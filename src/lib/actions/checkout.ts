@@ -214,15 +214,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       try {
         await cancelOrderReturnWallet(existingPending.id, `superseded-by-recheckout:${existingPending.id}`)
 
-        // Payssion vouchers stay PAYABLE at the provider until told otherwise
-        // — cancel there too, or the buyer could pay a slip whose order no
-        // longer exists. Best-effort until Part 2's outbox drains failures.
-        if (attempt?.provider === 'payssion' && attempt.provider_charge_id) {
-          const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-          await payssionCancelTransaction(attempt.provider_charge_id).catch((e) =>
-            console.error('[createCheckout] payssion cancel on supersede failed:', e)
-          )
-        }
+        // The stale order's live charge (a voucher, an invoice) stays payable
+        // at the provider until voided. The RPC queued it in
+        // provider_cancel_outbox in the same transaction; drain it now so it
+        // dies before the buyer can pay it — the reconcile cron is the
+        // guarantee if this best-effort pass fails.
+        const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+        await drainCancelOutboxForOrder(existingPending.id)
 
         // The superseded order's "Order Incomplete" nudge points at a dead
         // order — clear it (the new charge below mints its own).
@@ -398,13 +396,21 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // Expiry is the provider's authoritative invoice expiry when given
     // (BTCPay: 30 min, Payssion: per-method window), else ~2h.
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    let activated
     try {
-      await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
+      activated = await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
     } catch (activateError) {
+      console.error(`[createCheckout] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId}):`, activateError)
+      return { success: false, orderId, error: PAYMENT_BEING_PREPARED_MESSAGE }
+    }
+    if (activated.orphaned) {
       // The attempt was closed while the provider call was in flight (the
-      // buyer cancelled in another tab, the sweep expired it). The charge just
-      // minted has no order to pay — never hand the buyer its URL.
-      console.error(`[createCheckout] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId} orphaned):`, activateError)
+      // buyer cancelled in another tab, the sweep expired it). The charge
+      // just minted has no order to pay: the RPC queued it for voiding —
+      // never hand the buyer its URL.
+      console.warn(`[createCheckout] charge ${charge.providerChargeId} minted for a closed attempt ${attemptId} — queued for void`)
+      const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+      await drainCancelOutboxForOrder(orderId)
       return { success: false, orderId, error: PAYMENT_BEING_PREPARED_MESSAGE }
     }
 
@@ -636,11 +642,11 @@ export async function retryOrderPayment(orderId: string): Promise<{
       if (!superseded.changed && superseded.reason === 'in_flight') {
         return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
       }
-      if (superseded.provider === 'payssion' && superseded.providerChargeId) {
-        const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-        await payssionCancelTransaction(superseded.providerChargeId).catch((e) =>
-          console.error('[retryOrderPayment] payssion cancel on supersede failed:', e)
-        )
+      // The replaced charge is in provider_cancel_outbox (same transaction
+      // as the supersede); void it now, before the fresh one is minted.
+      if (superseded.changed && superseded.providerChargeId) {
+        const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+        await drainCancelOutboxForOrder(orderId)
       }
     }
     const fallbackExpiresAt = new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString()
@@ -679,10 +685,17 @@ export async function retryOrderPayment(orderId: string): Promise<{
       providerName === 'btcpay' ? `/checkout/pay/${orderId}` : charge.checkoutUrl
 
     const expiresAt = charge.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    let activated
     try {
-      await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
+      activated = await activateAttempt({ attemptId, providerChargeId: charge.providerChargeId, checkoutUrl: payUrl, expiresAt })
     } catch (activateError) {
-      console.error(`[retryOrderPayment] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId} orphaned):`, activateError)
+      console.error(`[retryOrderPayment] attempt ${attemptId} could not be activated (charge ${charge.providerChargeId}):`, activateError)
+      return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
+    }
+    if (activated.orphaned) {
+      console.warn(`[retryOrderPayment] charge ${charge.providerChargeId} minted for a closed attempt ${attemptId} — queued for void`)
+      const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+      await drainCancelOutboxForOrder(orderId)
       return { success: false, error: PAYMENT_BEING_PREPARED_MESSAGE }
     }
 

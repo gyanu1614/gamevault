@@ -201,3 +201,59 @@ describe('btcpay: provider fetches carry an AbortSignal timeout (PAY-016)', () =
     for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
   })
 })
+
+// ─── voidCharge (round B Part 2, PAY-004) ─────────────────────────────────
+describe('btcpay: voidCharge', () => {
+  const harness = (status: string, opts: { markOk?: boolean; archiveOk?: boolean } = {}) => {
+    const calls: { method: string; url: string; body?: string }[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      const u = String(url)
+      const method = init?.method ?? 'GET'
+      calls.push({ method, url: u, body: init?.body })
+      if (method === 'GET' && /\/invoices\/inv-1$/.test(u)) return { ok: true, json: async () => inv(status) } as any
+      if (method === 'POST' && u.endsWith('/invoices/inv-1/status')) {
+        return opts.markOk === false
+          ? ({ ok: false, status: 422, text: async () => 'nope' } as any)
+          : ({ ok: true, json: async () => inv('Invalid') } as any)
+      }
+      if (method === 'DELETE' && /\/invoices\/inv-1$/.test(u)) {
+        return opts.archiveOk === false ? ({ ok: false, status: 500, text: async () => 'boom' } as any) : ({ ok: true, json: async () => ({}) } as any)
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makeBtcpayProvider({ fetchImpl }) }
+  }
+
+  it('New → marks the invoice Invalid, archives it, reports voided', async () => {
+    const { calls, provider } = harness('New')
+    const r = await provider.voidCharge('inv-1')
+    expect(r.outcome).toBe('voided')
+    const mark = calls.find((c) => c.method === 'POST')!
+    expect(mark.url).toMatch(/\/invoices\/inv-1\/status$/)
+    expect(JSON.parse(mark.body!)).toEqual({ status: 'Invalid' })
+    expect(calls.some((c) => c.method === 'DELETE' && /\/invoices\/inv-1$/.test(c.url))).toBe(true)
+  })
+
+  it('Settled / Processing → paid (money arrived or is in flight — never voided)', async () => {
+    for (const s of ['Settled', 'Processing']) {
+      const { calls, provider } = harness(s)
+      const r = await provider.voidCharge('inv-1')
+      expect(r.outcome).toBe('paid')
+      expect(r.rawStatus).toBe(s)
+      expect(calls.filter((c) => c.method !== 'GET')).toEqual([])
+    }
+  })
+
+  it('Expired / Invalid → already_closed, nothing written', async () => {
+    for (const s of ['Expired', 'Invalid']) {
+      const { calls, provider } = harness(s)
+      expect((await provider.voidCharge('inv-1')).outcome).toBe('already_closed')
+      expect(calls.filter((c) => c.method !== 'GET')).toEqual([])
+    }
+  })
+
+  it('a refused status mark throws (the outbox retries); a failed archive does not', async () => {
+    await expect(harness('New', { markOk: false }).provider.voidCharge('inv-1')).rejects.toThrow(/mark invalid failed 422/)
+    expect((await harness('New', { archiveOk: false }).provider.voidCharge('inv-1')).outcome).toBe('voided')
+  })
+})

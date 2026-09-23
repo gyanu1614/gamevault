@@ -69,6 +69,9 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'payment_attempts_version', 'payment_attempts_backfill', 'order_create_pending',
   'payment_attempt_open', 'payment_attempt_activate', 'payment_attempt_supersede',
   'expired_pending_payment_attempts',
+  // Part 2: the provider cancel outbox + the deduped admin alert helper.
+  'provider_cancel_outbox_version', 'provider_cancel_outbox_enqueue', 'provider_cancel_outbox_claim',
+  'provider_cancel_outbox_mark', 'admin_alert_once',
 ]
 
 /**

@@ -1,21 +1,23 @@
 /**
  * Expire-pending-payments cron (every 30 min).
  *
- * Crypto orders expire themselves (BTCPay fires InvoiceExpired). Payssion
- * does NOT enforce our per-method windows (vouchers 48h, instant 1h), so a
- * buyer who walks away would leave the order pending forever. This sweep:
+ * Payssion does NOT enforce our per-method windows (vouchers 48h, instant
+ * 1h), and a lost BTCPay InvoiceExpired webhook would leave a crypto order
+ * pending too, so a buyer who walks away must be swept by us. This sweep:
  *
  *   1. finds orders still 'pending' whose OPEN payment attempt expired (+5 min
  *      grace for a payment landing at the buzzer) — or, with no attempt, whose
  *      fallback expiry passed (round B: expired_pending_payment_attempts),
- *   2. cancels the transaction at Payssion (their notify then mirrors it),
+ *   2. asks the provider to void the charge (round B: every provider; a
+ *      charge the provider reports paid is skipped for its webhook),
  *   3. drives the SAME canonical cancel path the webhook uses — dispatch()
  *      handles the transition, wallet-credit return, nudge cleanup and the
  *      "Order Cancelled" notification, idempotently — so a racing webhook
  *      or a double-run can never double-apply.
  *
- * If Payssion says the transaction actually COMPLETED (paid at the last
- * second), the order is left alone — the completed webhook confirms it.
+ * A void that fails is not fatal: the order is cancelled and the outbox
+ * (provider_cancel_outbox, drained by /api/cron/reconcile-payments) retries
+ * the provider with backoff and alerts once at the cap.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -50,21 +52,32 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, expired: 0 })
   }
 
-  const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+  const { getProvider } = await import('@/lib/payments/registry')
   const { dispatch } = await import('@/lib/payments/dispatch')
 
   let expired = 0
   let skippedPaid = 0
+  let voidDeferred = 0
   for (const row of rows) {
     try {
-      let state = 'cancelled'
-      if (row.provider === 'payssion' && row.providerChargeId) {
-        state = await payssionCancelTransaction(row.providerChargeId)
-      }
-      if (state === 'completed' || state === 'paid_more') {
-        // Paid at the buzzer — leave it for the completed webhook.
-        skippedPaid++
-        continue
+      // Round B Part 2: ask the provider FIRST, for every provider. A charge
+      // paid at the buzzer is left for its confirmation webhook; a voided /
+      // already-closed / unsupported one is cancelled with its outbox row
+      // written as done; a provider that cannot be reached is cancelled
+      // anyway and the outbox drain voids it later with backoff.
+      let voidOutcome: 'voided' | 'already_closed' | 'unsupported' | undefined
+      if (row.provider && row.providerChargeId) {
+        try {
+          const v = await getProvider(row.provider).voidCharge(row.providerChargeId)
+          if (v.outcome === 'paid') {
+            skippedPaid++
+            continue
+          }
+          voidOutcome = v.outcome
+        } catch (e) {
+          voidDeferred++
+          console.error(`[ExpirePayments] void of ${row.provider}/${row.providerChargeId} failed (outbox retries):`, e)
+        }
       }
       await dispatch(
         {
@@ -76,7 +89,7 @@ export async function GET(request: NextRequest) {
         `${row.providerChargeId ?? row.orderId}:expired-sweep`,
         row.providerChargeId ? row.provider ?? undefined : undefined,
         // We are closing it — the provider did not report it dead.
-        { closeAttemptAs: 'void' }
+        { closeAttemptAs: 'void', providerVoidOutcome: voidOutcome }
       )
       expired++
     } catch (e) {
@@ -84,5 +97,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, expired, skippedPaid, scanned: rows.length })
+  return NextResponse.json({ ok: true, expired, skippedPaid, voidDeferred, scanned: rows.length })
 }

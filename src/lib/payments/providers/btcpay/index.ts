@@ -22,6 +22,7 @@ import type {
   CreateChargeInput,
   CreateChargeResult,
   ParsedWebhook,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
 import {
@@ -148,6 +149,45 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
       assertBtcpayConfigured()
       const inv = await getInvoice(providerChargeId)
       return { rawStatus: inv.status }
+    },
+
+    /**
+     * Round B Part 2: close a live invoice. Greenfield has no "cancel"; the
+     * equivalent is marking it Invalid (POST /status) — the checkout page
+     * then refuses — and archiving it (DELETE) so it leaves the store's
+     * active list. Settled/Processing means money arrived or is being
+     * confirmed: never touched. Expired/Invalid is already closed.
+     */
+    async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+      assertBtcpayConfigured()
+      const inv = await getInvoice(providerChargeId)
+      if (inv.status === 'Settled' || inv.status === 'Processing') {
+        return { outcome: 'paid', rawStatus: inv.status }
+      }
+      if (inv.status === 'Expired' || inv.status === 'Invalid') {
+        return { outcome: 'already_closed', rawStatus: inv.status }
+      }
+      const base = `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${providerChargeId}`
+      const mark = await fetchImpl(`${base}/status`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: 'Invalid' }),
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+      })
+      if (!mark.ok) throw new Error(`btcpay: mark invalid failed ${mark.status} ${await mark.text()}`)
+      // Archiving is housekeeping (the invoice is already unpayable); a
+      // failure here must not make the outbox retry the whole void.
+      try {
+        const archive = await fetchImpl(base, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+        })
+        if (!archive.ok) console.warn(`[btcpay] archive of voided invoice ${providerChargeId} failed ${archive.status}`)
+      } catch (e) {
+        console.warn(`[btcpay] archive of voided invoice ${providerChargeId} failed:`, e)
+      }
+      return { outcome: 'voided', rawStatus: 'Invalid' }
     },
 
     async parseWebhook(headers, rawBody): Promise<ParsedWebhook> {

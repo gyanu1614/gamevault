@@ -67,6 +67,26 @@ export interface CreateChargeResult {
   expiresAt?: string
 }
 
+// ─── Void (round B Part 2, PAY-004/013) ───────────────────────────
+// Close a live charge at the provider so a buyer cannot pay into an order
+// that no longer wants the money (superseded by a retry, cancelled, expired
+// by our sweep). The outcome tells the caller what the provider's truth is:
+//   voided          the provider closed it on our request
+//   already_closed  it was already expired / invalid / cancelled there
+//   paid            money arrived or is in flight — NEVER void; the
+//                   confirmation webhook (or the late-payment credit) decides
+//   unsupported     the provider has no cancel for this charge kind; it
+//                   expires on its own (CoinGate standard orders)
+// Throw on a transient failure (network, refused-while-pending): the
+// provider_cancel_outbox retries with backoff and alerts at the cap.
+
+export type VoidChargeOutcome = 'voided' | 'already_closed' | 'paid' | 'unsupported'
+
+export interface VoidChargeResult {
+  outcome: VoidChargeOutcome
+  rawStatus: string
+}
+
 // ─── Webhook parsing result ───────────────────────────────────────
 // parseWebhook verifies the signature/source, then maps the raw payload to
 // 0..n canonical events. It returns a STABLE providerEventId used for the
@@ -89,6 +109,10 @@ export interface PaymentProvider {
 
   /** Retrieve authoritative charge state from the provider (the source of truth). */
   getCharge(providerChargeId: string): Promise<{ rawStatus: string }>
+
+  /** Close a live charge at the provider (see VoidChargeOutcome). Never
+   *  voids a charge the provider reports paid or in flight. */
+  voidCharge(providerChargeId: string): Promise<VoidChargeResult>
 
   /**
    * Verify the request's signature/source and map it to canonical events.

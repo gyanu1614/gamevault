@@ -339,3 +339,46 @@ describe('payssion: provider fetches carry an AbortSignal timeout (PAY-016)', ()
     for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
   })
 })
+
+// ─── voidCharge (round B Part 2, PAY-004/013) ─────────────────────────────
+describe('payssion: voidCharge', () => {
+  const harness = (cancel: { code: number; state?: string }, details?: { state: string }) => {
+    const calls: string[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      const u = String(url)
+      calls.push(u.replace(/^.*\/api\/v1/, ''))
+      if (u.endsWith('/payment/cancel')) {
+        return { ok: true, json: async () => ({ result_code: cancel.code, ...(cancel.state ? { transaction: { transaction_id: 'T1', state: cancel.state } } : {}) }) } as any
+      }
+      if (u.endsWith('/payment/details')) {
+        return { ok: true, json: async () => ({ result_code: 200, transaction: txn(details?.state ?? 'pending', { transaction_id: 'T1' }) }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makePayssionProvider({ fetchImpl }) }
+  }
+
+  it('cancel accepted (200, state cancelled) → voided, no details call', async () => {
+    const { calls, provider } = harness({ code: 200, state: 'cancelled' })
+    const r = await provider.voidCharge('T1')
+    expect(r.outcome).toBe('voided')
+    expect(r.rawStatus).toBe('cancelled')
+    expect(calls).toEqual(['/payment/cancel'])
+  })
+
+  it('cancel refused, details say completed / paid_more → paid (the money is coming)', async () => {
+    for (const s of ['completed', 'paid_more']) {
+      expect((await harness({ code: 400 }, { state: s }).provider.voidCharge('T1')).outcome).toBe('paid')
+    }
+  })
+
+  it('cancel refused, details say failed/expired/cancelled → already_closed', async () => {
+    for (const s of ['failed', 'expired', 'cancelled']) {
+      expect((await harness({ code: 400 }, { state: s }).provider.voidCharge('T1')).outcome).toBe('already_closed')
+    }
+  })
+
+  it('cancel refused while the transaction is still pending → throws (the outbox retries with backoff)', async () => {
+    await expect(harness({ code: 400 }, { state: 'pending' }).provider.voidCharge('T1')).rejects.toThrow(/cancel refused/)
+  })
+})

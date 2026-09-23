@@ -428,13 +428,11 @@ export async function cancelOrder(orderId: string): Promise<{
     // The old TS composition (bare transition, then a separate refundToWallet
     // whose failure was logged as CRITICAL and ignored) could leave a
     // cancelled order with the buyer's money stranded.
-    // Round B: the provider charge to close is the order's OPEN attempt,
-    // read BEFORE the cancel (the RPC closes the attempt as void).
-    const { openAttemptForOrder } = await import('@/lib/payments/attempts')
-    const openAttempt = wasUnpaid ? await openAttemptForOrder(orderId).catch(() => null) : null
     let cancelResult
     try {
-      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
+      // Round B: a pending order's live charge is closed as 'void' and
+      // queued in provider_cancel_outbox inside the same RPC transaction.
+      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true, closeAttemptAs: 'void' })
     } catch (cancelError: any) {
       console.error('Failed to cancel order:', cancelError)
       return { success: false, error: 'Cancellation failed — please contact support' }
@@ -464,16 +462,12 @@ export async function cancelOrder(orderId: string): Promise<{
         .eq('type', 'order_incomplete')
         .like('link', `%${orderId}%`)
 
-      // Payssion vouchers stay payable at the provider until told otherwise —
-      // cancel there too so a cancelled order can't be paid into later.
-      // Best-effort; a late payment lands on PAY-002's refusal path (the
-      // order is cancelled, so CHARGE_CONFIRMED raises and admins are paged).
-      if (openAttempt?.provider === 'payssion' && openAttempt.provider_charge_id) {
-        const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-        await payssionCancelTransaction(openAttempt.provider_charge_id).catch((e: any) =>
-          console.error('[Cancel] payssion provider cancel failed:', e)
-        )
-      }
+      // The charge (a voucher, an invoice) stays payable at the provider
+      // until voided: drain the outbox row the RPC just wrote. Best-effort —
+      // the reconcile cron retries with backoff; a payment that still lands
+      // is credited to the buyer's wallet by the late-payment path.
+      const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+      await drainCancelOutboxForOrder(orderId)
     }
 
     // Best-effort timestamp for the audit trail (status already flipped).

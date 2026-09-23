@@ -63,12 +63,20 @@ function toResult(data: any): OrderMoneyResult {
  * bound elsewhere is refused; one no longer open is a no-op, reason
  * `stale_attempt`). `closeAttemptAs` says how the open attempt closes:
  * 'failed' = the provider reported it dead (default when a charge is named),
- * 'void' = we closed it (sweep, supersede, buyer cancel).
+ * 'void' = we closed it (sweep, supersede, buyer cancel) — the live charge
+ * is then queued in provider_cancel_outbox inside the same transaction.
  */
 export async function cancelOrderReturnWallet(
   orderId: string,
   dedupeKey?: string,
-  opts?: { allowPaid?: boolean; charge?: ChargeRef; closeAttemptAs?: 'failed' | 'void' }
+  opts?: {
+    allowPaid?: boolean
+    charge?: ChargeRef
+    closeAttemptAs?: 'failed' | 'void'
+    /** The caller already asked the provider (the sweep voids first): its
+     *  answer is recorded on the outbox row, born done — the drain skips it. */
+    providerVoidOutcome?: 'voided' | 'already_closed' | 'unsupported'
+  }
 ): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_cancel_return_wallet', {
@@ -78,6 +86,7 @@ export async function cancelOrderReturnWallet(
     p_provider: opts?.charge?.provider ?? null,
     p_provider_charge_id: opts?.charge?.providerChargeId ?? null,
     p_attempt_close: opts?.closeAttemptAs ?? null,
+    p_provider_void_outcome: opts?.providerVoidOutcome ?? null,
   })
   if (error) throw new Error(`order_cancel_return_wallet failed: ${error.message}`)
   return toResult(data)

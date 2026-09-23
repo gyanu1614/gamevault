@@ -66,6 +66,8 @@ export async function dispatch(
      *  passes 'void' (we closed it); a provider webhook leaves the default
      *  ('failed' — the provider reported it dead). */
     closeAttemptAs?: 'failed' | 'void'
+    /** The sweep asked the provider before cancelling: its answer. */
+    providerVoidOutcome?: 'voided' | 'already_closed' | 'unsupported'
   }
 ): Promise<{ applied: boolean; orderId?: string; status?: string }> {
   const orderEvent = orderEventFor(event)
@@ -124,7 +126,11 @@ export async function dispatch(
       result = await refundOrderToWallet(event.orderId, providerEventId, event.amount?.amountMinor)
     } else if (event.type === 'CHARGE_FAILED') {
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
-      result = await cancelOrderReturnWallet(event.orderId, providerEventId, { charge, closeAttemptAs: opts?.closeAttemptAs })
+      result = await cancelOrderReturnWallet(event.orderId, providerEventId, {
+        charge,
+        closeAttemptAs: opts?.closeAttemptAs,
+        providerVoidOutcome: opts?.providerVoidOutcome,
+      })
       // PAY-002: a stale/late failure for an order that is already paid (or
       // terminal) is refused inside the RPC — nothing moved, admins were
       // alerted once. Not an error: the event is processed (no provider retry).

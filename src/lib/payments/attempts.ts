@@ -211,7 +211,7 @@ export async function activateAttempt(args: {
   providerChargeId: string
   checkoutUrl: string
   expiresAt: string
-}): Promise<{ changed: boolean }> {
+}): Promise<{ changed: boolean; orphaned: boolean }> {
   const { data, error } = await (createServiceRoleClient().rpc as any)('payment_attempt_activate', {
     p_attempt_id: args.attemptId,
     p_provider_charge_id: args.providerChargeId,
@@ -219,7 +219,9 @@ export async function activateAttempt(args: {
     p_expires_at: args.expiresAt,
   })
   if (error) throw new Error(`payment_attempt_activate failed: ${error.message}`)
-  return { changed: data?.changed === true }
+  // orphaned: the attempt closed while the provider call was in flight; the
+  // charge was queued in provider_cancel_outbox by the RPC (Part 2).
+  return { changed: data?.changed === true, orphaned: data?.orphaned === true }
 }
 
 export interface SupersedeResult {

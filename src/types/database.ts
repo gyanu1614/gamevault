@@ -3212,6 +3212,7 @@ export type Database = {
           event_ref: string | null
           id: string
           idempotency_key: string
+          matures_at: string | null
           order_id: string | null
         }
         Insert: {
@@ -3219,6 +3220,7 @@ export type Database = {
           event_ref?: string | null
           id?: string
           idempotency_key: string
+          matures_at?: string | null
           order_id?: string | null
         }
         Update: {
@@ -3226,6 +3228,7 @@ export type Database = {
           event_ref?: string | null
           id?: string
           idempotency_key?: string
+          matures_at?: string | null
           order_id?: string | null
         }
         Relationships: []
@@ -3818,6 +3821,7 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string | null
+          dedupe_key: string | null
           id: string
           is_read: boolean | null
           link: string | null
@@ -3829,6 +3833,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          dedupe_key?: string | null
           id?: string
           is_read?: boolean | null
           link?: string | null
@@ -3840,6 +3845,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          dedupe_key?: string | null
           id?: string
           is_read?: boolean | null
           link?: string | null
@@ -3986,6 +3992,70 @@ export type Database = {
           },
         ]
       }
+      order_completion_windows: {
+        Row: {
+          auto_complete_hours: number
+          category_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_complete_hours: number
+          category_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_complete_hours?: number
+          category_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_completion_windows_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           auto_release_at: string | null
@@ -3995,6 +4065,7 @@ export type Database = {
           chat_active_until: string | null
           checkout_url: string | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           created_at: string
           currency: string
           delivered_at: string | null
@@ -4055,6 +4126,7 @@ export type Database = {
           chat_active_until?: string | null
           checkout_url?: string | null
           completed_at?: string | null
+          confirm_reminder_sent_at?: string | null
           created_at?: string
           currency?: string
           delivered_at?: string | null
@@ -4115,6 +4187,7 @@ export type Database = {
           chat_active_until?: string | null
           checkout_url?: string | null
           completed_at?: string | null
+          confirm_reminder_sent_at?: string | null
           created_at?: string
           currency?: string
           delivered_at?: string | null
@@ -4480,30 +4553,42 @@ export type Database = {
       platform_fee_settings: {
         Row: {
           base_change_notice_days: number
+          completion_hold_hours: number
+          dispute_window_days: number
           founding_discount_pct: number
           founding_months: number
           id: boolean
+          payout_details_freeze_hours: number
           rank_floor_pct: number
           updated_at: string
           updated_by: string | null
+          withdrawal_min_account_age_days: number
         }
         Insert: {
           base_change_notice_days?: number
+          completion_hold_hours?: number
+          dispute_window_days?: number
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
+          payout_details_freeze_hours?: number
           rank_floor_pct?: number
           updated_at?: string
           updated_by?: string | null
+          withdrawal_min_account_age_days?: number
         }
         Update: {
           base_change_notice_days?: number
+          completion_hold_hours?: number
+          dispute_window_days?: number
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
+          payout_details_freeze_hours?: number
           rank_floor_pct?: number
           updated_at?: string
           updated_by?: string | null
+          withdrawal_min_account_age_days?: number
         }
         Relationships: [
           {
@@ -5102,6 +5187,79 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      provider_cancel_outbox: {
+        Row: {
+          attempt_id: string | null
+          attempts: number
+          created_at: string
+          done_at: string | null
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          order_id: string | null
+          outcome: string | null
+          provider: string
+          provider_charge_id: string
+          reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          attempts?: number
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          order_id?: string | null
+          outcome?: string | null
+          provider: string
+          provider_charge_id: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_id?: string | null
+          attempts?: number
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          order_id?: string | null
+          outcome?: string | null
+          provider?: string
+          provider_charge_id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_cancel_outbox_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_cancel_outbox_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_cancel_outbox_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -11513,6 +11671,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_alert_once: {
+        Args: {
+          p_link: string
+          p_message: string
+          p_title: string
+          p_type: string
+        }
+        Returns: number
+      }
       adopt_me_confidence_for: { Args: { listings: number }; Returns: string }
       approve_listing: {
         Args: { admin_id: string; listing_id: string }
@@ -11632,7 +11799,7 @@ export type Database = {
       }
       get_my_permissions: { Args: never; Returns: string[] }
       get_orders_ready_for_auto_release: {
-        Args: never
+        Args: { p_limit?: number }
         Returns: {
           auto_release_at: string | null
           buyer_confirmed_at: string | null
@@ -11641,6 +11808,7 @@ export type Database = {
           chat_active_until: string | null
           checkout_url: string | null
           completed_at: string | null
+          confirm_reminder_sent_at: string | null
           created_at: string
           currency: string
           delivered_at: string | null
@@ -11750,15 +11918,33 @@ export type Database = {
       mark_inactive_sellers_offline: { Args: never; Returns: undefined }
       money_atomicity_version: { Args: never; Returns: number }
       money_fault_hook: { Args: { p_point: string }; Returns: undefined }
+      notify_once: {
+        Args: {
+          p_dedupe_key: string
+          p_link: string
+          p_message: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       order_cancel_return_wallet: {
         Args: {
           p_allow_paid?: boolean
+          p_attempt_close?: string
           p_dedupe_key?: string
           p_order_id: string
           p_provider?: string
           p_provider_charge_id?: string
+          p_provider_void_done?: boolean
         }
         Returns: Json
+      }
+      order_completion_version: { Args: never; Returns: number }
+      order_completion_window_hours: {
+        Args: { p_order_id: string }
+        Returns: number
       }
       order_confirm_payment: {
         Args: {
@@ -11768,6 +11954,80 @@ export type Database = {
           p_provider_charge_id?: string
         }
         Returns: Json
+      }
+      order_confirm_receipt: {
+        Args: { p_buyer_id: string; p_order_id: string }
+        Returns: Json
+      }
+      order_confirm_reminders_claim: {
+        Args: { p_limit?: number }
+        Returns: {
+          auto_release_at: string | null
+          buyer_confirmed_at: string | null
+          buyer_id: string
+          cancelled_at: string | null
+          chat_active_until: string | null
+          checkout_url: string | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          created_at: string
+          currency: string
+          delivered_at: string | null
+          delivering_at: string | null
+          delivery_details: Json | null
+          delivery_evidence_required: boolean | null
+          delivery_evidence_urls: string[] | null
+          dispute_reason: string | null
+          disputed_at: string | null
+          escrow_status: string | null
+          id: string
+          instant_delivery_code: string | null
+          instant_delivery_delivered_at: string | null
+          instant_delivery_inventory_id: string | null
+          is_guest_order: boolean | null
+          listing_id: string
+          order_number: string | null
+          order_number_search: string | null
+          paid_at: string | null
+          payment_expires_at: string | null
+          payment_processing_fee: number
+          payment_processing_fee_rate: number
+          payment_provider: string | null
+          platform_fee: number
+          platform_fee_rate: number
+          promo_code_id: string | null
+          promo_discount: number
+          protection_until: string | null
+          provider_charge_id: string | null
+          quantity: number
+          release_method: string | null
+          seller_commission_pct: number | null
+          seller_fee_trace: Json | null
+          seller_id: string
+          seller_marked_delivered_at: string | null
+          seller_payout: number
+          status: string | null
+          stock_claimed_at: string | null
+          stock_returned_at: string | null
+          stripe_payment_intent_id: string | null
+          stripe_transfer_id: string | null
+          subtotal: number
+          total_amount: number
+          unit_price: number
+          updated_at: string
+          vaultshield_level: string | null
+          vaultshield_tier_fee: number
+          vaultshield_tier_fee_rate: number
+          version: number
+          wallet_amount_used: number
+          warranty_expires_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       order_create_pending: {
         Args: {
@@ -11793,6 +12053,14 @@ export type Database = {
           p_unit_price: number
           p_wallet_minor: number
         }
+        Returns: Json
+      }
+      order_mark_delivered: {
+        Args: { p_order_id: string; p_seller_id: string }
+        Returns: Json
+      }
+      order_mark_delivering: {
+        Args: { p_order_id: string; p_seller_id: string }
         Returns: Json
       }
       order_refund_to_wallet: {
@@ -11833,6 +12101,7 @@ export type Database = {
           p_entries: Json
           p_event_ref?: string
           p_idempotency_key: string
+          p_matures_at?: string
           p_order_id?: string
         }
         Returns: string
@@ -11846,6 +12115,52 @@ export type Database = {
         }
         Returns: Json
       }
+      provider_cancel_outbox_claim: {
+        Args: { p_limit?: number; p_order_id?: string }
+        Returns: {
+          attempt_id: string | null
+          attempts: number
+          created_at: string
+          done_at: string | null
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          order_id: string | null
+          outcome: string | null
+          provider: string
+          provider_charge_id: string
+          reason: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "provider_cancel_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      provider_cancel_outbox_enqueue: {
+        Args: {
+          p_attempt_id: string
+          p_done?: boolean
+          p_order_id: string
+          p_provider: string
+          p_provider_charge_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      provider_cancel_outbox_mark: {
+        Args: {
+          p_error: string
+          p_id: string
+          p_ok: boolean
+          p_outcome: string
+        }
+        Returns: Json
+      }
+      provider_cancel_outbox_version: { Args: never; Returns: number }
       public_profiles_revoked_version: { Args: never; Returns: number }
       public_profiles_version: { Args: never; Returns: number }
       public_table_posture: {
@@ -12039,10 +12354,20 @@ export type Database = {
         Args: { p_currency: string; p_seller_id: string }
         Returns: number
       }
+      seller_frozen_balance: {
+        Args: { p_currency?: string; p_seller_id: string }
+        Returns: number
+      }
       seller_is_in_payout_hold: {
         Args: { p_seller_id: string }
         Returns: boolean
       }
+      seller_matured_balance: {
+        Args: { p_currency?: string; p_seller_id: string }
+        Returns: number
+      }
+      seller_since: { Args: { p_seller_id: string }; Returns: string }
+      seller_withdrawal_gate: { Args: { p_seller_id: string }; Returns: Json }
       storage_bucket_posture: { Args: { p_bucket: string }; Returns: Json }
       storage_declared_buckets: { Args: never; Returns: string[] }
       storage_policies_version: { Args: never; Returns: number }
@@ -12051,6 +12376,10 @@ export type Database = {
       user_wallet_balance: {
         Args: { p_currency: string; p_user_id: string }
         Returns: number
+      }
+      wallet_available_balance: {
+        Args: { p_currency?: string; p_seller_id: string }
+        Returns: Json
       }
       wallet_credit: {
         Args: {
@@ -12153,6 +12482,7 @@ export type Database = {
         | "user_wallet"
         | "genesis_clearing"
         | "external_payout"
+        | "seller_frozen"
       ledger_direction: "debit" | "credit"
       ledger_owner_type:
         | "platform"
@@ -12337,6 +12667,7 @@ export const Constants = {
         "user_wallet",
         "genesis_clearing",
         "external_payout",
+        "seller_frozen",
       ],
       ledger_direction: ["debit", "credit"],
       ledger_owner_type: [

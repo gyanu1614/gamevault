@@ -13,6 +13,13 @@
  *           order; a failure on a superseded attempt never cancels the
  *           order; the sweep, the pay page and the return path read the
  *           OPEN attempt, not the order's mirror columns.
+ *   Part 2  voidCharge + provider_cancel_outbox (PAY-004/013): closing a
+ *           live charge (buyer cancel, expiry sweep, supersede, an orphaned
+ *           late activation) writes the outbox row IN the money transaction;
+ *           a provider-reported failure writes none; the drain voids at the
+ *           provider with retries + backoff and alerts admins ONCE at the
+ *           cap; a charge the provider reports paid is never voided; the
+ *           sweep asks the provider before cancelling.
  *
  * Every row this file causes is removed in afterAll — orders, attempts,
  * ledger journals, webhook_events and the notifications the RPCs insert
@@ -125,6 +132,15 @@ async function insertAttempt(over: Record<string, unknown>) {
   if (error) throw error
   return (data as any).id as string
 }
+async function outboxRows(chargeId: string) {
+  const { data, error } = await fx!.svc.from('provider_cancel_outbox').select('*').eq('provider_charge_id', chargeId)
+  if (error) throw new Error(`provider_cancel_outbox: ${error.message}`)
+  return (data ?? []) as any[]
+}
+async function adminAlerts(title: string, link: string) {
+  const { data } = await fx!.svc.from('notifications').select('user_id').eq('type', 'payment_review').eq('title', title).eq('link', link)
+  return ((data ?? []) as { user_id: string }[]).filter((n) => n.user_id === fx!.admin.id)
+}
 async function parkPendingOrders(buyerId = fx!.buyer.id) {
   const { data } = await fx!.svc.from('orders').select('id').eq('buyer_id', buyerId).eq('status', 'pending')
   const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
@@ -162,6 +178,7 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       await del(`ledger_test_cleanup_by_order(${id})`, svc.rpc('ledger_test_cleanup_by_order', { p_order_id: id } as any))
       await del('notifications(by link)', svc.from('notifications').delete().like('link', `%${id}%`))
       await del('webhook_events', svc.from('webhook_events').delete().eq('provider', 'fake').like('provider_event_id', `%${id}%`))
+      await del('provider_cancel_outbox', svc.from('provider_cancel_outbox').delete().eq('order_id', id))
       await del('payment_attempts', svc.from('payment_attempts').delete().eq('order_id', id))
     }
     await del('ledger_test_cleanup(fund)', svc.rpc('ledger_test_cleanup', { p_prefix: 'test:ledger:fix-b:%' } as any))
@@ -392,6 +409,211 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       expect(s.success, s.error).toBe(true)
       expect(s.invoiceStatus).toBe('New')
       expect(btcpayCalls).toEqual([`inv-${orderId}`])
+    }, 60_000)
+  })
+
+  // ── Part 2 ─────────────────────────────────────────────────────────────────
+  describe('Part 2 — voidCharge + provider_cancel_outbox (PAY-004/013)', () => {
+    const OUTBOX_MAX_ATTEMPTS = 6
+    async function fakeVoid() {
+      return (await import('@/lib/payments/providers/fake')).fakeVoid
+    }
+    async function forceDue(chargeId: string) {
+      await fx!.svc.from('provider_cancel_outbox').update({ next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq('provider_charge_id', chargeId)
+    }
+
+    it('cancelling a pending order with a live charge writes ONE outbox row in the same transaction; a provider-reported failure writes none', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-OB-${tag()}` })
+      const chargeId = `fake_ob_${orderId}`
+      const attemptId = await insertAttempt({ order_id: orderId, provider_charge_id: chargeId })
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const r = await cancelOrderReturnWallet(orderId, 'buyer-cancel', { closeAttemptAs: 'void' })
+      expect(r.changed).toBe(true)
+      const rows = await outboxRows(chargeId)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ provider: 'fake', order_id: orderId, attempt_id: attemptId, status: 'pending', attempts: 0 })
+      // idempotent: a replay adds nothing
+      await cancelOrderReturnWallet(orderId, 'buyer-cancel', { closeAttemptAs: 'void' })
+      expect(await outboxRows(chargeId)).toHaveLength(1)
+
+      // the provider itself said the charge is dead → nothing to void
+      await parkPendingOrders()
+      const dead = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-OBf-${tag()}` })
+      await insertAttempt({ order_id: dead, provider_charge_id: `fake_${dead}` })
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const res = await handleWebhook('fake', sig, JSON.stringify({ chargeId: `fake_${dead}`, orderId: dead, status: 'failed', amountMinor: '100', currency: CUR }))
+      expect(res.status, res.error).toBe(200)
+      expect((await orderRow(dead)).status).toBe('cancelled')
+      expect(await outboxRows(`fake_${dead}`)).toHaveLength(0)
+    }, 60_000)
+
+    it('the reconcile route drains the outbox: voided at the provider, row done; a second run finds nothing', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-DR-${tag()}` })
+      const chargeId = `fake_dr_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: chargeId })
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      await cancelOrderReturnWallet(orderId, 'sweep', { closeAttemptAs: 'void' })
+      const fv = await fakeVoid(); fv.reset()
+      const { GET } = await import('@/app/api/cron/reconcile-payments/route')
+      const res = await GET(cronRequest('/api/cron/reconcile-payments'))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.outbox.done).toBeGreaterThanOrEqual(1)
+      expect(fv.calls).toContain(chargeId)
+      const [row] = await outboxRows(chargeId)
+      expect(row).toMatchObject({ status: 'done', outcome: 'voided', attempts: 1 })
+      expect(row.done_at).not.toBeNull()
+      fv.reset()
+      const again = await GET(cronRequest('/api/cron/reconcile-payments'))
+      expect((await again.json()).outbox.claimed).toBe(0)
+      expect(fv.calls).toEqual([])
+    }, 60_000)
+
+    it("round A's orphan paths enqueue and drain inline: retry supersede, re-checkout supersede, buyer cancel", async () => {
+      const fv = await fakeVoid(); fv.reset()
+      // 1. retry past expiry (Part 1 flow) → the OLD charge is voided
+      await parkPendingOrders()
+      const retryOrder = await insertOrder({ status: 'pending', escrow_status: 'pending', total_amount: 1, order_number: `GT-OA1-${tag()}` })
+      const oldCharge = `fake_old_${retryOrder}`
+      await insertAttempt({ order_id: retryOrder, provider: 'btcpay', provider_charge_id: oldCharge, checkout_url: '/checkout/pay/x', expires_at: new Date(Date.now() - 60_000).toISOString() })
+      sessionClient = fx!.buyer.client
+      const { retryOrderPayment } = await import('@/lib/actions/checkout')
+      const r1 = await retryOrderPayment(retryOrder)
+      expect(r1.success, r1.error).toBe(true)
+      expect((await outboxRows(oldCharge))[0]).toMatchObject({ provider: 'btcpay', status: 'done', outcome: 'voided' })
+      expect(fv.calls).toContain(oldCharge)
+
+      // 2. re-checkout with a drifted amount → the stale ORDER is cancelled and its charge voided
+      await parkPendingOrders()
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const first = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(first.success, first.error).toBe(true)
+      createdOrderIds.push(first.orderId!)
+      const staleCharge = (await attempts(first.orderId!))[0].provider_charge_id
+      const second = await createCheckout({ listingId: fx!.listingId, quantity: 2 })
+      expect(second.success, second.error).toBe(true)
+      createdOrderIds.push(second.orderId!)
+      expect(second.orderId).not.toBe(first.orderId)
+      expect((await orderRow(first.orderId!)).status).toBe('cancelled')
+      expect((await outboxRows(staleCharge))[0]).toMatchObject({ status: 'done', outcome: 'voided' })
+
+      // 3. buyer cancels a pending order (the Payssion voucher case)
+      await parkPendingOrders()
+      const cancelOrderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-OA3-${tag()}` })
+      const voucher = `fake_voucher_${cancelOrderId}`
+      await insertAttempt({ order_id: cancelOrderId, provider: 'payssion', provider_charge_id: voucher, checkout_url: 'https://pay.test/v' })
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const c = await cancelOrder(cancelOrderId)
+      expect(c.success, c.error).toBe(true)
+      expect((await outboxRows(voucher))[0]).toMatchObject({ provider: 'payssion', status: 'done', outcome: 'voided' })
+      expect(fv.calls).toContain(voucher)
+      fv.reset()
+    }, 120_000)
+
+    it('a charge minted after its attempt was closed is enqueued as an orphan, never activated', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-ORPH-${tag()}` })
+      const attemptId = await insertAttempt({ order_id: orderId, status: 'created', provider_charge_id: null, checkout_url: null })
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      await cancelOrderReturnWallet(orderId, 'buyer-cancel-mid-flight', { closeAttemptAs: 'void' })
+      expect((await attempts(orderId))[0].status).toBe('void')
+      const { activateAttempt } = await import('@/lib/payments/attempts')
+      const late = `fake_late_${orderId}`
+      const r = await activateAttempt({ attemptId, providerChargeId: late, checkoutUrl: 'https://fake.test/late', expiresAt: new Date(Date.now() + 60_000).toISOString() })
+      expect(r.changed).toBe(false)
+      expect((await attempts(orderId))[0]).toMatchObject({ status: 'void', provider_charge_id: null })
+      expect((await outboxRows(late))[0]).toMatchObject({ provider: 'fake', order_id: orderId, status: 'pending' })
+      expect((await outboxRows(late))[0].reason).toMatch(/orphan/)
+    }, 60_000)
+
+    it('void failures back off and alert admins ONCE at the cap; a paid charge is recorded, never voided', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-BO-${tag()}` })
+      const boom = `fake_boom_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: boom })
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      await cancelOrderReturnWallet(orderId, 'sweep', { closeAttemptAs: 'void' })
+      const fv = await fakeVoid(); fv.reset(); fv.outcomes.set(boom, 'throw')
+      const { drainProviderCancelOutbox } = await import('@/lib/payments/cancel-outbox')
+      const link = `/account/orders/${orderId}`
+      let lastNext = ''
+      for (let i = 1; i <= OUTBOX_MAX_ATTEMPTS; i++) {
+        await forceDue(boom)
+        await drainProviderCancelOutbox({ limit: 10 })
+        const [row] = await outboxRows(boom)
+        expect(row.attempts).toBe(i)
+        expect(row.last_error).toMatch(/fake: void failed/)
+        if (i < OUTBOX_MAX_ATTEMPTS) {
+          expect(row.status).toBe('pending')
+          expect(new Date(row.next_attempt_at).getTime()).toBeGreaterThan(Date.now())
+          if (lastNext) expect(new Date(row.next_attempt_at).getTime()).toBeGreaterThan(new Date(lastNext).getTime())
+          lastNext = row.next_attempt_at
+          expect(await adminAlerts('Provider Cancel Failed', link)).toHaveLength(0)
+        } else {
+          expect(row.status).toBe('failed')
+          expect(await adminAlerts('Provider Cancel Failed', link)).toHaveLength(1)
+        }
+      }
+      // failed rows are never claimed again; the alert stays at one
+      fv.calls.length = 0
+      await forceDue(boom)
+      await drainProviderCancelOutbox({ limit: 10 })
+      expect(fv.calls).toEqual([])
+      expect(await adminAlerts('Provider Cancel Failed', link)).toHaveLength(1)
+
+      // paid at the buzzer: recorded, never voided, never alerted
+      await parkPendingOrders()
+      const paidOrder = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-BOp-${tag()}` })
+      const paidCharge = `fake_paid_${paidOrder}`
+      await insertAttempt({ order_id: paidOrder, provider_charge_id: paidCharge })
+      await cancelOrderReturnWallet(paidOrder, 'sweep', { closeAttemptAs: 'void' })
+      fv.outcomes.set(paidCharge, 'paid')
+      await drainProviderCancelOutbox({ limit: 10 })
+      expect((await outboxRows(paidCharge))[0]).toMatchObject({ status: 'done', outcome: 'paid' })
+      fv.reset()
+    }, 90_000)
+
+    itFault('an in-RPC fault after the outbox insert rolls the cancel back — no cancelled order, no void, no row', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-OBF-${tag()}` })
+      const chargeId = `fake_fault_${orderId}`
+      await insertAttempt({ order_id: orderId, provider_charge_id: chargeId })
+      const err = withFault('order_cancel_return_wallet:after_outbox',
+        `SELECT public.order_cancel_return_wallet('${orderId}'::uuid, 'fault', false, NULL, NULL, 'void')`)
+      expect(err).toMatch(/injected fault at order_cancel_return_wallet:after_outbox/)
+      expect((await orderRow(orderId)).status).toBe('pending')
+      expect((await attempts(orderId))[0].status).toBe('active')
+      expect(await outboxRows(chargeId)).toHaveLength(0)
+    }, 60_000)
+
+    it('the sweep asks the provider first: a buzzer-paid attempt is skipped, a voided one is cancelled with its outbox row already done', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await parkPendingOrders(fx!.admin.id)
+      const past = new Date(Date.now() - 10 * 60_000).toISOString()
+      const paidOrder = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-SWp-${tag()}` })
+      const paidCharge = `fake_swpaid_${paidOrder}`
+      await insertAttempt({ order_id: paidOrder, provider_charge_id: paidCharge, expires_at: past })
+      const deadOrder = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-SWv-${tag()}` })
+      const deadCharge = `fake_swvoid_${deadOrder}`
+      await insertAttempt({ order_id: deadOrder, provider_charge_id: deadCharge, expires_at: past })
+      const fv = await fakeVoid(); fv.reset(); fv.outcomes.set(paidCharge, 'paid')
+      const { GET } = await import('@/app/api/cron/expire-pending-payments/route')
+      const res = await GET(cronRequest('/api/cron/expire-pending-payments'))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.skippedPaid).toBeGreaterThanOrEqual(1)
+      expect((await orderRow(paidOrder)).status).toBe('pending')
+      expect((await attempts(paidOrder))[0].status).toBe('active')
+      expect((await orderRow(deadOrder)).status).toBe('cancelled')
+      expect((await attempts(deadOrder))[0].status).toBe('void')
+      expect((await outboxRows(deadCharge))[0]).toMatchObject({ status: 'done', outcome: 'voided' })
+      expect(fv.calls.filter((c) => c === deadCharge)).toHaveLength(1)
+      fv.reset()
+      // leave the buzzer-paid order closed for the fixture teardown
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      await cancelOrderReturnWallet(paidOrder, 'test-reset')
     }, 60_000)
   })
 })

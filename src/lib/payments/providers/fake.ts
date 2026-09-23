@@ -18,10 +18,25 @@ import type {
   CreateChargeResult,
   ParsedWebhook,
   CanonicalEvent,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { money } from '@/lib/money'
 
 const SECRET = process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret'
+
+/**
+ * Round B Part 2 — scriptable voidCharge for the outbox tests: per charge
+ * id, answer `voided` (default), `paid`, `already_closed`, `unsupported`,
+ * or `throw` (a transient provider failure). Every call is recorded.
+ */
+export const fakeVoid = {
+  outcomes: new Map<string, VoidChargeResult['outcome'] | 'throw'>(),
+  calls: [] as string[],
+  reset() {
+    this.outcomes.clear()
+    this.calls.length = 0
+  },
+}
 
 export const fakeProvider: PaymentProvider = {
   name: 'fake',
@@ -81,6 +96,13 @@ export const fakeProvider: PaymentProvider = {
       // unknown status → no events (logged no-op upstream)
     }
     return { providerEventId, events }
+  },
+
+  async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+    fakeVoid.calls.push(providerChargeId)
+    const mode = fakeVoid.outcomes.get(providerChargeId) ?? 'voided'
+    if (mode === 'throw') throw new Error(`fake: void failed for ${providerChargeId}`)
+    return { outcome: mode, rawStatus: mode }
   },
 
   async refund(providerChargeId, amount, _idempotencyKey) {
