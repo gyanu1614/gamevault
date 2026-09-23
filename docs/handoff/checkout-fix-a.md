@@ -1,6 +1,6 @@
 # Checkout fix round A — handoff
 
-**Date:** 2026-09-22 · **Branch:** `fix/checkout-p0` (worktree `../gamevault-checkout-fix-a`) · **PR:** (link below) · **Not merged. ⚠️ `supabase db push` REQUIRED before/with the deploy** (5 migrations).
+**Date:** 2026-09-22 · **Branch:** `fix/checkout-p0` (worktree `../gamevault-checkout-fix-a`) · **PR:** https://github.com/gyanu1614/gamevault/pull/88 · **Not merged. ⚠️ `supabase db push` REQUIRED before/with the deploy** (5 migrations).
 Source: `docs/audit/pass-6-checkout.md` (PART B). Scope = round A only (independent findings). Round B (attempts model, `voidCharge`, late-payment credit, reconciler) NOT started.
 
 ## Commits (one per ID, in order)
@@ -24,8 +24,17 @@ Source: `docs/audit/pass-6-checkout.md` (PART B). Scope = round A only (independ
 4. `20260922174029_pay_020_pending_payment_sweep_index.sql`
 5. `20260922174706_pay_014_promo_usage_cap.sql`
 
-## Test results
-See the table at the bottom (filled from the local stack, `.env.test`).
+## Test results (local stack, `.env.test`; the stack is SHARED with another worktree that reset it mid-session)
+| Check | Result |
+|---|---|
+| `pay-001-wallet-double-spend.repro` | RED on main (both spends commit, −1000) → GREEN (1 refused, balance 0) |
+| `checkout-fix-a.guard.integration` (new) | 17/17 — PAY-002/003/015/008/005/006/007/014 against the real RPCs, `createCheckout`, the webhook spine, `money_fault_hook` points |
+| `money-atomicity.guard.integration` | 18/18 (two supersede tests now park the fixture's raw pending order — PAY-005 guard) |
+| `db-p0-grants.guard.integration` | 57/57 (`order_confirm_payment` added to the service-only list) |
+| `payssion.test` / `btcpay.test` / `coingate.test` / `dispatch.test` / `cron-auth.test` / `timeouts.test` | 82/82 |
+| `fee-checkout-snapshot.guard.integration` (405-checkout parity loop, 8-way) | **12/12, 405/405** after the last PAY-007 commit. Five earlier runs lost 2–6 of 405 inserts to Kong 502 "upstream prematurely closed"; the baseline code passed 405/405 on the same stack, which pinned it to the new `head: true` pending-order count — a HEAD response through Kong → PostgREST poisons the upstream keep-alive socket and the NEXT request on it (the order INSERT) dies. The count is now a bounded GET (`.select('id').limit(max)`). **Rule for the codebase: never `head: true` on a hot path.** The limiter is stubbed and the cap raised in that file (`CHECKOUT_MAX_OPEN_PENDING_ORDERS`). |
+| Full `pnpm test` | 1511 passed / 11 failed → the 3 harness collisions above (all fixed after, files re-run green) + `table-posture` failing on the OTHER worktree's `fee_engine_drop_dead_tables` migration living on the shared DB (not on this branch). |
+| `tsc --noEmit` | clean |
 
 ## Manual steps for Gyanu
 1. `supabase db push` (5 files) **before or with** the deploy of this branch — see ordering note above. Then in the SQL editor: `SELECT proname FROM pg_proc WHERE proname IN ('order_confirm_payment');` → 1 row; `SELECT has_function_privilege('anon','public.order_confirm_payment(uuid,text)','EXECUTE');` → false.
