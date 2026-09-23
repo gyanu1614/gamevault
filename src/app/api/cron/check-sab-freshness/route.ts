@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { sendAdminNoticeEmail } from '@/lib/email'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 import {
   FRESHNESS_ALERT_EMAIL,
   FRESHNESS_CHECKS,
@@ -28,9 +29,8 @@ export async function GET(request: NextRequest) {
   // Read the secret per request rather than at module load: a module-scope
   // capture is evaluated once per lambda cold start, which makes the gate
   // untestable and silently wrong if the env is set after import.
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = request.headers.get('authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+  if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

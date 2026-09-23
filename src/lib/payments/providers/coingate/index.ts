@@ -29,6 +29,7 @@ import { callbackTokenFor, callbackTokenMatches } from './callback-token'
 import { isAllowedIp } from './ip-allowlist'
 import { coinGateToCanonical, coinGateEventId, type CoinGateOrder } from './status-map'
 import { displayOrderRef } from '@/lib/orders/order-number'
+import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -56,7 +57,10 @@ export function makeCoinGateProvider(deps?: {
   const now = deps?.now ?? (() => Date.now())
 
   async function getOrder(id: string): Promise<CoinGateOrder> {
-    const res = await fetchImpl(`${coinGateBase()}/orders/${id}`, { headers: authHeaders() })
+    const res = await fetchImpl(`${coinGateBase()}/orders/${id}`, {
+      headers: authHeaders(),
+      signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+    })
     if (!res.ok) throw new Error(`coingate: re-fetch failed ${res.status}`)
     return (await res.json()) as CoinGateOrder
   }
@@ -89,6 +93,7 @@ export function makeCoinGateProvider(deps?: {
         method: 'POST',
         headers: authHeaders(),
         body,
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`coingate: create failed ${res.status} ${await res.text()}`)
       const o = (await res.json()) as any

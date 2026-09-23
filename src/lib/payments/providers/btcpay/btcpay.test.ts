@@ -178,3 +178,26 @@ describe('btcpay: createCharge itemDesc', () => {
     expect(bodies[0].metadata.itemDesc).toBe('DropMarket order 0F1E2D3C')
   })
 })
+
+// ─── PAY-016: every outbound call carries a deadline ─────────────────────
+describe('btcpay: provider fetches carry an AbortSignal timeout (PAY-016)', () => {
+  it('invoice create and re-fetch pass an AbortSignal', async () => {
+    const signals: unknown[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      signals.push(init?.signal)
+      if (String(url).endsWith('/invoices') && init?.method === 'POST') {
+        return { ok: true, json: async () => ({ id: 'inv1', status: 'New', checkoutLink: 'https://pay.test.local/i/inv1' }) } as any
+      }
+      return { ok: true, json: async () => ({ id: 'inv1', status: 'New', metadata: { orderId: 'o' } }) } as any
+    }) as any
+    const provider = makeBtcpayProvider({ fetchImpl })
+    await provider.createCharge({
+      orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+      amount: { amountMinor: 1234n, currency: 'USD' as const },
+      returnUrl: 'https://app.test.local/account/orders/x',
+    })
+    await provider.getCharge('inv1')
+    expect(signals.length).toBe(2)
+    for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
+  })
+})

@@ -35,8 +35,12 @@ export async function POST(req: NextRequest) {
   })
 
   const result = await handleWebhook('payssion', headers, rawBody)
+  // PAY-020: the failure detail (which verification stage rejected the
+  // request, what dispatch threw) is for OUR logs; an unauthenticated caller
+  // only learns that the request was rejected.
+  if (!result.ok) console.error('[webhook:payssion] %d %s', result.status, result.error)
   return NextResponse.json(
-    { ok: result.ok, deduped: result.deduped ?? false, processed: result.processed ?? 0, error: result.error },
+    { ok: result.ok, deduped: result.deduped ?? false, processed: result.processed ?? 0, ...(result.ok ? {} : { error: 'rejected' }) },
     { status: result.status }
   )
 }

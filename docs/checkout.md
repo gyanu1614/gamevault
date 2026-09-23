@@ -1,6 +1,6 @@
 # Checkout & Payments — How It's Built
 
-Last updated: 2026-09-20. Covers the buyer checkout page, the payment provider
+Last updated: 2026-09-22 (checkout fix round A, `fix/checkout-p0`). Covers the buyer checkout page, the payment provider
 spine behind it, and the operational pieces (webhooks, expiry, testing).
 
 ---
@@ -156,8 +156,34 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
    **refused** with "Could not price this order" — there is no fallback to
    the TS constants (`docs/design/fee-engine.md` §9 A4). `createOrder` in
    `orders.ts` (the old Stripe-era second path) is deleted (A9).
+   **Before any of that (fix A, 2026-09-22):** `checkRateLimit('checkout',
+   user:<id>)` is charged inside the action (PAY-007; the REST route's limit
+   never covered the live UI), and a buyer holding **5 open pending orders**
+   is refused before the insert. Every pending order is inserted with a
+   **30-minute fallback `payment_expires_at`** (PAY-006) so a crash before the
+   charge UPDATE can never strand it. A promo usage is **awaited**: the caps
+   (`usage_limit`, `per_user_limit`, active, expiry) bind inside
+   `promo_usage_record` under the promo row lock (PAY-014); a refusal cancels
+   the just-created order and the discount is never granted.
 2. Wallet credit (ledger-backed, `getMyWalletBalance`) can part- or fully-pay;
-   a fully-wallet-paid order skips the provider entirely.
+   a fully-wallet-paid order skips the provider entirely. `wallet_spend`
+   serialises on a per-user advisory xact lock before its balance guard
+   (PAY-001) — two tabs on two listings can no longer overdraw one wallet.
+   A fully wallet-paid order is confirmed through `order_confirm_payment`
+   (same RPC as the webhook, §6); if the stock is gone it comes back as
+   `oversold_refunded` with the credit already returned.
+   **Duplicate / racing requests (PAY-005):** an existing pending order with
+   no `checkout_url` yet, created inside the 90 s in-flight window, is a
+   racing request still inside `createCharge` — it is neither superseded nor
+   re-charged; the buyer gets "payment is still being prepared" and finds
+   the finished order on retry. A 23505 loser on
+   `one_pending_order_per_buyer_listing` never proceeds into charge creation
+   for an order it did not insert.
+   **Charge creation failure (PAY-006):** `createCharge` is wrapped; on
+   failure the order is cancelled and the wallet hold mirrored back in ONE
+   RPC (`order_cancel_return_wallet`, key `charge-create-failed`), provider
+   internals stay in the log, and the copy says the credit is back in the
+   wallet.
 3. Provider routing (`src/lib/payments/registry.ts`):
    `providerNameForMethod(pmId)` → `'payssion'` if the pm_id is in the
    Payssion registry, else the env-active default (BTCPay). Un-registered
@@ -184,14 +210,46 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
   states map to canonical events. Event dedupe key: `txnId:state`.
 - Money seams (cancel+wallet return, refund+credit, …) are **single SQL
   RPCs** — see CLAUDE.md "Money seams" (never recompose in TS).
+- **Payment confirmation = `order_confirm_payment`** (fix A, PAY-003): the
+  ONLY way an order becomes `paid`. In one transaction it runs
+  `safedrop_transition(CHARGE_CONFIRMED)`, stamps `paid_at`, row-locks the
+  listing and **claims the stock** (`quantity >= q`, or `is_unlimited`;
+  `orders.stock_claimed_at`). Stock gone → the same transaction routes the
+  money to `order_refund_to_wallet` (paid → refunded, full total to the
+  buyer's wallet) and answers `outcome: 'oversold_refunded'`; dispatch then
+  sends the REFUND comms. Completion no longer decrements a claimed order
+  again; cancelling/refunding a claimed, still-`paid` order returns the
+  quantity (`stock_returned_at`), a refund after delivery keeps it out.
+  `inventory_claim_for_order` releases a code only to a paid order (PAY-015).
+- **Automatic cancels are valid from `pending` only** (PAY-002).
+  `order_cancel_return_wallet` — the CHARGE_FAILED webhook, the expiry sweep,
+  the checkout supersede and the charge-create failure all call it — is a
+  no-op on a paid/terminal order and inserts ONE deduped `payment_review`
+  notification per active admin (keyed on admin + title + order link).
+  The buyer's explicit `cancelOrder` (PAY-008) is the single caller that
+  passes `p_allow_paid`: a `paid`, undelivered order is cancelled and the
+  full total credited to the wallet in the same RPC; the old TS composition
+  is gone.
+- **Every provider fetch has an 8 s `AbortSignal.timeout`** (PAY-016,
+  `lib/payments/timeouts.ts`); the return-route probe uses 4 s and falls
+  through to the awaiting panel. Webhook routes answer an unauthenticated
+  caller with a generic `rejected` — the failing stage is logged, not echoed.
+  Cron routes check `CRON_SECRET` through `lib/security/cron-auth`
+  (constant-time, fails closed).
 - **Expiry sweep**: GitHub Actions every 30 min →
   `/api/cron/expire-pending-payments` (CRON_SECRET) cancels overdue pending
-  payments at the provider then through the canonical cancel path. (Vercel
+  payments at the provider then through the canonical cancel path. It also
+  closes **never-charged** pending orders (`payment_provider IS NULL`, the
+  fallback expiry from insert), oldest expiry first, on the partial index
+  `orders_pending_payment_sweep_idx`. A row that turned `paid` in the gap is
+  refused by the RPC (PAY-002), never cancelled. (Vercel
   Hobby refuses sub-daily crons — that's why it's a GH Action; vercel.json
   keeps a daily backstop.)
-- Return route `/checkout/return/[orderId]`: paid → order page; cancelled →
-  checkout with a one-shot toast (`?cancelled=1`, URL cleaned after); voucher
-  still pending → awaiting panel.
+- Return route `/checkout/return/[orderId]`: paid lifecycle
+  (paid/delivering/delivered/completed) → order page `?paid=1`; cancelled →
+  checkout with a one-shot toast (`?cancelled=1`, URL cleaned after);
+  refunded/disputed → plain order page; voucher still pending → awaiting
+  panel (provider probe capped at 4 s).
 - Known behavior: Payssion's own page "cancel" doesn't cancel the txn (buyer
   can resume — intended); abandoned QR pages are reaped by the sweep.
 
@@ -301,3 +359,17 @@ alerted on rather than left to accumulate:
 4. Only the selected country's methods render; crypto is always available.
 5. Skeleton (`loading.tsx`) matches every layout change, same pass.
 6. No escrow/hold language anywhere in checkout copy.
+7. **An order becomes `paid` only through `order_confirm_payment`**, which
+   claims the stock in the same transaction. Never call
+   `safedrop_transition(CHARGE_CONFIRMED)` from app code; never decrement
+   `listings.quantity` for a claimed order anywhere else.
+8. **Automatic cancels (webhook, sweep, supersede, charge failure) only ever
+   cancel from `pending`.** A paid order is cancelled only by the buyer's
+   explicit action (`p_allow_paid`) or a refund path — never by an event.
+9. **A 23505 loser never creates a charge for an order it did not insert**,
+   and an in-flight (url-less, < 90 s) pending order is never superseded.
+10. **Every money-state change is ONE service-role SQL function** with an
+    explicit GRANT and an entry in the posture guard's service-only list;
+    new interior steps sit behind a `money_fault_hook` point.
+11. Every pending order carries a `payment_expires_at` from the moment it is
+    inserted; every provider call carries a deadline.

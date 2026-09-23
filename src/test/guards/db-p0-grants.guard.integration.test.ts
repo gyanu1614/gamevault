@@ -61,6 +61,8 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'order_cancel_return_wallet', 'order_refund_to_wallet', 'withdrawal_cancel', 'withdrawal_reject',
   'inventory_claim_for_order', 'promo_usage_record', 'money_fault_hook', 'ledger_test_cleanup_by_withdrawal',
   'money_atomicity_version', 'webhook_event_claim',
+  // fix/checkout-p0 (PAY-003): payment confirm + stock claim, one RPC, service_role only.
+  'order_confirm_payment',
 ]
 
 /**

@@ -114,12 +114,22 @@ export async function validatePromoCode(
 
 // ── Internal: record usage after order is created ────────────────────────────
 
+export type PromoUsageResult = { ok: true; totalUsed: number } | { ok: false; error: string }
+
+/** Buyer-safe copy for a refused usage (the RPC message names the cap). */
+function promoRefusalMessage(detail: string): string {
+  if (/per-user limit/i.test(detail)) return 'You have already used this promo code'
+  if (/usage limit/i.test(detail)) return 'This promo code has reached its usage limit'
+  if (/no longer active/i.test(detail)) return 'This promo code has expired'
+  return 'This promo code could not be applied'
+}
+
 export async function recordPromoUsage(params: {
   promoCodeId: string
   orderId: string
   discountAmount: number
   userId: string | null
-}): Promise<void> {
+}): Promise<PromoUsageResult> {
   const { promoCodeId, orderId, discountAmount, userId } = params
   try {
     // DB-016: usage row + total_used increment in ONE DB transaction under the
@@ -127,16 +137,23 @@ export async function recordPromoUsage(params: {
     // SELECT total_used / UPDATE n+1 lost updates under concurrent redemptions
     // and — run on the session client — never matched a row for a buyer at
     // all (promo_codes is admin-write only), so the usage cap never bound.
+    // PAY-014: the cap now binds INSIDE the RPC; a refusal is returned, not
+    // swallowed — createCheckout awaits it before the discount stands.
     const service = createServiceRoleClient()
-    const { error } = await (service.rpc as any)('promo_usage_record', {
+    const { data, error } = await (service.rpc as any)('promo_usage_record', {
       p_promo_code_id: promoCodeId,
       p_order_id: orderId,
       p_user_id: userId,
       p_discount_amount: discountAmount,
     })
-    if (error) throw error
-  } catch (err) {
+    if (error) {
+      console.error('[promo] recordPromoUsage refused:', error.message)
+      return { ok: false, error: promoRefusalMessage(String(error.message ?? '')) }
+    }
+    return { ok: true, totalUsed: Number(data?.total_used ?? 0) }
+  } catch (err: any) {
     console.error('[promo] recordPromoUsage error:', err)
+    return { ok: false, error: promoRefusalMessage(String(err?.message ?? '')) }
   }
 }
 

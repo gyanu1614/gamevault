@@ -60,6 +60,15 @@ vi.mock('@/lib/supabase/server', () => ({
   },
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
+// PAY-007 (fix/checkout-p0): createCheckout is rate-limited per buyer (20/min)
+// and refuses a buyer with 5 open pending orders. This file drives hundreds of
+// checkouts through ONE buyer to prove fee parity, so the limiter is stubbed
+// open here and the cap raised in beforeAll; the guards themselves are tested
+// in checkout-fix-a.guard.integration.test.ts.
+vi.mock('@/lib/security/rate-limit', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/security/rate-limit')>()
+  return { ...real, checkRateLimit: async (name: string, id: string) => ({ limited: false, retryAfter: 60, key: `${name}:${id}` }) }
+})
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
@@ -159,6 +168,7 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
   beforeAll(async () => {
     process.env.NEXT_PUBLIC_PURCHASES_ENABLED = 'true'
     process.env.PAYMENT_PROVIDER = 'fake'
+    process.env.CHECKOUT_MAX_OPEN_PENDING_ORDERS = '100000' // PAY-007 cap, see the mock above
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('fee_engine_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)

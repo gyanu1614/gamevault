@@ -12,10 +12,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { pingIndexNow } from '@/lib/seo/indexnow'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 // Must be set in environment variables. No fallback — fail closed if unset
-// so a missing CRON_SECRET can never be triggered with a known default token.
-const CRON_SECRET = process.env.CRON_SECRET
 
 const PAGE_SIZE = 1000
 
@@ -106,8 +105,8 @@ async function captureFromCorrectedView(
 export async function GET(request: NextRequest) {
   try {
     // Verify cron secret (fail closed when the secret is not configured)
-    const authHeader = request.headers.get('authorization')
-    if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+    if (!isCronAuthorized(request.headers)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

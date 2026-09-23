@@ -14,10 +14,14 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import type { TransitionResult } from '@/lib/escrow/transition'
 
 export interface OrderMoneyResult extends TransitionResult {
   walletTxnId: string | null
+  /** PAY-002: the RPC declined to touch the order (paid/terminal on an
+   *  automatic cancel). Nothing changed; admins were alerted (deduped). */
+  refused: boolean
 }
 
 function toResult(data: any): OrderMoneyResult {
@@ -28,6 +32,7 @@ function toResult(data: any): OrderMoneyResult {
     ledgerTxnId: data.ledger_txn_id ?? null,
     changed: data.changed === true,
     walletTxnId: data.wallet_txn_id ?? null,
+    refused: data.refused === true,
   }
 }
 
@@ -35,12 +40,24 @@ function toResult(data: any): OrderMoneyResult {
  * Cancel an unpaid order AND mirror its checkout wallet hold
  * (`checkout_wallet:<id>`, escrow_held → user_wallet) back to the buyer, in
  * one transaction. No-op halves are skipped (already cancelled / no hold).
+ *
+ * PAY-002: the automatic callers (CHARGE_FAILED webhook, expiry sweep,
+ * checkout supersede, charge-create failure) may cancel from `pending` ONLY.
+ * On a paid/terminal order the RPC changes nothing, inserts one deduped
+ * admin `payment_review` alert and answers `{ changed: false, refused: true }`.
+ * The buyer's explicit cancel passes `allowPaid: true`, which also cancels a
+ * `paid` order and credits the full total to the wallet — inside the RPC.
  */
-export async function cancelOrderReturnWallet(orderId: string, dedupeKey?: string): Promise<OrderMoneyResult> {
+export async function cancelOrderReturnWallet(
+  orderId: string,
+  dedupeKey?: string,
+  opts?: { allowPaid?: boolean }
+): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_cancel_return_wallet', {
     p_order_id: orderId,
     p_dedupe_key: dedupeKey ?? null,
+    p_allow_paid: opts?.allowPaid === true,
   })
   if (error) throw new Error(`order_cancel_return_wallet failed: ${error.message}`)
   return toResult(data)
@@ -65,4 +82,51 @@ export async function refundOrderToWallet(
   })
   if (error) throw new Error(`order_refund_to_wallet failed: ${error.message}`)
   return toResult(data)
+}
+
+export type ConfirmOutcome = 'paid' | 'oversold_refunded' | 'noop'
+
+export interface ConfirmPaymentResult extends OrderMoneyResult {
+  outcome: ConfirmOutcome
+  /** oversold_refunded only: why the stock could not be claimed. */
+  reason?: string | null
+}
+
+/**
+ * PAY-003 — confirm a payment: pending → paid, paid_at stamped, and the
+ * listing's stock CLAIMED (row-locked `quantity >= q`) in ONE transaction.
+ * When the stock is already gone the same transaction routes the money to
+ * the existing refund path (paid → refunded, full total to the buyer's
+ * wallet) and answers `outcome: 'oversold_refunded'` — the buyer is never
+ * left paid-and-undeliverable. `noop` = already paid (replay).
+ *
+ * The only way an order becomes `paid`: the webhook (dispatch), the fully
+ * wallet-paid checkout, and the wallet-covered retry all call this.
+ */
+export async function confirmOrderPayment(orderId: string, dedupeKey?: string): Promise<ConfirmPaymentResult> {
+  const supabase = createServiceRoleClient()
+  const { data, error } = await (supabase.rpc as any)('order_confirm_payment', {
+    p_order_id: orderId,
+    p_dedupe_key: dedupeKey ?? null,
+  })
+  if (error) throw new Error(`order_confirm_payment failed: ${error.message}`)
+  const result: ConfirmPaymentResult = {
+    ...toResult(data),
+    outcome: (data.outcome as ConfirmOutcome) ?? 'noop',
+    reason: data.reason ?? null,
+  }
+  // Stock moved (claimed, or the listing re-opened): the prerendered
+  // category page shows the quantity. Best-effort, never fails the payment.
+  if (result.changed) await revalidateOrderListing(supabase, orderId)
+  return result
+}
+
+async function revalidateOrderListing(supabase: ReturnType<typeof createServiceRoleClient>, orderId: string) {
+  try {
+    const { data: order } = await supabase.from('orders').select('listing_id').eq('id', orderId).maybeSingle()
+    const listingId = (order as { listing_id?: string | null } | null)?.listing_id
+    if (listingId) await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+  } catch (e) {
+    console.error('[order-money] listing surface revalidation failed (non-fatal):', e)
+  }
 }

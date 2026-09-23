@@ -15,8 +15,9 @@
  *   6. Creates a CoinGate hosted charge for the REMAINING amount and returns the
  *      checkout URL to redirect the buyer to.
  *
- * The order is confirmed (pending → paid) only by the verified CoinGate webhook
- * (safedrop_transition CHARGE_CONFIRMED), never by the browser.
+ * The order is confirmed (pending → paid) only by the verified provider
+ * webhook (order_confirm_payment: CHARGE_CONFIRMED + stock claim in one
+ * transaction), never by the browser.
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -27,6 +28,8 @@ import { resolveSellerFee, FeeResolutionError, type SellerFeeTrace } from '@/lib
 import { runOrderInsert, OrderInsertConflictError, type OrderInsertResult } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import { spendWallet, getWalletBalance } from '@/lib/wallet/wallet'
+import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { checkRateLimit } from '@/lib/security/rate-limit'
 import { validatePromoCode, recordPromoUsage } from '@/lib/actions/promo'
 import { resolveCheckoutPromo } from '@/lib/checkout/promo'
 import { fromDecimal, money } from '@/lib/money'
@@ -38,6 +41,33 @@ import { fromDecimal, money } from '@/lib/money'
 // $-labelled surface of the UI. (EUR was a leftover of the CoinGate/SEPA
 // plan; switched before any real payment existed.)
 const ORDER_CURRENCY = 'USD'
+
+/** PAY-007: open (pending) orders one buyer may hold at once. Each one is a
+ *  live provider invoice and, when wallet credit was applied, money held for
+ *  that order — an unbounded count is an abuse surface, not a feature.
+ *  Read per call so a load harness (the fee parity loop drives hundreds of
+ *  checkouts through one buyer) can raise it; production never sets it. */
+const DEFAULT_MAX_OPEN_PENDING_ORDERS = 5
+function maxOpenPendingOrders(): number {
+  const n = Number.parseInt(process.env.CHECKOUT_MAX_OPEN_PENDING_ORDERS ?? '', 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_MAX_OPEN_PENDING_ORDERS
+}
+/** PAY-006: a pending order gets this expiry at INSERT, before any provider
+ *  call, so an order stranded by a crash between insert and the charge
+ *  UPDATE is always sweepable. The provider's own expiry overwrites it. */
+const FALLBACK_PAYMENT_WINDOW_MS = 30 * 60 * 1000
+/** PAY-005: an existing pending order with no checkout_url yet is a racing
+ *  request still inside provider.createCharge for this long; superseding it
+ *  would cancel an order that is about to receive a live charge. */
+const CHARGE_IN_FLIGHT_WINDOW_MS = 90 * 1000
+const PAYMENT_BEING_PREPARED_MESSAGE =
+  'Your payment is still being prepared — please try again in a moment.'
+const PROVIDER_UNAVAILABLE_MESSAGE =
+  'The payment service is temporarily unavailable. Nothing was charged, and any wallet credit you applied is back in your wallet. Please try again shortly.'
+/** PAY-003: the stock ran out between checkout and payment; the order was
+ *  refunded to the wallet inside the confirm transaction. */
+const SOLD_OUT_REFUNDED_MESSAGE =
+  'This item sold out just before your payment went through — the full amount is back in your DropMarket wallet.'
 
 export interface CreateCheckoutInput {
   listingId: string
@@ -70,6 +100,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { success: false, error: 'Authentication required' }
+
+    // PAY-007: the live UI calls this action directly (never /api/checkout),
+    // so the budget must be charged HERE. Per buyer, not per IP: one account
+    // minting orders + provider invoices is the abuse this bounds.
+    const limit = await checkRateLimit('checkout', `user:${user.id}`)
+    if (limit.limited) {
+      return { success: false, error: 'Too many checkout attempts — please wait a minute and try again.' }
+    }
 
     const quantity = Math.max(1, Math.floor(input.quantity ?? 1))
 
@@ -147,6 +185,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
           checkoutUrl: toRelativePayUrl(existingPending.checkout_url),
         }
       }
+      // PAY-005: no checkout_url yet and created moments ago = a racing
+      // request (other tab, double submit) is still creating the provider
+      // charge for it. Superseding now would cancel an order about to get a
+      // live charge; minting our own would give one order two charges. The
+      // buyer retries in a moment and finds the finished order (reuse above).
+      if (!existingPending.checkout_url && isChargeInFlight(existingPending.created_at)) {
+        return { success: false, orderId: existingPending.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
+      }
       // Amounts drifted (quantity/promo/wallet changed) OR the invoice expired.
       // Supersede the stale order: CANCELLED + the exact mirror of any wallet
       // hold the buyer applied to it (checkout_wallet:<id>, escrow_held →
@@ -182,6 +228,18 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       }
     }
 
+    // PAY-007: cap on open pending orders per buyer, server-side. Counted
+    // after the supersede above (a re-checkout of the same listing replaces
+    // its order rather than adding one) and before this insert.
+    const maxOpen = maxOpenPendingOrders()
+    const openPending = await countOpenPendingOrders(user.id, maxOpen)
+    if (openPending >= maxOpen) {
+      return {
+        success: false,
+        error: `You have ${openPending} orders awaiting payment. Complete or cancel one before starting another.`,
+      }
+    }
+
     // Create the order at PENDING. Confirmed only by the verified webhook.
     let orderId: string
     // The stored number, for the provider's buyer-visible description.
@@ -205,9 +263,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       if ('orderId' in insertRes) {
         orderId = insertRes.orderId
         orderNumber = insertRes.orderNumber ?? null
-        // AUTH-003 — usage is recorded so per-user / total limits bind.
+        // AUTH-003 / PAY-014 — the usage is recorded, AWAITED, before the
+        // discounted order can go anywhere: the RPC enforces usage_limit /
+        // per_user_limit under the promo row lock. A refusal cancels the
+        // order we just created (nothing else has happened to it yet) and
+        // the buyer gets the cap message — the discount is never granted.
         if (promoCodeId && promoDiscount > 0) {
-          recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id }).catch(() => {})
+          const usage = await recordPromoUsage({ promoCodeId, orderId, discountAmount: promoDiscount, userId: user.id })
+          if (!usage.ok) {
+            await cancelOrderReturnWallet(orderId, 'promo-refused').catch((e) =>
+              console.error('[createCheckout] cancel after promo refusal failed:', e)
+            )
+            return { success: false, error: usage.error }
+          }
         }
       } else if ('duplicate' in insertRes) {
         // 23505 on one_pending_order_per_buyer_listing (and ONLY that index —
@@ -219,12 +287,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         if (raced?.checkout_url) {
           return { success: true, orderId: raced.id, checkoutUrl: toRelativePayUrl(raced.checkout_url) }
         }
+        // PAY-005: the winner is still inside provider.createCharge (its
+        // checkout_url UPDATE comes after). This request did not insert that
+        // order and must NEVER create a charge for it — that overwrote the
+        // winner's provider_charge_id and left two live charges on one order.
         if (raced) {
-          orderId = raced.id
-          orderNumber = raced.order_number
-        } else {
-          return { success: false, error: 'Could not open checkout — please try again' }
+          return { success: false, orderId: raced.id, error: PAYMENT_BEING_PREPARED_MESSAGE }
         }
+        return { success: false, error: 'Could not open checkout — please try again' }
       } else {
         const isDev = process.env.NODE_ENV !== 'production'
         return { success: false, error: isDev ? `Failed to create order: ${insertRes.error}` : 'Failed to create order' }
@@ -261,14 +331,20 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       // Wallet already funded escrow_held for the full total; mark paid.
       // safedrop_transition dedupes the wallet-paid portion, so this posts
       // NO provider_float journal for a fully wallet-paid order. Service-role
-      // seam: the RPC is not executable by the user-bound client.
-      const { transition } = await import('@/lib/escrow/transition')
-      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full')
+      // seam: the RPC is not executable by the user-bound client. PAY-003:
+      // the stock is claimed inside the same transaction; if it is already
+      // gone the order is refunded to the wallet there and then.
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(orderId, 'wallet-full')
+      const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      if (confirmed.outcome === 'oversold_refunded') {
+        await notifyOrderTransition('REFUNDED', orderId).catch(() => {})
+        return { success: false, orderId, error: SOLD_OUT_REFUNDED_MESSAGE }
+      }
       // Paid comms normally ride on the payment webhook (dispatch), which
       // this wallet-only branch bypasses — send them here. The order was
       // created moments ago in this same call, so this is always its first
       // CHARGE_CONFIRMED. Awaited; failure never fails checkout.
-      const { notifyOrderTransition } = await import('@/lib/payments/notify')
       await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
       return { success: true, orderId, fullyPaidByWallet: true }
     }
@@ -283,25 +359,44 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     // crypto provider.
     const providerName = providerNameForMethod(input.paymentMethodId)
     const provider = getProvider(providerName)
-    const charge = await provider.createCharge({
-      orderId,
-      orderNumber,
-      amount: chargeMoney,
-      // Payssion has ONE return URL for paid AND cancelled — the smart
-      // /checkout/return route inspects the outcome and lands the buyer on
-      // the order page (paid/awaiting) or back at checkout (cancelled).
-      returnUrl:
-        providerName === 'payssion'
-          ? `${base}/checkout/return/${orderId}`
-          : `${base}/account/orders/${orderId}?paid=1`,
-      cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
-      metadata: {
-        listing_id: input.listingId,
-        ...(providerName === 'payssion' && input.paymentMethodId
-          ? { pm_id: input.paymentMethodId }
-          : {}),
-      },
-    })
+    let charge
+    try {
+      charge = await provider.createCharge({
+        orderId,
+        orderNumber,
+        amount: chargeMoney,
+        // Payssion has ONE return URL for paid AND cancelled — the smart
+        // /checkout/return route inspects the outcome and lands the buyer on
+        // the order page (paid/awaiting) or back at checkout (cancelled).
+        returnUrl:
+          providerName === 'payssion'
+            ? `${base}/checkout/return/${orderId}`
+            : `${base}/account/orders/${orderId}?paid=1`,
+        cancelUrl: `${base}/checkout/${input.listingId}?qty=${quantity}`,
+        metadata: {
+          listing_id: input.listingId,
+          ...(providerName === 'payssion' && input.paymentMethodId
+            ? { pm_id: input.paymentMethodId }
+            : {}),
+        },
+      })
+    } catch (chargeError: any) {
+      // PAY-006: no charge exists, but the order does — and the wallet debit
+      // above sits in escrow_held for it. Left alone it was a pending order
+      // with no provider, no expiry and no webhook ever coming: invisible to
+      // the sweep, the buyer's money stranded. Cancel + return the hold in
+      // ONE RPC (idempotent), then tell the buyer the truth. Provider/config
+      // internals never reach the buyer verbatim.
+      console.error(`[createCheckout] ${providerName} charge creation failed (order ${orderId} cancelled, wallet returned):`, chargeError?.message ?? chargeError)
+      try {
+        await cancelOrderReturnWallet(orderId, 'charge-create-failed')
+      } catch (cancelError) {
+        // The fallback payment_expires_at stamped at insert makes this order
+        // sweepable; the sweep drives the same cancel + return path.
+        console.error(`[createCheckout] cancel after charge failure ALSO failed (order ${orderId} left for the sweep):`, cancelError)
+      }
+      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
+    }
     // BTCPay: the buyer pays on OUR native page (address/QR/status), not the
     // provider's hosted checkout — the invoice id on the order is what the
     // page renders from. RELATIVE on purpose: an absolute URL would pin the
@@ -346,11 +441,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const msg = String(e?.message ?? '')
     // Provider/config internals never reach the buyer verbatim.
     if (msg.startsWith('[Payssion]') || msg.startsWith('payssion:')) {
-      console.error('[createCheckout] payssion charge failed:', msg)
-      return {
-        success: false,
-        error: 'The payment service is temporarily unavailable — nothing was charged. Please try again shortly.',
-      }
+      console.error('[createCheckout] payssion call failed:', msg)
+      return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
     }
     return { success: false, error: e?.message ?? 'Checkout failed' }
   }
@@ -406,6 +498,30 @@ function bigintMin(a: bigint, b: bigint): bigint {
   return a < b ? a : b
 }
 
+/** PAY-005: was this url-less pending order inserted within the in-flight window? */
+function isChargeInFlight(createdAtIso: string | null): boolean {
+  if (!createdAtIso) return false
+  const age = Date.now() - new Date(createdAtIso).getTime()
+  return age >= 0 && age < CHARGE_IN_FLIGHT_WINDOW_MS
+}
+
+/** PAY-007: the buyer's open (pending) orders, counted as the backend.
+ *  A bounded GET, deliberately NOT a `head: true` count: a HEAD response
+ *  through Kong → PostgREST leaves the upstream keep-alive socket in a bad
+ *  state and the NEXT request on it (the order INSERT) came back as a 502
+ *  "upstream prematurely closed" — 1–1.5 % of checkouts in the 405-order
+ *  parity loop, zero on the pre-fix code. We only need "at least the cap". */
+async function countOpenPendingOrders(buyerId: string, max: number): Promise<number> {
+  const { data, error } = await createServiceRoleClient()
+    .from('orders')
+    .select('id')
+    .eq('buyer_id', buyerId)
+    .eq('status', 'pending')
+    .limit(max)
+  if (error) throw new Error(`open pending order count failed: ${error.message}`)
+  return (data ?? []).length
+}
+
 interface ReusablePendingOrder {
   id: string
   order_number: string | null
@@ -414,6 +530,7 @@ interface ReusablePendingOrder {
   payment_expires_at: string | null
   payment_provider: string | null
   provider_charge_id: string | null
+  created_at: string | null
 }
 
 /**
@@ -429,7 +546,7 @@ async function findReusablePendingOrder(
 ): Promise<ReusablePendingOrder | null> {
   const { data } = await supabase
     .from('orders')
-    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id')
+    .select('id, order_number, total_amount, checkout_url, payment_expires_at, payment_provider, provider_charge_id, created_at')
     .eq('buyer_id', buyerId)
     .eq('listing_id', listingId)
     .eq('status', 'pending')
@@ -492,6 +609,8 @@ async function insertPendingOrder(
     escrow_status: 'pending',
     promo_discount: a.promoDiscount,
     promo_code_id: a.promoCodeId,
+    // PAY-006: sweepable from birth; the provider's expiry replaces this.
+    payment_expires_at: new Date(Date.now() + FALLBACK_PAYMENT_WINDOW_MS).toISOString(),
   })
     .select('id, order_number')
     .single())
@@ -564,10 +683,15 @@ export async function retryOrderPayment(orderId: string): Promise<{
     const remainingMinor = totalMoney.amountMinor - heldMinor
 
     if (remainingMinor <= 0n) {
-      // Wallet already funds the full total — confirm instead of charging.
-      const { transition } = await import('@/lib/escrow/transition')
-      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full-retry')
+      // Wallet already funds the full total — confirm instead of charging
+      // (PAY-003: stock claimed inside; sold out → refunded to the wallet).
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(orderId, 'wallet-full-retry')
       const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      if (confirmed.outcome === 'oversold_refunded') {
+        await notifyOrderTransition('REFUNDED', orderId).catch(() => {})
+        return { success: false, error: SOLD_OUT_REFUNDED_MESSAGE }
+      }
       await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
       return { success: true, fullyPaidByWallet: true }
     }

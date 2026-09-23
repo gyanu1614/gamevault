@@ -20,6 +20,7 @@ import {
   ExpireListingsError,
   runExpireSabListings,
 } from '@/lib/sab/expire-listings'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 /**
  * Next reads this as a literal only (CLAUDE.md). 300s is the Vercel maximum;
@@ -29,9 +30,8 @@ import {
 export const maxDuration = 300
 
 export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = request.headers.get('authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+  if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
