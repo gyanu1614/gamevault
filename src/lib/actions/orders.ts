@@ -4,11 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
-import { protectionWindowHours } from '@/lib/fees'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
-import { transition } from '@/lib/escrow/transition'
 import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
@@ -171,14 +170,12 @@ export async function startDelivering(
       }
     }
 
-    // Update order to delivering status
-    const { error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivering',
-        delivering_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
+    // PR 7: orders.status is a guarded column — every state change is one
+    // service-role RPC (order_mark_delivering → safedrop_transition).
+    const { error: updateError } = await (createServiceRoleClient().rpc as any)('order_mark_delivering', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
+    })
 
     if (updateError) {
       return {
@@ -230,18 +227,12 @@ export async function notifySellerActivity(orderId: string): Promise<void> {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    // The update is atomic + race-safe via the WHERE clause. If two
-    // messages land in the same tick, only the first matching row
-    // flips; the second is a 0-row no-op.
-    await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivering',
-        delivering_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
-      .eq('seller_id', user.id)
-      .eq('status', 'paid')
+    // The RPC locks the row and only flips a `paid` order owned by this
+    // seller; a second call in the same tick returns changed=false.
+    await (createServiceRoleClient().rpc as any)('order_mark_delivering', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
+    })
 
     revalidatePath(`/account/orders/${orderId}`)
   } catch (e) {
@@ -296,24 +287,13 @@ export async function markOrderAsDelivered(
       return { success: true }
     }
 
-    // Update order. The per-category protection window (fee spec §1) sets
-    // auto_release_at; the DB trigger only falls back to 48h when the app
-    // doesn't supply one (see update-fee-structure.sql).
-    const windowHours = protectionWindowHours({
-      categoryMetaType: order.listing?.category?.type,
-      categorySlug: order.listing?.category?.slug,
-      gameSlug: order.listing?.game?.slug,
+    // PR 7: ONE RPC — SELLER_DELIVERED + delivered_at + auto_release_at from
+    // the admin-editable per-category window (order_completion_windows). The
+    // row lock inside is the race guard; a loser sees changed=false.
+    const { data: delivered, error: updateError } = await (createServiceRoleClient().rpc as any)('order_mark_delivered', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
     })
-    const { data: updatedRows, error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivered',
-        delivered_at: new Date().toISOString(),
-        auto_release_at: new Date(Date.now() + windowHours * 3_600_000).toISOString(),
-      })
-      .eq('id', orderId)
-      .in('status', ['paid', 'delivering']) // race guard: only one transition wins
-      .select('id')
 
     if (updateError) {
       console.error('Database error updating order:', updateError)
@@ -324,9 +304,11 @@ export async function markOrderAsDelivered(
     }
 
     // Lost the race (another request already transitioned it) — no comms.
-    if (!updatedRows || updatedRows.length === 0) {
+    if (!delivered || delivered.changed !== true) {
       return { success: true }
     }
+    const windowHours = Number(delivered.window_hours ?? 72)
+    const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())
 
     // Send navbar notification to buyer
     try {
@@ -364,7 +346,7 @@ export async function markOrderAsDelivered(
           orderNumber: (order as any).order_number || orderId.slice(0, 8).toUpperCase(),
           listingTitle: (order as any).listing?.title || 'your item',
           windowHours,
-          confirmBy: new Date(Date.now() + windowHours * 3_600_000).toISOString(),
+          confirmBy,
         })
       }
     })().catch((err) => console.error('[Delivered] Buyer email failed:', err))
@@ -593,73 +575,35 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
-    // An UNPAID order must never be confirmable — without this, a buyer
-    // could walk a pending order straight to 'completed' (found when the
-    // dead PUBLIC_API_URL fallback left every order stuck at 'pending'
-    // yet the test flow still "completed" one).
-    if (order.status === 'pending' || order.status === 'cancelled' || order.status === 'refunded') {
-      return { success: false, error: 'This order has not been paid yet' }
-    }
-
-    // A disputed order's money is frozen — confirming receipt must not
-    // release it while an admin is reviewing. (The transition map allows
-    // disputed → completed for ADMIN resolutions; guard the buyer path.)
-    if (order.status === 'disputed') {
-      return { success: false, error: 'This order is under dispute review' }
-    }
-
-    // If order is not yet delivered, mark as delivered first
-    // This allows buyer to confirm receipt even if seller hasn't marked as delivered
-    const now = new Date().toISOString()
-
-    if (order.status !== 'delivered') {
-      // First transition to delivered. Guarded on escrow_status = 'held' so a
-      // replay racing the CAS below can't drag an already-completed (released)
-      // or disputed (frozen) order's status back to 'delivered'. Zero rows
-      // matched is not an error — the CAS below decides who owns completion.
-      const { error: deliveredError } = await (supabase
-        .from('orders')
-        .update as any)({
-          status: 'delivered',
-          delivered_at: now,
-        })
-        .eq('id', orderId)
-        .eq('escrow_status', 'held')
-
-      if (deliveredError) {
-        console.error('Error marking order as delivered:', deliveredError)
-        return {
-          success: false,
-          error: deliveredError.message || 'Failed to mark order as delivered',
-        }
-      }
-    }
-
-    // Complete atomically through the SafeDrop transition RPC: it locks the
-    // order row, validates delivered → completed, posts the ledger journal
-    // (escrow_held → platform take + seller_available — the seller's payout
-    // is credited to their internal seller balance, NOT a Stripe transfer)
-    // and flips status/escrow_status in ONE DB transaction. The row lock +
-    // idempotent journal replace the old CAS + transferEscrowToSeller pair:
-    // exactly one caller (buyer confirm vs auto-release cron) applies the
-    // move; the loser sees changed=false.
-    let release
-    try {
-      release = await transition(orderId, 'BUYER_CONFIRMED', undefined, 'buyer_confirmed')
-    } catch (transitionError: any) {
-      console.error('Database error completing order:', transitionError)
+    // PR 7: ONE RPC — (SELLER_DELIVERED if the seller never marked it) +
+    // BUYER_CONFIRMED release with the maturity hold, in one transaction. The
+    // RPC refuses (changed=false + reason) unpaid, disputed and already-
+    // released orders, and locks the row so exactly one of buyer confirm /
+    // auto-complete applies the move; the loser sees changed=false.
+    const { data: release, error: releaseError } = await (createServiceRoleClient().rpc as any)('order_confirm_receipt', {
+      p_order_id: orderId,
+      p_buyer_id: user.id,
+    })
+    if (releaseError) {
+      console.error('Database error completing order:', releaseError)
       return {
         success: false,
-        error: transitionError?.message || 'Failed to complete order',
+        error: releaseError.message || 'Failed to complete order',
       }
     }
 
-    if (!release.changed) {
-      // Lost the race: another path (auto-release cron, concurrent confirm)
-      // already completed the order. The winner owns the seller credit and
-      // completion comms — doing them here would double-send.
+    if (!release || release.changed !== true) {
+      const reason = String(release?.reason ?? '')
+      if (reason === 'not_paid') return { success: false, error: 'This order has not been paid yet' }
+      if (reason === 'disputed') return { success: false, error: 'This order is under dispute review' }
+      // already_completed / not_held / race lost: the winner owns the seller
+      // credit and completion comms — doing them here would double-send.
       return { success: true }
     }
+
+    // Completion decrements stock (trigger) — keep the public listing pages in
+    // step, exactly as transition() does for the auto-complete path.
+    await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
 
     // Buyer completion receipt (fire-and-forget, non-blocking). When
     // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic

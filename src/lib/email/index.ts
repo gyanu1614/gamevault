@@ -1240,3 +1240,52 @@ export async function sendEarlySellerAdminNotificationEmail({
 
   return error ? { success: false, error } : { success: true, data }
 }
+
+/**
+ * PR 7 — halfway reminder inside the SafeDrop Protection window. Sent at most
+ * once per order (the claim is atomic in order_confirm_reminders_claim).
+ */
+export async function sendOrderConfirmReminderEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  gameSlug,
+  autoCompleteAt,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  gameSlug?: string | null
+  /** ISO timestamp when the order completes automatically. */
+  autoCompleteAt: string
+}) {
+  const completesText = new Date(autoCompleteAt).toUTCString().replace(' GMT', ' UTC')
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Did you receive order #${orderNumber}? Please confirm`,
+    html: emailShell({
+      preview: `A quick check on order #${orderNumber} — confirm receipt or tell us what went wrong.`,
+      icon: 'delivered',
+      heading: 'Please confirm your order',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — the seller marked order #${orderNumber} as delivered a little while ago. If everything arrived as described, please confirm receipt so the seller gets paid.`) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
+        emailBox({
+          accent: true,
+          title: 'SafeDrop Protection',
+          html: `You are covered until <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${completesText}</strong>. If you do nothing, the order completes automatically then. Something not right? Open a dispute from the order page before that time and we will look into it for you.`,
+        }) +
+        emailButton('Confirm Receipt →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Not what you ordered? <a href="${APP_URL}/account/orders/${orderId}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Open a dispute</a> — Item Guaranteed or Full Refund.`),
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}

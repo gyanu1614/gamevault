@@ -72,6 +72,14 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
  * learn which keys are close to their limit. Named here so the posture test
  * says which function regressed rather than just printing a list diff.
  */
+/** Fee engine PR 7 — post-delivery money: completion, disputes, withdrawals. */
+const PR7_SERVICE_ONLY = [
+  'order_completion_version', 'post_journal', 'seller_matured_balance', 'seller_frozen_balance',
+  'order_completion_window_hours', 'order_mark_delivering', 'order_mark_delivered', 'order_confirm_receipt',
+  'get_orders_ready_for_auto_release', 'order_confirm_reminders_claim', 'notify_once',
+  'seller_since', 'seller_withdrawal_gate', 'wallet_available_balance',
+]
+
 const RATE_LIMIT_SERVICE_ONLY = [
   'rate_limit_hit', 'rate_limits_cleanup', 'rate_limits_version',
 ]
@@ -255,7 +263,7 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
-      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY]) {
+      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY]) {
         expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
         expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
       }

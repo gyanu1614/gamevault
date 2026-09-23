@@ -57,6 +57,9 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   // service-role only. docs/design/fee-engine.md §1.1–1.2.
   fee_rules: 'seller-commission rates; public by design, no PII, no money',
   platform_fee_settings: 'single-row fee programme terms (floor, founding %, notice days)',
+  // Fee engine PR 7: SafeDrop Protection windows per category are quoted on
+  // /sell/fees and the buyer terms. Read-only config, no PII, no money.
+  order_completion_windows: 'per-category auto-complete windows; public terms, service-role writes',
 
   // SAB public price catalogue.
   sab_brainrots: 'public SAB value pages',
