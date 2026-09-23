@@ -91,8 +91,22 @@ export async function dispatch(
   // manual external refund on top is DOUBLE compensation. Always check
   // ledger_transactions for those keys before refunding at the provider.
   let result
+  // PAY-003: a confirmed payment whose stock was already gone is refunded
+  // to the buyer's wallet inside the confirm transaction; the comms below
+  // must then be the REFUND comms, not the paid ones.
+  let notifyEvent: OrderEvent = orderEvent
   try {
-    if (event.type === 'REFUND_COMPLETED') {
+    if (event.type === 'CHARGE_CONFIRMED') {
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(event.orderId, providerEventId)
+      if (confirmed.outcome === 'oversold_refunded') {
+        console.warn(
+          `[Dispatch] order ${event.orderId} paid but out of stock (${confirmed.reason ?? 'unknown'}) — refunded to the buyer wallet in the same transaction`
+        )
+        notifyEvent = 'REFUNDED'
+      }
+      result = confirmed
+    } else if (event.type === 'REFUND_COMPLETED') {
       const { refundOrderToWallet } = await import('@/lib/wallet/order-money')
       result = await refundOrderToWallet(event.orderId, providerEventId, event.amount?.amountMinor)
     } else if (event.type === 'CHARGE_FAILED') {
@@ -130,7 +144,7 @@ export async function dispatch(
     // be silently dropped — but errors are swallowed: comms failure never
     // fails the payment.
     const { notifyOrderTransition } = await import('@/lib/payments/notify')
-    await notifyOrderTransition(orderEvent, event.orderId, event).catch(() => {})
+    await notifyOrderTransition(notifyEvent, event.orderId, notifyEvent === orderEvent ? event : undefined).catch(() => {})
   }
 
   return { applied: result.changed, orderId: result.orderId, status: result.status }

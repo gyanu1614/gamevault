@@ -6,12 +6,17 @@
  *   PAY-002  order_cancel_return_wallet cancels from `pending` only; paid /
  *            terminal → no-op + ONE deduped admin alert; buyer's explicit
  *            cancel (p_allow_paid) still cancels a paid order + credits wallet.
+ *   PAY-003  order_confirm_payment claims the listing stock inside the
+ *            confirm transaction; sold out → refunded to the wallet in the
+ *            same transaction; an undelivered cancel returns the stock.
+ *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
  *
  * Every row this file causes is removed in afterAll — orders, ledger
  * journals, and the admin notifications the RPC inserts (for EVERY active
  * admin on the stack, not just the fixture's).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
 
@@ -31,6 +36,33 @@ vi.mock('@/lib/email', async (importOriginal) => {
 
 let fx: Fixture | null = null
 const CUR = 'USD'
+const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const targetHost = (() => { try { return new globalThis.URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname } catch { return '' } })()
+const TARGET_IS_LOCAL = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(targetHost)
+const itFault = it.skipIf(!TARGET_IS_LOCAL)
+
+/** Run `sql` in one psql transaction with app.money_fault = point (local stack only). */
+function withFault(point: string, sql: string): string {
+  const script = `BEGIN;\nSET LOCAL app.money_fault = '${point}';\n${sql};\nCOMMIT;`
+  try {
+    execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', script], { stdio: 'pipe' })
+    return ''
+  } catch (e: any) {
+    return e?.stderr?.toString() ?? String(e)
+  }
+}
+async function listingRow() {
+  const { data } = await fx!.svc.from('listings').select('quantity, status, is_unlimited').eq('id', fx!.listingId).single()
+  return data as any
+}
+async function setStock(quantity: number, is_unlimited = false) {
+  const { error } = await fx!.svc.from('listings').update({ quantity, is_unlimited, status: 'active' }).eq('id', fx!.listingId)
+  if (error) throw new Error(`listing stock: ${error.message}`)
+}
+async function txnByKey(key: string) {
+  const { data } = await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', key).maybeSingle()
+  return data as { id: string } | null
+}
 const tag = () => Math.random().toString(36).slice(2, 8)
 const createdOrderIds: string[] = []
 
@@ -187,6 +219,141 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       const refused = await cancelOrderReturnWallet(delivering, undefined, { allowPaid: true })
       expect(refused.refused).toBe(true)
       expect((await orderRow(delivering)).status).toBe('delivering')
+    }, 60_000)
+  })
+
+  // ── PAY-003 / PAY-015 ──────────────────────────────────────────────────────
+  describe('PAY-003 — stock is claimed at payment confirmation, inside the confirm transaction', () => {
+    const sig = { 'x-fake-signature': process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret' }
+
+    it('two paid orders for the last unit: the first claims it, the second is refunded to the wallet in the same transaction', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await parkPendingOrders(fx!.admin.id)
+      await setStock(1)
+      const a = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-a-${tag()}` })
+      const b = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-P3-b-${tag()}` })
+      const bWalletBefore = await walletMinor(fx!.admin.id)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+
+      const ra = await confirmOrderPayment(a, 'evt-a')
+      expect(ra.outcome).toBe('paid')
+      expect(ra.changed).toBe(true)
+      const rowA = await orderRow(a)
+      expect(rowA.status).toBe('paid')
+      expect(rowA.paid_at).not.toBeNull()
+      expect(rowA.stock_claimed_at).not.toBeNull()
+      expect(await listingRow()).toMatchObject({ quantity: 0, status: 'sold' })
+
+      // Replay of the same confirmation: no-op, stock untouched.
+      const again = await confirmOrderPayment(a, 'evt-a')
+      expect(again.outcome).toBe('noop')
+      expect((await listingRow()).quantity).toBe(0)
+
+      const rb = await confirmOrderPayment(b, 'evt-b')
+      expect(rb.outcome).toBe('oversold_refunded')
+      expect(rb.reason).toBe('insufficient_stock')
+      const rowB = await orderRow(b)
+      expect(rowB.status).toBe('refunded')
+      expect(rowB.escrow_status).toBe('refunded')
+      expect(rowB.stock_claimed_at).toBeNull()
+      expect(await walletMinor(fx!.admin.id)).toBe(bWalletBefore + 100n)
+      expect(await txnByKey(`order:${b}:CHARGE_CONFIRMED:evt-b`)).not.toBeNull()
+      expect(await txnByKey(`order:${b}:REFUNDED:oversold`)).not.toBeNull()
+      expect(await txnByKey(`wallet_refund:${b}`)).not.toBeNull()
+      expect((await listingRow()).quantity).toBe(0)
+
+      // Buyer cancels the paid, undelivered order → the unit is back on sale.
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const cancelled = await cancelOrderReturnWallet(a, undefined, { allowPaid: true })
+      expect(cancelled.changed).toBe(true)
+      expect((await orderRow(a)).stock_returned_at).not.toBeNull()
+      expect(await listingRow()).toMatchObject({ quantity: 1, status: 'active' })
+      await setStock(5)
+    }, 90_000)
+
+    it('a refund AFTER delivery keeps the stock out; completion of a claimed order does not decrement twice', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(3)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const delivered = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-d-${tag()}` })
+      expect((await confirmOrderPayment(delivered, 'evt-d')).outcome).toBe('paid')
+      expect((await listingRow()).quantity).toBe(2)
+      await fx!.svc.from('orders').update({ status: 'delivering' }).eq('id', delivered)
+      await fx!.svc.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', delivered)
+      const { refundOrderToWallet } = await import('@/lib/wallet/order-money')
+      await refundOrderToWallet(delivered, 'after-delivery')
+      expect((await orderRow(delivered)).stock_returned_at).toBeNull()
+      expect((await listingRow()).quantity).toBe(2)
+
+      await parkPendingOrders(fx!.buyer.id)
+      const done = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-c-${tag()}` })
+      expect((await confirmOrderPayment(done, 'evt-c')).outcome).toBe('paid')
+      expect((await listingRow()).quantity).toBe(1)
+      await fx!.svc.from('orders').update({ status: 'delivering' }).eq('id', done)
+      await fx!.svc.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', done)
+      const { transition } = await import('@/lib/escrow/transition')
+      await transition(done, 'BUYER_CONFIRMED', undefined, 'buyer_confirmed')
+      expect((await orderRow(done)).status).toBe('completed')
+      expect((await listingRow()).quantity).toBe(1) // claimed at payment — not decremented again
+      await setStock(5)
+    }, 90_000)
+
+    it('the webhook path confirms through the claim', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(2)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-w-${tag()}` })
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const res = await handleWebhook('fake', sig, JSON.stringify({ chargeId: `fake_${orderId}`, orderId, status: 'paid', amountMinor: '100', currency: CUR }))
+      expect(res.status, res.error).toBe(200)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('paid')
+      expect(row.stock_claimed_at).not.toBeNull()
+      expect(row.paid_at).not.toBeNull()
+      expect((await listingRow()).quantity).toBe(1)
+      await setStock(5)
+    }, 60_000)
+
+    itFault('in-RPC fault after the stock claim rolls back the payment, the stamp and the stock', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(2)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-f-${tag()}` })
+      const err = withFault('order_confirm_payment:after_stock', `SELECT public.order_confirm_payment('${orderId}'::uuid, 'fault')`)
+      expect(err).toMatch(/injected fault at order_confirm_payment:after_stock/)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('pending')
+      expect(row.paid_at).toBeNull()
+      expect(row.stock_claimed_at).toBeNull()
+      expect((await listingRow()).quantity).toBe(2)
+      expect(await txnByKey(`order:${orderId}:CHARGE_CONFIRMED:fault`)).toBeNull()
+      await setStock(5)
+    }, 60_000)
+  })
+
+  describe('PAY-015 — inventory_claim_for_order releases codes to paid orders only', () => {
+    it('refuses a new claim on a pending order; a paid order claims', async () => {
+      const { encryptDeliveryData } = await import('@/lib/crypto/delivery-encryption')
+      const { error: ie } = await fx!.svc.from('instant_delivery_inventory').insert([{
+        listing_id: fx!.listingId, delivery_type: 'code', status: 'available',
+        delivery_data: encryptDeliveryData('p15-code'), created_by: fx!.seller.id,
+      }])
+      if (ie) throw new Error(`inventory insert: ${ie.message}`)
+      try {
+        await parkPendingOrders(fx!.buyer.id)
+        const pending = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P15-p-${tag()}` })
+        const refused = await (fx!.svc.rpc as any)('inventory_claim_for_order', { p_order_id: pending })
+        expect(refused.error, 'pending order must not receive a code').not.toBeNull()
+        expect(refused.error.code).toBe('23514')
+        const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact', head: true }).eq('listing_id', fx!.listingId).eq('status', 'sold')
+        expect(count ?? 0).toBe(0)
+
+        const paid = await insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-P15-ok-${tag()}` })
+        const ok = await (fx!.svc.rpc as any)('inventory_claim_for_order', { p_order_id: paid })
+        expect(ok.error).toBeNull()
+        expect(ok.data.inventory_id).not.toBeNull()
+      } finally {
+        await fx!.svc.from('orders').update({ instant_delivery_inventory_id: null }).eq('listing_id', fx!.listingId).not('instant_delivery_inventory_id', 'is', null)
+        await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
+      }
     }, 60_000)
   })
 })

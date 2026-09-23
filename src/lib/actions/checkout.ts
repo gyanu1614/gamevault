@@ -15,8 +15,9 @@
  *   6. Creates a CoinGate hosted charge for the REMAINING amount and returns the
  *      checkout URL to redirect the buyer to.
  *
- * The order is confirmed (pending → paid) only by the verified CoinGate webhook
- * (safedrop_transition CHARGE_CONFIRMED), never by the browser.
+ * The order is confirmed (pending → paid) only by the verified provider
+ * webhook (order_confirm_payment: CHARGE_CONFIRMED + stock claim in one
+ * transaction), never by the browser.
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -38,6 +39,11 @@ import { fromDecimal, money } from '@/lib/money'
 // $-labelled surface of the UI. (EUR was a leftover of the CoinGate/SEPA
 // plan; switched before any real payment existed.)
 const ORDER_CURRENCY = 'USD'
+
+/** PAY-003: the stock ran out between checkout and payment; the order was
+ *  refunded to the wallet inside the confirm transaction. */
+const SOLD_OUT_REFUNDED_MESSAGE =
+  'This item sold out just before your payment went through — the full amount is back in your DropMarket wallet.'
 
 export interface CreateCheckoutInput {
   listingId: string
@@ -261,14 +267,20 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       // Wallet already funded escrow_held for the full total; mark paid.
       // safedrop_transition dedupes the wallet-paid portion, so this posts
       // NO provider_float journal for a fully wallet-paid order. Service-role
-      // seam: the RPC is not executable by the user-bound client.
-      const { transition } = await import('@/lib/escrow/transition')
-      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full')
+      // seam: the RPC is not executable by the user-bound client. PAY-003:
+      // the stock is claimed inside the same transaction; if it is already
+      // gone the order is refunded to the wallet there and then.
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(orderId, 'wallet-full')
+      const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      if (confirmed.outcome === 'oversold_refunded') {
+        await notifyOrderTransition('REFUNDED', orderId).catch(() => {})
+        return { success: false, orderId, error: SOLD_OUT_REFUNDED_MESSAGE }
+      }
       // Paid comms normally ride on the payment webhook (dispatch), which
       // this wallet-only branch bypasses — send them here. The order was
       // created moments ago in this same call, so this is always its first
       // CHARGE_CONFIRMED. Awaited; failure never fails checkout.
-      const { notifyOrderTransition } = await import('@/lib/payments/notify')
       await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
       return { success: true, orderId, fullyPaidByWallet: true }
     }
@@ -564,10 +576,15 @@ export async function retryOrderPayment(orderId: string): Promise<{
     const remainingMinor = totalMoney.amountMinor - heldMinor
 
     if (remainingMinor <= 0n) {
-      // Wallet already funds the full total — confirm instead of charging.
-      const { transition } = await import('@/lib/escrow/transition')
-      await transition(orderId, 'CHARGE_CONFIRMED', 'wallet-full-retry')
+      // Wallet already funds the full total — confirm instead of charging
+      // (PAY-003: stock claimed inside; sold out → refunded to the wallet).
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(orderId, 'wallet-full-retry')
       const { notifyOrderTransition } = await import('@/lib/payments/notify')
+      if (confirmed.outcome === 'oversold_refunded') {
+        await notifyOrderTransition('REFUNDED', orderId).catch(() => {})
+        return { success: false, error: SOLD_OUT_REFUNDED_MESSAGE }
+      }
       await notifyOrderTransition('CHARGE_CONFIRMED', orderId).catch(() => {})
       return { success: true, fullyPaidByWallet: true }
     }
