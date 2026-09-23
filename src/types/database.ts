@@ -1300,73 +1300,6 @@ export type Database = {
           },
         ]
       }
-      category_fee_config: {
-        Row: {
-          base_pct: number
-          category: string
-          rank_discount: boolean
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          base_pct: number
-          category: string
-          rank_discount?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          base_pct?: number
-          category?: string
-          rank_discount?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "admin_review_overview"
-            referencedColumns: ["reviewer_id"]
-          },
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "admin_review_overview"
-            referencedColumns: ["seller_id"]
-          },
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "seller_dashboard_stats"
-            referencedColumns: ["seller_id"]
-          },
-          {
-            foreignKeyName: "category_fee_config_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "seller_shop_banners"
-            referencedColumns: ["seller_id"]
-          },
-        ]
-      }
       conversations: {
         Row: {
           buyer_id: string
@@ -2522,92 +2455,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "games"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      game_fee_overrides: {
-        Row: {
-          active: boolean
-          category: string
-          created_at: string
-          game_slug: string
-          id: string
-          note: string | null
-          pct: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          active?: boolean
-          category: string
-          created_at?: string
-          game_slug: string
-          id?: string
-          note?: string | null
-          pct: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          active?: boolean
-          category?: string
-          created_at?: string
-          game_slug?: string
-          id?: string
-          note?: string | null
-          pct?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_fee_overrides_category_fkey"
-            columns: ["category"]
-            isOneToOne: false
-            referencedRelation: "category_fee_config"
-            referencedColumns: ["category"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "admin_review_overview"
-            referencedColumns: ["reviewer_id"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "admin_review_overview"
-            referencedColumns: ["seller_id"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "seller_dashboard_stats"
-            referencedColumns: ["seller_id"]
-          },
-          {
-            foreignKeyName: "game_fee_overrides_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "seller_shop_banners"
-            referencedColumns: ["seller_id"]
           },
         ]
       }
@@ -8538,12 +8385,10 @@ export type Database = {
           badge_color: string
           banner_access: boolean
           bulk_daily_cap: number | null
-          commission_rate: number
           created_at: string | null
           description: string | null
           discount_pts: number
           display_name: string
-          fee_multiplier: number
           gmv_90d_min: number
           listing_limit: number | null
           min_age_days: number
@@ -8562,12 +8407,10 @@ export type Database = {
           badge_color?: string
           banner_access?: boolean
           bulk_daily_cap?: number | null
-          commission_rate: number
           created_at?: string | null
           description?: string | null
           discount_pts?: number
           display_name: string
-          fee_multiplier?: number
           gmv_90d_min?: number
           listing_limit?: number | null
           min_age_days?: number
@@ -8586,12 +8429,10 @@ export type Database = {
           badge_color?: string
           banner_access?: boolean
           bulk_daily_cap?: number | null
-          commission_rate?: number
           created_at?: string | null
           description?: string | null
           discount_pts?: number
           display_name?: string
-          fee_multiplier?: number
           gmv_90d_min?: number
           listing_limit?: number | null
           min_age_days?: number
@@ -11648,6 +11489,17 @@ export type Database = {
         Returns: string
       }
       fee_engine_version: { Args: never; Returns: number }
+      fee_rule_cancel_scheduled: { Args: { p_rule_id: string }; Returns: Json }
+      fee_rule_schedule_base: {
+        Args: {
+          p_created_by?: string
+          p_game_category_id: string
+          p_note?: string
+          p_pct: number
+          p_starts_at: string
+        }
+        Returns: Json
+      }
       generate_listing_slug: {
         Args: { listing_id: string; title_text: string }
         Returns: string
@@ -11803,7 +11655,11 @@ export type Database = {
       money_atomicity_version: { Args: never; Returns: number }
       money_fault_hook: { Args: { p_point: string }; Returns: undefined }
       order_cancel_return_wallet: {
-        Args: { p_dedupe_key?: string; p_order_id: string }
+        Args: {
+          p_allow_paid?: boolean
+          p_dedupe_key?: string
+          p_order_id: string
+        }
         Returns: Json
       }
       order_refund_to_wallet: {

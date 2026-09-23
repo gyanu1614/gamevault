@@ -4,11 +4,11 @@
  * 20260922001513_fee_engine_rates_2026_10).
  *
  * PR 1 wrote this file as the money-neutrality proof (resolver == lib/fees
- * commissionPct() for every catalogue pair). PR 4 is where the rates
+ * the PR 1 seed table for every catalogue pair). PR 4 is where the rates
  * intentionally diverge, so the proof becomes two-sided:
  *
  *   · BEFORE the start (start − 1 s): every pair still resolves to exactly
- *     what commissionPct() charges today — the PR 1 seed rows were closed at
+ *     what checkout charged before the engine (the PR 1 seed) — the PR 1 seed rows were closed at
  *     the start, not deleted, so nothing changes early.
  *   · FROM the start: every pair resolves to the PR 4 table (RATES below —
  *     the spec, restated independently of the migration), never through the
@@ -33,7 +33,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 
-import { commissionPct } from '@/lib/fees'
 import { hasEnv, makeFixture, URL, ANON, type Fixture } from './throwaway'
 
 let fx: Fixture | null = null
@@ -58,6 +57,23 @@ const RATES = {
   ladder: { bronze: 0, silver: 0.5, gold: 1, diamond: 1.5, legendary: 2 } as Record<string, number>,
   settings: { rank_floor_pct: 8, founding_discount_pct: 50, founding_months: 12 },
   floorDate: Date.UTC(2026, 9, 6),
+}
+
+/**
+ * What checkout charged BEFORE the start — the PR 1 money-neutral seed,
+ * restated (fee-engine.md §6.1). The TS constants this used to call were
+ * deleted in PR 5; the seed rows are what the resolver must reproduce.
+ */
+const LEGACY = {
+  category: { currency: 5, items: 7, account: 15, top_up: 5, service: 7, gift_card: 7 } as Record<string, number>,
+  robloxEconomyCurrency: ['steal-a-brainrot', 'grow-a-garden', 'grow-a-garden-2'],
+  highRiskAccount: ['gta-v', 'gtavi', 'gta-6'],
+}
+function legacyRate(p: Pair): number {
+  const slug = (p.game?.slug ?? '').toLowerCase()
+  if (p.type === 'currency' && LEGACY.robloxEconomyCurrency.includes(slug)) return 10
+  if (p.type === 'account' && LEGACY.highRiskAccount.includes(slug)) return 20
+  return LEGACY.category[p.type] ?? 7
 }
 
 const n = (v: string | number) => Number(v)
@@ -145,11 +161,11 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
     }
   })
 
-  it('BEFORE the start (start − 1 s): every pair resolves to exactly what commissionPct() charges today, none through the fallback', async () => {
+  it('BEFORE the start (start − 1 s): every pair resolves to exactly what checkout charged before the engine (the PR 1 seed), none through the fallback', async () => {
     const ids = new Set(pr4().map((r) => r.id))
     const { mismatches, gaps } = await sweep(
       pairs, justBefore,
-      (p) => commissionPct({ categoryMetaType: p.type, categorySlug: p.slug, gameSlug: p.game?.slug ?? null }),
+      (p) => legacyRate(p),
       'lib/fees today',
       (_p, row) => (row.rule_id && ids.has(row.rule_id) ? `resolved to a PR 4 row (${row.rule_id}) before the start` : null),
     )
@@ -247,7 +263,7 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
     const base = RATES.pairs.find((l) => l.type === p.type && l.slugs.includes(slug))?.pct ?? RATES.category[p.type]
     expect(n(after.pct)).toBe(base)
     // and before the start the promo does not exist yet: today's rate
-    expect(n((await resolveAnon(p.id, null, justBefore)).pct)).toBe(commissionPct({ categoryMetaType: p.type, categorySlug: p.slug, gameSlug: p.game?.slug ?? null }))
+    expect(n((await resolveAnon(p.id, null, justBefore)).pct)).toBe(legacyRate(p))
   })
 
   it('rank ladder: bronze 0 · silver 0.5 · gold 1.0 · diamond 1.5 · legendary 2.0 (live at push time — undated table)', async () => {
@@ -269,7 +285,7 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
     const { data: l } = await fx!.svc.from('listings').select('game_category_id').eq('id', fx!.listingId).single()
     const pair = pairs.find((p) => p.type === 'items') ?? pairs.find((p) => p.id === (l as any).game_category_id)!
     const pairId = pair.id
-    const baseBefore = commissionPct({ categoryMetaType: pair.type, categorySlug: pair.slug, gameSlug: pair.game?.slug ?? null })
+    const baseBefore = legacyRate(pair)
     const baseFrom = expectedAtStart(pair)
     const { data: prof, error: pe } = await fx!.svc.from('profiles').select('created_at').eq('id', fx!.seller.id).single()
     expect(pe).toBeNull()

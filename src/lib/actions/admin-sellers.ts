@@ -242,9 +242,9 @@ export async function toggleSellerTest(profileId: string, isTest: boolean) {
  * Grant or revoke founding-seller status on a real seller profile (Phase 0
  * seller acquisition). This is the ONLY way profiles.founding_seller flips —
  * the /early-seller waitlist is triage only and never sets it. Being founding
- * gives a permanently reduced commission (src/lib/fees, FOUNDING_DISCOUNT_PTS,
- * read at order-creation time) and a storefront badge, so it must be
- * admin-gated.
+ * gives the founding commission discount (platform_fee_settings, applied by
+ * resolve_seller_fee at order-creation time for founding_months from
+ * founding_since) and a storefront badge, so it must be admin-gated.
  *
  * Mirrors toggleSellerTest: service-role client (RLS blocks writing another
  * user's profile) and `founding` is the CURRENT value, so we persist its

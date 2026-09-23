@@ -6,8 +6,9 @@
  * deliberately distinct from the tier badges (TierBadge) so the two can sit
  * side by side: tier = earned progression, founding = the first-100 status.
  *
- * This is the visible half of the perk; the commission side lives in
- * src/lib/fees (FOUNDING_DISCOUNT_PTS).
+ * This is the visible half of the perk; the commission side is data
+ * (platform_fee_settings.founding_discount_pct / founding_months) applied by
+ * resolve_seller_fee.
  */
 
 import { IconRosetteDiscountCheck } from '@tabler/icons-react'
