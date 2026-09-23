@@ -57,8 +57,12 @@ describe('email transport guard', () => {
     const email = readFileSync('src/lib/email/index.ts', 'utf8')
     expect(email).toMatch(/assertEmailTransportAllowed\(/)
     // Guarding resend.emails.send covers every sender in the module.
+    // `getResendClient()` is awaited because the `resend` import is dynamic
+    // (it drags svix into the bundle otherwise); the property under test is
+    // unchanged — the guard runs BEFORE the client is obtained, so a test run
+    // can never reach the provider.
     const guardAt = email.indexOf('assertEmailTransportAllowed(')
-    const clientAt = email.indexOf('const client = getResendClient()')
+    const clientAt = email.indexOf('const client = await getResendClient()')
     expect(guardAt).toBeGreaterThan(-1)
     expect(guardAt).toBeLessThan(clientAt)
   })

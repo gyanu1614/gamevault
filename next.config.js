@@ -6,6 +6,33 @@ const nextConfig = {
     // out explicitly here so the requirement is visible at the call site and
     // survives a future change to the Sentry plugin's defaults.
     instrumentationHook: true,
+    // Rewrites barrel imports to deep ones per used symbol (build audit
+    // 2026-09-22, §5). @tabler/icons-react is imported as a BARREL in 11
+    // files, which pulls its 74 MB package; lucide-react is the real icon
+    // library (222 files); recharts and date-fns were 31 s and 23 s of module
+    // build time. @mui/icons-material is already deep-imported, listed so a
+    // future barrel import there is optimised too.
+    optimizePackageImports: [
+      '@tabler/icons-react',
+      'lucide-react',
+      '@mui/icons-material',
+      'recharts',
+      'date-fns',
+    ],
+    // Server-only native/heavy packages: required at runtime rather than
+    // bundled and traced (build audit 2026-09-22, §3/§5).
+    //   • svix — transitive via resend, 106 s of module build time, never
+    //     imported directly. The send site imports resend dynamically too.
+    //   • sharp — 17.3 MB of libvips, the largest item in the two biggest
+    //     bundles. It IS used at runtime (lib/games/icons.ts →
+    //     encodeIconVariants, reached by /api/internal/trend-radar/prepare),
+    //     so it stays a dependency;
+    //     externalising keeps it out of the traced bundle without breaking it.
+    //
+    // NOTE: this is `experimental.serverComponentsExternalPackages` on Next
+    // 14.2 — the top-level `serverExternalPackages` spelling is Next 15+ and
+    // is silently IGNORED here (config-schema.js accepts only the former).
+    serverComponentsExternalPackages: ['svix', 'resend', 'sharp'],
   },
   // Verification builds (agent/CI) set NEXT_DIST_DIR to keep their output OUT
   // of .next — a `next build` racing the running `next dev` corrupts the dev
@@ -254,4 +281,16 @@ module.exports = withSentryConfig(nextConfig, {
 
   // Strips the Sentry SDK's own debug logging from the client bundle.
   webpack: { treeshake: { removeDebugLogging: true } },
+
+  // Build-cost trims (build audit 2026-09-22, §3: Sentry + OpenTelemetry was
+  // ~260 s of module build time). None of these change what is REPORTED —
+  // /api/sentry-test must stay green.
+  //
+  // `disableLogger` is NOT set: this Sentry version deprecates it in favour of
+  // `webpack.treeshake.removeDebugLogging` above, which is already on and does
+  // the same job (setting both logs a deprecation warning on every build).
+  //
+  // Only upload/instrument the client files Next actually emits, instead of
+  // widening the glob to the whole output directory.
+  widenClientFileUpload: false,
 })

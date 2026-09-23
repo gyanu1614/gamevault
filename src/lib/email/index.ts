@@ -1,4 +1,4 @@
-import { Resend } from 'resend'
+import type { Resend } from 'resend'
 
 import { assertEmailTransportAllowed } from './transport-guard'
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
@@ -17,16 +17,27 @@ import {
   EMAIL_TOKENS,
 } from './shell'
 
-// Lazily construct the Resend client on first send, not at module load.
-// `new Resend(undefined)` throws immediately, which would crash any page that
-// merely imports this module (e.g. /admin/early-sellers) when RESEND_API_KEY
-// isn't set — common in local dev. This defers that so pages render, and when
-// the key is absent it no-ops the send (logs a warning) instead of throwing.
+// Lazily LOAD and construct the Resend client on first send, not at module
+// load. `new Resend(undefined)` throws immediately, which would crash any page
+// that merely imports this module (e.g. /admin/early-sellers) when
+// RESEND_API_KEY isn't set — common in local dev. This defers that so pages
+// render, and when the key is absent it no-ops the send (logs a warning)
+// instead of throwing.
+//
+// The IMPORT is dynamic too (build audit 2026-09-22, §3): `resend` pulls in
+// `svix`, which cost 106 s of module build time and was traced into every
+// bundle that touches this module, even though it is only reachable on a real
+// send. `import type` above keeps the types free. Combined with
+// serverExternalPackages in next.config.js, svix/resend stay out of the
+// function bundles.
 let _client: Resend | null = null
-function getResendClient(): Resend | null {
+async function getResendClient(): Promise<Resend | null> {
   const key = process.env.RESEND_API_KEY
   if (!key) return null
-  if (!_client) _client = new Resend(key)
+  if (!_client) {
+    const { Resend: ResendCtor } = await import('resend')
+    _client = new ResendCtor(key)
+  }
   return _client
 }
 
@@ -41,7 +52,7 @@ const resend = {
           ? ((payload as { subject?: string }).subject as string)
           : undefined,
       )
-      const client = getResendClient()
+      const client = await getResendClient()
       if (!client) {
         console.warn('[email] RESEND_API_KEY not set — skipping email send.')
         return { data: null, error: null }
