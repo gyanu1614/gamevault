@@ -11,6 +11,8 @@
  *   • Items        — link to the existing template builder route.
  *   • Accounts     — per-game required listing fields, delivery, policy.
  *   • Boosting     — tier ladder, avg delivery, instructions placeholder.
+ *   • Fees         — seller commission per enabled category (fee engine
+ *                    PR 5): live rate, scheduled rules, promos, risk band.
  *
  * Currency/Accounts/Boosting tabs are only shown when the matching
  * global category is enabled for this game — we don't surface config
@@ -26,8 +28,9 @@ import { CurrencyConfigForm } from './CurrencyConfigForm'
 import { AccountConfigForm } from './AccountConfigForm'
 import { BoostingConfigForm } from './BoostingConfigForm'
 import { SeoOverrideForm } from './SeoOverrideForm'
+import { FeesTab } from './FeesTab'
 
-type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'seo'
+type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'fees' | 'seo'
 
 // Mirrors the GameWizard's existing types so this file doesn't have
 // to import internal interfaces. The shapes come from
@@ -102,6 +105,9 @@ export default function GameDetailTabs({
               Boosting
             </TabsTrigger>
           )}
+          <TabsTrigger value="fees" className="data-[state=active]:bg-bg-overlay">
+            Fees
+          </TabsTrigger>
           <TabsTrigger value="seo" className="data-[state=active]:bg-bg-overlay">
             SEO
           </TabsTrigger>
@@ -148,6 +154,10 @@ export default function GameDetailTabs({
             </CategoryEmptyHint>
           </TabsContent>
         )}
+
+        <TabsContent value="fees" className="mt-6">
+          <FeesTab rows={initialGameCategories} gameName={game.name} />
+        </TabsContent>
 
         <TabsContent value="seo" className="mt-6">
           <SeoOverrideForm gameId={game.id} gameName={game.name} />

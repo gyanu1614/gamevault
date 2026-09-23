@@ -15,3 +15,11 @@ export const TEST_SELLERS_TAG = 'profiles:test-sellers'
 
 /** The active games + enabled categories directory (footer mesh, sub-nav). */
 export const GAME_DIRECTORY_TAG = 'games:directory'
+
+/**
+ * fee_rules / platform_fee_settings / seller_tier_config — every seller
+ * commission rate quoted on a public surface (/sell/fees, the /[game]/sell
+ * headline). The admin fee action revalidates it after every write
+ * (fee-engine.md §4.2, §5.5); the pages' 24 h `revalidate` is the backstop.
+ */
+export const FEE_RULES_TAG = 'fees:rules'
