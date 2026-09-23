@@ -44,7 +44,14 @@ on:
         required: false
         default: ""
   schedule:
-    # Every 3h over the CURATED tradeable set (not all 498). The collector's
+    # Every 12h over the CURATED tradeable set (not all 498) — Gyanu's call
+    # 2026-09-22: prices refresh twice a day, everything else daily. Was 3h
+    # (8 runs/day); each run marked all ~500 item pages stale, which was ~80%
+    # of the monthly ISR budget (build audit §4). Revalidation is now per
+    # changed item, so the remaining cost is proportional to real price
+    # movement rather than to the crawl cadence.
+    #
+    # The collector's
     # staleness queue (--refresh-after-hours 6) makes each 3h run grab whichever
     # tradeable items aged past 6h → about half the set per run, whole curated
     # set every ~6h. EVERY tradeable item rotates, including fully-covered ones
@@ -53,7 +60,7 @@ on:
     # spend zero budget on junk nobody trades. Self-balancing (a new item is max-
     # stale → crawled next run) and self-healing (a failed run just leaves items
     # for the next tick — no static half to black out).
-    - cron: "0 */3 * * *"
+    - cron: "0 */12 * * *"
 
 concurrency:
   group: sab-eldorado-daily-market

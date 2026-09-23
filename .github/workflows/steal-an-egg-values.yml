@@ -1,10 +1,11 @@
-name: Steal An Egg Values (3h)
+name: Steal An Egg Values (12h)
 
-# Vercel Hobby cannot schedule sub-daily cron, so the 3-hourly cadence lives
-# here — the same pattern the SAB Eldorado collection uses.
+# Vercel Hobby cannot schedule sub-daily cron, so the cadence lives here — the
+# same pattern the SAB Eldorado collection uses. 12-hourly (Gyanu 2026-09-22:
+# prices twice a day, everything else daily); was 3-hourly.
 on:
   schedule:
-    - cron: "40 */3 * * *"
+    - cron: "40 */12 * * *"
   workflow_dispatch:
     inputs:
       max_pages:
