@@ -1194,15 +1194,18 @@ export const LEGAL_DOCS: LegalDoc[] = [
       {
         h: 'Seller commissions',
         blocks: [
+          p(
+            'Sellers pay a **commission set per category** (in-game currency, in-game items, top-ups, gift cards, boosting / coaching, game accounts). Individual game economies may carry their own rate in place of the category standard, and game accounts are priced by risk band. The **current schedule** — every category and per-game rate, scheduled changes, the seller-rank discount ladder and the founding-seller programme — is published on the [Seller Fees page](/sell/fees), which reads the same rate table our checkout uses.',
+          ),
           ul([
-            '**In-game currency:** 5% (select promotional games 0%; Roblox in-game economies 10%) — 48-hour payout hold.',
-            '**In-game items:** 7% — 72-hour payout hold.',
-            '**Top-ups / gift cards:** 5% — 48-hour payout hold.',
-            '**Boosting / coaching:** 7% — payout hold of 72 hours after completion.',
-            '**Game accounts:** 12% / 15% / 20% by risk band, carrying 5-day / 7-day / 14-day Protection Windows respectively.',
+            'Commission applies to the **item price only** — never to the buyer fee.',
+            'The rate for an order is **fixed when the order is placed** and recorded on the order; a later change never applies to a past order.',
+            'Standard rates change only on a **dated schedule** with the notice period in Section 4 of the Terms; promotional rates may start immediately but always carry an end date.',
+            'Rank discounts reduce the category rate by a stated number of points, never below the published floor; the founding programme replaces the rank discount while it runs.',
+            'Payout holds follow the applicable Protection Window (see the Refund & Dispute Policy).',
           ]),
           p(
-            'Commission applies to the **item price only** — never to the buyer fee. Your exact commission and estimated net proceeds are shown on the listing form before you publish.',
+            'Your exact commission and estimated net proceeds, with any rank or founding adjustment, are shown on the listing form before you publish.',
           ),
         ],
       },

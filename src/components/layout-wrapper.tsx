@@ -23,7 +23,9 @@ export function LayoutWrapper({
   // its scrolled full-width mode via Navbar's `forceScrolled` prop —
   // see navbar-floating.tsx). Footer stays hidden so the wizard owns
   // the canvas below.
-  const isSellWizard = pathname?.startsWith('/sell')
+  // /sell/fees is the public fee schedule (normal chrome); only the wizard
+  // routes (/sell/new, /sell/edit, /sell/bulk) get the stripped shell.
+  const isSellWizard = /^\/sell\/(new|edit|bulk)(\/|$)/.test(pathname ?? '')
 
   // V19/P24/P7.r — /checkout/* has its own slim layout: stripped
   // navbar + checkout-specific footer so the buyer can't leak out

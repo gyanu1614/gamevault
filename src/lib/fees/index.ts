@@ -2,15 +2,17 @@
  * fees — single source of truth for ALL platform fees.
  *
  * Implements DropMarket_Fee_Implementation_Spec (12 Jul 2026) exactly.
- * Every percentage/config value lives HERE and is imported everywhere —
- * no scattered literals (spec §7). Values marked ADJUSTABLE in the spec
- * are plain consts here so ops can change them in one place.
+ * Buyer fee, protection windows, payout and refund rules live HERE and are
+ * imported everywhere — no scattered literals (spec §7). The SELLER
+ * COMMISSION does not: it is database data behind resolve_seller_fee (see
+ * ./resolver.ts). Values marked ADJUSTABLE are plain consts so ops can
+ * change them in one place.
  *
  * Money rule: round to 2 dp, half-up. Fee components are rounded
  * individually and summed (so $100 → $5.00 + $2.00 = $7.00 total).
  */
 
-import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { accountRiskBand, classifyOfferType, type AccountRiskBand, type OfferType } from '@/lib/utils/offer-type'
 
 // ─── Rounding ────────────────────────────────────────────────────────────────
 
@@ -62,132 +64,19 @@ export function buyerFee(subtotal: number, actualPspPct?: number): BuyerFee {
   }
 }
 
-// ─── §1 Seller commission (deducted from ITEM PRICE at completion) ──────────
-
-export type AccountRiskBand = 'low' | 'mid' | 'high'
-
-export const COMMISSION_PCT = {
-  currencyStandard: 5,
-  currencyRobloxEconomy: 10,
-  currencyPromo: 0,
-  items: 7,
-  topUp: 5,
-  boosting: 7,
-  accounts: { low: 12, mid: 15, high: 20 } as Record<AccountRiskBand, number>,
-} as const
-
-/**
- * Roblox in-game economies (10% commission) — catalog config by game
- * slug; extend as games are added (spec names SAB / GAG / GAG2 “etc.”).
- */
-export const ROBLOX_ECONOMY_GAMES: string[] = [
-  'steal-a-brainrot',
-  'grow-a-garden',
-  'grow-a-garden-2',
-]
-
-/** Promo/launch games at 0% currency commission — default EMPTY (spec §1). */
-export const PROMO_ZERO_FEE_GAMES: string[] = []
-
-/**
- * Founding-seller commission discount, in PERCENTAGE POINTS off the seller's
- * per-category rate (floored at 0). This is what makes the "founding seller
- * locks a reduced rate for life" perk real: a founding seller pays
- * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)` on every category, forever
- * (see profiles.founding_seller, granted by admin). It applies AFTER the
- * promo/roblox-economy/account-risk category rate is resolved, so the discount
- * follows each category proportionally rather than flattening them:
- *   Roblox economy 10 → 8,  items/boosting 7 → 5,  standard currency 5 → 3,
- *   mid-risk accounts 15 → 13,  promo 0 → 0 (already floored).
- * ADJUSTABLE — one place to retune the founding programme.
- */
-export const FOUNDING_DISCOUNT_PTS = 2
-
-/**
- * Account risk bands by game slug (spec: each account listing maps to
- * exactly one band via catalog config). Unlisted games default to mid.
- */
-export const ACCOUNT_RISK_BANDS: Record<string, AccountRiskBand> = {
-  'gta-v': 'high',
-  gtavi: 'high',
-  'gta-6': 'high',
-}
-export const DEFAULT_ACCOUNT_RISK_BAND: AccountRiskBand = 'mid'
-
-export function accountRiskBand(gameSlug: string | null | undefined): AccountRiskBand {
-  return ACCOUNT_RISK_BANDS[(gameSlug || '').toLowerCase()] ?? DEFAULT_ACCOUNT_RISK_BAND
-}
-
-export interface CommissionInput {
-  /** categories.metadata.type for the listing’s category. */
-  categoryMetaType?: string | null
-  categorySlug?: string | null
-  gameSlug?: string | null
-  /**
-   * When true, apply the founding-seller discount (FOUNDING_DISCOUNT_PTS off
-   * the resolved category rate, floored at 0). Sourced from
-   * profiles.founding_seller by the caller (checkout/orders look the seller up
-   * before computing commission). Omitted/false = today’s behaviour exactly.
-   */
-  isFounding?: boolean
-}
-
-/**
- * Category commission %, BEFORE the founding-seller discount. This is the raw
- * spec §1 table lookup; founding logic lives in commissionPct so this stays a
- * pure category→rate map (also what the public Fees page quotes).
- */
-function categoryCommissionPct(input: CommissionInput): number {
-  const type: OfferType = classifyOfferType(
-    input.categoryMetaType ?? undefined,
-    input.categorySlug ?? undefined,
-  )
-  const game = (input.gameSlug || '').toLowerCase()
-  switch (type) {
-    case 'currency':
-      if (PROMO_ZERO_FEE_GAMES.includes(game)) return COMMISSION_PCT.currencyPromo
-      if (ROBLOX_ECONOMY_GAMES.includes(game)) return COMMISSION_PCT.currencyRobloxEconomy
-      return COMMISSION_PCT.currencyStandard
-    case 'top-up':
-      return COMMISSION_PCT.topUp
-    case 'accounts':
-      return COMMISSION_PCT.accounts[accountRiskBand(game)]
-    case 'items':
-    default:
-      // Boosting classifies as items today; both are 7% (spec §1).
-      return COMMISSION_PCT.items
-  }
-}
-
-/**
- * Effective commission % for a listing (spec §1 table), after the
- * founding-seller discount when `input.isFounding` is set. Founding sellers pay
- * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)`.
- *
- * NOT A MONEY PATH ANY MORE (fee engine PR 3, 2026-09-21): checkout no longer
- * reads this. The rate an order is charged comes from the `resolve_seller_fee`
- * RPC via `@/lib/fees/resolver` and is snapshotted on the order. This function
- * and the constants above survive only for display surfaces and the PR 3
- * parity test (`fee-migration-parity`, `fee-checkout-snapshot`); PR 6 deletes
- * them. Do not wire it back into any order/payout computation.
- */
-export function commissionPct(input: CommissionInput): number {
-  const base = categoryCommissionPct(input)
-  if (input.isFounding) return Math.max(0, base - FOUNDING_DISCOUNT_PTS)
-  return base
-}
-
-/** Commission amount on the item price (never on the buyer fee). */
-export function commissionAmount(itemPrice: number, input: CommissionInput): number {
-  return round2((itemPrice * commissionPct(input)) / 100)
-}
-
-/** “You’ll receive $X after Y% fee” — net proceeds = price − commission. */
-export function netProceeds(itemPrice: number, input: CommissionInput): number {
-  return round2(itemPrice - commissionAmount(itemPrice, input))
-}
+// ─── §1 Seller commission ────────────────────────────────────────────────────
+// NOT HERE. The seller commission rate is DATA (fee_rules, seller_tier_config
+// .discount_pts, platform_fee_settings) resolved by ONE SQL function,
+// resolve_seller_fee, through src/lib/fees/resolver.ts — checkout stamps it
+// on the order, the sell wizard previews it, /sell/fees publishes it. No
+// TypeScript computes a commission percentage (fee-engine.md §8.4); the
+// constants that used to live here (COMMISSION_PCT, ROBLOX_ECONOMY_GAMES,
+// ACCOUNT_RISK_BANDS as a fee input, FOUNDING_DISCOUNT_PTS, commissionPct,
+// commissionAmount, netProceeds) were deleted in fee engine PR 5.
 
 // ─── §1 Protection windows / payout holds (hours) ───────────────────────────
+
+export type { AccountRiskBand }
 
 export const PROTECTION_WINDOW_HOURS = {
   currency: 48,
@@ -198,7 +87,14 @@ export const PROTECTION_WINDOW_HOURS = {
   accounts: { low: 5 * 24, mid: 7 * 24, high: 14 * 24 } as Record<AccountRiskBand, number>,
 } as const
 
-export function protectionWindowHours(input: CommissionInput): number {
+export interface ProtectionWindowInput {
+  /** game_categories.type for the listing's pair. */
+  categoryMetaType?: string | null
+  categorySlug?: string | null
+  gameSlug?: string | null
+}
+
+export function protectionWindowHours(input: ProtectionWindowInput): number {
   const type: OfferType = classifyOfferType(
     input.categoryMetaType ?? undefined,
     input.categorySlug ?? undefined,

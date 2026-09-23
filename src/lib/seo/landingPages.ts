@@ -249,7 +249,7 @@ export const LANDING_PAGES: LandingPage[] = [
       'List your gaming account or items on DropMarket and earn. Free to list — pay commission only when it sells. Fast payouts once delivery is confirmed.',
     headline: 'Sell Your Game Accounts',
     subCopy:
-      'Turn your gaming assets into real money. List for free, pay commission only when it sells (from 5% for most categories), and get paid out fast after delivery is confirmed.',
+      'Turn your gaming assets into real money. List for free, pay commission only when it sells, and get paid out fast after delivery is confirmed.',
     gameSlug: null,
     categorySlug: null,
     emoji: '💰',
@@ -257,7 +257,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'How much does it cost to sell on DropMarket?',
-        a: 'Listing is free — you pay commission only when your item sells: 5% for most currency, 7% for items, and 12–20% for accounts by risk band (see the Fees & Charges page). Buyers separately pay a small marketplace and processing fee.',
+        a: 'Listing is free — you pay commission only when your item sells. Commission is set per category and can differ per game; the current schedule is published on the Seller Fees page. Buyers separately pay a small marketplace and processing fee.',
       },
       {
         q: 'How do I get paid?',

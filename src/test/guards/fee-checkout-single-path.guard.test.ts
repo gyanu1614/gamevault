@@ -40,6 +40,22 @@ describe('fee engine — checkout is the only order path and reads only the reso
     expect(src).toMatch(/\bresolveSellerFee\s*\(/)
   })
 
+  it('lib/fees exports no TypeScript commission computation (PR 5 / A9 — the constants are gone)', () => {
+    const src = read('src/lib/fees/index.ts')
+    for (const sym of ['COMMISSION_PCT', 'ROBLOX_ECONOMY_GAMES', 'PROMO_ZERO_FEE_GAMES', 'FOUNDING_DISCOUNT_PTS', 'commissionPct', 'commissionAmount', 'netProceeds', 'CommissionInput']) {
+      expect(src, `${sym} is back in lib/fees`).not.toMatch(new RegExp(`\\b(export\\s+(const|function|interface|type)\\s+)?${sym}\\b\\s*[=(:<]`))
+    }
+  })
+
+  it('no source file references the retired commission symbols', () => {
+    const retired = /\b(COMMISSION_PCT|ROBLOX_ECONOMY_GAMES|PROMO_ZERO_FEE_GAMES|FOUNDING_DISCOUNT_PTS|commissionPct|commissionAmount|netProceeds|handleGuestCheckout|rateLimitCreateOrder)\b/
+    const offenders = walk(join(ROOT, 'src'))
+      .filter((p) => !p.endsWith('fee-checkout-single-path.guard.test.ts'))
+      .filter((p) => retired.test(readFileSync(p, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')))
+      .map((p) => p.slice(ROOT.length + 1))
+    expect(offenders).toEqual([])
+  })
+
   it('createOrder is deleted from orders.ts', () => {
     expect(read('src/lib/actions/orders.ts')).not.toMatch(/export async function createOrder\b/)
   })

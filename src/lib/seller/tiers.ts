@@ -77,8 +77,6 @@ export interface TierDef {
   /** Distinct lucide icon per rank (colored via colors.text at render). */
   Icon: LucideIcon
   thresholds: TierThresholds
-  /** Platform commission fraction (0.089 = 8.90%). */
-  commissionRate: number
   /** Max active listings; null = unlimited. */
   listingLimit: number | null
   /** Whether this rank may upload a custom storefront banner. */
@@ -115,7 +113,6 @@ export const TIERS: TierDef[] = [
     },
     Icon: Hexagon,
     thresholds: { minSales: 0, minRating: null, minAgeDays: 0, minCompletionRate: null },
-    commissionRate: 0.089,
     listingLimit: 20,
     bannerAccess: false,
     preModerationListings: 3,
@@ -139,7 +136,6 @@ export const TIERS: TierDef[] = [
     },
     Icon: Gem,
     thresholds: { minSales: 10, minRating: 4.0, minAgeDays: 30, minCompletionRate: 90.0 },
-    commissionRate: 0.079,
     listingLimit: 50,
     bannerAccess: false,
     preModerationListings: 0,
@@ -163,7 +159,6 @@ export const TIERS: TierDef[] = [
     },
     Icon: Diamond,
     thresholds: { minSales: 50, minRating: 4.3, minAgeDays: 90, minCompletionRate: 95.0 },
-    commissionRate: 0.069,
     listingLimit: 100,
     bannerAccess: false,
     preModerationListings: 0,
@@ -187,7 +182,6 @@ export const TIERS: TierDef[] = [
     },
     Icon: Octagon,
     thresholds: { minSales: 200, minRating: 4.6, minAgeDays: 180, minCompletionRate: 97.0 },
-    commissionRate: 0.059,
     listingLimit: null,
     bannerAccess: true,
     preModerationListings: 0,
@@ -211,7 +205,6 @@ export const TIERS: TierDef[] = [
     },
     Icon: Sparkles,
     thresholds: { minSales: 500, minRating: 4.8, minAgeDays: 365, minCompletionRate: 99.0 },
-    commissionRate: 0.049,
     listingLimit: null,
     bannerAccess: true,
     preModerationListings: 0,

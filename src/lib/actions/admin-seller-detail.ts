@@ -109,7 +109,8 @@ export interface SellerTierHistoryRow {
 export interface SellerTierConfigRow {
   tier: string
   display_name: string | null
-  commission_rate: number | null
+  /** Percentage points off the seller's category rate (fee engine). */
+  discount_pts: number | null
   listing_limit: number | null
   pre_moderation_listings: number | null
   badge_color: string | null
@@ -164,7 +165,7 @@ export interface SellerDetail {
     info: {
       current_tier: string
       eligible_tier: string
-      commission_rate: number | null
+      discount_pts: number | null
       listing_limit: number | null
       banner_access: boolean | null
       next_tier: string | null
@@ -323,7 +324,7 @@ export async function getSellerDetail(userId: string): Promise<{
         .limit(10),
       service
         .from('seller_tier_config')
-        .select('tier, display_name, commission_rate, listing_limit, pre_moderation_listings, badge_color, sort_order')
+        .select('tier, display_name, discount_pts, listing_limit, pre_moderation_listings, badge_color, sort_order')
         .order('sort_order', { ascending: true }) as any,
       (service.rpc as any)('get_seller_tier_info', { p_user_id: userId }),
       service
@@ -479,7 +480,7 @@ export async function getSellerDetail(userId: string): Promise<{
         configs: (tierConfigRes.data ?? []).map((c: any) => ({
           tier: c.tier,
           display_name: c.display_name ?? null,
-          commission_rate: c.commission_rate != null ? Number(c.commission_rate) : null,
+          discount_pts: c.discount_pts != null ? Number(c.discount_pts) : null,
           listing_limit: c.listing_limit != null ? Number(c.listing_limit) : null,
           pre_moderation_listings:
             c.pre_moderation_listings != null ? Number(c.pre_moderation_listings) : null,
@@ -491,9 +492,9 @@ export async function getSellerDetail(userId: string): Promise<{
             ? {
                 current_tier: tierInfoRes.data.current_tier,
                 eligible_tier: tierInfoRes.data.eligible_tier,
-                commission_rate:
-                  tierInfoRes.data.commission_rate != null
-                    ? Number(tierInfoRes.data.commission_rate)
+                discount_pts:
+                  tierInfoRes.data.discount_pts != null
+                    ? Number(tierInfoRes.data.discount_pts)
                     : null,
                 listing_limit:
                   tierInfoRes.data.listing_limit != null

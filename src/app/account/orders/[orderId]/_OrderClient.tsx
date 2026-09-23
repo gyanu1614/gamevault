@@ -193,7 +193,15 @@ export function OrderClient(props: OrderClientProps) {
   const totalPaid = Number(order.total_amount ?? subtotal + fee)
   const escrowAmount = Number(order.escrow_amount ?? totalPaid)
   const netPayout = Number(order.seller_payout ?? Math.max(0, subtotal - fee))
-  const feePercent = subtotal > 0 ? Math.round((fee / subtotal) * 100) : 8
+  // Fee engine PR 5 (D5): the seller-side fee row reads the commission rate
+  // snapshotted on the order (seller_commission_pct) and the amount it
+  // implies (subtotal − seller_payout). Pre-engine orders have no snapshot
+  // and keep the old derivation — minus the "8" that matched no fee.
+  const hasSnapshot = order.seller_commission_pct != null && order.seller_payout != null
+  const feePercent = hasSnapshot
+    ? Number(order.seller_commission_pct)
+    : subtotal > 0 ? Math.round((fee / subtotal) * 100) : 0
+  const sellerFeeAmount = hasSnapshot ? Math.max(0, Math.round((subtotal - netPayout) * 100) / 100) : fee
   const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
   const placedAtFull = new Date(order.created_at).toLocaleString('en-US', {
     month: 'short',
@@ -412,7 +420,7 @@ export function OrderClient(props: OrderClientProps) {
               placedAtLabel={placedAtFull}
               paymentMethod={paymentMethod}
               subtotal={subtotal}
-              fee={fee}
+              fee={sellerFeeAmount}
               totalPaid={totalPaid}
               role={userRole}
               escrowAmount={escrowAmount}

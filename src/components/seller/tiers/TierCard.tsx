@@ -22,7 +22,8 @@ export interface TierConfig {
   min_rating: number | null
   min_age_days: number
   min_completion_rate: number | null
-  commission_rate: number
+  /** Percentage POINTS off the seller's category rate (fee engine; never below the platform floor). */
+  discount_pts: number
   listing_limit: number | null
   banner_access: boolean
   badge_color: string
@@ -33,7 +34,16 @@ interface TierCardProps {
   config: TierConfig
   isCurrent?: boolean
   isEligible?: boolean
+  /** platform_fee_settings.rank_floor_pct — the rate a rank discount never goes below. */
+  floorPct?: number | null
   className?: string
+}
+
+/** "−0.5 pts" / "Standard rate" — a rank never quotes an absolute fee (fee-engine.md A6). */
+export function rankDiscountLabel(discountPts: number): string {
+  const pts = Number(discountPts) || 0
+  if (pts <= 0) return 'Standard rate'
+  return `−${pts.toFixed(2).replace(/\.?0+$/, '')} pts`
 }
 
 function Perk({ met, label }: { met: boolean; label: string }) {
@@ -52,9 +62,10 @@ export default function TierCard({
   config,
   isCurrent = false,
   isEligible = false,
+  floorPct = null,
   className,
 }: TierCardProps) {
-  const commissionPct = (config.commission_rate * 100).toFixed(1)
+  const discount = rankDiscountLabel(config.discount_pts)
   const { ring, glow } = tierByKey(config.tier).colors
 
   return (
@@ -87,16 +98,22 @@ export default function TierCard({
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2">
         <TierBadge tier={config.tier} size="md" />
-        <span className="text-lg font-bold text-white tabular-nums">{commissionPct}%</span>
+        <span className="text-lg font-bold text-white tabular-nums">{discount}</span>
       </div>
       <p className="text-xs text-zinc-500 leading-relaxed -mt-2">
         {config.description ?? config.display_name}
       </p>
 
-      {/* ── Commission callout ─────────────────────────────────────────── */}
+      {/* ── Rank discount callout — points off the category rate, never an
+             absolute fee: the rate itself is per category (see /sell/fees). */}
       <div className="rounded-lg bg-bg-overlay border border-border-subtle px-3 py-2 flex items-center justify-between">
-        <span className="text-xs text-zinc-500">Platform fee</span>
-        <span className="text-sm font-semibold text-white">{commissionPct}%</span>
+        <span className="text-xs text-zinc-500">Off your category rate</span>
+        <span className="text-sm font-semibold text-white">
+          {discount}
+          {floorPct != null && Number(config.discount_pts) > 0 && (
+            <span className="ml-1 text-[11px] font-normal text-zinc-500">· floor {Number(floorPct).toFixed(2).replace(/\.?0+$/, '')}%</span>
+          )}
+        </span>
       </div>
 
       {/* ── Requirements ───────────────────────────────────────────────── */}
