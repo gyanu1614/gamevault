@@ -348,7 +348,7 @@ export function sellMessage(
       '',
       'On Discord you go first and hope they pay. On **DropMarket**, SafeDrop holds the buyer’s money *before* you deliver — so **you always get paid, even if the buyer ghosts**. No chargebacks, no “you first”, no scams.',
       '',
-      '**Verified sellers get** a trust badge, priority placement, and buyers who came here *because* it’s safe. Founding sellers lock a reduced commission for life.',
+      '**Verified sellers get** a trust badge, priority placement, and buyers who came here *because* it’s safe. Founding sellers get a discounted commission for their first year.',
     ].join('\n'),
     color: BRAND_COLOR,
     footer: FOOTER,

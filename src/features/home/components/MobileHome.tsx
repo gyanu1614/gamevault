@@ -693,7 +693,7 @@ const TRUST_ROWS = [
   },
   {
     claim: "Fees That Don't Sting",
-    proof: 'Sellers pay 5–10%, not the 17–26% others skim.',
+    proof: 'Lowest seller fees — sellers keep more, so listings cost less.',
   },
   {
     claim: 'Humans, Around the Clock',
@@ -707,7 +707,7 @@ const TRUST_ROWS = [
 const TRUST_CARDS = [
   { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.avif', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
   { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.avif', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
-  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.avif', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
+  { claim: "Fees That Don't Sting", proof: 'Lowest seller fees — sellers keep more, so listings cost less.', img: '/how-it-works/step-2.avif', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
   { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.avif', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
 ] as const
 

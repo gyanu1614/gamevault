@@ -71,7 +71,7 @@ const FAQS = [
   },
   {
     q: 'How much does it cost to sell?',
-    a: 'Sellers pay a 5–10% fee — far below the 17–26% the big marketplaces charge — so listings start cheaper here and stay cheaper.',
+    a: 'Sellers pay some of the lowest fees in the market — set per category and published on our Seller Fees page — so listings start cheaper here and stay cheaper.',
   },
 ]
 

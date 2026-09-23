@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 
 import { assertEmailTransportAllowed } from './transport-guard'
-import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
+import { DISCORD_INVITE_URL, FOUNDING_FEE_PERK_SENTENCE } from '@/lib/config/founding-seller'
 import {
   emailShell,
   emailText,
@@ -1106,7 +1106,7 @@ export async function sendFoundingHqInviteEmail({
       n: 1,
       title: 'Your Founding Seller application is ready',
       html:
-        `Everything's set on our side. Open your private setup page to pick your store name, get verified, and post your first listing — you keep 2% lower fees for life and a founding badge on your storefront.` +
+        `Everything's set on our side. Open your private setup page to pick your store name, get verified, and post your first listing — you get ${FOUNDING_FEE_PERK_SENTENCE} and a founding badge on your storefront.` +
         emailButton('Open My Seller Setup', hqUrl),
     })
 
