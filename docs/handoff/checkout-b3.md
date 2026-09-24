@@ -1,6 +1,6 @@
 # Checkout B3 — buyer method fees as data — handoff
 
-**Date:** 2026-09-23 · **Branch:** `feat/buyer-method-fees` (worktree `../gamevault-checkout-b3`) · **PR:** see below · **Not merged. ⚠️ `supabase db push` REQUIRED BEFORE the deploy** (1 migration; `order_create_pending` changes signature).
+**Date:** 2026-09-23 · **Branch:** `feat/buyer-method-fees` (worktree `../gamevault-checkout-b3`) · **PR:** https://github.com/gyanu1614/gamevault/pull/92 · **Not merged. ⚠️ `supabase db push` REQUIRED BEFORE the deploy** (1 migration; `order_create_pending` changes signature).
 Source: audit pass-6 PART C §6 (`eligibleMethods`), rounds A/B (single RPC checkout, attempts model). PR 7 code (completion / dispute / withdrawal) untouched.
 
 ## Commits (one per part, in order)
