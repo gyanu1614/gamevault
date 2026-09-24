@@ -33,7 +33,7 @@ const COMMON = () => ({
 })
 /** The round-B (old code) shape: three legacy money args carry deliberately WRONG values. */
 const legacyArgs = (provider: string, pmId: string | null) => ({
-  ...COMMON(), p_payment_processing_fee_rate: 5, p_payment_processing_fee: 1, p_total_amount: 21.39,
+  ...COMMON(), p_payment_processing_fee_rate: 12.5, p_payment_processing_fee: 9.99, p_total_amount: 99.99,
   p_provider: provider, p_pm_id: pmId,
 })
 const newArgs = (provider: string, pmId: string | null, method: string) => ({
@@ -110,9 +110,10 @@ describe.skipIf(!hasEnv)('order_create_pending 21-arg compatibility shim (integr
 
     expect(pick(rowA)).toEqual(pick(rowB))
     expect(rowA.buyer_fee_method).toBe(method)
-    // the legacy args (5% / $1 / $21.39) never reached the row
-    expect(Number(rowA.payment_processing_fee)).not.toBe(1)
-    expect(Number(rowA.total_amount)).not.toBe(21.39)
+    // the legacy args (12.5% / $9.99 / $99.99) never reached the row
+    expect(Number(rowA.payment_processing_fee_rate)).not.toBe(12.5)
+    expect(Number(rowA.payment_processing_fee)).not.toBe(9.99)
+    expect(Number(rowA.total_amount)).not.toBe(99.99)
     expect(Number(rowA.total_amount)).toBe(Number(rowB.total_amount))
     expect(a.charge_minor).toBe(b.charge_minor)
     expect(a.buyer_fee_minor).toBe(b.buyer_fee_minor)
@@ -132,7 +133,7 @@ describe.skipIf(!hasEnv)('order_create_pending 21-arg compatibility shim (integr
     expect(act.error, act.error?.message).toBeNull()
     const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
     const confirmed = await confirmOrderPayment(r.order_id, `${chargeId}:paid`, { provider: 'fake', providerChargeId: chargeId }, { amountMinor: BigInt(r.charge_minor), currency: CUR, paidMinor: BigInt(r.charge_minor) })
-    expect(confirmed.outcome).toBe('confirmed')
+    expect(confirmed.outcome).toBe('paid')
     const row = await orderRow(r.order_id)
     expect(row.status).toBe('paid')
     expect(row.buyer_fee_method).toBe('fake')

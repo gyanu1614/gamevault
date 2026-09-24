@@ -218,9 +218,12 @@ COMMENT ON COLUMN public.orders.buyer_fee_amount IS
 COMMENT ON COLUMN public.orders.buyer_fee_method IS
   'Checkout B3: the payment_method_fees.method the fee was quoted for (pm_id, btcpay, coingate, wallet). Guarded.';
 
--- Re-created IN FULL (every existing check verbatim from 20260921201609) with
--- the three new columns appended: a buyer must not rewrite their own quoted
--- fee through PostgREST and dispute the total against it.
+-- Re-created IN FULL — every existing check verbatim from 20260923025457
+-- (fee PR 7: PR 1's money columns + the RPC-only state machine) — with the
+-- three buyer-fee columns appended. A guard re-created from an older body
+-- would silently un-protect PR 7's status / delivery timestamps: a buyer
+-- must not rewrite their own quoted fee through PostgREST and dispute the
+-- total against it, nor complete their own order.
 CREATE OR REPLACE FUNCTION public.guard_orders_protected_columns() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -250,14 +253,21 @@ BEGIN
   -- ── fee engine (PR 1) ──
   IF NEW.seller_commission_pct IS DISTINCT FROM OLD.seller_commission_pct THEN changed := array_append(changed, 'seller_commission_pct'); END IF;
   IF NEW.seller_fee_trace IS DISTINCT FROM OLD.seller_fee_trace THEN changed := array_append(changed, 'seller_fee_trace'); END IF;
-  -- ── checkout B3 ──
+  -- ── fee engine (PR 7): the state machine is RPC-only ──
+  IF NEW.status IS DISTINCT FROM OLD.status THEN changed := array_append(changed, 'status'); END IF;
+  IF NEW.delivered_at IS DISTINCT FROM OLD.delivered_at THEN changed := array_append(changed, 'delivered_at'); END IF;
+  IF NEW.auto_release_at IS DISTINCT FROM OLD.auto_release_at THEN changed := array_append(changed, 'auto_release_at'); END IF;
+  IF NEW.completed_at IS DISTINCT FROM OLD.completed_at THEN changed := array_append(changed, 'completed_at'); END IF;
+  IF NEW.disputed_at IS DISTINCT FROM OLD.disputed_at THEN changed := array_append(changed, 'disputed_at'); END IF;
+  IF NEW.release_method IS DISTINCT FROM OLD.release_method THEN changed := array_append(changed, 'release_method'); END IF;
+  IF NEW.confirm_reminder_sent_at IS DISTINCT FROM OLD.confirm_reminder_sent_at THEN changed := array_append(changed, 'confirm_reminder_sent_at'); END IF;
+  -- ── checkout B3: the quoted buyer fee is a snapshot ──
   IF NEW.buyer_fee_pct IS DISTINCT FROM OLD.buyer_fee_pct THEN changed := array_append(changed, 'buyer_fee_pct'); END IF;
   IF NEW.buyer_fee_amount IS DISTINCT FROM OLD.buyer_fee_amount THEN changed := array_append(changed, 'buyer_fee_amount'); END IF;
   IF NEW.buyer_fee_method IS DISTINCT FROM OLD.buyer_fee_method THEN changed := array_append(changed, 'buyer_fee_method'); END IF;
   IF array_length(changed, 1) > 0 THEN
     RAISE EXCEPTION 'orders: column(s) % are protected and cannot be changed by this caller',
-      array_to_string(changed, ', ')
-      USING ERRCODE = '42501';
+      array_to_string(changed, ', ') USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END;
