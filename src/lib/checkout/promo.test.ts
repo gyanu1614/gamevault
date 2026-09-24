@@ -7,9 +7,11 @@
  *     input types no longer carry one, and the API route does not forward it.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { resolveCheckoutPromo } from './promo'
 
+const MIGRATIONS = join(process.cwd(), 'supabase', 'migrations')
 const CHECKOUT = readFileSync('src/lib/actions/checkout.ts', 'utf8')
 const ORDERS = readFileSync('src/lib/actions/orders.ts', 'utf8')
 const ROUTE = readFileSync('src/app/api/checkout/route.ts', 'utf8')
@@ -68,6 +70,13 @@ describe('AUTH-003 — no client amount can reach the order total', () => {
   })
 
   it('promo usage is recorded on checkout so limits bind', () => {
-    expect(CHECKOUT).toMatch(/recordPromoUsage\(\{ promoCodeId, orderId, discountAmount: promoDiscount, userId: user\.id \}\)/)
+    // Round B Part 1: the usage is recorded INSIDE order_create_pending (the
+    // one-RPC checkout), under the promo row lock, in the same transaction
+    // as the order — the checkout passes the resolved promo in, and the RPC
+    // body calls promo_usage_record. A refusal rolls the order back.
+    expect(CHECKOUT).toMatch(/createPendingOrder\(\{[\s\S]*?promoCodeId,\s*promoDiscount,[\s\S]*?\}\)/)
+    const migration = readdirSync(MIGRATIONS).filter((f) => f.endsWith('_pay_attempts_model.sql')).map((f) => readFileSync(join(MIGRATIONS, f), 'utf8')).join('\n')
+    const body = migration.slice(migration.indexOf('FUNCTION public.order_create_pending('), migration.indexOf('FUNCTION public.payment_attempt_open('))
+    expect(body).toMatch(/PERFORM promo_usage_record\(p_promo_code_id, v_order_id, p_buyer_id, p_promo_discount\)/)
   })
 })

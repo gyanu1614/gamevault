@@ -63,6 +63,20 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'money_atomicity_version', 'webhook_event_claim',
   // fix/checkout-p0 (PAY-003): payment confirm + stock claim, one RPC, service_role only.
   'order_confirm_payment',
+  // fix/checkout-round-b Part 1: the payment attempts model. Checkout, retry
+  // and the sweep drive these as the backend; a browser must never open,
+  // activate or supersede a charge, nor read another buyer's attempts.
+  'payment_attempts_version', 'payment_attempts_backfill', 'order_create_pending',
+  'payment_attempt_open', 'payment_attempt_activate', 'payment_attempt_supersede',
+  'expired_pending_payment_attempts',
+  // Part 2: the provider cancel outbox + the deduped admin alert helper.
+  'provider_cancel_outbox_version', 'provider_cancel_outbox_enqueue', 'provider_cancel_outbox_claim',
+  'provider_cancel_outbox_mark', 'admin_alert_once',
+  // Part 3: late-payment / overpayment credit — wallet money moves, service only.
+  'late_payment_credit_version', 'order_credit_late_payment',
+  // Part 4: the stuck-webhook reconciler + the sweep's poison counter.
+  'payment_reconciler_version', 'webhook_events_flip_unreplayable', 'webhook_events_stuck_claim',
+  'webhook_event_reconcile_mark', 'payment_attempt_note_sweep_failure',
 ]
 
 /**

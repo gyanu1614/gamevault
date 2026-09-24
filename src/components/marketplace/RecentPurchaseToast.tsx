@@ -249,9 +249,9 @@ export function DailyStatsToast() {
 
       const { count } = await supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'completed')
-        .gte('created_at', today.toISOString())
+        .gte('created_at', today.toISOString()).limit(1)
 
       if (count && count > 0) {
         showStatsToast(count)

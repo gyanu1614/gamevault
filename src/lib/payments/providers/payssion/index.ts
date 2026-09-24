@@ -23,6 +23,7 @@ import type {
   CreateChargeResult,
   ParsedWebhook,
   ProviderCapabilities,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import type { Money } from '@/lib/money'
 import { toDecimal } from '@/lib/money'
@@ -51,6 +52,9 @@ const CAPABILITIES: ProviderCapabilities = {
   supportsRefund: true,
   chargebackRisk: true, // local cards/APMs can dispute — reserve engine applies
 }
+
+/** Transaction states that mean "this can no longer be paid". */
+const VOID_DEAD_STATES = new Set(['cancelled', 'canceled', 'failed', 'expired', 'rejected', 'blocked', 'error'])
 
 function form(data: Record<string, string>): string {
   return new URLSearchParams(data).toString()
@@ -151,10 +155,22 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
 
       let json = await post('/api/v1/payment/create', body(sigPrimary))
       if (json?.result_code === 402) {
-        console.warn('[Payssion] docs-scheme sig rejected — retrying WHMCS 7-field fallback')
-        json = await post('/api/v1/payment/create', body(sigFallback))
+        // PAY-017: a 402 is assumed to be "signature rejected", but it is not
+        // provably signature-only. If the answer nevertheless names a
+        // transaction, one WAS minted under this track_id — retrying would
+        // bind two transactions to one order. Use it when it is usable,
+        // refuse loudly when it is not; retry only a bare 402.
+        const mintedId = json?.transaction?.transaction_id as string | undefined
+        if (mintedId && json?.redirect_url) {
+          console.warn(`[Payssion] 402 with a live transaction ${mintedId} — using it, not re-minting`)
+        } else if (mintedId) {
+          throw new Error(`payssion: create answered 402 but minted transaction ${mintedId} without a redirect — not retrying (PAY-017)`)
+        } else {
+          console.warn('[Payssion] docs-scheme sig rejected — retrying WHMCS 7-field fallback')
+          json = await post('/api/v1/payment/create', body(sigFallback))
+        }
       }
-      if (json?.result_code !== 200 || !json?.transaction?.transaction_id || !json?.redirect_url) {
+      if (!json?.transaction?.transaction_id || !json?.redirect_url || (json?.result_code !== 200 && json?.result_code !== 402)) {
         throw new Error(`payssion: create failed (result_code ${json?.result_code})`)
       }
 
@@ -171,6 +187,38 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
     async getCharge(providerChargeId: string): Promise<{ rawStatus: string }> {
       const txn = await fetchDetails(providerChargeId)
       return { rawStatus: txn.state }
+    },
+
+    /**
+     * Round B Part 2: POST /payment/cancel. Payssion does not enforce OUR
+     * per-method windows, so vouchers stay payable until told otherwise —
+     * this is what closes them. A refused cancel falls back to the
+     * authoritative state: paid → the money is coming (never voided);
+     * a dead state → already closed; still pending → throw, the outbox
+     * retries with backoff.
+     */
+    async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+      assertPayssionConfigured()
+      const apiKey = payssionApiKey()!
+      const secret = payssionSecretKey()!
+      const json = await post('/api/v1/payment/cancel', {
+        api_key: apiKey,
+        transaction_id: providerChargeId,
+        api_sig: cancelSig({ apiKey, transactionId: providerChargeId, secret }),
+      })
+      const cancelledState = json?.result_code === 200 ? (json?.transaction?.state as string | undefined) : undefined
+      if (cancelledState && VOID_DEAD_STATES.has(cancelledState)) {
+        return { outcome: 'voided', rawStatus: cancelledState }
+      }
+      if (cancelledState === 'completed' || cancelledState === 'paid_more') {
+        return { outcome: 'paid', rawStatus: cancelledState }
+      }
+      // Cancel refused (or answered without a usable state): the details
+      // endpoint is the authority.
+      const txn = await fetchDetails(providerChargeId)
+      if (txn.state === 'completed' || txn.state === 'paid_more') return { outcome: 'paid', rawStatus: txn.state }
+      if (VOID_DEAD_STATES.has(txn.state)) return { outcome: 'already_closed', rawStatus: txn.state }
+      throw new Error(`payssion: cancel refused (result_code ${json?.result_code}) and transaction ${providerChargeId} is ${txn.state}`)
     },
 
     async parseWebhook(
@@ -246,13 +294,6 @@ export function makePayssionProvider(deps?: { fetchImpl?: typeof fetch }): Payme
 export const payssionProvider: PaymentProvider = makePayssionProvider()
 
 /**
- * Cancel a Payssion transaction and report its resulting state — used by the
- * expiry sweep (Payssion doesn't enforce OUR per-method windows, so we close
- * timed-out transactions ourselves). Falls back to fetching the current state
- * when cancel is refused (e.g. the buyer paid at the last second): the caller
- * must NOT cancel the order when the returned state is completed/paid_more.
- */
-/**
  * Authoritative transaction state for callers that KNOW the order id (the
  * smart return route, the expiry sweep). Signing with the order id matches
  * the documented details signature; retries the id-less variant on 402.
@@ -288,26 +329,3 @@ export async function payssionTransactionState(
   return json.transaction.state as string
 }
 
-export async function payssionCancelTransaction(transactionId: string): Promise<string> {
-  assertPayssionConfigured()
-  const apiKey = payssionApiKey()!
-  const secret = payssionSecretKey()!
-  const res = await fetch(`${payssionBase()}/api/v1/payment/cancel`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      api_key: apiKey,
-      transaction_id: transactionId,
-      api_sig: cancelSig({ apiKey, transactionId, secret }),
-    }).toString(),
-    signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
-  })
-  const json: any = res.ok ? await res.json() : null
-  if (json?.result_code === 200 && json?.transaction?.state) {
-    return json.transaction.state as string
-  }
-  // Cancel refused — surface the authoritative current state instead.
-  const { getCharge } = payssionProvider
-  const { rawStatus } = await getCharge(transactionId)
-  return rawStatus
-}

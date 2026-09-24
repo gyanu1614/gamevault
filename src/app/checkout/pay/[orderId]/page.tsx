@@ -109,7 +109,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   const { data: order } = (await supabase
     .from('orders')
     .select(
-      'id, order_number, buyer_id, status, total_amount, currency, payment_provider, provider_charge_id, payment_expires_at, checkout_url, listing_id, listing:listing_id ( title, images, game:game_id ( name ) )'
+      'id, order_number, buyer_id, status, total_amount, currency, listing_id, listing:listing_id ( title, images, game:game_id ( name ) )'
     )
     .eq('id', orderId)
     .single()) as any
@@ -126,13 +126,17 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   // Already paid (or otherwise terminal) → the order page owns the story.
   if (order.status !== 'pending') redirect(`/account/orders/${orderId}`)
 
-  // Not a BTCPay order (legacy/hosted provider) → its own checkout URL, or
-  // the order page's Awaiting Payment panel as the fallback.
-  if (order.payment_provider !== 'btcpay' || !order.provider_charge_id) {
-    redirect(order.checkout_url && !order.checkout_url.includes('/checkout/pay/')
-      ? order.checkout_url
+  // Round B: the charge this page renders is the order's OPEN payment
+  // attempt. Not a BTCPay attempt (hosted provider) → its own checkout URL,
+  // or the order page's Awaiting Payment panel as the fallback.
+  const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+  const attempt = await openAttemptForOrder(orderId)
+  if (attempt?.provider !== 'btcpay' || !attempt.provider_charge_id) {
+    redirect(attempt?.checkout_url && !attempt.checkout_url.includes('/checkout/pay/')
+      ? attempt.checkout_url
       : `/account/orders/${orderId}`)
   }
+  const invoiceId: string = attempt.provider_charge_id
 
   // Live invoice + payable methods from Greenfield.
   const { btcpayFetchInvoice, btcpayFetchPaymentMethods } = await import(
@@ -140,13 +144,13 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   )
   let invoiceStatus = 'Expired'
   let methods: PayMethod[] = []
-  let expiresAtIso: string | null = order.payment_expires_at ?? null
+  let expiresAtIso: string | null = attempt.expires_at ?? null
   // Invoice amount = the remaining charge (order total minus any wallet
   // credit applied at checkout). Falls back to the order total.
   let invoiceAmount = Number(order.total_amount) || 0
   let invoiceCreatedIso: string | null = null
   try {
-    const invoice = await btcpayFetchInvoice(order.provider_charge_id)
+    const invoice = await btcpayFetchInvoice(invoiceId)
     invoiceStatus = invoice.status
     if (invoice.createdTime) {
       invoiceCreatedIso = new Date(invoice.createdTime * 1000).toISOString()
@@ -158,7 +162,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       expiresAtIso = new Date(invoice.expirationTime * 1000).toISOString()
     }
     if (invoice.status === 'New' || invoice.status === 'Processing') {
-      const raw = await btcpayFetchPaymentMethods(order.provider_charge_id)
+      const raw = await btcpayFetchPaymentMethods(invoiceId)
       methods = raw
         .filter((m) => m.destination)
         .map((m) => {

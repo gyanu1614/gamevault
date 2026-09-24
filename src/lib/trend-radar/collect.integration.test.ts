@@ -96,10 +96,10 @@ describe.skipIf(!hasEnv)('trend radar — collect (integration)', () => {
   })
 
   it('a re-run inside the dedup window fires nothing new', async () => {
-    const before = (await svc.from('trend_events').select('id', { count: 'exact', head: true }).lt('created_at', '2002-01-01')).count
+    const before = (await svc.from('trend_events').select('id', { count: 'exact' }).lt('created_at', '2002-01-01').limit(1)).count
     const summary = await runCollect({ db: svc, fetchImpl: fixtureFetch, pacer: instant(), now: new Date(NOW.getTime() + 6 * 3600_000), config: { ...DEFAULT_CONFIG, topN: 35 } })
     expect(summary.eventsInserted).toBe(0)
-    const after = (await svc.from('trend_events').select('id', { count: 'exact', head: true }).lt('created_at', '2002-01-01')).count
+    const after = (await svc.from('trend_events').select('id', { count: 'exact' }).lt('created_at', '2002-01-01').limit(1)).count
     expect(after).toBe(before)
   })
 
@@ -126,7 +126,7 @@ describe.skipIf(!hasEnv)('trend radar — collect (integration)', () => {
     expect(summary.events.length).toBeGreaterThan(0)
     expect(summary.metricsInserted).toBe(0)
     expect(summary.eventsInserted).toBe(0)
-    const { count } = await svc.from('game_metrics').select('id', { count: 'exact', head: true }).eq('captured_at', at.toISOString())
+    const { count } = await svc.from('game_metrics').select('id', { count: 'exact' }).eq('captured_at', at.toISOString()).limit(1)
     expect(count).toBe(0)
   })
 
@@ -151,7 +151,7 @@ describe.skipIf(!hasEnv)('trend radar — collect (integration)', () => {
     expect(summary.ok).toBe(false)
     expect(summary.tripped).toBe(true)
     expect(calls).toBe(2) // first 429 → one retry → second 429 trips
-    const { count } = await svc.from('game_metrics').select('id', { count: 'exact', head: true }).eq('captured_at', at.toISOString())
+    const { count } = await svc.from('game_metrics').select('id', { count: 'exact' }).eq('captured_at', at.toISOString()).limit(1)
     expect(count).toBe(0)
   })
 })

@@ -124,7 +124,7 @@ describe.skipIf(!hasEnv)('trend radar — two-week replay with one breakout (int
     expect(text).toContain('#8')
     expect(text).toContain('top30_entry, growth_48h')
     // Dry run: nothing written.
-    const { count } = await svc.from('games').select('id', { count: 'exact', head: true }).ilike('slug', `replay-breakout-%`)
+    const { count } = await svc.from('games').select('id', { count: 'exact' }).ilike('slug', `replay-breakout-%`).limit(1)
     expect(count).toBe(0)
   })
 })

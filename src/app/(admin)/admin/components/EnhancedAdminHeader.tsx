@@ -178,9 +178,9 @@ export default function EnhancedAdminHeader({
     queryFn: async () => {
       const supabase = createClient()
       const [pendingApps, openDisputes, highFraud] = await Promise.all([
-        supabase.from('seller_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('disputes').select('*', { count: 'exact', head: true }).in('status', ['open', 'under_review']),
-        supabase.from('fraud_flags').select('*', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'high'),
+        supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
+        supabase.from('disputes').select('*', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1),
+        supabase.from('fraud_flags').select('*', { count: 'exact' }).eq('status', 'open').eq('severity', 'high').limit(1),
       ])
       return {
         pendingApplications: pendingApps.count || 0,
@@ -198,9 +198,9 @@ export default function EnhancedAdminHeader({
       const supabase = createClient()
       const { count } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id)
-        .eq('is_read', false)
+        .eq('is_read', false).limit(1)
       return count || 0
     },
     refetchInterval: 10000,

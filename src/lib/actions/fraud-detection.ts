@@ -424,13 +424,13 @@ export async function getFraudStats(): Promise<{
       { count: low },
       { count: resolvedToday },
     ] = await Promise.all([
-      supabase.from('fraud_flags').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('fraud_flags').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'high'),
-      supabase.from('fraud_flags').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'medium'),
-      supabase.from('fraud_flags').select('id', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'low'),
-      supabase.from('fraud_flags').select('id', { count: 'exact', head: true })
+      supabase.from('fraud_flags').select('id', { count: 'exact' }).eq('status', 'open').limit(1),
+      supabase.from('fraud_flags').select('id', { count: 'exact' }).eq('status', 'open').eq('severity', 'high').limit(1),
+      supabase.from('fraud_flags').select('id', { count: 'exact' }).eq('status', 'open').eq('severity', 'medium').limit(1),
+      supabase.from('fraud_flags').select('id', { count: 'exact' }).eq('status', 'open').eq('severity', 'low').limit(1),
+      supabase.from('fraud_flags').select('id', { count: 'exact' })
         .in('status', ['resolved', 'dismissed'])
-        .gte('resolved_at', todayStart.toISOString()),
+        .gte('resolved_at', todayStart.toISOString()).limit(1),
     ])
 
     return {

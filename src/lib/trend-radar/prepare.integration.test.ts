@@ -110,7 +110,7 @@ describe.skipIf(!hasEnv)('trend radar — prepare (integration)', () => {
     const summary = await runPrepare(deps({ post: async (p) => { posted.push(p); return { ok: true, messageId: 'x' } } }))
     expect(summary.created).toHaveLength(0)
     expect(posted).toHaveLength(0)
-    const { count } = await svc.from('games').select('id', { count: 'exact', head: true }).eq('slug', `radar-egg-${TAG}`)
+    const { count } = await svc.from('games').select('id', { count: 'exact' }).eq('slug', `radar-egg-${TAG}`).limit(1)
     expect(count).toBe(1)
   })
 
@@ -126,7 +126,7 @@ describe.skipIf(!hasEnv)('trend radar — prepare (integration)', () => {
     expect(summary.repaired).toContain(`radar-half-${TAG}`)
     const { data: cats } = await svc.from('game_categories').select('id').eq('game_id', (g as any).id)
     expect(cats).toHaveLength(2)
-    const { count } = await svc.from('games').select('id', { count: 'exact', head: true }).eq('name', `Radar Half ${TAG}`)
+    const { count } = await svc.from('games').select('id', { count: 'exact' }).eq('name', `Radar Half ${TAG}`).limit(1)
     expect(count).toBe(1)
   })
 
@@ -178,7 +178,7 @@ describe.skipIf(!hasEnv)('trend radar — prepare (integration)', () => {
     expect(summary.dryRun).toBe(true)
     expect(summary.wouldCreate.map((w) => w.slug)).toContain(`radar-dry-${TAG}`)
     expect(summary.payloads.length).toBeGreaterThan(0)
-    const { count } = await svc.from('games').select('id', { count: 'exact', head: true }).eq('slug', `radar-dry-${TAG}`)
+    const { count } = await svc.from('games').select('id', { count: 'exact' }).eq('slug', `radar-dry-${TAG}`).limit(1)
     expect(count).toBe(0)
     const { data: ev } = (await svc.from('trend_events').select('handled_at').eq('external_id', String(U4)).single()) as { data: any }
     expect(ev.handled_at).toBeNull()

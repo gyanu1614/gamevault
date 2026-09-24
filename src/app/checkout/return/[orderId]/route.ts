@@ -40,7 +40,7 @@ export async function GET(
 
   const { data: order } = (await supabase
     .from('orders')
-    .select('id, buyer_id, status, listing_id, quantity, payment_provider, provider_charge_id')
+    .select('id, buyer_id, status, listing_id, quantity')
     .eq('id', orderId)
     .single()) as any
   if (!order || order.buyer_id !== user.id) return to('/account/orders')
@@ -61,17 +61,21 @@ export async function GET(
   // awaiting-payment panel; the webhook is the authority either way.
   try {
     const { RETURN_PROBE_TIMEOUT_MS, withTimeout } = await import('@/lib/payments/timeouts')
-    if (order.payment_provider === 'payssion' && order.provider_charge_id) {
+    // Round B: the charge to ask about is the order's OPEN attempt (the
+    // order's mirror columns are display data, never the authority).
+    const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+    const attempt = await openAttemptForOrder(order.id)
+    if (attempt?.provider === 'payssion' && attempt.provider_charge_id) {
       // Order-bound lookup: the details signature includes the order id.
       const { payssionTransactionState } = await import('@/lib/payments/providers/payssion')
-      const state = await payssionTransactionState(order.provider_charge_id, order.id, {
+      const state = await payssionTransactionState(attempt.provider_charge_id, order.id, {
         timeoutMs: RETURN_PROBE_TIMEOUT_MS,
       })
       if (CANCELLED_STATES.has(state)) return to(backToCheckout)
-    } else if (order.payment_provider && order.provider_charge_id) {
+    } else if (attempt?.provider && attempt.provider_charge_id) {
       const { getProvider } = await import('@/lib/payments/registry')
       const { rawStatus } = await withTimeout(
-        getProvider(order.payment_provider).getCharge(order.provider_charge_id),
+        getProvider(attempt.provider).getCharge(attempt.provider_charge_id),
         RETURN_PROBE_TIMEOUT_MS,
         'return-route charge probe'
       )

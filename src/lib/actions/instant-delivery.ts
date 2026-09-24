@@ -160,9 +160,9 @@ export async function getAvailableInventoryCount(
 
     const { count, error } = await supabase
       .from('instant_delivery_inventory')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('listing_id', listingId)
-      .eq('status', 'available')
+      .eq('status', 'available').limit(1)
 
     if (error) {
       console.error('Error getting inventory count:', error)

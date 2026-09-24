@@ -136,8 +136,8 @@ async function resolveFounderFromToken(
   // Join order = how many signups are older-or-equal to this one.
   const { count } = await supabase
     .from('early_seller_signups')
-    .select('id', { count: 'exact', head: true })
-    .lte('created_at', row.created_at)
+    .select('id', { count: 'exact' })
+    .lte('created_at', row.created_at).limit(1)
 
   const founder: FoundingFounder = {
     name: firstName(row.username),
@@ -186,15 +186,15 @@ async function resolveSellerJourney(email: string): Promise<SellerJourney> {
     //    (went live at least once — that's what ticks step 4).
     const { count } = await supabase
       .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('seller_id', profile.id)
+      .select('id', { count: 'exact' })
+      .eq('seller_id', profile.id).limit(1)
     listingCount = count ?? 0
 
     const { count: pubCount } = await supabase
       .from('listings')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('seller_id', profile.id)
-      .in('status', ['active', 'sold', 'paused', 'archived'])
+      .in('status', ['active', 'sold', 'paused', 'archived']).limit(1)
     publishedCount = pubCount ?? 0
   }
 
@@ -371,8 +371,8 @@ async function resolveLoggedInFounder(): Promise<{
     if (wl?.created_at) {
       const { count } = await svc
         .from('early_seller_signups')
-        .select('id', { count: 'exact', head: true })
-        .lte('created_at', wl.created_at)
+        .select('id', { count: 'exact' })
+        .lte('created_at', wl.created_at).limit(1)
       joinNumber = count ?? 0
 
       // Self-heal the routing flag: this account's email is on the waitlist, so
