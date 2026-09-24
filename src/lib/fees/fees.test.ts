@@ -18,10 +18,15 @@ const CURRENCY = { categoryMetaType: 'currency', categorySlug: 'buy-vbucks', gam
 const ACCOUNT_MID = { categoryMetaType: 'account', categorySlug: 'buy-accounts', gameSlug: 'fortnite' }
 
 describe('worked example A — $100 standard currency sale', () => {
-  it('buyer pays $107.00', () => {
+  // Checkout B3: the PROCESSING fee is quoted per payment method by the
+  // database (buyer_fee_quote) — TypeScript keeps only the marketplace fee.
+  it('the marketplace fee is $2.00 (2%); no processing fee is computed here', () => {
     const fee = buyerFee(100)
-    expect(fee.amount).toBe(7)
-    expect(round2(100 + fee.amount)).toBe(107)
+    expect(fee.marketplacePct).toBe(2)
+    expect(fee.marketplaceAmount).toBe(2)
+    expect(fee.amount).toBe(2)
+    expect(round2(100 + fee.amount)).toBe(102)
+    expect((fee as any).processingPct).toBeUndefined()
   })
   // Seller commission is resolved by the database (resolve_seller_fee) —
   // pinned by fee-resolver.guard / fee-checkout-snapshot.guard, not here.
@@ -31,8 +36,8 @@ describe('worked example A — $100 standard currency sale', () => {
 })
 
 describe('worked example B — $300 mid-risk account sale', () => {
-  it('buyer pays $321.00', () => {
-    expect(round2(300 + buyerFee(300).amount)).toBe(321)
+  it('marketplace fee $6.00 before the method quote', () => {
+    expect(round2(300 + buyerFee(300).amount)).toBe(306)
   })
   it('7-day (168h) hold for mid-risk accounts', () => {
     expect(protectionWindowHours(ACCOUNT_MID)).toBe(168)

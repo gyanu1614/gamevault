@@ -2,10 +2,11 @@
  * fees — single source of truth for ALL platform fees.
  *
  * Implements DropMarket_Fee_Implementation_Spec (12 Jul 2026) exactly.
- * Buyer fee, protection windows, payout and refund rules live HERE and are
- * imported everywhere — no scattered literals (spec §7). The SELLER
+ * Marketplace fee, protection windows, payout and refund rules live HERE and
+ * are imported everywhere — no scattered literals (spec §7). The SELLER
  * COMMISSION does not: it is database data behind resolve_seller_fee (see
- * ./resolver.ts). Values marked ADJUSTABLE are plain consts so ops can
+ * ./resolver.ts). Neither does the buyer PROCESSING fee (checkout B3): it is
+ * database data per payment method behind buyer_fee_quote. Values marked ADJUSTABLE are plain consts so ops can
  * change them in one place.
  *
  * Money rule: round to 2 dp, half-up. Fee components are rounded
@@ -22,45 +23,35 @@ export function round2(n: number): number {
 }
 
 // ─── §2 Buyer fee (added on top of item price) ───────────────────────────────
+//
+// Checkout B3: the PROCESSING fee is quoted per payment method by the database
+// (payment_method_fees → buyer_fee_quote, reached through
+// lib/payments/eligibility) and snapshotted on the order inside
+// order_create_pending. No TypeScript computes it any more — the processing
+// constant and the max(5%, PSP) flag that used to live here were deleted.
+// Only the flat MARKETPLACE fee (buyer protection) stays here.
 
-/** ADJUSTABLE — becomes max(5, actual PSP fee) when PSP contracts sign. */
-export const BUYER_PROCESSING_FEE_PCT = 5
 export const BUYER_MARKETPLACE_FEE_PCT = 2
-/** Feature flag for the max(5%, actual PSP fee) logic — OFF until PSP contracts. */
-export const BUYER_FEE_USE_PSP_MAX = false
 /** Display labels — the buyer fee is shown as two itemised lines
- *  (marketplace 2% + processing 5%), both always in the displayed
- *  total. Never “passthrough”, never hidden. */
+ *  (marketplace 2% + the method's processing fee), both always in the
+ *  displayed total. Never "passthrough", never hidden. */
 export const MARKETPLACE_FEE_LABEL = 'Marketplace fee'
 export const PROCESSING_FEE_LABEL = 'Processing fee'
 
 export interface BuyerFee {
-  /** Processing component %, after the (flag-gated) max() rule. */
-  processingPct: number
   marketplacePct: number
-  processingAmount: number
   marketplaceAmount: number
-  /** Total fee actually charged to the buyer (sum of rounded components). */
+  /** The marketplace component only — the method fee is added from the quote. */
   amount: number
 }
 
-/**
- * Buyer fee on a subtotal. `actualPspPct` participates only when
- * BUYER_FEE_USE_PSP_MAX is enabled.
- */
-export function buyerFee(subtotal: number, actualPspPct?: number): BuyerFee {
-  const processingPct =
-    BUYER_FEE_USE_PSP_MAX && typeof actualPspPct === 'number'
-      ? Math.max(BUYER_PROCESSING_FEE_PCT, actualPspPct)
-      : BUYER_PROCESSING_FEE_PCT
-  const processingAmount = round2((subtotal * processingPct) / 100)
+/** Marketplace (buyer protection) fee on a subtotal. */
+export function buyerFee(subtotal: number): BuyerFee {
   const marketplaceAmount = round2((subtotal * BUYER_MARKETPLACE_FEE_PCT) / 100)
   return {
-    processingPct,
     marketplacePct: BUYER_MARKETPLACE_FEE_PCT,
-    processingAmount,
     marketplaceAmount,
-    amount: round2(processingAmount + marketplaceAmount),
+    amount: marketplaceAmount,
   }
 }
 
