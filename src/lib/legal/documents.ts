@@ -443,7 +443,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
       {
         blocks: [
           p(
-            'Every Order is covered by **SafeDrop Buyer Protection**: if your Order is not delivered or is not as described, you get your money back (see the Refund & Dispute Policy). Sellers are paid out only after you **Confirm Delivery** or the **Protection Window** for the category expires. Inspect the item and either confirm or open a dispute **within the Protection Window**.',
+            'Every Order is covered by **SafeDrop Protection**: if your Order is not delivered or is not as described, you get your money back (see the Refund & Dispute Policy). Sellers are credited only after you **Confirm Delivery** or the **Protection Window** for the category expires. Inspect the item and either confirm or open a dispute — you can open a dispute for **7 days from delivery**, even after the Order has completed.',
           ),
           ul([
             '**Covered:** non-delivery; items materially not as described; (for accounts) ban / recovery / clawback within the account Protection Window caused by the Seller or prior owner.',
@@ -655,17 +655,18 @@ export const LEGAL_DOCS: LegalDoc[] = [
             t: 'table',
             head: ['Category', 'Protection Window'],
             rows: [
-              ['In-game currency', '48 hours'],
-              ['Items', '72 hours'],
-              ['Top-ups / gift cards', '48 hours'],
-              ['Boosting / coaching', '72 hours after completion'],
-              ['Accounts — low risk', '5 days'],
-              ['Accounts — mid risk', '7 days'],
-              ['Accounts — high risk (e.g. GTA)', '14 days'],
+              ['In-game currency', '1 day'],
+              ['Items', '3 days'],
+              ['Top-ups / gift cards', '1 day'],
+              ['Boosting / coaching', '3 days after completion'],
+              ['Game accounts', '5 days'],
             ],
           },
           p(
-            '2.4. If you take no action before your Protection Window closes, the Order is treated as accepted. This does not affect your statutory rights (Section 6).',
+            '2.4. If you take no action before your Protection Window closes, the Order completes automatically. This does not affect your statutory rights (Section 6).',
+          ),
+          p(
+            '2.5. **Dispute window.** Whether or not the Order has completed, you can open a dispute for **7 days from delivery**. Disputes opened after the Order completed set the Seller’s amount aside while we review; a refund decided in your favour is credited to your DropMarket wallet.',
           ),
         ],
       },
@@ -695,7 +696,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '5. What SafeDrop means for Sellers',
         blocks: [
           p(
-            '5.1. **Payout timing.** Sale proceeds are credited to your Seller Balance after the Buyer confirms delivery or the Protection Window closes (or a dispute resolves in your favour). This is when your entitlement becomes withdrawable — see the Terms of Use, Section 9, and your Seller Agency Agreement.',
+            '5.1. **Payout timing.** Sale proceeds are credited to your Seller Balance when the Buyer confirms delivery (withdrawable 24 hours later) or when the Protection Window closes (withdrawable at once), or when a dispute resolves in your favour. A dispute opened within the 7-day dispute window sets that Order’s amount aside until it is decided — see the Terms of Use, Section 9, and your Seller Agency Agreement.',
           ),
           p(
             '5.2. **Guaranteed payout.** Once the Protection Window has closed without an upheld claim, your payout entitlement for that Order is final, except in cases of fraud, chargeback recovery under the Seller Agency Agreement, or breach of the Prohibited Items Policy.',
@@ -763,19 +764,19 @@ export const LEGAL_DOCS: LegalDoc[] = [
             rows: [
               [
                 'Game accounts',
-                '5, 7, or 14 days from delivery (by account risk band)',
+                '5 days from delivery',
                 'Covers ban / recovery / clawback caused by the Seller or a prior owner.',
               ],
               [
                 'In-game currency / gold',
-                '48 hours from delivery',
+                '1 day from delivery',
                 'Short window; value is consumed on use.',
               ],
-              ['In-game items', '72 hours from delivery', 'Non-delivery / not-as-described.'],
-              ['Top-ups / gift cards', '48 hours from delivery', 'Non-delivery / not-as-described.'],
+              ['In-game items', '3 days from delivery', 'Non-delivery / not-as-described.'],
+              ['Top-ups / gift cards', '1 day from delivery', 'Non-delivery / not-as-described.'],
               [
                 'Boosting / coaching',
-                'Service duration + 72 hours',
+                'Service duration + 3 days',
                 'Performance/completion-based; protects deliverables, not competitive outcomes.',
               ],
               [
@@ -786,7 +787,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             ],
           },
           p(
-            'If a Buyer takes no action before the Window closes, the Order is treated as accepted and the Seller is paid out — subject always to the statutory rights in Section 8.',
+            'If a Buyer takes no action before the Window closes, the Order completes automatically and the Seller is credited. A dispute can still be opened for 7 days from delivery; the Seller’s amount for that Order is set aside while it is reviewed — subject always to the statutory rights in Section 8.',
           ),
         ],
       },
@@ -1221,10 +1222,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Withdrawals',
         blocks: [
           ul([
-            '**Minimum withdrawal:** $100.',
-            '**Fiat payouts:** 1.5% + $2 per payout.',
-            '**Crypto payouts:** 3% + $10 per payout.',
+            '**Crypto payouts (USDT):** 3% + $5 per payout; minimum withdrawal $50.',
+            '**Payoneer payouts:** 3% per payout with a $5 minimum fee; minimum withdrawal $100.',
+            '**When a sale becomes withdrawable:** 24 hours after the Buyer confirms receipt, or immediately when the Order completes automatically at the end of its SafeDrop Protection window.',
+            '**New sellers:** withdrawals open 30 days after your seller account is approved.',
+            '**Payout details:** changing your payout address or Payoneer email pauses withdrawals for 48 hours. One withdrawal may be in progress at a time.',
+            '**Disputes:** while a dispute is open on an Order, that Order’s amount is set aside from your balance; a refund decided against you is deducted, and your balance may go below zero until later sales cover it.',
           ]),
+          p('The live schedule, read from the same table the withdrawal page quotes from, is on the [Seller Fees page](/sell/fees).'),
         ],
       },
       {

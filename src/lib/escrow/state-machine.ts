@@ -31,7 +31,8 @@ export type OrderStatus =
 
 /** Terminal states allow no outgoing transitions. */
 export const TERMINAL_STATES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
-  'completed',
+  // PR 7: `completed` is no longer terminal — a completed order can be
+  // disputed (buyer inside the dispute window, admin at any time).
   'cancelled',
   'refunded',
 ])
@@ -46,7 +47,9 @@ export const ALLOWED_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderSta
   delivering: ['delivered', 'disputed', 'cancelled', 'refunded'],
   delivered: ['completed', 'disputed', 'refunded'],
   disputed: ['completed', 'cancelled', 'refunded'],
-  completed: [],
+  // PR 7: a completed order may still be disputed (buyer inside the dispute
+  // window, or an admin at any time); the seller amount is frozen in the ledger.
+  completed: ['disputed'],
   cancelled: [],
   refunded: [],
 }
@@ -81,6 +84,7 @@ export type OrderEvent =
   | 'BUYER_CONFIRMED' // -> completed
   | 'AUTO_RELEASED' // -> completed
   | 'BUYER_DISPUTED' // -> disputed
+  | 'ADMIN_DISPUTED' // -> disputed (admin moves a completed order to disputed)
   | 'DISPUTE_RESOLVED_SELLER' // -> completed
   | 'DISPUTE_RESOLVED_BUYER' // -> refunded
   | 'DISPUTE_PARTIAL' // -> completed (split journal: partial refund + reduced payout)
@@ -94,6 +98,7 @@ export const EVENT_TARGET: Readonly<Record<OrderEvent, OrderStatus>> = {
   BUYER_CONFIRMED: 'completed',
   AUTO_RELEASED: 'completed',
   BUYER_DISPUTED: 'disputed',
+  ADMIN_DISPUTED: 'disputed',
   DISPUTE_RESOLVED_SELLER: 'completed',
   DISPUTE_RESOLVED_BUYER: 'refunded',
   DISPUTE_PARTIAL: 'completed',

@@ -3,9 +3,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
-import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
-import { PAYOUT_MIN_USD, round2 } from '@/lib/fees'
-import { validatePayoutAddress } from '@/lib/crypto/address-validation'
+import { revealPayoutSecret } from '@/lib/crypto/payout-encryption'
+
+/**
+ * PR 7: payment_details on new requests carries CIPHERTEXT
+ * (wallet_address_enc / payoneer_email_enc). Decrypt server-side, only inside
+ * an authenticated action's response, into the keys the UI renders.
+ */
+function revealPaymentDetails(details: Record<string, any> | null | undefined): Record<string, any> | null {
+  if (!details) return details ?? null
+  const out: Record<string, any> = { ...details }
+  try {
+    if (typeof out.wallet_address_enc === 'string') { out.wallet_address = revealPayoutSecret(out.wallet_address_enc); delete out.wallet_address_enc }
+    if (typeof out.payoneer_email_enc === 'string') { out.payoneer_email = revealPayoutSecret(out.payoneer_email_enc); delete out.payoneer_email_enc }
+  } catch (e) {
+    console.error('[Withdrawals] could not decrypt payment details:', e)
+    delete out.wallet_address_enc
+    delete out.payoneer_email_enc
+    out.decrypt_error = true
+  }
+  return out
+}
 
 // Types
 export interface WithdrawalMethod {
@@ -22,6 +40,8 @@ export interface WithdrawalMethod {
   coming_soon?: boolean | null
   fee_percentage: number
   fee_fixed: number
+  /** Minimum fee per withdrawal (PR 7): fee = max(pct + fixed, fee_min). */
+  fee_min?: number | null
   fee_currency: string
   min_withdrawal: number
   max_withdrawal: number
@@ -78,7 +98,78 @@ export async function getWithdrawalMethods(): Promise<{
   }
 }
 
-// 2. Calculate withdrawal fee
+// 2. Quote (PR 7): ONE SQL function computes every fee field and the first
+// refusal. TS never computes a fee; the page renders exactly what the RPC
+// returns and withdrawal_request() re-runs the same quote inside its
+// transaction (parity is a guard test).
+export interface WithdrawalQuote {
+  ok: boolean
+  refusal:
+    | 'method_unavailable' | 'account_age' | 'payout_details_freeze' | 'negative_balance' | 'open_withdrawal'
+    | 'payout_details_missing' | 'below_minimum' | 'above_maximum' | 'insufficient_available' | 'fee_exceeds_amount'
+    | null
+  message: string | null
+  amount: number
+  feePct: number
+  feeFixed: number
+  feeMin: number
+  feeAmount: number
+  net: number
+  minimum: number | null
+  maximum: number | null
+  /** Matured seller balance + store credit, in dollars. */
+  available: number
+  gate: { eligible: boolean; reason: string | null; unlockAt: string | null; freezeUntil: string | null; minAgeDays: number }
+}
+
+function toQuote(q: any): WithdrawalQuote {
+  const n = (v: unknown) => Number(v ?? 0)
+  return {
+    ok: Boolean(q?.ok),
+    refusal: q?.refusal ?? null,
+    message: q?.message ?? null,
+    amount: n(q?.amount),
+    feePct: n(q?.fee_pct),
+    feeFixed: n(q?.fee_fixed),
+    feeMin: n(q?.fee_min),
+    feeAmount: n(q?.fee_amount),
+    net: n(q?.net),
+    minimum: q?.minimum == null ? null : n(q.minimum),
+    maximum: q?.maximum == null ? null : n(q.maximum),
+    available: n(q?.available_minor) / 100,
+    gate: {
+      eligible: Boolean(q?.gate?.eligible),
+      reason: q?.gate?.reason ?? null,
+      unlockAt: q?.gate?.unlock_at ?? null,
+      freezeUntil: q?.gate?.freeze_until ?? null,
+      minAgeDays: n(q?.gate?.min_age_days ?? 30),
+    },
+  }
+}
+
+export async function quoteWithdrawal(methodId: string, amount: number): Promise<{
+  success: boolean
+  quote?: WithdrawalQuote
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+    const amt = Number(amount)
+    const { data, error } = await (createServiceRoleClient().rpc as any)('withdrawal_quote', {
+      p_seller_id: user.id,
+      p_method_id: methodId,
+      p_amount: Number.isFinite(amt) && amt > 0 ? amt : 0,
+    })
+    if (error) throw error
+    return { success: true, quote: toQuote(data) }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/** Back-compat wrapper: fee + net for the session user through the quote. */
 export async function calculateWithdrawalFee(
   amount: number,
   methodId: string
@@ -88,36 +179,24 @@ export async function calculateWithdrawalFee(
   net?: number
   error?: string
 }> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .rpc('calculate_withdrawal_fee', {
-        p_amount: amount,
-        p_method_id: methodId
-      } as any)
-      .single()
-
-    if (error) throw error
-
-    return {
-      success: true,
-      fee: (data as any).fee_amount,
-      net: (data as any).net_amount
-    }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
+  const r = await quoteWithdrawal(methodId, amount)
+  if (!r.success || !r.quote) return { success: false, error: r.error }
+  return { success: true, fee: r.quote.feeAmount, net: r.quote.net }
 }
 
-// 3. Create withdrawal request
+// 3. Create withdrawal request (PR 7): ONE RPC — advisory lock → quote →
+// INSERT with every fee field snapshotted → ledger hold → deduped
+// notification. The destination comes from the seller's saved payout details
+// (seller_payout_details), never from the request body.
 export async function createWithdrawalRequest(params: {
   amount: number
   methodId: string
-  paymentDetails: Record<string, any>
+  /** Ignored since PR 7 — kept so older callers still type-check. */
+  paymentDetails?: Record<string, any>
 }): Promise<{
   success: boolean
   requestId?: string
+  quote?: WithdrawalQuote
   error?: string
 }> {
   try {
@@ -125,138 +204,50 @@ export async function createWithdrawalRequest(params: {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    // Amount must be a real, sane money value before anything else touches
-    // it — NaN/Infinity would sail through the comparisons below and reach
-    // the ledger.
     const amount = Number(params.amount)
     if (!Number.isFinite(amount) || amount <= 0) {
       return { success: false, error: 'Enter a valid amount.' }
     }
-    // "At most 2 decimal places" — compare against a 2-dp rounding, NOT
-    // `Math.round(amount*100) === amount*100`. Float multiplication makes
-    // `64.01 * 100 === 6401.0000000000001`, so the old exact-equality guard
-    // wrongly rejected ~12% of valid 2-decimal amounts.
-    if (round2(amount) !== amount) {
+    if (Math.round(amount * 100) / 100 !== amount) {
       return { success: false, error: 'Amount can have at most 2 decimal places.' }
     }
 
-    // Platform-wide payout minimum (lib/fees — single source of truth; the
-    // per-method min_withdrawal rows mirror it).
-    if (amount < PAYOUT_MIN_USD) {
-      return { success: false, error: `Minimum withdrawal is $${PAYOUT_MIN_USD}` }
-    }
-
-    // One open request at a time. Without this a seller can submit N requests
-    // against the same balance faster than an admin can review them; each
-    // holds funds separately, but the queue fills with duplicates and the
-    // review workload multiplies.
-    const { count: openCount } = await supabase
-      .from('withdrawal_requests')
-      .select('id', { count: 'exact' })
-      .eq('user_id', user.id)
-      .in('status', ['pending', 'approved', 'processing']).limit(1)
-
-    if ((openCount ?? 0) > 0) {
-      return {
-        success: false,
-        error: 'You already have a withdrawal in progress. Wait for it to complete or cancel it first.',
-      }
-    }
-
-    // Balance check against the LEDGER (seller_available + wallet credit) —
-    // the legacy wallet_balances float table is no longer written to.
-    const balanceResult = await getMyWithdrawableBalance()
-    if (!balanceResult.success || !balanceResult.balance) {
-      return { success: false, error: balanceResult.error || 'Failed to check balance' }
-    }
-    if (balanceResult.balance.total < amount) {
-      return { success: false, error: 'Insufficient balance' }
-    }
-
-    // Get method details
-    const { data: method } = await supabase
-      .from('withdrawal_methods' as any)
-      .select('*')
-      .eq('id', params.methodId)
-      .single()
-
-    if (!method) throw new Error('Invalid withdrawal method')
-
-    const methodRow = method as any
-    if (methodRow.is_active === false) {
-      return { success: false, error: 'That withdrawal method isn’t available yet.' }
-    }
-
-    // Crypto sends are irreversible, so the destination is validated here —
-    // server-side and authoritative — not just in the browser. A live row in
-    // this table reads { method_name: "btc", network: "Trc20",
-    // wallet_address: "$sejsjsjwjh28383" }: Bitcoin over Tron, to junk. Both
-    // faults were accepted, and approving it would have destroyed the funds.
-    if (methodRow.method_type === 'crypto') {
-      const details = params.paymentDetails ?? {}
-      const address = String(details.wallet_address ?? '').trim()
-      const chain = String(details.network ?? '').trim().toLowerCase()
-      const coin = String(methodRow.coin ?? methodRow.method_name ?? '')
-        .trim()
-        .toLowerCase()
-
-      const check = validatePayoutAddress(coin, chain, address)
-      if (!check.valid) {
-        return { success: false, error: check.error || 'Invalid wallet address.' }
-      }
-
-      // Persist only the fields we validated — never the raw client object,
-      // which could otherwise smuggle extra keys into the admin's view.
-      params = {
-        ...params,
-        paymentDetails: { wallet_address: address, network: chain, coin },
-      }
-    }
-
-    // Calculate fees
-    const feeCalc = await calculateWithdrawalFee(amount, params.methodId)
-    if (!feeCalc.success) throw new Error(feeCalc.error)
-
-    // Create request
-    const serviceClient = createServiceRoleClient()
-    const { data: request, error } = await (serviceClient as any)
-      .from('withdrawal_requests')
-      .insert({
-        user_id: user.id,
-        amount,
-        method_id: params.methodId,
-        method_name: (method as any).method_name,
-        fee_amount: feeCalc.fee,
-        fee_percentage: (method as any).fee_percentage,
-        net_amount: feeCalc.net,
-        payment_details: params.paymentDetails,
-        status: 'pending'
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    const requestId = (request as any).id as string
-
-    // HOLD the funds in the ledger (seller_available / user_wallet →
-    // payout_clearing, idempotent on 'withdrawal:<requestId>') so a pending
-    // withdrawal can't also be spent at checkout. If the hold fails (e.g. a
-    // concurrent spend drained the balance), the request must not survive.
-    const { error: debitError } = await (serviceClient.rpc as any)('withdrawal_debit', {
-      p_user_id: user.id,
-      p_amount_minor: Math.round(amount * 100),
-      p_idempotency_key: `withdrawal:${requestId}`,
+    const { data, error } = await (createServiceRoleClient().rpc as any)('withdrawal_request', {
+      p_seller_id: user.id,
+      p_method_id: params.methodId,
+      p_amount: amount,
     })
-    if (debitError) {
-      await (serviceClient as any)
-        .from('withdrawal_requests')
-        .delete()
-        .eq('id', requestId)
-      return { success: false, error: 'Insufficient balance' }
+    if (error) {
+      // 23505 = the one-open-per-seller index caught a race the lock did not cover.
+      if (String(error.code) === '23505') {
+        return { success: false, error: 'You already have a withdrawal in progress. Wait for it to complete or cancel it first.' }
+      }
+      throw error
+    }
+    const quote = toQuote(data?.quote)
+    if (!data?.requested) {
+      return { success: false, quote, error: quote.message || 'This withdrawal cannot be requested right now.' }
     }
 
-    return { success: true, requestId }
+    // Email (in-app notification was written by the RPC, deduped).
+    await (async () => {
+      const service = createServiceRoleClient()
+      const { data: profile } = await service.from('profiles').select('email, username, full_name').eq('id', user.id).single() as any
+      if (profile?.email) {
+        const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
+        await sendWithdrawalProcessedEmail({
+          to: profile.email,
+          name: profile.full_name || profile.username || 'Gamer',
+          amount,
+          method: data.display_name || data.method_name || 'your payout method',
+          status: 'requested',
+          net: quote.net,
+          fee: quote.feeAmount,
+        })
+      }
+    })().catch((err) => console.error('[Withdrawals] Request email failed:', err))
+
+    return { success: true, requestId: data.request_id as string, quote }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
@@ -357,13 +348,26 @@ export async function getAllWithdrawalRequests(filters?: {
 
     if (error) throw error
 
-    return { success: true, requests: data as any }
+    // PR 7: risk snapshot per row (account age, completed sales, open disputes,
+    // refund rate, recent payout-detail change) from ONE SQL function.
+    const service = createServiceRoleClient()
+    const rows = (data ?? []) as any[]
+    const sellerIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
+    const snapshots = new Map<string, any>()
+    await Promise.all(sellerIds.map(async (id) => {
+      const { data: snap } = await (service.rpc as any)('withdrawal_risk_snapshot', { p_seller_id: id })
+      if (snap) snapshots.set(id, snap)
+    }))
+    const requests = rows.map((r) => ({ ...r, payment_details: revealPaymentDetails(r.payment_details), risk: snapshots.get(r.user_id) ?? null }))
+
+    return { success: true, requests }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
 }
 
-// 7. Approve withdrawal request (admin)
+// 7. Approve withdrawal request (admin) — PR 7: ONE RPC (status flip +
+// deduped notification); the email rides on top.
 export async function approveWithdrawalRequest(params: {
   requestId: string
   adminNotes?: string
@@ -373,74 +377,36 @@ export async function approveWithdrawalRequest(params: {
 }> {
   try {
     // SECURITY: admin-only. Gate on admin_roles BEFORE switching to the
-    // RLS-bypassing service-role client. Previously this only checked
-    // "is logged in", letting any user self-approve their own cash-out.
+    // RLS-bypassing service-role client.
     const admin = await requireAdmin()
 
     // Ledger note: the funds were already moved into payout_clearing when
-    // the request was created (withdrawal_debit). Approval flips status only;
-    // the payout_clearing → external_payout journal posts when ops actually
-    // sends the money (markWithdrawalPaid, below).
+    // the request was created (withdrawal_request). Approval flips status only;
+    // the payout_clearing → external_payout journal posts on Mark Paid.
     const serviceClient = createServiceRoleClient()
-    const { data: updatedRows, error } = await (serviceClient as any)
-      .from('withdrawal_requests')
-      .update({
-        status: 'approved',
-        approved_at: new Date().toISOString(),
-        processed_by: admin.userId,
-        admin_notes: params.adminNotes
-      })
-      .eq('id', params.requestId)
-      .eq('status', 'pending')
-      .select('user_id, amount, method_id, method_name')
-
+    const { data: approved, error } = await (serviceClient.rpc as any)('withdrawal_approve', {
+      p_request_id: params.requestId,
+      p_admin_id: admin.userId,
+      p_notes: params.adminNotes ?? null,
+    })
     if (error) throw error
+    if (!approved?.changed) return { success: true }
 
-    // Tell the user their withdrawal was approved (in-app + email).
-    // Awaited but isolated: comms failures must never fail the approval.
-    const request = updatedRows?.[0]
-    if (request) {
-      await (async () => {
-        const [{ data: profile }, { data: method }] = await Promise.all([
-          serviceClient
-            .from('profiles')
-            .select('email, username, full_name')
-            .eq('id', request.user_id)
-            .single() as any,
-          (serviceClient as any)
-            .from('withdrawal_methods')
-            .select('display_name')
-            .eq('id', request.method_id)
-            .single(),
-        ])
-        const methodName =
-          method?.display_name || request.method_name || 'your withdrawal method'
-        const amount = Number(request.amount) || 0
-
-        const { error: notifError } = await (serviceClient as any)
-          .from('notifications')
-          .insert({
-            user_id: request.user_id,
-            type: 'withdrawal_approved',
-            title: 'Withdrawal Approved',
-            message: `$${amount.toFixed(2)} → ${methodName} — processing.`,
-            link: '/account/wallet',
-            is_read: false,
-          })
-        if (notifError) throw notifError
-
-        if (profile?.email) {
-          const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
-          await sendWithdrawalProcessedEmail({
-            to: profile.email,
-            name: profile.full_name || profile.username || 'Gamer',
-            amount,
-            method: methodName,
-            status: 'approved',
-          })
-        }
-      })().catch((err) => console.error('[Withdrawals] Approval comms failed:', err))
-    }
+    await (async () => {
+      const { data: profile } = await serviceClient
+        .from('profiles').select('email, username, full_name').eq('id', approved.user_id).single() as any
+      if (profile?.email) {
+        const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
+        await sendWithdrawalProcessedEmail({
+          to: profile.email,
+          name: profile.full_name || profile.username || 'Gamer',
+          amount: Number(approved.amount) || 0,
+          net: Number(approved.net_amount) || undefined,
+          method: approved.display_name || approved.method_name || 'your withdrawal method',
+          status: 'approved',
+        })
+      }
+    })().catch((err) => console.error('[Withdrawals] Approval comms failed:', err))
 
     return { success: true }
   } catch (error: any) {
@@ -448,11 +414,13 @@ export async function approveWithdrawalRequest(params: {
   }
 }
 
-// 8. Mark approved withdrawal as paid (admin)
+// 8. Mark approved withdrawal as paid (admin) — PR 7: ONE RPC settles the
+// ledger (withdrawal_payout) and flips to completed with the reference.
 export async function markWithdrawalPaid(params: {
   requestId: string
-  /** On-chain tx hash / bank reference — proof of the send. */
+  /** On-chain tx hash / Payoneer payment reference — proof of the send. */
   transactionHash?: string
+  reference?: string
   adminNotes?: string
 }): Promise<{
   success: boolean
@@ -464,114 +432,45 @@ export async function markWithdrawalPaid(params: {
     // be able to record payouts. Checked BEFORE any service-role work.
     const admin = await requireRole(['admin', 'super_admin'])
 
+    const reference = (params.reference ?? params.transactionHash ?? '').trim()
+    if (!reference) {
+      return { success: false, error: 'Enter the payment reference (tx hash or Payoneer reference) — it is sent to the seller.' }
+    }
+
     const serviceClient = createServiceRoleClient()
-    const { data: request, error: loadError } = await (serviceClient as any)
-      .from('withdrawal_requests')
-      .select('id, status, user_id, amount, method_id, method_name')
-      .eq('id', params.requestId)
-      .single()
-
-    if (loadError || !request) {
-      return { success: false, error: 'Withdrawal request not found' }
-    }
-
-    // Replay of a finished payout: the journal already posted (it posts
-    // before the status flip), so there is nothing left to do.
-    if (request.status === 'completed') {
-      return { success: true }
-    }
-    if (request.status !== 'approved' && request.status !== 'processing') {
-      return {
-        success: false,
-        error: `Only an approved withdrawal can be marked paid — this one is ${request.status}.`,
-      }
-    }
-
-    // 1) Settle the ledger FIRST: payout_clearing → external_payout, sized
-    // from the hold journal itself, idempotent on 'payout:<requestId>'. If
-    // this fails the request stays approved and the action is retryable; the
-    // reverse order could mark a request completed with the money still
-    // showing in-flight — exactly the gap this action closes.
-    const { error: journalError } = await (serviceClient.rpc as any)('withdrawal_payout', {
+    const { data: paid, error } = await (serviceClient.rpc as any)('withdrawal_mark_paid', {
       p_request_id: params.requestId,
+      p_admin_id: admin.userId,
+      p_reference: reference,
+      p_notes: params.adminNotes ?? null,
     })
-    if (journalError) {
-      console.error(
-        `[Withdrawals] payout journal failed for request ${params.requestId}:`,
-        journalError
-      )
-      return { success: false, error: `Payout journal failed: ${journalError.message}` }
+    if (error) {
+      console.error(`[Withdrawals] mark paid failed for request ${params.requestId}:`, error)
+      return { success: false, error: `Payout failed: ${error.message}` }
+    }
+    if (!paid?.changed) {
+      // Replay of a finished payout is a success; anything else is a state error.
+      if (paid?.status === 'completed') return { success: true }
+      if (paid?.reason === 'not_found') return { success: false, error: 'Withdrawal request not found' }
+      return { success: false, error: `Only an approved withdrawal can be marked paid — this one is ${paid?.status ?? 'unknown'}.` }
     }
 
-    // 2) Flip to the terminal paid state. Status-gated so a concurrent
-    // double-click can't clobber audit fields; the journal above is shared
-    // and idempotent either way.
-    const txHash = params.transactionHash?.trim() || null
-    const { error: updateError } = await (serviceClient as any)
-      .from('withdrawal_requests')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        processed_by: admin.userId,
-        transaction_hash: txHash,
-        ...(params.adminNotes ? { admin_notes: params.adminNotes } : {}),
-      })
-      .eq('id', params.requestId)
-      .in('status', ['approved', 'processing'])
-
-    if (updateError) {
-      // Journal posted but the flip failed — surface loudly; a retry is safe
-      // (journal replays idempotently) and completes the flip.
-      console.error(
-        `[Withdrawals] CRITICAL: status flip failed for paid request ${params.requestId}:`,
-        updateError
-      )
-      return { success: false, error: 'Payout recorded but status update failed — retry.' }
-    }
-
-    // 3) Tell the seller the money was sent (in-app + email).
-    // Awaited but isolated: comms failures must never fail the settlement.
     await (async () => {
-      const [{ data: profile }, { data: method }] = await Promise.all([
-        serviceClient
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', request.user_id)
-          .single() as any,
-        (serviceClient as any)
-          .from('withdrawal_methods')
-          .select('display_name')
-          .eq('id', request.method_id)
-          .single(),
-      ])
-      const methodName =
-        method?.display_name || request.method_name || 'your withdrawal method'
-      const amount = Number(request.amount) || 0
-
-      const { error: notifError } = await (serviceClient as any)
-        .from('notifications')
-        .insert({
-          user_id: request.user_id,
-          type: 'withdrawal_completed',
-          title: 'Withdrawal Sent',
-          message: `$${amount.toFixed(2)} → ${methodName} — sent.`,
-          link: '/account/wallet',
-          is_read: false,
-        })
-      if (notifError) throw notifError
-
+      const { data: profile } = await serviceClient
+        .from('profiles').select('email, username, full_name').eq('id', paid.user_id).single() as any
       if (profile?.email) {
         const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
         await sendWithdrawalProcessedEmail({
           to: profile.email,
           name: profile.full_name || profile.username || 'Gamer',
-          amount,
-          method: methodName,
+          amount: Number(paid.amount) || 0,
+          net: Number(paid.net_amount) || undefined,
+          method: paid.display_name || paid.method_name || 'your withdrawal method',
           status: 'completed',
-          txReference: txHash ?? undefined,
+          txReference: paid.reference,
         })
       }
-    })().catch((err) => console.error('[Withdrawals] Payout comms failed:', err))
+    })().catch((err) => console.error('[Withdrawals] Paid comms failed:', err))
 
     return { success: true }
   } catch (error: any) {
@@ -632,18 +531,7 @@ export async function rejectWithdrawalRequest(params: {
           method?.display_name || request.method_name || 'your withdrawal method'
         const amount = Number(request.amount) || 0
 
-        const { error: notifError } = await (serviceClient as any)
-          .from('notifications')
-          .insert({
-            user_id: request.user_id,
-            type: 'withdrawal_rejected',
-            title: 'Withdrawal Declined',
-            message: `$${amount.toFixed(2)} — ${params.reason}. Funds stay in your wallet.`,
-            link: '/account/wallet',
-            is_read: false,
-          })
-        if (notifError) throw notifError
-
+        // In-app notification was written by the RPC (notify_once).
         if (profile?.email) {
           const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
           await sendWithdrawalProcessedEmail({

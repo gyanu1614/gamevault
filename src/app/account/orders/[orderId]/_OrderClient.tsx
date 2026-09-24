@@ -36,6 +36,8 @@ interface OrderClientProps {
   order: any
   userRole: 'buyer' | 'seller' | 'admin'
   disputeResolution: any | null
+  /** PR 7: end of the buyer's dispute window (delivered_at + N days), or null. */
+  disputeUntil?: string | null
   itemImageUrl: string | null
   itemTitle: string
   gameName: string | null
@@ -63,6 +65,7 @@ export function OrderClient(props: OrderClientProps) {
     order,
     userRole,
     disputeResolution,
+    disputeUntil = null,
     itemImageUrl,
     itemTitle,
     gameName,
@@ -316,6 +319,7 @@ export function OrderClient(props: OrderClientProps) {
               amount={userRole === 'seller' && order.status === 'completed' ? netPayout : undefined}
               overdue={isOverdueOnLoad}
               disputeHref={`/account/orders/${order.id}#dispute`}
+              disputeUntil={disputeUntil}
               onMarkDelivered={
                 userRole === 'seller' && order.status === 'delivering'
                   ? () => setMarkDeliveredOpen(true)
@@ -435,6 +439,7 @@ export function OrderClient(props: OrderClientProps) {
               itemName={itemTitle}
               deliveryInfo={(order as any).delivery_info ?? null}
               onOpenDispute={openDispute}
+              disputeUntil={disputeUntil}
             />
           </aside>
         </div>

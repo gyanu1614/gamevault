@@ -12,11 +12,11 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BadgePercent, CalendarClock, Crown, Sparkles } from 'lucide-react'
+import { BadgePercent, CalendarClock, Crown, Sparkles, Wallet } from 'lucide-react'
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
-import { getPublicFeeSchedule, type PublicFeeSchedule } from '@/lib/fees/public-rates'
+import { getPublicFeeSchedule, getPublicWithdrawalTerms, describeWithdrawalFee, formatScheduleDateUtc, type PublicFeeSchedule } from '@/lib/fees/public-rates'
 
 export const revalidate = 86400
 export const dynamic = 'force-static'
@@ -34,10 +34,10 @@ export const metadata: Metadata = {
   },
 }
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+const fmtDate = formatScheduleDateUtc
 const pct = (n: number) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}%`
 const pts = (n: number) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}`
+const hoursText = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h === 24 ? '' : 's'}` : `${h} hour${h === 1 ? '' : 's'}`)
 
 const FAQ = [
   {
@@ -59,7 +59,7 @@ const FAQ = [
 ]
 
 export default async function SellerFeesPage() {
-  const s = await getPublicFeeSchedule()
+  const [s, w] = await Promise.all([getPublicFeeSchedule(), getPublicWithdrawalTerms()])
   const hasNext = s.nextChange != null && s.categories.some((c) => c.nextPct != null)
 
   return (
@@ -149,6 +149,48 @@ export default async function SellerFeesPage() {
           </Card>
         </div>
 
+        {/* ── Getting paid (PR 7) — the only seller surface besides /fees that carries payout numbers ── */}
+        <Section
+          title="Getting paid"
+          lead="When a sale becomes withdrawable, and what each payout method costs. Read live from the same tables the withdrawal page quotes from."
+        >
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <Table
+              head={['Payout method', 'Fee', 'Minimum withdrawal']}
+              rows={w.methods.map((m) => [m.displayName, describeWithdrawalFee(m), `$${m.minWithdrawal.toFixed(0)}`])}
+            />
+            <Card icon={<Wallet className="h-4 w-4" />} title="Timing and rules">
+              <ul className="space-y-2 text-[14px] leading-relaxed text-text-secondary">
+                <li>
+                  A sale is credited when the buyer confirms receipt and becomes withdrawable{' '}
+                  <b className="text-text-primary">{hoursText(w.completionHoldHours)}</b> later. If the buyer does nothing,
+                  the order completes automatically when its SafeDrop Protection window closes and the credit is withdrawable at once.
+                </li>
+                <li>
+                  Protection windows:{' '}
+                  {w.windows.map((x, i) => (
+                    <span key={x.type}>
+                      {i > 0 && ' · '}
+                      {x.label} <b className="text-text-primary">{hoursText(x.hours)}</b>
+                    </span>
+                  ))}
+                  .
+                </li>
+                <li>
+                  Buyers can open a dispute for <b className="text-text-primary">{w.disputeWindowDays} days</b> after delivery.
+                  While a dispute is open the order&apos;s amount is set aside; we handle the dispute on your behalf and release or refund it when it is decided.
+                </li>
+                <li>
+                  Withdrawals open <b className="text-text-primary">{w.minAccountAgeDays} days</b> after your seller account is approved.
+                </li>
+                <li>
+                  Changing your payout details pauses withdrawals for <b className="text-text-primary">{hoursText(w.payoutFreezeHours)}</b>. One withdrawal can be in progress at a time.
+                </li>
+              </ul>
+            </Card>
+          </div>
+        </Section>
+
         {/* ── Rules ───────────────────────────────────────────────────────── */}
         <Section title="How the rate is applied">
           <ul className="space-y-2 text-[14px] leading-relaxed text-text-secondary">
@@ -160,8 +202,9 @@ export default async function SellerFeesPage() {
               start at once but always end on a stated date.
             </li>
             <li>
-              Buyer fees, withdrawal fees and warranty terms are set out in the{' '}
-              <Link href="/fees" className="font-semibold text-lime-text hover:underline">Fees &amp; Charges</Link> document.
+              Buyer fees and warranty terms are set out in the{' '}
+              <Link href="/fees" className="font-semibold text-lime-text hover:underline">Fees &amp; Charges</Link> document; withdrawal
+              terms are in &ldquo;Getting paid&rdquo; above.
             </li>
           </ul>
         </Section>

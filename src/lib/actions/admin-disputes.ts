@@ -7,8 +7,7 @@ import { logAdminActivity } from '@/lib/admin/activity-log'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { sendDisputeResolvedEmail, sendOrderRefundedEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
-import { refundToWallet } from '@/lib/wallet/wallet'
-import { transition } from '@/lib/escrow/transition'
+import { sendDisputeOpenedEmail } from '@/lib/email'
 
 // ============================================
 // TYPES
@@ -341,169 +340,44 @@ export async function resolveDispute(
 
   const isPartial = resolution.resolutionType === 'refund_partial'
   const isRefund = resolution.resolutionType === 'refund_full' || isPartial
-
-  // The buyer's store-credit amount. A FULL refund returns everything the
-  // buyer paid (the ledger moves the full held gross to refunds); a PARTIAL
-  // refund returns exactly the admin-entered amount.
   const refundAmount = isPartial
     ? Number(resolution.resolvedAmount || 0)
-    : Number(order.total_amount || 0)
+    : isRefund ? Number(order.total_amount || 0) : 0
 
-  if (isPartial && (!(refundAmount > 0) || refundAmount > Number(order.total_amount || 0))) {
+  if (isPartial && (!(refundAmount > 0) || refundAmount >= Number(order.total_amount || 0))) {
     return {
       success: false,
-      error: `Partial refund must be between $0.01 and $${Number(order.total_amount || 0).toFixed(2)}.`,
+      error: `Partial refund must be between $0.01 and $${(Number(order.total_amount || 0) - 0.01).toFixed(2)} — use a full refund for the whole amount.`,
     }
   }
 
-  // Flip the order + escrow through the atomic ledger transition FIRST so the
-  // status change and its money movement post together (same ordering as
-  // cancelOrder / processCancellationRequest / webhook dispatch — if the
-  // transition fails, nothing has moved and the dispute stays open):
-  //   refund_full    → DISPUTE_RESOLVED_BUYER (escrow_held → refunds; the
-  //                    wallet credit below completes the chain
-  //                    refunds → user_wallet)
-  //   refund_partial → DISPUTE_PARTIAL (split journal, 20260720 migration:
-  //                    escrow_held → refunds[partial] + platform take +
-  //                    reduced seller_available)
-  //   everything else→ DISPUTE_RESOLVED_SELLER (escrow_held →
-  //                    platform take + seller_available)
-  const disputeEvent =
-    resolution.resolutionType === 'refund_full'
-      ? ('DISPUTE_RESOLVED_BUYER' as const)
-      : isPartial
-      ? ('DISPUTE_PARTIAL' as const)
-      : ('DISPUTE_RESOLVED_SELLER' as const)
-
-  let transitionChanged = true
-  try {
-    const transitionResult = await transition(
-      (dispute as any).transaction_id,
-      disputeEvent,
-      disputeId,
-      disputeEvent === 'DISPUTE_RESOLVED_BUYER' ? undefined : 'dispute_resolved',
-      disputeEvent === 'DISPUTE_PARTIAL'
-        ? BigInt(Math.round(refundAmount * 100))
-        : undefined
-    )
-    transitionChanged = transitionResult.changed
-  } catch (orderUpdateError: any) {
-    // Transition-first means a failure here is CLEAN: no money has moved and
-    // the dispute is still open — the admin can simply retry.
-    console.error('[Dispute] Order transition failed (nothing moved):', orderUpdateError)
+  // PR 7: ONE RPC. Outcome → transition → buyer wallet credit → disputes +
+  // dispute_resolutions + audit row + deduped notifications, in one
+  // transaction; a failure anywhere leaves the dispute open and nothing moved.
+  //   release        → DISPUTE_RESOLVED_SELLER (unfreezes after completion)
+  //   refund_full    → order_refund_to_wallet (existing refund RPC)
+  //   refund_partial → DISPUTE_PARTIAL + wallet_refund:<order>:partial:<dispute>
+  const outcome = resolution.resolutionType === 'refund_full' ? 'refund_full' : isPartial ? 'refund_partial' : 'release'
+  const service = createServiceRoleClient()
+  const { data: resolved, error: resolveError } = await (service.rpc as any)('order_dispute_resolve', {
+    p_dispute_id: disputeId,
+    p_admin_id: admin.userId,
+    p_outcome: outcome,
+    p_refund_minor: isPartial ? Math.round(refundAmount * 100) : null,
+    p_notes: resolution.notes,
+  })
+  if (resolveError) {
+    console.error('[Dispute] order_dispute_resolve failed (nothing moved):', resolveError)
     return {
       success: false,
-      error: `Failed to resolve: ${orderUpdateError?.message ?? 'unknown error'}. No money has moved — please try again.`,
+      error: `Failed to resolve: ${resolveError.message}. No money has moved — please try again.`,
     }
   }
-
-  // V23 — Refund to the buyer's WALLET (ledger-backed), instantly. Crypto
-  // payments are irreversible, so refunds are an inbound wallet credit the
-  // buyer can re-spend or withdraw. Idempotent: full refunds key on
-  // 'wallet_refund:<orderId>'; partial refunds key on
-  // 'wallet_refund:<orderId>:partial:<disputeId>' so they can't collide with
-  // (or be swallowed by) a prior full-order refund key.
-  if (isRefund && refundAmount > 0) {
-    const currency = (order.currency || 'EUR').toUpperCase()
-
-    // PARTIAL double-credit guard. The partial wallet key is dispute-scoped
-    // (so a prior full-order key can't swallow it) — which means it is NOT
-    // protected by the order-level idempotency the full path enjoys. If the
-    // transition was a no-op (order already 'completed'), the split journal
-    // funding this credit only exists when THIS resolution posted it earlier
-    // (retry after a failed credit). If it's missing, the order was finalized
-    // by a different outcome (e.g. a concurrent seller-favor resolution
-    // already released the full payout) — crediting now would double-pay.
-    if (isPartial && !transitionChanged) {
-      const service = createServiceRoleClient()
-      const { data: partialJournal } = await service
-        .from('ledger_transactions')
-        .select('id')
-        .eq('idempotency_key', `order:${order.id}:DISPUTE_PARTIAL:${disputeId}`)
-        .maybeSingle() as any
-      if (!partialJournal) {
-        return {
-          success: false,
-          error:
-            'This order was already finalized by a different outcome, so the partial refund was NOT credited (it would double-pay). Review the order ledger before compensating manually.',
-        }
-      }
-    }
-
-    console.log(`[Dispute] Refunding ${resolution.resolutionType} of ${refundAmount} ${currency} to wallet for buyer ${order.buyer_id}`)
-
-    try {
-      await refundToWallet({
-        userId: order.buyer_id,
-        amountMinor: BigInt(Math.round(refundAmount * 100)),
-        currency,
-        orderId: order.id,
-        keySuffix: isPartial ? `partial:${disputeId}` : undefined,
-      })
-    } catch (e: any) {
-      // The order transition already posted (idempotently) — re-resolving the
-      // dispute will no-op the transition and retry this credit.
-      console.error('[Dispute] CRITICAL: wallet refund credit failed:', e?.message)
-      return {
-        success: false,
-        error: `Order updated but the wallet credit failed: ${e?.message ?? 'unknown error'}. Resolve again to retry the credit (it is idempotent) or contact support.`,
-      }
-    }
-    console.log('[Dispute] Wallet refund posted')
-  }
-
-  // Update dispute status
-  const { error: disputeError } = await (supabase
-    .from('disputes')
-    .update as any)({
-      status: resolution.status,
-      resolution_type: resolution.resolutionType,
-      resolved_amount: resolution.resolvedAmount,
-      resolution_notes: resolution.notes,
-      resolved_by: admin.userId,
-      resolved_at: new Date().toISOString(),
-    })
-    .eq('id', disputeId)
-
-  if (disputeError) {
-    return { success: false, error: disputeError.message }
-  }
-
-  // Create entry in dispute_resolutions table for buyer/seller pages
-  const favoredParty = resolution.status === 'resolved_buyer_favor' ? 'buyer'
-    : resolution.status === 'resolved_seller_favor' ? 'seller'
-    : 'neutral'
-
-  const resolutionTypeMapping: Record<string, string> = {
-    'refund_full': 'refund_buyer',
-    'refund_partial': 'partial_refund',
-    'no_refund': 'release_seller',
-    'replacement': 'replacement',
-    'other': 'other'
-  }
-
-  const { error: resolutionInsertError } = await (supabase
-    .from('dispute_resolutions')
-    .insert as any)({
-      dispute_id: disputeId,
-      resolved_by: admin.userId,
-      resolution_type: resolutionTypeMapping[resolution.resolutionType] || 'other',
-      favored_party: favoredParty,
-      refund_amount: resolution.resolutionType.includes('refund') ? resolution.resolvedAmount : null,
-      refund_percentage: resolution.resolutionType === 'refund_partial' && resolution.resolvedAmount
-        ? (resolution.resolvedAmount / (order as any).total_amount) * 100
-        : null,
-      seller_payout_amount: resolution.resolutionType === 'no_refund' ? (order as any).total_amount :
-        (resolution.resolutionType === 'refund_partial' && resolution.resolvedAmount
-          ? (order as any).total_amount - resolution.resolvedAmount
-          : null),
-      resolution_notes: resolution.notes,
-      resolved_at: new Date().toISOString(),
-    })
-
-  if (resolutionInsertError) {
-    console.error('[Dispute] Failed to create dispute_resolutions entry:', resolutionInsertError)
-    // Non-fatal - dispute is already marked as resolved
+  if (!resolved || resolved.resolved !== true) {
+    const why = String(resolved?.reason ?? '')
+    if (why === 'already_resolved') return { success: false, error: 'This dispute has already been resolved.' }
+    if (why === 'order_not_disputed') return { success: false, error: `The order is ${resolved?.status ?? 'not'} disputed — nothing to resolve.` }
+    return { success: false, error: 'This dispute could not be resolved.' }
   }
 
   // Send resolution message to order conversation
@@ -544,65 +418,8 @@ export async function resolveDispute(
     // Non-fatal - dispute is already resolved
   }
 
-  // Create navbar notifications for both buyer and seller about dispute resolution
   const orderRef = order.order_number || dispute.transaction_id.slice(0, 8).toUpperCase()
-  try {
-    const { createNotification } = await import('@/lib/utils/notifications')
-
-    // Determine the outcome message based on resolution. When money moved,
-    // the buyer copy says so — the store credit is already spendable.
-    let outcomeTitle = 'Dispute Resolved'
-    let buyerTitle = ''
-    let buyerMessage = ''
-    let buyerLink = `/account/orders/${dispute.transaction_id}`
-    let sellerMessage = ''
-
-    if (resolution.status === 'resolved_buyer_favor') {
-      outcomeTitle = 'Dispute Resolved - Buyer Favor'
-      buyerMessage = `Your dispute for order #${orderRef} was resolved in your favor. Check the order page for details.`
-      sellerMessage = `The dispute for order #${orderRef} was resolved in buyer's favor. Check the order page for details.`
-    } else if (resolution.status === 'resolved_seller_favor') {
-      outcomeTitle = 'Dispute Resolved - Seller Favor'
-      buyerMessage = `Your dispute for order #${orderRef} was resolved in seller's favor. Check the order page for details.`
-      sellerMessage = `The dispute for order #${orderRef} was resolved in your favor. Check the order page for details.`
-    } else {
-      outcomeTitle = 'Dispute Resolved - Partial'
-      buyerMessage = `Your dispute for order #${orderRef} has been resolved with a partial outcome. Check the order page for details.`
-      sellerMessage = `The dispute for order #${orderRef} has been resolved with a partial outcome. Check the order page for details.`
-    }
-
-    if (isRefund && refundAmount > 0) {
-      buyerTitle = 'Money In Your Wallet'
-      buyerMessage =
-        resolution.status === 'resolved_buyer_favor'
-          ? `Your dispute for order #${orderRef} was resolved in your favor — $${refundAmount.toFixed(2)} was added to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
-          : `Your dispute for order #${orderRef} was resolved with a partial refund — $${refundAmount.toFixed(2)} was added to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
-      buyerLink = '/account/wallet'
-    }
-
-    // Create notification for buyer
-    await createNotification({
-      userId: order.buyer_id,
-      type: 'dispute_resolved',
-      title: buyerTitle || outcomeTitle,
-      message: buyerMessage,
-      link: buyerLink,
-    })
-
-    // Create notification for seller
-    await createNotification({
-      userId: order.seller_id,
-      type: 'dispute_resolved',
-      title: outcomeTitle,
-      message: sellerMessage,
-      link: `/seller/orders/${dispute.transaction_id}`,
-    })
-
-    console.log('[Dispute] Navbar resolution notifications created for buyer and seller')
-  } catch (error) {
-    console.error('[Dispute] Failed to create navbar resolution notifications:', error)
-    // Non-fatal - dispute is already resolved
-  }
+  // In-app notifications for both parties were written by the RPC (notify_once).
 
   await logAdminActivity({
     action: ADMIN_ACTIONS.DISPUTE_RESOLVED,
@@ -768,4 +585,69 @@ export async function getDisputeStats() {
   }
 
   return { success: true, stats }
+}
+
+
+// ============================================
+// ADMIN: MOVE AN ORDER TO DISPUTED (PR 7)
+// ============================================
+
+/**
+ * Admin opens a dispute on an order — including a COMPLETED one (e.g. after a
+ * support ticket). The RPC moves the order to `disputed` (ADMIN_DISPUTED),
+ * freezes the seller amount when the order was already released, writes the
+ * disputes row + audit row and the two deduped notifications. Emails ride on
+ * top, best-effort.
+ */
+export async function adminOpenOrderDispute(orderId: string, reason: string) {
+  const admin = await requirePermission('disputes.resolve')
+  const description = String(reason ?? '').trim()
+  if (description.length < 5) return { success: false as const, error: 'Give a reason (at least 5 characters) — it is written to the audit trail.' }
+
+  const service = createServiceRoleClient()
+  const { data: opened, error } = await (service.rpc as any)('order_dispute_open', {
+    p_order_id: orderId,
+    p_actor_id: admin.userId,
+    p_actor_role: 'admin',
+    p_reason: 'other',
+    p_title: null,
+    p_description: description,
+  })
+  if (error) return { success: false as const, error: error.message }
+  if (!opened || opened.opened !== true) {
+    const why = String(opened?.reason ?? '')
+    if (why === 'already_open') return { success: false as const, error: 'A dispute is already open for this order.', disputeId: opened.dispute_id as string }
+    if (why === 'not_disputable') return { success: false as const, error: `A ${opened.status} order cannot be disputed.` }
+    return { success: false as const, error: 'This order cannot be disputed.' }
+  }
+
+  await logAdminActivity({
+    action: ADMIN_ACTIONS.DISPUTE_RESOLVED,
+    actionCategory: 'dispute',
+    resourceType: 'order',
+    resourceId: orderId,
+    resourceName: `Order #${opened.order_number ?? orderId.slice(0, 8)}`,
+    previousState: { status: opened.post_completion ? 'completed' : 'paid/delivered' },
+    newState: { status: 'disputed', dispute_id: opened.dispute_id, frozen_minor: opened.frozen_minor },
+    notes: description,
+  }).catch(() => undefined)
+
+  // Emails to both parties (best-effort).
+  await (async () => {
+    const { data: parties } = await service.from('profiles').select('id, email, username, full_name')
+      .in('id', [opened.buyer_id, opened.seller_id]) as any
+    const party = (id: string) => parties?.find((p: any) => p.id === id)
+    const buyer = party(opened.buyer_id)
+    const seller = party(opened.seller_id)
+    const disputeRef = opened.order_number || orderId.slice(0, 8).toUpperCase()
+    await Promise.allSettled([
+      buyer?.email ? sendDisputeOpenedEmail({ to: buyer.email, name: buyer.full_name || buyer.username || 'Gamer', disputeId: disputeRef, orderId, role: 'buyer', reason: description }) : Promise.resolve(),
+      seller?.email ? sendDisputeOpenedEmail({ to: seller.email, name: seller.full_name || seller.username || 'Gamer', disputeId: disputeRef, orderId, role: 'seller', reason: description }) : Promise.resolve(),
+    ])
+  })().catch((err) => console.error('[Dispute] admin-open emails failed:', err))
+
+  revalidatePath('/admin/disputes')
+  revalidatePath(`/admin/orders/${orderId}`)
+  revalidatePath(`/account/orders/${orderId}`)
+  return { success: true as const, disputeId: opened.dispute_id as string, postCompletion: Boolean(opened.post_completion), frozenMinor: Number(opened.frozen_minor ?? 0) }
 }

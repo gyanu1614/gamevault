@@ -40,6 +40,7 @@ const PINNED_FILES = [
   'src/app/founding/_components/FoundingRail.tsx',
   'src/lib/config/founding-seller.ts',
   'src/lib/email/index.ts',
+  'src/lib/email/fee-notice.ts',
   'src/lib/discord/embeds.ts',
   'src/components/seller/tiers/TierCard.tsx',
   'src/app/account/tiers/page.tsx',

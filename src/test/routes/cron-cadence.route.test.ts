@@ -27,6 +27,13 @@ const SUB_DAILY: Record<string, { maxPerDay: number; why: string }> = {
     maxPerDay: 2,
     why: 'price data — 12 h cadence',
   },
+  'auto-complete-orders.yml': {
+    // Money path: the SafeDrop Protection window closes at an exact hour and
+    // the seller's credit is due then; a daily sweep would hold it up to 23 h.
+    // Bounded query (page of 200), revalidates only the completed listings.
+    maxPerDay: 24,
+    why: 'money path — auto-complete + buyer reminders are due hourly',
+  },
   'reconcile-payments.yml': {
     // Money path (checkout fix round B): voids charges the RPCs closed,
     // re-runs stuck webhook events. Bounded batches, revalidates nothing.

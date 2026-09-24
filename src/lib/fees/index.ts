@@ -74,36 +74,12 @@ export function buyerFee(subtotal: number, actualPspPct?: number): BuyerFee {
 // ACCOUNT_RISK_BANDS as a fee input, FOUNDING_DISCOUNT_PTS, commissionPct,
 // commissionAmount, netProceeds) were deleted in fee engine PR 5.
 
-// ─── §1 Protection windows / payout holds (hours) ───────────────────────────
+// ─── §1 Protection windows / payout holds ───────────────────────────────────
+// Deleted in fee engine PR 7: the SafeDrop Protection window per category is a
+// row in `order_completion_windows` (admin-editable) and is applied by the
+// `order_mark_delivered` RPC. Nothing in TypeScript computes a window.
 
 export type { AccountRiskBand }
-
-export const PROTECTION_WINDOW_HOURS = {
-  currency: 48,
-  items: 72,
-  'top-up': 48,
-  /** After completion. */
-  boosting: 72,
-  accounts: { low: 5 * 24, mid: 7 * 24, high: 14 * 24 } as Record<AccountRiskBand, number>,
-} as const
-
-export interface ProtectionWindowInput {
-  /** game_categories.type for the listing's pair. */
-  categoryMetaType?: string | null
-  categorySlug?: string | null
-  gameSlug?: string | null
-}
-
-export function protectionWindowHours(input: ProtectionWindowInput): number {
-  const type: OfferType = classifyOfferType(
-    input.categoryMetaType ?? undefined,
-    input.categorySlug ?? undefined,
-  )
-  if (type === 'accounts') return PROTECTION_WINDOW_HOURS.accounts[accountRiskBand(input.gameSlug)]
-  if (type === 'currency') return PROTECTION_WINDOW_HOURS.currency
-  if (type === 'top-up') return PROTECTION_WINDOW_HOURS['top-up']
-  return PROTECTION_WINDOW_HOURS.items
-}
 
 // ─── §3 Withdrawal / payout fees (mirrored into withdrawal_methods rows) ────
 
