@@ -37,6 +37,7 @@ type Draft = {
   buffer_pct: string
   floor_pct: string
   min_fee_minor: string
+  min_total_minor: string
   max_total_minor: string
   refundable: boolean
   instant_clearing: boolean
@@ -49,6 +50,7 @@ const toDraft = (r: PaymentMethodFeeRow): Draft => ({
   buffer_pct: String(r.buffer_pct),
   floor_pct: String(r.floor_pct),
   min_fee_minor: String(r.min_fee_minor),
+  min_total_minor: r.min_total_minor == null ? '' : String(r.min_total_minor),
   max_total_minor: r.max_total_minor == null ? '' : String(r.max_total_minor),
   refundable: r.refundable,
   instant_clearing: r.instant_clearing,
@@ -74,7 +76,7 @@ export default function BuyerFeesClient({ initial }: { initial: { methods: Payme
           <table className={TABLE.table}>
             <thead>
               <tr>
-                {['Method', 'Provider', 'Fee ccy', 'Rate %', 'Fixed (minor)', 'FX %', 'Buffer %', 'Floor %', 'Min (minor)', 'Cap (minor)', 'Refunds', 'Instant', 'Shown', ''].map((h) => (
+                {['Method', 'Provider', 'Fee ccy', 'Rate %', 'Fixed (minor)', 'FX %', 'Buffer %', 'Floor %', 'Min fee (minor)', 'Min order (minor)', 'Cap (minor)', 'Refunds', 'Instant', 'Shown', ''].map((h) => (
                   <th key={h} className={TABLE.th}>{h}</th>
                 ))}
               </tr>
@@ -166,7 +168,7 @@ function MethodRow({ row, onSaved }: { row: PaymentMethodFeeRow; onSaved: (r: Pa
         method: row.method,
         patch: {
           provider_pct: d.provider_pct, provider_fixed_minor: d.provider_fixed_minor, fx_markup_pct: d.fx_markup_pct,
-          buffer_pct: d.buffer_pct, floor_pct: d.floor_pct, min_fee_minor: d.min_fee_minor, max_total_minor: d.max_total_minor,
+          buffer_pct: d.buffer_pct, floor_pct: d.floor_pct, min_fee_minor: d.min_fee_minor, min_total_minor: d.min_total_minor, max_total_minor: d.max_total_minor,
           refundable: d.refundable, instant_clearing: d.instant_clearing, selectable: d.selectable,
         },
       })
@@ -189,6 +191,7 @@ function MethodRow({ row, onSaved }: { row: PaymentMethodFeeRow; onSaved: (r: Pa
       <td className={TABLE.td}>{field('buffer_pct', 'w-16')}</td>
       <td className={TABLE.td}>{field('floor_pct', 'w-16')}</td>
       <td className={TABLE.td}>{field('min_fee_minor')}</td>
+      <td className={TABLE.td}>{field('min_total_minor', 'w-24')}</td>
       <td className={TABLE.td}>{field('max_total_minor', 'w-24')}</td>
       <td className={TABLE.td}>{toggle('refundable')}</td>
       <td className={TABLE.td}>{toggle('instant_clearing')}</td>

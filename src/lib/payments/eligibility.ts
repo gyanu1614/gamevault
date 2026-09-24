@@ -105,6 +105,8 @@ const REFUSAL_COPY: Record<string, (label: string) => string> = {
   currency_unsupported: (l) => `${l} can’t be used for an order in this currency — please pick another payment method.`,
   fx_rate_missing: (l) => `${l} isn’t available for this order right now — please pick another payment method.`,
   over_cap: (l) => `This order is over the payment limit for ${l} — please pick another payment method.`,
+  // B4: the provider's minimum charge (Payssion refuses below it).
+  under_min: (l) => `This order is under the minimum amount for ${l} — please pick another payment method.`,
 }
 
 /** Buyer-facing message for a refusal reason returned by buyer_fee_quote. */
