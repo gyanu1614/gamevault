@@ -5,6 +5,9 @@ import { isUuid } from '@/lib/ids'
 import { CheckoutForm } from './CheckoutForm'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import BuyingOpensSoon from './_BuyingOpensSoon'
+import { eligibleMethods, toClientMethods } from '@/lib/payments/eligibility'
+import { round2 } from '@/lib/fees'
+import { clampCheckoutQty } from './qty'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -144,12 +147,27 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     )
   }
 
+  // Checkout B3 — the payment methods this order can be paid with and what
+  // each costs the buyer, from the ONE eligibility source createCheckout
+  // also consults (payment_method_fees → buyer_fee_quote). Quoted for the
+  // same quantity the form renders; hidden / over-cap methods never reach
+  // the client. Fails closed: a quote error is a page error, not a default fee.
+  const quantity = clampCheckoutQty(listing, parsedQty, !!bundleSummary)
+  const subtotal = round2(Number(listing.price) * quantity)
+  const eligibility = await eligibleMethods({
+    buyerId: user?.id ?? null,
+    currency: (listing.currency as string | null) || 'USD',
+    country: buyerCountry,
+    subtotalMinor: BigInt(Math.round(subtotal * 100)),
+  })
+
   return (
     // V19/P24/P7.bb — Full-bleed checkout: no max-width container, no
     // Back chip. The CheckoutForm's two halves now extend edge-to-edge
     // of the viewport. Browser back handles return navigation.
     <main className="w-full">
       <CheckoutForm
+        methods={toClientMethods(eligibility.methods)}
         listing={listing}
         user={user}
         buyerProfile={buyerProfile}
