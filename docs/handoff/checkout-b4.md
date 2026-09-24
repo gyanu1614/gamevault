@@ -23,12 +23,12 @@ Probe record: `docs/payments/eu-methods-probe.md`. Registry ⇒ probe invariant 
 ## Part 3 — eligibility + UI
 `eligibleMethods()` is registry-driven: the 8 rows arrive automatically with country, currency, cap and (new) minimum handled by the quote; tiles show the quoted fee (unchanged mechanism). `CheckoutForm` `METHOD_UI`: one icon + points line per method (no layout change). Admin `/admin/fees` editor + `/fees` public table read the new column ("orders from €1.00").
 
-## Part 4 — copy (needs your approval)
+## Part 4 — copy (APPROVED 2026-09-24; one correction applied: /browse FAQ says "SafeDrop Protection", the PR 7 name)
 | Surface | Old | New |
 |---|---|---|
 | Homepage WhyCard | "Some of the lowest seller fees in the market — sellers keep more of every sale, so listings start cheaper here and stay cheaper." | "Lowest fees for buyers and sellers — sellers keep more of every sale, buyers see every fee before they pay, so listings start cheaper here and stay cheaper." |
 | Mobile strip (×2) | "Lowest seller fees — sellers keep more, so listings cost less." | "Lowest fees for buyers and sellers — every fee shown before you pay." |
-| /browse FAQ (new Q) | — | "What does it cost to buy?" → "Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Buyer Protection on every order, and the processing fee for the payment method you pick is quoted on its tile before you pay — the current terms are on our Fees page." |
+| /browse FAQ (new Q) | — | "What does it cost to buy?" → "Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Protection on every order, and the processing fee for the payment method you pick is quoted on its tile before you pay — the current terms are on our Fees page." |
 | Category meta (×3) | "…with low seller fees" / "…: low seller fees, fast delivery…" | "…with the lowest fees for buyers and sellers" / "…: the lowest fees for buyers and sellers, fast delivery…" |
 | /fees Withdrawals | "**Crypto payouts (USDT):** 3% + $5…" | "**Crypto payouts (USDT, USDC, BTC, ETH):** 3% + $5…" |
 | Checkout refusal (new reason) | — | "This order is under the minimum amount for <Method> — please pick another payment method." |
@@ -49,7 +49,7 @@ All pinned by `fee-copy.guard` (buyer line present + number-free on the 4 surfac
 | Security review of the diff (grants, definer search_path, no dynamic SQL, under_min enforced on both sides of the seam, no secrets in client-shipped files) | no findings |
 
 ## Manual steps for Gyanu
-1. Approve the copy table. 2. `supabase db push --include-all` (this file sorts after B3's two; all three idempotent). Verify: `SELECT method, min_fee_minor, min_total_minor FROM payment_method_fees WHERE method IN ('eps_at','mbway_pt','bancomatpay_it','bancomat_it');` → 0/100, 0/100, bancomatpay_it present, bancomat_it absent; `SELECT buyer_method_fees_version();` → 2. Push before or after deploy — either order works (no signature change; old code shows the generic refusal for `under_min`; the admin editor needs the column so push first if you open /admin/fees in between).
+1. Copy approved. 2. `supabase db push --include-all` (this file sorts after B3's two; all three idempotent). Verify: `SELECT method, min_fee_minor, min_total_minor FROM payment_method_fees WHERE method IN ('eps_at','mbway_pt','bancomatpay_it','bancomat_it');` → 0/100, 0/100, bancomatpay_it present, bancomat_it absent; `SELECT buyer_method_fees_version();` → 2. Push before or after deploy — either order works (no signature change; old code shows the generic refusal for `under_min`; the admin editor needs the column so push first if you open /admin/fees in between).
 3. Payssion dashboard: nothing to flip — all eight answered 200 on the live app. Leave the notify URL as is.
 4. One real order per wired method, smallest sensible amount, from a matching `?country=XX` on the checkout URL: tile fee == Processing-fee row == `orders.buyer_fee_amount`; the Payssion page shows the **local amount** (EUR/PLN/CZK) for a USD charge — note the rate it used against `currency_rates`; EPS / MB Way: also try a $0.50 listing and confirm the tile is hidden. paysafecard: confirm the tile's "Refunds go to your DropMarket wallet". Settlement ≥ the quote's assumption (FX markup for these rows is 0 — set it from what Payssion actually converts at).
 5. `pnpm db:types` in a worktree targets the wrong Docker stack when several run (regenerated here with `supabase gen types --db-url <this stack>`); worth a script fix.
