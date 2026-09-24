@@ -9,6 +9,7 @@ import {
   updateMoneySetting, updateCompletionWindow, updateWithdrawalMethodFees,
   type MoneySettingKey, type fetchMoneySettings,
 } from '@/lib/actions/admin-fees'
+import { payoutMethodState } from '@/lib/wallet/payout-method-state'
 
 type Data = Awaited<ReturnType<typeof fetchMoneySettings>>
 
@@ -34,6 +35,7 @@ export function MoneySettingsClient({ initial }: { initial: Data }) {
     Object.fromEntries(initial.methods.map((m) => [m.id, {
       feePct: String(m.fee_percentage), feeFixed: String(m.fee_fixed), feeMin: String(m.fee_min),
       minWithdrawal: String(m.min_withdrawal), maxWithdrawal: String(m.max_withdrawal), isActive: m.is_active,
+      comingSoon: m.coming_soon,
     }])),
   )
 
@@ -105,28 +107,34 @@ export function MoneySettingsClient({ initial }: { initial: Data }) {
             <thead>
               <tr>
                 <th className={TABLE.th}>Method</th><th className={TABLE.th}>%</th><th className={TABLE.th}>Fixed $</th><th className={TABLE.th}>Min fee $</th>
-                <th className={TABLE.th}>Min withdrawal $</th><th className={TABLE.th}>Max $</th><th className={TABLE.th}>Active</th><th className={TABLE.th}></th>
+                <th className={TABLE.th}>Min withdrawal $</th><th className={TABLE.th}>Max $</th><th className={TABLE.th}>Active</th>
+                <th className={TABLE.th}>Coming soon</th><th className={TABLE.th}></th>
               </tr>
             </thead>
             <tbody>
               {initial.methods.map((m) => {
                 const v = methods[m.id]
-                const field = (k: keyof typeof v) => (
-                  <input type={k === 'isActive' ? 'checkbox' : 'number'} step="0.01" min={0}
-                    checked={k === 'isActive' ? Boolean(v.isActive) : undefined}
-                    value={k === 'isActive' ? undefined : String(v[k])}
-                    onChange={(e) => setMethods({ ...methods, [m.id]: { ...v, [k]: k === 'isActive' ? e.target.checked : e.target.value } })}
-                    className={k === 'isActive' ? 'h-4 w-4 accent-lime' : `${inputCls} w-24`} />
-                )
+                const field = (k: keyof typeof v) => {
+                  const toggle = k === 'isActive' || k === 'comingSoon'
+                  return (
+                    <input type={toggle ? 'checkbox' : 'number'} step="0.01" min={0}
+                      checked={toggle ? Boolean(v[k]) : undefined}
+                      aria-label={toggle ? `${m.display_name} ${k === 'isActive' ? 'active' : 'coming soon'}` : undefined}
+                      value={toggle ? undefined : String(v[k])}
+                      onChange={(e) => setMethods({ ...methods, [m.id]: { ...v, [k]: toggle ? e.target.checked : e.target.value } })}
+                      className={toggle ? 'h-4 w-4 accent-lime' : `${inputCls} w-24`} />
+                  )
+                }
                 return (
                   <tr key={m.id} className={TABLE.row}>
-                    <td className={TABLE.tdPrimary}>{m.display_name}<div className="text-[11px] font-normal text-text-tertiary">{m.method_name} · {m.method_type}{m.coming_soon ? ' · coming soon' : ''}</div></td>
+                    <td className={TABLE.tdPrimary}>{m.display_name}<div className="text-[11px] font-normal text-text-tertiary">{payoutMethodState(m)} · {m.method_name}</div></td>
                     <td className={TABLE.td}>{field('feePct')}</td>
                     <td className={TABLE.td}>{field('feeFixed')}</td>
                     <td className={TABLE.td}>{field('feeMin')}</td>
                     <td className={TABLE.td}>{field('minWithdrawal')}</td>
                     <td className={TABLE.td}>{field('maxWithdrawal')}</td>
                     <td className={TABLE.td}>{field('isActive')}</td>
+                    <td className={TABLE.td}>{field('comingSoon')}</td>
                     <td className={TABLE.td}>
                       <Button size="sm" variant="outline" disabled={busy}
                         onClick={() => run(() => updateWithdrawalMethodFees({ methodId: m.id, ...v }), `${m.display_name} saved`)}>

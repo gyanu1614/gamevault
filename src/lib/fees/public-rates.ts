@@ -64,7 +64,10 @@ export interface GameOverride {
   categorySlug: string
   categoryName: string
   type: string
+  /** Headline rate now (resolver, NULL seller) — the category rate when the pair's own rule has not started yet. */
   pct: number
+  /** The rate from `nextChange` (resolver at that instant); null = unchanged / no change scheduled. */
+  nextPct: number | null
   kind: 'base' | 'promo'
   /** Promo only: when the promotional rate ends. */
   endsAt: string | null
@@ -118,12 +121,19 @@ async function loadSchedule(): Promise<PublicFeeSchedule> {
 
   const rules = (rulesRes.data ?? []) as unknown as RuleRow[]
   const pairs = ((pairsRes.data ?? []) as unknown as PairRow[]).filter((p) => p.game?.is_active && p.type)
-  const activeNow = (r: RuleRow) => r.starts_at <= nowIso && (r.ends_at == null || r.ends_at > nowIso)
+  const activeAt = (r: RuleRow, at: string) => r.starts_at <= at && (r.ends_at == null || r.ends_at > at)
+  const activeNow = (r: RuleRow) => activeAt(r, nowIso)
   const future = rules.filter((r) => r.kind === 'base' && r.starts_at > nowIso)
   const nextChange = future.length ? future[0].starts_at : null
 
-  // Pairs that carry their own rule right now (base or promo) — the overrides.
-  const ruledPairIds = new Set(rules.filter((r) => r.scope === 'game_category' && r.game_category_id && activeNow(r)).map((r) => r.game_category_id as string))
+  // Pairs that carry their own rule right now (base or promo) or from the next
+  // dated change — the overrides. A pair whose rule has not started yet is
+  // listed at today's (category) rate with its new rate in the "From" column.
+  const ruledPairIds = new Set(
+    rules
+      .filter((r) => r.scope === 'game_category' && r.game_category_id && (activeNow(r) || (nextChange != null && activeAt(r, nextChange))))
+      .map((r) => r.game_category_id as string),
+  )
   // …and pairs with ANY pair rule (including future), excluded from "representative".
   const everRuled = new Set(rules.filter((r) => r.scope === 'game_category' && r.game_category_id).map((r) => r.game_category_id as string))
 
@@ -149,25 +159,31 @@ async function loadSchedule(): Promise<PublicFeeSchedule> {
     categories.push({ type, label: CATEGORY_TYPE_LABEL[type] ?? type, pct, nextPct })
   }
 
-  const overrides: GameOverride[] = []
-  for (const p of pairs) {
-    if (!ruledPairIds.has(p.id)) continue
-    const rule = rules
-      .filter((r) => r.game_category_id === p.id && activeNow(r))
-      .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'promo' ? -1 : 1))[0]
-    const pct = await resolveNull(client, p.id)
-    if (pct == null) continue
-    overrides.push({
-      gameSlug: p.game!.slug,
-      gameName: p.game!.name,
-      categorySlug: p.slug,
-      categoryName: p.name ?? CATEGORY_TYPE_LABEL[p.type ?? ''] ?? p.slug,
-      type: p.type!,
-      pct,
-      kind: rule?.kind ?? 'base',
-      endsAt: rule?.kind === 'promo' ? rule.ends_at : null,
-    })
-  }
+  // One resolver call per pair and instant, in parallel: the dated per-game
+  // schedule is dozens of pairs, and each is independent.
+  const listed = await Promise.all(
+    pairs
+      .filter((p) => ruledPairIds.has(p.id))
+      .map(async (p): Promise<GameOverride | null> => {
+        const rule = rules
+          .filter((r) => r.game_category_id === p.id && activeNow(r))
+          .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'promo' ? -1 : 1))[0]
+        const [pct, atNext] = await Promise.all([resolveNull(client, p.id), nextChange ? resolveNull(client, p.id, nextChange) : null])
+        if (pct == null) return null
+        return {
+          gameSlug: p.game!.slug,
+          gameName: p.game!.name,
+          categorySlug: p.slug,
+          categoryName: p.name ?? CATEGORY_TYPE_LABEL[p.type ?? ''] ?? p.slug,
+          type: p.type!,
+          pct,
+          nextPct: atNext != null && atNext !== pct ? atNext : null,
+          kind: rule?.kind ?? 'base',
+          endsAt: rule?.kind === 'promo' ? rule.ends_at : null,
+        }
+      }),
+  )
+  const overrides = listed.filter((o): o is GameOverride => o != null)
   overrides.sort((a, b) => a.gameName.localeCompare(b.gameName) || a.type.localeCompare(b.type))
 
   const settings = (settingsRes.data ?? {}) as any

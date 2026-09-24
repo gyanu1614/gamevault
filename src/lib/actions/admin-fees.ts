@@ -417,6 +417,8 @@ export async function updateCompletionWindow(input: { categoryType: string; hour
 
 export async function updateWithdrawalMethodFees(input: {
   methodId: string; feePct: unknown; feeFixed: unknown; feeMin: unknown; minWithdrawal: unknown; maxWithdrawal: unknown; isActive: boolean
+  /** Omitted = leave coming_soon as it is. */
+  comingSoon?: boolean
 }): Promise<Result> {
   const admin = await requireAdmin()
   const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : NaN }
@@ -425,6 +427,7 @@ export async function updateWithdrawalMethodFees(input: {
   const { error } = await (getAdminSupabase().rpc as any)('withdrawal_methods_set_fees', {
     p_method_id: String(input.methodId), p_admin_id: admin.userId,
     p_fee_pct: vals[0], p_fee_fixed: vals[1], p_fee_min: vals[2], p_min: vals[3], p_max: vals[4], p_is_active: Boolean(input.isActive),
+    p_coming_soon: input.comingSoon === undefined ? null : Boolean(input.comingSoon),
   })
   if (error) return { success: false, error: feeRuleErrorMessage(error) }
   revalidateFeeReaders()

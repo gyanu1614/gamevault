@@ -19,10 +19,10 @@
  * removed in afterAll.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { round2 } from '@/lib/fees'
-import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, URL, SVC, type Fixture } from './throwaway'
 
 /** Which session the mocked cookie client hands out: the seller (preview) or the buyer (checkout). */
 let sessionClient: SupabaseClient | null = null
@@ -213,4 +213,61 @@ describe.skipIf(!hasEnv)('fee engine PR 5 — the sell-wizard preview equals wha
     expect(pv.pct).toBe(Number(rs.pct))
     expect(round2(Number(headline.pct) - Number(rs.rank_pts))).toBeGreaterThanOrEqual(pv.pct)
   })
+})
+
+/**
+ * /sell/fees per-game table (post-deploy fix 1): the public schedule must list
+ * every pair that carries its own rule now OR from the next dated change, at
+ * the resolver's headline rate now and at that change. Before the fix a pair
+ * whose rule had not started yet (37 on prod from 7 Oct: Roblox economies,
+ * CoD/Fortnite/R6 accounts…) was missing from the page entirely.
+ */
+describe.skipIf(!hasEnv)('fee engine — /sell/fees per-game "From" column == resolver (integration)', () => {
+  it('lists every ruled pair with rate now == resolver(now) and nextPct == resolver(nextChange)', async () => {
+    const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
+    const { getPublicFeeSchedule } = await import('@/lib/fees/public-rates')
+    const s = await getPublicFeeSchedule()
+
+    const [{ data: rules, error: re }, { data: pairs, error: pe }] = await Promise.all([
+      svc.from('fee_rules').select('kind, scope, game_category_id, starts_at, ends_at'),
+      svc.from('game_categories').select('id, slug, type, game:games!game_categories_game_id_fkey ( slug, is_active )').eq('is_enabled', true),
+    ])
+    expect(re?.message ?? null).toBeNull()
+    expect(pe?.message ?? null).toBeNull()
+    const ms = (iso: string) => new Date(iso).getTime()
+    const activeAt = (r: any, iso: string) => ms(r.starts_at) <= ms(iso) && (r.ends_at == null || ms(r.ends_at) > ms(iso))
+    const live = ((pairs ?? []) as any[]).filter((p) => p.game?.is_active && p.type)
+    const liveIds = new Set(live.map((p) => p.id as string))
+    const byKey = new Map(live.map((p) => [`${p.game.slug}/${p.slug}`, p.id as string]))
+    const pairRules = ((rules ?? []) as any[]).filter((r) => r.scope === 'game_category' && r.game_category_id && liveIds.has(r.game_category_id))
+    const expected = new Set(
+      pairRules
+        .filter((r) => activeAt(r, s.generatedAt) || (s.nextChange != null && activeAt(r, s.nextChange)))
+        .map((r) => r.game_category_id as string),
+    )
+    const listed = new Set(s.overrides.map((o) => byKey.get(`${o.gameSlug}/${o.categorySlug}`)))
+    expect([...expected].filter((id) => !listed.has(id)), 'ruled pairs missing from /sell/fees').toEqual([])
+
+    const resolve = async (pairId: string, pAt?: string) => {
+      const args: Record<string, unknown> = { p_seller_id: null, p_game_category_id: pairId }
+      if (pAt) args.p_at = pAt
+      const { data, error } = await svc.rpc('resolve_seller_fee', args as any)
+      if (error) throw new Error(error.message)
+      return Number((data as any[])[0].pct)
+    }
+    const mismatches: string[] = []
+    for (const o of s.overrides) {
+      const id = byKey.get(`${o.gameSlug}/${o.categorySlug}`)!
+      const nowPct = await resolve(id)
+      if (o.pct !== nowPct) mismatches.push(`${o.gameSlug}/${o.categorySlug}: page ${o.pct} ≠ resolver now ${nowPct}`)
+      const nextPct = s.nextChange ? await resolve(id, s.nextChange) : null
+      const want = nextPct != null && nextPct !== nowPct ? nextPct : null
+      if (o.nextPct !== want) mismatches.push(`${o.gameSlug}/${o.categorySlug}: page next ${o.nextPct} ≠ resolver at ${s.nextChange} ${want}`)
+    }
+    expect(mismatches, mismatches.join('\n')).toEqual([])
+
+    // A dated pair rule that moves a rate must surface in the column (the page shows it iff some nextPct != null).
+    const datedPairChange = s.nextChange != null && pairRules.some((r) => r.kind === 'base' && ms(r.starts_at) === ms(s.nextChange!))
+    if (datedPairChange) expect(s.overrides.some((o) => o.nextPct != null)).toBe(true)
+  }, 120_000)
 })

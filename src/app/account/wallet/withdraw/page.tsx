@@ -361,7 +361,7 @@ export default function WithdrawPage() {
             How Payouts Work
           </h2>
           <ol className="space-y-2 text-[12px] leading-relaxed text-text-secondary">
-            <li>1. Pick the coin and network you want to be paid in.</li>
+            <li>1. Choose how you want to be paid: crypto (pick the coin and network) or Payoneer.</li>
             <li>2. Enter the amount — it goes to the destination saved in your payout settings.</li>
             <li>3. The amount is set aside from your balance while our team reviews the request.</li>
             <li>4. Once sent, the payment reference appears in your wallet.</li>
