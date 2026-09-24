@@ -255,31 +255,43 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
 
 ---
 
-## 7. Payssion method status (2026-09-20)
+## 7. Payssion method status (2026-09-24, checkout B4)
 
-**Live in checkout (10):** gcash_ph, maya_ph, qr_ph (PH) · pix_br, boleto_br
-(BR) · oxxo_mx, spei_mx (MX) · qris_id (ID) · pse_co (CO) · webpay_cl (CL).
+**Live in checkout (18):** gcash_ph, maya_ph, qr_ph (PH) · pix_br, boleto_br
+(BR) · oxxo_mx, spei_mx (MX) · qris_id (ID) · pse_co (CO) · webpay_cl (CL) ·
+**trustly (Europe) · blik_pl, p24_pl (PL) · eps_at (AT) · mbway_pt (PT) ·
+bancomatpay_it (IT) · payu_cz (CZ) · paysafecard (EU/UK/CA/AU)** — B4, all
+probe-confirmed 200 on 2026-09-24 (`docs/payments/eu-methods-probe.md`; the
+recorded answers are `src/lib/payments/providers/payssion/probe-fixtures.ts`).
+Maya / OXXO / Boleto are wired but hidden by their fee row (`selectable=false`).
 
-**Approved on the account, NOT yet wired (probe-confirmed 200):**
+**Every method is charged in USD.** Payssion converts on its hosted page
+(its 417 text shows the rate: `0.90 USD(0.81 EUR)`); EUR / PLN / CZK charges
+are also accepted (probed) but nothing prices in them. Orders, attempts and
+charges stay USD end to end.
 
 | pm_id | Country | Payssion fee | Notes |
 |---|---|---|---|
-| paysafecard | EU/UK/CA/AU | 12.5% | no provider refunds → refund as wallet credit; surcharge decision pending |
-| trustly | EEA | 2.5% + €0.35 | cheapest EU rail |
+| paysafecard | EU/UK/CA/AU | 12.5% | no provider refunds → `refundable=false` (wallet credit only); **€250 cap is OURS** (`max_total_minor`) — Payssion accepted $320 at create |
+| trustly | Europe | 2.5% + €0.35 | cheapest EU rail; country list = Trustly's published bank coverage (filter only) |
 | blik_pl / p24_pl | PL | 4.75% + 0.55 zł | |
-| eps_at | AT | 3.75% + €0.45 | **€1.00 minimum** (417 below) |
-| mbway_pt | PT | 2.75% + €0.25 | **€1.00 minimum** |
-| bancontact_be | BE | 4.25% + €0.45 | |
-| bancomatpay_it | IT | 2.75% + €0.20 | |
+| eps_at | AT | 3.75% + €0.45 | **€1.00 minimum charge** (417 below) → `min_total_minor = 100` |
+| mbway_pt | PT | 2.75% + €0.25 | **€1.00 minimum charge** (417 below) → `min_total_minor = 100` |
+| bancomatpay_it | IT | 2.75% + €0.20 | the pm_id is `bancomatpay_it`; `bancomat_it` is not one (405) |
 | payu_cz | CZ | 4.75% + 3.5 Kč | |
-| multibanco_pt | PT | 4.25% + €0.45 | refunds not supported; MB Way preferred |
-| skrill | global | 3.5% + $0.35 | ⚠️ 10% + 180-day rolling reserve — **do not wire** |
 
-**Not enabled:** payid_au (491). **Dead pm_ids (docs stale):** ideal_nl,
-upi_in, neosurf, bankcard_in; sofort discontinued.
+**Approved, deliberately NOT wired:** bancontact_be (BE, 4.25% + €0.45 —
+probe control, 200), multibanco_pt (PT — refunds not supported; MB Way
+preferred), skrill (⚠️ 10% + 180-day rolling reserve — **never wire**),
+payu_pl (never wire). **Not enabled:** payid_au (491). **Dead pm_ids (docs
+stale):** ideal_nl, upi_in, neosurf, bankcard_in; sofort discontinued.
 
-Wiring these needs one new registry feature: a **per-method minimum amount**
-guard so sub-minimum orders don't offer a method that will 417.
+**Per-method minimum**: `payment_method_fees.min_total_minor` (fee currency).
+`buyer_fee_quote` refuses `under_min` on subtotal + fee (the tile is hidden)
+and `order_create_pending` re-checks the ACTUAL provider charge after promo
+and wallet credit, both with 5% headroom over `currency_rates` for the gap to
+Payssion's own rate. A 417 that still reaches `createCharge` cancels the
+order + returns the wallet hold (PAY-006) and tells the buyer the minimum.
 
 Terms to remember: settlement T+15, **$20 flat per wire** (batch withdrawals),
 USD/EUR settlement only. Rate sheet is confidential — never publish it.
@@ -352,7 +364,9 @@ alerted on rather than left to accumulate:
 ## 9. Invariants (do not break)
 
 1. Registry entry ⇒ the pm_id is **probe-confirmed 200** on our app. An
-   un-enabled pm_id in the registry = buyer-facing 491s.
+   un-enabled pm_id in the registry = buyer-facing 491s. Executable since B4:
+   `eu-methods.test.ts` fails for any selector pm_id without a recorded 200
+   fixture in `probe-fixtures.ts` — re-probe and record before adding one.
 2. Amounts are server-authoritative; the exact amount string that is signed
    is the one sent (never re-format).
 3. Notify bodies are never trusted — always the details re-fetch.

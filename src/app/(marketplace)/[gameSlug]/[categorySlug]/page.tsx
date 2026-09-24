@@ -122,7 +122,7 @@ function buildIntroLine(
       stats.count === 1 ? 'listing' : 'listings'
     } from $${formatStatPrice(stats.lowPrice)}${avg}. Every order covered by SafeDrop Buyer Protection.`
   }
-  return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes with low seller fees.`
+  return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes with the lowest fees for buyers and sellers.`
 }
 
 /**
@@ -153,9 +153,9 @@ function emptyTitleFor(gameName: string, categoryName: string): string {
 /** Unique-per-game description for a zero-inventory category page. */
 function emptyDescriptionFor(gameName: string, categoryName: string): string {
   const variants = [
-    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes with low seller fees. Every order is covered by SafeDrop Buyer Protection.`,
+    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes with the lowest fees for buyers and sellers. Every order is covered by SafeDrop Buyer Protection.`,
     `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop buyer protection — item guaranteed or your money back.`,
-    `${gameName} ${categoryName} on DropMarket: low seller fees, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
+    `${gameName} ${categoryName} on DropMarket: the lowest fees for buyers and sellers, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
     `Trade ${gameName} ${categoryName} the safe way. With SafeDrop, your item is guaranteed — get exactly what you ordered, or your money back.`,
   ]
   return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]

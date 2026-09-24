@@ -145,7 +145,7 @@ const WHY_CARDS = [
   {
     icon: Coins,
     title: "Fees that don't sting",
-    body: 'Some of the lowest seller fees in the market — sellers keep more of every sale, so listings start cheaper here and stay cheaper.',
+    body: 'Lowest fees for buyers and sellers — sellers keep more of every sale, buyers see every fee before they pay, so listings start cheaper here and stay cheaper.',
     tone: 'warning',
     img: '/how-it-works/step-2.avif',
   },
