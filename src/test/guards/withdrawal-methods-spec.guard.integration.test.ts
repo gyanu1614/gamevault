@@ -16,14 +16,27 @@
  *     without touching its fees, aligns BTC's fees without touching its
  *     visibility, audits each change once — and a second run changes nothing.
  *     The replay runs inside one psql transaction that is rolled back, so it
- *     leaves no row behind.
+ *     leaves no row behind;
+ *   · /admin/fees' coming-soon switch writes through withdrawal_methods_set_fees
+ *     with an audit row, and the state it labels a method with (live / coming
+ *     soon / hidden) is what a seller's session actually gets.
  */
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-import { hasEnv, URL, SVC, assertGuardTargetAllowed } from './throwaway'
+import { hasEnv, URL, SVC, assertGuardTargetAllowed, makeFixture, type Fixture } from './throwaway'
+import { payoutMethodState } from '@/lib/wallet/payout-method-state'
+
+let adminId = ''
+vi.mock('@/lib/actions/admin-permissions', () => ({
+  requireRole: async () => ({ userId: adminId, role: 'admin' }),
+  requireAdmin: async () => ({ userId: adminId, role: 'admin' }),
+  requirePermission: async () => ({ userId: adminId, role: 'admin' }),
+}))
+vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: unknown) => fn }))
+vi.mock('server-only', () => ({}))
 
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 const MIGRATION = join(__dirname, '../../../supabase/migrations/20260924043931_withdrawal_methods_spec.sql')
@@ -137,4 +150,78 @@ ROLLBACK;
     expect(line('audit2')).toBe(0)
     expect(line('run2')).toEqual(run1)
   }, 60_000)
+})
+
+describe.skipIf(!hasEnv)('/admin/fees — coming-soon switch and the state label (integration)', () => {
+  let fx: Fixture | null = null
+  let method: any = null
+
+  beforeAll(async () => {
+    fx = await makeFixture()
+    adminId = fx.admin.id
+    const { data, error } = await fx.svc.from('withdrawal_methods').select('*').eq('method_name', 'usdt_polygon').single()
+    if (error) throw new Error(`usdt_polygon: ${error.message}`)
+    method = data
+  }, 60_000)
+
+  afterAll(async () => {
+    if (!fx) return
+    const failures: string[] = []
+    if (method) {
+      const { error } = await fx.svc.from('withdrawal_methods').update({ is_active: method.is_active, coming_soon: method.coming_soon }).eq('id', method.id)
+      if (error) failures.push(`restore usdt_polygon: ${error.message}`)
+    }
+    const { error: ae } = await fx.svc.from('fee_config_audit').delete().eq('actor', fx.admin.id)
+    if (ae) failures.push(`fee_config_audit: ${ae.message}`)
+    try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
+    if (failures.length) throw new Error(`cleanup left residue:\n  - ${failures.join('\n  - ')}`)
+  }, 60_000)
+
+  const save = async (flags: { isActive: boolean; comingSoon?: boolean }) => {
+    const { updateWithdrawalMethodFees } = await import('@/lib/actions/admin-fees')
+    return updateWithdrawalMethodFees({
+      methodId: method.id, feePct: method.fee_percentage, feeFixed: method.fee_fixed, feeMin: method.fee_min,
+      minWithdrawal: method.min_withdrawal, maxWithdrawal: method.max_withdrawal, ...flags,
+    })
+  }
+  /** What the withdraw page's loader returns to a seller session (RLS applies). */
+  const sellerSees = async () => {
+    const { data, error } = await fx!.seller.client.from('withdrawal_methods').select('id, coming_soon').or('is_active.eq.true,coming_soon.eq.true')
+    if (error) throw new Error(error.message)
+    return (data ?? []).find((r: any) => r.id === method.id) ?? null
+  }
+
+  for (const [flags, state] of [
+    [{ isActive: true, comingSoon: true }, 'coming soon'],
+    [{ isActive: false, comingSoon: true }, 'hidden'],
+    [{ isActive: true, comingSoon: false }, 'live'],
+  ] as const) {
+    it(`active=${flags.isActive} coming_soon=${flags.comingSoon} → labelled "${state}", audited, and that is what the seller sees`, async () => {
+      const before = await fx!.svc.from('withdrawal_methods').select('is_active, coming_soon').eq('id', method.id).single()
+      const r = await save(flags)
+      expect(r, JSON.stringify(r)).toEqual({ success: true })
+
+      const { fetchMoneySettings } = await import('@/lib/actions/admin-fees')
+      const row = (await fetchMoneySettings()).methods.find((m) => m.id === method.id)!
+      expect({ is_active: row.is_active, coming_soon: row.coming_soon }).toEqual({ is_active: flags.isActive, coming_soon: flags.comingSoon })
+      expect(payoutMethodState(row)).toBe(state)
+
+      const { data: audit } = await fx!.svc.from('fee_config_audit').select('old_value, new_value')
+        .eq('actor', fx!.admin.id).eq('key', 'usdt_polygon').order('id', { ascending: false }).limit(1).single()
+      expect((audit as any).old_value.coming_soon).toBe((before.data as any).coming_soon)
+      expect((audit as any).new_value.coming_soon).toBe(flags.comingSoon)
+
+      const seen = await sellerSees()
+      if (state === 'hidden') expect(seen).toBeNull()
+      else expect(seen).toEqual({ id: method.id, coming_soon: state === 'coming soon' })
+    }, 30_000)
+  }
+
+  it('saving without comingSoon leaves it as it is', async () => {
+    expect(await save({ isActive: true, comingSoon: true })).toEqual({ success: true })
+    expect(await save({ isActive: true })).toEqual({ success: true })
+    const { data } = await fx!.svc.from('withdrawal_methods').select('coming_soon').eq('id', method.id).single()
+    expect((data as any).coming_soon).toBe(true)
+    expect(await save({ isActive: true, comingSoon: false })).toEqual({ success: true })
+  }, 30_000)
 })

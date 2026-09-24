@@ -19,6 +19,9 @@
 --
 -- Idempotent: a row that already matches is not written and gets no audit row;
 -- every change writes one fee_config_audit row (actor NULL, like PR 7's seed).
+--
+-- Also (section 4): withdrawal_methods_set_fees takes p_coming_soon so
+-- /admin/fees can switch "coming soon" through the same audited RPC.
 -- ============================================================================
 
 DO $$
@@ -89,3 +92,36 @@ BEGIN
       jsonb_build_object('fee_percentage', 3.00, 'fee_fixed', 5.00, 'fee_min', 0, 'min_withdrawal', 50.00, 'note', 'post-deploy-1: crypto 3% + $5, min $50'));
   END LOOP;
 END $$;
+
+-- ── 4. /admin/fees: coming_soon becomes an audited admin switch ────────────
+-- withdrawal_methods_set_fees gains p_coming_soon (NULL = leave as is), and
+-- its fee_config_audit row carries coming_soon next to is_active. The
+-- argument list changes, so the 8-argument version is dropped first (two
+-- overloads with a default would make an 8-argument call ambiguous).
+DROP FUNCTION IF EXISTS public.withdrawal_methods_set_fees(uuid, uuid, numeric, numeric, numeric, numeric, numeric, boolean);
+CREATE OR REPLACE FUNCTION public.withdrawal_methods_set_fees(
+  p_method_id uuid, p_admin_id uuid, p_fee_pct numeric, p_fee_fixed numeric, p_fee_min numeric, p_min numeric, p_max numeric,
+  p_is_active boolean, p_coming_soon boolean DEFAULT NULL
+) RETURNS jsonb
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_old RECORD; v_new RECORD;
+BEGIN
+  SELECT * INTO v_old FROM withdrawal_methods WHERE id = p_method_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'withdrawal_methods_set_fees: method not found' USING ERRCODE = 'no_data_found'; END IF;
+  IF p_fee_pct < 0 OR p_fee_pct > 50 OR p_fee_fixed < 0 OR p_fee_min < 0 OR p_min <= 0 OR p_max < p_min THEN
+    RAISE EXCEPTION 'withdrawal_methods_set_fees: out of range (pct 0–50, fixed/min >= 0, 0 < minimum <= maximum)' USING ERRCODE = 'check_violation';
+  END IF;
+  UPDATE withdrawal_methods
+     SET fee_percentage = fee_round_cents(p_fee_pct), fee_fixed = fee_round_cents(p_fee_fixed), fee_min = fee_round_cents(p_fee_min),
+         min_withdrawal = fee_round_cents(p_min), max_withdrawal = fee_round_cents(p_max), is_active = p_is_active,
+         coming_soon = COALESCE(p_coming_soon, coming_soon), updated_at = now()
+   WHERE id = p_method_id RETURNING * INTO v_new;
+  INSERT INTO fee_config_audit (actor, scope, key, old_value, new_value)
+  VALUES (p_admin_id, 'withdrawal_method', v_old.method_name,
+    jsonb_build_object('fee_percentage', v_old.fee_percentage, 'fee_fixed', v_old.fee_fixed, 'fee_min', v_old.fee_min, 'min_withdrawal', v_old.min_withdrawal, 'max_withdrawal', v_old.max_withdrawal, 'is_active', v_old.is_active, 'coming_soon', v_old.coming_soon),
+    jsonb_build_object('fee_percentage', v_new.fee_percentage, 'fee_fixed', v_new.fee_fixed, 'fee_min', v_new.fee_min, 'min_withdrawal', v_new.min_withdrawal, 'max_withdrawal', v_new.max_withdrawal, 'is_active', v_new.is_active, 'coming_soon', v_new.coming_soon));
+  RETURN to_jsonb(v_new);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.withdrawal_methods_set_fees(uuid, uuid, numeric, numeric, numeric, numeric, numeric, boolean, boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.withdrawal_methods_set_fees(uuid, uuid, numeric, numeric, numeric, numeric, numeric, boolean, boolean) TO service_role;
