@@ -10,10 +10,11 @@
 export type OfferType = 'currency' | 'items' | 'accounts' | 'top-up'
 
 /**
- * Account risk band by game slug — used ONLY by protectionWindowHours
- * (lib/fees) to pick the 5 / 7 / 14-day protection window for account
- * orders. It is NOT a fee input: account commission rates are fee_rules
- * pair rows resolved by resolve_seller_fee (fee-engine.md §9 A10, §10 Q4).
+ * Account risk band by game slug — kept for the admin Fees tab's risk-band
+ * display (setAccountRiskBand). Since fee PR 7 it drives NO window: the
+ * SafeDrop Protection window per category is a row in order_completion_windows.
+ * It is NOT a fee input: account commission rates are fee_rules pair rows
+ * resolved by resolve_seller_fee (fee-engine.md §9 A10, §10 Q4).
  * Unlisted games default to mid.
  */
 export type AccountRiskBand = 'low' | 'mid' | 'high'
