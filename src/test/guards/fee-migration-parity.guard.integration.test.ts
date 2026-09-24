@@ -25,10 +25,10 @@
  * Runs through the anon key on purpose: the public fee page and the ISR'd
  * /[game]/sell resolve with that role.
  *
- * Fresh local stack: `supabase db reset` → `pnpm seed:games --env=local` →
- * re-apply the PR 1 seed file, then this PR's migration file (both are
- * idempotent) so the pair-scope rows exist for the reseeded pairs — see
- * docs/handoff/fee-pr4.md.
+ * Fresh local stack: `pnpm test:reset` (db reset → seed:games → the
+ * pair-scope rows from supabase/seeds/fee_rules.local.sql). That seed file
+ * restates what the two fee migrations write for pairs; RATES below restate
+ * the spec a third time, so a drift in either fails this file.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
@@ -157,7 +157,7 @@ describe.skipIf(!hasEnv)('fee engine PR 4 — the new rates, before and from the
     expect(pairs.length).toBeGreaterThanOrEqual(1)
     if (pairs.length < 50) {
       // eslint-disable-next-line no-console
-      console.warn(`[fee-parity] only ${pairs.length} pair(s) in the target catalogue — run \`pnpm seed:games --env=local\` and re-apply both seed files for the full proof`)
+      console.warn(`[fee-parity] only ${pairs.length} pair(s) in the target catalogue — run \`pnpm test:reset\` for the full proof`)
     }
   })
 
