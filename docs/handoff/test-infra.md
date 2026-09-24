@@ -27,7 +27,7 @@
 ## Test results (this worktree, fresh stack, main + postdeploy stacks running)
 - `tsc --noEmit`: clean
 - `pnpm test:full` #1 (pre-docs): reset 72 s → games 233 · pairs 405 · fee rules 41 · resolver gaps 0. **192 files passed, 1 skipped · 1707 tests passed, 2 skipped, 0 failed.** 4 min 02 s total.
-- `pnpm test:full` #2 (final, merged with origin/main #93): RESULT_2
+- `pnpm test:full` #2 (final, after merging origin/main incl. #93's new migration + guard): reset 57 s → 233 · 405 · 41 · 0 gaps. **194 files passed, 1 skipped · 1724 tests passed, 2 skipped, 0 failed.** 2 min 58 s total.
 - Main stack untouched throughout (its db container up 3 h, still 233/405/41).
 
 ## Stale `.claude/worktrees` (step 4)
