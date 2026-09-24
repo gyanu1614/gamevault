@@ -1,6 +1,6 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 
-import { FEE_RULES_TAG } from './tags'
+import { BUYER_FEES_TAG, FEE_RULES_TAG } from './tags'
 
 /**
  * Every reader of the fee table, invalidated after an admin fee write
@@ -21,4 +21,21 @@ export function revalidateFeeReaders(): void {
   revalidatePath('/sell/fees')
   revalidatePath('/[gameSlug]/sell', 'page')
   revalidatePath('/admin/games')
+}
+
+/**
+ * Every reader of the buyer method-fee table (checkout B3), invalidated after
+ * an admin write to payment_method_fees / currency_rates:
+ *
+ *   · the tag — the unstable_cache'd /fees table read;
+ *   · /fees — the legal page that renders it;
+ *   · /admin/fees — the editor.
+ *
+ * Checkout pages are dynamic (per order, per buyer) and quote live, so they
+ * need no revalidation.
+ */
+export function revalidateBuyerFeeReaders(): void {
+  revalidateTag(BUYER_FEES_TAG)
+  revalidatePath('/fees')
+  revalidatePath('/admin/fees')
 }

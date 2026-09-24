@@ -1213,7 +1213,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Buyer fee',
         blocks: [
           p(
-            'Buyers pay two itemised fees at checkout: a **marketplace fee of 2%**, which keeps every order covered by SafeDrop Buyer Protection, and a **processing fee** of the greater of **5%** or the payment-processing cost. Both are always included in the displayed total — the price you see at checkout is the price you pay.',
+            'Buyers pay two itemised fees at checkout: a **marketplace fee of 2%**, which keeps every order covered by SafeDrop Buyer Protection, and a **processing fee** that depends on the payment method you choose. The processing fee covers the payment provider’s charge on the full amount, currency conversion where the provider applies it, and a small buffer for rate movement; every method also has a minimum share of the item price. The exact fee for your order is quoted on every payment tile before you pay, and both fees are always included in the displayed total — the price you see at checkout is the price you pay.',
+          ),
+          p(
+            'The current terms per payment method are listed below, read live from the same table checkout quotes from. A method that is hidden or over its provider’s limit for your order is not offered.',
           ),
         ],
       },
