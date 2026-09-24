@@ -57,6 +57,10 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   // service-role only. docs/design/fee-engine.md §1.1–1.2.
   fee_rules: 'seller-commission rates; public by design, no PII, no money',
   platform_fee_settings: 'single-row fee programme terms (floor, founding %, notice days)',
+  // Checkout B3: buyer method fees are public information (quoted on /fees and
+  // on every checkout tile). No write policy; the admin action writes them.
+  payment_method_fees: 'per-method buyer processing-fee terms; public by design, no PII, no money',
+  currency_rates: 'usd_per_unit reference rates for fixed fees / caps; public, no PII',
 
   // SAB public price catalogue.
   sab_brainrots: 'public SAB value pages',

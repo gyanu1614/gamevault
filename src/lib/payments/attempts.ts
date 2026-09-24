@@ -102,10 +102,7 @@ export interface CreatePendingOrderArgs {
   unitPrice: number
   subtotal: number
   platformFeeRate: number
-  paymentProcessingFeeRate: number
   platformFee: number
-  paymentProcessingFee: number
-  totalAmount: number
   sellerPayout: number
   sellerCommissionPct: number
   sellerFeeTrace: unknown
@@ -118,6 +115,10 @@ export interface CreatePendingOrderArgs {
   pmId: string | null
   /** PAY-006: sweepable from birth; the provider's expiry replaces it. */
   fallbackExpiresAt: string
+  /** Checkout B3: the payment_method_fees.method to quote the buyer fee for
+   *  (pm_id | crypto provider name | 'wallet'). The RPC computes the fee and
+   *  the total from it — TypeScript never does. */
+  buyerFeeMethod: string
 }
 
 export interface CreatePendingOrderResult {
@@ -126,6 +127,9 @@ export interface CreatePendingOrderResult {
   /** null when the wallet covered the whole total (no provider charge). */
   attemptId: string | null
   totalMinor: bigint
+  /** The buyer processing fee the RPC quoted and snapshotted. */
+  buyerFeeMinor: bigint
+  buyerFeePct: number
   walletAppliedMinor: bigint
   chargeMinor: bigint
 }
@@ -138,8 +142,9 @@ export interface RpcError {
 }
 
 /**
- * order_create_pending — order row + promo usage + wallet hold + created
- * attempt in ONE transaction. Resolves `{ error }` (not a throw) so the
+ * order_create_pending — buyer-fee quote + order row + promo usage + wallet
+ * hold + created attempt in ONE transaction (the fee and the total are
+ * computed inside the RPC from buyerFeeMethod — checkout B3). Resolves `{ error }` (not a throw) so the
  * caller can classify a 23505 by constraint name exactly as before.
  */
 export async function createPendingOrder(
@@ -153,10 +158,7 @@ export async function createPendingOrder(
     p_unit_price: a.unitPrice,
     p_subtotal: a.subtotal,
     p_platform_fee_rate: a.platformFeeRate,
-    p_payment_processing_fee_rate: a.paymentProcessingFeeRate,
     p_platform_fee: a.platformFee,
-    p_payment_processing_fee: a.paymentProcessingFee,
-    p_total_amount: a.totalAmount,
     p_seller_payout: a.sellerPayout,
     p_seller_commission_pct: a.sellerCommissionPct,
     p_seller_fee_trace: a.sellerFeeTrace,
@@ -167,6 +169,7 @@ export async function createPendingOrder(
     p_provider: a.provider,
     p_pm_id: a.pmId,
     p_fallback_expires_at: a.fallbackExpiresAt,
+    p_buyer_fee_method: a.buyerFeeMethod,
   })
   if (error) return { result: null, error: error as RpcError }
   return {
@@ -176,6 +179,8 @@ export async function createPendingOrder(
       orderNumber: data.order_number ?? null,
       attemptId: data.attempt_id ?? null,
       totalMinor: BigInt(data.total_minor ?? 0),
+      buyerFeeMinor: BigInt(data.buyer_fee_minor ?? 0),
+      buyerFeePct: Number(data.buyer_fee_pct ?? 0),
       walletAppliedMinor: BigInt(data.wallet_applied_minor ?? 0),
       chargeMinor: BigInt(data.charge_minor ?? 0),
     },

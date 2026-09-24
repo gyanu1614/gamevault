@@ -5,9 +5,10 @@
  *  · expiryMinutes — per-method payment window (owner decision 2026-09-06):
  *    instant rails ~1h; voucher rails (buyer walks to a shop / redeems a PIN)
  *    get 48h and are NEVER auto-cancelled on the crypto 30-min clock.
- *  · feePercent — buyer processing-fee override for this method. null →
- *    checkout keeps its default processing fee. Payssion has not quoted
- *    per-method rates yet; plug real numbers in here when they do.
+ *  · the buyer processing FEE is NOT here (checkout B3 / PAY-023): it lives
+ *    in payment_method_fees (one row per pm_id) and is quoted by
+ *    buyer_fee_quote through lib/payments/eligibility. This module ships to
+ *    the client, so it carries no fee number.
  *  · countries — ISO-3166 alpha-2 codes where the method is the local rail.
  *    Drives the checkout region filter: buyers see matching methods up
  *    front, everything else behind a "More Payment Methods" fold. An
@@ -35,8 +36,6 @@ export interface PayssionMethodMeta {
   label: string
   kind: 'instant' | 'voucher'
   expiryMinutes: number
-  /** Buyer processing-fee % override; null → checkout default. */
-  feePercent: number | null
   /** Where the method is usable — selector region chip. */
   coverage: string
   /** ISO-3166 alpha-2 codes for the region filter; [] → never geo-matched. */
@@ -51,9 +50,9 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
   // live probe still gets 491 (2026-09-08) — she's been asked to flip it on
   // for app "DropMarket". Uncomment once a probe returns 200. Sheet terms:
   // 12.5% fee, refunds NOT supported provider-side (refunds → wallet credit);
-  // feePercent null until the owner decides on a buyer surcharge.
+  // its fee row (payment_method_fees.paysafecard) is already seeded.
   // paysafecard: { pmId: 'paysafecard', label: 'Paysafecard', kind: 'voucher',
-  //   expiryMinutes: VOUCHER_MINUTES, feePercent: null,
+  //   expiryMinutes: VOUCHER_MINUTES,
   //   coverage: 'Europe, UK, CA & AU',
   //   countries: ['AT','AU','BE','BG','CA','CH','CY','CZ','DE','DK','EE','ES',
   //     'FI','FR','GB','GE','GI','GR','HR','HU','IE','IT','LT','LU','LV','MT',
@@ -63,7 +62,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Pix',
     kind: 'instant', // real-time bank transfer
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Brazil',
     countries: ['BR'],
   },
@@ -72,7 +70,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'GCash',
     kind: 'instant', // mobile wallet
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -81,7 +78,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Maya',
     kind: 'instant', // mobile wallet
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -90,7 +86,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'QR Ph',
     kind: 'instant', // national QR standard — any PH bank/wallet app
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -99,7 +94,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'QRIS',
     kind: 'instant', // national QR standard — any ID bank/wallet app
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Indonesia',
     countries: ['ID'],
   },
@@ -108,7 +102,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'OXXO',
     kind: 'voucher', // cash voucher paid at OXXO stores
     expiryMinutes: VOUCHER_MINUTES,
-    feePercent: null,
     coverage: 'Mexico',
     countries: ['MX'],
   },
@@ -117,7 +110,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'SPEI',
     kind: 'instant', // near-real-time interbank transfer
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Mexico',
     countries: ['MX'],
   },
@@ -126,7 +118,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Boleto',
     kind: 'voucher', // bank slip paid at banks/lotéricas — takes days
     expiryMinutes: VOUCHER_MINUTES,
-    feePercent: null,
     coverage: 'Brazil',
     countries: ['BR'],
   },
@@ -135,7 +126,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'PSE',
     kind: 'instant', // bank-redirect rail
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Colombia',
     countries: ['CO'],
   },
@@ -144,7 +134,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'WebPay',
     kind: 'instant', // bank/card redirect rail
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Chile',
     countries: ['CL'],
   },
@@ -155,7 +144,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Payssion Test',
     kind: 'instant',
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Sandbox',
     countries: [],
   },

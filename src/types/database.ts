@@ -1443,6 +1443,73 @@ export type Database = {
           },
         ]
       }
+      currency_rates: {
+        Row: {
+          currency: string
+          note: string | null
+          updated_at: string
+          updated_by: string | null
+          usd_per_unit: number
+        }
+        Insert: {
+          currency: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_per_unit: number
+        }
+        Update: {
+          currency?: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_per_unit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       dispute_messages: {
         Row: {
           attachments: Json | null
@@ -4173,6 +4240,9 @@ export type Database = {
         Row: {
           auto_release_at: string | null
           buyer_confirmed_at: string | null
+          buyer_fee_amount: number | null
+          buyer_fee_method: string | null
+          buyer_fee_pct: number | null
           buyer_id: string
           cancelled_at: string | null
           chat_active_until: string | null
@@ -4234,6 +4304,9 @@ export type Database = {
         Insert: {
           auto_release_at?: string | null
           buyer_confirmed_at?: string | null
+          buyer_fee_amount?: number | null
+          buyer_fee_method?: string | null
+          buyer_fee_pct?: number | null
           buyer_id: string
           cancelled_at?: string | null
           chat_active_until?: string | null
@@ -4295,6 +4368,9 @@ export type Database = {
         Update: {
           auto_release_at?: string | null
           buyer_confirmed_at?: string | null
+          buyer_fee_amount?: number | null
+          buyer_fee_method?: string | null
+          buyer_fee_pct?: number | null
           buyer_id?: string
           cancelled_at?: string | null
           chat_active_until?: string | null
@@ -4555,6 +4631,119 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_method_fees: {
+        Row: {
+          buffer_pct: number
+          currencies: string[]
+          fee_currency: string
+          floor_pct: number
+          fx_markup_pct: number
+          instant_clearing: boolean
+          label: string
+          max_total_minor: number | null
+          method: string
+          min_fee_minor: number
+          note: string | null
+          provider: string
+          provider_fixed_minor: number
+          provider_pct: number
+          refundable: boolean
+          selectable: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          buffer_pct?: number
+          currencies?: string[]
+          fee_currency?: string
+          floor_pct?: number
+          fx_markup_pct?: number
+          instant_clearing?: boolean
+          label: string
+          max_total_minor?: number | null
+          method: string
+          min_fee_minor?: number
+          note?: string | null
+          provider: string
+          provider_fixed_minor?: number
+          provider_pct?: number
+          refundable?: boolean
+          selectable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          buffer_pct?: number
+          currencies?: string[]
+          fee_currency?: string
+          floor_pct?: number
+          fx_markup_pct?: number
+          instant_clearing?: boolean
+          label?: string
+          max_total_minor?: number | null
+          method?: string
+          min_fee_minor?: number
+          note?: string | null
+          provider?: string
+          provider_fixed_minor?: number
+          provider_pct?: number
+          refundable?: boolean
+          selectable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_fees_fee_currency_fkey"
+            columns: ["fee_currency"]
+            isOneToOne: false
+            referencedRelation: "currency_rates"
+            referencedColumns: ["currency"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
           },
         ]
       }
@@ -8299,6 +8488,124 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_notice_sends: {
+        Row: {
+          claimed_at: string
+          claimed_by: string | null
+          email: string
+          error: string | null
+          notice_key: string
+          provider_id: string | null
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          claimed_by?: string | null
+          email: string
+          error?: string | null
+          notice_key: string
+          provider_id?: string | null
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          claimed_by?: string | null
+          email?: string
+          error?: string | null
+          notice_key?: string
+          provider_id?: string | null
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_notice_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       seller_notifications: {
         Row: {
           created_at: string | null
@@ -8376,6 +8683,94 @@ export type Database = {
             foreignKeyName: "seller_notifications_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      seller_payout_details: {
+        Row: {
+          created_at: string
+          crypto_address_enc: string | null
+          crypto_address_hash: string | null
+          crypto_address_plain: string | null
+          crypto_chain: string | null
+          crypto_coin: string | null
+          details_changed_at: string | null
+          payoneer_email_enc: string | null
+          payoneer_email_hash: string | null
+          payoneer_email_plain: string | null
+          seller_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crypto_address_enc?: string | null
+          crypto_address_hash?: string | null
+          crypto_address_plain?: string | null
+          crypto_chain?: string | null
+          crypto_coin?: string | null
+          details_changed_at?: string | null
+          payoneer_email_enc?: string | null
+          payoneer_email_hash?: string | null
+          payoneer_email_plain?: string | null
+          seller_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crypto_address_enc?: string | null
+          crypto_address_hash?: string | null
+          crypto_address_plain?: string | null
+          crypto_chain?: string | null
+          crypto_coin?: string | null
+          details_changed_at?: string | null
+          payoneer_email_enc?: string | null
+          payoneer_email_hash?: string | null
+          payoneer_email_plain?: string | null
+          seller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_payout_details_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
           },
@@ -9934,6 +10329,7 @@ export type Database = {
           display_name: string
           fee_currency: string | null
           fee_fixed: number | null
+          fee_min: number
           fee_percentage: number | null
           icon_name: string | null
           id: string
@@ -9956,6 +10352,7 @@ export type Database = {
           display_name: string
           fee_currency?: string | null
           fee_fixed?: number | null
+          fee_min?: number
           fee_percentage?: number | null
           icon_name?: string | null
           id?: string
@@ -9978,6 +10375,7 @@ export type Database = {
           display_name?: string
           fee_currency?: string | null
           fee_fixed?: number | null
+          fee_min?: number
           fee_percentage?: number | null
           icon_name?: string | null
           id?: string
@@ -10001,6 +10399,8 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           fee_amount: number
+          fee_fixed: number | null
+          fee_min: number | null
           fee_percentage: number | null
           id: string
           method_id: string
@@ -10009,6 +10409,7 @@ export type Database = {
           payment_details: Json
           payment_reference: string | null
           processed_by: string | null
+          quote: Json | null
           rejected_at: string | null
           status: string
           transaction_hash: string | null
@@ -10022,6 +10423,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           fee_amount?: number
+          fee_fixed?: number | null
+          fee_min?: number | null
           fee_percentage?: number | null
           id?: string
           method_id: string
@@ -10030,6 +10433,7 @@ export type Database = {
           payment_details?: Json
           payment_reference?: string | null
           processed_by?: string | null
+          quote?: Json | null
           rejected_at?: string | null
           status?: string
           transaction_hash?: string | null
@@ -10043,6 +10447,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           fee_amount?: number
+          fee_fixed?: number | null
+          fee_min?: number | null
           fee_percentage?: number | null
           id?: string
           method_id?: string
@@ -10051,6 +10457,7 @@ export type Database = {
           payment_details?: Json
           payment_reference?: string | null
           processed_by?: string | null
+          quote?: Json | null
           rejected_at?: string | null
           status?: string
           transaction_hash?: string | null
@@ -11825,6 +12232,19 @@ export type Database = {
       assert_moderator: { Args: never; Returns: undefined }
       auth_p0_guards_version: { Args: never; Returns: number }
       auth_p1_guards_version: { Args: never; Returns: number }
+      buyer_fee_quote: {
+        Args: { p_currency: string; p_method: string; p_subtotal_minor: number }
+        Returns: Json
+      }
+      buyer_fee_quote_many: {
+        Args: {
+          p_currency: string
+          p_methods: string[]
+          p_subtotal_minor: number
+        }
+        Returns: Json[]
+      }
+      buyer_method_fees_version: { Args: never; Returns: number }
       calculate_reapply_cooldown: {
         Args: { rejection_count_param: number }
         Returns: string
@@ -11887,6 +12307,7 @@ export type Database = {
         }[]
       }
       fee_engine_version: { Args: never; Returns: number }
+      fee_round_cents: { Args: { p_amount: number }; Returns: number }
       fee_rule_cancel_scheduled: { Args: { p_rule_id: string }; Returns: Json }
       fee_rule_schedule_base: {
         Args: {
@@ -11940,6 +12361,9 @@ export type Database = {
         Returns: {
           auto_release_at: string | null
           buyer_confirmed_at: string | null
+          buyer_fee_amount: number | null
+          buyer_fee_method: string | null
+          buyer_fee_pct: number | null
           buyer_id: string
           cancelled_at: string | null
           chat_active_until: string | null
@@ -12084,6 +12508,10 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: number
       }
+      order_completion_window_set: {
+        Args: { p_admin_id: string; p_category_type: string; p_hours: number }
+        Returns: Json
+      }
       order_confirm_payment: {
         Args: {
           p_amount_minor?: number
@@ -12105,6 +12533,9 @@ export type Database = {
         Returns: {
           auto_release_at: string | null
           buyer_confirmed_at: string | null
+          buyer_fee_amount: number | null
+          buyer_fee_method: string | null
+          buyer_fee_pct: number | null
           buyer_id: string
           cancelled_at: string | null
           chat_active_until: string | null
@@ -12170,32 +12601,57 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      order_create_pending: {
-        Args: {
-          p_buyer_id: string
-          p_currency: string
-          p_fallback_expires_at: string
-          p_listing_id: string
-          p_payment_processing_fee: number
-          p_payment_processing_fee_rate: number
-          p_platform_fee: number
-          p_platform_fee_rate: number
-          p_pm_id: string
-          p_promo_code_id: string
-          p_promo_discount: number
-          p_provider: string
-          p_quantity: number
-          p_seller_commission_pct: number
-          p_seller_fee_trace: Json
-          p_seller_id: string
-          p_seller_payout: number
-          p_subtotal: number
-          p_total_amount: number
-          p_unit_price: number
-          p_wallet_minor: number
-        }
-        Returns: Json
-      }
+      order_create_pending:
+        | {
+            Args: {
+              p_buyer_id: string
+              p_currency: string
+              p_fallback_expires_at: string
+              p_listing_id: string
+              p_payment_processing_fee: number
+              p_payment_processing_fee_rate: number
+              p_platform_fee: number
+              p_platform_fee_rate: number
+              p_pm_id: string
+              p_promo_code_id: string
+              p_promo_discount: number
+              p_provider: string
+              p_quantity: number
+              p_seller_commission_pct: number
+              p_seller_fee_trace: Json
+              p_seller_id: string
+              p_seller_payout: number
+              p_subtotal: number
+              p_total_amount: number
+              p_unit_price: number
+              p_wallet_minor: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_buyer_fee_method: string
+              p_buyer_id: string
+              p_currency: string
+              p_fallback_expires_at: string
+              p_listing_id: string
+              p_platform_fee: number
+              p_platform_fee_rate: number
+              p_pm_id: string
+              p_promo_code_id: string
+              p_promo_discount: number
+              p_provider: string
+              p_quantity: number
+              p_seller_commission_pct: number
+              p_seller_fee_trace: Json
+              p_seller_id: string
+              p_seller_payout: number
+              p_subtotal: number
+              p_unit_price: number
+              p_wallet_minor: number
+            }
+            Returns: Json
+          }
       order_credit_late_payment: {
         Args: {
           p_amount_minor: number
@@ -12276,6 +12732,10 @@ export type Database = {
       payment_attempts_backfill: { Args: never; Returns: number }
       payment_attempts_version: { Args: never; Returns: number }
       payment_reconciler_version: { Args: never; Returns: number }
+      platform_money_setting_set: {
+        Args: { p_admin_id: string; p_key: string; p_value: number }
+        Returns: Json
+      }
       post_journal: {
         Args: {
           p_entries: Json
@@ -12286,6 +12746,7 @@ export type Database = {
         }
         Returns: string
       }
+      pr7_grants_encryption_version: { Args: never; Returns: number }
       promo_usage_record: {
         Args: {
           p_discount_amount: number
@@ -12546,6 +13007,37 @@ export type Database = {
         Args: { p_currency?: string; p_seller_id: string }
         Returns: number
       }
+      seller_notice_claim: {
+        Args: {
+          p_claimed_by?: string
+          p_email: string
+          p_notice_key: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      seller_notice_record: {
+        Args: {
+          p_error: string
+          p_notice_key: string
+          p_provider_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      seller_payout_details_set: {
+        Args: {
+          p_address_enc?: string
+          p_address_hash?: string
+          p_chain?: string
+          p_coin?: string
+          p_email_enc?: string
+          p_email_hash?: string
+          p_kind: string
+          p_seller_id: string
+        }
+        Returns: Json
+      }
       seller_since: { Args: { p_seller_id: string }; Returns: string }
       seller_withdrawal_gate: { Args: { p_seller_id: string }; Returns: Json }
       storage_bucket_posture: { Args: { p_bucket: string }; Returns: Json }
@@ -12643,6 +13135,10 @@ export type Database = {
         Args: { application_id_param: string; user_id_param: string }
         Returns: Json
       }
+      withdrawal_approve: {
+        Args: { p_admin_id: string; p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
       withdrawal_cancel: {
         Args: { p_request_id: string; p_user_id: string }
         Returns: Json
@@ -12656,12 +13152,45 @@ export type Database = {
         }
         Returns: string
       }
+      withdrawal_mark_paid: {
+        Args: {
+          p_admin_id: string
+          p_notes?: string
+          p_reference: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      withdrawal_methods_set_fees: {
+        Args: {
+          p_admin_id: string
+          p_coming_soon?: boolean
+          p_fee_fixed: number
+          p_fee_min: number
+          p_fee_pct: number
+          p_is_active: boolean
+          p_max: number
+          p_method_id: string
+          p_min: number
+        }
+        Returns: Json
+      }
       withdrawal_payout: { Args: { p_request_id: string }; Returns: string }
+      withdrawal_quote: {
+        Args: { p_amount: number; p_method_id: string; p_seller_id: string }
+        Returns: Json
+      }
       withdrawal_reject: {
         Args: { p_admin_id: string; p_reason: string; p_request_id: string }
         Returns: Json
       }
+      withdrawal_request: {
+        Args: { p_amount: number; p_method_id: string; p_seller_id: string }
+        Returns: Json
+      }
       withdrawal_reversal: { Args: { p_request_id: string }; Returns: string }
+      withdrawal_risk_snapshot: { Args: { p_seller_id: string }; Returns: Json }
+      withdrawal_rules_version: { Args: never; Returns: number }
     }
     Enums: {
       admin_role_enum: "super_admin" | "admin" | "moderator" | "support"

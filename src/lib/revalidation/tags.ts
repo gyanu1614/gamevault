@@ -23,3 +23,10 @@ export const GAME_DIRECTORY_TAG = 'games:directory'
  * (fee-engine.md §4.2, §5.5); the pages' 24 h `revalidate` is the backstop.
  */
 export const FEE_RULES_TAG = 'fees:rules'
+
+/**
+ * payment_method_fees / currency_rates — the buyer processing-fee terms
+ * quoted on /fees (checkout B3). The admin buyer-fee action revalidates it
+ * after every write; the page's 24 h `revalidate` is the backstop.
+ */
+export const BUYER_FEES_TAG = 'fees:buyer-methods'

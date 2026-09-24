@@ -141,6 +141,23 @@ describe('fee engine — marketing copy carries no seller-fee number', () => {
     expect(text).toMatch(/\[Seller Fees page\]\(\/sell\/fees\)/)
   })
 
+  // Checkout B3: /fees is the ONE page where buyer-fee numbers may appear —
+  // but only the flat marketplace fee lives in the document; every
+  // per-method processing figure is a table built from payment_method_fees
+  // at render time (lib/fees/buyer-public-rates), never typed into copy.
+  it('the /fees buyer section carries only the marketplace fee; per-method numbers come from the table', () => {
+    const doc = LEGAL_DOCS.find((d) => d.slug === 'fees')!
+    const section = doc.sections.find((s) => s.h === 'Buyer fee')
+    expect(section, 'the Buyer fee section exists').toBeTruthy()
+    const text = JSON.stringify(section!.blocks)
+    const numbers = text.match(PCT_RE) ?? []
+    expect(numbers, 'only the marketplace fee is a literal').toEqual(['2%'])
+    expect(text).not.toMatch(/5%|processing fee of the greater/i)
+    const page = read('src/app/(legal)/fees/page.tsx')
+    expect(page).toMatch(/getPublicBuyerFees\(/)
+    expect(page).toMatch(/buyerFeeTableBlock\(/)
+  })
+
   it('no source file outside lib/fees re-declares the retired TS commission constants', () => {
     const retired = ['COMMISSION_PCT', 'ROBLOX_ECONOMY_GAMES', 'FOUNDING_DISCOUNT_PTS', 'PROMO_ZERO_FEE_GAMES']
     for (const file of PINNED_FILES) {

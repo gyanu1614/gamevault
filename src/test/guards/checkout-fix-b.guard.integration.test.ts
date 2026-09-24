@@ -250,7 +250,10 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       const walletBefore = await walletMinor(fx!.buyer.id)
       sessionClient = fx!.buyer.client
       const { createCheckout } = await import('@/lib/actions/checkout')
-      // price 1 → buyer fee 7% → total 1.07; wallet 0.50 → charge 0.57
+      // price 1 → marketplace 2% (2¢) + the GCash row's quote (checkout B3:
+      // buyer_fee_quote, not a TS constant) → total; wallet 0.50 → charge the rest
+      const { data: gq } = await fx!.svc.rpc('buyer_fee_quote', { p_method: 'gcash_ph', p_subtotal_minor: 100, p_currency: CUR } as any)
+      const expectedTotal = 100 + 2 + Number((gq as any).fee_minor)
       const r = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5, paymentMethodId: 'gcash_ph' })
       expect(r.success, r.error).toBe(true)
       createdOrderIds.push(r.orderId!)
@@ -263,9 +266,11 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       expect(a.status).toBe('active')
       expect(a.provider).toBe('payssion') // the routing decision, from the pm_id
       expect(a.pm_id).toBe('gcash_ph')
-      expect(Number(a.order_total_minor)).toBe(107)
+      expect(Number(a.order_total_minor)).toBe(expectedTotal)
       expect(Number(a.wallet_minor)).toBe(50)
-      expect(Number(a.amount_minor)).toBe(57)
+      expect(Number(a.amount_minor)).toBe(expectedTotal - 50)
+      expect(row.buyer_fee_method).toBe('gcash_ph')
+      expect(Math.round(Number(row.buyer_fee_amount) * 100)).toBe(Number((gq as any).fee_minor))
       expect(a.currency).toBe(CUR)
       expect(a.provider_charge_id).toBe(`fake_${r.orderId}`)
       expect(a.checkout_url).toBe(r.checkoutUrl)
@@ -303,7 +308,7 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       const { data: listing } = await fx!.svc.from('listings').select('id').eq('id', fx!.listingId).single()
       const err = withFault('order_create_pending:after_wallet', `SELECT public.order_create_pending(
         '${fx!.buyer.id}'::uuid, '${fx!.seller.id}'::uuid, '${(listing as any).id}'::uuid, 1,
-        1, 1, 0, 0, 0, 0, 1.00, 1.00, 0, '{}'::jsonb, 'USD', NULL, 0, 40, 'fake', NULL, now() + interval '30 minutes')`)
+        1, 1, 0, 0, 1.00, 0, '{}'::jsonb, 'USD', NULL, 0, 40, 'fake', NULL, now() + interval '30 minutes', 'fake')`)
       expect(err).toMatch(/injected fault at order_create_pending:after_wallet/)
       const { data: rows } = await fx!.svc.from('orders').select('id').eq('buyer_id', fx!.buyer.id).eq('listing_id', fx!.listingId).eq('status', 'pending')
       expect(rows ?? []).toEqual([])
