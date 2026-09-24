@@ -1443,6 +1443,73 @@ export type Database = {
           },
         ]
       }
+      currency_rates: {
+        Row: {
+          currency: string
+          note: string | null
+          updated_at: string
+          updated_by: string | null
+          usd_per_unit: number
+        }
+        Insert: {
+          currency: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_per_unit: number
+        }
+        Update: {
+          currency?: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          usd_per_unit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "currency_rates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       dispute_messages: {
         Row: {
           attachments: Json | null
@@ -4171,6 +4238,9 @@ export type Database = {
       }
       orders: {
         Row: {
+          buyer_fee_amount: number | null
+          buyer_fee_method: string | null
+          buyer_fee_pct: number | null
           auto_release_at: string | null
           buyer_confirmed_at: string | null
           buyer_id: string
@@ -4232,6 +4302,9 @@ export type Database = {
           warranty_expires_at: string | null
         }
         Insert: {
+          buyer_fee_amount?: number | null
+          buyer_fee_method?: string | null
+          buyer_fee_pct?: number | null
           auto_release_at?: string | null
           buyer_confirmed_at?: string | null
           buyer_id: string
@@ -4293,6 +4366,9 @@ export type Database = {
           warranty_expires_at?: string | null
         }
         Update: {
+          buyer_fee_amount?: number | null
+          buyer_fee_method?: string | null
+          buyer_fee_pct?: number | null
           auto_release_at?: string | null
           buyer_confirmed_at?: string | null
           buyer_id?: string
@@ -4555,6 +4631,119 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_method_fees: {
+        Row: {
+          buffer_pct: number
+          currencies: string[]
+          fee_currency: string
+          floor_pct: number
+          fx_markup_pct: number
+          instant_clearing: boolean
+          label: string
+          max_total_minor: number | null
+          method: string
+          min_fee_minor: number
+          note: string | null
+          provider: string
+          provider_fixed_minor: number
+          provider_pct: number
+          refundable: boolean
+          selectable: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          buffer_pct?: number
+          currencies?: string[]
+          fee_currency?: string
+          floor_pct?: number
+          fx_markup_pct?: number
+          instant_clearing?: boolean
+          label: string
+          max_total_minor?: number | null
+          method: string
+          min_fee_minor?: number
+          note?: string | null
+          provider: string
+          provider_fixed_minor?: number
+          provider_pct?: number
+          refundable?: boolean
+          selectable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          buffer_pct?: number
+          currencies?: string[]
+          fee_currency?: string
+          floor_pct?: number
+          fx_markup_pct?: number
+          instant_clearing?: boolean
+          label?: string
+          max_total_minor?: number | null
+          method?: string
+          min_fee_minor?: number
+          note?: string | null
+          provider?: string
+          provider_fixed_minor?: number
+          provider_pct?: number
+          refundable?: boolean
+          selectable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_fees_fee_currency_fkey"
+            columns: ["fee_currency"]
+            isOneToOne: false
+            referencedRelation: "currency_rates"
+            referencedColumns: ["currency"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "payment_method_fees_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
           },
         ]
       }
@@ -11825,6 +12014,19 @@ export type Database = {
       assert_moderator: { Args: never; Returns: undefined }
       auth_p0_guards_version: { Args: never; Returns: number }
       auth_p1_guards_version: { Args: never; Returns: number }
+      buyer_fee_quote: {
+        Args: { p_currency: string; p_method: string; p_subtotal_minor: number }
+        Returns: Json
+      }
+      buyer_fee_quote_many: {
+        Args: {
+          p_currency: string
+          p_methods: string[]
+          p_subtotal_minor: number
+        }
+        Returns: Json[]
+      }
+      buyer_method_fees_version: { Args: never; Returns: number }
       calculate_reapply_cooldown: {
         Args: { rejection_count_param: number }
         Returns: string
@@ -12056,6 +12258,7 @@ export type Database = {
       mark_inactive_sellers_offline: { Args: never; Returns: undefined }
       money_atomicity_version: { Args: never; Returns: number }
       money_fault_hook: { Args: { p_point: string }; Returns: undefined }
+      money_round_minor: { Args: { p_amount: number }; Returns: number }
       notify_once: {
         Args: {
           p_dedupe_key: string
@@ -12172,12 +12375,11 @@ export type Database = {
       }
       order_create_pending: {
         Args: {
+          p_buyer_fee_method: string
           p_buyer_id: string
           p_currency: string
           p_fallback_expires_at: string
           p_listing_id: string
-          p_payment_processing_fee: number
-          p_payment_processing_fee_rate: number
           p_platform_fee: number
           p_platform_fee_rate: number
           p_pm_id: string
@@ -12190,7 +12392,6 @@ export type Database = {
           p_seller_id: string
           p_seller_payout: number
           p_subtotal: number
-          p_total_amount: number
           p_unit_price: number
           p_wallet_minor: number
         }

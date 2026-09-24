@@ -77,6 +77,10 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   // Part 4: the stuck-webhook reconciler + the sweep's poison counter.
   'payment_reconciler_version', 'webhook_events_flip_unreplayable', 'webhook_events_stuck_claim',
   'webhook_event_reconcile_mark', 'payment_attempt_note_sweep_failure',
+  // Checkout B3: the buyer method-fee quote. The browser never quotes — the
+  // page and createCheckout reach it through eligibleMethods (service role);
+  // a quote the client could call would be a fee oracle it could disagree with.
+  'buyer_method_fees_version', 'buyer_fee_quote', 'buyer_fee_quote_many',
 ]
 
 /**
