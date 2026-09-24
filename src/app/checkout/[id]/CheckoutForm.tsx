@@ -473,6 +473,39 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
     Icon: Landmark,
     points: ['Approve on the WebPay page', 'Payment confirms instantly'],
   },
+  // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
+  trustly: {
+    Icon: Landmark,
+    points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
+  },
+  blik_pl: {
+    Icon: Smartphone,
+    points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
+  },
+  p24_pl: {
+    Icon: Landmark,
+    points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
+  },
+  eps_at: {
+    Icon: Landmark,
+    points: ['Approve in your bank portal', 'Payment confirms instantly'],
+  },
+  mbway_pt: {
+    Icon: Smartphone,
+    points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
+  },
+  bancomatpay_it: {
+    Icon: Smartphone,
+    points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
+  },
+  payu_cz: {
+    Icon: Landmark,
+    points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
+  },
+  paysafecard: {
+    Icon: CreditCard,
+    points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your DropMarket wallet'],
+  },
 }
 const FALLBACK_UI = {
   Icon: Landmark,

@@ -131,10 +131,13 @@ describe('payssion: routing + per-method expiry', () => {
     ]) {
       expect(providerNameForMethod(pm)).toBe('payssion')
     }
-    // Not in the registry (not enabled on the app) → never routed to payssion.
-    // paysafecard: still 491 live despite the account manager's email.
-    expect(providerNameForMethod('paysafecard')).not.toBe('payssion')
-    expect(providerNameForMethod('p24_pl')).not.toBe('payssion')
+    // B4 (probe 2026-09-24): the EU rails, paysafecard's 491 cleared.
+    for (const pm of ['trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz', 'paysafecard']) {
+      expect(providerNameForMethod(pm)).toBe('payssion')
+    }
+    // Not in the registry (never wired / not a pm_id) → never routed to payssion.
+    expect(providerNameForMethod('skrill')).not.toBe('payssion')
+    expect(providerNameForMethod('bancomat_it')).not.toBe('payssion')
     expect(providerNameForMethod('BTC-CHAIN')).not.toBe('payssion')
     expect(providerNameForMethod(undefined)).not.toBe('payssion')
   })
@@ -143,7 +146,9 @@ describe('payssion: routing + per-method expiry', () => {
     const now = Date.now()
     expect(new Date(payssionExpiryIso('boleto_br', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('oxxo_mx', now)).getTime() - now).toBe(48 * 60 * 60_000)
-    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']) {
+    expect(new Date(payssionExpiryIso('paysafecard', now)).getTime() - now).toBe(48 * 60 * 60_000)
+    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl',
+      'trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz']) {
       expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
     }
   })

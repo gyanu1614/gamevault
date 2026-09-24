@@ -30,6 +30,7 @@ export interface PublicMethodFee {
   bufferPct: number
   floorPct: number
   minFeeMinor: number
+  minTotalMinor: number | null
   maxTotalMinor: number | null
   refundable: boolean
   instantClearing: boolean
@@ -50,6 +51,7 @@ export function describeMethodFee(r: PublicMethodFee): string {
   const clauses: string[] = [parts.length ? parts.join(' + ') : 'no provider charge']
   clauses.push(`at least ${pct(r.floorPct)} of the item price`)
   if (r.minFeeMinor > 0) clauses.push(`minimum ${money(r.minFeeMinor, r.feeCurrency)}`)
+  if (r.minTotalMinor != null) clauses.push(`orders from ${money(r.minTotalMinor, r.feeCurrency)}`)
   if (r.maxTotalMinor != null) clauses.push(`orders up to ${money(r.maxTotalMinor, r.feeCurrency)}`)
   return clauses.join(', ')
 }
@@ -77,7 +79,7 @@ const PROVIDER_ORDER: Record<string, number> = { btcpay: 0, coingate: 0, wallet:
 async function readBuyerFees(): Promise<PublicMethodFee[]> {
   const { data, error } = await createAnonClient()
     .from('payment_method_fees')
-    .select('method, label, provider, fee_currency, provider_pct, provider_fixed_minor, fx_markup_pct, buffer_pct, floor_pct, min_fee_minor, max_total_minor, refundable, instant_clearing, selectable')
+    .select('method, label, provider, fee_currency, provider_pct, provider_fixed_minor, fx_markup_pct, buffer_pct, floor_pct, min_fee_minor, min_total_minor, max_total_minor, refundable, instant_clearing, selectable')
   if (error) throw new Error(`payment_method_fees: ${error.message}`)
   return ((data ?? []) as any[])
     .filter((r) => r.provider !== 'fake')
@@ -92,6 +94,7 @@ async function readBuyerFees(): Promise<PublicMethodFee[]> {
       bufferPct: Number(r.buffer_pct),
       floorPct: Number(r.floor_pct),
       minFeeMinor: Number(r.min_fee_minor),
+      minTotalMinor: r.min_total_minor == null ? null : Number(r.min_total_minor),
       maxTotalMinor: r.max_total_minor == null ? null : Number(r.max_total_minor),
       refundable: !!r.refundable,
       instantClearing: !!r.instant_clearing,

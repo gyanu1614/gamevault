@@ -158,6 +158,29 @@ describe('fee engine — marketing copy carries no seller-fee number', () => {
     expect(page).toMatch(/buyerFeeTableBlock\(/)
   })
 
+  // Checkout B4: the buyer-side line lives on the SAME surfaces as the seller
+  // line — number-free ("Lowest fees for buyers and sellers"), never a rate.
+  // A surface that drops it, or a rewrite that quotes a figure, fails here.
+  it('the buyer-side fee line is present, number-free, on every surface the seller line uses', () => {
+    const BUYER_LINE_RE = /lowest fees for buyers and sellers/i
+    const surfaces = [
+      'src/features/home/pages/HomePage.tsx',
+      'src/features/home/components/MobileHome.tsx',
+      'src/app/browse/page.tsx',
+      'src/app/(marketplace)/[gameSlug]/[categorySlug]/page.tsx',
+    ]
+    for (const file of surfaces) {
+      const src = read(file)
+      expect(src, `${file} carries the buyer-side fee line`).toMatch(BUYER_LINE_RE)
+      for (const line of src.split('\n').filter((l) => BUYER_LINE_RE.test(l))) {
+        expect(line, `${file}: the buyer line must stay number-free`).not.toMatch(/\d\s*%|\$\s*\d/)
+      }
+    }
+    // /fees lists every crypto payout currency offered, not just USDT.
+    const withdrawals = LEGAL_DOCS.find((d) => d.slug === 'fees')!.sections.find((s) => s.h === 'Withdrawals')!
+    expect(JSON.stringify(withdrawals.blocks)).toMatch(/Crypto payouts \(USDT, USDC, BTC, ETH\)/)
+  })
+
   it('no source file outside lib/fees re-declares the retired TS commission constants', () => {
     const retired = ['COMMISSION_PCT', 'ROBLOX_ECONOMY_GAMES', 'FOUNDING_DISCOUNT_PTS', 'PROMO_ZERO_FEE_GAMES']
     for (const file of PINNED_FILES) {

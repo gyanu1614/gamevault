@@ -42,6 +42,7 @@ export interface PaymentMethodFeeRow {
   buffer_pct: number
   floor_pct: number
   min_fee_minor: number
+  min_total_minor: number | null
   max_total_minor: number | null
   refundable: boolean
   instant_clearing: boolean
@@ -69,7 +70,7 @@ export interface AuditRow {
 type Result<T = object> = ({ success: true } & T) | { success: false; error: string }
 
 const FEE_COLS =
-  'method, label, provider, fee_currency, provider_pct, provider_fixed_minor, fx_markup_pct, buffer_pct, floor_pct, min_fee_minor, max_total_minor, refundable, instant_clearing, selectable, currencies, note, updated_at'
+  'method, label, provider, fee_currency, provider_pct, provider_fixed_minor, fx_markup_pct, buffer_pct, floor_pct, min_fee_minor, min_total_minor, max_total_minor, refundable, instant_clearing, selectable, currencies, note, updated_at'
 
 const toFee = (r: any): PaymentMethodFeeRow => ({
   ...r,
@@ -80,6 +81,7 @@ const toFee = (r: any): PaymentMethodFeeRow => ({
   buffer_pct: Number(r.buffer_pct),
   floor_pct: Number(r.floor_pct),
   min_fee_minor: Number(r.min_fee_minor),
+  min_total_minor: r.min_total_minor == null ? null : Number(r.min_total_minor),
   max_total_minor: r.max_total_minor == null ? null : Number(r.max_total_minor),
 })
 const toRate = (r: any): CurrencyRateRow => ({ ...r, currency: String(r.currency).trim(), usd_per_unit: Number(r.usd_per_unit) })
@@ -110,6 +112,7 @@ export interface PaymentMethodFeePatch {
   buffer_pct?: unknown
   floor_pct?: unknown
   min_fee_minor?: unknown
+  min_total_minor?: unknown
   max_total_minor?: unknown
   refundable?: unknown
   instant_clearing?: unknown
@@ -129,7 +132,7 @@ async function validateMethodFeePatch(patch: PaymentMethodFeePatch): Promise<{ v
     if ('error' in r) return r
     values[key] = r.n
   }
-  for (const [key, label, nullable] of [['provider_fixed_minor', 'Fixed fee', false], ['min_fee_minor', 'Minimum fee', false], ['max_total_minor', 'Provider cap', true]] as const) {
+  for (const [key, label, nullable] of [['provider_fixed_minor', 'Fixed fee', false], ['min_fee_minor', 'Minimum fee', false], ['min_total_minor', 'Provider minimum', true], ['max_total_minor', 'Provider cap', true]] as const) {
     if (patch[key] === undefined) continue
     const r = minor(patch[key], label, nullable)
     if ('error' in r) return r

@@ -11,7 +11,7 @@ import { buyerFeeTableBlock, describeMethodFee, type PublicMethodFee } from './b
 
 const row = (over: Partial<PublicMethodFee>): PublicMethodFee => ({
   method: 'pix_br', label: 'Pix', provider: 'payssion', feeCurrency: 'USD', providerPct: 3.75, providerFixedMinor: 0,
-  fxMarkupPct: 7.5, bufferPct: 1, floorPct: 5, minFeeMinor: 35, maxTotalMinor: null, refundable: true, instantClearing: true,
+  fxMarkupPct: 7.5, bufferPct: 1, floorPct: 5, minFeeMinor: 35, minTotalMinor: null, maxTotalMinor: null, refundable: true, instantClearing: true,
   selectable: true, ...over,
 })
 

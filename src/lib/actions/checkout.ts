@@ -84,6 +84,11 @@ const SOLD_OUT_REFUNDED_MESSAGE =
   'This item sold out just before your payment went through — the full amount is back in your DropMarket wallet.'
 const WALLET_CHANGED_MESSAGE =
   'Your wallet balance changed while the order was being created — nothing was charged. Please try again.'
+/** B4: the provider refused the charge as below its minimum (Payssion 417 —
+ *  its own FX rate moved past our headroom). The order was cancelled and any
+ *  wallet credit returned by the PAY-006 path before this is shown. */
+const BELOW_PROVIDER_MINIMUM_MESSAGE =
+  'This order is under the minimum amount for that payment method — nothing was charged, and any wallet credit you applied is back in your wallet. Please pick another payment method.'
 
 export interface CreateCheckoutInput {
   listingId: string
@@ -419,6 +424,9 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
         // The fallback payment_expires_at stamped at insert makes this order
         // sweepable; the sweep drives the same cancel + return path.
         console.error(`[createCheckout] cancel after charge failure ALSO failed (order ${orderId} left for the sweep):`, cancelError)
+      }
+      if (/result_code 417/.test(String(chargeError?.message ?? ''))) {
+        return { success: false, error: BELOW_PROVIDER_MINIMUM_MESSAGE }
       }
       return { success: false, error: PROVIDER_UNAVAILABLE_MESSAGE }
     }

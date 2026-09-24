@@ -1225,7 +1225,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Withdrawals',
         blocks: [
           ul([
-            '**Crypto payouts (USDT):** 3% + $5 per payout; minimum withdrawal $50.',
+            '**Crypto payouts (USDT, USDC, BTC, ETH):** 3% + $5 per payout; minimum withdrawal $50.',
             '**Payoneer payouts:** 3% per payout with a $5 minimum fee; minimum withdrawal $100.',
             '**When a sale becomes withdrawable:** 24 hours after the Buyer confirms receipt, or immediately when the Order completes automatically at the end of its SafeDrop Protection window.',
             '**New sellers:** withdrawals open 30 days after your seller account is approved.',

@@ -4646,6 +4646,7 @@ export type Database = {
           max_total_minor: number | null
           method: string
           min_fee_minor: number
+          min_total_minor: number | null
           note: string | null
           provider: string
           provider_fixed_minor: number
@@ -4666,6 +4667,7 @@ export type Database = {
           max_total_minor?: number | null
           method: string
           min_fee_minor?: number
+          min_total_minor?: number | null
           note?: string | null
           provider: string
           provider_fixed_minor?: number
@@ -4686,6 +4688,7 @@ export type Database = {
           max_total_minor?: number | null
           method?: string
           min_fee_minor?: number
+          min_total_minor?: number | null
           note?: string | null
           provider?: string
           provider_fixed_minor?: number

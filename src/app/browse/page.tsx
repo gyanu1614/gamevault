@@ -73,6 +73,10 @@ const FAQS = [
     q: 'How much does it cost to sell?',
     a: 'Sellers pay some of the lowest fees in the market — set per category and published on our Seller Fees page — so listings start cheaper here and stay cheaper.',
   },
+  {
+    q: 'What does it cost to buy?',
+    a: 'Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Protection on every order, and the processing fee for the payment method you pick is quoted on its tile before you pay — the current terms are on our Fees page.',
+  },
 ]
 
 interface GameRow {
