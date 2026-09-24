@@ -182,3 +182,36 @@ describe('coingate: createCharge title', () => {
     expect(bodies[0].title).toBe('DropMarket order 0F1E2D3C')
   })
 })
+
+// ─── voidCharge (round B Part 2, PAY-004) ─────────────────────────────────
+describe('coingate: voidCharge', () => {
+  const harness = (status: string) => {
+    const calls: string[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      calls.push(`${init?.method ?? 'GET'} ${String(url)}`)
+      if (/\/orders\/555$/.test(String(url))) {
+        return { ok: true, json: async () => ({ id: 555, order_id: 'order-1', status, price_amount: '1.00', price_currency: 'USD' }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makeCoinGateProvider({ fetchImpl }) }
+  }
+
+  it('paid / confirming → paid', async () => {
+    for (const s of ['paid', 'confirming']) expect((await harness(s).provider.voidCharge('555')).outcome).toBe('paid')
+  })
+
+  it('expired / canceled / invalid / refunded → already_closed', async () => {
+    for (const s of ['expired', 'canceled', 'invalid', 'refunded']) expect((await harness(s).provider.voidCharge('555')).outcome).toBe('already_closed')
+  })
+
+  it('new / pending → unsupported: CoinGate has no cancel for a standard order (it expires itself); only the GET is made', async () => {
+    for (const s of ['new', 'pending']) {
+      const { calls, provider } = harness(s)
+      const r = await provider.voidCharge('555')
+      expect(r.outcome).toBe('unsupported')
+      expect(r.rawStatus).toBe(s)
+      expect(calls).toEqual([expect.stringMatching(/^GET .*\/orders\/555$/)])
+    }
+  })
+})

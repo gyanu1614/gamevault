@@ -179,10 +179,10 @@ export async function checkSellerNeedsModeration(): Promise<{
     // Count approved listings for entry-tier sellers still under moderation.
     const { count } = await supabase
       .from('listings')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('seller_id', user.id)
       .in('status', ['active', 'sold', 'archived'])
-      .not('approved_at', 'is', null)
+      .not('approved_at', 'is', null).limit(1)
 
     const approvedCount = count || 0
 

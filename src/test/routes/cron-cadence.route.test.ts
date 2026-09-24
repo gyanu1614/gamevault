@@ -34,6 +34,12 @@ const SUB_DAILY: Record<string, { maxPerDay: number; why: string }> = {
     maxPerDay: 24,
     why: 'money path — auto-complete + buyer reminders are due hourly',
   },
+  'reconcile-payments.yml': {
+    // Money path (checkout fix round B): voids charges the RPCs closed,
+    // re-runs stuck webhook events. Bounded batches, revalidates nothing.
+    maxPerDay: 96,
+    why: 'money path — provider cancel outbox + stuck webhook events',
+  },
   'expire-pending-payments.yml': {
     // Money path: an unpaid order holds inventory until it is expired, so a
     // 24 h window would strand stock for a day. Not a cache/CPU cost — the

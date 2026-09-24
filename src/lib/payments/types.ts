@@ -17,7 +17,19 @@ import type { Money } from '@/lib/money'
 
 export type CanonicalEvent =
   | { type: 'CHARGE_PENDING'; orderId: string; providerChargeId: string }
-  | { type: 'CHARGE_CONFIRMED'; orderId: string; providerChargeId: string; settled: Money }
+  | {
+      type: 'CHARGE_CONFIRMED'
+      orderId: string
+      providerChargeId: string
+      /** The amount the charge asked for (the invoice / transaction amount). */
+      settled: Money
+      /** Round B Part 3 (PAY-011): what the buyer ACTUALLY paid when the
+       *  provider reports it (Payssion `paid`, BTCPay PaidOver via the
+       *  payment methods). Above `settled` = an overpayment, credited to the
+       *  wallet by order_confirm_payment. Absent when the provider gives no
+       *  figure (CoinGate) — never a guess. */
+      paid?: Money
+    }
   | { type: 'CHARGE_FAILED'; orderId: string; providerChargeId: string; reason: string }
   | { type: 'REFUND_COMPLETED'; orderId: string; refundId: string; amount: Money }
   | { type: 'PAYOUT_COMPLETED'; payoutId: string; amount: Money }
@@ -67,6 +79,26 @@ export interface CreateChargeResult {
   expiresAt?: string
 }
 
+// ─── Void (round B Part 2, PAY-004/013) ───────────────────────────
+// Close a live charge at the provider so a buyer cannot pay into an order
+// that no longer wants the money (superseded by a retry, cancelled, expired
+// by our sweep). The outcome tells the caller what the provider's truth is:
+//   voided          the provider closed it on our request
+//   already_closed  it was already expired / invalid / cancelled there
+//   paid            money arrived or is in flight — NEVER void; the
+//                   confirmation webhook (or the late-payment credit) decides
+//   unsupported     the provider has no cancel for this charge kind; it
+//                   expires on its own (CoinGate standard orders)
+// Throw on a transient failure (network, refused-while-pending): the
+// provider_cancel_outbox retries with backoff and alerts at the cap.
+
+export type VoidChargeOutcome = 'voided' | 'already_closed' | 'paid' | 'unsupported'
+
+export interface VoidChargeResult {
+  outcome: VoidChargeOutcome
+  rawStatus: string
+}
+
 // ─── Webhook parsing result ───────────────────────────────────────
 // parseWebhook verifies the signature/source, then maps the raw payload to
 // 0..n canonical events. It returns a STABLE providerEventId used for the
@@ -89,6 +121,10 @@ export interface PaymentProvider {
 
   /** Retrieve authoritative charge state from the provider (the source of truth). */
   getCharge(providerChargeId: string): Promise<{ rawStatus: string }>
+
+  /** Close a live charge at the provider (see VoidChargeOutcome). Never
+   *  voids a charge the provider reports paid or in flight. */
+  voidCharge(providerChargeId: string): Promise<VoidChargeResult>
 
   /**
    * Verify the request's signature/source and map it to canonical events.

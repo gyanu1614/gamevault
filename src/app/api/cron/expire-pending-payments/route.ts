@@ -1,24 +1,26 @@
 /**
  * Expire-pending-payments cron (every 30 min).
  *
- * Crypto orders expire themselves (BTCPay fires InvoiceExpired). Payssion
- * does NOT enforce our per-method windows (vouchers 48h, instant 1h), so a
- * buyer who walks away would leave the order pending forever. This sweep:
+ * Payssion does NOT enforce our per-method windows (vouchers 48h, instant
+ * 1h), and a lost BTCPay InvoiceExpired webhook would leave a crypto order
+ * pending too, so a buyer who walks away must be swept by us. This sweep:
  *
- *   1. finds payssion orders still 'pending' past payment_expires_at (+5 min
- *      grace for a payment landing at the buzzer),
- *   2. cancels the transaction at Payssion (their notify then mirrors it),
+ *   1. finds orders still 'pending' whose OPEN payment attempt expired (+5 min
+ *      grace for a payment landing at the buzzer) — or, with no attempt, whose
+ *      fallback expiry passed (round B: expired_pending_payment_attempts),
+ *   2. asks the provider to void the charge (round B: every provider; a
+ *      charge the provider reports paid is skipped for its webhook),
  *   3. drives the SAME canonical cancel path the webhook uses — dispatch()
  *      handles the transition, wallet-credit return, nudge cleanup and the
  *      "Order Cancelled" notification, idempotently — so a racing webhook
  *      or a double-run can never double-apply.
  *
- * If Payssion says the transaction actually COMPLETED (paid at the last
- * second), the order is left alone — the completed webhook confirms it.
+ * A void that fails is not fatal: the order is cancelled and the outbox
+ * (provider_cancel_outbox, drained by /api/cron/reconcile-payments) retries
+ * the provider with backoff and alerts once at the cap.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/service'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 const GRACE_MS = 5 * 60 * 1000
@@ -33,60 +35,76 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createServiceRoleClient()
   const cutoff = new Date(Date.now() - GRACE_MS).toISOString()
 
-  // PAY-006: an order with NO provider (the charge was never created — a
-  // crash between insert and the charge UPDATE) carries the fallback expiry
-  // stamped at insert; it has nothing to cancel at a provider and is closed
-  // through the same canonical path.
-  const { data: orders, error } = (await supabase
-    .from('orders')
-    .select('id, provider_charge_id, payment_provider, payment_expires_at')
-    .eq('status', 'pending')
-    .or('payment_provider.eq.payssion,payment_provider.is.null')
-    .lt('payment_expires_at', cutoff)
-    .order('payment_expires_at', { ascending: true })
-    .limit(BATCH)) as any
-
-  if (error) {
-    console.error('[ExpirePayments] fetch failed:', error)
+  // Round B Part 1: the expiry lives on the order's OPEN payment attempt; an
+  // order with no attempt at all (PAY-006: the charge was never created)
+  // carries the fallback expiry stamped at insert. One service-role read.
+  const { expiredPendingAttempts } = await import('@/lib/payments/attempts')
+  let rows
+  try {
+    rows = await expiredPendingAttempts(cutoff, BATCH)
+  } catch (e) {
+    console.error('[ExpirePayments] fetch failed:', e)
     return NextResponse.json({ error: 'fetch failed' }, { status: 500 })
   }
-  if (!orders?.length) {
+  if (!rows.length) {
     return NextResponse.json({ ok: true, expired: 0 })
   }
 
-  const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
+  const { getProvider } = await import('@/lib/payments/registry')
   const { dispatch } = await import('@/lib/payments/dispatch')
 
   let expired = 0
   let skippedPaid = 0
-  for (const order of orders) {
+  let voidDeferred = 0
+  for (const row of rows) {
     try {
-      let state = 'cancelled'
-      if (order.payment_provider === 'payssion' && order.provider_charge_id) {
-        state = await payssionCancelTransaction(order.provider_charge_id)
-      }
-      if (state === 'completed' || state === 'paid_more') {
-        // Paid at the buzzer — leave it for the completed webhook.
-        skippedPaid++
-        continue
+      // Round B Part 2: ask the provider FIRST, for every provider. A charge
+      // paid at the buzzer is left for its confirmation webhook; a voided /
+      // already-closed / unsupported one is cancelled with its outbox row
+      // written as done; a provider that cannot be reached is cancelled
+      // anyway and the outbox drain voids it later with backoff.
+      let voidOutcome: 'voided' | 'already_closed' | 'unsupported' | undefined
+      if (row.provider && row.providerChargeId) {
+        try {
+          const v = await getProvider(row.provider).voidCharge(row.providerChargeId)
+          if (v.outcome === 'paid') {
+            skippedPaid++
+            continue
+          }
+          voidOutcome = v.outcome
+        } catch (e) {
+          voidDeferred++
+          console.error(`[ExpirePayments] void of ${row.provider}/${row.providerChargeId} failed (outbox retries):`, e)
+        }
       }
       await dispatch(
         {
           type: 'CHARGE_FAILED',
-          orderId: order.id,
-          providerChargeId: order.provider_charge_id ?? '',
+          orderId: row.orderId,
+          providerChargeId: row.providerChargeId ?? '',
           reason: 'expired:sweep',
         },
-        `${order.provider_charge_id ?? order.id}:expired-sweep`
+        `${row.providerChargeId ?? row.orderId}:expired-sweep`,
+        row.providerChargeId ? row.provider ?? undefined : undefined,
+        // We are closing it — the provider did not report it dead.
+        { closeAttemptAs: 'void', providerVoidOutcome: voidOutcome }
       )
       expired++
-    } catch (e) {
-      console.error(`[ExpirePayments] order ${order.id} failed (retried next run):`, e)
+    } catch (e: any) {
+      // PAY-012: a poison row is counted on its attempt (alert once at the
+      // cap, then dropped from the batch) instead of retried silently
+      // forever; the ORDER BY expiry keeps it from starving the rest.
+      console.error(`[ExpirePayments] order ${row.orderId} failed (retried next run):`, e)
+      if (row.attemptId) {
+        const { noteSweepFailure } = await import('@/lib/payments/attempts')
+        await noteSweepFailure(row.attemptId, String(e?.message ?? e)).catch((noteErr) =>
+          console.error(`[ExpirePayments] could not record the failure on attempt ${row.attemptId}:`, noteErr)
+        )
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, expired, skippedPaid, scanned: orders.length })
+  return NextResponse.json({ ok: true, expired, skippedPaid, voidDeferred, scanned: rows.length })
 }

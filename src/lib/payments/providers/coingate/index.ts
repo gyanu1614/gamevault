@@ -16,6 +16,7 @@ import type {
   CreateChargeInput,
   CreateChargeResult,
   ParsedWebhook,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { minorToDecimal } from '@/lib/payments/providers/coingate/amount'
 import {
@@ -104,6 +105,25 @@ export function makeCoinGateProvider(deps?: {
       assertCoinGateConfigured()
       const o = await getOrder(providerChargeId)
       return { rawStatus: o.status }
+    },
+
+    /**
+     * Round B Part 2. CoinGate's API v2 has no cancel for a standard order
+     * (only Binance-checkout orders and a void REQUEST on paid invoices);
+     * a `new` order expires by itself after 2 h, a `pending` one after
+     * 20 min. So the honest answer is the provider's current truth:
+     * paid/confirming → paid, terminal → already_closed, otherwise
+     * `unsupported` — the outbox records it and the late-payment credit
+     * path covers a payment that lands after we stopped wanting it.
+     */
+    async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+      assertCoinGateConfigured()
+      const o = await getOrder(providerChargeId)
+      if (o.status === 'paid' || o.status === 'confirming') return { outcome: 'paid', rawStatus: o.status }
+      if (['expired', 'canceled', 'invalid', 'refunded', 'partially_refunded'].includes(o.status)) {
+        return { outcome: 'already_closed', rawStatus: o.status }
+      }
+      return { outcome: 'unsupported', rawStatus: o.status }
     },
 
     async parseWebhook(headers, rawBody): Promise<ParsedWebhook> {

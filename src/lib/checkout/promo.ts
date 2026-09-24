@@ -34,3 +34,15 @@ export async function resolveCheckoutPromo(
   const discount = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), Math.max(subtotal, 0)) : 0
   return { ok: true, discount: round2(discount), promoCodeId: res.promoCodeId }
 }
+
+/**
+ * PAY-014: the promo caps bind inside promo_usage_record (usage / per-user /
+ * active window). Map the RPC's refusal text to the buyer-facing message.
+ * Shared by the standalone recorder and the one-RPC checkout path.
+ */
+export function promoRefusalMessage(detail: string): string {
+  if (/per-user limit/i.test(detail)) return 'You have already used this promo code'
+  if (/usage limit/i.test(detail)) return 'This promo code has reached its usage limit'
+  if (/no longer active/i.test(detail)) return 'This promo code has expired'
+  return 'This promo code could not be applied'
+}

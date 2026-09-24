@@ -1137,10 +1137,10 @@ export const messagesApi = {
         // Get unread count
         const { count } = await supabase
           .from('messages')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
           .eq('conversation_id', conv.id)
           .eq('is_read', false)
-          .neq('sender_id', user.id)
+          .neq('sender_id', user.id).limit(1)
 
         return {
           ...conv,

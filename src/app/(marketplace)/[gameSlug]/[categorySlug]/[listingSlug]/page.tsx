@@ -164,12 +164,12 @@ async function getSellerStats(sellerId: string) {
     { count: totalSales },
     { count: activeListings }
   ] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact', head: true })
+    supabase.from('orders').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'completed'),
-    supabase.from('listings').select('*', { count: 'exact', head: true })
+      .eq('status', 'completed').limit(1),
+    supabase.from('listings').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'active')
+      .eq('status', 'active').limit(1)
   ])
 
   return {

@@ -85,37 +85,37 @@ export async function getDashboardStats(): Promise<{
       notificationsResult,
     ] = await Promise.all([
       // Orders
-      supabase.from('orders').select('total_amount', { count: 'exact', head: true }),
+      supabase.from('orders').select('total_amount', { count: 'exact' }).limit(1),
       supabase.from('orders').select('total_amount', { count: 'exact', head: false }).gte('created_at', todayStart),
-      supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', weekStart),
-      supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pending', 'paid', 'processing', 'delivering']),
+      supabase.from('orders').select('*', { count: 'exact' }).gte('created_at', weekStart).limit(1),
+      supabase.from('orders').select('*', { count: 'exact' }).in('status', ['pending', 'paid', 'processing', 'delivering']).limit(1),
 
       // Users
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
-      supabase.from('orders').select('buyer_id', { count: 'exact', head: true }).not('buyer_id', 'is', null),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'seller'),
+      supabase.from('profiles').select('*', { count: 'exact' }).limit(1),
+      supabase.from('profiles').select('*', { count: 'exact' }).gte('created_at', todayStart).limit(1),
+      supabase.from('orders').select('buyer_id', { count: 'exact' }).not('buyer_id', 'is', null).limit(1),
+      supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'seller').limit(1),
 
       // Seller applications
-      supabase.from('seller_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('seller_applications').select('*', { count: 'exact', head: true }).eq('status', 'approved').gte('updated_at', todayStart),
-      supabase.from('seller_applications').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-      supabase.from('seller_applications').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+      supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
+      supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'approved').gte('updated_at', todayStart).limit(1),
+      supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'approved').limit(1),
+      supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'rejected').limit(1),
 
       // Disputes
-      supabase.from('disputes').select('*', { count: 'exact', head: true }).in('status', ['open', 'under_review']),
-      supabase.from('disputes').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
-      supabase.from('disputes').select('*', { count: 'exact', head: true }).eq('priority', 'urgent').in('status', ['open', 'under_review']),
+      supabase.from('disputes').select('*', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1),
+      supabase.from('disputes').select('*', { count: 'exact' }).gte('created_at', todayStart).limit(1),
+      supabase.from('disputes').select('*', { count: 'exact' }).eq('priority', 'urgent').in('status', ['open', 'under_review']).limit(1),
 
       // Cancellations
-      supabase.from('order_cancellation_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('order_cancellation_requests').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
 
       // Fraud
-      supabase.from('fraud_flags').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('fraud_flags').select('*', { count: 'exact', head: true }).eq('status', 'open').eq('severity', 'high'),
+      supabase.from('fraud_flags').select('*', { count: 'exact' }).eq('status', 'open').limit(1),
+      supabase.from('fraud_flags').select('*', { count: 'exact' }).eq('status', 'open').eq('severity', 'high').limit(1),
 
       // Notifications
-      supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', admin.userId).eq('is_read', false),
+      supabase.from('notifications').select('*', { count: 'exact' }).eq('user_id', admin.userId).eq('is_read', false).limit(1),
     ])
 
     // Calculate revenue

@@ -39,8 +39,8 @@ function hqUrlFor(id: string, email: string): string {
 async function joinNumberFor(supabase: any, createdAt: string): Promise<number> {
   const { count } = await supabase
     .from('early_seller_signups')
-    .select('id', { count: 'exact', head: true })
-    .lte('created_at', createdAt)
+    .select('id', { count: 'exact' })
+    .lte('created_at', createdAt).limit(1)
   return count ?? 1
 }
 

@@ -123,7 +123,7 @@ async function adminAlerts(orderId: string) {
   return (data ?? []) as { user_id: string }[]
 }
 async function activeAdminCount() {
-  const { count } = await fx!.svc.from('admin_roles').select('user_id', { count: 'exact', head: true }).eq('is_active', true)
+  const { count } = await fx!.svc.from('admin_roles').select('user_id', { count: 'exact' }).eq('is_active', true).limit(1)
   return count ?? 0
 }
 
@@ -383,7 +383,7 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
         const refused = await (fx!.svc.rpc as any)('inventory_claim_for_order', { p_order_id: pending })
         expect(refused.error, 'pending order must not receive a code').not.toBeNull()
         expect(refused.error.code).toBe('23514')
-        const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact', head: true }).eq('listing_id', fx!.listingId).eq('status', 'sold')
+        const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact' }).eq('listing_id', fx!.listingId).eq('status', 'sold').limit(1)
         expect(count ?? 0).toBe(0)
 
         const paid = await insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-P15-ok-${tag()}` })
@@ -477,8 +477,15 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
     it('PAY-005: a racing pending order still creating its charge is neither superseded nor re-charged', async () => {
       await clearRateLimit()
       await cancelAllPendingFor(fx!.buyer.id)
-      // The "winner": inserted seconds ago, no checkout_url yet (createCharge in flight).
+      // The "winner": inserted seconds ago with a `created` payment attempt
+      // (round B: the attempt row, not a url-less order, is the in-flight
+      // marker — createCharge has not answered yet).
       const inFlight = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P5-${tag()}` })
+      const { data: att, error: ae } = await fx!.svc.from('payment_attempts').insert({
+        order_id: inFlight, provider: 'fake', status: 'created', amount_minor: 107, currency: CUR, order_total_minor: 107,
+        expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+      }).select('id').single()
+      if (ae) throw new Error(`attempt insert: ${ae.message}`)
       sessionClient = fx!.buyer.client
       const { createCheckout } = await import('@/lib/actions/checkout')
       const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
@@ -488,15 +495,20 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       expect(row.status).toBe('pending')
       expect(row.provider_charge_id).toBeNull() // never charged by the loser
       expect(row.checkout_url).toBeNull()
+      const { data: same } = await fx!.svc.from('payment_attempts').select('status, provider_charge_id').eq('id', (att as any).id).single()
+      expect(same).toMatchObject({ status: 'created', provider_charge_id: null })
 
-      // A STALE url-less pending order (older than the in-flight window) is
-      // superseded as before.
-      await fx!.svc.from('orders').update({ created_at: new Date(Date.now() - 10 * 60_000).toISOString() }).eq('id', inFlight)
+      // A STALE created attempt (older than the in-flight window: the minting
+      // request died) is superseded as before — the order is cancelled and
+      // its attempt closed as void.
+      await fx!.svc.from('payment_attempts').update({ created_at: new Date(Date.now() - 10 * 60_000).toISOString() }).eq('id', (att as any).id)
       const r2 = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
       expect(r2.success, r2.error).toBe(true)
       expect(r2.orderId).not.toBe(inFlight)
       createdOrderIds.push(r2.orderId!)
       expect((await orderRow(inFlight)).status).toBe('cancelled')
+      const { data: closed } = await fx!.svc.from('payment_attempts').select('status').eq('id', (att as any).id).single()
+      expect((closed as any).status).toBe('void')
       expect((await orderRow(r2.orderId!)).payment_expires_at).not.toBeNull()
     }, 90_000)
 
@@ -546,7 +558,7 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
       expect(r.success).toBe(false)
       expect(r.error).toMatch(/orders awaiting payment/)
-      const { count } = await fx!.svc.from('orders').select('id', { count: 'exact', head: true }).eq('buyer_id', fx!.buyer.id).eq('status', 'pending')
+      const { count } = await fx!.svc.from('orders').select('id', { count: 'exact' }).eq('buyer_id', fx!.buyer.id).eq('status', 'pending').limit(1)
       expect(count).toBe(5)
       await cancelAllPendingFor(fx!.buyer.id)
       for (const id of extra) await fx!.svc.from('orders').delete().eq('listing_id', id)
@@ -584,7 +596,7 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
         expect(first.success, first.error).toBe(true)
         createdOrderIds.push(first.orderId!)
         // Awaited, not fire-and-forget: the usage row exists when the action returns.
-        const { count } = await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', promoId)
+        const { count } = await fx!.svc.from('promo_code_usages').select('id', { count: 'exact' }).eq('promo_code_id', promoId).limit(1)
         expect(count).toBe(1)
 
         // The cap is enforced by the RPC itself (the lock holder), not only by the pre-validation.

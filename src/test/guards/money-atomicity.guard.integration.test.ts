@@ -472,15 +472,15 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       const { error: pe } = await fx!.svc.rpc('withdrawal_payout', { p_request_id: id } as any)
       if (pe) throw new Error(`withdrawal_payout: ${pe.message}`)
       const availBefore = await sellerAvailMinor(fx!.seller.id)
-      const { count: notifBefore } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
-        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
+      const { count: notifBefore } = await fx!.svc.from('notifications').select('id', { count: 'exact' })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected').limit(1)
 
       sessionClient = fx!.admin.client
       const { rejectWithdrawalRequest } = await import('@/lib/actions/withdrawals')
       const res = await rejectWithdrawalRequest({ requestId: id, reason: 'guard test' })
 
-      const { count: notifAfter } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
-        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
+      const { count: notifAfter } = await fx!.svc.from('notifications').select('id', { count: 'exact' })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected').limit(1)
       expect(res.success).toBe(false)
       expect(await requestStatus(id)).toBe('pending')
       expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
@@ -540,8 +540,8 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
     }
     const paidOrder = (suffix: string) => insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-ID-${suffix}-${tag()}` })
     async function soldCount() {
-      const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact', head: true })
-        .eq('listing_id', fx!.listingId).eq('status', 'sold')
+      const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact' })
+        .eq('listing_id', fx!.listingId).eq('status', 'sold').limit(1)
       return count ?? 0
     }
     /** Session client whose orders UPDATE fails once (the plaintext stamp). */
@@ -633,7 +633,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       return (promo as any).id as string
     }
     const totalUsed = async (id: string) => ((await fx!.svc.from('promo_codes').select('total_used').eq('id', id).single()).data as any).total_used as number
-    const usages = async (id: string) => (await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', id)).count ?? 0
+    const usages = async (id: string) => (await fx!.svc.from('promo_code_usages').select('id', { count: 'exact' }).eq('promo_code_id', id).limit(1)).count ?? 0
 
     it('N concurrent redemptions on N orders → N usage rows and total_used = N; a replay does not double-count', async () => {
       const promoId = await makePromo()
@@ -692,7 +692,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       // Once per order: a second recorder run (replayed confirm / auto-release) is a no-op.
       const { recordReferralCommission } = await import('@/lib/referral/commission')
       await recordReferralCommission(orderId)
-      const { count } = await fx!.svc.from('referral_earnings').select('id', { count: 'exact', head: true }).eq('order_id', orderId)
+      const { count } = await fx!.svc.from('referral_earnings').select('id', { count: 'exact' }).eq('order_id', orderId).limit(1)
       expect(count).toBe(1)
     }, 60_000)
   })

@@ -34,6 +34,14 @@ vi.mock('@/lib/supabase/server', () => ({
   },
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: unknown) => fn }))
+// PAY-007 (PR #88): createCheckout is rate-limited per buyer (20/min). The
+// three states below drive ~24 checkouts through ONE buyer inside a minute,
+// so the limiter is stubbed open here exactly as fee-checkout-snapshot does;
+// the limiter itself is tested in checkout-fix-a.guard.integration.test.ts.
+vi.mock('@/lib/security/rate-limit', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/security/rate-limit')>()
+  return { ...real, checkRateLimit: async (name: string, id: string) => ({ limited: false, retryAfter: 60, key: `${name}:${id}` }) }
+})
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
@@ -107,6 +115,10 @@ describe.skipIf(!hasEnv)('fee engine PR 5 — the sell-wizard preview equals wha
   beforeAll(async () => {
     process.env.NEXT_PUBLIC_PURCHASES_ENABLED = 'true'
     process.env.PAYMENT_PROVIDER = 'fake'
+    // PAY-007 (PR #88) caps a buyer at 5 open pending orders; this matrix
+    // drives ~8 checkouts per state through ONE buyer and never pays them.
+    // Same override the 405-order parity loop uses (fee-checkout-snapshot).
+    process.env.CHECKOUT_MAX_OPEN_PENDING_ORDERS = '100000'
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('fee_engine_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)

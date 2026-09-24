@@ -21,6 +21,27 @@ import { createHash } from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getProvider } from '@/lib/payments/registry'
 import { dispatch } from '@/lib/payments/dispatch'
+import type { CanonicalEvent } from '@/lib/payments/types'
+import { serializeCanonicalEvents } from '@/lib/payments/webhook-events-serde'
+
+/**
+ * Dispatch a provider event's canonical events, in order. The ONE handler
+ * for an event: the webhook route runs it right after the claim, the
+ * reconciler runs it again for a row that never reached the mark (round B
+ * Part 4, PAY-010). Every transition it drives is idempotent.
+ */
+export async function dispatchStoredEvents(
+  providerName: string,
+  providerEventId: string,
+  events: CanonicalEvent[]
+): Promise<number> {
+  let processed = 0
+  for (const event of events) {
+    await dispatch(event, providerEventId, providerName)
+    processed++
+  }
+  return processed
+}
 
 export interface WebhookResult {
   ok: boolean
@@ -64,10 +85,13 @@ export async function handleWebhook(
     .digest('hex')
 
   // 3. Dedupe-claim. FALSE means we've already processed this event → no-op.
+  //    The verified events ride on the claim (PAY-010): a row that never
+  //    reaches the mark below is re-run by the reconciler from these.
   const { data: claimed, error: claimErr } = await (supabase.rpc as any)('webhook_event_claim', {
     p_provider: providerName,
     p_provider_event_id: parsed.providerEventId,
     p_payload_hash: payloadHash,
+    p_events: serializeCanonicalEvents(parsed.events),
   })
   if (claimErr) {
     return { ok: false, status: 500, error: `claim failed: ${claimErr.message}` }
@@ -78,24 +102,14 @@ export async function handleWebhook(
   }
 
   // 4. Dispatch each canonical event to its SafeDrop transition.
+  let processed = 0
   try {
-    let processed = 0
-    for (const event of parsed.events) {
-      await dispatch(event, parsed.providerEventId)
-      processed++
-    }
-    // 5. Mark processed.
-    await (supabase.rpc as any)('webhook_event_mark', {
-      p_provider: providerName,
-      p_provider_event_id: parsed.providerEventId,
-      p_status: 'processed',
-      p_result: { processed },
-    })
-    return { ok: true, status: 200, processed }
+    processed = await dispatchStoredEvents(providerName, parsed.providerEventId, parsed.events)
   } catch (e: any) {
     // Mark failed and return 500 so the provider retries; webhook_event_claim
     // re-claims a 'failed' row (DB-015d), so that retry re-runs dispatch — every
-    // transition it drives is idempotent. There is no separate replay worker.
+    // transition it drives is idempotent. Round B: a row the mark below never
+    // reaches (crash here) is re-run by the reconciler after 15 min.
     await (supabase.rpc as any)('webhook_event_mark', {
       p_provider: providerName,
       p_provider_event_id: parsed.providerEventId,
@@ -104,4 +118,19 @@ export async function handleWebhook(
     })
     return { ok: false, status: 500, error: `dispatch failed: ${e?.message ?? e}` }
   }
+  // 5. Mark processed. PAY-010: a failed mark used to be ignored and the row
+  //    stayed `received` forever while every provider retry deduped to 200.
+  //    Answer 500 instead: the provider retries, the claim sees the row is
+  //    still `received` and dedupes, and the reconciler re-runs it from the
+  //    stored events — the transitions are idempotent either way.
+  const { error: markErr } = await (supabase.rpc as any)('webhook_event_mark', {
+    p_provider: providerName,
+    p_provider_event_id: parsed.providerEventId,
+    p_status: 'processed',
+    p_result: { processed },
+  })
+  if (markErr) {
+    return { ok: false, status: 500, processed, error: `mark failed: ${markErr.message}` }
+  }
+  return { ok: true, status: 200, processed }
 }

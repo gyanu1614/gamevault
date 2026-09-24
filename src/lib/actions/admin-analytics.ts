@@ -129,25 +129,25 @@ export async function getAnalyticsData(): Promise<{
       : 0
 
     // ── Users ────────────────────────────────────────────────────────────────
-    const { count: usersTotal }    = await supabase.from('profiles').select('id', { count: 'exact', head: true })
-    const { count: usersNewMtd }   = await supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', mtdStart)
-    const { count: usersNewPrevM } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', prevMStart).lte('created_at', prevMEnd)
-    const { count: sellersActive } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'seller')
-    const { count: buyersTotal }   = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'buyer')
+    const { count: usersTotal }    = await supabase.from('profiles').select('id', { count: 'exact' }).limit(1)
+    const { count: usersNewMtd }   = await supabase.from('profiles').select('id', { count: 'exact' }).gte('created_at', mtdStart).limit(1)
+    const { count: usersNewPrevM } = await supabase.from('profiles').select('id', { count: 'exact' }).gte('created_at', prevMStart).lte('created_at', prevMEnd).limit(1)
+    const { count: sellersActive } = await supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'seller').limit(1)
+    const { count: buyersTotal }   = await supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'buyer').limit(1)
 
     // ── Listings ─────────────────────────────────────────────────────────────
-    const { count: listingsTotal }   = await supabase.from('listings').select('id', { count: 'exact', head: true })
-    const { count: listingsActive }  = await supabase.from('listings').select('id', { count: 'exact', head: true }).eq('status', 'active')
-    const { count: listingsNewMtd }  = await supabase.from('listings').select('id', { count: 'exact', head: true }).gte('created_at', mtdStart)
+    const { count: listingsTotal }   = await supabase.from('listings').select('id', { count: 'exact' }).limit(1)
+    const { count: listingsActive }  = await supabase.from('listings').select('id', { count: 'exact' }).eq('status', 'active').limit(1)
+    const { count: listingsNewMtd }  = await supabase.from('listings').select('id', { count: 'exact' }).gte('created_at', mtdStart).limit(1)
 
     // ── Promos ───────────────────────────────────────────────────────────────
-    const { count: promoUsages }    = await supabase.from('promo_code_usages').select('id', { count: 'exact', head: true })
+    const { count: promoUsages }    = await supabase.from('promo_code_usages').select('id', { count: 'exact' }).limit(1)
     const { data: promoDiscounts }  = await supabase.from('promo_code_usages').select('discount_amount')
     const promoTotalDiscount = (promoDiscounts as any[] | null)?.reduce((s, r) => s + (r.discount_amount ?? 0), 0) ?? 0
 
     // ── Disputes ─────────────────────────────────────────────────────────────
-    const { count: disputesOpen }     = await supabase.from('disputes').select('id', { count: 'exact', head: true }).in('status', ['open', 'under_review'])
-    const { count: disputesResolved } = await supabase.from('disputes').select('id', { count: 'exact', head: true }).eq('status', 'resolved')
+    const { count: disputesOpen }     = await supabase.from('disputes').select('id', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1)
+    const { count: disputesResolved } = await supabase.from('disputes').select('id', { count: 'exact' }).eq('status', 'resolved').limit(1)
 
     // ── Daily revenue chart (last 30 days) ───────────────────────────────────
     const { data: recentOrders } = await supabase

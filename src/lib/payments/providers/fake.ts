@@ -7,7 +7,7 @@
  *
  * Webhook payload shape (JSON string in rawBody):
  *   { "chargeId": "...", "orderId": "...", "status": "paid"|"pending"|"failed"|"refunded",
- *     "amountMinor": "10000", "currency": "EUR" }
+ *     "amountMinor": "10000", "currency": "EUR", "paidMinor"?: "12000" }
  * Signature: header "x-fake-signature" must equal FAKE_WEBHOOK_SECRET (default
  * "fake-secret"); anything else throws (→ spine returns 400).
  */
@@ -18,10 +18,25 @@ import type {
   CreateChargeResult,
   ParsedWebhook,
   CanonicalEvent,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { money } from '@/lib/money'
 
 const SECRET = process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret'
+
+/**
+ * Round B Part 2 — scriptable voidCharge for the outbox tests: per charge
+ * id, answer `voided` (default), `paid`, `already_closed`, `unsupported`,
+ * or `throw` (a transient provider failure). Every call is recorded.
+ */
+export const fakeVoid = {
+  outcomes: new Map<string, VoidChargeResult['outcome'] | 'throw'>(),
+  calls: [] as string[],
+  reset() {
+    this.outcomes.clear()
+    this.calls.length = 0
+  },
+}
 
 export const fakeProvider: PaymentProvider = {
   name: 'fake',
@@ -70,7 +85,13 @@ export const fakeProvider: PaymentProvider = {
         events.push({ type: 'CHARGE_PENDING', orderId, providerChargeId: chargeId })
         break
       case 'paid':
-        events.push({ type: 'CHARGE_CONFIRMED', orderId, providerChargeId: chargeId, settled: amt() })
+        events.push({
+          type: 'CHARGE_CONFIRMED',
+          orderId,
+          providerChargeId: chargeId,
+          settled: amt(),
+          ...(body.paidMinor ? { paid: money(BigInt(body.paidMinor), body.currency ?? 'EUR') } : {}),
+        })
         break
       case 'failed':
         events.push({ type: 'CHARGE_FAILED', orderId, providerChargeId: chargeId, reason: 'fake-failed' })
@@ -81,6 +102,13 @@ export const fakeProvider: PaymentProvider = {
       // unknown status → no events (logged no-op upstream)
     }
     return { providerEventId, events }
+  },
+
+  async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+    fakeVoid.calls.push(providerChargeId)
+    const mode = fakeVoid.outcomes.get(providerChargeId) ?? 'voided'
+    if (mode === 'throw') throw new Error(`fake: void failed for ${providerChargeId}`)
+    return { outcome: mode, rawStatus: mode }
   },
 
   async refund(providerChargeId, amount, _idempotencyKey) {
