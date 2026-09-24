@@ -61,6 +61,9 @@ const FAQ = [
 export default async function SellerFeesPage() {
   const [s, w] = await Promise.all([getPublicFeeSchedule(), getPublicWithdrawalTerms()])
   const hasNext = s.nextChange != null && s.categories.some((c) => c.nextPct != null)
+  // Same rule for the per-game table: the "From" column shows only while a
+  // dated change moves a listed rate, and disappears once that date passes.
+  const hasNextPair = s.nextChange != null && s.overrides.some((o) => o.nextPct != null)
 
   return (
     <main className="min-h-screen bg-bg-base">
@@ -103,11 +106,12 @@ export default async function SellerFeesPage() {
             <p className="text-[14px] text-text-tertiary">No per-game rates are in force right now.</p>
           ) : (
             <Table
-              head={['Game', 'Category', 'Rate', 'Type']}
+              head={hasNextPair ? ['Game', 'Category', 'Rate now', `From ${fmtDate(s.nextChange!)}`, 'Type'] : ['Game', 'Category', 'Rate', 'Type']}
               rows={s.overrides.map((o) => [
                 o.gameName,
                 o.categoryName,
                 pct(o.pct),
+                ...(hasNextPair ? [o.nextPct == null ? 'unchanged' : pct(o.nextPct)] : []),
                 o.kind === 'promo' ? `Promotion until ${o.endsAt ? fmtDate(o.endsAt) : 'further notice'}` : 'Standard',
               ])}
               linkFirst={(i) => `/${s.overrides[i].gameSlug}/${s.overrides[i].categorySlug}`}
