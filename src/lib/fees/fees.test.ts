@@ -9,13 +9,9 @@ import {
   buyerFee,
   cashRefundAmount,
   payoutFee,
-  protectionWindowHours,
   round2,
   storeCreditRefundAmount,
 } from './index'
-
-const CURRENCY = { categoryMetaType: 'currency', categorySlug: 'buy-vbucks', gameSlug: 'fortnite' }
-const ACCOUNT_MID = { categoryMetaType: 'account', categorySlug: 'buy-accounts', gameSlug: 'fortnite' }
 
 describe('worked example A — $100 standard currency sale', () => {
   // Checkout B3: the PROCESSING fee is quoted per payment method by the
@@ -30,17 +26,13 @@ describe('worked example A — $100 standard currency sale', () => {
   })
   // Seller commission is resolved by the database (resolve_seller_fee) —
   // pinned by fee-resolver.guard / fee-checkout-snapshot.guard, not here.
-  it('48h payout hold', () => {
-    expect(protectionWindowHours(CURRENCY)).toBe(48)
-  })
+  // The protection window is a row in order_completion_windows (fee PR 7) —
+  // pinned by order-completion.guard, not here.
 })
 
 describe('worked example B — $300 mid-risk account sale', () => {
   it('marketplace fee $6.00 before the method quote', () => {
     expect(round2(300 + buyerFee(300).amount)).toBe(306)
-  })
-  it('7-day (168h) hold for mid-risk accounts', () => {
-    expect(protectionWindowHours(ACCOUNT_MID)).toBe(168)
   })
 })
 
@@ -64,19 +56,7 @@ describe('worked example E — cash refund of example A (PSP fee $3.75)', () => 
   })
 })
 
-describe('spec rules (buyer side + protection windows; seller commission is database data)', () => {
-  it('GTA accounts are high risk: 14-day protection window', () => {
-    expect(protectionWindowHours({ categoryMetaType: 'account', gameSlug: 'gta-v' })).toBe(14 * 24)
-  })
-  it('mid-risk accounts: 7 days', () => {
-    expect(protectionWindowHours(ACCOUNT_MID)).toBe(7 * 24)
-  })
-  it('top-ups: 48h', () => {
-    expect(protectionWindowHours({ categoryMetaType: 'top_up', gameSlug: 'fortnite' })).toBe(48)
-  })
-  it('items: 72h', () => {
-    expect(protectionWindowHours({ categoryMetaType: 'items', gameSlug: 'fortnite' })).toBe(72)
-  })
+describe('spec rules (buyer side; protection windows and seller commission are database data)', () => {
   it('crypto payout: 3% + $10', () => {
     expect(payoutFee(100, 'crypto').fee).toBe(13)
     expect(payoutFee(100, 'crypto').net).toBe(87)

@@ -15,11 +15,26 @@
  * a legitimate non-commission percentage is exempted by name, never by
  * loosening the regex. No DB.
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import { LEGAL_DOCS } from '@/lib/legal/documents'
+import { formatScheduleDateUtc, type PublicFeeSchedule, type PublicWithdrawalTerms } from '@/lib/fees/public-rates'
+
+// tsconfig's `jsx: preserve` leaves vitest on the classic transform, which
+// needs React in scope; the page (like every Next page) does not import it.
+;(globalThis as { React?: typeof React }).React = React
+
+// /sell/fees renders from these two reads; the tests below swap in fixtures.
+const feeData = vi.hoisted(() => ({ schedule: null as unknown, terms: null as unknown }))
+vi.mock('@/lib/fees/public-rates', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/fees/public-rates')>()
+  return { ...real, getPublicFeeSchedule: async () => feeData.schedule, getPublicWithdrawalTerms: async () => feeData.terms }
+})
+vi.mock('next/link', () => ({ default: ({ children }: { children: unknown }) => children }))
 
 const ROOT = join(__dirname, '../../..')
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
@@ -40,9 +55,13 @@ const PINNED_FILES = [
   'src/app/founding/_components/FoundingRail.tsx',
   'src/lib/config/founding-seller.ts',
   'src/lib/email/index.ts',
+  'src/lib/email/fee-notice.ts',
   'src/lib/discord/embeds.ts',
   'src/components/seller/tiers/TierCard.tsx',
   'src/app/account/tiers/page.tsx',
+  // The one page that shows rates: every number on it comes from the
+  // resolver at render time, so a literal in its source is a hard-coded rate.
+  'src/app/(marketing)/sell/fees/page.tsx',
   'src/components/account/BecomeSellerBanner.tsx',
   'src/components/account/BecomeSellerCta.tsx',
 ]
@@ -60,6 +79,9 @@ const ALLOWED: Record<string, Array<{ text: string; reason: string }>> = {
   ],
   'src/features/home/components/MobileHome.tsx': [
     { text: 'width: ', reason: 'CSS percentage widths in inline styles' },
+  ],
+  'src/app/(marketing)/sell/fees/page.tsx': [
+    { text: 'className="h-4 w-4" /> Seller Fees', reason: 'the eyebrow icon\'s size class sits next to the "Seller Fees" label, not a fee' },
   ],
 }
 
@@ -142,5 +164,87 @@ describe('fee engine — marketing copy carries no seller-fee number', () => {
       const src = read(file)
       for (const name of retired) expect(src.includes(name), `${file} references ${name}`).toBe(false)
     }
+  })
+})
+
+/**
+ * /sell/fees — the per-game table carries the same dated "From" column as the
+ * category table: same formatter (formatScheduleDateUtc, UTC), same header,
+ * same rule (shown while a dated change moves a listed rate, gone once the
+ * date has passed and `nextChange` is null). Rendered with react-dom/server
+ * from fixture reads; no DB.
+ */
+describe('/sell/fees — per-game "From <date>" column mirrors the category table', () => {
+  const START = '2026-10-07T00:00:00+00:00'
+  const TERMS: PublicWithdrawalTerms = {
+    methods: [], completionHoldHours: 24, disputeWindowDays: 7, minAccountAgeDays: 30, payoutFreezeHours: 48, windows: [], generatedAt: START,
+  }
+  const cat = (type: string, pct: number, nextPct: number | null) => ({ type, label: type, pct, nextPct })
+  const pair = (gameName: string, categoryName: string, pct: number, nextPct: number | null, kind: 'base' | 'promo' = 'base', endsAt: string | null = null) => ({
+    gameSlug: gameName.toLowerCase().replace(/\W+/g, '-'), gameName, categorySlug: categoryName.toLowerCase(), categoryName, type: 'currency', pct, nextPct, kind, endsAt,
+  })
+  const schedule = (over: Partial<PublicFeeSchedule>): PublicFeeSchedule => ({
+    categories: [cat('currency', 5, null), cat('account', 12, 15)],
+    overrides: [],
+    ranks: [], rankFloorPct: 8, founding: { discountPct: 50, months: 12 }, noticeDays: 14,
+    effectiveFrom: '2026-09-22T00:00:00+00:00', nextChange: START, generatedAt: START,
+    ...over,
+  })
+
+  /** Header and body cells of every <table> on the page, in order. */
+  async function renderTables(s: PublicFeeSchedule): Promise<Array<{ head: string[]; rows: string[][] }>> {
+    feeData.schedule = s
+    feeData.terms = TERMS
+    const { default: SellerFeesPage } = await import('@/app/(marketing)/sell/fees/page')
+    const html = renderToStaticMarkup(await SellerFeesPage())
+    const text = (h: string) => h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim()
+    return html.split('<table').slice(1).map((t) => {
+      const [thead, tbody = ''] = t.split('<tbody')
+      return {
+        head: [...thead.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => text(m[1])),
+        rows: [...tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map((r) => [...r[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((c) => text(c[1]))),
+      }
+    })
+  }
+
+  it('a dated per-game change shows "Rate now" + "From <date>" with the category table\'s formatter', async () => {
+    const [category, perGame] = await renderTables(schedule({
+      overrides: [
+        pair('Grow a Garden', 'Sheckles', 5, 10),
+        pair('Fortnite', 'Accounts', 12, 15),
+        pair('Blox Fruits', 'Beli', 10, null),
+        pair('EA Sports FC 26', 'FC Points', 0, null, 'promo', '2027-04-07T00:00:00+00:00'),
+      ],
+    }))
+    const from = `From ${formatScheduleDateUtc(START)}`
+    expect(from).toBe('From 7 October 2026')
+    expect(category.head).toEqual(['Category', 'Rate now', from])
+    expect(perGame.head).toEqual(['Game', 'Category', 'Rate now', from, 'Type'])
+    expect(perGame.rows).toEqual([
+      ['Grow a Garden', 'Sheckles', '5%', '10%', 'Standard'],
+      ['Fortnite', 'Accounts', '12%', '15%', 'Standard'],
+      ['Blox Fruits', 'Beli', '10%', 'unchanged', 'Standard'],
+      ['EA Sports FC 26', 'FC Points', '0%', 'unchanged', `Promotion until ${formatScheduleDateUtc('2027-04-07T00:00:00+00:00')}`],
+    ])
+  })
+
+  it('after the start date (no nextChange) both tables drop the column', async () => {
+    const [category, perGame] = await renderTables(schedule({
+      categories: [cat('currency', 5, null), cat('account', 15, null)],
+      overrides: [pair('Grow a Garden', 'Sheckles', 10, null), pair('Fortnite', 'Accounts', 15, null)],
+      nextChange: null,
+    }))
+    expect(category.head).toEqual(['Category', 'Rate'])
+    expect(perGame.head).toEqual(['Game', 'Category', 'Rate', 'Type'])
+    expect(perGame.rows).toEqual([
+      ['Grow a Garden', 'Sheckles', '10%', 'Standard'],
+      ['Fortnite', 'Accounts', '15%', 'Standard'],
+    ])
+  })
+
+  it('the per-game column follows its own rows: a category-only change adds no per-game column', async () => {
+    const [category, perGame] = await renderTables(schedule({ overrides: [pair('Blox Fruits', 'Beli', 10, null)] }))
+    expect(category.head).toContain(`From ${formatScheduleDateUtc(START)}`)
+    expect(perGame.head).toEqual(['Game', 'Category', 'Rate', 'Type'])
   })
 })

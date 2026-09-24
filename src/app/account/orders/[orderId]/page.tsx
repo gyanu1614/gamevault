@@ -213,6 +213,19 @@ export default async function OrderDetailPage({ params }: PageProps) {
     }
   }
 
+  // PR 7 — the buyer may open a dispute for dispute_window_days after
+  // delivery, even once the order has completed. The number is admin-editable
+  // (platform_fee_settings, readable by every signed-in user).
+  const { data: moneySettings } = await supabase
+    .from('platform_fee_settings')
+    .select('dispute_window_days')
+    .eq('id', true)
+    .maybeSingle() as any
+  const disputeWindowDays = Number(moneySettings?.dispute_window_days ?? 7)
+  const disputeUntil = order.delivered_at
+    ? new Date(new Date(order.delivered_at).getTime() + disputeWindowDays * 86_400_000).toISOString()
+    : null
+
   // Computed timing values
   const now = new Date()
 
@@ -335,6 +348,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       />
       <OrderClient
         order={order}
+        disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
         itemImageUrl={listingImageUrl ?? gameImageUrl ?? null}

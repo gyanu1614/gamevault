@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { AdminOrderActions } from './_AdminOrderActions'
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -91,7 +92,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   // order and none consumes another, so they run as one fan-out instead of
   // four serial round-trips. The two conditional reads resolve to null when
   // the listing carries no game/category.
-  const [{ data: buyer }, { data: seller }, gameRes, categoryRes] = await Promise.all([
+  const [{ data: buyer }, { data: seller }, gameRes, categoryRes, { data: openDispute }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, username, email, avatar_url')
@@ -116,6 +117,13 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           .eq('id', order.listing.game_category_id)
           .single() as any)
       : Promise.resolve({ data: null }),
+    // PR 7 — the open dispute (if any) drives the money controls below.
+    supabase
+      .from('disputes')
+      .select('id')
+      .eq('transaction_id', orderId)
+      .not('status', 'in', '("resolved_buyer_favor","resolved_seller_favor","resolved_partial","closed")')
+      .maybeSingle() as any,
   ])
 
   const game = (gameRes as any).data as
@@ -340,13 +348,22 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </div>
           )}
 
+          {/* PR 7 — Money controls: mark disputed / resolve */}
+          <AdminOrderActions
+            orderId={order.id}
+            status={order.status}
+            totalAmount={Number(order.total_amount ?? 0)}
+            sellerPayout={Number(order.seller_payout ?? 0)}
+            openDisputeId={(openDispute as any)?.id ?? null}
+          />
+
           {/* Quick Actions */}
           <div className="rounded-xl border border-border-default bg-bg-raised p-5">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              {order.dispute_id && (
+              {((openDispute as any)?.id || order.dispute_id) && (
                 <Link
-                  href={`/admin/disputes/${order.dispute_id}`}
+                  href={`/admin/disputes/${(openDispute as any)?.id ?? order.dispute_id}`}
                   className="block w-full px-3 py-2 text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors text-center"
                 >
                   View Dispute

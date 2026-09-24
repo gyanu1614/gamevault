@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Buyer fee editor (checkout B3). One row per payment_method_fees entry with
+ * Buyer fee editor (checkout B3) — a section of /admin/fees, under PR 7's
+ * post-delivery money settings. One row per payment_method_fees entry with
  * inline number fields + three toggles; a second panel for currency_rates.
  * Every number on screen came back from the database after the write; the
  * client trusts nothing it typed.
@@ -18,7 +19,7 @@ import {
   type CurrencyRateRow,
   type PaymentMethodFeeRow,
 } from '@/lib/actions/admin-buyer-fees'
-import { AdminPanel, PageHeader, SectionLabel, TABLE } from '../components/kit'
+import { AdminPanel, SectionLabel, TABLE } from '../components/kit'
 
 const INPUT =
   'h-9 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-[13px] tabular-nums text-text-primary outline-none transition-colors focus:border-lime'
@@ -60,11 +61,13 @@ export default function BuyerFeesClient({ initial }: { initial: { methods: Payme
   const [audit, setAudit] = useState(initial.audit)
 
   return (
-    <div>
-      <PageHeader
-        title="Buyer Fees"
-        description="Processing fee per payment method — the provider's rate on the full amount, any fixed charge (in the fee currency, minor units), currency-conversion markup, buffer, the floor share of the item price, minimum and provider cap. Checkout quotes every order from these rows; each change is audited and republishes /fees."
-      />
+    <div className="space-y-5">
+      <AdminPanel>
+        <SectionLabel>Buyer processing fees (per payment method)</SectionLabel>
+        <p className="text-[12.5px] text-text-secondary">
+          The provider&apos;s rate on the full amount, any fixed charge (in the fee currency, minor units), currency-conversion markup, buffer, the floor share of the item price, minimum and provider cap. Checkout quotes every order from these rows; each change is audited and republishes /fees.
+        </p>
+      </AdminPanel>
 
       <AdminPanel pad={false}>
         <div className={TABLE.wrap}>

@@ -344,3 +344,92 @@ export async function endPromoFeeRule(input: { ruleId: string }): Promise<Result
   revalidateFeeReaders()
   return { success: true }
 }
+
+
+// ── PR 7: post-delivery money numbers (hold, windows, gate, freeze, payout fees) ──
+// Every write is ONE service-role RPC that also writes the fee_config_audit row.
+
+export type MoneySettingKey = 'completion_hold_hours' | 'dispute_window_days' | 'withdrawal_min_account_age_days' | 'payout_details_freeze_hours'
+
+export async function fetchMoneySettings(): Promise<{
+  settings: Record<MoneySettingKey, number>
+  windows: Array<{ category_type: string; auto_complete_hours: number; updated_at: string }>
+  methods: Array<{ id: string; method_name: string; display_name: string; method_type: string; fee_percentage: number; fee_fixed: number; fee_min: number; min_withdrawal: number; max_withdrawal: number; is_active: boolean; coming_soon: boolean }>
+}> {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+  const [{ data: s }, { data: w }, { data: m }] = await Promise.all([
+    supabase.from('platform_fee_settings').select('completion_hold_hours, dispute_window_days, withdrawal_min_account_age_days, payout_details_freeze_hours').eq('id', true).maybeSingle(),
+    (supabase as any).from('order_completion_windows').select('category_type, auto_complete_hours, updated_at').order('category_type'),
+    (supabase as any).from('withdrawal_methods').select('id, method_name, display_name, method_type, fee_percentage, fee_fixed, fee_min, min_withdrawal, max_withdrawal, is_active, coming_soon').order('sort_order'),
+  ])
+  const row = (s ?? {}) as any
+  return {
+    settings: {
+      completion_hold_hours: Number(row.completion_hold_hours ?? 24),
+      dispute_window_days: Number(row.dispute_window_days ?? 7),
+      withdrawal_min_account_age_days: Number(row.withdrawal_min_account_age_days ?? 30),
+      payout_details_freeze_hours: Number(row.payout_details_freeze_hours ?? 48),
+    },
+    windows: ((w ?? []) as any[]).map((x) => ({ category_type: x.category_type, auto_complete_hours: Number(x.auto_complete_hours), updated_at: x.updated_at })),
+    methods: ((m ?? []) as any[]).map((x) => ({
+      id: x.id, method_name: x.method_name, display_name: x.display_name, method_type: x.method_type,
+      fee_percentage: Number(x.fee_percentage ?? 0), fee_fixed: Number(x.fee_fixed ?? 0), fee_min: Number(x.fee_min ?? 0),
+      min_withdrawal: Number(x.min_withdrawal ?? 0), max_withdrawal: Number(x.max_withdrawal ?? 0),
+      is_active: Boolean(x.is_active), coming_soon: Boolean(x.coming_soon),
+    })),
+  }
+}
+
+function parseInt0(v: unknown, label: string, min: number, max: number): { n: number } | { error: string } {
+  const n = Number(v)
+  if (!Number.isInteger(n) || n < min || n > max) return { error: `${label} must be a whole number between ${min} and ${max}` }
+  return { n }
+}
+
+export async function updateMoneySetting(input: { key: MoneySettingKey; value: unknown }): Promise<Result<{ old: number; value: number }>> {
+  const admin = await requireAdmin()
+  const bounds: Record<MoneySettingKey, [number, number, string]> = {
+    completion_hold_hours: [0, 24 * 90, 'Completion hold (hours)'],
+    dispute_window_days: [0, 365, 'Dispute window (days)'],
+    withdrawal_min_account_age_days: [0, 3650, 'New-seller withdrawal rule (days)'],
+    payout_details_freeze_hours: [0, 24 * 30, 'Payout-details freeze (hours)'],
+  }
+  const b = bounds[input.key]
+  if (!b) return { success: false, error: 'Unknown setting' }
+  const v = parseInt0(input.value, b[2], b[0], b[1])
+  if ('error' in v) return { success: false, error: v.error }
+  const { data, error } = await (getAdminSupabase().rpc as any)('platform_money_setting_set', { p_admin_id: admin.userId, p_key: input.key, p_value: v.n })
+  if (error) return { success: false, error: error.message }
+  revalidateFeeReaders()
+  return { success: true, old: Number(data?.old), value: v.n }
+}
+
+export async function updateCompletionWindow(input: { categoryType: string; hours: unknown }): Promise<Result<{ old: number; hours: number }>> {
+  const admin = await requireAdmin()
+  const v = parseInt0(input.hours, 'Auto-complete window (hours)', 1, 24 * 60)
+  if ('error' in v) return { success: false, error: v.error }
+  const { data, error } = await (getAdminSupabase().rpc as any)('order_completion_window_set', { p_admin_id: admin.userId, p_category_type: String(input.categoryType), p_hours: v.n })
+  if (error) return { success: false, error: error.message }
+  revalidateFeeReaders()
+  return { success: true, old: Number(data?.old), hours: v.n }
+}
+
+export async function updateWithdrawalMethodFees(input: {
+  methodId: string; feePct: unknown; feeFixed: unknown; feeMin: unknown; minWithdrawal: unknown; maxWithdrawal: unknown; isActive: boolean
+  /** Omitted = leave coming_soon as it is. */
+  comingSoon?: boolean
+}): Promise<Result> {
+  const admin = await requireAdmin()
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : NaN }
+  const vals = [num(input.feePct), num(input.feeFixed), num(input.feeMin), num(input.minWithdrawal), num(input.maxWithdrawal)]
+  if (vals.some((n) => Number.isNaN(n) || n < 0)) return { success: false, error: 'Every fee field must be a non-negative number' }
+  const { error } = await (getAdminSupabase().rpc as any)('withdrawal_methods_set_fees', {
+    p_method_id: String(input.methodId), p_admin_id: admin.userId,
+    p_fee_pct: vals[0], p_fee_fixed: vals[1], p_fee_min: vals[2], p_min: vals[3], p_max: vals[4], p_is_active: Boolean(input.isActive),
+    p_coming_soon: input.comingSoon === undefined ? null : Boolean(input.comingSoon),
+  })
+  if (error) return { success: false, error: feeRuleErrorMessage(error) }
+  revalidateFeeReaders()
+  return { success: true }
+}

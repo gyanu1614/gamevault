@@ -17,9 +17,9 @@
 --   fee   = max(floor_pct × subtotal, gross − subtotal)
 --   fee   = max(fee, min_fee);  refuse when the total exceeds max_total (cap)
 -- fixed / min_fee / max_total live in fee_currency and convert through
--- currency_rates into the quote currency. Rounded once, to minor units, by
--- money_round_minor (half away from zero — the rule every other amount in
--- order_create_pending already follows via ROUND(x * 100)::bigint).
+-- currency_rates into the quote currency. Rounded once, to the cent, by
+-- fee_round_cents (fee PR 7's helper: half away from zero — the rule every
+-- other amount in order_create_pending already follows via ROUND(x * 100)).
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ── 0. Version marker ────────────────────────────────────────────────────────
@@ -28,16 +28,10 @@ CREATE OR REPLACE FUNCTION public.buyer_method_fees_version() RETURNS integer
 REVOKE ALL ON FUNCTION public.buyer_method_fees_version() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.buyer_method_fees_version() TO service_role;
 
--- ── 1. money_round_minor — the one rounding rule for quoted money ────────────
--- No cents helper existed before this migration (order_create_pending rounds
--- inline with ROUND(x * 100)::bigint). Postgres numeric ROUND is half away
--- from zero; every input here is non-negative, so this is half-up.
-CREATE OR REPLACE FUNCTION public.money_round_minor(p_amount numeric) RETURNS bigint
-  LANGUAGE sql IMMUTABLE STRICT AS $$ SELECT ROUND(p_amount, 0)::bigint $$;
-REVOKE ALL ON FUNCTION public.money_round_minor(numeric) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.money_round_minor(numeric) TO service_role;
-COMMENT ON FUNCTION public.money_round_minor(numeric) IS
-  'Checkout B3: round a minor-unit amount to a whole minor unit, half away from zero. Used once, at the end of buyer_fee_quote.';
+-- ── 1. Rounding — ONE helper, fee_round_cents (20260923031644, fee PR 7) ──────
+-- Postgres numeric round() is half away from zero; every input is non-negative,
+-- so this is half-up to the cent. buyer_fee_quote rounds its fee ONCE through
+-- it (major units → cents → minor). No second helper exists.
 
 -- ── 2. currency_rates ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.currency_rates (
@@ -185,7 +179,7 @@ BEGIN
   v_gross := (v_sub + v_fixed) / v_denom;
   v_fee   := GREATEST(r.floor_pct / 100 * v_sub, v_gross - v_sub);
   v_fee   := GREATEST(v_fee, r.min_fee_minor * v_conv);
-  v_fee_minor   := public.money_round_minor(v_fee);
+  v_fee_minor   := (public.fee_round_cents(v_fee / 100) * 100)::bigint;
   v_total_minor := p_subtotal_minor + v_fee_minor;
   IF r.max_total_minor IS NOT NULL AND (v_total_minor / v_conv) > r.max_total_minor THEN
     RETURN refusal || jsonb_build_object('reason', 'over_cap');

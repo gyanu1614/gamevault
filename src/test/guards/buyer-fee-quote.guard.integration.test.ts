@@ -11,8 +11,8 @@
  *         gross = (subtotal + fixed) / (1 − provider_pct − fx_markup − buffer)
  *         fee   = max(floor_pct × subtotal, gross − subtotal), then min_fee,
  *                 refused above max_total (the provider cap, in fee_currency).
- *       Rounded ONCE to minor units by money_round_minor (half away from zero,
- *       the same rule order_create_pending uses for every other amount).
+ *       Rounded ONCE, through fee_round_cents (fee PR 7's one rounding helper;
+ *       half away from zero, the rule order_create_pending uses everywhere).
  *
  * Every number below is a hand-computed worked example against the seeded
  * rows — if a seed value or the formula drifts, this fails with the figure.
@@ -170,12 +170,15 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
   })
 
   // ── rounding + batch ───────────────────────────────────────────────────────
-  it('money_round_minor rounds half away from zero, once', async () => {
-    for (const [input, expected] of [['1.5', 2], ['2.5', 3], ['1.4999', 1], ['0.5', 1], ['279.2023', 279]] as const) {
-      const { data, error } = await fx!.svc.rpc('money_round_minor', { p_amount: input } as any)
+  it('the fee is rounded once, through fee_round_cents (the one SQL rounding helper), half away from zero', async () => {
+    for (const [input, expected] of [['0.015', 0.02], ['0.025', 0.03], ['0.014999', 0.01], ['0.005', 0.01], ['2.792023', 2.79]] as const) {
+      const { data, error } = await fx!.svc.rpc('fee_round_cents', { p_amount: input } as any)
       expect(error).toBeNull()
       expect(Number(data)).toBe(expected)
     }
+    // no second helper: money_round_minor must not exist
+    const gone = await fx!.svc.rpc('money_round_minor' as never, { p_amount: '1.5' } as never)
+    expect(gone.error?.code).toBe('PGRST202')
   })
 
   it('buyer_fee_quote_many returns one quote per requested method, refusals included, in order', async () => {

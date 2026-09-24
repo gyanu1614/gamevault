@@ -29,7 +29,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
-import { buyerFee, protectionWindowHours, round2 } from '@/lib/fees'
+import { buyerFee, round2 } from '@/lib/fees'
 import { resolveSellerFee, FeeResolutionError } from '@/lib/fees/resolver'
 import { buyerFeeRefusalMessage, eligibleMethods, type EligibleMethod } from '@/lib/payments/eligibility'
 import { classifyUniqueViolation, uniqueViolationConstraint, OrderInsertConflictError } from '@/lib/checkout/order-insert'
@@ -170,9 +170,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const promoDiscount = promo.discount
     const promoCodeId = promo.promoCodeId
     const sellerPayout = round2(subtotal - commission)
-    // Per-category protection window (hours) — consumed at delivery time to
-    // set auto_release_at; stored implicitly via markDelivered (lib/fees).
-    void protectionWindowHours
+    // The SafeDrop Protection window is applied at delivery time by the
+    // order_mark_delivered RPC from order_completion_windows (fee PR 7).
 
     // Provider is a property of the METHOD picked: Payssion pm_ids route to
     // 'payssion' (hosted redirect); everything else stays on the env-active

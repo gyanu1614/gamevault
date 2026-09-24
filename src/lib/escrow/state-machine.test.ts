@@ -24,8 +24,10 @@ const ALL_STATES: OrderStatus[] = [
 ]
 
 describe('state machine: terminal states', () => {
-  it('completed/cancelled/refunded are terminal — no outgoing transitions', () => {
-    for (const t of ['completed', 'cancelled', 'refunded'] as OrderStatus[]) {
+  it('cancelled/refunded are terminal — no outgoing transitions (completed may still be disputed, PR 7)', () => {
+    expect(TERMINAL_STATES.has('completed')).toBe(false)
+    expect(ALLOWED_TRANSITIONS.completed).toEqual(['disputed'])
+    for (const t of ['cancelled', 'refunded'] as OrderStatus[]) {
       expect(TERMINAL_STATES.has(t)).toBe(true)
       expect(ALLOWED_TRANSITIONS[t]).toEqual([])
       for (const to of ALL_STATES) {
@@ -53,7 +55,8 @@ describe('state machine: full transition matrix', () => {
     expect(isValidTransition('pending', 'completed')).toBe(false)
     expect(isValidTransition('pending', 'delivered')).toBe(false)
     expect(isValidTransition('refunded', 'paid')).toBe(false)
-    expect(isValidTransition('completed', 'disputed')).toBe(false)
+    expect(isValidTransition('completed', 'paid')).toBe(false)
+    expect(isValidTransition('completed', 'disputed')).toBe(true) // PR 7: post-completion dispute
   })
 
   it('allows the happy path end to end', () => {
@@ -64,7 +67,8 @@ describe('state machine: full transition matrix', () => {
 
   it('allows same-status (idempotent) on non-terminal states', () => {
     expect(isValidTransition('paid', 'paid')).toBe(true)
-    expect(isValidTransition('completed', 'completed')).toBe(false) // terminal: even same is blocked
+    expect(isValidTransition('completed', 'completed')).toBe(true) // PR 7: no longer terminal
+    expect(isValidTransition('refunded', 'refunded')).toBe(false) // terminal: even same is blocked
   })
 
   it('assertTransition throws on illegal, passes on legal', () => {
