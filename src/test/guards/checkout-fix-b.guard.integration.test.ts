@@ -42,6 +42,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { purgeAuditLogs } from './fixture-namespace'
 
 let sessionClient: SupabaseClient | null = null
 /** PAY-012: orders whose cancel RPC must throw (a poison row for the sweep). */
@@ -207,14 +208,7 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       await del('payment_attempts', svc.from('payment_attempts').delete().eq('order_id', id))
     }
     await del('ledger_test_cleanup(fund)', svc.rpc('ledger_test_cleanup', { p_prefix: 'test:ledger:fix-b:%' } as any))
-    if (TARGET_IS_LOCAL) {
-      try {
-        execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c',
-          `BEGIN; ALTER TABLE public.audit_logs DISABLE TRIGGER trg_prevent_audit_log_delete; ` +
-          `DELETE FROM public.audit_logs WHERE user_id IN ('${users.join("','")}'); ` +
-          `ALTER TABLE public.audit_logs ENABLE TRIGGER trg_prevent_audit_log_delete; COMMIT;`], { stdio: 'pipe' })
-      } catch (e: any) { failures.push(`audit_logs purge: ${e?.stderr?.toString() ?? e}`) }
-    }
+    purgeAuditLogs(users, failures) // local stack only (fixture-namespace.ts)
     try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
     if (failures.length) throw new Error(`checkout-fix-b cleanup left residue:\n  - ${failures.join('\n  - ')}`)
   }, 120_000)

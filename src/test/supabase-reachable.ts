@@ -4,7 +4,7 @@
  * Integration tests used to gate on "are credentials present?", which was a
  * good enough proxy while .env.local always pointed at a live production
  * stack. Since .env.test points at a LOCAL stack that may simply not be
- * running (`npx supabase start`), credentials can be present and valid while
+ * running (`pnpm db:up`), credentials can be present and valid while
  * nothing is listening — the test then fails with ECONNREFUSED instead of
  * skipping, which is noise, not signal.
  *

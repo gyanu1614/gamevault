@@ -208,7 +208,7 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
     expect(pairs.length).toBeGreaterThanOrEqual(1)
     if (pairs.length < 50) {
       // eslint-disable-next-line no-console
-      console.warn(`[fee-checkout] only ${pairs.length} enabled pair(s) — run \`pnpm seed:games --env=local\` + re-apply the seed migration for the full proof`)
+      console.warn(`[fee-checkout] only ${pairs.length} enabled pair(s) — run \`pnpm test:reset\` for the full proof`)
     }
   })
 

@@ -36,6 +36,26 @@ if (existsSync(envFile)) {
   // eslint-disable-next-line no-console
   console.warn(
     `[test env] ${envFile} not found — integration tests will self-skip. ` +
-      'Create it with: cp .env.test.example .env.test (then npx supabase start).',
+      'Create it with: pnpm db:up (starts this worktree\'s stack and writes .env.test).',
   )
+}
+
+/**
+ * The psql-based suites (fault injection, audit_logs purge) read
+ * SUPABASE_DB_URL and used to fall back to 127.0.0.1:54322 — the MAIN
+ * checkout's stack. With per-worktree stacks (scripts/local-stack.mjs) that
+ * fallback would point a worktree's psql at another worktree's database while
+ * its PostgREST calls hit its own. `pnpm db:up` writes SUPABASE_DB_URL; for an
+ * older .env.test without it, derive it from the local API URL: every stack's
+ * db port is its api port + 1 (54321/54322 on main).
+ */
+if (!process.env.SUPABASE_DB_URL && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  try {
+    const api = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+    if (['127.0.0.1', 'localhost'].includes(api.hostname) && api.port) {
+      process.env.SUPABASE_DB_URL = `postgresql://postgres:postgres@127.0.0.1:${Number(api.port) + 1}/postgres`
+    }
+  } catch {
+    // unparsable URL: leave it; the suites' own guards reject it
+  }
 }

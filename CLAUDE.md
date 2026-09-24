@@ -19,12 +19,21 @@
 - Vercel: set the Install Command to `pnpm install --frozen-lockfile` in the dashboard (Settings → General → Build & Development Settings).
 
 ## Tests & environment (never bypass)
-- `vitest` loads **`.env.test`** by default: local Supabase, **no `RESEND_API_KEY`**, dummy provider keys. Set it up once: `cp .env.test.example .env.test` then `pnpm supabase start`.
+- `vitest` loads **`.env.test`** by default: local Supabase, **no `RESEND_API_KEY`**, dummy provider keys. `pnpm db:up` creates it (from `.env.test.example`) pointed at this worktree's own stack — see the next section.
 - `.env.test` is gitignored; **`.env.test.example` is committed**. Never put a real secret in either.
 - `ALLOW_REMOTE_GUARD_TESTS=1` is the ONLY way to load `.env.local` (production Supabase + live keys) into a test run. Use it deliberately, never to "make a failing test pass".
 - A test that touches email **must** `vi.mock('@/lib/email')`. Real sends throw from a test run (`src/lib/email/transport-guard.ts`).
 - Integration tests that create rows must call `assertGuardTargetAllowed` before writing, and must clean up **every** row they cause — including rows written by side effects (notifications, ledger), not just the ones they insert directly.
+- Mint fixture ids through the file's namespace (`makeFixture()` does; extra ids via `fx.ns` / `fixtureNamespace()` in `src/test/guards/fixture-namespace.ts`). Teardown residue checks and purges cover **only that file's key**; `audit_logs` rows go through `purgeAuditLogs` (psql, local only). Never write a global `guardtest-%` sweep into a suite's teardown.
 - Why: on 2026-09-12 a plain `vitest run` emailed real sellers and left 32 orphaned notifications on production accounts for ~2 months. `setup-env.ts` had loaded `.env.local` unconditionally.
+
+## Local Supabase: one stack per worktree (from 2026-09-23)
+- **Start:** `pnpm db:up` in the worktree (after `pnpm install`). The main checkout stays slot 0 (committed `config.toml`, ports 54320–54329, all services). Every other worktree gets a slot from `<git common dir>/local-stacks.json`, project id `gamevault-<folder>`, ports `54320 + 100 × slot` (api +1, db +2), and a **lean** service set (no studio/analytics/realtime/edge/imgproxy; `--full` for all). The overrides live in the gitignored `supabase/.env`, which the CLI loads on every command, so even a raw `supabase …` in a worktree targets its own stack.
+- **Reset + seed:** `pnpm test:reset` = `supabase db reset` → `seed:games --env=local` → `supabase/seeds/fee_rules.local.sql` → sanity counts read from the DB (games / pairs / fee rules / resolver gaps; fails on any gap). **Never `supabase db reset` directly and never re-run migration files by psql to reseed.** A fee migration that keys rules by pair must add its local rows to that seed file.
+- **Full gate:** `pnpm test:full` = `test:reset` then the whole vitest suite.
+- **Housekeeping:** `pnpm db:list` (every stack: slot, ports, containers, memory), `pnpm db:down` (stop, keep data), `pnpm db:down --purge` (delete data + free the slot — do this before removing a worktree). Docker has ~3.9 GB: a lean stack is ~0.6 GB idle, a full one 1.1–1.7 GB; stop stacks you are not using.
+- **Never hand-edit `supabase/config.toml` ports or `project_id`** for a worktree — `db:up` already isolates it, and the edit would ship in the PR.
+- Why: on 2026-09-23 three chats shared main's stack; one worktree's `db reset` wiped another's functions mid-test-run, fixtures leaked between guard suites, and every handoff repeated a manual reseed recipe.
 
 ## Migration timestamps
 - Migration timestamps use the **real current second** (`date +%Y%m%d%H%M%S`), never a round number like `…100000`. Two chats on the same day both reaching for `100000` collide.
