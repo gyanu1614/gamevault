@@ -1,4 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest'
+// A plain placeholder, not a real address: secret scanners flag high-entropy
+// literals, and the round-trip proves the same thing on any string.
+const SAMPLE = 'example-payout-destination-value'
+
 import { encryptPayoutSecret, decryptPayoutSecret, hashPayoutSecret, isEncryptedPayoutSecret, revealPayoutSecret, maskPayoutSecret } from './payout-encryption'
 
 describe('payout-encryption (AES-256-GCM, PAYOUT_ENCRYPTION_KEY)', () => {
@@ -6,12 +10,12 @@ describe('payout-encryption (AES-256-GCM, PAYOUT_ENCRYPTION_KEY)', () => {
     if (!process.env.PAYOUT_ENCRYPTION_KEY) process.env.PAYOUT_ENCRYPTION_KEY = 'x'.repeat(40)
   })
   it('round-trips, never repeats ciphertext, and prefixes v1:', () => {
-    const a = encryptPayoutSecret('TJRyWwFs9wTFGZg3JbrVriFbNfCug5tDeC')
-    const b = encryptPayoutSecret('TJRyWwFs9wTFGZg3JbrVriFbNfCug5tDeC')
+    const a = encryptPayoutSecret(SAMPLE)
+    const b = encryptPayoutSecret(SAMPLE)
     expect(a).not.toBe(b)
     expect(isEncryptedPayoutSecret(a)).toBe(true)
-    expect(decryptPayoutSecret(a)).toBe('TJRyWwFs9wTFGZg3JbrVriFbNfCug5tDeC')
-    expect(revealPayoutSecret(b)).toBe('TJRyWwFs9wTFGZg3JbrVriFbNfCug5tDeC')
+    expect(decryptPayoutSecret(a)).toBe(SAMPLE)
+    expect(revealPayoutSecret(b)).toBe(SAMPLE)
     expect(revealPayoutSecret('legacy-plaintext')).toBe('legacy-plaintext')
     expect(revealPayoutSecret(null)).toBeNull()
   })
@@ -31,6 +35,6 @@ describe('payout-encryption (AES-256-GCM, PAYOUT_ENCRYPTION_KEY)', () => {
     try { expect(() => encryptPayoutSecret('x')).toThrow(/PAYOUT_ENCRYPTION_KEY/) } finally { process.env.PAYOUT_ENCRYPTION_KEY = k }
   })
   it('masks to the last six characters', () => {
-    expect(maskPayoutSecret('TJRyWwFs9wTFGZg3JbrVriFbNfCug5tDeC')).toBe('…g5tDeC')
+    expect(maskPayoutSecret(SAMPLE)).toBe('…-value')
   })
 })
