@@ -1,6 +1,6 @@
 # Checkout B4 — EU Payssion methods — handoff
 
-**Date:** 2026-09-24 · **Branch:** `feat/eu-payment-methods` (worktree `../gamevault-checkout-b4`, own stack slot 10) · **PR:** __PR_URL__ · **Not merged. `supabase db push --include-all` needed** (1 new migration + B3's 2 if still unpushed).
+**Date:** 2026-09-24 · **Branch:** `feat/eu-payment-methods` (worktree `../gamevault-checkout-b4`, own stack slot 10) · **PR:** https://github.com/gyanu1614/gamevault/pull/95 · **Not merged. `supabase db push --include-all` needed** (1 new migration + B3's 2 if still unpushed).
 Probe record: `docs/payments/eu-methods-probe.md`. Registry ⇒ probe invariant is now executable (`eu-methods.test.ts` ← `probe-fixtures.ts`).
 
 ## Part 1 — probe (control bancontact_be 200 first; every minted probe cancelled in-run)
