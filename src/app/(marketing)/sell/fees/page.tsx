@@ -16,7 +16,7 @@ import { BadgePercent, CalendarClock, Crown, Sparkles, Wallet } from 'lucide-rea
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
-import { getPublicFeeSchedule, getPublicWithdrawalTerms, describeWithdrawalFee, type PublicFeeSchedule } from '@/lib/fees/public-rates'
+import { getPublicFeeSchedule, getPublicWithdrawalTerms, describeWithdrawalFee, formatScheduleDateUtc, type PublicFeeSchedule } from '@/lib/fees/public-rates'
 
 export const revalidate = 86400
 export const dynamic = 'force-static'
@@ -34,8 +34,7 @@ export const metadata: Metadata = {
   },
 }
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+const fmtDate = formatScheduleDateUtc
 const pct = (n: number) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}%`
 const pts = (n: number) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}`
 const hoursText = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h === 24 ? '' : 's'}` : `${h} hour${h === 1 ? '' : 's'}`)

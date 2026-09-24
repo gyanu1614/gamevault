@@ -13,6 +13,7 @@ import {
   emailShell, emailText, emailBox, emailButton, emailFooterNote, emailOrderSummary, EMAIL_TOKENS,
 } from '@/lib/email/shell'
 import { escapeHtmlText, sendTransactionalEmail } from '@/lib/email'
+import { formatScheduleDateUtc } from '@/lib/fees/public-rates'
 
 export interface FeeNoticeMethod {
   displayName: string
@@ -38,8 +39,8 @@ export interface FeeNoticeFacts {
 
 const { APP_URL, INK, FOREST_2 } = EMAIL_TOKENS
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+// Same renderer as /sell/fees — the notice and the page can never disagree.
+const fmtDate = formatScheduleDateUtc
 const hoursText = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h === 24 ? '' : 's'}` : `${h} hours`)
 const money = (n: number) => `$${Number(n).toFixed(2).replace(/\.?0+$/, '')}`
 
