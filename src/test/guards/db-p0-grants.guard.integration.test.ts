@@ -96,7 +96,7 @@ const PR7_SERVICE_ONLY = [
   'withdrawal_rules_version', 'fee_round_cents', 'withdrawal_quote', 'withdrawal_request', 'withdrawal_approve',
   'withdrawal_mark_paid', 'seller_payout_details_set', 'withdrawal_risk_snapshot', 'withdrawal_methods_set_fees',
   'platform_money_setting_set', 'order_completion_window_set',
-  'seller_notice_claim', 'seller_notice_record',
+  'seller_notice_claim', 'seller_notice_record', 'pr7_grants_encryption_version',
 ]
 
 const RATE_LIMIT_SERVICE_ONLY = [

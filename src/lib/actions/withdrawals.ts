@@ -3,6 +3,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
+import { revealPayoutSecret } from '@/lib/crypto/payout-encryption'
+
+/**
+ * PR 7: payment_details on new requests carries CIPHERTEXT
+ * (wallet_address_enc / payoneer_email_enc). Decrypt server-side, only inside
+ * an authenticated action's response, into the keys the UI renders.
+ */
+function revealPaymentDetails(details: Record<string, any> | null | undefined): Record<string, any> | null {
+  if (!details) return details ?? null
+  const out: Record<string, any> = { ...details }
+  try {
+    if (typeof out.wallet_address_enc === 'string') { out.wallet_address = revealPayoutSecret(out.wallet_address_enc); delete out.wallet_address_enc }
+    if (typeof out.payoneer_email_enc === 'string') { out.payoneer_email = revealPayoutSecret(out.payoneer_email_enc); delete out.payoneer_email_enc }
+  } catch (e) {
+    console.error('[Withdrawals] could not decrypt payment details:', e)
+    delete out.wallet_address_enc
+    delete out.payoneer_email_enc
+    out.decrypt_error = true
+  }
+  return out
+}
 
 // Types
 export interface WithdrawalMethod {
@@ -337,7 +358,7 @@ export async function getAllWithdrawalRequests(filters?: {
       const { data: snap } = await (service.rpc as any)('withdrawal_risk_snapshot', { p_seller_id: id })
       if (snap) snapshots.set(id, snap)
     }))
-    const requests = rows.map((r) => ({ ...r, risk: snapshots.get(r.user_id) ?? null }))
+    const requests = rows.map((r) => ({ ...r, payment_details: revealPaymentDetails(r.payment_details), risk: snapshots.get(r.user_id) ?? null }))
 
     return { success: true, requests }
   } catch (error: any) {

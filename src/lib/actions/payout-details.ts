@@ -8,12 +8,17 @@
  * platform_fee_settings.payout_details_freeze_hours (48 h) and emails the
  * seller (an attacker who changes the address cannot cash out before the
  * owner sees the email).
+ *
+ * Secrets are stored ENCRYPTED (AES-256-GCM, PAYOUT_ENCRYPTION_KEY) with an
+ * HMAC hash for equality; only these server actions decrypt, and only into
+ * the owner's own response.
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { validatePayoutAddress, COIN_CHAINS, type PayoutChain } from '@/lib/crypto/address-validation'
+import { encryptPayoutSecret, hashPayoutSecret, revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
 export interface PayoutDetails {
   cryptoCoin: string | null
@@ -43,8 +48,9 @@ export async function getMyPayoutDetails(): Promise<{ success: boolean; details?
       details: {
         cryptoCoin: row?.crypto_coin ?? null,
         cryptoChain: row?.crypto_chain ?? null,
-        cryptoAddress: row?.crypto_address ?? null,
-        payoneerEmail: row?.payoneer_email ?? null,
+        // Decrypted server-side for the OWNER only (this action is session-scoped).
+        cryptoAddress: revealPayoutSecret(row?.crypto_address_enc ?? row?.crypto_address_plain),
+        payoneerEmail: revealPayoutSecret(row?.payoneer_email_enc ?? row?.payoneer_email_plain),
         detailsChangedAt: changed?.toISOString() ?? null,
         freezeUntil: changed ? new Date(changed.getTime() + freezeHours * 3_600_000).toISOString() : null,
       },
@@ -80,11 +86,18 @@ export async function savePayoutDetails(input: SavePayoutDetailsInput): Promise<
       // Authoritative shape check: crypto sends are irreversible.
       const check = validatePayoutAddress(coin, chain, address)
       if (!check.valid) return { success: false, error: check.error || 'Invalid wallet address.' }
-      args = { p_seller_id: user.id, p_kind: 'crypto', p_coin: coin, p_chain: chain, p_address: address, p_email: null }
+      args = {
+        p_seller_id: user.id, p_kind: 'crypto', p_coin: coin, p_chain: chain,
+        p_address_enc: encryptPayoutSecret(address), p_address_hash: hashPayoutSecret(address),
+        p_email_enc: null, p_email_hash: null,
+      }
     } else {
       const email = String(input.email ?? '').trim().toLowerCase()
       if (!EMAIL_RE.test(email) || email.length > 254) return { success: false, error: 'Enter a valid Payoneer email address.' }
-      args = { p_seller_id: user.id, p_kind: 'payoneer', p_coin: null, p_chain: null, p_address: null, p_email: email }
+      args = {
+        p_seller_id: user.id, p_kind: 'payoneer', p_coin: null, p_chain: null, p_address_enc: null, p_address_hash: null,
+        p_email_enc: encryptPayoutSecret(email), p_email_hash: hashPayoutSecret(email),
+      }
     }
 
     const service = createServiceRoleClient()

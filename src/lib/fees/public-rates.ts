@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { FEE_RULES_TAG } from '@/lib/revalidation/tags'
 
 /**
@@ -226,10 +227,13 @@ export interface PublicWithdrawalTerms {
 
 async function loadWithdrawalTerms(): Promise<PublicWithdrawalTerms> {
   const client = createAnonClient()
+  // order_completion_windows is service-role only (PR 7 grants follow-up):
+  // this runs at build / revalidate time on the server, never in a browser.
+  const service = createServiceRoleClient()
   const [methodsRes, settingsRes, windowsRes] = await Promise.all([
     client.from('withdrawal_methods').select('method_name, display_name, method_type, fee_percentage, fee_fixed, fee_min, min_withdrawal, max_withdrawal, is_active, coming_soon, sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
     client.from('platform_fee_settings').select('completion_hold_hours, dispute_window_days, withdrawal_min_account_age_days, payout_details_freeze_hours').eq('id', true).maybeSingle(),
-    (client as any).from('order_completion_windows').select('category_type, auto_complete_hours'),
+    (service as any).from('order_completion_windows').select('category_type, auto_complete_hours'),
   ])
   if (methodsRes.error) throw new Error(`withdrawal_methods: ${methodsRes.error.message}`)
   const s = (settingsRes.data ?? {}) as any
@@ -263,6 +267,16 @@ export const getPublicWithdrawalTerms = unstable_cache(loadWithdrawalTerms, ['pu
   tags: [FEE_RULES_TAG],
   revalidate: TWENTY_FOUR_HOURS,
 })
+
+/**
+ * THE date renderer for every schedule date a seller sees — /sell/fees and the
+ * fee notice email both use it, so the two can never disagree. UTC, en-GB long
+ * form ("8 October 2026"): fee_rules.starts_at values are midnight UTC, and a
+ * local-timezone render would show the previous day west of Greenwich.
+ */
+export function formatScheduleDateUtc(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
 
 /** "3% + $5" / "3% (min $5)" / "$5" / "free" — the one place fee terms become words. */
 export function describeWithdrawalFee(m: { feePct: number; feeFixed: number; feeMin: number }): string {

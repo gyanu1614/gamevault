@@ -57,14 +57,21 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   // service-role only. docs/design/fee-engine.md §1.1–1.2.
   fee_rules: 'seller-commission rates; public by design, no PII, no money',
   platform_fee_settings: 'single-row fee programme terms (floor, founding %, notice days)',
-  // Fee engine PR 7: SafeDrop Protection windows per category are quoted on
-  // /sell/fees and the buyer terms. Read-only config, no PII, no money.
-  order_completion_windows: 'per-category auto-complete windows; public terms, service-role writes',
 
   // SAB public price catalogue.
   sab_brainrots: 'public SAB value pages',
   sab_mutations: 'public SAB value pages',
   sab_price_display: 'materialised public price catalogue',
+}
+
+/**
+ * Tables a signed-in user may SELECT directly (RLS scopes the rows), beyond
+ * the public list. Everything PR 7 created is deliberately NOT here: the
+ * wallet, payout-details, dispute and notice tables are read through
+ * server actions with the service role.
+ */
+const AUTHENTICATED_READ_ALLOWLIST: Record<string, string> = {
+  platform_fee_settings: 'public list already; listed for clarity',
 }
 
 /** Tables that may be written by anon/authenticated (RLS scopes the rows). */
@@ -200,6 +207,23 @@ describe.skipIf(!hasEnv)('DLT-005/006 — public table posture (integration)', (
       leaked,
       `anon-readable tables missing from PUBLIC_READ_ALLOWLIST — add \`revoke all on table … from anon, authenticated\`\n` +
         `to the migration, or allow-list it WITH A REASON:\n${leaked.join('\n')}`,
+    ).toEqual([])
+  })
+
+  /**
+   * PR 7 follow-up: a table granted to `authenticated` is readable by EVERY
+   * signed-in user (RLS permitting) — that needs a reason just like anon.
+   * Tables the anon list already covers are implicitly fine for authenticated.
+   */
+  it('no table outside the allow-lists is readable by authenticated', () => {
+    if (!applied) return
+    const leaked = rows
+      .filter((r) => r.auth_select && !(r.table_name in PUBLIC_READ_ALLOWLIST) && !(r.table_name in AUTHENTICATED_READ_ALLOWLIST) && !LEGACY_BASELINE.has(r.table_name))
+      .map((r) => r.table_name)
+    expect(
+      leaked,
+      `authenticated-readable tables missing from the allow-lists — add \`revoke all on table … from anon, authenticated\`\n` +
+        `to the migration (read it through a server action instead), or allow-list it WITH A REASON:\n${leaked.join('\n')}`,
     ).toEqual([])
   })
 

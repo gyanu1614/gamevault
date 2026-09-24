@@ -19,6 +19,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { encryptPayoutSecret, hashPayoutSecret, revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
 vi.mock('server-only', () => ({}))
@@ -86,10 +87,17 @@ async function debitSeller(minor: number, suffix: string) {
 async function matured(): Promise<number> {
   return Number(await rpc('seller_matured_balance', { p_seller_id: fx!.seller.id, p_currency: CUR }))
 }
+/** Mirrors savePayoutDetails: the action encrypts + hashes, the RPC stores ciphertext + hash. */
+function encArgs(kind: 'crypto' | 'payoneer', v: Record<string, string | null>, sellerId: string) {
+  const email = v.email ? v.email.trim().toLowerCase() : null
+  return {
+    p_seller_id: sellerId, p_kind: kind, p_coin: v.coin ?? null, p_chain: v.chain ?? null,
+    p_address_enc: v.address ? encryptPayoutSecret(v.address) : null, p_address_hash: v.address ? hashPayoutSecret(v.address) : null,
+    p_email_enc: email ? encryptPayoutSecret(email) : null, p_email_hash: email ? hashPayoutSecret(email) : null,
+  }
+}
 async function setDetails(kind: 'crypto' | 'payoneer', v: Record<string, string | null>) {
-  return rpc('seller_payout_details_set', {
-    p_seller_id: fx!.seller.id, p_kind: kind, p_coin: v.coin ?? null, p_chain: v.chain ?? null, p_address: v.address ?? null, p_email: v.email ?? null,
-  })
+  return rpc('seller_payout_details_set', encArgs(kind, v, fx!.seller.id))
 }
 async function ageDetails(hoursAgo: number) {
   await fx!.svc.from('seller_payout_details').update({ details_changed_at: new Date(Date.now() - hoursAgo * 3_600_000).toISOString() }).eq('seller_id', fx!.seller.id)
@@ -106,7 +114,7 @@ async function row(id: string) {
 describe.skipIf(!hasEnv)('PR 7 Part 3 — withdrawal quote, gate, request, Payoneer, payout details (integration)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
-    ready = !(await fx.svc.rpc('withdrawal_rules_version' as any)).error
+    ready = !(await fx.svc.rpc('withdrawal_rules_version' as any)).error && !(await fx.svc.rpc('pr7_grants_encryption_version' as any)).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
     const { data: methods } = await fx.svc.from('withdrawal_methods').select('*').in('method_name', ['usdt_trc20', 'payoneer'])
     crypto = (methods ?? []).find((m: any) => m.method_name === 'usdt_trc20')
@@ -216,7 +224,15 @@ describe.skipIf(!hasEnv)('PR 7 Part 3 — withdrawal quote, gate, request, Payon
     expect(Number(w.fee_min)).toBe(q.fee_min)
     expect(Number(w.net_amount)).toBe(q.net)
     expect(w.quote.fee_amount).toBe(q.fee_amount)
-    expect(w.payment_details).toEqual({ wallet_address: TRON_ADDR, network: 'tron', coin: 'usdt' })
+    // Ciphertext on the row (never the address); the admin action decrypts it.
+    expect(w.payment_details.wallet_address).toBeUndefined()
+    expect(w.payment_details).toMatchObject({ network: 'tron', coin: 'usdt' })
+    expect(w.payment_details.wallet_address_enc).toMatch(/^v1:/)
+    expect(revealPayoutSecret(w.payment_details.wallet_address_enc)).toBe(TRON_ADDR)
+    const { data: stored } = await fx!.svc.from('seller_payout_details').select('*').eq('seller_id', fx!.seller.id).single()
+    expect((stored as any).crypto_address_plain).toBeNull()
+    expect((stored as any).crypto_address_enc).toMatch(/^v1:/)
+    expect((stored as any).crypto_address_hash).toMatch(/^[0-9a-f]{64}$/)
     expect(w.status).toBe('pending')
     expect(await matured()).toBe(maturedBefore - 10_000) // hold left seller_available
     const { data: hold } = await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', `withdrawal:${r.request_id}`).maybeSingle()
@@ -259,16 +275,16 @@ describe.skipIf(!hasEnv)('PR 7 Part 3 — withdrawal quote, gate, request, Payon
     const saved = await setDetails('payoneer', { email: `guard-${RUN.slice(-6)}@example.com` })
     expect(saved).toMatchObject({ saved: true, changed: true })
     // another seller cannot claim the same email
-    const dup = await rpc('seller_payout_details_set', {
-      p_seller_id: fx!.buyer.id, p_kind: 'payoneer', p_coin: null, p_chain: null, p_address: null, p_email: `GUARD-${RUN.slice(-6)}@example.com`,
-    })
+    const dup = await rpc('seller_payout_details_set', encArgs('payoneer', { email: `GUARD-${RUN.slice(-6)}@example.com` }, fx!.buyer.id))
     expect(dup).toMatchObject({ saved: false, reason: 'email_in_use' })
     await ageDetails(49)
 
     const r = await request(payoneer.id, 100)
     expect(r.requested).toBe(true)
     expect(r.quote).toMatchObject({ fee_amount: 5, net: 95 })
-    expect((await row(r.request_id)).payment_details).toEqual({ payoneer_email: `guard-${RUN.slice(-6)}@example.com` })
+    const pd = (await row(r.request_id)).payment_details
+    expect(pd.payoneer_email).toBeUndefined()
+    expect(revealPayoutSecret(pd.payoneer_email_enc)).toBe(`guard-${RUN.slice(-6)}@example.com`)
 
     // mark paid before approval is refused
     const early = await rpc('withdrawal_mark_paid', { p_request_id: r.request_id, p_admin_id: fx!.admin.id, p_reference: 'PYN-1', p_notes: null })
