@@ -34,8 +34,19 @@ const COIN_ARTWORK: Record<string, string> = {
 
 const FIAT_ARTWORK: Record<string, string> = {
   paypal: '/payment-methods/paypal.png',
-  payoneer: '/payment-methods/payoneer.png',
   bank: '/payment-methods/bank.png',
+}
+
+/**
+ * Fiat rails drawn as their own mark. Payoneer's mark is its gradient ring:
+ * the PNG in /public is the stacked logo (ring over a dark wordmark), which at
+ * badge size shrank to a smudge with an unreadable wordmark on the dark tile.
+ * Stops sampled every 30° from that artwork, clockwise from 12 o'clock.
+ */
+const FIAT_RINGS: Record<string, string> = {
+  payoneer:
+    'conic-gradient(#EB9E00, #D6D805 30deg, #73D940 60deg, #1CD58F 90deg, #07A3D8 120deg, #5B77E7 150deg, ' +
+    '#DB53CC 180deg, #EE4B61 210deg, #FC480C 240deg, #FF4700 270deg, #FE4800 300deg, #FB5200 330deg, #EB9E00)',
 }
 
 interface CoinBadgeProps {
@@ -58,7 +69,13 @@ export default function CoinBadge({
 }: CoinBadgeProps) {
   const key = (coin ?? '').toLowerCase()
   const artwork = COIN_ARTWORK[key] ?? FIAT_ARTWORK[methodName]
+  const ring = key ? undefined : FIAT_RINGS[methodName]
   const mark = COIN_MARKS[key]
+  // The ring fills the same box as the coin marks, with the logo's stroke
+  // (7.7% of the diameter), never thinner than 2px.
+  const ringSize = Math.round(size * 0.6)
+  const ringStroke = Math.max(2, Math.round(ringSize * 0.077))
+  const ringMask = `radial-gradient(farthest-side, transparent calc(100% - ${ringStroke}px - 0.5px), #000 calc(100% - ${ringStroke}px))`
 
   return (
     <span
@@ -77,6 +94,18 @@ export default function CoinBadge({
           width={Math.round(size * 0.55)}
           height={Math.round(size * 0.55)}
           className="object-contain"
+        />
+      ) : ring ? (
+        <span
+          aria-hidden
+          style={{
+            background: ring,
+            width: ringSize,
+            height: ringSize,
+            WebkitMask: ringMask,
+            mask: ringMask,
+          }}
+          className="rounded-full"
         />
       ) : mark ? (
         <span
