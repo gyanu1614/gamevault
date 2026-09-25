@@ -275,8 +275,8 @@ export default function SafeDropPage() {
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
               Your protection window is the time you have to check your order
-              and raise an issue. Sellers are paid out when you confirm
-              delivery or the window closes.
+              and raise an issue. Confirm and the order is complete. Not
+              delivered or not as described? You get a full refund.
             </p>
           </div>
 

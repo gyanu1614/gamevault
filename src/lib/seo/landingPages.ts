@@ -68,7 +68,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'Is it safe to buy a Roblox account on DropMarket?',
-        a: 'Yes. Every order is covered by SafeDrop Buyer Protection, and the seller is only paid out after you verify the account credentials and confirm delivery. If your order isn\'t delivered or isn\'t as described, you get a full refund.',
+        a: 'Yes. Every order is covered by SafeDrop Buyer Protection. Verify the account credentials, confirm delivery, and the order is complete. If your order isn\'t delivered or isn\'t as described, you get a full refund.',
       },
       {
         q: 'What Roblox accounts are available?',
@@ -80,7 +80,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the account details don\'t work?',
-        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). The seller\'s payout is paused while we investigate — if the issue can\'t be resolved, you get a full refund.',
+        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). Your order stays open while we investigate — if the issue can\'t be resolved, you get a full refund.',
       },
     ],
   },
@@ -136,7 +136,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'How does SafeDrop protect me?',
-        a: 'Every order is covered by SafeDrop Buyer Protection: the seller is only paid out after you confirm the account works and you\'ve changed the credentials. If there\'s an issue, we mediate and refund if necessary.',
+        a: 'Every order is covered by SafeDrop Buyer Protection: confirm the account works once you\'ve changed the credentials, and the order is complete. If there\'s an issue, we mediate and refund if necessary.',
       },
     ],
   },
@@ -188,7 +188,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'What if the Epic account is locked after purchase?',
-        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). The seller\'s payout is paused while we investigate — if the issue can\'t be resolved, you get a full refund.',
+        a: 'Open a dispute within your protection window (5–14 days for accounts, depending on risk band). Your order stays open while we investigate — if the issue can\'t be resolved, you get a full refund.',
       },
     ],
   },

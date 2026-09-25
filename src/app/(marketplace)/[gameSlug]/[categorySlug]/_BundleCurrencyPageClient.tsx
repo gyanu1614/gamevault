@@ -600,7 +600,7 @@ export default function BundleCurrencyPageClient({
           { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
           { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
           { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm receipt and the seller gets paid — or you get a full refund.' },
+          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}
       />
 

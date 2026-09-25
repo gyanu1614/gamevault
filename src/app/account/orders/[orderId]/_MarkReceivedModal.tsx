@@ -6,7 +6,7 @@
  * Buyer's "Confirm Delivery" flow. Centered shadcn Dialog. Layout:
  *   1. Amber warning banner — "Only confirm if you received your
  *      order in full."
- *   2. Centered SafeDrop payout block — title + amount stacked.
+ *   2. Centered SafeDrop amount block — title + amount stacked.
  *   3. Mandatory review block — thumbs up/down + quick chips that
  *      pre-fill the comment + a textarea. Must be filled before
  *      Confirm activates.
@@ -141,7 +141,7 @@ export function MarkReceivedModal({
         return
       }
 
-      toast.success(`Delivery confirmed — ${fmtUsd(amount)} paid out to the seller`)
+      toast.success('Delivery confirmed — your order is complete')
       onConfirmed?.()
       setTimeout(() => {
         onOpenChange(false)
@@ -172,7 +172,7 @@ export function MarkReceivedModal({
           <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
             {mode === 'review'
               ? 'Share your experience to help other buyers.'
-              : 'Once you confirm, the seller is paid out for this order.'}
+              : 'Confirm and the order is complete.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -194,7 +194,7 @@ export function MarkReceivedModal({
             <div className="mt-3 flex items-center justify-between px-1">
               <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-secondary">
                 <Shield className="h-[18px] w-[18px] text-lime-text" />
-                Seller Payout
+                Amount Covered
               </span>
               <span className="text-[22px] font-extrabold tabular-nums text-lime-text">
                 {fmtUsd(amount)}
