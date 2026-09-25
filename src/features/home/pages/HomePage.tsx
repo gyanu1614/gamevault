@@ -131,7 +131,7 @@ const WHY_CARDS = [
   {
     icon: ShieldCheck,
     title: 'SafeDrop on Every Order',
-    body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
+    body: 'Every order is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
     img: '/icons/trust/money-back.avif',
   },

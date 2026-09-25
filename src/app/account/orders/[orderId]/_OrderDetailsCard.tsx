@@ -230,7 +230,7 @@ function SafeDropBody({
   } else if (orderStatus === 'delivered') {
     amountLabel = 'Amount Covered'
     caption =
-      "Your order arrived. Confirm Delivery so the seller gets paid, or open a dispute if something's off."
+      "Your order arrived. Confirm Delivery to complete the order, or open a dispute if something's off."
     showDisputeCta = true
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
@@ -239,7 +239,7 @@ function SafeDropBody({
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
     caption =
-      'A DropMarket admin is reviewing your dispute. The seller payout is paused until it resolves.'
+      'A DropMarket admin is reviewing your dispute. Your order stays open until it resolves.'
   } else if (orderStatus === 'cancelled') {
     if (cancelledWithRefund) {
       amountLabel = 'Amount Refunded'
