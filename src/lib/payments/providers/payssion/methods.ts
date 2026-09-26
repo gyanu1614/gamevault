@@ -5,16 +5,17 @@
  *  · expiryMinutes — per-method payment window (owner decision 2026-09-06):
  *    instant rails ~1h; voucher rails (buyer walks to a shop / redeems a PIN)
  *    get 48h and are NEVER auto-cancelled on the crypto 30-min clock.
- *  · feePercent — buyer processing-fee override for this method. null →
- *    checkout keeps its default processing fee. Payssion has not quoted
- *    per-method rates yet; plug real numbers in here when they do.
+ *  · the buyer processing FEE is NOT here (checkout B3 / PAY-023): it lives
+ *    in payment_method_fees (one row per pm_id) and is quoted by
+ *    buyer_fee_quote through lib/payments/eligibility. This module ships to
+ *    the client, so it carries no fee number.
  *  · countries — ISO-3166 alpha-2 codes where the method is the local rail.
  *    Drives the checkout region filter: buyers see matching methods up
  *    front, everything else behind a "More Payment Methods" fold. An
  *    unknown buyer country shows the full list.
  *
  * Entry ORDER here is the checkout display order — keep it sorted by
- * buyer-traffic priority (BR → PH → ID → MX → CO → CL today).
+ * buyer-traffic priority (BR → PH → ID → MX → CO → CL, then Europe).
  *
  * Adding a method later = one entry here (probe it first: an un-enabled
  * pm_id fails create with 491) + an icon/copy line in the checkout's
@@ -27,6 +28,14 @@
  *     sofort discontinued 2025-09-30.
  * 2026-09-08 probe: pix_br, maya_ph, qr_ph, qris_id, spei_mx, pse_co,
  *   webpay_cl all create fine (200) — live below.
+ * 2026-09-24 probe (checkout B4, docs/payments/eu-methods-probe.md): trustly,
+ *   blik_pl, p24_pl, eps_at, mbway_pt, bancomatpay_it, payu_cz, paysafecard
+ *   all 200 on a USD charge (Payssion converts on its page — no local-currency
+ *   charging); eps_at / mbway_pt refuse below €1.00 (417) → min_total_minor on
+ *   their fee rows; paysafecard's 491 has cleared. `bancomat_it` is NOT a
+ *   pm_id (405) — the real one is bancomatpay_it. The recorded responses are
+ *   in ./probe-fixtures.ts and eu-methods.test.ts pins "registry ⇒ probe 200".
+ *   NEVER wire skrill (rolling reserve), payu_pl or multibanco_pt (owner rule).
  * `payssion_test` is the sandbox-only simulator (guarded by PAYSSION_TESTMODE).
  */
 
@@ -35,8 +44,6 @@ export interface PayssionMethodMeta {
   label: string
   kind: 'instant' | 'voucher'
   expiryMinutes: number
-  /** Buyer processing-fee % override; null → checkout default. */
-  feePercent: number | null
   /** Where the method is usable — selector region chip. */
   coverage: string
   /** ISO-3166 alpha-2 codes for the region filter; [] → never geo-matched. */
@@ -47,23 +54,11 @@ const INSTANT_MINUTES = 60
 const VOUCHER_MINUTES = 48 * 60
 
 export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
-  // Paysafecard: account manager SAYS it's enabled (email 2026-09-07) but the
-  // live probe still gets 491 (2026-09-08) — she's been asked to flip it on
-  // for app "DropMarket". Uncomment once a probe returns 200. Sheet terms:
-  // 12.5% fee, refunds NOT supported provider-side (refunds → wallet credit);
-  // feePercent null until the owner decides on a buyer surcharge.
-  // paysafecard: { pmId: 'paysafecard', label: 'Paysafecard', kind: 'voucher',
-  //   expiryMinutes: VOUCHER_MINUTES, feePercent: null,
-  //   coverage: 'Europe, UK, CA & AU',
-  //   countries: ['AT','AU','BE','BG','CA','CH','CY','CZ','DE','DK','EE','ES',
-  //     'FI','FR','GB','GE','GI','GR','HR','HU','IE','IT','LT','LU','LV','MT',
-  //     'NL','NO','PL','PT','RO','SE','SI','SK'] },
   pix_br: {
     pmId: 'pix_br',
     label: 'Pix',
     kind: 'instant', // real-time bank transfer
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Brazil',
     countries: ['BR'],
   },
@@ -72,7 +67,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'GCash',
     kind: 'instant', // mobile wallet
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -81,7 +75,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Maya',
     kind: 'instant', // mobile wallet
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -90,7 +83,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'QR Ph',
     kind: 'instant', // national QR standard — any PH bank/wallet app
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Philippines',
     countries: ['PH'],
   },
@@ -99,7 +91,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'QRIS',
     kind: 'instant', // national QR standard — any ID bank/wallet app
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Indonesia',
     countries: ['ID'],
   },
@@ -108,7 +99,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'OXXO',
     kind: 'voucher', // cash voucher paid at OXXO stores
     expiryMinutes: VOUCHER_MINUTES,
-    feePercent: null,
     coverage: 'Mexico',
     countries: ['MX'],
   },
@@ -117,7 +107,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'SPEI',
     kind: 'instant', // near-real-time interbank transfer
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Mexico',
     countries: ['MX'],
   },
@@ -126,7 +115,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Boleto',
     kind: 'voucher', // bank slip paid at banks/lotéricas — takes days
     expiryMinutes: VOUCHER_MINUTES,
-    feePercent: null,
     coverage: 'Brazil',
     countries: ['BR'],
   },
@@ -135,7 +123,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'PSE',
     kind: 'instant', // bank-redirect rail
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Colombia',
     countries: ['CO'],
   },
@@ -144,9 +131,81 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'WebPay',
     kind: 'instant', // bank/card redirect rail
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Chile',
     countries: ['CL'],
+  },
+  // ── Europe (checkout B4, probe-verified 2026-09-24) ──────────────────────
+  trustly: {
+    pmId: 'trustly',
+    label: 'Trustly',
+    kind: 'instant', // bank-redirect rail (online banking)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Europe',
+    // Trustly's published European bank coverage (its accepted list; Payssion
+    // publishes no narrower one). A filter only — never hides a method.
+    countries: ['AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GB','GR',
+      'HR','HU','IE','IT','LT','LU','LV','MT','NL','NO','PL','PT','RO','SE','SI','SK'],
+  },
+  blik_pl: {
+    pmId: 'blik_pl',
+    label: 'BLIK',
+    kind: 'instant', // 6-digit code from the buyer's bank app
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Poland',
+    countries: ['PL'],
+  },
+  p24_pl: {
+    pmId: 'p24_pl',
+    label: 'Przelewy24',
+    kind: 'instant', // bank-redirect rail
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Poland',
+    countries: ['PL'],
+  },
+  eps_at: {
+    pmId: 'eps_at',
+    label: 'EPS',
+    kind: 'instant', // bank-redirect rail; Payssion refuses below €1.00 (417)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Austria',
+    countries: ['AT'],
+  },
+  mbway_pt: {
+    pmId: 'mbway_pt',
+    label: 'MB Way',
+    kind: 'instant', // mobile wallet; Payssion refuses below €1.00 (417)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Portugal',
+    countries: ['PT'],
+  },
+  bancomatpay_it: {
+    pmId: 'bancomatpay_it',
+    label: 'BANCOMAT Pay',
+    kind: 'instant', // mobile wallet
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Italy',
+    countries: ['IT'],
+  },
+  payu_cz: {
+    pmId: 'payu_cz',
+    label: 'PayU',
+    kind: 'instant', // bank-redirect rail
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Czechia',
+    countries: ['CZ'],
+  },
+  paysafecard: {
+    pmId: 'paysafecard',
+    label: 'paysafecard',
+    kind: 'voucher', // prepaid PIN — the buyer may need to buy one first
+    expiryMinutes: VOUCHER_MINUTES,
+    coverage: 'Europe, UK, CA & AU',
+    // Sheet terms: 12.5%, cap €250 (enforced by OUR fee row — Payssion accepted
+    // $320 at create), no provider refunds (fee row refundable=false → wallet
+    // credit only). Accepted list from the account manager (2026-09-07).
+    countries: ['AT','AU','BE','BG','CA','CH','CY','CZ','DE','DK','EE','ES',
+      'FI','FR','GB','GE','GI','GR','HR','HU','IE','IT','LT','LU','LV','MT',
+      'NL','NO','PL','PT','RO','SE','SI','SK'],
   },
   // Sandbox simulator (PAYSSION_TESTMODE only) — lets us run the whole
   // create → redirect → "Mark as Completed" → notify pipeline without money.
@@ -155,7 +214,6 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     label: 'Payssion Test',
     kind: 'instant',
     expiryMinutes: INSTANT_MINUTES,
-    feePercent: null,
     coverage: 'Sandbox',
     countries: [],
   },

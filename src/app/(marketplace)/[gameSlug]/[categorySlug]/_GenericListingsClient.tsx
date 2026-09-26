@@ -126,7 +126,7 @@ function EmptyState({
       </div>
       <h3 className="text-lg font-semibold text-text-primary mb-1">No listings found</h3>
       <p className="text-sm text-text-tertiary mb-4">
-        Be the first to sell {gameName} {categoryName} on DropMarket — list in minutes at 5–7% fees.
+        Be the first to sell {gameName} {categoryName} on DropMarket — list in minutes with low seller fees.
       </p>
       <Link
         href="/sell"

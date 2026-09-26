@@ -31,7 +31,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { commissionPct, netProceeds } from '@/lib/fees'
+import { round2 } from '@/lib/fees'
+import { previewSellerFee, type SellerFeePreview } from '@/lib/actions/fee-preview'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { Combobox } from '@/components/ui/combobox'
@@ -1387,6 +1388,7 @@ export default function SellWizard({
                   categorySlug={selectedCategory.slug}
                   gameName={selectedGame.game_name}
                   gameSlug={selectedGame.game_slug}
+                  gameCategoryId={selectedGame.game_category_id}
                   unitLabel={currencyConfig?.unit_label ?? null}
                   unitLabelLoading={currencyConfigLoading}
                   granularity={currencyConfig?.quantity_granularity ?? 'unit'}
@@ -2221,6 +2223,12 @@ interface Step4Props {
   gameName?: string
   gameSlug?: string
   /**
+   * Fee engine PR 5 — the (game, category) pair the seller is listing under.
+   * The net-proceeds preview resolves THIS seller's rate for it through the
+   * same RPC checkout stamps on the order (founding + rank included).
+   */
+  gameCategoryId?: string | null
+  /**
    * V19/P2 — Admin-configured unit label for currency listings
    * ("Robux", "V-Bucks", "Orbs", "Crystals"). Null when not a currency
    * category or when the config is still loading. Used to render the
@@ -2296,6 +2304,17 @@ const formatPriceSuffix = quantityUnit
  */
 function Step4Publish(p: Step4Props) {
   const priceNum = parseFloat(p.price || '0')
+  // Fee engine PR 5 — ONE resolver call per selected pair (not per keystroke);
+  // the subtraction below uses the same rounding as checkout
+  // (commission = round2(price × pct / 100); net = round2(price − commission)).
+  const [feePreview, setFeePreview] = useState<SellerFeePreview | null>(null)
+  useEffect(() => {
+    let alive = true
+    setFeePreview(null)
+    if (!p.gameCategoryId) return
+    previewSellerFee({ gameCategoryId: p.gameCategoryId }).then((r) => { if (alive) setFeePreview(r) })
+    return () => { alive = false }
+  }, [p.gameCategoryId])
   // V19/P24/P7.b — Custom-delivery dialog replaces window.prompt().
   // Local state lives at this scope because the trigger and the
   // submit handler need to reach `p.setDeliveryTime`.
@@ -2638,16 +2657,23 @@ function Step4Publish(p: Step4Props) {
                   </div>
                   {priceInvalid && <FieldError>This field is required.</FieldError>}
                   {/* Fee spec §1 — the seller sees their exact commission
-                      and estimated net proceeds before publishing. */}
-                  {Number(p.price) > 0 && (
-                    <p className="text-[12px] text-text-tertiary">
-                      You’ll receive{' '}
-                      <span className="font-semibold text-lime-text">
-                        ${netProceeds(Number(p.price), { categorySlug: p.categorySlug, gameSlug: p.gameSlug }).toFixed(2)}
-                      </span>
-                      {isBundleMode ? ' per bundle' : isCurrency ? ` per ${suffix}` : ''} after the{' '}
-                      {commissionPct({ categorySlug: p.categorySlug, gameSlug: p.gameSlug })}% commission.
-                    </p>
+                      and estimated net proceeds before publishing. The rate
+                      is the resolver's answer for THIS seller on THIS pair
+                      (fee engine PR 5, D1) — never a constant. */}
+                  {Number(p.price) > 0 && feePreview?.ok && (() => {
+                    const price = Number(p.price)
+                    const net = round2(price - round2((price * feePreview.pct) / 100))
+                    return (
+                      <p className="text-[12px] text-text-tertiary">
+                        You receive{' '}
+                        <span className="font-semibold text-lime-text">${net.toFixed(2)}</span>
+                        {isBundleMode ? ' per bundle' : isCurrency ? ` per ${suffix}` : ''} ({feePreview.pct}% fee
+                        {feePreview.foundingApplied ? ', founding rate' : feePreview.rankPts > 0 ? `, ${feePreview.rank} rank` : ''}).
+                      </p>
+                    )
+                  })()}
+                  {Number(p.price) > 0 && feePreview && !feePreview.ok && (
+                    <p className="text-[12px] text-text-tertiary">{feePreview.error}.</p>
                   )}
                 </div>
 

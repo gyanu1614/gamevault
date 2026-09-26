@@ -24,7 +24,12 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next-check/types/**/*.ts",
-    ".next-check2/types/**/*.ts"
+    ".next-check2/types/**/*.ts",
+    ".next-base/types/**/*.ts",
+    ".next-after/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "supabase/functions"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
+  ]
 }

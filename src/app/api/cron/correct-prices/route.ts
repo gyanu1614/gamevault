@@ -21,8 +21,8 @@ import { revalidateTag } from 'next/cache'
 
 import { PRICING_GAMES } from '@/lib/pricing/registry'
 import { PRICE_CACHE_TAG } from '@/lib/sab/priceCache'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
-const CRON_SECRET = process.env.CRON_SECRET
 
 /**
  * Next reads this as a literal only — it cannot follow a re-export or a
@@ -47,8 +47,8 @@ export const maxDuration = 300
 const GAMES = PRICING_GAMES
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+  // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+  if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

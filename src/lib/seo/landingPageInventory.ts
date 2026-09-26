@@ -23,7 +23,7 @@ import type { ListingWithRelations } from '@/types/database'
 // than just nulling the embedded seller.
 const LISTING_SELECT = `
   id, slug, title, price, currency, images, delivery_time, is_unlimited, quantity, views, sales,
-  seller:profiles!listings_seller_id_fkey!inner(id, username, avatar_url, seller_rating, is_test),
+  seller:public_profiles!listings_seller_id_fkey!inner(id, username, avatar_url, seller_rating, is_test),
   game:games!listings_game_id_fkey(id, name, slug, emoji),
   category:game_categories!listings_game_category_id_fkey(id, name, slug, icon_emoji)
 `

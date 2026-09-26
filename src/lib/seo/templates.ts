@@ -10,8 +10,9 @@
  * crawlable with real copy and FAQ, no manual SEO work. Pages call the
  * resolvers below instead of hand-writing metadata inline.
  *
- * Copy follows the PSP-safe wording rule (SafeDrop Buyer Protection,
- * "sellers are paid after you confirm" — never "escrow / we hold funds").
+ * Copy follows the commercial-agent wording rule (SafeDrop Buyer Protection,
+ * "Item Guaranteed or Full Refund" — never "escrow / we hold funds", and
+ * never WHEN money moves between buyer, platform and seller).
  */
 
 export type ProductType =
@@ -103,8 +104,8 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
   const introTemplate =
     `Browse ${name} ${primary} from verified sellers on DropMarket. ` +
     `Compare prices, stock and delivery times, then buy with confidence — ` +
-    `every order is covered by SafeDrop Buyer Protection, so the seller is ` +
-    `paid only after you confirm you received exactly what was described. ` +
+    `every order is covered by SafeDrop Buyer Protection, so you get ` +
+    `exactly what was described. ` +
     `If something is wrong or never arrives, you get your money back. Every ` +
     `${name} seller is verified before they can list.`
 
@@ -129,7 +130,7 @@ function gameFaq(name: string): SeoFaqItem[] {
   return [
     {
       q: `Is it safe to buy ${name} items and currency on DropMarket?`,
-      a: `Yes. Every ${name} order is covered by SafeDrop Buyer Protection — the seller is paid only after you confirm you received exactly what was described. If it's not delivered or not as described, you get your money back.`,
+      a: `Yes. Every ${name} order is covered by SafeDrop Buyer Protection — Item Guaranteed or Full Refund. If it's not delivered or not as described, you get your money back.`,
     },
     {
       q: `How fast is ${name} delivery?`,
@@ -202,9 +203,8 @@ export function resolveCategorySeo(input: CategorySeoInput): ResolvedSeo {
 
   const introTemplate =
     `Compare ${gameName} ${lc(categoryLabel)} from verified sellers on DropMarket. ` +
-    `${stat}Every order is protected by SafeDrop Buyer Protection — the seller is ` +
-    `paid only after you confirm delivery, so you get exactly what you ordered or ` +
-    `your money back. Sort by price, delivery speed or seller rating to find the ` +
+    `${stat}Every order is covered by SafeDrop Buyer Protection, so you get exactly ` +
+    `what you ordered or your money back. Sort by price, delivery speed or seller rating to find the ` +
     `right offer.`
 
   return {
@@ -226,7 +226,7 @@ function categoryFaq(game: string, label: string, type: string): SeoFaqItem[] {
   const base: SeoFaqItem[] = [
     {
       q: `Is buying ${game} ${lc(label)} on DropMarket safe?`,
-      a: `Yes — every ${game} ${lc(label)} order is covered by SafeDrop Buyer Protection. The seller is paid only after you confirm you received exactly what was described, so you get what you ordered or your money back.`,
+      a: `Yes — every ${game} ${lc(label)} order is covered by SafeDrop Buyer Protection: you get exactly what was described, or your money back. Confirm and the order is complete.`,
     },
     {
       q: `How much does ${game} ${lc(label)} cost?`,

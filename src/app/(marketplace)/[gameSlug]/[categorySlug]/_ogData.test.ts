@@ -35,6 +35,7 @@ describe('buildCategoryOgData', () => {
       gameName: 'Roblox',
       categoryName: 'Robux',
       subtitle: 'From $1.99 · 3 Offers · Instant Delivery',
+      live: true,
     })
     const categoryPath = f.paths.find((p) => p.startsWith('game_categories?'))
     expect(categoryPath).toMatch(/slug=eq\.buy-robux/)
@@ -68,6 +69,34 @@ describe('buildCategoryOgData', () => {
       gameName: 'Grow A Garden',
       categoryName: 'Buy Sheckles',
       subtitle: 'Verified Sellers · Instant Delivery',
+      live: false,
     })
+  })
+
+  /**
+   * Step 7b — `live` decides whether the route renders a Satori card (a full
+   * CPU pass) or serves the static branded PNG. Same rule as the sitemap: a
+   * pair is live with at least one active listing OR a curated currency
+   * config; everything else is long tail.
+   */
+  it('is not live with no listings and no curated currency config', async () => {
+    const f = fetcherFor({
+      'games?': { rows: [{ id: 'g1', name: 'Rust' }] },
+      'game_categories?': { rows: [{ id: 'c1', name: 'Accounts' }] },
+      'listings?': { rows: [], total: 0 },
+      'category_configs?': { rows: [] },
+    })
+    expect((await buildCategoryOgData('rust', 'buy-accounts', f.fetch)).live).toBe(false)
+    expect(f.paths.some((p) => p.startsWith('category_configs?'))).toBe(true)
+  })
+
+  it('is live with no listings when the game has a curated currency config', async () => {
+    const f = fetcherFor({
+      'games?': { rows: [{ id: 'g1', name: 'Blade Ball' }] },
+      'game_categories?': { rows: [{ id: 'c1', name: 'Tokens' }] },
+      'listings?': { rows: [], total: 0 },
+      'category_configs?': { rows: [{ game_id: 'g1' }] },
+    })
+    expect((await buildCategoryOgData('blade-ball', 'buy-currency', f.fetch)).live).toBe(true)
   })
 })

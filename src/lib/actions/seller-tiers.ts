@@ -22,12 +22,26 @@ const FALLBACK_TIER_CONFIGS = TIERS.map((t) => ({
   min_rating: t.thresholds.minRating,
   min_age_days: t.thresholds.minAgeDays,
   min_completion_rate: t.thresholds.minCompletionRate,
-  commission_rate: t.commissionRate,
+  // Rank steps are DATA (seller_tier_config.discount_pts, fee engine); the
+  // TS fallback claims no discount rather than inventing a ladder.
+  discount_pts: 0,
   listing_limit: t.listingLimit,
   banner_access: t.bannerAccess,
   badge_color: t.colors.badgeColor,
   sort_order: t.sortOrder,
 }))
+
+// ─── Platform fee settings the tier pages quote (floor) ───────────────────────
+
+export async function getRankFloorPct(): Promise<number | null> {
+  try {
+    const { data } = await getServiceClient().from('platform_fee_settings').select('rank_floor_pct').eq('id', true).maybeSingle()
+    const v = Number((data as any)?.rank_floor_pct)
+    return Number.isFinite(v) ? v : null
+  } catch {
+    return null
+  }
+}
 
 // ─── All tier configs (public, no auth needed) ────────────────────────────────
 
@@ -63,9 +77,9 @@ export async function getMyTierInfo() {
   const [salesResult, profileResult, completionResult] = await Promise.all([
     service
       .from('orders')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('seller_id', user.id)
-      .eq('status', 'completed'),
+      .eq('status', 'completed').limit(1),
 
     service
       .from('profiles')
@@ -110,11 +124,12 @@ export async function getMyTierInfo() {
       tierInfo: tierInfo as {
         current_tier: string
         eligible_tier: string
-        commission_rate: number
+        /** Rank step — points off the category rate (fee engine); never a rate. */
+        discount_pts: number | null
         listing_limit: number | null
         banner_access: boolean
         next_tier: string | null
-        next_commission_rate: number | null
+        next_discount_pts: number | null
         next_min_sales: number | null
         next_min_rating: number | null
       },
@@ -133,11 +148,11 @@ export async function getMyTierInfo() {
     tierInfo: {
       current_tier: currentTier,
       eligible_tier: currentTier, // can't compute without SQL function
-      commission_rate: tierConfig.commission_rate,
+      discount_pts: tierConfig.discount_pts,
       listing_limit: tierConfig.listing_limit,
       banner_access: tierConfig.banner_access,
       next_tier: nextConfig?.tier ?? null,
-      next_commission_rate: nextConfig?.commission_rate ?? null,
+      next_discount_pts: nextConfig?.discount_pts ?? null,
       next_min_sales: nextConfig?.min_sales ?? null,
       next_min_rating: nextConfig?.min_rating ?? null,
     },

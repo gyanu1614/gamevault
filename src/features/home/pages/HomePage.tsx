@@ -131,7 +131,7 @@ const WHY_CARDS = [
   {
     icon: ShieldCheck,
     title: 'SafeDrop on Every Order',
-    body: 'The seller is only paid after you confirm delivery. Not delivered or not as described? You get your money back — and real humans review anything off.',
+    body: 'Every order is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back — and real humans review anything off.',
     tone: 'lime',
     img: '/icons/trust/money-back.avif',
   },
@@ -145,7 +145,7 @@ const WHY_CARDS = [
   {
     icon: Coins,
     title: "Fees that don't sting",
-    body: 'Sellers pay 5–10% — not the 17–26% the big marketplaces skim — so listings start cheaper here and stay cheaper.',
+    body: 'Lowest fees for buyers and sellers — sellers keep more of every sale, buyers see every fee before they pay, so listings start cheaper here and stay cheaper.',
     tone: 'warning',
     img: '/how-it-works/step-2.avif',
   },

@@ -7,9 +7,11 @@
  *     input types no longer carry one, and the API route does not forward it.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { resolveCheckoutPromo } from './promo'
 
+const MIGRATIONS = join(process.cwd(), 'supabase', 'migrations')
 const CHECKOUT = readFileSync('src/lib/actions/checkout.ts', 'utf8')
 const ORDERS = readFileSync('src/lib/actions/orders.ts', 'utf8')
 const ROUTE = readFileSync('src/app/api/checkout/route.ts', 'utf8')
@@ -46,20 +48,18 @@ describe('AUTH-003 — resolveCheckoutPromo', () => {
 })
 
 describe('AUTH-003 — no client amount can reach the order total', () => {
-  it('checkout.ts and orders.ts never read a client-supplied promoDiscount', () => {
+  it('checkout.ts never reads a client-supplied promoDiscount; orders.ts no longer creates orders at all', () => {
     expect(CHECKOUT).not.toMatch(/input\.promoDiscount/)
-    expect(ORDERS).not.toMatch(/data\.promoDiscount/)
     expect(CHECKOUT).toMatch(/resolveCheckoutPromo\(input\.promoCode, subtotal, validatePromoCode\)/)
-    expect(ORDERS).toMatch(/resolveCheckoutPromo\(data\.promoCode, subtotal, validatePromoCode\)/)
+    // createOrder (the second order path with its own promo + fee logic) was
+    // deleted in fee engine PR 3 (A9). createCheckout is the only writer.
+    expect(ORDERS).not.toMatch(/createOrder\b|CreateOrderData|promoDiscount|resolveCheckoutPromo/)
   })
 
-  it('input contracts carry a promo CODE, not an amount', () => {
+  it('input contract carries a promo CODE, not an amount', () => {
     const checkoutInput = CHECKOUT.slice(CHECKOUT.indexOf('export interface CreateCheckoutInput'), CHECKOUT.indexOf('}', CHECKOUT.indexOf('export interface CreateCheckoutInput')))
     expect(checkoutInput).toMatch(/promoCode\?: string/)
     expect(checkoutInput).not.toMatch(/promoDiscount/)
-    const orderInput = ORDERS.slice(ORDERS.indexOf('interface CreateOrderData'), ORDERS.indexOf('}', ORDERS.indexOf('interface CreateOrderData')))
-    expect(orderInput).toMatch(/promoCode\?: string/)
-    expect(orderInput).not.toMatch(/promoDiscount|promoCodeId/)
   })
 
   it('API route forwards only a string promoCode; the client sends the code', () => {
@@ -70,6 +70,13 @@ describe('AUTH-003 — no client amount can reach the order total', () => {
   })
 
   it('promo usage is recorded on checkout so limits bind', () => {
-    expect(CHECKOUT).toMatch(/recordPromoUsage\(\{ promoCodeId, orderId, discountAmount: promoDiscount, userId: user\.id \}\)/)
+    // Round B Part 1: the usage is recorded INSIDE order_create_pending (the
+    // one-RPC checkout), under the promo row lock, in the same transaction
+    // as the order — the checkout passes the resolved promo in, and the RPC
+    // body calls promo_usage_record. A refusal rolls the order back.
+    expect(CHECKOUT).toMatch(/createPendingOrder\(\{[\s\S]*?promoCodeId,\s*promoDiscount,[\s\S]*?\}\)/)
+    const migration = readdirSync(MIGRATIONS).filter((f) => f.endsWith('_pay_attempts_model.sql')).map((f) => readFileSync(join(MIGRATIONS, f), 'utf8')).join('\n')
+    const body = migration.slice(migration.indexOf('FUNCTION public.order_create_pending('), migration.indexOf('FUNCTION public.payment_attempt_open('))
+    expect(body).toMatch(/PERFORM promo_usage_record\(p_promo_code_id, v_order_id, p_buyer_id, p_promo_discount\)/)
   })
 })

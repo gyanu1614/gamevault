@@ -77,8 +77,8 @@ async function getPricedItemCount(gameSlug: string): Promise<number> {
   const supabase = createAnonClient()
   const { count, error } = await (supabase as any)
     .from('sab_price_display')
-    .select('brainrot_id', { count: 'exact', head: true })
-    .eq('mutation_slug', 'default')
+    .select('brainrot_id', { count: 'exact' })
+    .eq('mutation_slug', 'default').limit(1)
   if (error) {
     console.error('Unable to count priced items for blog hub:', error)
     return 0

@@ -45,6 +45,13 @@ const RUNNER_SCHEDULED: Record<string, { workflow: string; step: string }[]> = {
   '/api/cron/expire-sab-listings': [
     { workflow: 'sab-eldorado-daily.yml', step: 'pnpm sab:expire' },
   ],
+  // Checkout fix round B: the payment reconciler runs every 15 min from a
+  // GitHub Actions workflow (Vercel Hobby rejects sub-daily cron). NEVER in
+  // vercel.json — a daily pass would leave a superseded invoice payable for
+  // a day.
+  '/api/cron/reconcile-payments': [
+    { workflow: 'reconcile-payments.yml', step: '/api/cron/reconcile-payments' },
+  ],
 }
 const runnerScheduled = Object.keys(RUNNER_SCHEDULED).sort()
 

@@ -14,6 +14,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import type { OrderEvent } from '@/lib/escrow/state-machine'
 
 export interface TransitionResult {
@@ -69,16 +70,36 @@ export async function transition(
 
   const r = data as any
 
-  // Stamp the payment moment: the delivery SLA timer starts at PAYMENT, not
-  // at order creation (buyers can pay long after Buy Now). First stamp wins;
-  // best-effort — never fails the transition.
-  if (event === 'CHARGE_CONFIRMED' && r.changed === true) {
+  // Step 7b — on completion the DB trigger update_listing_quantity decrements
+  // the listing's stock; the (24 h TTL) category page shows it. Best-effort,
+  // never fails the transition; the nightly full revalidate is the backstop.
+  if (r.status === 'completed' && r.changed === true) {
     try {
-      await (supabase.from('orders').update as any)({ paid_at: new Date().toISOString() })
+      const { data: order } = await supabase
+        .from('orders')
+        .select('listing_id')
         .eq('id', orderId)
-        .is('paid_at', null)
+        .maybeSingle()
+      const listingId = (order as { listing_id?: string | null } | null)?.listing_id
+      if (listingId) {
+        await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+      }
     } catch (e) {
-      console.error('[transition] paid_at stamp failed (non-fatal):', e)
+      console.error('[transition] listing surface revalidation failed (non-fatal):', e)
+    }
+  }
+
+  // Stamp the payment moment: the delivery SLA timer starts at PAYMENT, not
+  // at order creation (buyers can pay long after Buy Now). First stamp wins.
+  // PAY-003 moved every production CHARGE_CONFIRMED into order_confirm_payment,
+  // which stamps inside the transaction; this remains for direct callers and
+  // is FATAL (PAY-020): a swallowed failure silently broke the SLA timer.
+  if (event === 'CHARGE_CONFIRMED' && r.changed === true) {
+    const { error: stampError } = await (supabase.from('orders').update as any)({ paid_at: new Date().toISOString() })
+      .eq('id', orderId)
+      .is('paid_at', null)
+    if (stampError) {
+      throw new Error(`safedrop_transition(CHARGE_CONFIRMED) applied but paid_at stamp failed: ${stampError.message}`)
     }
   }
 

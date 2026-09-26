@@ -5,14 +5,25 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { revalidateMyListingSurfaces } from '@/lib/actions/revalidate-listing-surfaces'
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
+import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 
 const supabase = createClient()
 
 // =====================================================
 // TYPES (matching your existing schema)
 // =====================================================
+
+/**
+ * Step 7b — after a listing write from the browser, ask the server to
+ * revalidate the category pages this seller has listings in. Best-effort:
+ * the write already happened; the action is session-scoped and rate-limited.
+ */
+function revalidateMine(): void {
+  void revalidateMyListingSurfaces().catch((e) => console.error('[seller-api] revalidate failed:', e))
+}
 
 export type ListingStatus =
   | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
@@ -271,6 +282,7 @@ export const listingsApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 
@@ -295,6 +307,7 @@ export const listingsApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 
@@ -313,6 +326,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 
   /**
@@ -330,6 +344,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
 
     if (error) throw error
+    revalidateMine()
   },
 
   /**
@@ -347,6 +362,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 }
 
@@ -413,7 +429,7 @@ export const ordersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
@@ -494,6 +510,7 @@ export const ordersApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 }
@@ -560,7 +577,7 @@ export const buyerOrdersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
@@ -1120,10 +1137,10 @@ export const messagesApi = {
         // Get unread count
         const { count } = await supabase
           .from('messages')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
           .eq('conversation_id', conv.id)
           .eq('is_read', false)
-          .neq('sender_id', user.id)
+          .neq('sender_id', user.id).limit(1)
 
         return {
           ...conv,

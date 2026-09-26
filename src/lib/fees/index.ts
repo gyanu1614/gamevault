@@ -2,15 +2,18 @@
  * fees — single source of truth for ALL platform fees.
  *
  * Implements DropMarket_Fee_Implementation_Spec (12 Jul 2026) exactly.
- * Every percentage/config value lives HERE and is imported everywhere —
- * no scattered literals (spec §7). Values marked ADJUSTABLE in the spec
- * are plain consts here so ops can change them in one place.
+ * Marketplace fee, protection windows, payout and refund rules live HERE and
+ * are imported everywhere — no scattered literals (spec §7). The SELLER
+ * COMMISSION does not: it is database data behind resolve_seller_fee (see
+ * ./resolver.ts). Neither does the buyer PROCESSING fee (checkout B3): it is
+ * database data per payment method behind buyer_fee_quote. Values marked ADJUSTABLE are plain consts so ops can
+ * change them in one place.
  *
  * Money rule: round to 2 dp, half-up. Fee components are rounded
  * individually and summed (so $100 → $5.00 + $2.00 = $7.00 total).
  */
 
-import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { accountRiskBand, classifyOfferType, type AccountRiskBand, type OfferType } from '@/lib/utils/offer-type'
 
 // ─── Rounding ────────────────────────────────────────────────────────────────
 
@@ -20,187 +23,54 @@ export function round2(n: number): number {
 }
 
 // ─── §2 Buyer fee (added on top of item price) ───────────────────────────────
+//
+// Checkout B3: the PROCESSING fee is quoted per payment method by the database
+// (payment_method_fees → buyer_fee_quote, reached through
+// lib/payments/eligibility) and snapshotted on the order inside
+// order_create_pending. No TypeScript computes it any more — the processing
+// constant and the max(5%, PSP) flag that used to live here were deleted.
+// Only the flat MARKETPLACE fee (buyer protection) stays here.
 
-/** ADJUSTABLE — becomes max(5, actual PSP fee) when PSP contracts sign. */
-export const BUYER_PROCESSING_FEE_PCT = 5
 export const BUYER_MARKETPLACE_FEE_PCT = 2
-/** Feature flag for the max(5%, actual PSP fee) logic — OFF until PSP contracts. */
-export const BUYER_FEE_USE_PSP_MAX = false
 /** Display labels — the buyer fee is shown as two itemised lines
- *  (marketplace 2% + processing 5%), both always in the displayed
- *  total. Never “passthrough”, never hidden. */
+ *  (marketplace 2% + the method's processing fee), both always in the
+ *  displayed total. Never "passthrough", never hidden. */
 export const MARKETPLACE_FEE_LABEL = 'Marketplace fee'
 export const PROCESSING_FEE_LABEL = 'Processing fee'
 
 export interface BuyerFee {
-  /** Processing component %, after the (flag-gated) max() rule. */
-  processingPct: number
   marketplacePct: number
-  processingAmount: number
   marketplaceAmount: number
-  /** Total fee actually charged to the buyer (sum of rounded components). */
+  /** The marketplace component only — the method fee is added from the quote. */
   amount: number
 }
 
-/**
- * Buyer fee on a subtotal. `actualPspPct` participates only when
- * BUYER_FEE_USE_PSP_MAX is enabled.
- */
-export function buyerFee(subtotal: number, actualPspPct?: number): BuyerFee {
-  const processingPct =
-    BUYER_FEE_USE_PSP_MAX && typeof actualPspPct === 'number'
-      ? Math.max(BUYER_PROCESSING_FEE_PCT, actualPspPct)
-      : BUYER_PROCESSING_FEE_PCT
-  const processingAmount = round2((subtotal * processingPct) / 100)
+/** Marketplace (buyer protection) fee on a subtotal. */
+export function buyerFee(subtotal: number): BuyerFee {
   const marketplaceAmount = round2((subtotal * BUYER_MARKETPLACE_FEE_PCT) / 100)
   return {
-    processingPct,
     marketplacePct: BUYER_MARKETPLACE_FEE_PCT,
-    processingAmount,
     marketplaceAmount,
-    amount: round2(processingAmount + marketplaceAmount),
+    amount: marketplaceAmount,
   }
 }
 
-// ─── §1 Seller commission (deducted from ITEM PRICE at completion) ──────────
+// ─── §1 Seller commission ────────────────────────────────────────────────────
+// NOT HERE. The seller commission rate is DATA (fee_rules, seller_tier_config
+// .discount_pts, platform_fee_settings) resolved by ONE SQL function,
+// resolve_seller_fee, through src/lib/fees/resolver.ts — checkout stamps it
+// on the order, the sell wizard previews it, /sell/fees publishes it. No
+// TypeScript computes a commission percentage (fee-engine.md §8.4); the
+// constants that used to live here (COMMISSION_PCT, ROBLOX_ECONOMY_GAMES,
+// ACCOUNT_RISK_BANDS as a fee input, FOUNDING_DISCOUNT_PTS, commissionPct,
+// commissionAmount, netProceeds) were deleted in fee engine PR 5.
 
-export type AccountRiskBand = 'low' | 'mid' | 'high'
+// ─── §1 Protection windows / payout holds ───────────────────────────────────
+// Deleted in fee engine PR 7: the SafeDrop Protection window per category is a
+// row in `order_completion_windows` (admin-editable) and is applied by the
+// `order_mark_delivered` RPC. Nothing in TypeScript computes a window.
 
-export const COMMISSION_PCT = {
-  currencyStandard: 5,
-  currencyRobloxEconomy: 10,
-  currencyPromo: 0,
-  items: 7,
-  topUp: 5,
-  boosting: 7,
-  accounts: { low: 12, mid: 15, high: 20 } as Record<AccountRiskBand, number>,
-} as const
-
-/**
- * Roblox in-game economies (10% commission) — catalog config by game
- * slug; extend as games are added (spec names SAB / GAG / GAG2 “etc.”).
- */
-export const ROBLOX_ECONOMY_GAMES: string[] = [
-  'steal-a-brainrot',
-  'grow-a-garden',
-  'grow-a-garden-2',
-]
-
-/** Promo/launch games at 0% currency commission — default EMPTY (spec §1). */
-export const PROMO_ZERO_FEE_GAMES: string[] = []
-
-/**
- * Founding-seller commission discount, in PERCENTAGE POINTS off the seller's
- * per-category rate (floored at 0). This is what makes the "founding seller
- * locks a reduced rate for life" perk real: a founding seller pays
- * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)` on every category, forever
- * (see profiles.founding_seller, granted by admin). It applies AFTER the
- * promo/roblox-economy/account-risk category rate is resolved, so the discount
- * follows each category proportionally rather than flattening them:
- *   Roblox economy 10 → 8,  items/boosting 7 → 5,  standard currency 5 → 3,
- *   mid-risk accounts 15 → 13,  promo 0 → 0 (already floored).
- * ADJUSTABLE — one place to retune the founding programme.
- */
-export const FOUNDING_DISCOUNT_PTS = 2
-
-/**
- * Account risk bands by game slug (spec: each account listing maps to
- * exactly one band via catalog config). Unlisted games default to mid.
- */
-export const ACCOUNT_RISK_BANDS: Record<string, AccountRiskBand> = {
-  'gta-v': 'high',
-  gtavi: 'high',
-  'gta-6': 'high',
-}
-export const DEFAULT_ACCOUNT_RISK_BAND: AccountRiskBand = 'mid'
-
-export function accountRiskBand(gameSlug: string | null | undefined): AccountRiskBand {
-  return ACCOUNT_RISK_BANDS[(gameSlug || '').toLowerCase()] ?? DEFAULT_ACCOUNT_RISK_BAND
-}
-
-export interface CommissionInput {
-  /** categories.metadata.type for the listing’s category. */
-  categoryMetaType?: string | null
-  categorySlug?: string | null
-  gameSlug?: string | null
-  /**
-   * When true, apply the founding-seller discount (FOUNDING_DISCOUNT_PTS off
-   * the resolved category rate, floored at 0). Sourced from
-   * profiles.founding_seller by the caller (checkout/orders look the seller up
-   * before computing commission). Omitted/false = today’s behaviour exactly.
-   */
-  isFounding?: boolean
-}
-
-/**
- * Category commission %, BEFORE the founding-seller discount. This is the raw
- * spec §1 table lookup; founding logic lives in commissionPct so this stays a
- * pure category→rate map (also what the public Fees page quotes).
- */
-function categoryCommissionPct(input: CommissionInput): number {
-  const type: OfferType = classifyOfferType(
-    input.categoryMetaType ?? undefined,
-    input.categorySlug ?? undefined,
-  )
-  const game = (input.gameSlug || '').toLowerCase()
-  switch (type) {
-    case 'currency':
-      if (PROMO_ZERO_FEE_GAMES.includes(game)) return COMMISSION_PCT.currencyPromo
-      if (ROBLOX_ECONOMY_GAMES.includes(game)) return COMMISSION_PCT.currencyRobloxEconomy
-      return COMMISSION_PCT.currencyStandard
-    case 'top-up':
-      return COMMISSION_PCT.topUp
-    case 'accounts':
-      return COMMISSION_PCT.accounts[accountRiskBand(game)]
-    case 'items':
-    default:
-      // Boosting classifies as items today; both are 7% (spec §1).
-      return COMMISSION_PCT.items
-  }
-}
-
-/**
- * Effective commission % for a listing (spec §1 table), after the
- * founding-seller discount when `input.isFounding` is set. Founding sellers pay
- * `max(0, categoryPct − FOUNDING_DISCOUNT_PTS)`.
- */
-export function commissionPct(input: CommissionInput): number {
-  const base = categoryCommissionPct(input)
-  if (input.isFounding) return Math.max(0, base - FOUNDING_DISCOUNT_PTS)
-  return base
-}
-
-/** Commission amount on the item price (never on the buyer fee). */
-export function commissionAmount(itemPrice: number, input: CommissionInput): number {
-  return round2((itemPrice * commissionPct(input)) / 100)
-}
-
-/** “You’ll receive $X after Y% fee” — net proceeds = price − commission. */
-export function netProceeds(itemPrice: number, input: CommissionInput): number {
-  return round2(itemPrice - commissionAmount(itemPrice, input))
-}
-
-// ─── §1 Protection windows / payout holds (hours) ───────────────────────────
-
-export const PROTECTION_WINDOW_HOURS = {
-  currency: 48,
-  items: 72,
-  'top-up': 48,
-  /** After completion. */
-  boosting: 72,
-  accounts: { low: 5 * 24, mid: 7 * 24, high: 14 * 24 } as Record<AccountRiskBand, number>,
-} as const
-
-export function protectionWindowHours(input: CommissionInput): number {
-  const type: OfferType = classifyOfferType(
-    input.categoryMetaType ?? undefined,
-    input.categorySlug ?? undefined,
-  )
-  if (type === 'accounts') return PROTECTION_WINDOW_HOURS.accounts[accountRiskBand(input.gameSlug)]
-  if (type === 'currency') return PROTECTION_WINDOW_HOURS.currency
-  if (type === 'top-up') return PROTECTION_WINDOW_HOURS['top-up']
-  return PROTECTION_WINDOW_HOURS.items
-}
+export type { AccountRiskBand }
 
 // ─── §3 Withdrawal / payout fees (mirrored into withdrawal_methods rows) ────
 

@@ -24,7 +24,11 @@ import {
   getActiveGame,
   getEnabledCategory,
 } from './_routeGate'
-import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
+import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
+import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
+import { getGameDirectory } from '@/lib/games/directory'
+import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
+import { unstable_cache } from 'next/cache'
 import RouteSkeleton from './_RouteSkeleton'
 // PERF-004 — the three page variants below are mutually exclusive: a category
 // resolves to exactly one of them at render time. Statically importing all
@@ -78,17 +82,23 @@ import { SabNavExtras } from '../values/_SabNavExtras'
 /**
  * Step 7a — static-first. This route rendered per request (2,000 renders a
  * day, `private, no-store`) because it read the cookie client and
- * `searchParams` on the server. It is now ISR: every public read goes through
- * the anon client, the viewer is resolved in the client variants (useAuth),
- * and the generic grid's filters run in the browser. 5 minutes keeps the
- * listing counts honest; the long tail of (game, category) pairs renders on
- * demand into the same cache, and unknown pairs cache their 404 too.
+ * `searchParams` on the server. Every public read goes through the anon
+ * client, the viewer is resolved in the client variants (useAuth), and the
+ * generic grid's filters run in the browser.
+ *
+ * Step 7b — prerendered for EVERY enabled pair and event-driven. ~80% of hits
+ * are long-tail pairs visited hours apart, and ~12 deploys/day empty the
+ * on-demand cache, so a short TTL never deduped them. Now every pair is built
+ * at deploy, the page re-renders only when a listing mutation revalidates its
+ * `listings:category:<id>` tag (lib/revalidation/listings — every mutation
+ * path is enumerated by a guard test), and 24 h is the safety net alongside
+ * the nightly full revalidate. Unknown pairs still 404 and cache the 404.
  */
-export const revalidate = 300
+export const revalidate = 86400
 
-/** The sitemap's (game, category) pairs — same rule, see lib/seo/category-pairs. */
+/** Every enabled (active game, enabled category) pair — see lib/seo/category-pairs. */
 export async function generateStaticParams() {
-  return getIndexableCategoryPairs()
+  return getAllEnabledCategoryPairs()
 }
 
 interface PageProps {
@@ -118,7 +128,7 @@ function buildIntroLine(
       stats.count === 1 ? 'listing' : 'listings'
     } from $${formatStatPrice(stats.lowPrice)}${priceSuffix ? `/${priceSuffix}` : ''}${avg}. Every order covered by SafeDrop Buyer Protection.`
   }
-  return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes at 5–7% fees.`
+  return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes with the lowest fees for buyers and sellers.`
 }
 
 /**
@@ -149,9 +159,9 @@ function emptyTitleFor(gameName: string, categoryName: string): string {
 /** Unique-per-game description for a zero-inventory category page. */
 function emptyDescriptionFor(gameName: string, categoryName: string): string {
   const variants = [
-    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes at 5–7% fees. Every order is covered by SafeDrop Buyer Protection.`,
+    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes with the lowest fees for buyers and sellers. Every order is covered by SafeDrop Buyer Protection.`,
     `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop buyer protection — item guaranteed or your money back.`,
-    `${gameName} ${categoryName} on DropMarket: low seller fees, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
+    `${gameName} ${categoryName} on DropMarket: the lowest fees for buyers and sellers, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
     `Trade ${gameName} ${categoryName} the safe way. With SafeDrop, your item is guaranteed — get exactly what you ordered, or your money back.`,
   ]
   return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]
@@ -278,17 +288,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // gate costs no extra queries.
 const getCurrencyShell = cache(getCurrencyShellUncached)
 
-async function getAllGameCategories(gameId: string): Promise<GameCategory[]> {
-  const supabase = createAnonClient()
-  const { data } = await supabase
-    .from('game_categories')
-    .select('id, name, slug')
-    .eq('game_id', gameId)
-    .eq('is_enabled', true)
-    .order('sort_order', { ascending: true })
-    .order('name', { ascending: true }) as any
-  return (data || []) as GameCategory[]
-}
+// Step 7b — per game, not per page: a game's sub-nav tabs are identical on
+// every one of its category pages, so this is one tagged cache entry per game
+// per build/hour (GAME_DIRECTORY_TAG, like the footer directory).
+const getAllGameCategories = unstable_cache(
+  async (gameId: string): Promise<GameCategory[]> => {
+    const supabase = createAnonClient()
+    const { data } = await supabase
+      .from('game_categories')
+      .select('id, name, slug')
+      .eq('game_id', gameId)
+      .eq('is_enabled', true)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }) as any
+    return (data || []) as GameCategory[]
+  },
+  ['game-categories-nav'],
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+)
 
 // V21/P7.ae — Apply an "exclude offline sellers" filter to a listings
 // query. Sellers in Offline Mode have all their offers hidden from
@@ -319,7 +336,7 @@ async function getGenericListings(
     .select(`
       id, slug, title, description, price, original_price, images,
       delivery_time, view_count, created_at,
-      seller:profiles!listings_seller_id_fkey!inner(
+      seller:public_profiles!listings_seller_id_fkey!inner(
         id, username, seller_tier, avatar_url, is_test,
         presence:seller_presence(is_online, last_seen_at)
       )
@@ -379,6 +396,11 @@ async function CategoryBrowsePage({ params }: PageProps) {
   // items / generic). One indexed read, no per-query refetch.
   const pausedSellerIds = await getPausedSellerIds()
 
+  // Step 7b — tag this render so listing mutations in this category can
+  // revalidate exactly this page (cache()d lookup, shared with the gate).
+  const resolvedPair = await getGameAndCategory(gameSlug, categorySlug)
+  if (resolvedPair) await bindCategoryListingsTag(resolvedPair.category.id)
+
   // V17g — Canonical-redirect block removed. The DB now stores the
   // canonical slug directly (buy-robux, buy-vbucks, etc.), so every
   // URL the app serves is already canonical. No aliases → no 301s →
@@ -429,7 +451,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, description, price, quantity, delivery_time, is_unlimited,
             bundle_id, region, platform,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
@@ -588,7 +610,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, title, description, price, original_price, quantity,
             min_quantity, delivery_method, delivery_time, is_unlimited,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, is_verified
             )
@@ -753,7 +775,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, slug, title, price, original_price, delivery_time,
             quantity, is_unlimited, images, template_data, status,
-            seller:profiles!listings_seller_id_fkey(
+            seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
             ),
@@ -964,53 +986,10 @@ async function RelatedGames({
   categorySlug: string
   categoryName: string
 }) {
-  const supabase = createAnonClient()
-
-  const { data: games } = (await supabase
-    .from('games')
-    .select('id, slug, name, image_url, sort_order')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
-    .order('name', { ascending: true })) as {
-      data: { id: string; slug: string; name: string; image_url: string | null }[] | null
-    }
-
-  const list = games ?? []
-  if (list.length === 0) return null
-
-  const { data: cats } = (await supabase
-    .from('game_categories')
-    .select('game_id, slug, name, sort_order')
-    .in('game_id', list.map((g) => g.id))
-    .eq('is_enabled', true)
-    .order('sort_order', { ascending: true })) as unknown as {
-      data: {
-        game_id: string
-        slug: string
-        name: string | null
-        sort_order: number | null
-      }[] | null
-    }
-
-  const catsByGame = new Map<string, { slug: string; label: string }[]>()
-  for (const c of cats ?? []) {
-    const label =
-      c.name ||
-      c.slug.replace(/^buy-/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
-    const arr = catsByGame.get(c.game_id)
-    if (arr) arr.push({ slug: c.slug, label })
-    else catsByGame.set(c.game_id, [{ slug: c.slug, label }])
-  }
-
-  const directoryGames = list
-    .map((g) => ({
-      slug: g.slug,
-      name: g.name,
-      imageUrl: g.image_url,
-      categories: catsByGame.get(g.id) ?? [],
-    }))
-    .filter((g) => g.categories.length > 0)
-
+  // Step 7b — the directory (every active game + its enabled categories) is
+  // the same on all ~600 prerendered pages: one tagged cache read
+  // (lib/games/directory), not two queries per page at build.
+  const directoryGames = await getGameDirectory()
   if (directoryGames.length === 0) return null
 
   return <GameDirectory games={directoryGames} heading={`Buy ${categoryName} for Every Game`} />

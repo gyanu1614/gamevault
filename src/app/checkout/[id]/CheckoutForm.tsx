@@ -12,8 +12,10 @@
  *
  * All money logic preserved from the previous checkout: quantity comes
  * clamped from the ?qty deep-link, promo codes (validatePromoCode),
- * wallet Store Credit toggle, itemised buyer fee (lib/fees is the one
- * source, mirrored server-side), DC cashback, and submit via
+ * wallet Store Credit toggle, itemised buyer fee (the marketplace fee from
+ * lib/fees; the PROCESSING fee per method is the database's quote, handed in
+ * as `methods` by the page from the same eligibleMethods() call
+ * createCheckout uses — checkout B3), DC cashback, and submit via
  * createCheckout (amounts recomputed server-authoritatively). The
  * chosen network rides to the payment page as ?net= so its coin tab
  * preselects.
@@ -57,10 +59,8 @@ import {
 } from 'lucide-react'
 
 import { createCheckout } from '@/lib/actions/checkout'
-import {
-  payssionSelectorMethods,
-  type PayssionMethodMeta,
-} from '@/lib/payments/providers/payssion/methods'
+import type { ClientMethod } from '@/lib/payments/eligibility'
+import { clampCheckoutQty } from './qty'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -418,11 +418,13 @@ function CompanyStrip() {
   )
 }
 
-// Payssion local methods come FROM THE PROVIDER REGISTRY (methods.ts) —
-// pm_ids, labels, region chips, display order and country tags all live
-// there. This map only adds what the registry shouldn't know: the icon and
-// the buyer-facing note. Adding a method later = registry entry + one line
-// here (a missing line still renders, with the fallback icon/note).
+// Payssion local methods arrive from the PAGE (eligibleMethods → the provider
+// registry + payment_method_fees): pm_ids, labels, region chips, display
+// order, country tags and each method's quoted fee. Hidden / over-cap methods
+// never reach this component. This map only adds what neither the registry
+// nor the fee table should know: the icon and the buyer-facing note. Adding
+// a method later = registry entry + fee row + one line here (a missing line
+// still renders, with the fallback icon/note).
 type PayMethodId = 'crypto' | (string & {})
 const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; logo?: string }> = {
   pix_br: {
@@ -471,6 +473,39 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
     Icon: Landmark,
     points: ['Approve on the WebPay page', 'Payment confirms instantly'],
   },
+  // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
+  trustly: {
+    Icon: Landmark,
+    points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
+  },
+  blik_pl: {
+    Icon: Smartphone,
+    points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
+  },
+  p24_pl: {
+    Icon: Landmark,
+    points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
+  },
+  eps_at: {
+    Icon: Landmark,
+    points: ['Approve in your bank portal', 'Payment confirms instantly'],
+  },
+  mbway_pt: {
+    Icon: Smartphone,
+    points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
+  },
+  bancomatpay_it: {
+    Icon: Smartphone,
+    points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
+  },
+  payu_cz: {
+    Icon: Landmark,
+    points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
+  },
+  paysafecard: {
+    Icon: CreditCard,
+    points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your DropMarket wallet'],
+  },
 }
 const FALLBACK_UI = {
   Icon: Landmark,
@@ -481,6 +516,8 @@ interface LocalMethodRow {
   id: string
   label: string
   region: string
+  /** The database's buyer-fee quote for this order (checkout B3). */
+  quote: ClientMethod['quote']
   /** Real brand mark (public/payments/*.svg); Icon is the fallback. */
   logo?: string
   /** Emoji flag for the region chip: country flag, or 🌍 for multi-country. */
@@ -511,18 +548,26 @@ function countryName(cc: string): string {
   }
 }
 
-function toRow(m: PayssionMethodMeta): LocalMethodRow {
-  const ui = METHOD_UI[m.pmId] ?? FALLBACK_UI
+function toRow(m: ClientMethod): LocalMethodRow {
+  const ui = METHOD_UI[m.method] ?? FALLBACK_UI
   return {
-    id: m.pmId,
+    id: m.method,
     label: m.label,
     region: m.coverage,
+    quote: m.quote,
     logo: ui.logo,
     flag: m.countries.length === 1 ? ccFlag(m.countries[0]) : '🌍',
     countries: m.countries,
     Icon: ui.Icon,
     points: ui.points,
   }
+}
+
+/** "+ $1.20 · 5%" — the tile / badge fee line (checkout B3). */
+function fmtFeeLine(q: ClientMethod['quote'] | null | undefined): string {
+  if (!q) return ''
+  const pct = q.pctEffective == null ? '' : ` · ${Number(q.pctEffective).toFixed(2).replace(/\.?0+$/, '')}%`
+  return `+ $${(q.feeMinor / 100).toFixed(2)}${pct}`
 }
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
@@ -536,16 +581,24 @@ interface CheckoutFormProps {
   bundleSummary?: { name: string; iconUrl: string | null } | null
   /** ISO-3166 alpha-2 from the Vercel geo header; null/undefined → show all. */
   buyerCountry?: string | null
+  /** Checkout B3: the methods this order can be paid with + each one's quoted
+   *  fee, from eligibleMethods() on the server (the same call createCheckout
+   *  refuses against). Hidden / over-cap methods are already absent. */
+  methods: ClientMethod[]
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods }: CheckoutFormProps) {
   const router = useRouter()
 
   // Tabbed selector: Crypto | E-Wallet | Card (soon). Local methods live in
   // the E-Wallet tab, filtered by a country pin that defaults to the buyer's
   // geo country (G2A pattern). Rows and countries derive from the provider
   // registry, so new methods surface automatically.
-  const allLocalRows = payssionSelectorMethods().map(toRow)
+  const allLocalRows = methods.filter((m) => m.kind === 'local').map(toRow)
+  // The crypto row for the env-active provider; absent = crypto is not
+  // payable for this order (no fee row / hidden) and its tab is disabled.
+  const cryptoMethod = methods.find((m) => m.kind === 'crypto') ?? null
+  const walletQuote = methods.find((m) => m.kind === 'wallet')?.quote ?? null
   const geoCc = (buyerCountry ?? '').trim().toUpperCase()
   const geoValid = /^[A-Z]{2}$/.test(geoCc)
   // Country options: every country with a method (registry order) + the
@@ -562,22 +615,17 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   if (geoValid && !localCountries.some((c) => c.cc === geoCc)) {
     localCountries.unshift({ cc: geoCc, count: 0 })
   }
-  const [payCategory, setPayCategory] = useState<'crypto' | 'ewallet'>('crypto')
+  const [payCategory, setPayCategory] = useState<'crypto' | 'ewallet'>(cryptoMethod ? 'crypto' : 'ewallet')
   // '' = no country chosen yet (unknown geo) — the tab shows a chooser
   // prompt instead of dumping every method.
   const [walletCountry, setWalletCountry] = useState<string>(geoValid ? geoCc : '')
 
-  // Quantity comes clamped from the ?qty deep-link (chosen on the item page).
-  const seedQty = (() => {
-    if (!initialQty) return 1
-    const min = bundleSummary ? 1 : Math.max(1, listing.min_quantity ?? 1)
-    const max = Math.max(min, listing.quantity ?? min)
-    return Math.min(max, Math.max(min, initialQty))
-  })()
-  const [quantity] = useState(seedQty)
+  // Quantity comes clamped from the ?qty deep-link (chosen on the item page)
+  // — the same clamp the page quoted the buyer fee for.
+  const [quantity] = useState(() => clampCheckoutQty(listing, initialQty, !!bundleSummary))
 
   // Payment method: crypto (expanded card) or a Payssion local method.
-  const [payMethod, setPayMethod] = useState<PayMethodId>('crypto')
+  const [payMethod, setPayMethod] = useState<PayMethodId>(cryptoMethod ? 'crypto' : (allLocalRows[0]?.id ?? 'crypto'))
   const walletRows =
     walletCountry === ''
       ? []
@@ -612,10 +660,23 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [useWallet, setUseWallet] = useState(false)
 
   const subtotal = listing.price * quantity
-  const fee = buyerFee(subtotal)
-  const totalBeforeWallet = subtotal + fee.amount - promoDiscount
-  const walletAmount = useWallet ? Math.min(walletBalance, totalBeforeWallet) : 0
-  const total = Math.max(totalBeforeWallet - walletAmount, 0)
+  const fee = buyerFee(subtotal) // marketplace fee only (lib/fees)
+  // Processing fee = the database's quote for the picked method (checkout
+  // B3). When store credit covers the whole order at the wallet row's quote,
+  // the order is a 'wallet' order and that quote applies — exactly the
+  // routing createCheckout performs, so page and snapshot agree to the cent.
+  const methodQuote =
+    payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
+  const baseBeforeMethodFeeCents = Math.round(subtotal * 100) + Math.round(fee.marketplaceAmount * 100) - Math.round(promoDiscount * 100)
+  const walletBalanceCents = Math.round(walletBalance * 100)
+  const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= baseBeforeMethodFeeCents + walletQuote.feeMinor
+  const activeQuote = walletCoversAll ? walletQuote : methodQuote
+  const processingFee = (activeQuote?.feeMinor ?? 0) / 100
+  const quotedPct = activeQuote?.pctEffective ?? null
+  const totalBeforeWalletCents = Math.max(baseBeforeMethodFeeCents + (activeQuote?.feeMinor ?? 0), 0)
+  const walletAmountCents = useWallet ? Math.min(walletBalanceCents, totalBeforeWalletCents) : 0
+  const walletAmount = walletAmountCents / 100
+  const total = Math.max(totalBeforeWalletCents - walletAmountCents, 0) / 100
 
   useEffect(() => {
     if (!user) return
@@ -662,7 +723,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   // Crypto needs a coin picked before Pay makes sense.
-  const payDisabled = paying || (payMethod === 'crypto' && !coin)
+  const payDisabled = paying || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
   const handlePay = async () => {
     if (payMethod === 'crypto' && !coin) return
     setPaying(true)
@@ -776,10 +837,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           Choose Coin
         </p>
         <span
-          className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+          className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold tabular-nums"
           style={{ background: T.limeTint, color: T.forest }}
         >
-          No Fees
+          {fmtFeeLine(cryptoMethod?.quote)}
         </span>
       </div>
       {/* Coin tiles — USDT opens a network chooser below; BTC is pick-and-pay. */}
@@ -899,12 +960,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
             {m.label}
           </span>
+          {/* Fee line (checkout B3): the database's quote for THIS order. */}
+          <span className="ml-auto whitespace-nowrap text-[12px] font-semibold tabular-nums" style={{ color: T.ink2 }}>
+            {fmtFeeLine(m.quote)}
+          </span>
           {/* Region chip only when it ADDS info — i.e. the row's country
               differs from the selector (a kept selection after a country
               switch). Same-country chips just repeat the pin. */}
           {!m.countries.includes(walletCountry) && (
             <span
-              className="ml-auto rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
+              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
               style={{ background: '#EFEFEA', color: '#6B7166' }}
             >
               {m.flag} {m.region}
@@ -930,17 +995,23 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // ── Category tab bar: Crypto | E-Wallet | Card (soon) ─────────────
   const categoryTab = (cat: 'crypto' | 'ewallet', icon: React.ReactNode, label: string) => {
     const active = payCategory === cat
+    // Crypto with no fee row for the active provider is not payable — the tab
+    // greys out like Card (hidden methods disappear; checkout B3).
+    const disabled = cat === 'crypto' && !cryptoMethod
     return (
       <button
         type="button"
         role="tab"
         aria-selected={active}
+        disabled={disabled}
         onClick={() => selectCategory(cat)}
         className="flex h-11 items-center justify-center gap-2 rounded-md text-[13.5px] font-semibold transition-colors active:scale-[0.98]"
         style={
           active
             ? { background: T.forest, color: '#FFFFFF' }
-            : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1.5px ${T.line}` }
+            : disabled
+              ? { background: T.row, color: T.dis, boxShadow: `inset 0 0 0 1.5px ${T.disLine}`, cursor: 'not-allowed' }
+              : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1.5px ${T.line}` }
         }
       >
         {icon}
@@ -1086,7 +1157,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 {walletCountryMeta ? countryName(walletCountryMeta.cc) : 'Your Region'} Yet
               </p>
               <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                Crypto works everywhere, with no processing fees. Or pick another country above.
+                Crypto works everywhere. Or pick another country above.
               </p>
               <button
                 type="button"
@@ -1262,10 +1333,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         />
         <Row
           label={PROCESSING_FEE_LABEL}
-          value={`+$${fee.processingAmount.toFixed(2)}`}
+          value={`+$${processingFee.toFixed(2)}`}
           infoTitle="Processing Fee"
-          infoBadge={`${fee.processingPct}%`}
-          info="Covers payment processing."
+          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
+          info="Covers payment processing for the method you picked."
         />
         {promoDiscount > 0 && (
           <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.forest2} />

@@ -12,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
@@ -178,10 +179,10 @@ export async function checkSellerNeedsModeration(): Promise<{
     // Count approved listings for entry-tier sellers still under moderation.
     const { count } = await supabase
       .from('listings')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('seller_id', user.id)
       .in('status', ['active', 'sold', 'archived'])
-      .not('approved_at', 'is', null)
+      .not('approved_at', 'is', null).limit(1)
 
     const approvedCount = count || 0
 
@@ -284,6 +285,9 @@ export async function updateListingPrice(
       .eq('id', listingId)
 
     if (updateError) throw updateError
+
+    // Step 7b — the category page shows this price (24 h TTL).
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true }
   } catch (error: any) {
@@ -405,9 +409,10 @@ export async function updateListing(
     if (updateError) throw updateError
 
     revalidatePath('/account/listings')
-    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
-    // revalidate `/` (homepage features popular listings).
-    revalidatePath('/')
+    // No revalidatePath('/'): every homepage shelf is a CLIENT react-query
+    // hook (features/home/hooks/*), which server revalidation cannot reach.
+    // Step 7b — the category page itself (status/price/title changes).
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true, listing: data }
   } catch (error: any) {
@@ -475,7 +480,9 @@ export async function deleteListing(
     // Verify ownership before deleting
     const { data: listing } = await supabase
       .from('listings')
-      .select('seller_id, images')
+      // game_category_id: read BEFORE the delete so the category page can be
+      // revalidated afterwards (Step 7b) — the row is gone by then.
+      .select('seller_id, images, game_category_id')
       .eq('id', listingId)
       .single() as any
 
@@ -506,6 +513,12 @@ export async function deleteListing(
       .eq('id', listingId)
 
     if (deleteError) throw deleteError
+
+    if (listing.game_category_id) {
+      await revalidateListingSurfaces(supabase as never, {
+        gameCategoryIds: [listing.game_category_id],
+      })
+    }
 
     return { success: true }
   } catch (error: any) {

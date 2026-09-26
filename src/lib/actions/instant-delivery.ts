@@ -9,6 +9,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import {
   encryptDeliveryData,
   decryptDeliveryData,
@@ -129,6 +130,10 @@ export async function addInstantDeliveryInventory(
       }
     }
 
+    // Step 7b — sync_listing_quantity_with_inventory (DB trigger) just changed
+    // listings.quantity; the category page shows stock.
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+
     return {
       success: true,
       count: data?.length || 0,
@@ -155,9 +160,9 @@ export async function getAvailableInventoryCount(
 
     const { count, error } = await supabase
       .from('instant_delivery_inventory')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('listing_id', listingId)
-      .eq('status', 'available')
+      .eq('status', 'available').limit(1)
 
     if (error) {
       console.error('Error getting inventory count:', error)
@@ -439,6 +444,9 @@ export async function deleteAvailableInventory(
       console.error('Error deleting inventory:', error)
       return { success: false, error: 'Failed to delete inventory' }
     }
+
+    // Step 7b — quantity trigger, as above.
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true, deletedCount: count || 0 }
 

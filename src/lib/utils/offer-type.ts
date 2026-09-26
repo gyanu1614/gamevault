@@ -9,6 +9,27 @@
 
 export type OfferType = 'currency' | 'items' | 'accounts' | 'top-up'
 
+/**
+ * Account risk band by game slug — kept for the admin Fees tab's risk-band
+ * display (setAccountRiskBand). Since fee PR 7 it drives NO window: the
+ * SafeDrop Protection window per category is a row in order_completion_windows.
+ * It is NOT a fee input: account commission rates are fee_rules pair rows
+ * resolved by resolve_seller_fee (fee-engine.md §9 A10, §10 Q4).
+ * Unlisted games default to mid.
+ */
+export type AccountRiskBand = 'low' | 'mid' | 'high'
+
+export const ACCOUNT_RISK_BANDS: Record<string, AccountRiskBand> = {
+  'gta-v': 'high',
+  gtavi: 'high',
+  'gta-6': 'high',
+}
+export const DEFAULT_ACCOUNT_RISK_BAND: AccountRiskBand = 'mid'
+
+export function accountRiskBand(gameSlug: string | null | undefined): AccountRiskBand {
+  return ACCOUNT_RISK_BANDS[(gameSlug || '').toLowerCase()] ?? DEFAULT_ACCOUNT_RISK_BAND
+}
+
 export function classifyOfferType(
   metaType: string | undefined,
   slug: string | undefined,

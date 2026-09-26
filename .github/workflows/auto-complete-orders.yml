@@ -1,0 +1,22 @@
+# Hourly auto-complete of delivered orders whose SafeDrop Protection window
+# has closed, plus the halfway "please confirm receipt" buyer reminder.
+# Lives here because Vercel Hobby only allows once-daily cron schedules — the
+# vercel.json entry for /api/cron/auto-release-escrow (daily) is the backstop;
+# this is the real cadence. The handler is idempotent and paginated, so an
+# overlapping or repeated run completes nothing twice.
+name: Auto-Complete Orders
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch: {}
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call auto-complete endpoint
+        run: |
+          code=$(curl -s -o /tmp/out -w "%{http_code}" -m 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/auto-release-escrow)
+          cat /tmp/out
+          [ "$code" = "200" ] || exit 1

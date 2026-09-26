@@ -241,6 +241,10 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
   describe('DB-015a — createCheckout supersede runs CANCELLED + hold return as one RPC', () => {
     it('supersede returns the exact hold (escrow_held → user_wallet) under wallet_refund:<id>', async () => {
       sessionClient = fx!.buyer.client
+      // PAY-005: the fixture's raw pending order (no charge, seconds old) reads
+      // as a racing checkout still creating its charge and would be refused
+      // with "payment is being prepared" rather than superseded — park it.
+      await parkPendingOrders()
       await fundWallet(fx!.buyer.id, 10_00n, 'supersede')
       const { createCheckout } = await import('@/lib/actions/checkout')
 
@@ -266,6 +270,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
 
     it('seam module unreachable → nothing changes and the buyer gets the SAME pending order back', async () => {
       sessionClient = fx!.buyer.client
+      await parkPendingOrders() // PAY-005, as above
       const { createCheckout } = await import('@/lib/actions/checkout')
       const a = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
       expect(a.success, a.error).toBe(true)
@@ -397,6 +402,11 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
   describe('DB-015c — withdrawal cancel/reject reverse the hold FIRST, in the same transaction', () => {
     async function makeHeldRequest(amountMinor: bigint, suffix: string) {
       await fundSeller(fx!.seller.id, amountMinor, suffix)
+      // PR 7: one OPEN withdrawal per seller is a partial unique index. Each
+      // case here needs a fresh pending row, so park whatever the previous
+      // case left open (status only — its hold journal is cleaned up by id).
+      await fx!.svc.from('withdrawal_requests').update({ status: 'failed' })
+        .eq('user_id', fx!.seller.id).in('status', ['pending', 'approved', 'processing'])
       const { data: req, error } = await fx!.svc.from('withdrawal_requests').insert({
         user_id: fx!.seller.id, amount: Number(amountMinor) / 100, method_id: methodId, method_name: 'Guard Test Method',
         status: 'pending', fee_amount: 0, net_amount: Number(amountMinor) / 100, payment_details: {},
@@ -462,15 +472,15 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       const { error: pe } = await fx!.svc.rpc('withdrawal_payout', { p_request_id: id } as any)
       if (pe) throw new Error(`withdrawal_payout: ${pe.message}`)
       const availBefore = await sellerAvailMinor(fx!.seller.id)
-      const { count: notifBefore } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
-        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
+      const { count: notifBefore } = await fx!.svc.from('notifications').select('id', { count: 'exact' })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected').limit(1)
 
       sessionClient = fx!.admin.client
       const { rejectWithdrawalRequest } = await import('@/lib/actions/withdrawals')
       const res = await rejectWithdrawalRequest({ requestId: id, reason: 'guard test' })
 
-      const { count: notifAfter } = await fx!.svc.from('notifications').select('id', { count: 'exact', head: true })
-        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected')
+      const { count: notifAfter } = await fx!.svc.from('notifications').select('id', { count: 'exact' })
+        .eq('user_id', fx!.seller.id).eq('type', 'withdrawal_rejected').limit(1)
       expect(res.success).toBe(false)
       expect(await requestStatus(id)).toBe('pending')
       expect(await txnByKey(`withdrawal_reversal:${id}`)).toBeNull()
@@ -530,8 +540,8 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
     }
     const paidOrder = (suffix: string) => insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-ID-${suffix}-${tag()}` })
     async function soldCount() {
-      const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact', head: true })
-        .eq('listing_id', fx!.listingId).eq('status', 'sold')
+      const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact' })
+        .eq('listing_id', fx!.listingId).eq('status', 'sold').limit(1)
       return count ?? 0
     }
     /** Session client whose orders UPDATE fails once (the plaintext stamp). */
@@ -623,7 +633,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       return (promo as any).id as string
     }
     const totalUsed = async (id: string) => ((await fx!.svc.from('promo_codes').select('total_used').eq('id', id).single()).data as any).total_used as number
-    const usages = async (id: string) => (await fx!.svc.from('promo_code_usages').select('id', { count: 'exact', head: true }).eq('promo_code_id', id)).count ?? 0
+    const usages = async (id: string) => (await fx!.svc.from('promo_code_usages').select('id', { count: 'exact' }).eq('promo_code_id', id).limit(1)).count ?? 0
 
     it('N concurrent redemptions on N orders → N usage rows and total_used = N; a replay does not double-count', async () => {
       const promoId = await makePromo()
@@ -682,7 +692,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
       // Once per order: a second recorder run (replayed confirm / auto-release) is a no-op.
       const { recordReferralCommission } = await import('@/lib/referral/commission')
       await recordReferralCommission(orderId)
-      const { count } = await fx!.svc.from('referral_earnings').select('id', { count: 'exact', head: true }).eq('order_id', orderId)
+      const { count } = await fx!.svc.from('referral_earnings').select('id', { count: 'exact' }).eq('order_id', orderId).limit(1)
       expect(count).toBe(1)
     }, 60_000)
   })

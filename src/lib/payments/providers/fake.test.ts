@@ -71,3 +71,30 @@ describe('fake provider: parseWebhook verification + mapping', () => {
     expect(events).toHaveLength(0)
   })
 })
+
+describe('fake provider: voidCharge (test double for the cancel outbox)', () => {
+  it('voids by default and records the call', async () => {
+    const { fakeVoid } = await import('@/lib/payments/providers/fake')
+    fakeVoid.reset()
+    const r = await fakeProvider.voidCharge('fake_o1')
+    expect(r.outcome).toBe('voided')
+    expect(fakeVoid.calls).toEqual(['fake_o1'])
+  })
+  it('per-charge behaviour: paid / throw', async () => {
+    const { fakeVoid } = await import('@/lib/payments/providers/fake')
+    fakeVoid.reset()
+    fakeVoid.outcomes.set('fake_paid', 'paid')
+    fakeVoid.outcomes.set('fake_boom', 'throw')
+    expect((await fakeProvider.voidCharge('fake_paid')).outcome).toBe('paid')
+    await expect(fakeProvider.voidCharge('fake_boom')).rejects.toThrow(/fake: void failed/)
+    fakeVoid.reset()
+  })
+})
+
+describe('fake provider: paidMinor on a paid webhook (overpayment tests)', () => {
+  it('carries `paid` when the body names paidMinor', async () => {
+    const { events } = await fakeProvider.parseWebhook(sig, body({ chargeId: 'c1', orderId: 'o1', status: 'paid', amountMinor: '107', paidMinor: '150', currency: 'USD' }))
+    expect((events[0] as any).settled).toEqual({ amountMinor: 107n, currency: 'USD' })
+    expect((events[0] as any).paid).toEqual({ amountMinor: 150n, currency: 'USD' })
+  })
+})

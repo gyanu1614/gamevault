@@ -519,8 +519,8 @@ export function MobileHero() {
         </span>
       </motion.h1>
       <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-white/65 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
-        Buy accounts, currency and items — held in escrow until you say it&apos;s
-        delivered.
+        Buy accounts, currency and items — every order covered by SafeDrop Buyer
+        Protection.
       </p>
 
       <div className="mt-4">
@@ -640,7 +640,7 @@ const PROTECTION_STEPS = [
   { num: '01', title: 'Choose Your Item', copy: 'Compare offers, buy with confidence.', Icon: Step1ChooseItem, glow: 'rgba(148,178,255,0.14)' },
   { num: '02', title: 'Pay Securely', copy: 'Covered by SafeDrop from the first second.', Icon: Step2SecurePayment, glow: 'rgba(255,120,120,0.13)' },
   { num: '03', title: 'Get Your Delivery', copy: 'Fast in-game delivery, tracked live.', Icon: Step3Delivery, glow: 'rgba(255,190,90,0.13)' },
-  { num: '04', title: 'Confirm Delivery', copy: 'Seller is paid after you confirm — or your money back.', Icon: Step4Confirm, glow: 'rgba(163,230,53,0.14)' },
+  { num: '04', title: 'Confirm Delivery', copy: 'Confirm and the order is complete — or your money back.', Icon: Step4Confirm, glow: 'rgba(163,230,53,0.14)' },
 ] as const
 
 export function MobileProtectionStrip() {
@@ -685,7 +685,7 @@ export function MobileProtectionStrip() {
 const TRUST_ROWS = [
   {
     claim: 'SafeDrop on Every Order',
-    proof: 'Sellers are paid only after you confirm delivery.',
+    proof: 'Item Guaranteed or Full Refund.',
   },
   {
     claim: 'Sellers Earn Their Spot',
@@ -693,7 +693,7 @@ const TRUST_ROWS = [
   },
   {
     claim: "Fees That Don't Sting",
-    proof: 'Sellers pay 5–10%, not the 17–26% others skim.',
+    proof: 'Lowest fees for buyers and sellers — every fee shown before you pay.',
   },
   {
     claim: 'Humans, Around the Clock',
@@ -705,9 +705,9 @@ const TRUST_ROWS = [
    watermark, the 3D trust art with its tone glow — the look the user
    asked to keep, at 2-up phone size. */
 const TRUST_CARDS = [
-  { claim: 'SafeDrop On Every Order', proof: 'Sellers are paid only after you confirm delivery.', img: '/icons/trust/money-back.avif', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
+  { claim: 'SafeDrop On Every Order', proof: 'Item Guaranteed or Full Refund.', img: '/icons/trust/money-back.avif', Ghost: ShieldCheck, glow: 'rgba(198,255,61,0.28)' },
   { claim: 'Sellers Earn Their Spot', proof: 'ID checks, payment verification and live ratings.', img: '/icons/safedrop-emblem.avif', Ghost: ShieldCheck, glow: 'rgba(74,222,128,0.30)' },
-  { claim: "Fees That Don't Sting", proof: 'Sellers pay 5\u201310%, not the 17\u201326% others skim.', img: '/how-it-works/step-2.avif', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
+  { claim: "Fees That Don't Sting", proof: 'Lowest fees for buyers and sellers — every fee shown before you pay.', img: '/how-it-works/step-2.avif', Ghost: Coins, glow: 'rgba(251,191,36,0.28)' },
   { claim: 'Humans, Around The Clock', proof: 'Support and dispute resolution never close.', img: '/icons/trust/support.avif', Ghost: Headset, glow: 'rgba(96,165,250,0.32)' },
 ] as const
 

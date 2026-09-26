@@ -56,7 +56,6 @@ import {
   balanceLabel as sharedBalanceLabel,
   decimal,
   money,
-  percentFromRate,
   signedMoney,
 } from '@/lib/seller/format-amount'
 import {
@@ -571,10 +570,10 @@ export default function SellerDetailClient({
             </span>
             {currentConfig && (
               <span className="text-[12px] text-white/85">
-                {percentFromRate(currentConfig.commission_rate) && (
-                  <>Commission{' '}
+                {currentConfig.discount_pts != null && (
+                  <>Rank Discount{' '}
                     <b className="font-semibold tabular-nums text-white/85">
-                      {percentFromRate(currentConfig.commission_rate)}
+                      {currentConfig.discount_pts > 0 ? `−${currentConfig.discount_pts} pts` : 'none'}
                     </b>
                   </>
                 )}

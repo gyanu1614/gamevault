@@ -21,18 +21,15 @@ export function LayoutWrapper({
 
   // The sell wizard is a focused task surface, not a browsing page: it
   // strips the global navbar AND footer so nothing competes with the
-  // form. Same rationale as checkout and the seller application — a
-  // seller mid-listing shouldn't have a storefront nav inviting them
-  // out of the flow, and the wizard's own progress rail sits at the
-  // very top of the viewport where the navbar used to be.
+  // form, and the wizard's own progress rail sits where the navbar was.
+  // /sell/fees is the public fee schedule (normal chrome); only the wizard
+  // routes (/sell/new, /sell/edit, /sell/bulk) get the stripped shell. An
+  // exact segment match also keeps /seller/* and /seller-agreement out.
   const isSellWizard =
-    // Exact segment: a bare startsWith('/sell') also matched /seller/*
-    // and /seller-agreement and stripped their navbar.
-    pathname === '/sell' ||
-    pathname?.startsWith('/sell/') ||
+    /^\/sell\/(new|edit|bulk)(\/|$)/.test(pathname ?? '') ||
     // The dev harness must render the same chrome-less shell as the real
     // route, or it measures a layout nobody sees.
-    pathname?.startsWith('/dev/sell-wizard-preview')
+    !!pathname?.startsWith('/dev/sell-wizard-preview')
 
   // V19/P24/P7.r — /checkout/* has its own slim layout: stripped
   // navbar + checkout-specific footer so the buyer can't leak out

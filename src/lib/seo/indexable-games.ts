@@ -20,7 +20,7 @@ export async function getIndexableGameSlugs(): Promise<string[]> {
       }>,
       supabase
         .from('listings')
-        .select('seller:profiles!listings_seller_id_fkey!inner(is_test), game:games!listings_game_id_fkey(slug)')
+        .select('seller:public_profiles!listings_seller_id_fkey!inner(is_test), game:games!listings_game_id_fkey(slug)')
         .eq('status', 'active')
         .eq('seller.is_test', false) as unknown as Promise<{
         data: { game: { slug: string } | null }[] | null
@@ -44,6 +44,23 @@ export async function getIndexableGameSlugs(): Promise<string[]> {
       )
       .map((g) => g.slug)
       .sort()
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Every active game slug — the prerender set for `/[gameSlug]/opengraph-image`
+ * (Step 7b: all game images are built at deploy, so a scraper never pays a
+ * Satori render for one). [] on failure: the rest renders on demand.
+ */
+export async function getActiveGameSlugs(): Promise<string[]> {
+  try {
+    const supabase = createAnonClient()
+    const { data } = (await supabase.from('games').select('slug').eq('is_active', true)) as unknown as {
+      data: { slug: string }[] | null
+    }
+    return (data ?? []).map((g) => g.slug).sort()
   } catch {
     return []
   }

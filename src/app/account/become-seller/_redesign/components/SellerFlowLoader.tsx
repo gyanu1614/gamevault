@@ -39,6 +39,9 @@ export default function SellerFlowLoader({ label }: { label: string }) {
             width={36}
             height={36}
             className="h-9 w-9 object-contain"
+            // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+            // it to WebP bills a transformation and saves nothing.
+            unoptimized
           />
           <span className="text-lg font-bold tracking-tight text-white">
             Drop<span className="text-white/70">Market</span>

@@ -7,7 +7,7 @@
 
 import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(is_test),
+      seller:public_profiles!listings_seller_id_fkey(is_test),
       game:games!listings_game_id_fkey(name),
       category:game_categories!listings_game_category_id_fkey(name)
     `)
@@ -111,7 +111,7 @@ const getListing = cache(async function getListing(listingSlug: string) {
 
   const SELECT = `
     *,
-    seller:profiles!listings_seller_id_fkey(*),
+    seller:public_profiles!listings_seller_id_fkey(*),
     game:games!listings_game_id_fkey(*),
     category:game_categories!listings_game_category_id_fkey(*)
   `
@@ -164,12 +164,12 @@ async function getSellerStats(sellerId: string) {
     { count: totalSales },
     { count: activeListings }
   ] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact', head: true })
+    supabase.from('orders').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'completed'),
-    supabase.from('listings').select('*', { count: 'exact', head: true })
+      .eq('status', 'completed').limit(1),
+    supabase.from('listings').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'active')
+      .eq('status', 'active').limit(1)
   ])
 
   return {
@@ -226,7 +226,7 @@ async function getCarouselListings({
     .select(`
       id, slug, title, price, original_price, delivery_time, quantity,
       is_unlimited, description, images, template_data, status,
-      seller:profiles!listings_seller_id_fkey(
+      seller:public_profiles!listings_seller_id_fkey(
         id, username, shop_name, shop_slug, avatar_url, seller_tier,
         seller_rating, total_sales, total_reviews, is_verified
       ),
@@ -427,7 +427,7 @@ async function ListingDetailPage({ params }: PageProps) {
       {!isPreview && <ViewTracker listingId={listing.id} />}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schemaData) }}
       />
       <JsonLd data={breadcrumbData} />
 

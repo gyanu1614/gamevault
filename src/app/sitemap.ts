@@ -116,6 +116,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: `${BASE_URL}/sell/fees`,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
       url: `${BASE_URL}/account/become-seller`,
       changeFrequency: 'monthly',
       priority: 0.7,
@@ -206,7 +211,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           `
           slug,
           updated_at,
-          seller:profiles!listings_seller_id_fkey!inner(is_test),
+          seller:public_profiles!listings_seller_id_fkey!inner(is_test),
           game:games!listings_game_id_fkey(slug),
           category:game_categories!listings_game_category_id_fkey(slug)
         `

@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin, requireRole } from './admin-permissions'
 import { getEntryTier } from '@/lib/seller/entry-tier'
 import { revalidatePath } from 'next/cache'
+import { revalidateSellerStorefront } from '@/lib/revalidation/listings'
 import {
   sendApplicationApprovedEmail,
   sendApplicationInReviewEmail,
@@ -98,23 +99,23 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     // Get total users count
     const { count: usersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' }).limit(1)
 
     stats.totalUsers = usersCount || 0
 
     // Get active sellers count (users with seller role)
     const { count: sellersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'seller')
+      .select('*', { count: 'exact' })
+      .eq('role', 'seller').limit(1)
 
     stats.activeSellers = sellersCount || 0
 
     // Get open disputes count
     const { count: disputesCount } = await supabase
       .from('disputes')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'under_review'])
+      .select('*', { count: 'exact' })
+      .in('status', ['open', 'under_review']).limit(1)
 
     stats.openDisputes = disputesCount || 0
 
@@ -783,7 +784,11 @@ export async function approveApplication(
 
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${applicationId}`)
-    if (grantFounding) revalidatePath('/') // storefronts render the founding badge
+    // The founding badge renders on THIS seller's storefront and beside their
+    // offers — not on every page (build audit 2026-09-22, §4).
+    if (grantFounding && application.user_id) {
+      await revalidateSellerStorefront(getServiceClient() as never, application.user_id)
+    }
 
     return {
       success: true,

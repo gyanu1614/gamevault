@@ -17,6 +17,14 @@ vi.mock('react', async (importOriginal) => ({
   cache: (fn: unknown) => fn,
 }))
 
+// unstable_cache needs Next's incremental cache (Step 7b wraps the shared
+// reads in it); outside the Next runtime it throws, so pass the reader through.
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: () => Promise<unknown>) => fn,
+  revalidateTag: () => undefined,
+  revalidatePath: () => undefined,
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => {
     throw new Error('cookie client used on a public read')
@@ -42,7 +50,10 @@ describe('category page helpers read through the anon client', () => {
   it('getTestSellerIds', async () => {
     const { getTestSellerIds } = await import('@/lib/seo/public-hygiene')
     await expect(getTestSellerIds()).resolves.toEqual([])
-    expect(recorder.tables()).toContain('profiles')
+    // DLT-001: reads the public_profiles projection, never the base table —
+    // anon holds no grant on profiles' sensitive columns.
+    expect(recorder.tables()).toContain('public_profiles')
+    expect(recorder.tables()).not.toContain('profiles')
   })
 
   it('getPausedSellerIds', async () => {

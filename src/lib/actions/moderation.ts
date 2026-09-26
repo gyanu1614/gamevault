@@ -13,6 +13,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 // ─── Shared moderator gate ───────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ export async function approveListing(
     // now trusted — release the rest of their queued listings automatically so
     // admins never re-review a seller who already crossed the bar.
     let drainedCount = 0
+    let drainedSellerId: string | undefined
     try {
       const service = createServiceRoleClient()
       const { data: approvedRow } = await service
@@ -281,6 +283,7 @@ export async function approveListing(
         .eq('id', listingId)
         .single() as any
       const sellerId = approvedRow?.seller_id as string | undefined
+      drainedSellerId = sellerId
       if (sellerId) {
         const { data: stillNeedsModeration } = await (service.rpc as any)(
           'check_seller_needs_moderation',
@@ -337,10 +340,16 @@ export async function approveListing(
     }
 
     revalidatePath('/admin/moderation')
-    // V21/P7.d — Marketplace tree lives at `/{gameSlug}/...` now;
-    // homepage surfaces featured/popular listings so revalidating
-    // `/` covers the public-facing impact of a moderation change.
-    revalidatePath('/')
+    // No revalidatePath('/'): the homepage's featured/popular shelves are
+    // CLIENT react-query hooks (features/home/hooks/*), which server
+    // revalidation cannot reach. The category tags below are the real
+    // public-facing refresh (build audit 2026-09-22, §4).
+    // Step 7b — the category pages (24 h TTL). An approval can drain the
+    // seller's whole queue, so resolve by listing AND seller.
+    await revalidateListingSurfaces(createServiceRoleClient() as never, {
+      listingIds: [listingId],
+      sellerIds: drainedSellerId ? [drainedSellerId] : [],
+    })
 
     return { success: true, drainedCount }
   } catch (error: any) {
@@ -427,6 +436,7 @@ export async function rejectListing(
     })
 
     revalidatePath('/admin/moderation')
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
 
     return { success: true }
   } catch (error: any) {
@@ -518,6 +528,7 @@ export async function requestListingChanges(
 
     revalidatePath('/admin/moderation')
     revalidatePath('/account/listings')
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { listingIds: [listingId] })
 
     return { success: true }
   } catch (error: any) {
@@ -559,29 +570,29 @@ export async function getModerationStats(): Promise<{
     ] = await Promise.all([
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending_approval'),
+        .select('*', { count: 'exact' })
+        .eq('status', 'pending_approval').limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'changes_requested'),
+        .select('*', { count: 'exact' })
+        .eq('status', 'changes_requested').limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'active')
-        .gte('approved_at', today.toISOString()),
+        .gte('approved_at', today.toISOString()).limit(1),
       // reject_listing nulls approved_at and stamps rejected_at, so the
       // "today" filter must use rejected_at (approved_at was always 0).
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'rejected')
-        .gte('rejected_at', today.toISOString()),
+        .gte('rejected_at', today.toISOString()).limit(1),
       supabase
         .from('listings')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'active')
-        .not('approved_at', 'is', null),
+        .not('approved_at', 'is', null).limit(1),
     ])
 
     return {

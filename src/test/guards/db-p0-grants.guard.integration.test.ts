@@ -35,7 +35,14 @@ const VIEWS = [
 ] as const
 
 /** The only SECURITY DEFINER functions the anon key may still execute. */
-const ANON_DEFINER_ALLOWLIST = ['has_permission', 'is_admin', 'sab_public_price_catalog_rows']
+const ANON_DEFINER_ALLOWLIST = [
+  'has_permission', 'is_admin',
+  // Fee engine PR 1: the public fee page and the ISR'd /[game]/sell resolve with
+  // no session; with a seller id it only returns a percentage the seller already
+  // publishes (rank/founding badge). Writes nothing. docs/design/fee-engine.md §2.5.
+  'resolve_seller_fee',
+  'sab_public_price_catalog_rows',
+]
 /** …and the only ones a plain signed-in user may execute (auth.uid()-scoped or moderator-asserted). */
 const AUTHENTICATED_DEFINER_ALLOWLIST = [
   ...ANON_DEFINER_ALLOWLIST,
@@ -54,6 +61,26 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
   'order_cancel_return_wallet', 'order_refund_to_wallet', 'withdrawal_cancel', 'withdrawal_reject',
   'inventory_claim_for_order', 'promo_usage_record', 'money_fault_hook', 'ledger_test_cleanup_by_withdrawal',
   'money_atomicity_version', 'webhook_event_claim',
+  // fix/checkout-p0 (PAY-003): payment confirm + stock claim, one RPC, service_role only.
+  'order_confirm_payment',
+  // fix/checkout-round-b Part 1: the payment attempts model. Checkout, retry
+  // and the sweep drive these as the backend; a browser must never open,
+  // activate or supersede a charge, nor read another buyer's attempts.
+  'payment_attempts_version', 'payment_attempts_backfill', 'order_create_pending',
+  'payment_attempt_open', 'payment_attempt_activate', 'payment_attempt_supersede',
+  'expired_pending_payment_attempts',
+  // Part 2: the provider cancel outbox + the deduped admin alert helper.
+  'provider_cancel_outbox_version', 'provider_cancel_outbox_enqueue', 'provider_cancel_outbox_claim',
+  'provider_cancel_outbox_mark', 'admin_alert_once',
+  // Part 3: late-payment / overpayment credit — wallet money moves, service only.
+  'late_payment_credit_version', 'order_credit_late_payment',
+  // Part 4: the stuck-webhook reconciler + the sweep's poison counter.
+  'payment_reconciler_version', 'webhook_events_flip_unreplayable', 'webhook_events_stuck_claim',
+  'webhook_event_reconcile_mark', 'payment_attempt_note_sweep_failure',
+  // Checkout B3: the buyer method-fee quote. The browser never quotes — the
+  // page and createCheckout reach it through eligibleMethods (service role);
+  // a quote the client could call would be a fee oracle it could disagree with.
+  'buyer_method_fees_version', 'buyer_fee_quote', 'buyer_fee_quote_many',
 ]
 
 /**
@@ -63,6 +90,19 @@ const MONEY_ATOMICITY_SERVICE_ONLY = [
  * learn which keys are close to their limit. Named here so the posture test
  * says which function regressed rather than just printing a list diff.
  */
+/** Fee engine PR 7 — post-delivery money: completion, disputes, withdrawals. */
+const PR7_SERVICE_ONLY = [
+  'order_completion_version', 'post_journal', 'seller_matured_balance', 'seller_frozen_balance',
+  'order_completion_window_hours', 'order_mark_delivering', 'order_mark_delivered', 'order_confirm_receipt',
+  'get_orders_ready_for_auto_release', 'order_confirm_reminders_claim', 'notify_once',
+  'seller_since', 'seller_withdrawal_gate', 'wallet_available_balance',
+  'order_disputes_version', 'order_dispute_open', 'order_dispute_resolve',
+  'withdrawal_rules_version', 'fee_round_cents', 'withdrawal_quote', 'withdrawal_request', 'withdrawal_approve',
+  'withdrawal_mark_paid', 'seller_payout_details_set', 'withdrawal_risk_snapshot', 'withdrawal_methods_set_fees',
+  'platform_money_setting_set', 'order_completion_window_set',
+  'seller_notice_claim', 'seller_notice_record', 'pr7_grants_encryption_version',
+]
+
 const RATE_LIMIT_SERVICE_ONLY = [
   'rate_limit_hit', 'rate_limits_cleanup', 'rate_limits_version',
 ]
@@ -246,7 +286,7 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
-      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY]) {
+      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY]) {
         expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
         expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
       }

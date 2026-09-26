@@ -35,7 +35,11 @@ export const PROTECTED_ROUTE_PREFIXES = [
  * startsWith would swallow sibling public routes (e.g. `/seller`
  * matching `/seller-agreement`, `/sell` matching `/seller-agreement`).
  */
+/** Public pages that live under a protected prefix (the seller fee schedule). */
+export const PUBLIC_EXCEPTIONS = ['/sell/fees'] as const
+
 export function isProtectedPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false
+  if (PUBLIC_EXCEPTIONS.some((p) => pathname === p || pathname.startsWith(p + '/'))) return false
   return PROTECTED_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }

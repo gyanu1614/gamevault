@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
+import { displayOrderRef } from '@/lib/orders/order-number'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
@@ -212,6 +213,19 @@ export default async function OrderDetailPage({ params }: PageProps) {
     }
   }
 
+  // PR 7 — the buyer may open a dispute for dispute_window_days after
+  // delivery, even once the order has completed. The number is admin-editable
+  // (platform_fee_settings, readable by every signed-in user).
+  const { data: moneySettings } = await supabase
+    .from('platform_fee_settings')
+    .select('dispute_window_days')
+    .eq('id', true)
+    .maybeSingle() as any
+  const disputeWindowDays = Number(moneySettings?.dispute_window_days ?? 7)
+  const disputeUntil = order.delivered_at
+    ? new Date(new Date(order.delivered_at).getTime() + disputeWindowDays * 86_400_000).toISOString()
+    : null
+
   // Computed timing values
   const now = new Date()
 
@@ -224,12 +238,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const protectionRemaining = protectionDate ? Math.max(0, protectionDate.getTime() - now.getTime()) : 0
   const protectionDays    = Math.floor(protectionRemaining / (1000 * 60 * 60 * 24))
 
-  // V21/P3.b — Display-layer rebrand: GV- → DM-. DB rows keep their
-  // legacy order_number until a migration regenerates them; the URL
-  // resolver work is tracked separately. New orders are emitted with
-  // DM- prefix at the action level.
-  const rawOrderNum    = order.order_number || order.id.slice(0, 8).toUpperCase()
-  const orderNum       = rawOrderNum.replace(/^GV-/, 'DM-')
+  // The stored order_number IS the number (DM-XXXX-XXXX since migration
+  // 20260921234649; older GV- rows stay as issued and render as stored).
+  const orderNum       = displayOrderRef(order.order_number, order.id)
   const listingImageUrl = order.listing?.images?.[0]
   const gameImageUrl   = game?.image_url
   const listingTitle   = order.listing?.title
@@ -337,6 +348,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       />
       <OrderClient
         order={order}
+        disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
         itemImageUrl={listingImageUrl ?? gameImageUrl ?? null}

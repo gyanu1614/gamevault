@@ -15,9 +15,10 @@
  * EUR-priced amount — our ledger settles EUR; the crypto actually received
  * lives in BTCPay/the cold wallet and is reconciled at off-ramp time.
  *
- * Policy notes (design session 2026-09-03):
- *   PaidOver    → order proceeds; the excess is credited to the buyer's
- *                 DropMarket wallet from the admin queue (manual v1).
+ * Policy notes (design session 2026-09-03, round B Part 3):
+ *   PaidOver    → order proceeds; the excess (Σ totalPaid × rate − amount)
+ *                 rides on the event as `paid` and order_confirm_payment
+ *                 credits it to the buyer's wallet (PAY-011).
  *   PaidLate    → invoice already Expired/Invalid; admin either marks it
  *                 Settled in BTCPay (webhook re-fires → normal flow) or
  *                 wallet-credits the buyer.
@@ -26,7 +27,7 @@
  */
 
 import type { CanonicalEvent } from '@/lib/payments/types'
-import { fromDecimal } from '@/lib/money'
+import { fromDecimal, type Money } from '@/lib/money'
 
 export type BtcpayStatus = 'New' | 'Processing' | 'Settled' | 'Expired' | 'Invalid'
 
@@ -61,7 +62,31 @@ export interface BtcpayInvoice {
  * embeds it, so its absence means the invoice is not ours (e.g. created by
  * hand in the BTCPay UI) and must not drive any order transition.
  */
-export function btcpayToCanonical(inv: BtcpayInvoice): CanonicalEvent[] {
+/**
+ * PAY-011: what a PaidOver invoice actually received, in the invoice
+ * currency — Σ totalPaid × rate over the payment methods, to the cent.
+ * Undefined when any method that received money carries no usable rate:
+ * an overpayment credit must never be a guess.
+ */
+export function btcpayPaidFromMethods(
+  methods: ReadonlyArray<{ totalPaid?: string; rate?: string }>,
+  currency: string
+): Money | undefined {
+  let total = 0
+  let any = false
+  for (const m of methods) {
+    const paid = Number(m.totalPaid ?? 0)
+    if (!(paid > 0)) continue
+    const rate = Number(m.rate)
+    if (!Number.isFinite(rate) || rate <= 0) return undefined
+    total += paid * rate
+    any = true
+  }
+  if (!any) return undefined
+  return fromDecimal(total.toFixed(2), currency)
+}
+
+export function btcpayToCanonical(inv: BtcpayInvoice, paid?: Money): CanonicalEvent[] {
   const orderId = inv.metadata?.orderId
   if (!orderId || typeof orderId !== 'string') {
     throw new Error('btcpay: invoice has no metadata.orderId (not a marketplace invoice)')
@@ -80,6 +105,7 @@ export function btcpayToCanonical(inv: BtcpayInvoice): CanonicalEvent[] {
           orderId,
           providerChargeId: chargeId,
           settled: fromDecimal(inv.amount, inv.currency),
+          ...(paid ? { paid } : {}),
         },
       ]
 

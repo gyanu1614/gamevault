@@ -8,7 +8,7 @@ import { createSupabaseRecorder, type SupabaseRecorder } from '@/test/fakes/supa
 let recorder: SupabaseRecorder
 vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
 
-import { getIndexableGameSlugs } from './indexable-games'
+import { getIndexableGameSlugs, getActiveGameSlugs } from './indexable-games'
 
 describe('getIndexableGameSlugs', () => {
   it('keeps games with a live listing, data-tier content, a curated currency config, or an admin override', async () => {
@@ -38,5 +38,23 @@ describe('getIndexableGameSlugs', () => {
       throw new Error('db down')
     }
     await expect(getIndexableGameSlugs()).resolves.toEqual([])
+  })
+})
+
+/** Step 7b — the game OG image is built for EVERY active game at deploy. */
+describe('getActiveGameSlugs', () => {
+  it('lists every active game slug, sorted, from one read', async () => {
+    recorder = createSupabaseRecorder({
+      games: [{ slug: 'valorant' }, { slug: 'adopt-me' }, { slug: 'roblox' }],
+    })
+    await expect(getActiveGameSlugs()).resolves.toEqual(['adopt-me', 'roblox', 'valorant'])
+    expect(recorder.tables()).toEqual(['games'])
+  })
+  it('returns [] when the read fails', async () => {
+    recorder = createSupabaseRecorder()
+    recorder.client.from = () => {
+      throw new Error('db down')
+    }
+    await expect(getActiveGameSlugs()).resolves.toEqual([])
   })
 })

@@ -15,6 +15,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
@@ -755,6 +756,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/account/listings')
+    // Step 7b — the category page is prerendered (24 h TTL); tell it.
+    await revalidateListingSurfaces(getAdminSupabase() as never, {
+      gameCategoryIds: [gameCategory.id],
+    })
 
     // SEO — IndexNow ping for the freshly published listing + the pages
     // it appears on. Only 'active' listings are publicly crawlable;
@@ -944,6 +949,8 @@ export async function updateListingFromWizard(
 
     revalidatePath('/account/listings')
     revalidatePath('/admin/moderation')
+    // Step 7b — an edit may move the listing between categories; resolve by id.
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
     // V19/P11 — Canonical edit URL is /sell/edit/[id]; the old
     // /account/listings/[id]/edit is now a permanent redirect, so we
     // revalidate the new path. Keeping the old revalidate as a
@@ -1128,6 +1135,7 @@ export async function bulkPublishListings(
     // AUTH-031 — see publishListing: rows insert as the backend after the
     // gate + policy decision; seller_id is pinned to the session user.
     const listingsWriter = getAdminSupabase()
+    const touchedCategoryIds = new Set<string>()
 
     for (const r of rows) {
       try {
@@ -1169,12 +1177,19 @@ export async function bulkPublishListings(
           continue
         }
         ok++
+        touchedCategoryIds.add(gameCategory.id)
       } catch (e: any) {
         failed.push({ line: r.line, error: e?.message ?? 'Unknown error' })
       }
     }
 
     revalidatePath('/account/listings')
+    // Step 7b — one revalidation per category the batch touched.
+    if (touchedCategoryIds.size > 0) {
+      await revalidateListingSurfaces(listingsWriter as never, {
+        gameCategoryIds: [...touchedCategoryIds],
+      })
+    }
 
     // SEO — one IndexNow ping for the game hub + category page when bulk
     // rows went live. Individual listing URLs are skipped here (slugs

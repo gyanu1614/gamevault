@@ -143,11 +143,11 @@ describe('SellerDetailClient — rows missing the numeric field entirely', () =>
       d.orders.revenue = undefined
       d.orders.gmv = undefined
     }],
-    ['tier config without a commission rate', (d) => {
+    ['tier config without a rank discount', (d) => {
       d.tier.configs = [{
         tier: 'bronze',
         display_name: 'Bronze',
-        commission_rate: undefined,
+        discount_pts: undefined,
         listing_limit: null,
         pre_moderation_listings: null,
         badge_color: null,

@@ -19,6 +19,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { supabaseReachable } from '../supabase-reachable'
+import { fixtureNamespace, purgeAuditLogs, type FixtureNamespace } from './fixture-namespace'
 
 export const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 export const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -53,6 +54,8 @@ export type Fixture = {
   listingId: string
   pendingOrderId: string
   completedOrderId: string
+  /** this test file's fixture namespace — mint any extra ids through it */
+  ns: FixtureNamespace
   cleanup: () => Promise<void>
 }
 
@@ -106,28 +109,79 @@ export const GUARD_EMAIL_LIKE = 'guardtest-%@example.com'
 export const GUARD_EMAIL_RE = /^guardtest-[a-z]+-[a-z0-9]+@example\.com$/
 
 /**
- * Throws when ANY guard-test fixture residue exists in the target database —
+ * Throws when guard-test fixture residue exists in the target database —
  * profiles or auth users matching the fixture email pattern, or listings
  * titled GUARD-TEST-… . Called from cleanup()'s finally block, so a leaked
  * fixture (this run's or an earlier one's) fails the run loudly.
+ *
+ * With `ns` the check covers ONLY that test file's namespace: another file's
+ * leak is that file's failure, not this one's (it used to fail every suite
+ * that tore down after it). Without `ns` it scans every guard-test row.
  */
-export async function verifyNoGuardTestResidue(svc: SupabaseClient, priorFailures: string[] = []): Promise<void> {
+export async function verifyNoGuardTestResidue(svc: SupabaseClient, priorFailures: string[] = [], ns?: FixtureNamespace): Promise<void> {
   const problems = [...priorFailures]
-  const { data: profs, error: pe } = await svc.from('profiles').select('id').like('email', GUARD_EMAIL_LIKE)
+  const scope = ns ? ` (${ns.file}, key ${ns.key})` : ''
+  const { data: profs, error: pe } = await svc.from('profiles').select('id').like('email', ns?.emailLike ?? GUARD_EMAIL_LIKE)
   if (pe) problems.push(`residue check (profiles): ${pe.message}`)
-  else if ((profs ?? []).length) problems.push(`${(profs ?? []).length} guard-test profile(s) remain: ${(profs ?? []).map((p: any) => p.id).join(', ')}`)
-  const { data: lst, error: le } = await svc.from('listings').select('id').like('title', 'GUARD-TEST-%')
+  else if ((profs ?? []).length) problems.push(`${(profs ?? []).length} guard-test profile(s) remain${scope}: ${(profs ?? []).map((p: any) => p.id).join(', ')}`)
+  const { data: lst, error: le } = await svc.from('listings').select('id').like('title', ns?.listingLike ?? 'GUARD-TEST-%')
   if (le) problems.push(`residue check (listings): ${le.message}`)
-  else if ((lst ?? []).length) problems.push(`${(lst ?? []).length} GUARD-TEST listing(s) remain: ${(lst ?? []).map((l: any) => l.id).join(', ')}`)
+  else if ((lst ?? []).length) problems.push(`${(lst ?? []).length} GUARD-TEST listing(s) remain${scope}: ${(lst ?? []).map((l: any) => l.id).join(', ')}`)
   const { data: au, error: ae } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 })
   if (ae) problems.push(`residue check (auth.users): ${ae.message}`)
   else {
-    const leaked = (au?.users ?? []).filter((u) => GUARD_EMAIL_RE.test(u.email ?? ''))
-    if (leaked.length) problems.push(`${leaked.length} guard-test auth user(s) remain: ${leaked.map((u) => u.id).join(', ')}`)
+    const re = ns?.emailRe ?? GUARD_EMAIL_RE
+    const leaked = (au?.users ?? []).filter((u) => re.test(u.email ?? ''))
+    if (leaked.length) problems.push(`${leaked.length} guard-test auth user(s) remain${scope}: ${leaked.map((u) => u.id).join(', ')}`)
   }
   if (problems.length) {
     throw new Error(`guard-test fixture teardown left residue in ${URL}:\n  - ${problems.join('\n  - ')}`)
   }
+}
+
+/**
+ * Delete fixture users and everything that references them: dependents
+ * first (explicitly — never rely on cascades that differ between
+ * environments), then audit_logs (local psql path), then the auth users
+ * (profiles cascade). Errors are collected into `failures`, never swallowed.
+ */
+export async function purgeFixtureUsers(svc: SupabaseClient, userIds: string[], failures: string[]): Promise<void> {
+  if (!userIds.length) return
+  for (const [table, cols] of DEPENDENT_TABLES) {
+    for (const col of cols) {
+      const { error } = await svc.from(table).delete().in(col, userIds)
+      if (error) failures.push(`${table}.${col}: ${error.message}`)
+    }
+  }
+  purgeAuditLogs(userIds, failures)
+  for (const id of userIds) {
+    const { error } = await svc.auth.admin.deleteUser(id)
+    if (error) {
+      failures.push(`auth.admin.deleteUser(${id}): ${error.message}`)
+      const { error: pe } = await svc.from('profiles').delete().eq('id', id)
+      if (pe) failures.push(`profiles.delete(${id}): ${pe.message}`)
+    }
+  }
+}
+
+/**
+ * Remove every row ANY earlier run of this test file left behind (a crashed
+ * run, a killed worker) — and nothing outside the file's namespace. Returns
+ * what it could not delete.
+ */
+export async function purgeNamespace(svc: SupabaseClient, ns: FixtureNamespace): Promise<string[]> {
+  const failures: string[] = []
+  const ids = new Set<string>()
+  const { data: profs } = await svc.from('profiles').select('id').like('email', ns.emailLike)
+  for (const p of (profs ?? []) as { id: string }[]) ids.add(p.id)
+  const { data: au } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  for (const u of au?.users ?? []) if (ns.emailRe.test(u.email ?? '')) ids.add(u.id)
+  await purgeFixtureUsers(svc, [...ids], failures)
+  const { error: le } = await svc.from('listings').delete().like('title', ns.listingLike)
+  if (le) failures.push(`listings(${ns.listingLike}): ${le.message}`)
+  const { error: ge } = await svc.from('games').delete().like('slug', ns.gameSlugLike)
+  if (ge) failures.push(`games(${ns.gameSlugLike}): ${ge.message}`)
+  return failures
 }
 
 export async function makeFixture(): Promise<Fixture> {
@@ -138,29 +192,34 @@ export async function makeFixture(): Promise<Fixture> {
   if (!(await supabaseReachable(URL))) {
     throw new Error(
       `guard tests: no Supabase reachable at ${JSON.stringify(URL ?? '')}. ` +
-        'Start the local stack with `npx supabase start`, or run with ' +
+        'Start this worktree\'s stack with `pnpm db:up` (then `pnpm test:reset`), or run with ' +
         'ALLOW_REMOTE_GUARD_TESTS=1 to target .env.local deliberately.',
     )
   }
   const svc = createClient(URL!, SVC!, { auth: { persistSession: false } })
-  // Short tag: profiles.username has a length CHECK.
-  const tag = Math.random().toString(36).slice(2, 8)
+  // Every id this fixture mints carries the test file's key (see
+  // fixture-namespace.ts); stale rows from an earlier crashed run of THIS
+  // file are purged first, other files' rows are never touched.
+  const ns = fixtureNamespace()
+  const stale = await purgeNamespace(svc, ns)
+  if (stale.length) throw new Error(`guard fixture (${ns.file}): could not purge an earlier run's rows:\n  - ${stale.join('\n  - ')}`)
+  const tag = ns.tag
   const created: string[] = []
   let createdGameId: string | null = null
   /** A pair created under a PRE-EXISTING game (no cascade to rely on). Its mirrored legacy row goes with it. */
   let createdGameCategoryId: string | null = null
 
   async function mkUser(label: string): Promise<Actor> {
-    const email = `guardtest-${label}-${tag}@example.com`
+    const email = ns.email(label)
     const password = `Pw!${tag}${label}Xy`
     const { data, error } = await svc.auth.admin.createUser({
-      email, password, email_confirm: true, user_metadata: { username: `gt_${label}_${tag}` },
+      email, password, email_confirm: true, user_metadata: { username: ns.username(label) },
     })
     if (error || !data.user) throw new Error(`createUser(${label}): ${error?.message}`)
     created.push(data.user.id)
     const { data: prof } = await svc.from('profiles').select('id').eq('id', data.user.id).maybeSingle()
     if (!prof) {
-      const { error: pe } = await svc.from('profiles').insert({ id: data.user.id, username: `gt_${label}_${tag}`, email })
+      const { error: pe } = await svc.from('profiles').insert({ id: data.user.id, username: ns.username(label), email })
       if (pe) throw new Error(`profile insert(${label}): ${pe.message}`)
     }
     const client = createClient(URL!, ANON!, { auth: { persistSession: false } })
@@ -172,24 +231,7 @@ export async function makeFixture(): Promise<Fixture> {
   const cleanup = async () => {
     const failures: string[] = []
     try {
-      if (created.length) {
-        // Dependents first, explicitly — never rely on cascades that may differ
-        // between environments. Errors are collected, never swallowed.
-        for (const [table, cols] of DEPENDENT_TABLES) {
-          for (const col of cols) {
-            const { error } = await svc.from(table).delete().in(col, created)
-            if (error) failures.push(`${table}.${col}: ${error.message}`)
-          }
-        }
-        for (const id of created) {
-          const { error } = await svc.auth.admin.deleteUser(id)
-          if (error) {
-            failures.push(`auth.admin.deleteUser(${id}): ${error.message}`)
-            const { error: pe } = await svc.from('profiles').delete().eq('id', id)
-            if (pe) failures.push(`profiles.delete(${id}): ${pe.message}`)
-          }
-        }
-      }
+      await purgeFixtureUsers(svc, created, failures)
       if (createdGameCategoryId) {
         const { data: pair } = await svc.from('game_categories').select('legacy_category_id').eq('id', createdGameCategoryId).maybeSingle()
         const { error } = await svc.from('game_categories').delete().eq('id', createdGameCategoryId)
@@ -205,8 +247,9 @@ export async function makeFixture(): Promise<Fixture> {
         if (error) failures.push(`games.delete: ${error.message}`)
       }
     } finally {
-      // Runs even if a delete threw: a leaked fixture must fail the run.
-      await verifyNoGuardTestResidue(svc, failures)
+      // Runs even if a delete threw: a leaked fixture must fail the run —
+      // this file's own leak only; another file's residue is its own failure.
+      await verifyNoGuardTestResidue(svc, failures, ns)
     }
   }
 
@@ -244,7 +287,7 @@ export async function makeFixture(): Promise<Fixture> {
 
     const { data: listing, error: le } = await svc.from('listings').insert({
       seller_id: seller.id, game_id: (game as any).id, game_category_id: (cat as any).id,
-      title: `GUARD-TEST-${tag}`, description: 'guard test throwaway', price: 1, quantity: 5, status: 'pending_approval',
+      title: ns.listingTitle(), description: 'guard test throwaway', price: 1, quantity: 5, status: 'pending_approval',
     }).select('id').single()
     if (le) throw new Error(`listing insert: ${le.message}`)
 
@@ -265,6 +308,7 @@ export async function makeFixture(): Promise<Fixture> {
       listingId: (listing as any).id,
       pendingOrderId: (pending as any).id,
       completedOrderId: (completed as any).id,
+      ns,
       cleanup,
     }
   } catch (e) {
