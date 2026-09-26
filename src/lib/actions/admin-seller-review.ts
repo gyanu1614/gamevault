@@ -11,12 +11,14 @@ import {
   sendApplicationInReviewEmail,
   sendApplicationRejectedEmail,
   sendInfoRequestedEmail,
+  sendApplicantDraftsSubmittedEmail,
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
 import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
+import { submitApplicantDrafts } from '@/lib/listings/submit-applicant-drafts'
 
 // Create service role client that bypasses RLS
 function getServiceClient() {
@@ -756,12 +758,31 @@ export async function approveApplication(
 
     // Send email notification
     const userEmail = (application.profiles as any)?.email || application.alternate_email
+    const sellerName = application.full_legal_name || (application.profiles as any)?.full_name || 'Seller'
     if (userEmail) {
       await sendApplicationApprovedEmail({
         to: userEmail,
-        name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+        name: sellerName,
         displayName: application.display_name,
       })
+    }
+
+    // GRO-08 — the drafts built during review go out now, through the normal
+    // publish rules (validator + publish policy). Best-effort: the approval
+    // is already committed; a failure here is logged, never surfaced as a
+    // failed approval, and the seller still has the drafts.
+    try {
+      const drafts = await submitApplicantDrafts(serviceClient as never, application.user_id)
+      if (userEmail && drafts.submitted.length + drafts.skipped.length > 0) {
+        await sendApplicantDraftsSubmittedEmail({
+          to: userEmail,
+          name: sellerName,
+          submitted: drafts.submitted,
+          skipped: drafts.skipped,
+        })
+      }
+    } catch (draftErr) {
+      console.error('[approveApplication] applicant drafts submission failed:', draftErr)
     }
 
     // Best-effort audit trail

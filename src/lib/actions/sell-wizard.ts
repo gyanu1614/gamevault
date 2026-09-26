@@ -21,7 +21,9 @@ import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } f
 import { findEnabledGameCategory } from '@/lib/categories'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
-import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
+import { publishDenialMessage, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
+import { decidePublishStatus } from '@/lib/listings/publish-status'
+import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
@@ -572,9 +574,14 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // AUTH-009 — seller gate before anything else runs.
-    const denied = await publishDenialFor(supabase, user.id)
-    if (denied) return { success: false, error: denied }
+    // AUTH-009 / ACC-01 — seller gate before anything else runs. GRO-08: an
+    // applicant (application in the pipeline) may use the wizard, but every
+    // save lands as a DRAFT — the DB (INSERT policy + trigger) refuses any
+    // other status for them, whoever writes.
+    const kind = await sellAccessKind(supabase, user.id)
+    const isApplicant = kind === 'applicant'
+    const denied = publishDenialMessage(kind)
+    if (denied && !isApplicant) return { success: false, error: denied }
 
     // ─── D1: tier-based cap + moderation gate ────────────────────────────
     // Fetch the publish policy in the same request so we can reject early
@@ -582,20 +589,24 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // `pending_approval` when their tier requires it. The DB trigger
     // (check_listing_moderation) also enforces moderation as a safety net,
     // but doing it here means the wizard sees the right status back
-    // immediately and the seller gets a clear toast.
-    const policyRes = await (supabase.rpc as any)(
-      'get_seller_publish_policy',
-      { p_user_id: user.id },
-    )
-    if (policyRes.error) {
-      return { success: false, error: policyRes.error.message }
-    }
-    const policy = policyRes.data as SellerPublishPolicy
+    // immediately and the seller gets a clear toast. An applicant has no
+    // policy yet: drafts only, submitted on approval.
+    let policy: SellerPublishPolicy | null = null
+    if (!isApplicant) {
+      const policyRes = await (supabase.rpc as any)(
+        'get_seller_publish_policy',
+        { p_user_id: user.id },
+      )
+      if (policyRes.error) {
+        return { success: false, error: policyRes.error.message }
+      }
+      policy = policyRes.data as SellerPublishPolicy
 
-    if (input.status === 'active' && policy.at_listing_limit) {
-      return {
-        success: false,
-        error: `You're at your active-listing cap (${policy.listing_limit}). Pause one before adding more, or level up your tier.`,
+      if (input.status === 'active' && policy.at_listing_limit) {
+        return {
+          success: false,
+          error: `You're at your active-listing cap (${policy.listing_limit}). Pause one before adding more, or level up your tier.`,
+        }
       }
     }
 
@@ -616,12 +627,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     if (!validated.ok) return { success: false, error: validated.error }
     const v = validated.value
 
-    // D1: downgrade `active` → `pending_approval` when the tier requires it.
-    // Draft / explicit pending_approval pass through unchanged.
-    const finalStatus =
-      input.status === 'active' && (policy.needs_moderation || !policy.auto_approve_single)
-        ? 'pending_approval'
-        : input.status
+    // D1: downgrade `active` → `pending_approval` when the tier requires it
+    // (one rule with the drafts submitted on approval: decidePublishStatus).
+    // GRO-08: an applicant's save is always a draft.
+    const finalStatus = isApplicant || !policy ? 'draft' : decidePublishStatus(policy, v.status)
 
     // V19/P9 — One currency listing per (seller, game) in flexible
     // mode (Robux-style).
@@ -702,6 +711,8 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       // flexible currency listings and every non-currency listing.
       bundle_id: v.bundle_id,
       status: finalStatus,
+      // GRO-08 — marks the drafts to submit automatically on approval.
+      ...(isApplicant ? { metadata: { [APPLICANT_DRAFT_KEY]: true } } : {}),
     }
 
     // AUTH-031 — the DB coerces every non-guarded listings INSERT to
@@ -793,9 +804,15 @@ export async function updateListingFromWizard(
     }
 
     // ACC-01 / BUG-16 — the same seller gate as publish: a restricted or
-    // banned seller can neither edit nor resubmit.
-    const denied = await publishDenialFor(supabase, user.id)
-    if (denied) return { success: false, error: denied }
+    // banned seller can neither edit nor resubmit. GRO-08: an applicant may
+    // keep editing their own drafts — as drafts.
+    const kind = await sellAccessKind(supabase, user.id)
+    const isApplicant = kind === 'applicant'
+    const denied = publishDenialMessage(kind)
+    if (denied && !isApplicant) return { success: false, error: denied }
+    if (isApplicant && existing.status !== 'draft') {
+      return { success: false, error: 'Only drafts can be edited while your application is under review' }
+    }
 
     const categoryType = existing.pair?.type ?? input.category_slug
     const rules = await loadListingRuleContext(supabase, existing.game_id, categoryType)
@@ -815,6 +832,7 @@ export async function updateListingFromWizard(
     const isResubmit =
       (existingStatus === 'changes_requested' || existingStatus === 'rejected') &&
       v.status !== 'draft'
+    const requestedStatus: 'draft' | 'active' = isApplicant ? 'draft' : v.status
 
     const updatePayload: Record<string, unknown> = {
       title: resolvedTitle || 'Untitled',
@@ -835,7 +853,7 @@ export async function updateListingFromWizard(
       // Only let the seller flip between draft ↔ active here; don't let an
       // edit accidentally reset moderation state — EXCEPT the resubmit
       // loop, which moves changes_requested/rejected back into review.
-      ...(v.status === 'draft'
+      ...(requestedStatus === 'draft'
         ? { status: 'draft' }
         : isResubmit
           ? { status: 'pending_approval' }
@@ -855,7 +873,7 @@ export async function updateListingFromWizard(
       .single()
     if (error) return { success: false, error: error.message }
     const finalStatus: string = (written as { status?: string } | null)?.status
-      ?? (v.status === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus)
+      ?? (requestedStatus === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus)
 
     // Moderation comms — the listing (re-)entered the review queue.
     if (finalStatus === 'pending_approval' && existingStatus !== 'pending_approval') {
@@ -1040,8 +1058,8 @@ export async function bulkPublishListings(
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // AUTH-009 — seller gate before anything else runs.
-    const denied = await publishDenialFor(supabase, user.id)
+    // AUTH-009 — seller gate before anything else runs (bulk is sellers only).
+    const denied = publishDenialMessage(await sellAccessKind(supabase, user.id))
     if (denied) return { success: false, error: denied }
 
     const policyRes = await (supabase.rpc as any)(

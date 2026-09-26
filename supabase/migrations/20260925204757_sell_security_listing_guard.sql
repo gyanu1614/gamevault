@@ -43,6 +43,11 @@
 --   insert at all. createCheckout refuses a blocked seller's listing.
 -- ACC-04 — a seller still under pre-moderation who edits the CONTENT of an
 --   active listing sends it back to review (trigger, so every path is covered).
+-- GRO-08 (server half) — an applicant (application pending / under review /
+--   info requested) may build DRAFTS: the INSERT policy admits them for
+--   status = 'draft' only and the trigger refuses any other status on insert
+--   or update, for every caller. On approval the app submits those drafts
+--   through the normal publish rules (src/lib/listings/submit-applicant-drafts.ts).
 -- ACC-07 / ACC-08 — the middleware gates /sell/* and the upload actions gate
 --   listing-images on sell_access_kind too; the listing-images INSERT policy
 --   (20260921005402 opened it to any signed-in user under their own prefix)
@@ -248,6 +253,12 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
+  -- GRO-08 (every caller): an applicant's listings are drafts, full stop.
+  IF v_kind = 'applicant' AND NEW.status IS DISTINCT FROM 'draft' THEN
+    RAISE EXCEPTION 'listings: an application under review can only save drafts (got %)', NEW.status
+      USING ERRCODE = '42501';
+  END IF;
+
   -- ACC-04 (every caller except the moderation RPCs): while the seller is
   -- still under pre-moderation, a CONTENT edit of an active listing goes back
   -- to review. Price / stock / delivery / status changes are not content.
@@ -306,4 +317,18 @@ CREATE POLICY listing_images_seller_write ON storage.objects
     bucket_id = 'listing-images'
     AND (storage.foldername(name))[1] = auth.uid()::text
     AND public.sell_access_kind(auth.uid()) IN ('seller', 'admin', 'applicant')
+  );
+
+-- ── GRO-08: applicants may INSERT drafts ────────────────────────────────────
+-- Re-creation of "Sellers can insert their own listings" (baseline; AUTH-009
+-- dropped its permissive sibling) on sell_access_kind: an active seller, an
+-- active admin, or — new — an applicant for a DRAFT row. The trigger above
+-- is the second lock on the status.
+DROP POLICY IF EXISTS "Sellers can insert their own listings" ON public.listings;
+CREATE POLICY "Sellers can insert their own listings" ON public.listings
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (auth.uid() = seller_id AND public.sell_access_kind(auth.uid()) = 'seller')
+    OR public.sell_access_kind(auth.uid()) = 'admin'
+    OR (auth.uid() = seller_id AND public.sell_access_kind(auth.uid()) = 'applicant' AND status = 'draft')
   );

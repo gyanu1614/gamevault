@@ -133,6 +133,9 @@ describe('listing mutations revalidate the category surfaces', () => {
       'src/lib/api/listings.ts',
       'src/lib/api/seller-compatible.ts',
       'src/lib/escrow/transition.ts',
+      // GRO-08: drafts built during the application are submitted on
+      // approval (service role) — calls the seam per touched listing.
+      'src/lib/listings/submit-applicant-drafts.ts',
     ])
   })
 })

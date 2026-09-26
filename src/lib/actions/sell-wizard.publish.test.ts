@@ -130,7 +130,7 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
 })
 
 describe('AUTH-009 / ACC-01 — publish paths refuse non-sellers before touching anything', () => {
-  for (const [label, kind] of [['a plain user', 'none'], ['a restricted seller', 'seller_blocked'], ['an applicant', 'applicant']] as const) {
+  for (const [label, kind] of [['a plain user', 'none'], ['a restricted seller', 'seller_blocked']] as const) {
     it(`publishListing: ${label} is rejected with no catalogue or listings access`, async () => {
       h.session = sessionWith({
         global_categories: [{ data: { id: 'gc-items' }, error: null }],
@@ -229,4 +229,32 @@ describe('ACC-11 — a crafted status never reaches the service-role insert', ()
       expect(h.admin.calls).toEqual([])
     })
   }
+})
+
+describe('GRO-08 — an applicant may save drafts, never anything else', () => {
+  it('publishListing for an applicant lands as a marked draft without consulting the publish policy', async () => {
+    const rpcNames: string[] = []
+    h.session = mockClient({
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    }, {
+      auth: { getUser: async () => ({ data: { user: USER }, error: null }) },
+      rpc: async (name: string) => { rpcNames.push(name); return name === 'sell_access_kind' ? { data: 'applicant', error: null } : { data: POLICY, error: null } },
+    })
+    h.admin = mockClient({ listings: [{ data: { id: 'l-9', slug: 'z' }, error: null }] })
+    const res = await publishListing({ ...INPUT, status: 'active' })
+    expect(res).toEqual({ success: true, data: { id: 'l-9', status: 'draft' } })
+    expect(rpcNames).toEqual(['sell_access_kind'])
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    expect((ins.args[0] as any).status).toBe('draft')
+    expect((ins.args[0] as any).metadata).toEqual({ applicant_draft: true })
+  })
+
+  it('bulk upload stays sellers-only', async () => {
+    h.session = sessionWith({}, 'applicant')
+    h.admin = mockClient({})
+    const res = await bulkPublishListings('game-1', 'items', [])
+    expect(res.success).toBe(false)
+    expect(h.admin.tables).toEqual([])
+  })
 })
