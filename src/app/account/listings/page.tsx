@@ -33,6 +33,7 @@
 
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUrlFilters } from '@/hooks/use-url-filters'
@@ -71,6 +72,7 @@ import { cn } from '@/lib/utils'
 // ─── Offer sections ──────────────────────────────────────────────────────────
 
 import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { listingUnits, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 
 const OFFER_META: Record<OfferType, { title: string }> = {
   currency: { title: 'Currency Offers' },
@@ -338,6 +340,52 @@ function OffersContent() {
   })()
 
   const { listings, isLoading, error, updateListing, deleteListing, bulkUpdate, bulkDelete } = useSellerListings()
+
+  // Currency rows are priced and counted in the game's own unit — "/K",
+  // "1 K", "1,000 M", "Robux" — not a generic "Unit". The unit lives on
+  // the per-game currency config, so read it for the games in view.
+  const currencyGameIds = useMemo(
+    () => Array.from(new Set(
+      listings
+        .filter((l) => classifyOfferType(l.category?.type ?? undefined, l.category?.slug) === 'currency')
+        .map((l) => l.game_id),
+    )).sort(),
+    [listings],
+  )
+  const { data: currencyConfigs } = useQuery({
+    queryKey: ['seller', 'currency-units', currencyGameIds],
+    enabled: currencyGameIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const { data } = await createClient()
+        .from('category_configs')
+        .select('game_id, config')
+        .eq('category_type', 'currency')
+        .in('game_id', currencyGameIds)
+      const map: Record<string, { quantity_granularity?: QuantityGranularity; unit_label?: string }> = {}
+      for (const row of (data ?? []) as Array<{ game_id: string; config: Record<string, unknown> | null }>) {
+        map[row.game_id] = (row.config ?? {}) as (typeof map)[string]
+      }
+      return map
+    },
+  })
+  const unitsFor = (l: Listing) =>
+    listingUnits({
+      type: classifyOfferType(l.category?.type ?? undefined, l.category?.slug),
+      bundleId: l.bundle_id,
+      config: currencyConfigs?.[l.game_id],
+    })
+  // Currency stock is shown in full with its unit ("1,000 K"): the compact
+  // form would print 1,000 K as "1K", which reads as one thousand units.
+  const stockLabel = (l: Listing) => {
+    if (l.is_unlimited) return '∞'
+    const n = l.quantity ?? 0
+    const u = unitsFor(l).quantity
+    if (u === 'Unit') return fmtCompact(n)
+    if (u === 'Bundle') return `${n.toLocaleString('en-US')} ${n === 1 ? 'Bundle' : 'Bundles'}`
+    return `${n.toLocaleString('en-US')} ${u}`
+  }
 
   // Restriction + Offline Mode (carried over from the old page).
   const sellerStatus = (((user?.profile as Record<string, unknown> | undefined)?.seller_status as SellerStatus) || 'active')
@@ -866,14 +914,14 @@ function OffersContent() {
                       {formatDeliveryLabel(l.delivery_time)}
                     </td>
                     <td className="px-3 py-2.5">
-                      <PriceField value={l.price} unit="Unit" onSave={(next) => savePrice(l, next)} />
+                      <PriceField value={l.price} unit={unitsFor(l).price} onSave={(next) => savePrice(l, next)} />
                     </td>
                     <td className="px-3 py-2.5"><StatusChip k={chip} /></td>
                     <td className="px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
-                      {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
+                      {stockLabel(l)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-[13px] tabular-nums text-text-secondary">
-                      {(l.min_quantity ?? 1).toLocaleString()} Unit
+                      {(l.min_quantity ?? 1).toLocaleString('en-US')} {unitsFor(l).quantity}
                     </td>
                     <td className="px-3 py-2.5">
                       <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
@@ -988,7 +1036,7 @@ function OffersContent() {
                 <div className="mt-3 flex items-center gap-2">
                   <PriceField
                     value={l.price}
-                    unit="Unit"
+                    unit={unitsFor(l).price}
                     onSave={(next) => savePrice(l, next)}
                     className="w-auto min-w-0 flex-1"
                   />
@@ -1009,13 +1057,13 @@ function OffersContent() {
                   <span className="whitespace-nowrap">
                     Stock{' '}
                     <span className="font-bold tabular-nums text-text-primary">
-                      {l.is_unlimited ? '∞' : fmtCompact(l.quantity ?? 0)}
+                      {stockLabel(l)}
                     </span>
                   </span>
                   <span className="whitespace-nowrap">
                     Min{' '}
                     <span className="tabular-nums text-text-secondary">
-                      {(l.min_quantity ?? 1).toLocaleString()} Unit
+                      {(l.min_quantity ?? 1).toLocaleString('en-US')} {unitsFor(l).quantity}
                     </span>
                   </span>
                   <span className="whitespace-nowrap">

@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
+import { resolveMinQuantity } from '@/lib/currency/min-quantity'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
@@ -557,7 +558,7 @@ export interface PublishListingInput {
  * rows. We resolve the old game-scoped category_id from (game_id, type)
  * so marketplace filters like `category_id = X` keep matching.
  */
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string }>> {
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string }>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -653,18 +654,9 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    // V14 — Enforce minimum 100-unit order for currency listings. Mirrors
-    // the wizard floor so the client and server agree.
-    // V19/P24/P5 — Bundle listings sell whole-bundle-only, so the
-    // 100-floor doesn't apply (a bundle of "600 V-Bucks" is one unit).
-    let resolvedMinQuantity = input.min_quantity
-    if (
-      input.category_slug === 'currency' &&
-      !input.bundle_id &&
-      resolvedMinQuantity < 100
-    ) {
-      resolvedMinQuantity = 100
-    }
+    // Currency minimums are resolved below from the game's admin floor
+    // (resolveMinQuantity); every other category keeps the seller's value.
+    let resolvedMinQuantity = Math.max(1, Math.floor(input.min_quantity || 1))
 
     // V13 — Currency listings auto-fill title + image from the game record
     // so sellers don't have to. The wizard hides those fields in the UI.
@@ -703,6 +695,15 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       const matchedBundle = input.bundle_id
         ? bundles.find((b) => b.id === input.bundle_id)
         : null
+      // Same rule as the wizard: the seller's minimum, raised to this
+      // game's admin floor and capped at stock. Was a hard-coded 100,
+      // which turned a seller's "1 K" into "100 K" on every save.
+      resolvedMinQuantity = resolveMinQuantity({
+        requested: input.min_quantity,
+        adminFloor: cfgRow?.config?.min_quantity,
+        stock: input.quantity,
+        isBundle: !!input.bundle_id,
+      })
       if (!resolvedTitle) {
         resolvedTitle = matchedBundle?.name
           ? `${gameName} ${matchedBundle.name}`
@@ -767,8 +768,14 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // NOTE: later client-side status changes (pause/activate/price edits
     // in the seller offers table) are deliberately NOT wired to IndexNow
     // — the sitemap's lastmod (max listing updated_at) covers those.
+    // The public category page this offer now appears on — the wizard
+    // lands the seller there. Only a live offer is visible, so drafts and
+    // offers waiting for review get no path (the wizard falls back to the
+    // offers table).
+    let categoryPath: string | undefined
     if (finalStatus === 'active') {
       const { data: pingGame } = await supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any
+      if (pingGame?.slug) categoryPath = `/${pingGame.slug}/${gameCategory.slug}`
       if (pingGame?.slug) {
         const listingSlug = (data as { id: string; slug?: string | null }).slug
         await pingIndexNow([
@@ -779,7 +786,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus } }
+    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus, path: categoryPath } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
@@ -814,17 +821,9 @@ export async function updateListingFromWizard(
       return { success: false, error: 'You can only edit your own listings' }
     }
 
-    // V14k — Same currency-floor enforcement as publish.
-    // V19/P24/P5 — Bundle listings skip the 100-floor (each bundle
-    // is its own atomic unit).
-    let resolvedMinQuantity = input.min_quantity
-    if (
-      input.category_slug === 'currency' &&
-      !input.bundle_id &&
-      resolvedMinQuantity < 100
-    ) {
-      resolvedMinQuantity = 100
-    }
+    // Currency minimums are resolved below from the game's admin floor
+    // (resolveMinQuantity); every other category keeps the seller's value.
+    let resolvedMinQuantity = Math.max(1, Math.floor(input.min_quantity || 1))
 
     // V14k — Same currency title/image auto-fill as publish.
     // V19/P24/P6 — Pulled the hardcoded currencyUnit Record out and
@@ -857,6 +856,15 @@ export async function updateListingFromWizard(
       const matchedBundle = input.bundle_id
         ? bundles.find((b) => b.id === input.bundle_id)
         : null
+      // Same rule as the wizard: the seller's minimum, raised to this
+      // game's admin floor and capped at stock. Was a hard-coded 100,
+      // which turned a seller's "1 K" into "100 K" on every save.
+      resolvedMinQuantity = resolveMinQuantity({
+        requested: input.min_quantity,
+        adminFloor: cfgRow?.config?.min_quantity,
+        stock: input.quantity,
+        isBundle: !!input.bundle_id,
+      })
       if (!resolvedTitle) {
         resolvedTitle = matchedBundle?.name
           ? `${gameName} ${matchedBundle.name}`
