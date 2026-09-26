@@ -70,7 +70,7 @@ export async function getFeaturedCatalogue(
       `price, game_id,
        game:games!inner(slug),
        category:categories!inner(metadata),
-       seller:profiles!listings_seller_id_fkey!inner(is_test)`,
+       seller:public_profiles!listings_seller_id_fkey!inner(is_test)`,
     )
     .eq('status', 'active')
     .eq('seller.is_test', false)

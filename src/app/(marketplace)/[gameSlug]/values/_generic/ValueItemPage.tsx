@@ -132,7 +132,7 @@ export default async function ValueItemPage({
         ) : (
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[var(--ct-text-muted)]">
             We do not publish a price for {item.name} — it is not sold directly
-            on the marketplaces we track. Everything below is from the game's
+            on the marketplaces we track. Everything below is from the game&apos;s
             own data.
           </p>
         )}

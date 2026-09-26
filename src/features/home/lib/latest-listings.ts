@@ -65,7 +65,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
       `id, title, price, images, slug, created_at, quantity, delivery_time,
        game:games!inner(slug, name, is_active),
        category:categories!inner(slug, name, metadata),
-       seller:profiles!listings_seller_id_fkey!inner(is_test)`,
+       seller:public_profiles!listings_seller_id_fkey!inner(is_test)`,
     )
     .eq('status', 'active')
     .eq('seller.is_test', false)

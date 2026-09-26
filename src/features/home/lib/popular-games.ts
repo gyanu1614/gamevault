@@ -123,7 +123,7 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
   // renders 8 cards.
   const { data: listings } = await supabase
     .from('listings')
-    .select('game_id, price, seller:profiles!listings_seller_id_fkey!inner(is_test)')
+    .select('game_id, price, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('status', 'active')
     .eq('seller.is_test', false)
 
