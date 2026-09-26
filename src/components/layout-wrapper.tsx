@@ -19,11 +19,20 @@ export function LayoutWrapper({
   // Don't show navbar and footer on admin pages
   const isAdminPage = pathname?.startsWith('/admin')
 
-  // V19/P15.b — Sell wizard pages keep the global navbar (forced into
-  // its scrolled full-width mode via Navbar's `forceScrolled` prop —
-  // see navbar-floating.tsx). Footer stays hidden so the wizard owns
-  // the canvas below.
-  const isSellWizard = pathname?.startsWith('/sell')
+  // The sell wizard is a focused task surface, not a browsing page: it
+  // strips the global navbar AND footer so nothing competes with the
+  // form. Same rationale as checkout and the seller application — a
+  // seller mid-listing shouldn't have a storefront nav inviting them
+  // out of the flow, and the wizard's own progress rail sits at the
+  // very top of the viewport where the navbar used to be.
+  const isSellWizard =
+    // Exact segment: a bare startsWith('/sell') also matched /seller/*
+    // and /seller-agreement and stripped their navbar.
+    pathname === '/sell' ||
+    pathname?.startsWith('/sell/') ||
+    // The dev harness must render the same chrome-less shell as the real
+    // route, or it measures a layout nobody sees.
+    pathname?.startsWith('/dev/sell-wizard-preview')
 
   // V19/P24/P7.r — /checkout/* has its own slim layout: stripped
   // navbar + checkout-specific footer so the buyer can't leak out
@@ -80,7 +89,7 @@ export function LayoutWrapper({
       {/* Not on sidebar'd account/seller pages: the banner recruits sellers
           ("Sell on DropMarket … Start Earning"), which is noise once you are
           signed in and standing in your own account area. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !hasSidebar && (
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && !hasSidebar && (
         <BetaBanner />
       )}
       {/* P5 — Checkout strips the global navbar: the page carries its
@@ -88,8 +97,8 @@ export function LayoutWrapper({
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
           the floating pill reads as an overlay above a page that already has
           its own left rail. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && (
-        <Navbar forceScrolled={isSellWizard || hasSidebar} />
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && (
+        <Navbar forceScrolled={hasSidebar} />
       )}
       <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it
