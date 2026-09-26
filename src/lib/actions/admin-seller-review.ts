@@ -16,6 +16,7 @@ import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
+import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
 
 // Create service role client that bypasses RLS
 function getServiceClient() {
@@ -583,7 +584,25 @@ export async function approveApplication(
    * actual fee perk. This is where the two get connected, on approval.
    */
   asFounding = false,
-) {
+  options: {
+    /**
+     * ACC-02 — approval computes the identity check BEFORE the role is
+     * granted. When the ID + selfie are missing or not yet verified the
+     * action returns { requiresAcknowledgement: true, kycGap } and grants
+     * nothing; the admin UI shows the gap and may approve anyway by
+     * re-calling with this flag. KYC-before-listing stays an admin decision
+     * (owner ruling 2026-08-04) — this makes it an informed one.
+     */
+    acknowledgeKycGap?: boolean
+  } = {},
+): Promise<{
+  success: boolean
+  error?: string
+  founding?: boolean
+  message?: string
+  requiresAcknowledgement?: boolean
+  kycGap?: IdentityAssessment
+}> {
   try {
     const admin = await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
@@ -626,6 +645,23 @@ export async function approveApplication(
     // FIRST and seller_applications (the status the client keys off) LAST,
     // making the identity update the one guaranteed to have already landed.
     const serviceClient = getServiceClient()
+
+    // ACC-02 — identity check BEFORE anything is granted: a verified ID and
+    // selfie (or an approved Didit session). Service client so RLS on the
+    // documents table cannot hide a row from the decision.
+    const { data: kycDocs } = await serviceClient
+      .from('seller_kyc_documents')
+      .select('document_type, file_path, verified')
+      .eq('application_id', applicationId) as any
+    const kyc = assessIdentityForApproval(kycDocs ?? [])
+    if (!kyc.verified && !options.acknowledgeKycGap) {
+      return {
+        success: false,
+        requiresAcknowledgement: true,
+        kycGap: kyc,
+        error: 'Identity documents are missing or not verified',
+      }
+    }
 
     const { data: currentProfile } = await serviceClient
       .from('profiles')
@@ -677,6 +713,9 @@ export async function approveApplication(
         // the ladder was re-keyed (profiles_seller_tier_check).
         is_verified: true,
         seller_tier: entryTier,
+        // ACC-02 — what the identity check actually found. 'pending' when the
+        // admin approved over a gap; nothing gates on it yet (owner decision).
+        kyc_status: kyc.verified ? 'approved' : 'pending',
         // Only ever set founding true here — never false, so this can't revoke
         // a founding status granted elsewhere.
         ...(grantFounding ? { founding_seller: true } : {}),
@@ -690,12 +729,9 @@ export async function approveApplication(
 
     // Which verifications are complete, from the actually-uploaded KYC docs
     // (parity with the legacy admin-sellers copy this action replaced).
-    const { data: kycDocs } = await supabase
-      .from('seller_kyc_documents')
-      .select('document_type')
-      .eq('application_id', applicationId) as any
-    const docTypes: string[] = kycDocs?.map((d: any) => d.document_type) || []
-    const identity_verified = docTypes.some((t) => ['id_front', 'id_back', 'selfie_with_id'].includes(t))
+    // Identity is the real assessment above, not "a document exists".
+    const docTypes: string[] = (kycDocs ?? []).map((d: any) => d.document_type)
+    const identity_verified = kyc.verified
     const address_verified = docTypes.includes('proof_of_address')
     const business_verified = docTypes.some((t) => ['certificate_of_incorporation', 'business_license', 'director_id'].includes(t))
     const tax_verified = docTypes.some((t) => ['w9_form', 'w8ben_form', 'bank_statement'].includes(t))
@@ -734,7 +770,12 @@ export async function approveApplication(
         action: 'seller_application_approved',
         table_name: 'seller_applications',
         record_id: applicationId,
-        new_data: { status: 'approved', notes: notes || null },
+        new_data: {
+          status: 'approved',
+          notes: notes || null,
+          identity_verified: kyc.verified,
+          ...(kyc.verified ? {} : { kyc_gap_acknowledged: true, kyc_missing: kyc.missing, kyc_unverified: kyc.unverified }),
+        },
       })
     } catch (auditErr) {
       console.error('[approveApplication] audit log failed:', auditErr)
