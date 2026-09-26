@@ -1,6 +1,11 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
+// Two display faces still load via next/font/google (it downloads and
+// self-hosts them at build time): Archivo for the seller-card titles and
+// Roboto Condensed for the How Buying Works numerals. Everything else is
+// the local files above.
+import { Archivo, Roboto_Condensed } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -58,6 +63,36 @@ const jetbrainsMono = localFont({
   variable: '--font-mono',
   display: 'swap',
   preload: false,
+})
+
+// Archivo — display face under evaluation for the seller-program card titles.
+// Variable width axis, so `font-variation-settings: 'wdth' N` actually moves.
+// Its own variable, NOT --font-display: that one is bound to Inter on <body>
+// and is read across the whole site.
+const archivo = Archivo({
+  // No explicit `weight`: next/font rejects `axes` alongside pinned weights
+  // ("Axes can only be defined for variable fonts") because listing weights
+  // requests static instances. Omitting it loads the full variable range,
+  // which covers 400-800 AND keeps the wdth axis live.
+  axes: ['wdth'],
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-archivo',
+})
+
+// Roboto Condensed — the step numerals on the buyer-steps section ONLY.
+// Chosen by rasterising each candidate's '1' and comparing its ink-width
+// profile down the glyph against the reference's. The reference '1' has a
+// wide angled FLAG at the top over a thin stem (profile 2,31,59,59,30,2,2…);
+// Roboto Condensed matches it closely (4,32,59,56,30…) where Big Shoulders
+// Display — which won on bounding-box proportion alone — has almost no flag
+// and scored worst of eleven candidates. Bounding boxes do not capture glyph
+// shape; the profile does.
+const bigShoulders = Roboto_Condensed({
+  weight: '700',
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-numeral',
 })
 
 export const metadata: Metadata = {
@@ -118,7 +153,7 @@ export default function RootLayout({
             it was the single largest download on the landing page, which
             never shows that hero. Removed in Step 1c/Fix 1. */}
       </head>
-      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} ${bigShoulders.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

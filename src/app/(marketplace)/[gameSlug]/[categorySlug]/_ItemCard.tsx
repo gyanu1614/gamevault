@@ -86,13 +86,10 @@ function MetaPill({
 }) {
   return (
     <span
+      style={{ fontSize: 'var(--fs-micro)' }}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-semibold',
-        tone === 'success'
-          ? 'border-success/30 bg-success/12 text-success'
-          // Default tone kept greyish/faded — softer label + dimmer icon +
-          // lighter border/bg so it reads as quiet metadata, not stark white.
-          : 'border-border-subtle bg-bg-base/50 text-text-secondary',
+        'inline-flex items-center gap-1.5 font-semibold',
+        tone === 'success' ? 'text-success' : 'text-text-secondary',
       )}
     >
       <Icon className={cn('h-3.5 w-3.5', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
@@ -131,14 +128,15 @@ export default function ItemCard({
   return (
     <article
       className={cn(
-        // Hover is colour only — no lift, no shadow bloom. In a dense
-        // grid a per-card translate makes the whole wall twitch as the
-        // pointer crosses it; the surface/border shift is enough to
-        // show which card is live. Transition is scoped to colours so
-        // nothing else can animate back in by accident.
+        // Hover = highlight in place: the surface lightens one step and the
+        // border brightens toward white, with a faint lit top edge. NO lift
+        // and no drop shadow — the card must not move. Colour + border only,
+        // so it transitions `colors` and `box-shadow`, never `transform`.
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
-        'transition-colors duration-200',
-        'hover:border-border-strong hover:bg-bg-overlay-2',
+        'transition-[background-color,border-color,box-shadow] duration-200',
+        // bg-inset, NOT bg-overlay-2: overlay-2 is the same hex as the resting
+        // bg-overlay (#252B34), so hovering to it changed nothing.
+        'hover:border-white/25 hover:bg-bg-inset hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -157,13 +155,13 @@ export default function ItemCard({
 
       {/* MAIN BLOCK — pointer-events-none so the whole-card Link gets clicks;
           interactive children opt back in. */}
-      <div className="pointer-events-none relative z-10 flex flex-col p-3.5 sm:p-4">
+      <div className="pointer-events-none relative z-10 flex flex-col" style={{ padding: 'var(--gap-card)' }}>
         {/* Breadcrumb — full-width row across the top so long category
             chains have the whole card width to wrap into (the image no
             longer crowds it from the right). Muted/light, not accent —
             it's metadata, kept minimal. */}
         {offer.breadcrumb.length > 0 && (
-          <div className="mb-2 line-clamp-1 text-[12px] font-medium text-text-tertiary">
+          <div className="mb-2 line-clamp-1 font-medium text-text-tertiary" style={{ fontSize: 'var(--fs-caption)', letterSpacing: '0.02em' }}>
             {offer.breadcrumb.join(' · ')}
           </div>
         )}
@@ -176,7 +174,7 @@ export default function ItemCard({
           {/* Title reserves a fixed 2-line height (min-h) even for 1-line
               names, so the delivery chip below always lands at the same
               vertical spot across cards — no drift, uniform card heights. */}
-          <h3 className="min-h-[2.75rem] text-[15.5px] font-bold leading-snug text-text-primary line-clamp-2 sm:text-[16px]">
+          <h3 className="min-h-[2.75rem] line-clamp-2 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 'var(--fw-heading)', lineHeight: 'var(--lh-card-title)' }}>
             {offer.name}
           </h3>
 
@@ -192,7 +190,12 @@ export default function ItemCard({
         </div>
 
         {/* Right column — square thumbnail + optional Best deal flag */}
-        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md bg-bg-base sm:w-[110px]">
+        {/* No background on the thumbnail slot — it is transparent, so a
+            PNG cutout (most pet/item art) floats directly on the card and
+            takes the card's colour, including on hover. An opaque image
+            fills the slot with object-cover and keeps its rounded corners,
+            so it looks exactly as it did on the old dark tile. */}
+        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md sm:w-[110px]">
           {offer.imageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -203,7 +206,7 @@ export default function ItemCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-text-tertiary">
-              <span className="text-[10px] font-medium uppercase tracking-wider">No image</span>
+              <span className="font-medium uppercase tracking-wider" style={{ fontSize: 'var(--fs-micro)' }}>No image</span>
             </div>
           )}
         </div>
@@ -219,19 +222,19 @@ export default function ItemCard({
           SAME vertical space. Without this the strip collapses on owned
           listings and the card ends up shorter than its neighbours, which
           broke row alignment in the detail-page carousel. */}
-      <div className="pointer-events-none relative z-10 mt-auto flex min-h-[58px] items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5 sm:px-3.5">
+      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-subtle" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="text-[20px] font-bold tabular-nums leading-none text-text-primary sm:text-[22px]">
+          <span className="tabular-nums leading-none text-text-primary" style={{ fontSize: 'var(--fs-price)', fontWeight: 'var(--fw-heading)', fontVariantNumeric: 'tabular-nums' }}>
             {fmtPrice(offer.pricePerUnit)}
           </span>
           {discountPct > 0 && offer.originalPrice != null && (
-            <span className="text-[12px] font-medium tabular-nums text-text-tertiary line-through">
+            <span className="tabular-nums text-text-tertiary line-through" style={{ fontSize: 'var(--fs-micro)' }}>
               {fmtPrice(offer.originalPrice)}
             </span>
           )}
-          <span className="text-[13px] font-semibold text-text-secondary">/ Unit</span>
+          <span className="font-semibold text-text-secondary" style={{ fontSize: 'var(--fs-meta)' }}>/ Unit</span>
 
           {/* Lowest-price signal: icon only by default, label on hover.
               The `bd-tip` group reveals the tooltip via CSS (see globals
@@ -247,7 +250,8 @@ export default function ItemCard({
               </span>
               <span
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border-default bg-bg-overlay-2 px-2 py-1 text-[10.5px] font-semibold text-text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover/tip:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded border border-border-default bg-bg-overlay-2 px-2 py-1 font-semibold text-text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover/tip:opacity-100"
+                style={{ fontSize: 'var(--fs-micro)' }}
               >
                 Lowest Price
               </span>
@@ -263,7 +267,8 @@ export default function ItemCard({
           <Link
             href={`/sell/edit/${offer.id}`}
             onClick={stop}
-            className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+            className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+            style={{ minHeight: 'var(--h-btn-tertiary)', fontSize: 'var(--fs-micro)' }}
           >
             Yours
           </Link>
@@ -271,7 +276,7 @@ export default function ItemCard({
           <SmartLink
             href={`/shop/${sellerShopSlug(offer.seller) ?? ''}`}
             onClick={stop}
-            className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded-lg py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
+            className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
           >
             <SellerAvatar seller={offer.seller} size={32} />
 

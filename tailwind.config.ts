@@ -96,6 +96,7 @@ const config: Config = {
           base:           'var(--color-bg-base)',
           raised:         'var(--color-bg-raised)',
           'raised-hover': 'var(--color-bg-raised-hover)',
+          well:           'var(--color-bg-well)',
           overlay:        'var(--color-bg-overlay)',
           'overlay-2':    'var(--color-bg-overlay-2)',
           inset:          'var(--color-bg-inset)',

@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
-import { BetaBanner } from '@/components/beta-banner'
 
 export function LayoutWrapper({
   children,
@@ -79,16 +78,6 @@ export function LayoutWrapper({
 
   return (
     <div className={`flex min-h-screen flex-col${isValuesHub ? ' hub-chrome' : ''}`}>
-      {/* Beta announcement bar — normal-flow so it scrolls away with the
-          page; the fixed navbar reads its remaining height and rides just
-          below it. Self-hides on chrome-less shells (admin/checkout/seller
-          application) to match the navbar rules below. */}
-      {/* Not on sidebar'd account/seller pages: the banner recruits sellers
-          ("Sell on DropMarket … Start Earning"), which is noise once you are
-          signed in and standing in your own account area. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && !hasSidebar && (
-        <BetaBanner />
-      )}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
@@ -109,10 +98,9 @@ export function LayoutWrapper({
         !isSellerApplication &&
         !hasSidebar &&
         !isValuesHub && (
-          <>
-            {footerGameLinks}
-            <Footer />
-          </>
+          // Direction A: the games directory is a slot INSIDE the footer
+          // rather than its own band above it — see the note in footer.tsx.
+          <Footer gameDirectory={footerGameLinks} />
         )}
     </div>
   )

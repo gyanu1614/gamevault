@@ -82,7 +82,7 @@ export default function SafeDropPage() {
         "name": "How do disputes work?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Contact the seller first — most issues are resolved in chat. If nothing is fixed within the 12-hour grace period, open a dispute. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
+          "text": "Contact the seller first — most issues are resolved in chat. Once the seller's delivery time has passed you can open a dispute from your order. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
         }
       },
       {
@@ -320,7 +320,7 @@ export default function SafeDropPage() {
               number={2}
               icon={Clock}
               title="12-Hour Grace Period"
-              description="The seller has 12 hours to put things right"
+              description="Raise it once the seller's delivery time has passed"
             />
 
             <HowItWorksStep
@@ -413,7 +413,7 @@ export default function SafeDropPage() {
 
             <FAQItem
               question="How do disputes work?"
-              answer="Contact the seller first — most issues are resolved in chat. If nothing is fixed within the 12-hour grace period, open a dispute. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
+              answer="Contact the seller first — most issues are resolved in chat. Once the seller's delivery time has passed you can open a dispute from your order. Both sides then have 24 hours to submit evidence, and our team issues a decision within 3 days."
             />
 
             <FAQItem

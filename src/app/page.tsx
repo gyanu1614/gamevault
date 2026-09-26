@@ -1,6 +1,8 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
+import { PopularGames } from '@/features/home/components/PopularGames'
+import { LatestListings } from '@/features/home/components/LatestListings'
 import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
@@ -56,11 +58,12 @@ export default function Page() {
       <link
         rel="preload"
         as="image"
-        href="/assets/heroes/home.avif"
+        // Must match HomeHeroArt's backdropSrc (HomePage.tsx), or the page
+        // preloads an image it never shows (it was /assets/heroes/home.avif,
+        // 279 KB, unused, while the real 78 KB hero was not preloaded).
+        href="/hero/home.avif"
         type="image/avif"
-        // @ts-expect-error — `fetchpriority` is valid HTML, React types
-        // lag the spec. High priority puts it ahead of carousel images.
-        fetchpriority="high"
+        fetchPriority="high"
       />
 
       {/* JSON-LD */}
@@ -72,7 +75,12 @@ export default function Page() {
         />
       ))}
 
-      <HomePage />
+      {/* Popular Games fetches on the server and is handed to the client
+          page as a child — see the note in HomePage. */}
+      <HomePage
+        popularGames={<PopularGames />}
+        latestListings={<LatestListings />}
+      />
     </>
   )
 }
