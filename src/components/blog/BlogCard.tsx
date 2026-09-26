@@ -157,8 +157,10 @@ export function BlogCard({
       <div className={cn('flex min-w-0 flex-1 flex-col p-4', featured && 'md:p-5')}>
         <h3
           className={cn(
-            'line-clamp-2 font-bold leading-snug text-text-primary transition-colors group-hover:text-lime-text',
+            'line-clamp-2 font-bold text-text-primary transition-colors group-hover:text-lime-text',
             featured ? 'text-body-lg md:text-subheading' : 'text-body',
+            // After the size: cn() lets a later font size drop an earlier leading-*.
+            'leading-snug',
           )}
         >
           {post.title}

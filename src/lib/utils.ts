@@ -1,6 +1,26 @@
 import { type ClassValue, clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
 import { formatDistanceToNow, format } from 'date-fns'
+
+// The custom type scale in tailwind.config.ts (theme.extend.fontSize). Stock
+// tailwind-merge reads unknown `text-*` classes as colours, so a later colour
+// silently dropped the size. Keep in sync with the config; utils.cn.test.ts
+// fails when a size is missing here.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        {
+          text: [
+            'hero', 'display-lg', 'display', 'heading', 'subheading',
+            'body-lg', 'body', 'body-sm', 'caption', 'mono', 'overline',
+            'label', 'label-sm',
+          ],
+        },
+      ],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
