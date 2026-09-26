@@ -110,6 +110,29 @@ function firstIssue(err: z.ZodError): string {
   return `${path}${issue?.message ?? 'invalid input'}`
 }
 
+/**
+ * ACC-06 — price: numeric(12,4) rounding, an absolute floor of $0.01 (a
+ * $0 listing took checkout's wallet-covered auto-confirm path), the column's
+ * ceiling, and the admin's per-game floor / ceiling for currency listings.
+ */
+export function resolvePrice(raw: number, ctx: ListingRuleContext, label = 'price'): ValidationResult<number> {
+  if (!Number.isFinite(raw)) return { ok: false, error: `${label} must be a number` }
+  const price = roundPrice(raw)
+  if (price < PRICE_MIN) return { ok: false, error: `${label} must be at least $${PRICE_MIN.toFixed(2)}` }
+  if (price > PRICE_MAX) return { ok: false, error: `${label} is above the maximum allowed` }
+  if (ctx.categoryType === 'currency' && ctx.currencyConfig) {
+    const floor = Number(ctx.currencyConfig.price_floor)
+    const ceiling = Number(ctx.currencyConfig.price_ceiling)
+    if (Number.isFinite(floor) && floor > 0 && price < floor) {
+      return { ok: false, error: `${label} must be at least $${floor} per unit for this game` }
+    }
+    if (Number.isFinite(ceiling) && ceiling > 0 && price > ceiling) {
+      return { ok: false, error: `${label} must be at most $${ceiling} per unit for this game` }
+    }
+  }
+  return { ok: true, value: price }
+}
+
 /** 'instant' delivery has no window; a manual listing must promise one of
  *  SELLER_DELIVERY_WINDOWS (free text breaks the SLA / cancellation parsers). */
 export function resolveDeliveryTime(
@@ -145,13 +168,22 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
   const delivery = resolveDeliveryTime(v.delivery_method, v.delivery_time)
   if (!delivery.ok) return delivery
 
+  const price = resolvePrice(v.price, ctx)
+  if (!price.ok) return price
+  let originalPrice: number | null = null
+  if (v.original_price != null) {
+    const op = resolvePrice(v.original_price, ctx, 'original price')
+    if (!op.ok) return op
+    originalPrice = op.value
+  }
+
   return {
     ok: true,
     value: {
       title: v.title,
       description: v.description,
-      price: v.price,
-      original_price: v.original_price ?? null,
+      price: price.value,
+      original_price: originalPrice,
       quantity: v.quantity,
       min_quantity: v.min_quantity,
       delivery_method: v.delivery_method,
@@ -218,6 +250,17 @@ export function validateListingPatch(
   }
   if (p.images !== undefined && p.images.length === 0) {
     return { ok: false, error: 'at least one image is required' }
+  }
+
+  if (p.price !== undefined) {
+    const price = resolvePrice(p.price, ctx)
+    if (!price.ok) return price
+    p.price = price.value
+  }
+  if (p.original_price != null) {
+    const op = resolvePrice(p.original_price, ctx, 'original price')
+    if (!op.ok) return op
+    p.original_price = op.value
   }
 
   const method = (p.delivery_method ?? existing.delivery_method) as DeliveryMethod

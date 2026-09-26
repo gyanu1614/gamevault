@@ -73,6 +73,21 @@ describe.skipIf(!hasEnv)('sell security Part 1 — listing validator + DB guard 
     expect(ready).toBe(true)
   })
 
+  describe('ACC-06 — no $0 listing, for any caller', () => {
+    it('INSERT price = 0 and UPDATE price = 0 both fail the CHECK', async () => {
+      if (!ready) return
+      const ins = await fx!.svc.from('listings').insert({
+        seller_id: fx!.seller.id, game_id: gameId, game_category_id: pairId,
+        title: fx!.ns.listingTitle(), description: 'x', price: 0, quantity: 1, status: 'draft',
+      }).select('id')
+      expect(ins.error?.code).toBe('23514')
+      const id = await mkListing()
+      const upd = await fx!.svc.from('listings').update({ price: 0 }).eq('id', id).select('id')
+      expect(upd.error?.code).toBe('23514')
+      expect(Number((await row(id)).price)).toBe(1)
+    })
+  })
+
   describe('ACC-03 — seller edits cannot bypass validation', () => {
     it('a seller cannot UPDATE their own listing through PostgREST at all — not even the price', async () => {
       if (!ready) return

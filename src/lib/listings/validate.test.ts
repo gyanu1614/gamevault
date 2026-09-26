@@ -78,6 +78,40 @@ describe('ACC-03 — delivery method / window are closed sets', () => {
   })
 })
 
+describe('ACC-06 — server-side price validation', () => {
+  const CURRENCY = { categoryType: 'currency' as const, currencyConfig: { price_floor: 0.005, price_ceiling: 0.02, min_quantity: 100, bundles: [] } }
+
+  it('$0 and sub-cent prices are refused; 0.00004 does not round to a free listing', () => {
+    expect(validateListingWrite({ ...base, price: 0 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, price: 0.00004 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, price: 0.009 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, price: -5 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, price: Number.NaN }, ITEMS)).toMatchObject({ ok: false })
+  })
+
+  it('price is stored at numeric(12,4) scale and capped at the column maximum (BUG-15 server side)', () => {
+    expect(validateListingWrite({ ...base, price: 1.23456 }, ITEMS)).toMatchObject({ ok: true, value: { price: 1.2346 } })
+    expect(validateListingWrite({ ...base, price: 1e9 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, original_price: 0 }, ITEMS)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, original_price: null }, ITEMS)).toMatchObject({ ok: true, value: { original_price: null } })
+  })
+
+  it('currency listings must sit inside the admin floor / ceiling of the game config', () => {
+    const cur = { ...base, title: '', price: 0.01, quantity: 1000, min_quantity: 100 }
+    expect(validateListingWrite({ ...cur, price: 0.001 }, CURRENCY)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...cur, price: 0.05 }, CURRENCY)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...cur, price: 0.01 }, CURRENCY)).toMatchObject({ ok: true, value: { price: 0.01 } })
+    // no config → only the absolute rules apply
+    expect(validateListingWrite({ ...cur, price: 0.05 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true })
+  })
+
+  it('patch: the same price rules apply to the offers-table inline editor', () => {
+    expect(validateListingPatch({ price: 0 }, ITEMS, existing)).toMatchObject({ ok: false })
+    expect(validateListingPatch({ price: 2.00005 }, ITEMS, existing)).toMatchObject({ ok: true, value: { price: 2.0001 } })
+    expect(validateListingPatch({ price: 0.05 }, CURRENCY, existing)).toMatchObject({ ok: false })
+  })
+})
+
 describe('numeric(12,4) price rounding', () => {
   it('rounds half away from zero at 4 decimals like Postgres', () => {
     expect(roundPrice(0.00005)).toBe(0.0001)

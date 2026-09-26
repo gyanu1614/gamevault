@@ -27,12 +27,33 @@
 --     whenever it changes; delivery_method must be manual|instant.
 --   · AUTH-034 (moderated-out → active only through review) now also binds
 --     the service role: the app's actions are the seller's only edit path.
+-- ACC-06 — $0 listings: CHECK (price > 0) replaces the baseline's >= 0; the
+--   validator adds the $0.01 floor, numeric(12,4) rounding and the per-game
+--   currency floor / ceiling.
 -- ============================================================================
 
 -- ── ACC-03: no direct UPDATE for JWT callers ────────────────────────────────
 REVOKE UPDATE ON TABLE public.listings FROM anon, authenticated;
 DROP POLICY IF EXISTS "Sellers can update own listings" ON public.listings;
 DROP POLICY IF EXISTS "Sellers can update their own listings" ON public.listings;
+
+-- ── ACC-06: price > 0 ───────────────────────────────────────────────────────
+-- The baseline allowed price >= 0; a $0 listing produced a $0 order that took
+-- checkout's wallet-covered auto-confirm path (free orders between two
+-- accounts to farm reviews / rank). Added NOT VALID so a production row at 0
+-- cannot fail the push; validated in place when no such row exists (the
+-- handoff carries the query to run before validating manually otherwise).
+ALTER TABLE public.listings DROP CONSTRAINT IF EXISTS listings_price_check;
+ALTER TABLE public.listings ADD CONSTRAINT listings_price_check CHECK (price > 0) NOT VALID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.listings WHERE price <= 0) THEN
+    ALTER TABLE public.listings VALIDATE CONSTRAINT listings_price_check;
+  ELSE
+    RAISE NOTICE 'listings_price_check left NOT VALID: % row(s) have price <= 0',
+      (SELECT count(*) FROM public.listings WHERE price <= 0);
+  END IF;
+END $$;
 
 -- ── validate_listing_write ──────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.validate_listing_write() RETURNS trigger
