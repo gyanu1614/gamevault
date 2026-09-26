@@ -47,7 +47,7 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 import { useSellerListings } from '@/hooks/use-seller-listings'
 import type { Listing } from '@/lib/api/seller-compatible'
-import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
+import { formatDeliveryLabel, SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
 import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
 import { getMyStorePaused } from '@/lib/actions/seller-presence'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
@@ -206,7 +206,7 @@ const SORTS = [
 type SortKey = (typeof SORTS)[number]['value']
 
 /** Bulk delivery-time presets — union of the wizard's grids. */
-const DELIVERY_TIME_OPTIONS = ['instant', '5min', '15min', '30min', '1hr', '3hr', '6hr', '12hr', '24hr']
+
 
 // ─── Dense rectangular menu recipe (matches /dev/offers-preview) ────────────
 
@@ -832,10 +832,13 @@ function OffersContent() {
                           </span>
                         )}
                         <span className="min-w-0">
-                          <span className="block max-w-[240px] truncate text-[13.5px] font-bold text-text-primary">
+                          {/* Game first, offer second: the game is the
+                              coarser grouping, so it reads as the label and
+                              the offer name as the value beneath it. */}
+                          <span className="block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
+                          <span className="mt-0.5 block max-w-[240px] truncate text-[13.5px] font-bold text-text-primary">
                             {displayTitle(l, type)}
                           </span>
-                          <span className="mt-0.5 block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
                           {/* What the review team asked to change — shown ONLY
                               while the offer is in Changes Requested (the same
                               column is internal notes after approval). Tap/click
@@ -966,10 +969,10 @@ function OffersContent() {
                     </span>
                   )}
                   <span className="min-w-0 flex-1 pl-1">
-                    <span className="block truncate text-[13.5px] font-bold text-text-primary">
+                    <span className="block truncate text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
+                    <span className="mt-0.5 block truncate text-[13.5px] font-bold text-text-primary">
                       {displayTitle(l, type)}
                     </span>
-                    <span className="mt-0.5 block truncate text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
                   </span>
                   <StatusChip k={chip} />
                 </div>
@@ -1174,16 +1177,18 @@ function OffersContent() {
               Applies to {selected.size} selected {selected.size === 1 ? 'offer' : 'offers'}.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-2">
-            {DELIVERY_TIME_OPTIONS.map((v) => (
+          {/* Same windows as the sell wizard (one shared list), so a bulk
+              edit can never set a value the wizard would not offer. */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {SELLER_DELIVERY_WINDOWS.map((w) => (
               <button
-                key={v}
+                key={w.value}
                 type="button"
                 disabled={busy}
-                onClick={() => void bulkDelivery(v)}
+                onClick={() => void bulkDelivery(w.value)}
                 className="flex h-10 items-center justify-center rounded-md border border-white/[0.08] bg-[#12151e] text-[13px] font-semibold text-text-secondary transition-colors hover:border-white/[0.16] hover:text-text-primary disabled:opacity-50"
               >
-                {formatDeliveryLabel(v)}
+                {w.label}
               </button>
             ))}
           </div>
