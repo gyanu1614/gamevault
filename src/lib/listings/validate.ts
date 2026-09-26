@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 import { SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
-import { DEFAULT_CURRENCY_CONFIG, type CurrencyConfig } from '@/lib/types/category-configs'
+import type { CurrencyConfig } from '@/lib/types/category-configs'
 
 export const DELIVERY_METHODS = ['manual', 'instant'] as const
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number]
@@ -163,8 +163,10 @@ export function resolveMinimumAndBundle(
   } else {
     if (input.bundle_id) return { ok: false, error: 'bundle_id is not valid for this listing' }
     if (isCurrency) {
-      const configured = Number(ctx.currencyConfig?.min_quantity)
-      floor = Number.isInteger(configured) && configured >= 1 ? configured : DEFAULT_CURRENCY_CONFIG.min_quantity
+      // Parity with the wizard's resolveMinQuantity (src/lib/currency/min-quantity.ts,
+      // PR #99): the admin floor, and 1 when the game has none configured.
+      const configured = Math.floor(Number(ctx.currencyConfig?.min_quantity))
+      floor = Number.isFinite(configured) && configured >= 1 ? configured : 1
     }
   }
 

@@ -51,7 +51,7 @@ describe('ACC-03 — delivery method / window are closed sets', () => {
   it('title 5..100 outside currency; images are http(s) URLs, at most 10', () => {
     expect(validateListingWrite({ ...base, title: 'abc' }, ITEMS)).toMatchObject({ ok: false })
     expect(validateListingWrite({ ...base, title: 'x'.repeat(101) }, ITEMS)).toMatchObject({ ok: false })
-    expect(validateListingWrite({ ...base, title: '', quantity: 1000, min_quantity: 100 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true })
+    expect(validateListingWrite({ ...base, title: '', quantity: 1000, min_quantity: 1 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true })
     expect(validateListingWrite({ ...base, images: ['javascript:alert(1)'] }, ITEMS)).toMatchObject({ ok: false })
     expect(validateListingWrite({ ...base, images: Array(11).fill('https://x.y/a.png') }, ITEMS)).toMatchObject({ ok: false })
   })
@@ -122,8 +122,8 @@ describe('ACC-05 — minimum order size comes from the config, bundle ids from t
     expect(validateListingWrite({ ...cur, quantity: 10, min_quantity: 1 }, FLEX)).toMatchObject({ ok: true, value: { min_quantity: 1, bundle_id: null } })
     // a crafted request cannot undercut a floor above 100
     expect(validateListingWrite({ ...cur, quantity: 5000, min_quantity: 50 }, FLEX_500)).toMatchObject({ ok: true, value: { min_quantity: 500 } })
-    // no config row → the default floor (100) applies
-    expect(validateListingWrite({ ...cur, quantity: 5000, min_quantity: 1 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true, value: { min_quantity: 100 } })
+    // no config row → floor 1 (parity with the wizard's resolveMinQuantity)
+    expect(validateListingWrite({ ...cur, quantity: 5000, min_quantity: 1 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true, value: { min_quantity: 1 } })
   })
 
   it('stock below the floor cannot be listed; the minimum is capped at the stock', () => {

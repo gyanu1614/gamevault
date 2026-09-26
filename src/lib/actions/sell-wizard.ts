@@ -568,7 +568,7 @@ export interface PublishListingInput {
  * rows. We resolve the old game-scoped category_id from (game_id, type)
  * so marketplace filters like `category_id = X` keep matching.
  */
-export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string }>> {
+export async function publishListing(input: PublishListingInput): Promise<Result<{ id: string; status: string; path?: string }>> {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -742,8 +742,14 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // NOTE: later client-side status changes (pause/activate/price edits
     // in the seller offers table) are deliberately NOT wired to IndexNow
     // — the sitemap's lastmod (max listing updated_at) covers those.
+    // The public category page this offer now appears on — the wizard
+    // lands the seller there. Only a live offer is visible, so drafts and
+    // offers waiting for review get no path (the wizard falls back to the
+    // offers table).
+    let categoryPath: string | undefined
     if (finalStatus === 'active') {
       const { data: pingGame } = await supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any
+      if (pingGame?.slug) categoryPath = `/${pingGame.slug}/${gameCategory.slug}`
       if (pingGame?.slug) {
         const listingSlug = (data as { id: string; slug?: string | null }).slug
         await pingIndexNow([
@@ -754,7 +760,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus } }
+    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus, path: categoryPath } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
