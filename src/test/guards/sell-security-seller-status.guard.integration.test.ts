@@ -107,4 +107,34 @@ describe.skipIf(!hasEnv)('sell security Part 2 — seller status after a listing
     })
   })
 
+  describe('ACC-04 — content edits under pre-moderation go back to review', () => {
+    it('an entry-tier seller editing the title of an approved active listing lands in pending_approval; price/stock edits do not', async () => {
+      if (!ready) return
+      const { entry } = await establishedTier(fx!.svc)
+      await fx!.svc.from('profiles').update({ seller_tier: entry }).eq('id', fx!.seller.id)
+      // earlier cases left approved rows behind; pre-moderation counts them, so park them
+      await fx!.svc.from('listings').update({ status: 'paused', approved_at: null, approved_by: null }).eq('seller_id', fx!.seller.id)
+
+      const id = await mkListing({ status: 'active', approved_by: fx!.admin.id, approved_at: new Date().toISOString() })
+      const needs = (await fx!.svc.rpc('check_seller_needs_moderation', { seller_id: fx!.seller.id })).data
+      expect(needs).toBe(true)
+      expect((await fx!.svc.from('listings').update({ price: 3, quantity: 9 }).eq('id', id)).error).toBeNull()
+      expect(await statusOf(id)).toBe('active')
+      expect((await fx!.svc.from('listings').update({ title: fx!.ns.listingTitle() + ' v2' }).eq('id', id)).error).toBeNull()
+      expect(await statusOf(id)).toBe('pending_approval')
+      // review brings it back
+      const { error } = await fx!.admin.client.rpc('approve_listing', { listing_id: id, admin_id: fx!.admin.id })
+      expect(error).toBeNull()
+      expect(await statusOf(id)).toBe('active')
+    })
+
+    it('an established seller (no pre-moderation) keeps the listing active on a content edit', async () => {
+      if (!ready) return
+      const { tier } = await establishedTier(fx!.svc)
+      await fx!.svc.from('profiles').update({ seller_tier: tier }).eq('id', fx!.seller.id)
+      const id = await mkListing({ status: 'active', approved_by: fx!.admin.id, approved_at: new Date().toISOString() })
+      expect((await fx!.svc.from('listings').update({ description: 'edited' }).eq('id', id)).error).toBeNull()
+      expect(await statusOf(id)).toBe('active')
+    })
+  })
 })

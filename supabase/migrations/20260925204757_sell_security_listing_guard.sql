@@ -41,6 +41,8 @@
 --   listing can only become active for an active seller (or an active admin),
 --   whoever writes — approve_listing included — and a blocked seller cannot
 --   insert at all. createCheckout refuses a blocked seller's listing.
+-- ACC-04 — a seller still under pre-moderation who edits the CONTENT of an
+--   active listing sends it back to review (trigger, so every path is covered).
 -- ============================================================================
 
 -- ── ACC-03: no direct UPDATE for JWT callers ────────────────────────────────
@@ -240,6 +242,21 @@ BEGIN
      AND v_kind NOT IN ('seller', 'admin') THEN
     RAISE EXCEPTION 'listings: only an active seller can activate a listing (seller access: %)', v_kind
       USING ERRCODE = '42501';
+  END IF;
+
+  -- ACC-04 (every caller except the moderation RPCs): while the seller is
+  -- still under pre-moderation, a CONTENT edit of an active listing goes back
+  -- to review. Price / stock / delivery / status changes are not content.
+  IF TG_OP = 'UPDATE' AND NOT v_flagged
+     AND OLD.status = 'active' AND NEW.status = 'active' THEN
+    v_content_changed :=
+         NEW.title IS DISTINCT FROM OLD.title
+      OR NEW.description IS DISTINCT FROM OLD.description
+      OR NEW.images IS DISTINCT FROM OLD.images
+      OR NEW.template_data IS DISTINCT FROM OLD.template_data;
+    IF v_content_changed AND public.check_seller_needs_moderation(NEW.seller_id) THEN
+      NEW.status := 'pending_approval';
+    END IF;
   END IF;
 
   -- ACC-03 (every caller): delivery_method is a closed set.
