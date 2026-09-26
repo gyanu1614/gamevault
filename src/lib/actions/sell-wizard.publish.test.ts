@@ -64,10 +64,11 @@ function mockClient(queues: Record<string, Res[]>, extra: Record<string, unknown
 const USER = { id: 'seller-1' }
 const POLICY = { at_listing_limit: false, needs_moderation: false, auto_approve_single: true, auto_approve_bulk: true, bulk_daily_cap: null, bulk_today_count: 0, listing_limit: 10 }
 
-function sessionWith(queues: Record<string, Res[]>) {
+/** The seller gate is the sell_access_kind RPC (ACC-01); the publish policy is the other RPC. */
+function sessionWith(queues: Record<string, Res[]>, kind = 'seller') {
   return mockClient(queues, {
     auth: { getUser: async () => ({ data: { user: USER }, error: null }) },
-    rpc: async () => ({ data: POLICY, error: null }),
+    rpc: async (name: string) => (name === 'sell_access_kind' ? { data: kind, error: null } : { data: POLICY, error: null }),
   })
 }
 
@@ -128,18 +129,13 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
   })
 })
 
-describe('AUTH-009 — publish paths refuse non-sellers before touching anything', () => {
-  const notSeller = { role: 'user', seller_status: 'active' }
-  const restricted = { role: 'seller', seller_status: 'restricted' }
-
-  for (const [label, profile] of [['a plain user', notSeller], ['a restricted seller', restricted]] as const) {
+describe('AUTH-009 / ACC-01 — publish paths refuse non-sellers before touching anything', () => {
+  for (const [label, kind] of [['a plain user', 'none'], ['a restricted seller', 'seller_blocked'], ['an applicant', 'applicant']] as const) {
     it(`publishListing: ${label} is rejected with no catalogue or listings access`, async () => {
       h.session = sessionWith({
-        profiles: [{ data: profile, error: null }],
-        admin_roles: [{ data: null, error: null }],
         global_categories: [{ data: { id: 'gc-items' }, error: null }],
         game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
-      })
+      }, kind)
       h.admin = mockClient({})
       const res = await publishListing(INPUT)
       expect(res.success).toBe(false)
@@ -150,11 +146,9 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
 
     it(`bulkPublishListings: ${label} is rejected with no catalogue or listings access`, async () => {
       h.session = sessionWith({
-        profiles: [{ data: profile, error: null }],
-        admin_roles: [{ data: null, error: null }],
         global_categories: [{ data: { id: 'gc-items' }, error: null }],
         game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
-      })
+      }, kind)
       h.admin = mockClient({})
       const res = await bulkPublishListings('game-1', 'items', [
         { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
@@ -167,11 +161,9 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
 
   it('an active admin without role=seller may still publish (parity with the INSERT policy)', async () => {
     h.session = sessionWith({
-      profiles: [{ data: { role: 'user', seller_status: 'active' }, error: null }],
-      admin_roles: [{ data: { role: 'admin' }, error: null }],
       global_categories: [{ data: { id: 'gc-items' }, error: null }],
       game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
-    })
+    }, 'admin')
     h.admin = mockClient({
       games: [{ data: { slug: 'fortnite' }, error: null }],
       listings: [{ data: { id: 'l-2', slug: 'x' }, error: null }],

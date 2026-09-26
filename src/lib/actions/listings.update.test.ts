@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 type Res = { data: unknown; error: unknown }
 
-const h = vi.hoisted(() => ({ session: null as any, service: null as any }))
+const h = vi.hoisted(() => ({ session: null as any, service: null as any, kind: 'seller' }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
@@ -47,11 +47,11 @@ const OWNED = {
 function session(listing: Record<string, unknown> | null) {
   return mockClient(
     { listings: [{ data: listing, error: null }], category_configs: [{ data: null, error: null }] },
-    { auth: { getUser: async () => ({ data: { user: USER }, error: null }) } },
+    { auth: { getUser: async () => ({ data: { user: USER }, error: null }) }, rpc: async () => ({ data: h.kind, error: null }) },
   )
 }
 
-beforeEach(() => { h.session = null; h.service = null })
+beforeEach(() => { h.session = null; h.service = null; h.kind = 'seller' })
 
 describe('updateListing', () => {
   it('refuses a listing the caller does not own before any write', async () => {
@@ -97,6 +97,16 @@ describe('updateListing', () => {
     expect(h.service.calls).toEqual([])
   })
 
+  it('ACC-01 / BUG-16: a restricted seller cannot edit — nothing is written', async () => {
+    h.kind = 'seller_blocked'
+    h.session = session(OWNED)
+    h.service = mockClient({})
+    const res = await updateListing('l-1', { price: 2 })
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/restricted/i)
+    expect(h.service.calls).toEqual([])
+  })
+
   it('updateListingPrice is the same path', async () => {
     h.session = session(OWNED)
     h.service = mockClient({ listings: [{ data: { id: 'l-1' }, error: null }] })
@@ -109,7 +119,7 @@ describe('bulkUpdateListings', () => {
   it('touches only rows the caller owns (the ownership query is seller-scoped) and skips moderated-out rows on activate', async () => {
     h.session = mockClient(
       { listings: [{ data: [{ id: 'l-1', ...OWNED, status: 'paused' }, { id: 'l-2', ...OWNED, status: 'pending_approval' }], error: null }], category_configs: [{ data: null, error: null }] },
-      { auth: { getUser: async () => ({ data: { user: USER }, error: null }) } },
+      { auth: { getUser: async () => ({ data: { user: USER }, error: null }) }, rpc: async () => ({ data: h.kind, error: null }) },
     )
     h.service = mockClient({ listings: [{ data: null, error: null }, { data: null, error: null }] })
     const res = await bulkUpdateListings(['l-1', 'l-2', 'l-3'], { status: 'active' })
@@ -124,7 +134,7 @@ describe('bulkUpdateListings', () => {
   it('an invalid patch fails the whole batch before any write', async () => {
     h.session = mockClient(
       { listings: [{ data: [{ id: 'l-1', ...OWNED }], error: null }], category_configs: [{ data: null, error: null }] },
-      { auth: { getUser: async () => ({ data: { user: USER }, error: null }) } },
+      { auth: { getUser: async () => ({ data: { user: USER }, error: null }) }, rpc: async () => ({ data: h.kind, error: null }) },
     )
     h.service = mockClient({})
     const res = await bulkUpdateListings(['l-1'], { status: 'sold' } as never)

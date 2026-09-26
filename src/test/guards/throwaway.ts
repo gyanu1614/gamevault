@@ -272,6 +272,10 @@ export async function makeFixture(): Promise<Fixture> {
     const seller = await mkUser('seller')
     const buyer = await mkUser('buyer')
     const admin = await mkUser('admin')
+    // ACC-01 (20260925204757): a listing can only become active for an
+    // account the DB recognises as a seller — the fixture seller is one.
+    const { error: re } = await svc.from('profiles').update({ role: 'seller', seller_status: 'active' }).eq('id', seller.id)
+    if (re) throw new Error(`seller role update: ${re.message}`)
     const { error: ae } = await svc.from('admin_roles').insert({ user_id: admin.id, role: 'admin', is_active: true })
     if (ae) throw new Error(`admin_roles insert: ${ae.message}`)
 

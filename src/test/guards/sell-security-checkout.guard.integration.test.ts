@@ -51,4 +51,18 @@ describe.skipIf(!hasEnv)('sell security — createCheckout gates (integration)',
     expect(r.error).toMatch(/minimum order of 3/)
     expect(await ordersFor(fx!.buyer.id)).toBe(before)
   })
+
+  it("ACC-01: a restricted seller's still-active listing cannot be bought", async () => {
+    const before = await ordersFor(fx!.buyer.id)
+    await fx!.svc.from('profiles').update({ seller_status: 'restricted' }).eq('id', fx!.seller.id)
+    try {
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 3 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/not available/)
+      expect(await ordersFor(fx!.buyer.id)).toBe(before)
+    } finally {
+      await fx!.svc.from('profiles').update({ seller_status: 'active' }).eq('id', fx!.seller.id)
+    }
+  })
 })

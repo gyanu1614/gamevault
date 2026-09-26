@@ -21,6 +21,7 @@ import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } f
 import { findEnabledGameCategory } from '@/lib/categories'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
+import { publishDenialFor } from '@/lib/listings/access'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 
@@ -37,39 +38,6 @@ function getAdminSupabase() {
 // ─── Result helper ───────────────────────────────────────────────────────────
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
-
-/**
- * AUTH-009 — only an ACTIVE seller (profiles.role = 'seller' AND
- * seller_status = 'active') or an active admin/super_admin may publish.
- * Mirrors the surviving listings INSERT policy so the app and the DB agree;
- * KYC-before-listing is an explicit owner decision. Returns an error string
- * or null. Reads the caller's own rows with the session client.
- */
-async function publishDenialFor(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-): Promise<string | null> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, seller_status')
-    .eq('id', userId)
-    .maybeSingle()
-  const p = profile as { role: string | null; seller_status: string | null } | null
-  const blocked = p?.seller_status === 'restricted' || p?.seller_status === 'banned'
-  if (!blocked && p?.role === 'seller') return null
-
-  if (!blocked) {
-    const { data: admin } = await supabase
-      .from('admin_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .in('role', ['admin', 'super_admin'])
-      .maybeSingle()
-    if (admin) return null
-  }
-  return 'Only approved, active sellers can publish listings.'
-}
 
 // ─── D1: publish policy (moderation + caps) ──────────────────────────────────
 
@@ -822,6 +790,11 @@ export async function updateListingFromWizard(
     if (existing.seller_id !== user.id) {
       return { success: false, error: 'You can only edit your own listings' }
     }
+
+    // ACC-01 / BUG-16 — the same seller gate as publish: a restricted or
+    // banned seller can neither edit nor resubmit.
+    const denied = await publishDenialFor(supabase, user.id)
+    if (denied) return { success: false, error: denied }
 
     const categoryType = existing.pair?.type ?? input.category_slug
     const rules = await loadListingRuleContext(supabase, existing.game_id, categoryType)

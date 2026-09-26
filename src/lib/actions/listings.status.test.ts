@@ -27,6 +27,7 @@ vi.mock('@/lib/supabase/service', () => ({
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'seller-1' } }, error: null }) },
+    rpc: async () => ({ data: 'seller', error: null }),
     from: (table: string) => {
       const b: any = {}
       for (const m of ['select', 'eq']) b[m] = () => b

@@ -142,6 +142,17 @@ describe.skipIf(!hasEnv)('sell security Part 1 — listing validator + DB guard 
       expect((await row(id)).price).toBe(1)
     })
 
+    it("a service-role price edit (the action path) records price history against the seller, not a NULL actor", async () => {
+      if (!ready) return
+      const id = await mkListing()
+      const { error } = await fx!.svc.from('listings').update({ price: 2.5 }).eq('id', id)
+      expect(error).toBeNull()
+      const { data: hist } = await fx!.svc.from('listing_price_history').select('changed_by, old_price, new_price').eq('listing_id', id)
+      expect(hist).toHaveLength(1)
+      expect((hist as any)[0].changed_by).toBe(fx!.seller.id)
+      await fx!.svc.from('listing_price_history').delete().eq('listing_id', id)
+    })
+
     it('an admin session cannot UPDATE listings directly either (admin writes are service-role actions)', async () => {
       if (!ready) return
       const id = await mkListing()

@@ -49,6 +49,11 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   'approve_listing', 'can_edit_review', 'check_seller_needs_moderation', 'checkout_wallet_hold_minor',
   'get_admin_role', 'get_my_permissions', 'get_seller_publish_policy', 'is_super_admin_safe',
   'reject_listing', 'reject_seller_application', 'request_listing_changes', 'withdraw_seller_application',
+  // /sell security (20260925204757): "may this account sell?" — pinned to
+  // auth.uid() for a JWT caller; evaluated by the listings INSERT policy and
+  // the listing-images storage policy as the caller, and asked by the
+  // middleware / actions about themselves.
+  'sell_access_kind',
 ].sort()
 
 /**

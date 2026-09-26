@@ -16,6 +16,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import { validateListingPatch } from '@/lib/listings/validate'
+import { publishDenialFor } from '@/lib/listings/access'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
@@ -313,6 +314,10 @@ export async function updateListing(
       return { success: false, error: 'Unauthorized - not your listing' }
     }
 
+    // ACC-01 — a restricted / banned seller cannot edit (nor re-activate).
+    const denied = await publishDenialFor(supabase, user.id)
+    if (denied) return { success: false, error: denied }
+
     // AUTH-034 — a moderation decision is only undone by review. The DB guard
     // rejects this transition too (42501); refusing here gives a clear message.
     if (
@@ -385,6 +390,9 @@ export async function bulkUpdateListings(
     if (ids.length === 0 || ids.length > 200) {
       return { success: false, error: 'Select between 1 and 200 offers' }
     }
+    // ACC-01 — same seller gate as every other write.
+    const denied = await publishDenialFor(supabase, user.id)
+    if (denied) return { success: false, error: denied }
 
     const { data: rowsRaw } = await supabase
       .from('listings')
