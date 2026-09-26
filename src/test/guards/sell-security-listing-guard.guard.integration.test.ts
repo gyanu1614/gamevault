@@ -110,6 +110,29 @@ describe.skipIf(!hasEnv)('sell security Part 1 — listing validator + DB guard 
     })
   })
 
+  describe('ACC-11 — a crafted status on a direct insert is refused', () => {
+    it("a seller's own PostgREST insert can be born draft or pending_approval only", async () => {
+      if (!ready) return
+      // the fixture seller has no role yet: give it the seller role so the INSERT policy admits it
+      await fx!.svc.from('profiles').update({ role: 'seller' }).eq('id', fx!.seller.id)
+      const base = {
+        seller_id: fx!.seller.id, game_id: gameId, game_category_id: pairId,
+        description: 'x', price: 1, quantity: 1,
+      }
+      for (const status of ['paused', 'sold', 'suspended', 'archived', 'rejected', 'changes_requested']) {
+        const res = await fx!.seller.client.from('listings').insert({ ...base, title: fx!.ns.listingTitle(), status }).select('id')
+        expect(res.error?.code, status).toBe('42501')
+      }
+      const draft = await fx!.seller.client.from('listings').insert({ ...base, title: fx!.ns.listingTitle(), status: 'draft' }).select('id, status').single()
+      expect(draft.error).toBeNull()
+      expect((draft.data as any).status).toBe('draft')
+      // AUTH-031: 'active' is coerced into review, never refused
+      const active = await fx!.seller.client.from('listings').insert({ ...base, title: fx!.ns.listingTitle(), status: 'active' }).select('id, status').single()
+      expect(active.error).toBeNull()
+      expect((active.data as any).status).toBe('pending_approval')
+    })
+  })
+
   describe('ACC-03 — seller edits cannot bypass validation', () => {
     it('a seller cannot UPDATE their own listing through PostgREST at all — not even the price', async () => {
       if (!ready) return

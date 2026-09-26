@@ -222,3 +222,19 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
     expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
   })
 })
+
+describe('ACC-11 — a crafted status never reaches the service-role insert', () => {
+  for (const status of ['paused', 'sold', 'suspended', 'pending_approval', 'archived']) {
+    it(`publishListing refuses status=${status}`, async () => {
+      h.session = sessionWith({
+        profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+        global_categories: [{ data: { id: 'gc-items' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+      })
+      h.admin = mockClient({})
+      const res = await publishListing({ ...INPUT, status: status as never })
+      expect(res.success).toBe(false)
+      expect(h.admin.calls).toEqual([])
+    })
+  }
+})

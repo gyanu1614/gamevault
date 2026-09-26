@@ -33,6 +33,8 @@
 -- ACC-05 — minimum order size: min_quantity <= quantity unless unlimited (the
 --   config floor, the bundle-id check and the cap live in the validator;
 --   createCheckout now refuses quantity < min_quantity).
+-- ACC-11 — crafted status on insert: a JWT insert can only be born draft /
+--   pending_approval; the validator whitelists draft|active for the app.
 -- ============================================================================
 
 -- ── ACC-03: no direct UPDATE for JWT callers ────────────────────────────────
@@ -78,6 +80,16 @@ BEGIN
      AND NEW.status = 'active' THEN
     RAISE EXCEPTION 'listings: status % → active is protected; a moderated listing is re-activated only through review',
       OLD.status
+      USING ERRCODE = '42501';
+  END IF;
+
+  -- ACC-11 (untrusted only): a JWT insert is born draft or pending_approval,
+  -- nothing else. trg_guard_listings_protected_columns has already coerced
+  -- 'active' to 'pending_approval' (AUTH-031); a crafted paused / sold /
+  -- suspended / archived / rejected row is refused outright. The app's
+  -- service-role publish paths whitelist draft|active in the validator.
+  IF TG_OP = 'INSERT' AND NOT v_trusted AND NEW.status NOT IN ('draft', 'pending_approval') THEN
+    RAISE EXCEPTION 'listings: a new listing can only be a draft or submitted for review (got %)', NEW.status
       USING ERRCODE = '42501';
   END IF;
 
