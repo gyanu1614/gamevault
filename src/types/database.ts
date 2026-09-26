@@ -12994,6 +12994,9 @@ export type Database = {
         }
         Returns: Json
       }
+      sell_access_kind: { Args: { p_user: string }; Returns: string }
+      sell_access_kind_of: { Args: { p_user: string }; Returns: string }
+      sell_security_version: { Args: never; Returns: number }
       seller_available_balance: {
         Args: { p_currency: string; p_seller_id: string }
         Returns: number

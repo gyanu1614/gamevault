@@ -87,6 +87,21 @@ export async function establishedTier(svc: SupabaseClient): Promise<{ tier: stri
 }
 
 /** Promote a fixture user to an active seller on the established tier; throws if the write fails. */
+/**
+ * Activate the fixture's pending listing the way the app does: through the
+ * approve_listing RPC (flag path). Since ACC-03 (20260925204757) a plain
+ * service-role `update({ status: 'active' })` on a pending_approval row is
+ * rejected — review is the only way out of moderation, for the app too.
+ */
+export async function activateFixtureListing(svc: SupabaseClient, listingId: string, adminId: string, extra: Record<string, unknown> = {}): Promise<void> {
+  const { error } = await svc.rpc('approve_listing', { listing_id: listingId, admin_id: adminId })
+  if (error) throw new Error(`approve_listing(${listingId}): ${error.message}`)
+  if (Object.keys(extra).length) {
+    const { error: ue } = await svc.from('listings').update(extra).eq('id', listingId)
+    if (ue) throw new Error(`listing patch(${listingId}): ${ue.message}`)
+  }
+}
+
 export async function promoteToEstablishedSeller(svc: SupabaseClient, userId: string): Promise<{ tier: string; entry: string }> {
   const t = await establishedTier(svc)
   const { error } = await svc.from('profiles').update({ role: 'seller', seller_tier: t.tier, seller_status: 'active' }).eq('id', userId)
@@ -257,6 +272,10 @@ export async function makeFixture(): Promise<Fixture> {
     const seller = await mkUser('seller')
     const buyer = await mkUser('buyer')
     const admin = await mkUser('admin')
+    // ACC-01 (20260925204757): a listing can only become active for an
+    // account the DB recognises as a seller — the fixture seller is one.
+    const { error: re } = await svc.from('profiles').update({ role: 'seller', seller_status: 'active' }).eq('id', seller.id)
+    if (re) throw new Error(`seller role update: ${re.message}`)
     const { error: ae } = await svc.from('admin_roles').insert({ user_id: admin.id, role: 'admin', is_active: true })
     if (ae) throw new Error(`admin_roles insert: ${ae.message}`)
 

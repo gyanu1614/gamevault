@@ -9,17 +9,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const h = vi.hoisted(() => ({ update: vi.fn(), current: null as any }))
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({}) }))
-vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => ({}) }))
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: { id: 'seller-1' } }, error: null }) },
+vi.mock('@/lib/revalidation/listings', () => ({ revalidateListingSurfaces: vi.fn(async () => ({ tags: [] })) }))
+// ACC-03: the session client only READS (ownership); the write is a
+// service-role update. The assertion "writes nothing" therefore watches the
+// service client.
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceRoleClient: () => ({
     from: () => {
       const b: any = {}
       for (const m of ['select', 'eq']) b[m] = () => b
-      b.single = async () => ({ data: h.current, error: null })
+      b.single = async () => ({ data: { id: 'l-1' }, error: null })
       b.update = (...a: unknown[]) => { h.update(...a); return b }
-      b.then = (ok: any) => Promise.resolve({ data: h.current, error: null }).then(ok)
+      return b
+    },
+  }),
+}))
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({
+    auth: { getUser: async () => ({ data: { user: { id: 'seller-1' } }, error: null }) },
+    rpc: async () => ({ data: 'seller', error: null }),
+    from: (table: string) => {
+      const b: any = {}
+      for (const m of ['select', 'eq']) b[m] = () => b
+      const row = table === 'listings'
+        ? { game_id: 'g', game_category_id: 'p', quantity: 5, min_quantity: 1, is_unlimited: false, delivery_method: 'manual', bundle_id: null, pair: { type: 'items' }, ...h.current }
+        : null
+      b.single = async () => ({ data: row, error: null })
+      b.maybeSingle = async () => ({ data: row, error: null })
+      b.then = (ok: any) => Promise.resolve({ data: row, error: null }).then(ok)
       return b
     },
   }),

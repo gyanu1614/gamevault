@@ -27,31 +27,6 @@ export function useSellerListings(options?: UseListingsOptions) {
     queryFn: () => listingsApi.getAll(options),
   })
 
-  // Create listing mutation
-  const createListing = useMutation({
-    mutationFn: (listing: {
-      game_id: string
-      category_id: string
-      title: string
-      description: string
-      price: number
-      quantity?: number
-      is_unlimited?: boolean
-      delivery_time?: string
-      delivery_method?: string
-      images?: string[]
-      status?: ListingStatus
-    }) => listingsApi.create(listing),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller', 'listings'] })
-      queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
-      toast.success('Listing created successfully!')
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create listing')
-    },
-  })
-
   // Update listing mutation
   const updateListing = useMutation({
     mutationFn: ({ id, updates, silent }: { id: string; updates: Partial<Listing>; silent?: boolean }) =>
@@ -134,12 +109,10 @@ export function useSellerListings(options?: UseListingsOptions) {
     listings: listings || [],
     isLoading,
     error,
-    createListing: createListing.mutateAsync,
     updateListing: updateListing.mutateAsync,
     deleteListing: deleteListing.mutateAsync,
     bulkUpdate: bulkUpdate.mutateAsync,
     bulkDelete: bulkDelete.mutateAsync,
-    isCreating: createListing.isPending,
     isUpdating: updateListing.isPending,
     isDeleting: deleteListing.isPending,
   }

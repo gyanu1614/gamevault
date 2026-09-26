@@ -16,11 +16,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
-import { resolveMinQuantity } from '@/lib/currency/min-quantity'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
 import { pingIndexNow } from '@/lib/seo/indexnow'
+import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
+import { publishDenialMessage, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
+import { decidePublishStatus } from '@/lib/listings/publish-status'
+import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
+import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
+import { loadListingRuleContext } from '@/lib/listings/rule-context'
+import type { CurrencyConfig } from '@/lib/types/category-configs'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
  *  legacy categories row on the publish path. The user-bound client can't
@@ -35,39 +41,6 @@ function getAdminSupabase() {
 // ─── Result helper ───────────────────────────────────────────────────────────
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
-
-/**
- * AUTH-009 — only an ACTIVE seller (profiles.role = 'seller' AND
- * seller_status = 'active') or an active admin/super_admin may publish.
- * Mirrors the surviving listings INSERT policy so the app and the DB agree;
- * KYC-before-listing is an explicit owner decision. Returns an error string
- * or null. Reads the caller's own rows with the session client.
- */
-async function publishDenialFor(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-): Promise<string | null> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, seller_status')
-    .eq('id', userId)
-    .maybeSingle()
-  const p = profile as { role: string | null; seller_status: string | null } | null
-  const blocked = p?.seller_status === 'restricted' || p?.seller_status === 'banned'
-  if (!blocked && p?.role === 'seller') return null
-
-  if (!blocked) {
-    const { data: admin } = await supabase
-      .from('admin_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .in('role', ['admin', 'super_admin'])
-      .maybeSingle()
-    if (admin) return null
-  }
-  return 'Only approved, active sellers can publish listings.'
-}
 
 // ─── D1: publish policy (moderation + caps) ──────────────────────────────────
 
@@ -524,6 +497,43 @@ export async function shouldShowAttribute(
   return true
 }
 
+// ─── Currency auto-fill (shared by publish + wizard edit) ───────────────────
+
+/**
+ * V13 / V19/P9 / V19/P24/P6 — currency listings take their title and default
+ * image from the game + category config (unit_label, bundle name/icon); the
+ * wizard hides those fields. Non-currency categories pass through untouched.
+ */
+async function resolveCurrencyTitleAndImages(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  gameId: string,
+  categoryType: string,
+  currencyConfig: Partial<CurrencyConfig> | null | undefined,
+  v: Pick<ListingWrite, 'title' | 'images' | 'bundle_id'>,
+): Promise<{ title: string; images: string[] }> {
+  if (categoryType !== 'currency') return { title: v.title, images: v.images }
+  const { data: gameRow } = await supabase
+    .from('games')
+    .select('name, image_url')
+    .eq('id', gameId)
+    .maybeSingle() as any
+  const gameName: string = gameRow?.name ?? 'Currency'
+  const gameImage: string | null = gameRow?.image_url ?? null
+  const unit = currencyConfig?.unit_label || `${gameName} currency`
+  const bundles = currencyConfig?.bundles ?? []
+  const matchedBundle = v.bundle_id ? bundles.find((b) => b.id === v.bundle_id) : null
+  let title = v.title
+  if (!title) {
+    title = matchedBundle?.name ? `${gameName} ${matchedBundle.name}` : `${gameName} ${unit}`
+  }
+  let images = v.images
+  if (images.length === 0) {
+    const fallbackImage = matchedBundle?.icon_url || gameImage
+    if (fallbackImage) images = [fallbackImage]
+  }
+  return { title, images }
+}
+
 // ─── PUBLISH ─────────────────────────────────────────────────────────────────
 
 export interface PublishListingInput {
@@ -564,9 +574,14 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // AUTH-009 — seller gate before anything else runs.
-    const denied = await publishDenialFor(supabase, user.id)
-    if (denied) return { success: false, error: denied }
+    // AUTH-009 / ACC-01 — seller gate before anything else runs. GRO-08: an
+    // applicant (application in the pipeline) may use the wizard, but every
+    // save lands as a DRAFT — the DB (INSERT policy + trigger) refuses any
+    // other status for them, whoever writes.
+    const kind = await sellAccessKind(supabase, user.id)
+    const isApplicant = kind === 'applicant'
+    const denied = publishDenialMessage(kind)
+    if (denied && !isApplicant) return { success: false, error: denied }
 
     // ─── D1: tier-based cap + moderation gate ────────────────────────────
     // Fetch the publish policy in the same request so we can reject early
@@ -574,20 +589,24 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // `pending_approval` when their tier requires it. The DB trigger
     // (check_listing_moderation) also enforces moderation as a safety net,
     // but doing it here means the wizard sees the right status back
-    // immediately and the seller gets a clear toast.
-    const policyRes = await (supabase.rpc as any)(
-      'get_seller_publish_policy',
-      { p_user_id: user.id },
-    )
-    if (policyRes.error) {
-      return { success: false, error: policyRes.error.message }
-    }
-    const policy = policyRes.data as SellerPublishPolicy
+    // immediately and the seller gets a clear toast. An applicant has no
+    // policy yet: drafts only, submitted on approval.
+    let policy: SellerPublishPolicy | null = null
+    if (!isApplicant) {
+      const policyRes = await (supabase.rpc as any)(
+        'get_seller_publish_policy',
+        { p_user_id: user.id },
+      )
+      if (policyRes.error) {
+        return { success: false, error: policyRes.error.message }
+      }
+      policy = policyRes.data as SellerPublishPolicy
 
-    if (input.status === 'active' && policy.at_listing_limit) {
-      return {
-        success: false,
-        error: `You're at your active-listing cap (${policy.listing_limit}). Pause one before adding more, or level up your tier.`,
+      if (input.status === 'active' && policy.at_listing_limit) {
+        return {
+          success: false,
+          error: `You're at your active-listing cap (${policy.listing_limit}). Pause one before adding more, or level up your tier.`,
+        }
       }
     }
 
@@ -599,12 +618,19 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       return { success: false, error: 'This category is not enabled for this game.' }
     }
 
-    // D1: downgrade `active` → `pending_approval` when the tier requires it.
-    // Draft / explicit pending_approval pass through unchanged.
-    const finalStatus =
-      input.status === 'active' && (policy.needs_moderation || !policy.auto_approve_single)
-        ? 'pending_approval'
-        : input.status
+    // ACC-03/05/06/11 — ONE validator for every write path. Runs after the
+    // pair gate (the rules depend on the pair's type and config) and before
+    // any write; the payload below is built from its output, never from the
+    // raw input.
+    const rules = await loadListingRuleContext(supabase, input.game_id, gameCategory.type)
+    const validated = validateListingWrite(input, rules)
+    if (!validated.ok) return { success: false, error: validated.error }
+    const v = validated.value
+
+    // D1: downgrade `active` → `pending_approval` when the tier requires it
+    // (one rule with the drafts submitted on approval: decidePublishStatus).
+    // GRO-08: an applicant's save is always a draft.
+    const finalStatus = isApplicant || !policy ? 'draft' : decidePublishStatus(policy, v.status)
 
     // V19/P9 — One currency listing per (seller, game) in flexible
     // mode (Robux-style).
@@ -654,66 +680,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    // Currency minimums are resolved below from the game's admin floor
-    // (resolveMinQuantity); every other category keeps the seller's value.
-    let resolvedMinQuantity = Math.max(1, Math.floor(input.min_quantity || 1))
-
     // V13 — Currency listings auto-fill title + image from the game record
     // so sellers don't have to. The wizard hides those fields in the UI.
-    let resolvedTitle = input.title.trim()
-    let resolvedImages = input.images
-    if (input.category_slug === 'currency') {
-      // V19/P9 — Pull title from the live category_configs row (admin
-      // sets unit_label per game). Falls back to "{Game} currency" if
-      // config hasn't been edited yet. Replaces the hardcoded
-      // currencyUnit map that mirrored the old client-side map we
-      // deleted in V19/P4.
-      const [{ data: gameRow }, { data: cfgRow }] = await Promise.all([
-        supabase
-          .from('games')
-          .select('name, slug, image_url')
-          .eq('id', input.game_id)
-          .single() as any,
-        supabase
-          .from('category_configs')
-          .select('config')
-          .eq('game_id', input.game_id)
-          .eq('category_type', 'currency')
-          .maybeSingle() as any,
-      ])
-      const gameName: string = gameRow?.name ?? 'Currency'
-      const gameImage: string | null = gameRow?.image_url ?? null
-      const unitLabel: string | undefined = cfgRow?.config?.unit_label
-      const unit = unitLabel || `${gameName} currency`
-      // V19/P24/P6 — Bundle listings auto-fill title with the bundle
-      // name so the listing detail page reads "Fortnite 600 V-Bucks"
-      // instead of "Fortnite V-Bucks", and the seller's My Listings
-      // table can tell two bundles apart at a glance. Bundle's image
-      // also overrides the game logo as the default listing image.
-      const bundles: Array<{ id: string; name?: string; icon_url?: string }> =
-        cfgRow?.config?.bundles ?? []
-      const matchedBundle = input.bundle_id
-        ? bundles.find((b) => b.id === input.bundle_id)
-        : null
-      // Same rule as the wizard: the seller's minimum, raised to this
-      // game's admin floor and capped at stock. Was a hard-coded 100,
-      // which turned a seller's "1 K" into "100 K" on every save.
-      resolvedMinQuantity = resolveMinQuantity({
-        requested: input.min_quantity,
-        adminFloor: cfgRow?.config?.min_quantity,
-        stock: input.quantity,
-        isBundle: !!input.bundle_id,
-      })
-      if (!resolvedTitle) {
-        resolvedTitle = matchedBundle?.name
-          ? `${gameName} ${matchedBundle.name}`
-          : `${gameName} ${unit}`
-      }
-      if (resolvedImages.length === 0) {
-        const fallbackImage = matchedBundle?.icon_url || gameImage
-        if (fallbackImage) resolvedImages = [fallbackImage]
-      }
-    }
+    const { title: resolvedTitle, images: resolvedImages } =
+      await resolveCurrencyTitleAndImages(supabase, input.game_id, gameCategory.type, rules.currencyConfig, v)
 
     const insertPayload: Record<string, unknown> = {
       seller_id: user.id,
@@ -724,21 +694,25 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       category_id: gameCategory.legacy_category_id,
       title: resolvedTitle || 'Untitled',
       // listings.description is NOT NULL in the legacy schema; default to ''
-      description: input.description?.trim() || '',
-      price: input.price,
-      original_price: input.original_price ?? null,
-      quantity: input.quantity,
-      min_quantity: resolvedMinQuantity,
-      delivery_method: input.delivery_method,
-      delivery_time: input.delivery_time ?? null,
+      description: v.description,
+      price: v.price,
+      original_price: v.original_price,
+      quantity: v.quantity,
+      // ACC-05 — the validator resolved this from category_configs
+      // (min_quantity floor, bundle → 1, capped at stock).
+      min_quantity: v.min_quantity,
+      delivery_method: v.delivery_method,
+      delivery_time: v.delivery_time,
       images: resolvedImages,
-      template_data: input.template_data,
-      region: input.region ?? null,
-      platform: input.platform ?? null,
+      template_data: v.template_data,
+      region: v.region,
+      platform: v.platform,
       // V19/P24 — Bundle id for fixed-bundle currencies. NULL for
       // flexible currency listings and every non-currency listing.
-      bundle_id: input.bundle_id ?? null,
+      bundle_id: v.bundle_id,
       status: finalStatus,
+      // GRO-08 — marks the drafts to submit automatically on approval.
+      ...(isApplicant ? { metadata: { [APPLICANT_DRAFT_KEY]: true } } : {}),
     }
 
     // AUTH-031 — the DB coerces every non-guarded listings INSERT to
@@ -796,10 +770,16 @@ export async function publishListing(input: PublishListingInput): Promise<Result
 /**
  * V14k — Update an existing listing using the same wizard payload. Edit-mode
  * skips the publish-policy gate (the listing was already approved) and the
- * legacy-category resolution (the row already has a category_id), but keeps
- * the currency floor + auto-fill so behaviour stays identical to publish.
+ * legacy-category resolution (the row already has a category_id), but runs
+ * the SAME validator as publish (ACC-03) and the same currency auto-fill.
+ *
+ * The listing's game / category are fixed: the row's own pair decides the
+ * rules and the payload never carries game_id / game_category_id (BUG-03
+ * server side; the DB trigger freezes them for JWT callers too).
  *
  * Ownership check: rejects the update if the listing belongs to someone else.
+ * The write itself is a service-role write — UPDATE on listings is revoked
+ * for JWT callers (migration 20260925204757) — after that check.
  */
 export async function updateListingFromWizard(
   listingId: string,
@@ -810,149 +790,100 @@ export async function updateListingFromWizard(
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // Ownership guard.
-    const { data: existing, error: lookupErr } = await (supabase
+    // Ownership guard + the row's fixed pair (session client: RLS lets a
+    // seller read their own rows in any status).
+    const { data: existingRaw, error: lookupErr } = await (supabase
       .from('listings') as any)
-      .select('seller_id, status')
+      .select('seller_id, status, game_id, game_category_id, pair:game_categories!listings_game_category_id_fkey (type)')
       .eq('id', listingId)
       .single()
+    const existing = existingRaw as {
+      seller_id: string
+      status: string
+      game_id: string
+      game_category_id: string | null
+      pair: { type: string } | null
+    } | null
     if (lookupErr || !existing) return { success: false, error: 'Listing not found' }
-    if ((existing as { seller_id: string }).seller_id !== user.id) {
+    if (existing.seller_id !== user.id) {
       return { success: false, error: 'You can only edit your own listings' }
     }
 
-    // Currency minimums are resolved below from the game's admin floor
-    // (resolveMinQuantity); every other category keeps the seller's value.
-    let resolvedMinQuantity = Math.max(1, Math.floor(input.min_quantity || 1))
-
-    // V14k — Same currency title/image auto-fill as publish.
-    // V19/P24/P6 — Pulled the hardcoded currencyUnit Record out and
-    // wired the edit path to read the same category_configs row +
-    // bundle list that publishListing uses. Bundle listings get a
-    // "{Game} {bundle.name}" title so edits don't regress to a
-    // bundle-less generic name.
-    let resolvedTitle = input.title.trim()
-    let resolvedImages = input.images
-    if (input.category_slug === 'currency') {
-      const [{ data: gameRow }, { data: cfgRow }] = await Promise.all([
-        supabase
-          .from('games')
-          .select('name, image_url')
-          .eq('id', input.game_id)
-          .single() as any,
-        supabase
-          .from('category_configs')
-          .select('config')
-          .eq('game_id', input.game_id)
-          .eq('category_type', 'currency')
-          .maybeSingle() as any,
-      ])
-      const gameName: string = gameRow?.name ?? 'Currency'
-      const gameImage: string | null = gameRow?.image_url ?? null
-      const unitLabel: string | undefined = cfgRow?.config?.unit_label
-      const unit = unitLabel || `${gameName} currency`
-      const bundles: Array<{ id: string; name?: string; icon_url?: string }> =
-        cfgRow?.config?.bundles ?? []
-      const matchedBundle = input.bundle_id
-        ? bundles.find((b) => b.id === input.bundle_id)
-        : null
-      // Same rule as the wizard: the seller's minimum, raised to this
-      // game's admin floor and capped at stock. Was a hard-coded 100,
-      // which turned a seller's "1 K" into "100 K" on every save.
-      resolvedMinQuantity = resolveMinQuantity({
-        requested: input.min_quantity,
-        adminFloor: cfgRow?.config?.min_quantity,
-        stock: input.quantity,
-        isBundle: !!input.bundle_id,
-      })
-      if (!resolvedTitle) {
-        resolvedTitle = matchedBundle?.name
-          ? `${gameName} ${matchedBundle.name}`
-          : `${gameName} ${unit}`
-      }
-      if (resolvedImages.length === 0) {
-        const fallbackImage = matchedBundle?.icon_url || gameImage
-        if (fallbackImage) resolvedImages = [fallbackImage]
-      }
+    // ACC-01 / BUG-16 — the same seller gate as publish: a restricted or
+    // banned seller can neither edit nor resubmit. GRO-08: an applicant may
+    // keep editing their own drafts — as drafts.
+    const kind = await sellAccessKind(supabase, user.id)
+    const isApplicant = kind === 'applicant'
+    const denied = publishDenialMessage(kind)
+    if (denied && !isApplicant) return { success: false, error: denied }
+    if (isApplicant && existing.status !== 'draft') {
+      return { success: false, error: 'Only drafts can be edited while your application is under review' }
     }
+
+    const categoryType = existing.pair?.type ?? input.category_slug
+    const rules = await loadListingRuleContext(supabase, existing.game_id, categoryType)
+    const validated = validateListingWrite(input, rules)
+    if (!validated.ok) return { success: false, error: validated.error }
+    const v = validated.value
+
+    const { title: resolvedTitle, images: resolvedImages } =
+      await resolveCurrencyTitleAndImages(supabase, existing.game_id, categoryType, rules.currencyConfig, v)
 
     // Resubmit loop: a listing the review team bounced back
     // (changes_requested) or rejected re-enters the review queue when
     // the seller saves a non-draft edit. Explicit status flip — the
     // check_listing_moderation trigger only intervenes on transitions
     // to 'active', so we can't rely on it here.
-    const existingStatus = (existing as { status: string }).status
+    const existingStatus = existing.status
     const isResubmit =
       (existingStatus === 'changes_requested' || existingStatus === 'rejected') &&
-      input.status !== 'draft'
+      v.status !== 'draft'
+    const requestedStatus: 'draft' | 'active' = isApplicant ? 'draft' : v.status
 
     const updatePayload: Record<string, unknown> = {
       title: resolvedTitle || 'Untitled',
-      description: input.description?.trim() || '',
-      price: input.price,
-      original_price: input.original_price ?? null,
-      quantity: input.quantity,
-      min_quantity: resolvedMinQuantity,
-      delivery_method: input.delivery_method,
-      delivery_time: input.delivery_time ?? null,
+      description: v.description,
+      price: v.price,
+      original_price: v.original_price,
+      quantity: v.quantity,
+      min_quantity: v.min_quantity,
+      delivery_method: v.delivery_method,
+      delivery_time: v.delivery_time,
       images: resolvedImages,
-      template_data: input.template_data,
-      region: input.region ?? null,
-      platform: input.platform ?? null,
+      template_data: v.template_data,
+      region: v.region,
+      platform: v.platform,
       // V19/P24 — Bundle id propagated on edit too so the seller can
       // re-target a different bundle from the wizard.
-      bundle_id: input.bundle_id ?? null,
+      bundle_id: v.bundle_id,
       // Only let the seller flip between draft ↔ active here; don't let an
       // edit accidentally reset moderation state — EXCEPT the resubmit
       // loop, which moves changes_requested/rejected back into review.
-      ...(input.status === 'draft'
+      ...(requestedStatus === 'draft'
         ? { status: 'draft' }
         : isResubmit
           ? { status: 'pending_approval' }
           : {}),
     }
 
-    const { error } = await (supabase
+    // Service-role write after the ownership check above; the row id AND
+    // seller_id are both pinned so a race on ownership cannot widen it. The
+    // status is read back: the DB may bounce a moderated seller's content
+    // edit into review (ACC-04).
+    const { data: written, error } = await (getAdminSupabase()
       .from('listings') as any)
       .update(updatePayload)
       .eq('id', listingId)
+      .eq('seller_id', user.id)
+      .select('status')
+      .single()
     if (error) return { success: false, error: error.message }
+    const finalStatus: string = (written as { status?: string } | null)?.status
+      ?? (requestedStatus === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus)
 
-    // Resubmit comms — tell the moderation team the listing is back in
-    // the queue. AWAITED but wrapped so it can never fail the edit;
-    // service-role client because a seller session can't read admin
-    // role rows or insert notifications for other users under RLS.
-    if (isResubmit) {
-      await (async () => {
-        const { createServiceRoleClient } = await import('@/lib/supabase/service')
-        const service = createServiceRoleClient()
-
-        const { data: rolesWithPermission } = await service
-          .from('role_permissions')
-          .select('role')
-          .eq('permission', 'listings.moderate') as any
-        const roles = (rolesWithPermission || []).map((r: any) => r.role)
-        if (roles.length === 0) return
-
-        const { data: admins } = await service
-          .from('admin_roles')
-          .select('user_id')
-          .in('role', roles)
-          .eq('is_active', true) as any
-        const adminIds: string[] = (admins || []).map((a: any) => a.user_id)
-        if (adminIds.length === 0) return
-
-        await (service.from('notifications').insert as any)(
-          adminIds.map((adminId) => ({
-            user_id: adminId,
-            type: 'listing_resubmitted',
-            title: 'Listing Resubmitted',
-            message: `"${resolvedTitle || 'Untitled'}" was updated and resubmitted for review.`,
-            link: '/admin/moderation',
-            is_read: false,
-          }))
-        )
-      })().catch((err) => console.error('[SellWizard] Resubmit admin comms failed:', err))
+    // Moderation comms — the listing (re-)entered the review queue.
+    if (finalStatus === 'pending_approval' && existingStatus !== 'pending_approval') {
+      await notifyModeratorsListingResubmitted(resolvedTitle || 'Untitled')
     }
 
     revalidatePath('/account/listings')
@@ -965,16 +896,49 @@ export async function updateListingFromWizard(
     // belt-and-braces measure costs nothing.
     revalidatePath(`/sell/edit/${listingId}`)
     revalidatePath(`/account/listings/${listingId}/edit`)
-    return {
-      success: true,
-      data: {
-        id: listingId,
-        status: input.status === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus,
-      },
-    }
+    return { success: true, data: { id: listingId, status: finalStatus } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
+}
+
+/**
+ * Tell the moderation team a listing is back in the queue. AWAITED but
+ * wrapped so it can never fail the edit; service-role client because a
+ * seller session can't read admin role rows or insert notifications for
+ * other users under RLS.
+ */
+async function notifyModeratorsListingResubmitted(title: string): Promise<void> {
+  await (async () => {
+    const { createServiceRoleClient } = await import('@/lib/supabase/service')
+    const service = createServiceRoleClient()
+
+    const { data: rolesWithPermission } = await service
+      .from('role_permissions')
+      .select('role')
+      .eq('permission', 'listings.moderate') as any
+    const roles = (rolesWithPermission || []).map((r: any) => r.role)
+    if (roles.length === 0) return
+
+    const { data: admins } = await service
+      .from('admin_roles')
+      .select('user_id')
+      .in('role', roles)
+      .eq('is_active', true) as any
+    const adminIds: string[] = (admins || []).map((a: any) => a.user_id)
+    if (adminIds.length === 0) return
+
+    await (service.from('notifications').insert as any)(
+      adminIds.map((adminId) => ({
+        user_id: adminId,
+        type: 'listing_resubmitted',
+        title: 'Listing Resubmitted',
+        message: `"${title}" was updated and resubmitted for review.`,
+        link: '/admin/moderation',
+        is_read: false,
+      }))
+    )
+  })().catch((err) => console.error('[SellWizard] Resubmit admin comms failed:', err))
 }
 
 // ─── D5: Bulk CSV upload ────────────────────────────────────────────────────
@@ -1100,8 +1064,8 @@ export async function bulkPublishListings(
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    // AUTH-009 — seller gate before anything else runs.
-    const denied = await publishDenialFor(supabase, user.id)
+    // AUTH-009 — seller gate before anything else runs (bulk is sellers only).
+    const denied = publishDenialMessage(await sellAccessKind(supabase, user.id))
     if (denied) return { success: false, error: denied }
 
     const policyRes = await (supabase.rpc as any)(
@@ -1140,6 +1104,10 @@ export async function bulkPublishListings(
     const failed: Array<{ line: number; error: string }> = []
     let ok = 0
 
+    // ACC-03 / BUG-13 — every row goes through the same validator as the
+    // wizard: delivery windows, price, minimum order size, stock.
+    const rules = await loadListingRuleContext(supabase, gameId, gameCategory.type)
+
     // AUTH-031 — see publishListing: rows insert as the backend after the
     // gate + policy decision; seller_id is pinned to the session user.
     const listingsWriter = getAdminSupabase()
@@ -1147,35 +1115,51 @@ export async function bulkPublishListings(
 
     for (const r of rows) {
       try {
-        if (!r.title?.trim()) {
-          failed.push({ line: r.line, error: 'title is required' })
-          continue
-        }
-        if (!Number.isFinite(r.price) || r.price <= 0) {
-          failed.push({ line: r.line, error: 'price must be > 0' })
-          continue
-        }
         if (!Number.isFinite(r.quantity) || r.quantity < 1) {
           failed.push({ line: r.line, error: 'quantity must be >= 1' })
           continue
         }
+        const validated = validateListingWrite(
+          {
+            title: r.title ?? '',
+            description: r.description ?? '',
+            price: r.price,
+            original_price: r.original_price ?? null,
+            quantity: r.quantity,
+            min_quantity: r.min_quantity || 1,
+            delivery_method: r.delivery_method,
+            delivery_time: r.delivery_time,
+            images: r.images ?? [],
+            template_data: r.template_data ?? {},
+            region: r.region ?? null,
+            platform: r.platform ?? null,
+            bundle_id: null,
+            status: 'active',
+          },
+          rules,
+        )
+        if (!validated.ok) {
+          failed.push({ line: r.line, error: validated.error })
+          continue
+        }
+        const v = validated.value
         const payload: Record<string, unknown> = {
           seller_id: user.id,
           game_id: gameId,
           game_category_id: gameCategory.id,
           category_id: gameCategory.legacy_category_id,
-          title: r.title.trim(),
-          description: r.description?.trim() || '',
-          price: r.price,
-          original_price: r.original_price,
-          quantity: r.quantity,
-          min_quantity: r.min_quantity || 1,
-          delivery_method: r.delivery_method,
-          delivery_time: r.delivery_time,
-          images: r.images,
-          template_data: r.template_data,
-          region: r.region,
-          platform: r.platform,
+          title: v.title,
+          description: v.description,
+          price: v.price,
+          original_price: v.original_price,
+          quantity: v.quantity,
+          min_quantity: v.min_quantity,
+          delivery_method: v.delivery_method,
+          delivery_time: v.delivery_time,
+          images: v.images,
+          template_data: v.template_data,
+          region: v.region,
+          platform: v.platform,
           status,
           metadata: { source: 'bulk' },
         }
@@ -1218,6 +1202,13 @@ export async function bulkPublishListings(
 
 // ─── IMAGE UPLOAD (same bucket as old flow) ──────────────────────────────────
 
+/**
+ * ACC-08 — only an account that may use the sell surface (active seller,
+ * admin, or an applicant building drafts) can put files in listing-images;
+ * the type and extension come from the bytes, the size cap is server-side,
+ * and the object lands under the caller's own prefix (which the storage
+ * policy `listing_images_seller_write` re-checks as the caller).
+ */
 export async function uploadSellImage(
   formData: FormData
 ): Promise<Result<{ url: string }>> {
@@ -1226,24 +1217,22 @@ export async function uploadSellImage(
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    const file = formData.get('file') as File | null
-    if (!file) return { success: false, error: 'No file provided' }
-
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      return { success: false, error: 'JPG, PNG, or WebP only' }
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'Each image must be under 5 MB' }
+    const kind = await sellAccessKind(supabase, user.id)
+    if (!canUseSellSurface(kind)) {
+      return { success: false, error: 'Only sellers and seller applicants can upload listing images' }
     }
 
-    const ext = file.name.split('.').pop()
-    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const file = formData.get('file')
+    if (!(file instanceof File)) return { success: false, error: 'No file provided' }
+    const checked = await checkListingImage(file)
+    if (!checked.ok) return { success: false, error: checked.error }
+
+    const path = listingImagePathFor(user.id, checked.image.ext)
     const { data, error } = await supabase.storage
-      .from('listing-images')
-      .upload(path, file, { cacheControl: '3600', upsert: false })
+      .from(LISTING_IMAGE_BUCKET)
+      .upload(path, checked.bytes, { cacheControl: '3600', upsert: false, contentType: checked.image.mime })
     if (error) return { success: false, error: error.message }
-    const { data: urlData } = supabase.storage.from('listing-images').getPublicUrl(data.path)
+    const { data: urlData } = supabase.storage.from(LISTING_IMAGE_BUCKET).getPublicUrl(data.path)
     return { success: true, data: { url: urlData.publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }

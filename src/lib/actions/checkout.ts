@@ -144,8 +144,24 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     if (listingError || !listing) return { success: false, error: 'Listing not found' }
     if (listing.status !== 'active') return { success: false, error: 'Listing is not available' }
     if (listing.seller_id === user.id) return { success: false, error: 'Cannot purchase your own listing' }
+    // ACC-01 — a restricted / banned seller's listing cannot be bought even if
+    // the row still says 'active' (the pause on restriction is best-effort).
+    // Service role: seller_status is not on the public profile view.
+    const { data: sellerProfile } = await createServiceRoleClient()
+      .from('profiles')
+      .select('seller_status')
+      .eq('id', listing.seller_id)
+      .maybeSingle()
+    if ((sellerProfile as { seller_status: string | null } | null)?.seller_status !== 'active') {
+      return { success: false, error: 'Listing is not available' }
+    }
     if (!listing.is_unlimited && listing.quantity < quantity) {
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
+    }
+    // ACC-05(e) — the seller's minimum order size was never enforced here.
+    const minQuantity = Math.max(1, Math.floor(Number(listing.min_quantity ?? 1)))
+    if (quantity < minQuantity) {
+      return { success: false, error: `This offer has a minimum order of ${minQuantity}` }
     }
 
     // Server-computed amounts (promo clamped, no client money trusted). Fee

@@ -29,6 +29,7 @@ import { rejectApplication } from '@/lib/actions/admin-sellers'
 // sends the approval email + notification. The admin-sellers.ts copy only
 // flipped the application row, leaving the seller without access.
 import { approveApplication, requestMoreInfo, messageApplicant } from '@/lib/actions/admin-seller-review'
+import type { IdentityAssessment } from '@/lib/utils/seller-verification'
 import { getDocumentsSignedUrls } from '@/lib/actions/kyc-documents'
 import {
   calculateVerificationStatus,
@@ -533,9 +534,21 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   // approval. Even without it, approveApplication auto-grants founding to any
   // applicant already flagged is_founding_applicant (waitlist founder), so a
   // courted lead never loses the promised perk.
-  const handleApprove = async (asFounding = false) => {
+  // ACC-02 — the server computes the identity check before granting the role;
+  // a gap comes back as requiresAcknowledgement and the modal shows it. The
+  // admin can still approve (acknowledge = true) — informed, not blocked.
+  const [kycGap, setKycGap] = useState<IdentityAssessment | null>(null)
+  const [pendingFounding, setPendingFounding] = useState(false)
+  const handleApprove = async (asFounding = false, acknowledgeKycGap = false) => {
     setIsProcessing(true)
-    const result = await approveApplication(application.id, adminNotes, asFounding)
+    setPendingFounding(asFounding)
+    const result = await approveApplication(application.id, adminNotes, asFounding, { acknowledgeKycGap })
+
+    if (result.requiresAcknowledgement && result.kycGap) {
+      setKycGap(result.kycGap)
+      setIsProcessing(false)
+      return
+    }
 
     if (result.success) {
       setShowApproveModal(false)
@@ -1256,7 +1269,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
 
       {/* Approve */}
       {showApproveModal && (
-        <ModalShell onClose={() => !isProcessing && setShowApproveModal(false)}>
+        <ModalShell onClose={() => !isProcessing && (setShowApproveModal(false), setKycGap(null))}>
           <div className="mb-6 text-center">
             <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.15]">
               <CheckCircle className="h-7 w-7 text-[#A3E635]" />
@@ -1267,19 +1280,50 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               to the seller dashboard and allow them to start listing products.
             </p>
           </div>
+          {/* ACC-02 — identity not verified: say exactly what is missing. The
+              admin may still approve; the decision is recorded in the audit log
+              and profiles.kyc_status stays 'pending'. */}
+          {(kycGap ?? (!verification.checks.find((c) => c.key === 'identity')?.ok ? { missing: ['Government ID or selfie'], unverified: [] } : null)) && (
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border border-[#F5C451]/40 bg-[#F5C451]/10 px-3.5 py-3 text-[13px] leading-relaxed text-[#F5C451]"
+            >
+              <p className="font-semibold">Identity Not Verified</p>
+              {kycGap ? (
+                <ul className="mt-1 list-disc pl-4 text-[#F5C451]/90">
+                  {kycGap.missing.map((m) => <li key={`m-${m}`}>{m}: not uploaded</li>)}
+                  {kycGap.unverified.map((u) => <li key={`u-${u}`}>{u}: uploaded, not verified</li>)}
+                </ul>
+              ) : (
+                <p className="mt-1 text-[#F5C451]/90">A verified government ID and selfie (or a Didit session) are not on file.</p>
+              )}
+              <p className="mt-1.5 text-[#F5C451]/80">
+                Approving now grants seller access without a verified identity and records that you accepted the gap.
+              </p>
+            </div>
+          )}
           <div className="flex gap-2.5">
             <button
-              onClick={() => setShowApproveModal(false)}
+              onClick={() => { setShowApproveModal(false); setKycGap(null) }}
               disabled={isProcessing}
               className={MODAL_CANCEL}
             >
               Cancel
             </button>
-            <button onClick={() => handleApprove(false)} disabled={isProcessing} className={MODAL_CONFIRM_LIME}>
+            <button
+              onClick={() => handleApprove(kycGap ? pendingFounding : false, kycGap !== null)}
+              disabled={isProcessing}
+              className={MODAL_CONFIRM_LIME}
+            >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   Approving…
+                </>
+              ) : kycGap ? (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Approve Anyway
                 </>
               ) : (
                 <>
@@ -1294,7 +1338,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               (A waitlist founder is auto-granted founding by plain Approve too —
               this button forces it for anyone.) */}
           <button
-            onClick={() => handleApprove(true)}
+            onClick={() => handleApprove(true, kycGap !== null)}
             disabled={isProcessing}
             className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#F5C451]/40 bg-[#F5C451]/10 py-2.5 text-sm font-semibold text-[#F5C451] transition-colors hover:bg-[#F5C451]/15 disabled:opacity-50"
           >

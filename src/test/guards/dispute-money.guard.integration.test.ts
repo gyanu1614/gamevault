@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture, activateFixtureListing } from './throwaway'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
 vi.mock('server-only', () => ({}))
@@ -123,7 +123,7 @@ describe.skipIf(!hasEnv)('PR 7 Part 2 — disputes: freeze, refund, negative bal
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('order_disputes_version' as any)).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    await fx.svc.from('listings').update({ status: 'active' }).eq('id', fx.listingId)
+    await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id)
     await fx.svc.from('orders').update({ status: 'cancelled' }).eq('id', fx.pendingOrderId)
   }, 60_000)
 

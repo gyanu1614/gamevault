@@ -52,19 +52,30 @@ describe.skipIf(!hasEnv)('AUTH-034 — listings status transition guard (integra
     })
   }
 
-  it('the seller can still pause/unpause, restock a sold listing, and pull a rejected one back to draft', async () => {
+  // ACC-03 (2026-09-25): sellers no longer UPDATE listings directly — the
+  // validated server actions write as the service role. The positive cases
+  // therefore exercise the service role, and the moderated-out → active rule
+  // is asserted for it too (sell-security-listing-guard covers the rest).
+  it('the app path (service role) can still pause/unpause, restock a sold listing, and pull a rejected one back to draft', async () => {
     const active = await mkListing('active', { approved_by: fx!.admin.id, approved_at: new Date().toISOString() })
-    expect((await fx!.seller.client.from('listings').update({ status: 'paused' }).eq('id', active)).error).toBeNull()
-    expect((await fx!.seller.client.from('listings').update({ status: 'active' }).eq('id', active)).error).toBeNull()
+    expect((await fx!.svc.from('listings').update({ status: 'paused' }).eq('id', active)).error).toBeNull()
+    expect((await fx!.svc.from('listings').update({ status: 'active' }).eq('id', active)).error).toBeNull()
     expect(await statusOf(active)).toBe('active')
 
     const sold = await mkListing('sold', { approved_by: fx!.admin.id, approved_at: new Date().toISOString(), quantity: 0 })
-    expect((await fx!.seller.client.from('listings').update({ status: 'active', quantity: 3 }).eq('id', sold)).error).toBeNull()
+    expect((await fx!.svc.from('listings').update({ status: 'active', quantity: 3 }).eq('id', sold)).error).toBeNull()
     expect(await statusOf(sold)).toBe('active')
 
     const rejected = await mkListing('rejected', { rejected_at: new Date().toISOString(), rejection_reason: 'no' })
-    expect((await fx!.seller.client.from('listings').update({ status: 'draft' }).eq('id', rejected)).error).toBeNull()
+    expect((await fx!.svc.from('listings').update({ status: 'draft' }).eq('id', rejected)).error).toBeNull()
     expect(await statusOf(rejected)).toBe('draft')
+  })
+
+  it('the app path (service role, no flag) cannot flip a moderated-out listing to active either', async () => {
+    const id = await mkListing('changes_requested')
+    const res = await fx!.svc.from('listings').update({ status: 'active' }).eq('id', id).select('id')
+    expectGuardRejection(res as any, 'listings')
+    expect(await statusOf(id)).toBe('changes_requested')
   })
 
   it('the admin approve_listing RPC still activates a pending listing', async () => {

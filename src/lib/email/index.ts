@@ -1362,3 +1362,66 @@ export async function sendPayoutDetailsChangedEmail({
   })
   return error ? { success: false, error } : { success: true, data }
 }
+
+/**
+ * GRO-08 — after approval, the drafts the applicant built during review were
+ * submitted automatically. One email lists what went live / into review and
+ * what still needs finishing.
+ */
+export async function sendApplicantDraftsSubmittedEmail({
+  to,
+  name,
+  submitted,
+  skipped,
+}: {
+  to: string
+  name: string
+  submitted: Array<{ title: string; status: 'active' | 'pending_approval' }>
+  skipped: Array<{ title: string; reason: string }>
+}) {
+  try {
+    const row = (title: string, note: string, color: string) =>
+      `<tr><td style="padding:6px 0;font-size:13px;line-height:1.5;color:${EMAIL_TOKENS.INK};border-bottom:1px solid ${EMAIL_TOKENS.LINE};">${escapeHtml(title)}<br><span style="font-size:12px;color:${color};">${escapeHtml(note)}</span></td></tr>`
+    const submittedRows = submitted
+      .map((s) => row(s.title, s.status === 'active' ? 'Live now' : 'Submitted for review', EMAIL_TOKENS.FOREST_2))
+      .join('')
+    const skippedRows = skipped.map((s) => row(s.title, `Still a draft — ${s.reason}`, EMAIL_TOKENS.MUTED)).join('')
+
+    const body =
+      emailText(
+        `Hi ${escapeHtml(name)} — you\'re approved, and the ${submitted.length + skipped.length === 1 ? 'listing' : 'listings'} you drafted while your application was under review ${submitted.length > 0 ? 'went out automatically' : 'are waiting for you'}.`,
+      ) +
+      (submitted.length > 0
+        ? emailBox({ accent: true, title: `Submitted (${submitted.length})`, html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${submittedRows}</table>` })
+        : '') +
+      (skipped.length > 0
+        ? emailBox({ title: `Needs a finishing touch (${skipped.length})`, html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${skippedRows}</table>` })
+        : '') +
+      emailButton('Open My Listings', `${APP_URL}/account/listings`) +
+      emailFooterNote('Listings marked "Submitted for review" go live once our team has checked them.')
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to,
+      subject:
+        submitted.length > 0
+          ? `Your ${submitted.length} draft ${submitted.length === 1 ? 'listing is' : 'listings are'} on their way`
+          : 'Your draft listings are waiting for you',
+      html: emailShell({
+        preview: 'Your drafts from the application period were submitted.',
+        icon: 'sale',
+        heading: 'Your drafts are moving',
+        body,
+      }),
+    })
+    if (error) {
+      console.error('Failed to send drafts-submitted email:', error)
+      return { success: false, error }
+    }
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email service error:', error)
+    return { success: false, error }
+  }
+}

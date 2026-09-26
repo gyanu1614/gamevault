@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMyListingSurfaces } from '@/lib/actions/revalidate-listing-surfaces'
+import { updateListing as updateListingAction, bulkUpdateListings as bulkUpdateListingsAction } from '@/lib/actions/listings'
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
@@ -252,65 +253,16 @@ export const listingsApi = {
   },
 
   /**
-   * Create a new listing
-   */
-  async create(listing: {
-    game_id: string
-    category_id: string
-    title: string
-    description: string
-    price: number
-    quantity?: number
-    is_unlimited?: boolean
-    delivery_time?: string
-    delivery_method?: string
-    images?: string[]
-    status?: ListingStatus
-  }): Promise<Listing> {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data, error } = await (supabase
-      .from('listings')
-      .insert as any)([{
-        seller_id: user.id,
-        ...listing,
-      }])
-      .select(`
-        *,
-        game:game_id (id, name, slug, emoji, image_url),
-        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
-      `)
-      .single()
-
-    if (error) throw error
-    revalidateMine()
-    return data
-  },
-
-  /**
-   * Update a listing
+   * Update a listing.
+   *
+   * ACC-03 — sellers no longer UPDATE listings through PostgREST (the grant
+   * is revoked); the validated server action owns the write: ownership check,
+   * shared validator, service-role write, category-page revalidation.
    */
   async update(id: string, updates: Partial<Listing>): Promise<Listing> {
-    // CRITICAL: Verify ownership before updating
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data, error } = await (supabase
-      .from('listings')
-      .update as any)(updates)
-      .eq('id', id)
-      .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
-      .select(`
-        *,
-        game:game_id (id, name, slug, emoji, image_url),
-        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
-      `)
-      .single()
-
-    if (error) throw error
-    revalidateMine()
-    return data
+    const res = await updateListingAction(id, updates as never)
+    if (!res.success) throw new Error(res.error || 'Failed to update listing')
+    return res.listing as Listing
   },
 
   /**
@@ -332,21 +284,11 @@ export const listingsApi = {
   },
 
   /**
-   * Bulk update listings
+   * Bulk update listings — same validated server action path as `update`.
    */
   async bulkUpdate(ids: string[], updates: Partial<Listing>): Promise<void> {
-    // CRITICAL: Verify ownership before bulk updating
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { error } = await (supabase
-      .from('listings')
-      .update as any)(updates)
-      .in('id', ids)
-      .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
-
-    if (error) throw error
-    revalidateMine()
+    const res = await bulkUpdateListingsAction(ids, updates as never)
+    if (!res.success) throw new Error(res.error || 'Failed to update listings')
   },
 
   /**

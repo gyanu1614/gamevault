@@ -53,9 +53,11 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       return { success: false, error: 'Failed to update seller status' }
     }
 
-    // If restricting or banning, pause all active listings
+    // If restricting or banning, pause all active listings. ACC-03: UPDATE on
+    // listings is revoked for JWT callers (the admin session included), so
+    // this is a service-role write behind the requireRole gate above.
     if (status !== 'active') {
-      const { error: pauseError } = await (supabase
+      const { error: pauseError } = await (createServiceRoleClient()
         .from('listings')
         .update as any)({ status: 'paused' })
         .eq('seller_id', userId)

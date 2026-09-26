@@ -41,7 +41,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture, activateFixtureListing } from './throwaway'
 import { purgeAuditLogs } from './fixture-namespace'
 
 let sessionClient: SupabaseClient | null = null
@@ -186,7 +186,7 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
     process.env.PAYMENT_PROVIDER = 'fake'
     fx = await makeFixture()
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    await fx.svc.from('listings').update({ status: 'active', quantity: 50 }).eq('id', fx.listingId)
+    await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id, { quantity: 50 })
   }, 90_000)
 
   afterAll(async () => {

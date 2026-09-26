@@ -21,7 +21,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { hasEnv, makeFixture, promoteToEstablishedSeller, expectGuardRejection, type Fixture } from './throwaway'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, expectGuardRejection, type Fixture, activateFixtureListing } from './throwaway'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined }))
 vi.mock('server-only', () => ({}))
@@ -92,7 +92,7 @@ describe.skipIf(!hasEnv)('PR 7 Part 1 — completion, hold, auto-complete, remin
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('order_completion_version' as any)).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    await fx.svc.from('listings').update({ status: 'active' }).eq('id', fx.listingId)
+    await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id)
     // one_pending_order_per_buyer_listing: park the fixture's pending order so
     // insertPaidOrder (pending → CHARGE_CONFIRMED) can use the same pair.
     await fx.svc.from('orders').update({ status: 'cancelled' }).eq('id', fx.pendingOrderId)
