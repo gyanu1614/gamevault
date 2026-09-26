@@ -21,7 +21,8 @@ import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } f
 import { findEnabledGameCategory } from '@/lib/categories'
 import { pingIndexNow } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
-import { publishDenialFor } from '@/lib/listings/access'
+import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
+import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 
@@ -1177,6 +1178,13 @@ export async function bulkPublishListings(
 
 // ─── IMAGE UPLOAD (same bucket as old flow) ──────────────────────────────────
 
+/**
+ * ACC-08 — only an account that may use the sell surface (active seller,
+ * admin, or an applicant building drafts) can put files in listing-images;
+ * the type and extension come from the bytes, the size cap is server-side,
+ * and the object lands under the caller's own prefix (which the storage
+ * policy `listing_images_seller_write` re-checks as the caller).
+ */
 export async function uploadSellImage(
   formData: FormData
 ): Promise<Result<{ url: string }>> {
@@ -1185,24 +1193,22 @@ export async function uploadSellImage(
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return { success: false, error: 'Not signed in' }
 
-    const file = formData.get('file') as File | null
-    if (!file) return { success: false, error: 'No file provided' }
-
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      return { success: false, error: 'JPG, PNG, or WebP only' }
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'Each image must be under 5 MB' }
+    const kind = await sellAccessKind(supabase, user.id)
+    if (!canUseSellSurface(kind)) {
+      return { success: false, error: 'Only sellers and seller applicants can upload listing images' }
     }
 
-    const ext = file.name.split('.').pop()
-    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const file = formData.get('file')
+    if (!(file instanceof File)) return { success: false, error: 'No file provided' }
+    const checked = await checkListingImage(file)
+    if (!checked.ok) return { success: false, error: checked.error }
+
+    const path = listingImagePathFor(user.id, checked.image.ext)
     const { data, error } = await supabase.storage
-      .from('listing-images')
-      .upload(path, file, { cacheControl: '3600', upsert: false })
+      .from(LISTING_IMAGE_BUCKET)
+      .upload(path, checked.bytes, { cacheControl: '3600', upsert: false, contentType: checked.image.mime })
     if (error) return { success: false, error: error.message }
-    const { data: urlData } = supabase.storage.from('listing-images').getPublicUrl(data.path)
+    const { data: urlData } = supabase.storage.from(LISTING_IMAGE_BUCKET).getPublicUrl(data.path)
     return { success: true, data: { url: urlData.publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }

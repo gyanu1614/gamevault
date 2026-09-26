@@ -16,7 +16,8 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import { validateListingPatch } from '@/lib/listings/validate'
-import { publishDenialFor } from '@/lib/listings/access'
+import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
+import { checkListingImage, listingImagePathFor, listingImagePathFromUrl, isOwnedListingImagePath, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
@@ -39,15 +40,14 @@ export interface ListingUpdateInput {
 }
 
 /**
- * Upload listing image to Supabase Storage
+ * Upload listing image to Supabase Storage.
+ * ACC-08 — same gate, sniffing, cap and owner prefix as uploadSellImage.
  */
 export async function uploadListingImage(
   formData: FormData
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
     const supabase = await createClient()
-
-    // Get authenticated user
     const {
       data: { user },
       error: authError,
@@ -56,44 +56,27 @@ export async function uploadListingImage(
       return { success: false, error: 'Not authenticated' }
     }
 
-    const file = formData.get('file') as File
-    if (!file) {
+    const kind = await sellAccessKind(supabase, user.id)
+    if (!canUseSellSurface(kind)) {
+      return { success: false, error: 'Only sellers and seller applicants can upload listing images' }
+    }
+
+    const file = formData.get('file')
+    if (!(file instanceof File)) {
       return { success: false, error: 'No file provided' }
     }
+    const checked = await checkListingImage(file)
+    if (!checked.ok) return { success: false, error: checked.error }
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      return {
-        success: false,
-        error: 'Invalid file type. Only JPG, PNG, and WebP are allowed.',
-      }
-    }
-
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
-      return { success: false, error: 'File size must be less than 5MB' }
-    }
-
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-
-    // Upload to Supabase Storage
+    const fileName = listingImagePathFor(user.id, checked.image.ext)
     const { data, error } = await supabase.storage
-      .from('listing-images')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      })
-
+      .from(LISTING_IMAGE_BUCKET)
+      .upload(fileName, checked.bytes, { cacheControl: '3600', upsert: false, contentType: checked.image.mime })
     if (error) throw error
 
-    // Get public URL
     const {
       data: { publicUrl },
-    } = supabase.storage.from('listing-images').getPublicUrl(data.path)
+    } = supabase.storage.from(LISTING_IMAGE_BUCKET).getPublicUrl(data.path)
 
     return { success: true, url: publicUrl }
   } catch (error: any) {
@@ -103,23 +86,34 @@ export async function uploadListingImage(
 }
 
 /**
- * Delete listing image from Supabase Storage
+ * Delete listing image from Supabase Storage.
+ * ACC-08 — the path must be under the caller's own `${user.id}/` prefix; a
+ * URL from anywhere else (another seller, a bundle icon, a game cover) is
+ * refused before the storage call.
  */
 export async function deleteListingImage(
   imageUrl: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Not authenticated' }
+    }
 
-    // Extract path from URL
-    const urlParts = imageUrl.split('/listing-images/')
-    if (urlParts.length < 2) {
+    const filePath = listingImagePathFromUrl(imageUrl)
+    if (!filePath) {
       return { success: false, error: 'Invalid image URL' }
     }
-    const filePath = urlParts[1]
+    if (!isOwnedListingImagePath(filePath, user.id)) {
+      return { success: false, error: 'You can only delete your own images' }
+    }
 
     const { error } = await supabase.storage
-      .from('listing-images')
+      .from(LISTING_IMAGE_BUCKET)
       .remove([filePath])
 
     if (error) throw error

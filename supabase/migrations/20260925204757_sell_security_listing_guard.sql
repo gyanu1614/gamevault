@@ -43,6 +43,10 @@
 --   insert at all. createCheckout refuses a blocked seller's listing.
 -- ACC-04 — a seller still under pre-moderation who edits the CONTENT of an
 --   active listing sends it back to review (trigger, so every path is covered).
+-- ACC-07 / ACC-08 — the middleware gates /sell/* and the upload actions gate
+--   listing-images on sell_access_kind too; the listing-images INSERT policy
+--   (20260921005402 opened it to any signed-in user under their own prefix)
+--   now requires seller / admin / applicant as well.
 -- ============================================================================
 
 -- ── ACC-03: no direct UPDATE for JWT callers ────────────────────────────────
@@ -280,3 +284,26 @@ CREATE TRIGGER trg_z_validate_listing_write
 CREATE OR REPLACE FUNCTION public.sell_security_version() RETURNS integer
   LANGUAGE sql IMMUTABLE AS $$ SELECT 1 $$;
 REVOKE ALL ON FUNCTION public.sell_security_version() FROM PUBLIC, anon, authenticated;
+
+-- ── ACC-08: listing-images writes need sell access ──────────────────────────
+-- 20260921005402 let ANY signed-in user write listing-images under their own
+-- prefix (shared policy with profile-pictures). Split: profile-pictures keeps
+-- owner-write; listing-images owner-write additionally requires the caller to
+-- be an active seller, an admin, or an applicant building drafts. Read /
+-- update / delete policies are unchanged.
+DROP POLICY IF EXISTS user_owned_buckets_owner_write ON storage.objects;
+CREATE POLICY user_owned_buckets_owner_write ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'profile-pictures'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS listing_images_seller_write ON storage.objects;
+CREATE POLICY listing_images_seller_write ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'listing-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND public.sell_access_kind(auth.uid()) IN ('seller', 'admin', 'applicant')
+  );
