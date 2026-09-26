@@ -73,7 +73,7 @@ function sessionWith(queues: Record<string, Res[]>) {
 
 const INPUT = {
   game_id: 'game-1', category_slug: 'items', title: 'Sword', description: 'x', price: 5,
-  quantity: 1, min_quantity: 1, delivery_method: 'manual' as const, images: [], template_data: {}, status: 'active' as const,
+  quantity: 1, min_quantity: 1, delivery_method: 'manual' as const, delivery_time: '1hr', images: [], template_data: {}, status: 'active' as const,
 }
 
 beforeEach(() => { h.session = null; h.admin = null })
@@ -101,7 +101,7 @@ describe('AUTH-010 — publish paths require an admin-enabled (game, category) p
     })
     h.admin = mockClient({})
     const res = await bulkPublishListings('game-1', 'items', [
-      { line: 1, title: 'A', price: 1, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
     ])
     expect(res.success).toBe(false)
     expect(h.admin.tables).toEqual([])
@@ -157,7 +157,7 @@ describe('AUTH-009 — publish paths refuse non-sellers before touching anything
       })
       h.admin = mockClient({})
       const res = await bulkPublishListings('game-1', 'items', [
-        { line: 1, title: 'A', price: 1, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
+        { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
       ])
       expect(res.success).toBe(false)
       expect(h.admin.tables).toEqual([])
@@ -212,8 +212,8 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
       games: [{ data: { slug: 'fortnite' }, error: null }],
     })
     const res = await bulkPublishListings('game-1', 'items', [
-      { line: 1, title: 'A', price: 1, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
-      { line: 2, title: 'B', price: 2, quantity: 1, delivery_method: 'manual', images: [], template_data: {} } as any,
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+      { line: 2, title: 'Bravo item', price: 2, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
     ])
     expect(res.success).toBe(true)
     const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')

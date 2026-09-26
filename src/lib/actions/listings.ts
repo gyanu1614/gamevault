@@ -12,8 +12,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
+import { validateListingPatch } from '@/lib/listings/validate'
+import { loadListingRuleContext } from '@/lib/listings/rule-context'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
 export interface ListingUpdateInput {
@@ -28,9 +31,10 @@ export interface ListingUpdateInput {
   delivery_method_type?: string // Game-specific delivery method (e.g., 'game_pass', 'in_game_trade')
   images: string[] // Supabase Storage URLs
   template_data?: Record<string, any> // Dynamic field values
-  status?: 'draft' | 'active'
-  region?: string // For region-specific items (gift cards, regional accounts)
-  platform?: string // For platform-specific items (GTA, Fortnite, etc.)
+  /** draft | active | paused | archived — moderation states are review-only. */
+  status?: 'draft' | 'active' | 'paused' | 'archived'
+  region?: string | null // For region-specific items (gift cards, regional accounts)
+  platform?: string | null // For platform-specific items (GTA, Fortnite, etc.)
 }
 
 /**
@@ -239,65 +243,42 @@ export async function getSellerProfile(): Promise<{
   }
 }
 
+/** The row fragment every seller edit reads before it validates and writes. */
+interface OwnedListingRow {
+  seller_id: string
+  status: string
+  game_id: string
+  game_category_id: string | null
+  quantity: number
+  min_quantity: number
+  is_unlimited: boolean
+  delivery_method: string
+  pair: { type: string } | null
+}
+
+const OWNED_LISTING_SELECT =
+  'seller_id, status, game_id, game_category_id, quantity, min_quantity, is_unlimited, delivery_method, pair:game_categories!listings_game_category_id_fkey (type)'
+
 /**
- * Update listing price
+ * Update listing price — the offers-table inline price editor. Same validator
+ * and write path as every other seller edit (ACC-03/06).
  */
 export async function updateListingPrice(
   listingId: string,
   newPrice: number
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = await createClient()
-
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    // Validate price
-    if (!newPrice || newPrice <= 0) {
-      return { success: false, error: 'Price must be greater than 0' }
-    }
-
-    // Verify ownership before updating
-    const { data: listing } = await supabase
-      .from('listings')
-      .select('seller_id')
-      .eq('id', listingId)
-      .single() as any
-
-    if (!listing) {
-      return { success: false, error: 'Listing not found' }
-    }
-
-    if (listing.seller_id !== user.id) {
-      return { success: false, error: 'Unauthorized - not your listing' }
-    }
-
-    // Update the price
-    const { error: updateError } = await (supabase
-      .from('listings')
-      .update as any)({ price: newPrice, updated_at: new Date().toISOString() })
-      .eq('id', listingId)
-
-    if (updateError) throw updateError
-
-    // Step 7b — the category page shows this price (24 h TTL).
-    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
-
-    return { success: true }
-  } catch (error: any) {
-    console.error('Error updating listing price:', error)
-    return { success: false, error: error.message }
-  }
+  const res = await updateListing(listingId, { price: newPrice })
+  return res.success ? { success: true } : { success: false, error: res.error }
 }
 
 /**
- * Update a listing (full update)
+ * Update a listing (partial edit).
+ *
+ * ACC-03 — UPDATE on listings is revoked for JWT callers (migration
+ * 20260925204757); this action is the seller's only edit path outside the
+ * wizard. It (1) checks ownership with the session client, (2) validates the
+ * patch with the shared validator against the row's own pair/config,
+ * (3) writes with the service role, pinning id AND seller_id.
  */
 export async function updateListing(
   listingId: string,
@@ -316,11 +297,12 @@ export async function updateListing(
     }
 
     // Verify ownership before updating
-    const { data: listing } = await supabase
+    const { data: listingRaw } = await supabase
       .from('listings')
-      .select('seller_id, status')
+      .select(OWNED_LISTING_SELECT)
       .eq('id', listingId)
       .single() as any
+    const listing = listingRaw as OwnedListingRow | null
 
     if (!listing) {
       return { success: false, error: 'Listing not found' }
@@ -342,63 +324,22 @@ export async function updateListing(
       }
     }
 
-    // Prepare update data
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
+    const rules = await loadListingRuleContext(supabase, listing.game_id, listing.pair?.type ?? 'items')
+    const validated = validateListingPatch(input, rules, listing)
+    if (!validated.ok) return { success: false, error: validated.error }
+    const patch: Record<string, unknown> = { ...validated.value, updated_at: new Date().toISOString() }
+
+    // Auto-reactivate a sold-out listing when the seller restocks
+    if (patch.quantity !== undefined && (patch.quantity as number) > 0 && listing.status === 'sold' && patch.status === undefined) {
+      patch.status = 'active'
     }
 
-    if (input.title) {
-      if (input.title.trim().length < 5) {
-        return { success: false, error: 'Title must be at least 5 characters' }
-      }
-      if (input.title.trim().length > 100) {
-        return { success: false, error: 'Title must be less than 100 characters' }
-      }
-      updateData.title = input.title.trim()
-    }
-
-    if (input.description !== undefined) updateData.description = input.description?.trim() || ''
-    if (input.price !== undefined) {
-      if (input.price <= 0) {
-        return { success: false, error: 'Price must be greater than 0' }
-      }
-      updateData.price = input.price
-    }
-    if (input.original_price !== undefined) updateData.original_price = input.original_price || null
-    if (input.quantity !== undefined) {
-      updateData.quantity = input.quantity
-      // Auto-reactivate a sold-out listing when the seller restocks
-      if (input.quantity > 0) {
-        const { data: currentListing } = await supabase
-          .from('listings')
-          .select('status')
-          .eq('id', listingId)
-          .single() as any
-        if (currentListing?.status === 'sold') {
-          updateData.status = 'active'
-        }
-      }
-    }
-    if (input.min_quantity !== undefined) updateData.min_quantity = input.min_quantity
-    if (input.delivery_method) updateData.delivery_method = input.delivery_method
-    if (input.delivery_time) updateData.delivery_time = input.delivery_time
-    if (input.delivery_method_type !== undefined) updateData.delivery_method_type = input.delivery_method_type
-    if (input.images) {
-      if (input.images.length === 0) {
-        return { success: false, error: 'At least one image is required' }
-      }
-      updateData.images = input.images
-    }
-    if (input.template_data !== undefined) updateData.template_data = input.template_data
-    if (input.region !== undefined) updateData.region = input.region || null
-    if (input.platform !== undefined) updateData.platform = input.platform || null
-    if (input.status !== undefined) updateData.status = input.status
-
-    // Update the listing
-    const { data, error: updateError } = await (supabase
+    // Update the listing (service role; the ownership check above is the gate)
+    const { data, error: updateError } = await (createServiceRoleClient()
       .from('listings')
-      .update as any)(updateData)
+      .update as any)(patch)
       .eq('id', listingId)
+      .eq('seller_id', user.id)
       .select(`
         *,
         game:game_id (id, name, slug, image_url),
@@ -417,6 +358,79 @@ export async function updateListing(
     return { success: true, listing: data }
   } catch (error: any) {
     console.error('Error updating listing:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Apply ONE patch to several of the caller's listings (offers-table bulk
+ * pause / activate / delivery window). Ids the caller does not own are
+ * skipped, never errored — the response says how many were touched.
+ */
+export async function bulkUpdateListings(
+  listingIds: string[],
+  input: Partial<ListingUpdateInput> & { status?: string }
+): Promise<{ success: boolean; updated?: number; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    const ids = Array.from(new Set(listingIds.filter((id) => typeof id === 'string' && id.length > 0)))
+    if (ids.length === 0 || ids.length > 200) {
+      return { success: false, error: 'Select between 1 and 200 offers' }
+    }
+
+    const { data: rowsRaw } = await supabase
+      .from('listings')
+      .select(`id, ${OWNED_LISTING_SELECT}`)
+      .in('id', ids)
+      .eq('seller_id', user.id) as any
+    const rows = ((rowsRaw ?? []) as Array<OwnedListingRow & { id: string }>)
+    if (rows.length === 0) return { success: false, error: 'No offers found' }
+
+    // AUTH-034 — moderated-out rows cannot be bulk-activated; they are skipped.
+    const eligible =
+      input.status === 'active'
+        ? rows.filter((r) => !['rejected', 'changes_requested', 'pending_approval'].includes(r.status))
+        : rows
+    if (eligible.length === 0) {
+      return { success: false, error: 'These offers are under review or were rejected — resubmit them instead of re-activating.' }
+    }
+
+    // One validation per distinct pair/config (the patch is the same for all).
+    const byContext = new Map<string, Array<OwnedListingRow & { id: string }>>()
+    for (const r of eligible) {
+      const key = `${r.game_id}:${r.pair?.type ?? 'items'}`
+      byContext.set(key, [...(byContext.get(key) ?? []), r])
+    }
+    const service = createServiceRoleClient()
+    let updated = 0
+    for (const group of byContext.values()) {
+      const rules = await loadListingRuleContext(supabase, group[0].game_id, group[0].pair?.type ?? 'items')
+      for (const row of group) {
+        const validated = validateListingPatch(input, rules, row)
+        if (!validated.ok) return { success: false, error: validated.error }
+        const { error } = await (service.from('listings').update as any)({
+          ...validated.value,
+          updated_at: new Date().toISOString(),
+        })
+          .eq('id', row.id)
+          .eq('seller_id', user.id)
+        if (error) throw error
+        updated++
+      }
+    }
+
+    revalidatePath('/account/listings')
+    await revalidateListingSurfaces(supabase as never, { listingIds: eligible.map((r) => r.id) })
+    return { success: true, updated }
+  } catch (error: any) {
+    console.error('Error bulk-updating listings:', error)
     return { success: false, error: error.message }
   }
 }

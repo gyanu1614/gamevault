@@ -28,10 +28,10 @@ describe.skipIf(!hasEnv)('AUTH-006 — listings column guard (integration)', () 
     expect((data as any).approved_by).toBeNull()
   })
 
-  it('seller setting status=active alone still lands in pending_approval (verified live 3b)', async () => {
+  it('seller setting status=active alone is refused outright (ACC-03: no direct UPDATE) and stays pending_approval', async () => {
     if (!ready) return
     const { error } = await fx!.seller.client.from('listings').update({ status: 'active' }).eq('id', fx!.listingId)
-    expect(error).toBeNull()
+    expect(error?.code).toBe('42501')
     const { data } = await fx!.svc.from('listings').select('status').eq('id', fx!.listingId).single()
     expect((data as any).status).toBe('pending_approval')
   })
@@ -44,10 +44,12 @@ describe.skipIf(!hasEnv)('AUTH-006 — listings column guard (integration)', () 
     expectGuardRejection(res, 'listings')
   })
 
-  it('seller can still edit their own price (unprotected column)', async () => {
+  it('seller cannot edit even an unprotected column directly — price edits go through updateListing (ACC-03)', async () => {
     if (!ready) return
     const { error } = await fx!.seller.client.from('listings').update({ price: 2 }).eq('id', fx!.listingId)
-    expect(error).toBeNull()
+    expect(error?.code).toBe('42501')
+    const { data } = await fx!.svc.from('listings').select('price').eq('id', fx!.listingId).single()
+    expect(Number((data as any).price)).toBe(1)
   })
 
   it('POSITIVE: admin approves via approve_listing and it goes active (flag path)', async () => {
