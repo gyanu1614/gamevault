@@ -32,11 +32,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
-import { BadgeCheck, Check, Clock, Flame, Package, ShieldCheck, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
+import { Check, Clock, Flame, Package, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { NumberField } from '@/components/ui/number-field'
+import { CollapsibleText } from '@/components/ui/collapsible-text'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SellerRatingLine } from '@/components/seller/SellerRatingLine'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import { Button } from '@/components/ui/button'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
@@ -57,6 +60,8 @@ export interface BundleOffer {
   sellerName: string
   sellerAvatarUrl?: string | null
   verified: boolean
+  /** Rank key from `profiles.seller_tier` ("bronze" … "legendary"). */
+  sellerTier: string | null
   rating: number | null
   reviews: number
   /** $ per bundle (the listing.price column). */
@@ -847,11 +852,13 @@ function OfferPanel({
           Delivery Instructions
         </div>
         <CollapsibleText
-          text={
-            bestOffer.blurb ||
-            'Seller will message you for delivery details after purchase.'
-          }
-        />
+          lines={3}
+          resetKey={bestOffer.listingId}
+          className="text-[13.5px] leading-relaxed text-text-secondary"
+        >
+          {bestOffer.blurb ||
+            'Seller will message you for delivery details after purchase.'}
+        </CollapsibleText>
       </div>
 
       {/* 4) Quantity */}
@@ -911,38 +918,6 @@ function OfferPanel({
   )
 }
 
-/* ── Collapsible instructions ──────────────────────────────────── */
-
-function CollapsibleText({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false)
-  // V19/P24/P7.g — Soft truncation: line-clamp to 3 lines when
-  // collapsed. We compute a heuristic for "is it actually overflowing"
-  // off line breaks + length so we only render Show more when needed.
-  const looksTruncated =
-    text.split(/\r?\n/).length > 3 || text.length > 180
-  return (
-    <div>
-      <p
-        className={cn(
-          'whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary',
-          !expanded && 'line-clamp-3',
-        )}
-      >
-        {text}
-      </p>
-      {looksTruncated && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1 text-[12px] font-semibold text-lime-text transition-colors hover:text-text-primary"
-        >
-          {expanded ? 'Show less' : 'Show more'}
-        </button>
-      )}
-    </div>
-  )
-}
-
 /* ── Inline label / value row ──────────────────────────────────── */
 
 function KeyValue({
@@ -987,28 +962,9 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
           <span className="truncate text-[13.5px] font-semibold text-text-primary">
             {offer.sellerName}
           </span>
-          {offer.verified && (
-            <BadgeCheck
-              className="h-3.5 w-3.5 shrink-0 text-lime-text"
-              aria-label="Verified"
-            />
-          )}
+          {offer.verified && <VerifiedBadge size={14} />}
         </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-          {offer.rating != null ? (
-            <>
-              <span className="font-semibold text-text-secondary">
-                {offer.rating.toFixed(1)}%
-              </span>
-              <span aria-hidden>·</span>
-              <span>
-                {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-              </span>
-            </>
-          ) : (
-            <span className="font-semibold text-text-secondary">New Seller</span>
-          )}
-        </div>
+        <SellerRatingLine rating={offer.rating} reviews={offer.reviews} />
       </div>
     </div>
   )
@@ -1048,21 +1004,12 @@ function SellerRow({
         {/* Seller — leads the row, clickable chip → /shop/{slug} */}
         <div className="min-w-0 flex-1">
           <SellerChip offer={offer} />
-          <div className="mt-1.5 flex items-center gap-2 text-[12.5px] text-text-tertiary">
-            {offer.rating != null ? (
-              <>
-                <span className="font-semibold text-text-secondary">
-                  {offer.rating.toFixed(1)}%
-                </span>
-                <span aria-hidden>·</span>
-                <span>
-                  {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-                </span>
-              </>
-            ) : (
-              <span className="font-semibold text-text-secondary">New Seller</span>
-            )}
-          </div>
+          <SellerRatingLine
+            rating={offer.rating}
+            reviews={offer.reviews}
+            size="md"
+            className="mt-1.5"
+          />
         </div>
 
         {/* V19/P24/P7.h — Stock + Delivery metric columns, desktop
@@ -1246,10 +1193,7 @@ function SellerChip({
       )}
       <span className={nameClass}>{offer.sellerName}</span>
       {offer.verified && (
-        <ShieldCheck
-          className="h-3.5 w-3.5 shrink-0 text-lime-text"
-          aria-label="Verified"
-        />
+        <VerifiedBadge size={size === 'lg' ? 15 : 14} />
       )}
     </>
   )
