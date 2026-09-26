@@ -54,12 +54,12 @@ import {
   Tag,
   TriangleAlert,
   Undo2,
-  Wallet,
   X,
 } from 'lucide-react'
 
 import { createCheckout } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
+import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
 import { clampCheckoutQty } from './qty'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
@@ -475,34 +475,42 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
   },
   // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
   trustly: {
+    logo: '/payments/trustly.svg',
     Icon: Landmark,
     points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
   },
   blik_pl: {
+    logo: '/payments/blik_pl.svg',
     Icon: Smartphone,
     points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
   },
   p24_pl: {
+    logo: '/payments/p24_pl.svg',
     Icon: Landmark,
     points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
   },
   eps_at: {
+    logo: '/payments/eps_at.svg',
     Icon: Landmark,
     points: ['Approve in your bank portal', 'Payment confirms instantly'],
   },
   mbway_pt: {
+    logo: '/payments/mbway_pt.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
   },
   bancomatpay_it: {
+    logo: '/payments/bancomatpay_it.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
   },
   payu_cz: {
+    logo: '/payments/payu_cz.svg',
     Icon: Landmark,
     points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
   },
   paysafecard: {
+    logo: '/payments/paysafecard.svg',
     Icon: CreditCard,
     points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your DropMarket wallet'],
   },
@@ -533,19 +541,6 @@ function ccFlag(cc: string): string {
   return String.fromCodePoint(
     ...[...cc.toUpperCase()].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65)
   )
-}
-
-/** ISO code → English country name (Intl built-in; falls back to the code). */
-const regionNames =
-  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-    ? new Intl.DisplayNames(['en'], { type: 'region' })
-    : null
-function countryName(cc: string): string {
-  try {
-    return regionNames?.of(cc.toUpperCase()) ?? cc.toUpperCase()
-  } catch {
-    return cc.toUpperCase()
-  }
 }
 
 function toRow(m: ClientMethod): LocalMethodRow {
@@ -590,60 +585,38 @@ interface CheckoutFormProps {
 export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods }: CheckoutFormProps) {
   const router = useRouter()
 
-  // Tabbed selector: Crypto | E-Wallet | Card (soon). Local methods live in
-  // the E-Wallet tab, filtered by a country pin that defaults to the buyer's
-  // geo country (G2A pattern). Rows and countries derive from the provider
-  // registry, so new methods surface automatically.
+  // Flat selector (checkout regions, 2026-09-26): rails local to the
+  // buyer's own country first, then the rest of their region, then
+  // Cryptocurrency last (first and only when the region has nothing). The
+  // region comes from the geo country; a chip row lets the buyer switch.
+  // Rows derive from the provider registry, so new methods surface
+  // automatically.
   const allLocalRows = methods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
-  // payable for this order (no fee row / hidden) and its tab is disabled.
+  // payable for this order (no fee row / hidden) and its row is not shown.
   const cryptoMethod = methods.find((m) => m.kind === 'crypto') ?? null
   const walletQuote = methods.find((m) => m.kind === 'wallet')?.quote ?? null
   const geoCc = (buyerCountry ?? '').trim().toUpperCase()
-  const geoValid = /^[A-Z]{2}$/.test(geoCc)
-  // Country options: every country with a method (registry order) + the
-  // buyer's own geo country even at 0 methods (honest empty state beats a
-  // silently wrong pin).
-  const localCountries: Array<{ cc: string; count: number }> = []
-  for (const row of allLocalRows) {
-    for (const cc of row.countries) {
-      const hit = localCountries.find((c) => c.cc === cc)
-      if (hit) hit.count += 1
-      else localCountries.push({ cc, count: 1 })
-    }
-  }
-  if (geoValid && !localCountries.some((c) => c.cc === geoCc)) {
-    localCountries.unshift({ cc: geoCc, count: 0 })
-  }
-  const [payCategory, setPayCategory] = useState<'crypto' | 'ewallet'>(cryptoMethod ? 'crypto' : 'ewallet')
-  // '' = no country chosen yet (unknown geo) — the tab shows a chooser
-  // prompt instead of dumping every method.
-  const [walletCountry, setWalletCountry] = useState<string>(geoValid ? geoCc : '')
+  const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
+  const [region, setRegion] = useState<RegionId>(() => regionForCountry(geo))
+  const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, region, geo)
+  const orderedRows = [...localRows, ...regionalRows]
+  const regionChips = regionsWithMethods(allLocalRows, region)
 
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page)
   // — the same clamp the page quoted the buyer fee for.
   const [quantity] = useState(() => clampCheckoutQty(listing, initialQty, !!bundleSummary))
 
-  // Payment method: crypto (expanded card) or a Payssion local method.
-  const [payMethod, setPayMethod] = useState<PayMethodId>(cryptoMethod ? 'crypto' : (allLocalRows[0]?.id ?? 'crypto'))
-  const walletRows =
-    walletCountry === ''
-      ? []
-      : allLocalRows.filter(
-          // The selected method never disappears when the country filter
-          // changes — the buyer's active choice must stay visible.
-          (r) => r.countries.includes(walletCountry) || r.id === payMethod
-        )
-
-  // Switching tabs keeps payMethod coherent: Crypto tab pays with crypto;
-  // the E-Wallet tab auto-selects its first visible method.
-  const selectCategory = (cat: 'crypto' | 'ewallet') => {
-    setPayCategory(cat)
-    if (cat === 'crypto') {
-      setPayMethod('crypto')
-    } else if (payMethod === 'crypto' && walletRows.length > 0) {
-      setPayMethod(walletRows[0].id)
-    }
+  // Payment method: the first row of the ordered list (a local rail when
+  // the buyer has one, else Cryptocurrency).
+  const [payMethod, setPayMethod] = useState<PayMethodId>(orderedRows[0]?.id ?? 'crypto')
+  // Switching region re-orders the list; a pick that is no longer listed
+  // falls to the new region's first row (crypto is always listed).
+  const selectRegion = (id: RegionId) => {
+    setRegion(id)
+    const next = orderMethodsForRegion(allLocalRows, id, geo)
+    const rows = [...next.local, ...next.regional]
+    if (payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(rows[0]?.id ?? 'crypto')
   }
   // Coin + network selection (within the crypto card).
   // No coin preselected — the network chooser stays closed until a pick.
@@ -830,19 +803,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </button>
   )
 
-  const cryptoBody = (
-    <div className="rounded-lg bg-white p-4" style={{ boxShadow: `inset 0 0 0 1.5px ${T.line}` }}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <p className="text-[15px] font-bold" style={{ color: T.ink }}>
-          Choose Coin
-        </p>
-        <span
-          className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold tabular-nums"
-          style={{ background: T.limeTint, color: T.forest }}
-        >
-          {fmtFeeLine(cryptoMethod?.quote)}
-        </span>
-      </div>
+  // ── Crypto picker: coin tiles + network + warning, inside the crypto row ──
+  const cryptoPicker = (
+    <div>
+      <p className="mb-2.5 text-[13.5px] font-semibold" style={{ color: T.ink }}>
+        Choose Coin
+      </p>
       {/* Coin tiles — USDT opens a network chooser below; BTC is pick-and-pay. */}
       <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Coin">
         {COINS.map((c) => {
@@ -935,51 +901,68 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </span>
   )
 
-  const renderLocalRow = (m: LocalMethodRow) => {
+  /** Row surface: hairline edge, a soft top highlight and a faint lift —
+   *  the forest ring marks the pick. */
+  const rowSurface = (checked: boolean) =>
+    checked
+      ? `inset 0 0 0 1.5px ${T.forest}, inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 2px rgba(20,29,25,0.05)`
+      : `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(20,29,25,0.04)`
+  const rowClass = (checked: boolean) =>
+    cn('rounded-lg transition-[box-shadow,background-color] duration-150', checked ? 'bg-[#FAFAF7]' : 'bg-white hover:bg-[#FCFCFA]')
+
+  /** The brand mark in a small white tile (the row's icon, tinted, when a
+   *  method has no logo yet). */
+  const markTile = (m: LocalMethodRow) => (
+    <span
+      className="grid h-9 w-14 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
+      style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
+    >
+      {m.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={m.logo} alt="" className="h-full w-full object-contain p-1" />
+      ) : (
+        <m.Icon className="h-[18px] w-[18px]" style={{ color: T.forest }} />
+      )}
+    </span>
+  )
+
+  const renderMethodRow = (m: LocalMethodRow, scope: 'local' | 'regional') => {
     const checked = payMethod === m.id
+    // An own-country row already says its first point in the subtitle.
+    const detailPoints = scope === 'local' ? m.points.slice(1) : m.points
     return (
-      <div
-        key={m.id}
-        className="rounded-lg bg-white"
-        style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
-      >
+      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
         <button
           type="button"
           role="radio"
           aria-checked={checked}
           onClick={() => setPayMethod(m.id)}
-          className="flex w-full items-center gap-3 p-4 text-left"
+          className="flex w-full items-center gap-3 rounded-lg p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40"
         >
           {radioDot(checked)}
-          {m.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.logo} alt="" className="h-5 w-auto max-w-[84px] shrink-0 object-contain" />
-          ) : (
-            <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
-          )}
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-            {m.label}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+              {m.label}
+            </span>
+            {/* Own-country rails say how they pay; regional rails say where they
+                are local. On phones the fee takes this line so the label never clips. */}
+            <span className="mt-0.5 hidden truncate text-[12.5px] sm:block" style={{ color: T.ink2 }}>
+              {scope === 'local' ? m.points[0] : `${m.flag} ${m.region}`}
+            </span>
+            <span className="mt-0.5 block text-[12px] font-semibold tabular-nums sm:hidden" style={{ color: T.ink2 }}>
+              {fmtFeeLine(m.quote)}
+            </span>
           </span>
           {/* Fee line (checkout B3): the database's quote for THIS order. */}
-          <span className="ml-auto whitespace-nowrap text-[12px] font-semibold tabular-nums" style={{ color: T.ink2 }}>
+          <span className="hidden whitespace-nowrap text-[12px] font-semibold tabular-nums sm:inline" style={{ color: T.ink2 }}>
             {fmtFeeLine(m.quote)}
           </span>
-          {/* Region chip only when it ADDS info — i.e. the row's country
-              differs from the selector (a kept selection after a country
-              switch). Same-country chips just repeat the pin. */}
-          {!m.countries.includes(walletCountry) && (
-            <span
-              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
-              style={{ background: '#EFEFEA', color: '#6B7166' }}
-            >
-              {m.flag} {m.region}
-            </span>
-          )}
+          {markTile(m)}
         </button>
-        {checked && (
+        {checked && detailPoints.length > 0 && (
           <div className="border-t px-4 pb-3.5 pt-3" style={{ borderColor: T.line }}>
             <ul className="flex flex-col gap-1.5">
-              {m.points.map((pt) => (
+              {detailPoints.map((pt) => (
                 <li key={pt} className="flex items-center gap-2 text-[12.5px]" style={{ color: T.ink2 }}>
                   <Check className="h-3.5 w-3.5 shrink-0" style={{ color: T.forest }} />
                   {pt}
@@ -992,185 +975,117 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     )
   }
 
-  // ── Category tab bar: Crypto | E-Wallet | Card (soon) ─────────────
-  const categoryTab = (cat: 'crypto' | 'ewallet', icon: React.ReactNode, label: string) => {
-    const active = payCategory === cat
-    // Crypto with no fee row for the active provider is not payable — the tab
-    // greys out like Card (hidden methods disappear; checkout B3).
-    const disabled = cat === 'crypto' && !cryptoMethod
-    return (
+  // Cryptocurrency: always the last row; opens the coin picker when picked.
+  const cryptoChecked = payMethod === 'crypto'
+  const cryptoRow = cryptoMethod && (
+    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
       <button
         type="button"
-        role="tab"
-        aria-selected={active}
-        disabled={disabled}
-        onClick={() => selectCategory(cat)}
-        className="flex h-11 items-center justify-center gap-2 rounded-md text-[13.5px] font-semibold transition-colors active:scale-[0.98]"
-        style={
-          active
-            ? { background: T.forest, color: '#FFFFFF' }
-            : disabled
-              ? { background: T.row, color: T.dis, boxShadow: `inset 0 0 0 1.5px ${T.disLine}`, cursor: 'not-allowed' }
-              : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1.5px ${T.line}` }
-        }
+        role="radio"
+        aria-checked={cryptoChecked}
+        onClick={() => setPayMethod('crypto')}
+        className="flex w-full items-center gap-3 rounded-lg p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40"
       >
-        {icon}
-        {label}
+        {radioDot(cryptoChecked)}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+            Cryptocurrency
+          </span>
+          <span className="mt-0.5 hidden truncate text-[12.5px] sm:block" style={{ color: T.ink2 }}>
+            {coin
+              ? `${COINS.find((c) => c.value === coin)?.label ?? ''}${coin === 'usdt' ? ` · ${selectedNet.label}` : ''}`
+              : 'USDT or Bitcoin, from any wallet'}
+          </span>
+          <span className="mt-0.5 block text-[12px] font-semibold tabular-nums sm:hidden" style={{ color: T.ink2 }}>
+            {fmtFeeLine(cryptoMethod.quote)}
+          </span>
+        </span>
+        <span className="hidden whitespace-nowrap text-[12px] font-semibold tabular-nums sm:inline" style={{ color: T.ink2 }}>
+          {fmtFeeLine(cryptoMethod.quote)}
+        </span>
+        <span className="flex shrink-0 gap-1.5">
+          {COINS.map((c) => (
+            <span
+              key={c.value}
+              className="grid h-9 w-9 place-items-center rounded-md bg-white"
+              style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
+            >
+              <Image src={c.icon} alt="" width={20} height={20} unoptimized />
+            </span>
+          ))}
+        </span>
       </button>
-    )
-  }
-
-  /** Small tinted circle behind a stroke icon — lifts it off the pill. */
-  const tabIconChip = (Icon: typeof Wallet, active: boolean, disabled = false) => (
-    <span
-      className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
-      style={{
-        background: active ? 'rgba(255,255,255,0.16)' : disabled ? '#EFEFEA' : T.ivory2,
-      }}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </span>
+      {cryptoChecked && (
+        <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
+          {cryptoPicker}
+        </div>
+      )}
+    </div>
   )
 
-  const walletCountryMeta = localCountries.find((c) => c.cc === walletCountry)
+  // ── Region switcher: only when more than one region has a rail ──────
+  const regionSwitcher = regionChips.length > 1 && (
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Region">
+      <span className="mr-1 text-[12px] font-semibold" style={{ color: T.ink2 }}>
+        Paying From
+      </span>
+      {regionChips.map((r) => {
+        const active = r.id === region
+        return (
+          <button
+            key={r.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => selectRegion(r.id)}
+            className="h-8 rounded-md px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40 active:scale-[0.98]"
+            style={active ? { background: T.forest, color: '#FFFFFF' } : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1px ${T.line}` }}
+          >
+            {r.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  const rowMotion = {
+    layout: true,
+    initial: { opacity: 0, y: 6 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -6 },
+    transition: { duration: 0.16, ease: 'easeOut' as const },
+  }
 
   const paymentList = (
     <div className="flex flex-col gap-3">
-      <div role="tablist" aria-label="Payment Type" className="grid grid-cols-3 gap-2">
-        {categoryTab(
-          'crypto',
-          // Real coin marks, overlapped — instantly readable as crypto.
-          <span className="flex shrink-0 -space-x-1.5">
-            <Image
-              src="/crypto/btc.svg"
-              alt=""
-              width={18}
-              height={18}
-              unoptimized
-              className="rounded-full ring-2"
-              style={{ ['--tw-ring-color' as string]: payCategory === 'crypto' ? T.forest : '#FFFFFF' }}
-            />
-            <Image
-              src="/crypto/usdt.svg"
-              alt=""
-              width={18}
-              height={18}
-              unoptimized
-              className="rounded-full ring-2"
-              style={{ ['--tw-ring-color' as string]: payCategory === 'crypto' ? T.forest : '#FFFFFF' }}
-            />
-          </span>,
-          'Crypto'
-        )}
-        {categoryTab('ewallet', tabIconChip(Wallet, payCategory === 'ewallet'), 'E-Wallet')}
-        {/* Cards ship with the card acquirer — greyed, not clickable. */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          disabled
-          className="flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md text-[13.5px] font-medium"
-          style={{ background: T.row, color: T.dis, boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
-        >
-          {tabIconChip(CreditCard, false, true)}
-          Card
-          <span
-            className="rounded-md px-[6px] py-[2px] text-[10.5px] font-semibold"
-            style={{ background: '#EFEFEA', color: '#8A9086' }}
-          >
-            Soon
-          </span>
-        </button>
-      </div>
-
-      {payCategory === 'crypto' && cryptoBody}
-
-      {payCategory === 'ewallet' && (
-        <div className="flex flex-col gap-3">
-          {/* Country pin — only the chosen country's methods ever render. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <span className="text-[12px] font-semibold" style={{ color: T.ink2 }}>
-              {walletCountry === '' ? 'Choose Your Country' : 'Paying From Another Country?'}
-            </span>
-            <div className="w-[210px] shrink-0 max-[420px]:w-full">
-              <LightSelect
-                ariaLabel="Country"
-                placeholder="🌍 Select Country"
-                value={walletCountry}
-                onChange={(v) => {
-                  setWalletCountry(v)
-                  // Picking a country on this tab means "pay locally" — line
-                  // up its first method unless the current pick still fits.
-                  const rows = allLocalRows.filter((r) => r.countries.includes(v))
-                  if (!rows.some((r) => r.id === payMethod)) {
-                    if (rows.length > 0) setPayMethod(rows[0].id)
-                    else setPayMethod('crypto')
-                  }
-                }}
-                options={localCountries.map((c) => ({
-                  value: c.cc,
-                  label: `${ccFlag(c.cc)} ${countryName(c.cc)}`,
-                  hint: `${c.count}`,
-                }))}
-              />
-            </div>
-          </div>
-
-          {walletCountry === '' ? (
-            /* No geo signal — ask, don't dump the whole catalog. */
-            <div
-              className="rounded-lg border px-5 py-6 text-center"
-              style={{ background: T.row, borderColor: T.line }}
-            >
-              <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
-                Local Methods Are Country-Specific
-              </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                Choose your country above to see the wallets and bank options available to you.
-              </p>
-            </div>
-          ) : walletRows.length > 0 ? (
-            <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
-              <AnimatePresence initial={false} mode="popLayout">
-                {walletRows.map((m) => (
-                  <motion.div
-                    key={m.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16, ease: 'easeOut' }}
-                  >
-                    {renderLocalRow(m)}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          ) : (
-            /* No local rails for this country yet — point at crypto. */
-            <div
-              className="rounded-lg border px-5 py-6 text-center"
-              style={{ background: T.row, borderColor: T.line }}
-            >
-              <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
-                No Local Methods for {walletCountryMeta ? ccFlag(walletCountryMeta.cc) : '🌍'}{' '}
-                {walletCountryMeta ? countryName(walletCountryMeta.cc) : 'Your Region'} Yet
-              </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                Crypto works everywhere. Or pick another country above.
-              </p>
-              <button
-                type="button"
-                onClick={() => selectCategory('crypto')}
-                className="mt-3 rounded-md px-4 py-2 text-[13px] font-semibold text-white transition-colors"
-                style={{ background: T.forest }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = T.forest2)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = T.forest)}
-              >
-                Pay With Crypto
-              </button>
-            </div>
-          )}
+      {regionSwitcher}
+      {orderedRows.length === 0 && !cryptoMethod ? (
+        <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
+          <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
+            No Payment Methods Available
+          </p>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
+            This order can’t be paid right now — please try again shortly.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
+          <AnimatePresence initial={false} mode="popLayout">
+            {localRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m, 'local')}
+              </motion.div>
+            ))}
+            {regionalRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m, 'regional')}
+              </motion.div>
+            ))}
+            {cryptoRow && (
+              <motion.div key="crypto" {...rowMotion}>
+                {cryptoRow}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
