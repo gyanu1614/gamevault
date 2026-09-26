@@ -50,21 +50,26 @@ export default function CheckoutLoading() {
             <Block className="h-5 w-24" />
             <Block className="mt-2 h-4 w-72" />
 
-            {/* Category tabs: Crypto | E-Wallet | Card */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <Block className="h-11 w-full rounded-full" />
-              <Block className="h-11 w-full rounded-full" />
-              <Block className="h-11 w-full rounded-full" />
+            {/* Region chips */}
+            <div className="mt-4 flex items-center gap-2">
+              <Block className="h-3.5 w-16" />
+              <Block className="h-8 w-20 rounded-md" />
+              <Block className="h-8 w-28 rounded-md" />
+              <Block className="h-8 w-28 rounded-md" />
             </div>
 
-            {/* Crypto panel: coin tiles + network + warning */}
-            <Card className="mt-3 p-4">
-              <Block className="h-3.5 w-24" />
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Block className="h-[46px] w-full" />
-                <Block className="h-[46px] w-full" />
-              </div>
-            </Card>
+            {/* Method rows: radio + label/sub + fee + mark tile */}
+            {[0, 1, 2].map((i) => (
+              <Card key={i} className="mt-3 flex items-center gap-3 p-4">
+                <Block className="h-[18px] w-[18px] rounded-full" />
+                <div className="min-w-0 flex-1">
+                  <Block className="h-4 w-28" />
+                  <Block className="mt-1.5 h-3 w-40" />
+                </div>
+                <Block className="h-3 w-16" />
+                <Block className="h-9 w-14 rounded-md" />
+              </Card>
+            ))}
 
             <Block className="mt-5 hidden h-12 w-full lg:block" />
             <Block className="mx-auto mt-2.5 hidden h-3.5 w-80 lg:block" />
