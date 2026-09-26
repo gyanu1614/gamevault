@@ -35,7 +35,7 @@ const MAX_CHIPS = 3
  */
 /**
  * Which categories win the two chip slots. Buyers come for goods first, so
- * accounts and items outrank services. `display_order` is a per-game admin
+ * accounts and items outrank services. `sort_order` is a per-game admin
  * setting and can't express this cross-game preference — without it, a game
  * whose first two rows happen to be Boosting and Coaching (Valorant) would
  * show neither of the things most people are shopping for.
@@ -129,20 +129,22 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
     .eq('status', 'active')
     .eq('seller.is_test', false)
 
-  // Categories for the chips. Ordered by display_order, which is the
-  // curation an admin already set — no second ordering rule here.
+  // Categories for the chips, from the one category system. Ordered by
+  // sort_order, which is the curation an admin already set — no second
+  // ordering rule here. The public read policy no longer hides disabled
+  // rows, so `is_enabled` is filtered explicitly.
   //
   // The chip uses the category's OWN name ("V-Bucks", "R6 Credits") rather
-  // than a label derived from metadata.type. That is deliberate: several
-  // rows are typed `currency` when they are really top-ups (V-Bucks, R6
-  // Credits, VP are bought as credit, not traded as an in-game economy the
-  // way Robux or Sheckles are). Rendering the real name sidesteps the
-  // mistyping and reads more accurately per game.
+  // than a label derived from `type`. That is deliberate: several rows are
+  // typed `currency` when they are really top-ups (V-Bucks, R6 Credits, VP
+  // are bought as credit, not traded as an in-game economy the way Robux or
+  // Sheckles are). Rendering the real name sidesteps the mistyping and reads
+  // more accurately per game.
   const { data: categories } = await supabase
-    .from('categories')
-    .select('game_id, slug, name, metadata, display_order')
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
+    .from('game_categories')
+    .select('game_id, slug, name, type, sort_order')
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
 
   const gameSlugById = new Map(games.map((g) => [g.id, g.slug]))
   const grouped = new Map<string, { label: string; href: string; rank: number }[]>()
@@ -150,16 +152,16 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
   for (const row of (categories ?? []) as {
     game_id: string
     slug: string
-    name: string | null
-    metadata: { label?: string; type?: string } | null
+    name: string
+    type: string
   }[]) {
     const gameSlug = gameSlugById.get(row.game_id)
     if (!gameSlug) continue
     const list = grouped.get(row.game_id) ?? []
     list.push({
-      label: SHORT_CHIP_LABEL[row.slug] || row.name || row.metadata?.label || row.slug,
+      label: SHORT_CHIP_LABEL[row.slug] || row.name || row.slug,
       href: `/${gameSlug}/${row.slug}`,
-      rank: CHIP_PRIORITY[row.metadata?.type ?? ''] ?? 99,
+      rank: CHIP_PRIORITY[row.type] ?? 99,
     })
     grouped.set(row.game_id, list)
   }
