@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Star, Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'
 import type { ListingWithRelations } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { listingUrl } from '@/lib/listings/url'
 import WishlistButton from '@/components/wishlist/WishlistButton'
 
 interface ListingCardProps {
@@ -18,8 +19,12 @@ interface ListingCardProps {
 export function ListingCard({ listing, index = 0 }: ListingCardProps) {
   const primaryImage = listing.images?.[0] || null
   const isUnlimited = listing.is_unlimited
-  const isLowStock = !isUnlimited && listing.quantity > 0 && listing.quantity <= 5
-  const isSoldOut = !isUnlimited && listing.quantity === 0
+  // quantity/views/seller_rating are nullable in the DB; the old hand-written
+  // types hid that. Treat null quantity as 0 so a row with no stock never
+  // renders as buyable.
+  const quantity = listing.quantity ?? 0
+  const isLowStock = !isUnlimited && quantity > 0 && quantity <= 5
+  const isSoldOut = !isUnlimited && quantity === 0
   const hasPriceDrop = listing.original_price != null && listing.original_price > listing.price
   const discountPct = hasPriceDrop
     ? Math.round(((listing.original_price! - listing.price) / listing.original_price!) * 100)
@@ -33,7 +38,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
       whileHover={{ y: -4 }}
     >
       <Link
-        href={`/listings/${listing.id}`}
+        href={listingUrl(listing)}
         className={cn(
           'group relative flex flex-col overflow-hidden rounded-2xl',
           'bg-bg-raised border border-border-subtle',
@@ -91,7 +96,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             {isLowStock && (
               <div className="flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-1 backdrop-blur-md">
                 <span className="text-[10px] font-semibold text-amber-400 leading-none">
-                  {listing.quantity} left
+                  {quantity} left
                 </span>
               </div>
             )}
@@ -170,11 +175,11 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
                 {sellerDisplayName(listing.seller)}
               </span>
               {/* Rating */}
-              {listing.seller?.seller_rating > 0 && (
+              {(listing.seller?.seller_rating ?? 0) > 0 && (
                 <div className="flex items-center gap-0.5 shrink-0">
                   <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                   <span className="text-[11px] font-medium text-amber-400">
-                    {listing.seller.seller_rating.toFixed(1)}
+                    {(listing.seller.seller_rating ?? 0).toFixed(1)}
                   </span>
                 </div>
               )}
@@ -184,7 +189,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground shrink-0">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
-                {listing.views > 999 ? `${(listing.views / 1000).toFixed(1)}k` : listing.views}
+                {(listing.views ?? 0) > 999 ? `${((listing.views ?? 0) / 1000).toFixed(1)}k` : (listing.views ?? 0)}
               </span>
               <span className="flex items-center gap-1">
                 <ShoppingBag className="h-3 w-3" />

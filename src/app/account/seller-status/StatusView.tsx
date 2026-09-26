@@ -173,7 +173,7 @@ export default function StatusView({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-white.png"
+                src="/brand/logo-mark-white.avif"
                 alt=""
                 width={28}
                 height={28}

@@ -53,6 +53,12 @@ import {
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { TIERS, TIER_KEYS, tierByKey } from '@/lib/seller/tiers'
 import {
+  balanceLabel as sharedBalanceLabel,
+  decimal,
+  money,
+  signedMoney,
+} from '@/lib/seller/format-amount'
+import {
   FOREST_BG,
   FOREST_CLASSES,
   FOREST_MOTION,
@@ -60,7 +66,7 @@ import {
 } from '../../_theme/forest'
 import { tierChipClass } from '../_components/ActiveSellersPageClient'
 
-/** Gemstone tier ladder, low → high, from the central module. */
+/** Seller rank ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────
@@ -89,18 +95,10 @@ function relativeTime(iso: string | null | undefined, now: number | null): strin
   return `${days}d ago`
 }
 
-function money(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 const CURRENCY_SYMBOL: Record<string, string> = { USD: '$', EUR: '€' }
 
 function balanceLabel(balances: { currency: string; amount: number }[]): string {
-  const nonZero = balances.filter((b) => b.amount !== 0)
-  const shown = nonZero.length > 0 ? nonZero : balances.slice(0, 1)
-  return shown
-    .map((b) => `${CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}${b.amount.toFixed(2)}`)
-    .join(' · ')
+  return sharedBalanceLabel(balances, CURRENCY_SYMBOL)
 }
 
 function titleCase(s: string): string {
@@ -418,7 +416,7 @@ export default function SellerDetailClient({
         profile.seller_rating != null ? (
           <span className="inline-flex items-center gap-1.5">
             <Star className="h-5 w-5 fill-current text-[#FCD34D]" />
-            {profile.seller_rating.toFixed(1)}
+            {decimal(profile.seller_rating, 1)}
           </span>
         ) : (
           '—'
@@ -572,10 +570,10 @@ export default function SellerDetailClient({
             </span>
             {currentConfig && (
               <span className="text-[12px] text-white/85">
-                {currentConfig.commission_rate != null && (
-                  <>Commission{' '}
+                {currentConfig.discount_pts != null && (
+                  <>Rank Discount{' '}
                     <b className="font-semibold tabular-nums text-white/85">
-                      {(currentConfig.commission_rate * 100).toFixed(2)}%
+                      {currentConfig.discount_pts > 0 ? `−${currentConfig.discount_pts} pts` : 'none'}
                     </b>
                   </>
                 )}
@@ -766,7 +764,7 @@ export default function SellerDetailClient({
                 {detail.wallet.sellerBalances.map((b) => (
                   <span key={b.currency} className="text-[15px] font-extrabold tabular-nums text-white/95">
                     {CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}
-                    {b.amount.toFixed(2)}
+                    {decimal(b.amount)}
                     <span className="ml-1 text-[10.5px] font-bold text-white/70">{b.currency}</span>
                   </span>
                 ))}
@@ -778,7 +776,7 @@ export default function SellerDetailClient({
                 {detail.wallet.storeCreditBalances.map((b) => (
                   <span key={b.currency} className="text-[15px] font-extrabold tabular-nums text-white/95">
                     {CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}
-                    {b.amount.toFixed(2)}
+                    {decimal(b.amount)}
                     <span className="ml-1 text-[10.5px] font-bold text-white/70">{b.currency}</span>
                   </span>
                 ))}
@@ -812,7 +810,7 @@ export default function SellerDetailClient({
                         t.amount < 0 ? 'text-[#FCA5A5]' : 'text-[#BEF264]',
                       )}
                     >
-                      {t.amount < 0 ? `-$${Math.abs(t.amount).toFixed(2)}` : `+$${t.amount.toFixed(2)}`}
+                      {signedMoney(t.amount)}
                     </span>
                     <span className="w-[92px] text-right text-[11px] text-white/85">
                       {fmtDate(t.created_at)}

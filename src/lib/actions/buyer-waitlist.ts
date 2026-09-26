@@ -9,6 +9,7 @@
 
 import { headers } from 'next/headers'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { rateLimitAction } from '@/lib/security/rate-limit'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -29,6 +30,10 @@ export async function submitBuyerWaitlist(input: {
     if (!email || !EMAIL_RE.test(email)) {
       return { success: false, error: 'Enter a valid email address.' }
     }
+
+    // Public, unauthenticated form — same spam exposure as the seller waitlist.
+    const limited = await rateLimitAction('contact')
+    if (limited) return { success: false, error: limited.error }
 
     const h = await headers()
     const ip =

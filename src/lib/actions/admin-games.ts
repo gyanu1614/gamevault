@@ -3,7 +3,8 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,8 @@ export async function deleteGame(id: string) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -80,6 +83,8 @@ export async function updateGame(id: string, data: GameData) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -99,6 +104,8 @@ export async function insertGame(data: GameData) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -113,6 +120,8 @@ export async function toggleGameActive(id: string, isActive: boolean) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -132,8 +141,12 @@ export async function toggleGamePopular(id: string, isPopular: boolean) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
-  // Also bust the homepage's cache. The hook keys are 'popular-games'.
-  revalidatePath('/')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
+  // No revalidatePath('/'): the homepage shelf is a CLIENT react-query hook
+  // ('popular-games', staleTime 5 min — features/home/hooks/usePopularGames),
+  // which server revalidation cannot reach. The call invalidated all ~950
+  // prerendered pages and refreshed nothing (build audit 2026-09-22, §4).
   return { success: true }
 }
 
@@ -153,8 +166,9 @@ export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
-  // Bust the marketplace-menu spotlight query on the client side too.
-  revalidatePath('/')
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
+  // The spotlight grid is likewise a client-side query — see toggleGamePopular.
   return { success: true }
 }
 
@@ -197,7 +211,9 @@ export async function updateGameSeo(id: string, data: GameSeoData) {
     return t.length > 0 ? t : null
   }
 
-  const { error } = await (supabase.from('games') as any)
+  // `.select('slug')` on the update returns the row we just wrote, so the
+  // revalidation below can target this game's own pages without a second read.
+  const { data: updated, error } = await (supabase.from('games') as any)
     .update({
       seo_title: nn(data.seo_title),
       seo_description: nn(data.seo_description),
@@ -208,10 +224,16 @@ export async function updateGameSeo(id: string, data: GameSeoData) {
       seo_noindex_reason: nn(data.seo_noindex_reason),
     })
     .eq('id', id)
+    .select('slug')
+    .maybeSingle()
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
-  revalidatePath('/') // public pages read the templates
+  // The SEO template drives this game's OWN landing page, not every route.
+  const slug = (updated as { slug?: string } | null)?.slug
+  if (slug) revalidatePath(`/${slug}`)
+  // Footer game directory renders on every route (unstable_cache).
+  revalidateTag(GAME_DIRECTORY_TAG)
   return { success: true }
 }
 
@@ -293,6 +315,8 @@ export async function uploadGameIcon(
     }
 
     revalidatePath('/admin/games')
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true, url: iconUrl }
   } catch (error: any) {
     return { success: false, error: error.message || 'Upload failed' }
@@ -332,6 +356,8 @@ export async function deleteGameIcon(gameId: string) {
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/games')
+    // Footer game directory renders on every route (unstable_cache).
+    revalidateTag(GAME_DIRECTORY_TAG)
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message || 'Delete failed' }

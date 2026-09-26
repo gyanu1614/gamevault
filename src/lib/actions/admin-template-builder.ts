@@ -13,8 +13,10 @@
 
 'use server'
 
+import { slugify } from '@/lib/utils'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { ensureGameCategory } from '@/lib/categories'
 import { revalidatePath } from 'next/cache'
 
 function getAdminSupabase() {
@@ -89,15 +91,6 @@ type Result<T> = { success: true; data: T } | { success: false; error: string }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
 // ─── READS ────────────────────────────────────────────────────────────────────
 
 /**
@@ -123,7 +116,10 @@ export async function loadBuilderState(
     if (!game) return { success: false, error: 'Game not found' }
     if (!gc)   return { success: false, error: 'Category not found' }
 
-    // 2. game_categories row — create lazily if missing
+    // 2. game_categories row — create lazily if missing, through the single
+    //    creation path (slug / name / type come from the global's defaults).
+    //    `enabled` is only applied on CREATE by ensureGameCategory when the
+    //    pair does not exist yet; an existing pair keeps its admin setting.
     const { data: existingGCRow } = await supabase
       .from('game_categories')
       .select('id')
@@ -133,17 +129,16 @@ export async function loadBuilderState(
 
     let gameCategoryId = (existingGCRow as any)?.id as string | undefined
     if (!gameCategoryId) {
-      const { data: newGC, error: insErr } = await supabase
-        .from('game_categories')
-        .insert({
-          game_id: gameId,
-          global_category_id: (gc as any).id,
-          is_enabled: false, // builder doesn't auto-enable
+      try {
+        const created = await ensureGameCategory(supabase, {
+          gameId,
+          globalSlug: (gc as any).slug,
+          enabled: false, // builder doesn't auto-enable
         })
-        .select('id')
-        .single()
-      if (insErr) return { success: false, error: insErr.message }
-      gameCategoryId = (newGC as any).id
+        gameCategoryId = created.id
+      } catch (e: any) {
+        return { success: false, error: e?.message ?? 'Could not create the game category' }
+      }
     }
 
     // 3. attribute_templates row — create lazily if missing

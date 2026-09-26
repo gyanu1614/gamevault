@@ -145,14 +145,6 @@ export function getRateLimitMapSize(): number {
 // ============================================================================
 
 /**
- * Rate limit for order creation
- * 5 orders per minute per user
- */
-export function rateLimitCreateOrder(userId: string): boolean {
-  return rateLimit(`create-order:${userId}`, 5, 60000)
-}
-
-/**
  * Rate limit for payment intent creation
  * 3 payment attempts per minute per user
  */
@@ -199,14 +191,14 @@ export function rateLimitAPI(userId: string): boolean {
 /**
  * Example 1: In a server action
  *
- * export async function createOrder(data: CreateOrderData) {
+ * export async function submitThing(data: ThingData) {
  *   const { data: { user } } = await supabase.auth.getUser()
  *
- *   if (!rateLimitCreateOrder(user.id)) {
- *     return { success: false, error: 'Too many orders. Please wait 1 minute.' }
+ *   if (!rateLimitPayment(user.id)) {
+ *     return { success: false, error: 'Too many attempts. Please wait 1 minute.' }
  *   }
  *
- *   // Proceed with order creation...
+ *   // Proceed...
  * }
  */
 

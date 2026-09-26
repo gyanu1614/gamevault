@@ -1,0 +1,845 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { ChevronRight, ExternalLink, ShieldCheck, TrendingUp } from 'lucide-react'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { FaqCards } from '@/components/marketplace/FaqCards'
+import { buildBrainrotFaq } from '@/lib/sab/faq'
+import ItemHero, { type MutationOption } from './_ItemHero'
+import { SimilarBrainrots } from './_SimilarBrainrots'
+import { SabHeroBackdrop } from '../_SabHeroBackdrop'
+import { HubNav } from '@/components/content/HubNav'
+import { HubFooter } from '@/components/content/HubFooter'
+import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { hasHubPage } from '@/lib/content/theme'
+import { cn } from '@/lib/utils'
+import { sabCard } from '@/lib/sab/theme'
+import AdoptMePetPage from './_AdoptMePetPage'
+import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
+import GenericValueItemPage from '../_generic/ValueItemPage'
+import { getValueItems } from '@/lib/values/data'
+import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
+import { getGameContentTheme } from '@/lib/content/theme'
+
+/**
+ * The page SHELL is static content — an item's name, rarity, artwork, income
+ * and copy change when the catalogue is edited, not on a price crawl. Only the
+ * price block moves, and it moves on its own tag.
+ *
+ * So the time-based window is a long safety net (7 days), not the refresh
+ * path. The refresh is event-driven:
+ *   • prices  → `price:<game>:<item>`, revalidated by the crawl's publish step
+ *               for the items whose prices actually moved
+ *               (/api/internal/sab-market-revalidate)
+ *   • content → `values:<game>`, revalidated by /api/internal/values-revalidate
+ *
+ * Before this, the 24 h window plus a whole-game tag on every one of 8 daily
+ * crawls rebuilt all ~500 item pages whether or not anything changed — ~80% of
+ * the monthly ISR budget (build audit 2026-09-22, §4).
+ */
+export const revalidate = 604800
+
+/** Games served by the generic values_* pipeline (see the hub route). */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
+
+/**
+ * Prerender EVERY item page at build time (Step 7a). The set used to be
+ * capped at 100 per game because building ~500 pages against the remote DB
+ * intermittently tripped Next's 60 s per-page static-generation timeout; the
+ * cap left the other ~360 pages to render on first visit after every deploy,
+ * at ~12 deploys a day. `staticPageGenerationTimeout` in next.config.js is
+ * raised instead. Unknown slugs still 404 through the gates below
+ * (dynamicParams stays true: a slug published between deploys renders on
+ * demand into the same cache).
+ */
+export async function generateStaticParams() {
+  const supabase = createAnonClient()
+  const [{ data: brainrots }, petSlugs] = await Promise.all([
+    (supabase as any)
+      .from('sab_brainrot_market_catalog')
+      .select('slug')
+      .order('market_value_usd', { ascending: false, nullsFirst: false }),
+    getPublishablePetSlugs(),
+  ])
+  // Generic-pipeline games: prerender the PRICED items (the pages that can
+  // rank). The unpriced catalogue renders on demand into the same ISR cache.
+  const pipelineParams: Array<{ gameSlug: string; itemSlug: string }> = []
+  for (const slug of VALUES_PIPELINE_GAMES) {
+    const items = await getValueItems(slug)
+    pipelineParams.push(
+      ...items
+        .filter((i) => i.price?.cheapestUsd != null)
+        .map((i) => ({ gameSlug: slug, itemSlug: i.slug })),
+    )
+  }
+
+  return [
+    ...pipelineParams,
+    ...(((brainrots ?? []) as { slug: string }[]).map((r) => ({
+      gameSlug: 'steal-a-brainrot',
+      itemSlug: r.slug,
+    }))),
+    ...petSlugs.map((slug) => ({ gameSlug: 'adopt-me', itemSlug: slug })),
+  ]
+}
+
+interface PageProps {
+  params: Promise<{
+    gameSlug: string
+    itemSlug: string
+  }>
+}
+
+type BrainrotRow = {
+  id: string
+  name: string
+  slug: string
+  rarity: string
+  obtainability: string
+  base_income_per_second: number | string | null
+  ingame_cost: number | string | null
+  image_url: string | null
+  image_alt: string
+  source_url: string | null
+  cheapest_active_price_usd: number | string | null
+  market_value_usd: number | string | null
+  quick_sale_usd: number | string | null
+  patient_sale_usd: number | string | null
+  active_listing_count: number
+  completed_sale_count: number
+  unique_seller_count: number
+  confidence_label: string
+  display_price_usd: number | string | null
+  display_price_label: string
+  display_price_source: string
+  price_updated_at: string | null
+}
+
+type MutationRow = {
+  mutation_slug: string
+  mutation_name: string
+  income_multiplier: number | string
+  mutation_availability: string
+  calculated_income_per_second: number | string | null
+  income_source: string
+  is_verified_variant: boolean
+}
+
+type TradePriceRow = {
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
+  confidence_label: string
+  external_sample_size: number
+  price_updated_at: string | null
+  is_trade_ready: boolean
+}
+
+type MutationMarketPriceRow = {
+  mutation_slug: string
+  market_value_usd: number | string | null
+  market_low_usd: number | string | null
+  market_high_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
+  confidence_label: string
+  external_sample_size: number
+  price_updated_at: string | null
+  is_trade_ready: boolean
+}
+
+/** Measured market premium per mutation — see sab_mutation_price_multipliers. */
+type MutationPriceMultiplierRow = {
+  mutation_slug: string
+  price_multiplier: number | string
+}
+
+function asNumber(value: number | string | null | undefined): number | null {
+  if (value == null) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function formatMoney(value: number | string | null | undefined): string | null {
+  const amount = asNumber(value)
+  if (amount == null) return null
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: amount < 10 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+function formatIncome(value: number | string | null | undefined): string {
+  const amount = asNumber(value)
+  if (amount == null) return 'Unknown'
+
+  return `${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
+  }).format(amount)}/s`
+}
+
+/** In-game currency cost, compact — "$250B" not "$250,000,000,000". */
+function formatIngameCost(value: number | string | null | undefined): string | null {
+  const amount = asNumber(value)
+  if (amount == null) return null
+  return `$${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2,
+  }).format(amount)}`
+}
+
+function formatDate(value: string | null): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
+  const supabase = createAnonClient()
+  const { data, error } = await (supabase as any)
+    .from('sab_brainrot_market_catalog')
+    // STATE-012 — explicit columns, exactly the BrainrotRow contract above.
+    .select(
+      'id,name,slug,rarity,obtainability,base_income_per_second,ingame_cost,image_url,image_alt,source_url,cheapest_active_price_usd,market_value_usd,quick_sale_usd,patient_sale_usd,active_listing_count,completed_sale_count,unique_seller_count,confidence_label,display_price_usd,display_price_label,display_price_source,price_updated_at',
+    )
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Unable to load Brainrot value page:', error)
+    return null
+  }
+
+  return (data as BrainrotRow | null) ?? null
+}
+
+async function getDefaultTradePrice(
+  brainrotId: string,
+): Promise<TradePriceRow | null> {
+  const supabase = createAnonClient()
+  const { data, error } = await (supabase as any)
+    .from('sab_price_display')
+    .select(
+      'market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+    )
+    .eq('brainrot_id', brainrotId)
+    .eq('mutation_slug', 'default')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Unable to load default mutation market price:', error)
+    return null
+  }
+
+  return (data as TradePriceRow | null) ?? null
+}
+
+async function getMutations(brainrotId: string): Promise<MutationOption[]> {
+  const supabase = createAnonClient()
+
+  // Fetch mutation income data, per-mutation market prices, and the measured
+  // mutation price premiums in parallel, then merge so each mutation carries
+  // its real USD market value (not just income).
+  const [calculatorResult, pricesResult, multiplierResult] = await Promise.all([
+    (supabase as any)
+      .from('sab_brainrot_mutation_calculator')
+      .select(
+        'mutation_slug,mutation_name,income_multiplier,mutation_availability,calculated_income_per_second,income_source,is_verified_variant',
+      )
+      .eq('brainrot_id', brainrotId)
+      .order('income_multiplier', { ascending: true }),
+    (supabase as any)
+      .from('sab_price_display')
+      .select(
+        'mutation_slug,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,external_sample_size,price_updated_at,is_trade_ready',
+      )
+      .eq('brainrot_id', brainrotId),
+    (supabase as any)
+      .from('sab_mutation_price_multipliers')
+      .select('mutation_slug,price_multiplier'),
+  ])
+
+  if (calculatorResult.error) {
+    console.error('Unable to load Brainrot mutations:', calculatorResult.error)
+    return []
+  }
+
+  if (pricesResult.error) {
+    console.error('Unable to load Brainrot mutation prices:', pricesResult.error)
+  }
+
+  const priceBySlug = new Map<string, MutationMarketPriceRow>(
+    ((pricesResult.data ?? []) as MutationMarketPriceRow[]).map((row) => [
+      row.mutation_slug,
+      row,
+    ]),
+  )
+
+  const rows = (calculatorResult.data ?? []) as MutationRow[]
+
+  /**
+   * MEASURED price premium per mutation, not the income multiplier.
+   *
+   * This used to scale the default price by the mutation's INCOME multiplier,
+   * which badly overstated high-tier mutations: measured across 1,155
+   * well-sampled variant/default pairs, the market premium saturates around
+   * 2.5-3.5x however high income scales (Rainbow is 10x income but ~3.0x
+   * price). A Rainbow estimate was therefore roughly threefold too high.
+   *
+   * The table is refreshed daily by /api/cron/correct-prices. If it hasn't
+   * been populated yet we fall back to the old income-multiplier behaviour
+   * rather than showing nothing.
+   */
+  const priceMultiplierBySlug = new Map<string, number>(
+    ((multiplierResult?.data ?? []) as MutationPriceMultiplierRow[]).map(
+      (row) => [row.mutation_slug, Number(row.price_multiplier)],
+    ),
+  )
+
+  // Anchor for the fallback estimate: the default mutation's real price and
+  // multiplier. When a mutation has NO market listings, we scale the default
+  // price by the measured premium so the page still shows a number (clearly
+  // flagged as estimated) — anything beats a blank.
+  const defaultRow = rows.find((r) => r.mutation_slug === 'default')
+  const defaultPrice = asNumber(
+    priceBySlug.get('default')?.market_value_usd ?? null,
+  )
+  const defaultMultiplier = Number(defaultRow?.income_multiplier) || 1
+
+  return rows.map((row) => {
+    const price = priceBySlug.get(row.mutation_slug)
+    const realValue = asNumber(price?.market_value_usd ?? null)
+
+    // Derive an estimate only when there's no real value, we have a default
+    // anchor, and this isn't the default itself.
+    let estimatedValue: number | null = null
+    if (realValue == null && defaultPrice != null && row.mutation_slug !== 'default') {
+      const ratio =
+        priceMultiplierBySlug.get(row.mutation_slug) ??
+        Number(row.income_multiplier) / defaultMultiplier
+      if (Number.isFinite(ratio) && ratio > 0) {
+        estimatedValue = Math.round(defaultPrice * ratio * 100) / 100
+      }
+    }
+
+    return {
+      slug: row.mutation_slug,
+      name: row.mutation_name,
+      multiplier: Number(row.income_multiplier),
+      availability: row.mutation_availability,
+      calculatedIncomePerSecond: asNumber(row.calculated_income_per_second),
+      incomeSource: row.income_source,
+      isVerifiedVariant: row.is_verified_variant,
+      marketValueUsd: realValue ?? estimatedValue,
+      marketLowUsd: asNumber(price?.market_low_usd ?? null),
+      marketHighUsd: asNumber(price?.market_high_usd ?? null),
+      cheapestUsd: asNumber(price?.cheapest_usd ?? null),
+      averageUsd: asNumber(price?.average_usd ?? null),
+      marketConfidenceLabel: price?.confidence_label ?? null,
+      marketSampleSize: price?.external_sample_size ?? 0,
+      marketUpdatedAt: price?.price_updated_at ?? null,
+      isEstimated: realValue == null && estimatedValue != null,
+    }
+  })
+}
+
+// Daily price history per mutation, for the trend chart. Resilient: returns an
+// empty map if the table isn't present yet (migration not applied) or on error,
+// so the page renders fine before history exists — the chart shows a
+// "collecting history" state in that case.
+async function getPriceHistory(
+  brainrotId: string,
+): Promise<Record<string, { date: string; median: number }[]>> {
+  const supabase = createAnonClient()
+  const { data, error } = await (supabase as any)
+    .from('sab_price_history')
+    .select('mutation_slug:mutation_id,history_date,median_usd,sab_mutations(slug)')
+    .eq('brainrot_id', brainrotId)
+    .order('history_date', { ascending: true })
+
+  if (error || !data) return {}
+
+  const bySlug: Record<string, { date: string; median: number }[]> = {}
+  for (const row of data as any[]) {
+    const slug = row.sab_mutations?.slug
+    const median = asNumber(row.median_usd)
+    if (!slug || median == null) continue
+    ;(bySlug[slug] = bySlug[slug] ?? []).push({ date: row.history_date, median })
+  }
+  return bySlug
+}
+
+async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]> {
+  const supabase = createAnonClient()
+  const { data } = await (supabase as any)
+    .from('sab_brainrot_market_catalog')
+    .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label')
+    .eq('rarity', brainrot.rarity)
+    .neq('id', brainrot.id)
+    .order('name', { ascending: true })
+    .limit(24)
+
+  const rows = (data ?? []) as BrainrotRow[]
+  if (rows.length === 0) return rows
+
+  // display_price_usd only reflects verified trade-ready prices (often null).
+  // Pull the real default cash value from the public catalog so cards show a
+  // price instead of "pending", matching what the item page displays.
+  const { data: prices } = await (supabase as any)
+    .from('sab_price_display')
+    .select('brainrot_id,market_value_usd')
+    .eq('mutation_slug', 'default')
+    .in(
+      'brainrot_id',
+      rows.map((r) => r.id),
+    )
+
+  const priceById = new Map<string, number | string | null>(
+    ((prices ?? []) as Array<{ brainrot_id: string; market_value_usd: number | string | null }>).map(
+      (p) => [p.brainrot_id, p.market_value_usd],
+    ),
+  )
+
+  return rows
+    .map((r) => ({ ...r, display_price_usd: priceById.get(r.id) ?? r.display_price_usd }))
+    .sort((a, b) => (asNumber(b.display_price_usd) ?? 0) - (asNumber(a.display_price_usd) ?? 0))
+    // 20 sibling links (was 12): a denser related-items block is the strongest
+    // internal-link-mesh lever competitors (Rolimons) use — every item page
+    // feeds keyword-rich links to 20 others, spreading crawl + equity.
+    .slice(0, 20)
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { gameSlug, itemSlug } = await params
+
+  if (gameSlug === 'adopt-me') {
+    const pet = await getAdoptMePet(itemSlug)
+    if (!pet) return { title: 'Value Not Found' }
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    // Title leads with the pet name + "value" (the head term) and carries the
+    // real-money wedge; keeps DropMarket last.
+    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value | DropMarket`
+    const description = `How much is a ${pet.name} worth in Adopt Me in real money? See the ${pet.name}'s cash value (USD) and community trade value — Normal, Fly Ride, Neon and Mega prices, updated ${monthYear} from real marketplace listings.`
+    const canonical = `/adopt-me/values/${pet.slug}`
+    // Page-specific keywords targeting the uncontested long-tail the brief
+    // names — "worth in real money / USD / can you sell". Per-pet, not the dead
+    // site-wide stuffed string.
+    const keywords = [
+      `${pet.name} value`,
+      `${pet.name} value adopt me`,
+      `${pet.name} worth`,
+      `how much is a ${pet.name} worth`,
+      `${pet.name} value in real money`,
+      `${pet.name} usd value`,
+      `${pet.name} fly ride value`,
+      `${pet.name} neon value`,
+      `${pet.name} mega neon value`,
+      `sell ${pet.name} adopt me`,
+      `adopt me ${pet.name} price`,
+    ]
+    return {
+      title,
+      description,
+      keywords,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: 'website',
+        images: pet.imageUrl ? [pet.imageUrl] : [],
+      },
+    }
+  }
+
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const item = (await getValueItems(gameSlug)).find((i) => i.slug === itemSlug)
+    if (!item) return { title: 'Value Not Found' }
+    const price = item.price
+    const priced = price?.cheapestUsd != null
+    // The brief's rule: fewer than 3 live listings behind a value is not
+    // enough to index. Every unpriced catalogue page (all pets) is noindex too
+    // — it is useful to a reader who lands on it, but it is not a ranking page.
+    const thin = !priced || (price?.sampleSize ?? 0) < 3
+    const title = priced
+      ? `${item.name} Value — ${theme.name}`
+      : `${item.name} — ${theme.name} ${item.rarity ? `${item.rarity} ` : ''}Pet`
+    return {
+      title,
+      description: priced
+        ? `${item.name} sells for about $${price!.cheapestUsd!.toFixed(2)} in ${theme.name}, priced from ${price!.sampleSize} live marketplace listings.`
+        : `${item.name} in ${theme.name}: rarity, area, income and the egg it hatches from. No market price — ${item.name} is not sold directly.`,
+      alternates: { canonical: `/${gameSlug}/values/${item.slug}` },
+      ...(thin ? { robots: { index: false, follow: true } } : {}),
+    }
+  }
+
+  if (!hasHubPage(gameSlug, 'values')) return { title: 'Value Not Found' }
+
+  const brainrot = await getBrainrot(itemSlug)
+  if (!brainrot) return { title: 'Brainrot Not Found' }
+
+  const title = `${brainrot.name} Value, Income & Mutations`
+  const description = `${brainrot.name} value guide for Steal a Brainrot. See rarity, base income, mutation income, obtainability, and current DropMarket pricing.`
+  const canonical = `/steal-a-brainrot/values/${brainrot.slug}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: 'website',
+      images: brainrot.image_url ? [brainrot.image_url] : [],
+    },
+  }
+}
+
+export default async function BrainrotValuePage({ params }: PageProps) {
+  const { gameSlug, itemSlug } = await params
+  // Two tags, two lifetimes (see `revalidate` above):
+  //   • `values:<game>`      — catalogue/content edits, whole game.
+  //   • `price:<game>:<item>` — this item's prices, moved by a crawl only when
+  //     the published numbers actually changed.
+  // Both are bound before any branch so every variant of this page carries
+  // them, and the prices below stay SERVER-rendered (they are in the HTML for
+  // crawlers — the tags change when the page is rebuilt, not how).
+  await Promise.all([
+    bindValuesTag(gameSlug),
+    bindValueItemPriceTag(gameSlug, itemSlug),
+  ])
+
+  // Adopt Me per-pet page — only publishable pets (has_page) render; anything
+  // thin or unpriced 404s rather than shipping an empty page.
+  if (gameSlug === 'adopt-me') {
+    const pet = await getAdoptMePet(itemSlug)
+    if (!pet) notFound()
+    return <AdoptMePetPage pet={pet} />
+  }
+
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericValueItemPage gameSlug={gameSlug} itemSlug={itemSlug} />
+  }
+
+  if (!hasHubPage(gameSlug, 'values')) notFound()
+
+  const brainrot = await getBrainrot(itemSlug)
+  if (!brainrot) notFound()
+
+  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav] =
+    await Promise.all([
+      getMutations(brainrot.id),
+      getRelatedBrainrots(brainrot),
+      getDefaultTradePrice(brainrot.id),
+      getPriceHistory(brainrot.id),
+      getHubNavData(gameSlug),
+    ])
+
+  const hasPublicMarketPrice =
+    defaultTradePrice != null &&
+    asNumber(defaultTradePrice?.market_value_usd) != null
+
+  const displayPrice = formatMoney(
+    hasPublicMarketPrice
+      ? defaultTradePrice?.market_value_usd
+      : brainrot.display_price_usd,
+  )
+  // Reputable-seller pricing: the buyer-facing "Cheapest" + "Market price".
+  // Market price = the reputable average when we have it, else the corrected
+  // value. Cheapest = the reputable low, shown only when it undercuts the market
+  // price (a single reputable seller makes them equal).
+  const reputableAverage = asNumber(defaultTradePrice?.average_usd)
+  const reputableCheapest = asNumber(defaultTradePrice?.cheapest_usd)
+  const marketPriceUsd =
+    reputableAverage ??
+    (hasPublicMarketPrice
+      ? asNumber(defaultTradePrice?.market_value_usd)
+      : asNumber(brainrot.market_value_usd))
+  const marketPrice = formatMoney(marketPriceUsd)
+  const cheapestPrice =
+    reputableCheapest != null &&
+    marketPriceUsd != null &&
+    reputableCheapest < marketPriceUsd - 0.005
+      ? formatMoney(reputableCheapest)
+      : null
+  const marketValue = formatMoney(
+    hasPublicMarketPrice
+      ? defaultTradePrice?.market_value_usd
+      : brainrot.market_value_usd,
+  )
+  const marketLow = formatMoney(defaultTradePrice?.market_low_usd)
+  const marketHigh = formatMoney(defaultTradePrice?.market_high_usd)
+  const marketSampleSize = defaultTradePrice?.external_sample_size ?? 0
+  const effectiveConfidenceLabel = hasPublicMarketPrice
+    ? defaultTradePrice?.confidence_label
+    : brainrot.confidence_label
+  const quickSale = formatMoney(brainrot.quick_sale_usd)
+  const patientSale = formatMoney(brainrot.patient_sale_usd)
+  const updatedLabel = formatDate(
+    hasPublicMarketPrice
+      ? defaultTradePrice?.price_updated_at
+      : brainrot.price_updated_at,
+  )
+
+  const marketplaceHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(brainrot.name)}`
+
+  // Highest-value priced mutation (excluding default) for the FAQ copy.
+  const topMutation = mutations
+    .filter((m) => m.slug !== 'default' && asNumber(m.marketValueUsd) != null)
+    .sort((a, b) => (asNumber(b.marketValueUsd) ?? 0) - (asNumber(a.marketValueUsd) ?? 0))[0]
+
+  const faqItems = buildBrainrotFaq({
+    name: brainrot.name,
+    rarity: brainrot.rarity,
+    obtainability: brainrot.obtainability,
+    baseIncomePerSecond: brainrot.base_income_per_second,
+    ingameCost: brainrot.ingame_cost,
+    defaultPriceUsd: hasPublicMarketPrice
+      ? (defaultTradePrice?.market_value_usd ?? null)
+      : brainrot.market_value_usd,
+    lowUsd: defaultTradePrice?.market_low_usd ?? null,
+    highUsd: defaultTradePrice?.market_high_usd ?? null,
+    topMutation: topMutation
+      ? { name: topMutation.name, priceUsd: topMutation.marketValueUsd }
+      : null,
+    sampleSize: marketSampleSize,
+  })
+  const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
+
+  return (
+    <main className="relative min-h-screen bg-[#171B21]">
+      <SabHeroBackdrop height={560}>
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Home', path: '/' },
+          { name: 'Steal a Brainrot', path: '/steal-a-brainrot' },
+          { name: 'Values', path: '/steal-a-brainrot/values' },
+          { name: brainrot.name, path: canonicalPath },
+        ])}
+      />
+
+      {brainrot.active_listing_count > 0 && brainrot.cheapest_active_price_usd != null && (
+        <JsonLd
+          data={productAggregate({
+            name: `${brainrot.name} — Steal a Brainrot`,
+            description: `Buy ${brainrot.name} from verified DropMarket sellers.`,
+            brand: 'Steal a Brainrot',
+            lowPrice: Number(brainrot.cheapest_active_price_usd),
+            highPrice: Number(brainrot.patient_sale_usd ?? brainrot.cheapest_active_price_usd),
+            offerCount: brainrot.active_listing_count,
+            url: canonicalPath,
+          })}
+        />
+      )}
+
+      <HubNav data={hubNav} />
+
+      {/* pt clears the fixed HubNav. */}
+      <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
+        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#9BA8A0]">
+          <Link href="/steal-a-brainrot/values" className="transition-colors hover:text-[#F1F3F1]">
+            Values
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
+          <Link
+            href={`/steal-a-brainrot/values?rarity=${encodeURIComponent(brainrot.rarity)}`}
+            className="transition-colors hover:text-[#F1F3F1]"
+          >
+            {brainrot.rarity}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
+          <span className="font-medium text-[#F1F3F1]">{brainrot.name}</span>
+        </nav>
+
+        <ItemHero
+          brainrotName={brainrot.name}
+          rarity={brainrot.rarity}
+          obtainability={brainrot.obtainability}
+          baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
+          ingameCost={formatIngameCost(brainrot.ingame_cost)}
+          imageUrl={brainrot.image_url}
+          imageAlt={brainrot.image_alt}
+          mutations={mutations}
+          listingsHref={marketplaceHref}
+          priceHistory={priceHistory}
+          updatedAt={
+            hasPublicMarketPrice
+              ? (defaultTradePrice?.price_updated_at ?? null)
+              : brainrot.price_updated_at
+          }
+        />
+      </section>
+
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+        <div className="space-y-6">
+
+          <section className={cn(sabCard, 'p-5 sm:p-6')}>
+            <h2 className="text-lg font-semibold text-[#F1F3F1]">
+              How much is {brainrot.name} worth?
+            </h2>
+            {/* Answer-first, dated, quotable lead sentence — the exact string an
+                AI answer engine (ChatGPT/Perplexity) lifts as a citation. Kept
+                as plain server-rendered text (AI crawlers run no JavaScript).
+                See search-engines-ai-seo-research memo (Princeton GEO study:
+                statistics + freshness are the top citation levers). */}
+            <p className="mt-2 text-sm leading-6 text-[#C6CEC9]">
+              {marketValue ? (
+                <>
+                  The current value of <strong className="font-semibold text-[#F1F3F1]">{brainrot.name}</strong>{' '}
+                  in Steal a Brainrot is <strong className="font-semibold text-[#F1F3F1]">{marketValue}</strong>
+                  {updatedLabel ? <> as of {updatedLabel}</> : null}, based on live DropMarket
+                  marketplace data. It is a {brainrot.rarity} Brainrot with a base income of{' '}
+                  {formatIncome(brainrot.base_income_per_second)}.
+                </>
+              ) : (
+                <>
+                  {brainrot.name} is a {brainrot.rarity} Brainrot in Steal a Brainrot with a base income
+                  of {formatIncome(brainrot.base_income_per_second)}. Live pricing is still being
+                  collected — check back as DropMarket gathers more marketplace data.
+                </>
+              )}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[#9BA8A0]">
+              Estimated from recent comparable marketplace listings by reputable sellers when available. Extreme prices, bundles, and unclear variants are excluded.
+            </p>
+
+            <dl className="mt-5 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+              <BodyRow label="Cheapest active listing" value={cheapestPrice ?? 'No active listings'} />
+              <BodyRow label="Current market price" value={marketValue ?? 'Insufficient data'} />
+              <BodyRow label="Quick-sale estimate" value={quickSale ?? 'Insufficient data'} />
+              <BodyRow label="Patient-sale estimate" value={patientSale ?? 'Insufficient data'} />
+            </dl>
+          </section>
+
+          <section className={cn(sabCard, 'p-5 sm:p-6')}>
+            <h2 className="text-lg font-semibold text-[#F1F3F1]">About {brainrot.name}</h2>
+            <p className="mt-2 text-sm leading-6 text-[#9BA8A0]">
+              {brainrot.name} is a {brainrot.rarity} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
+            </p>
+            {brainrot.source_url && (
+              <a
+                href={brainrot.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#4FB477] underline-offset-4 hover:underline"
+              >
+                View source information
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          <section className={cn(sabCard, 'p-5')}>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-[18px] w-[18px] text-[#4FB477]" />
+              <h2 className="text-sm font-semibold text-[#F1F3F1]">Market activity</h2>
+            </div>
+            <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+              <BodyRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
+              <BodyRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
+              <BodyRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
+              <BodyRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
+            </dl>
+          </section>
+
+          <section className={cn(sabCard, 'p-5')}>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-[18px] w-[18px] text-[#4FB477]" />
+              <h2 className="text-sm font-semibold text-[#F1F3F1]">Pricing integrity</h2>
+            </div>
+            <p className="mt-2.5 text-[13px] leading-6 text-[#9BA8A0]">
+              Extreme prices, bundles, account sales, unclear mutations, test listings, cancelled orders, refunds, disputes, and unverified mappings are excluded from market calculations.
+            </p>
+          </section>
+        </aside>
+      </div>
+
+      <SimilarBrainrots
+        rarity={brainrot.rarity}
+        items={relatedBrainrots.map((r) => ({
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+          rarity: r.rarity,
+          imageUrl: r.image_url,
+          priceUsd: r.display_price_usd,
+        }))}
+      />
+
+      {/* Curated FAQ — unique per brainrot (SEO) + FAQPage structured data. */}
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="border-t border-white/[0.07] pt-10">
+          <h2 className="text-lg font-semibold text-[#F1F3F1]">{brainrot.name} — questions</h2>
+          <FaqCards items={faqItems} defaultOpen={0} className="mt-5" square />
+        </div>
+      </section>
+      <JsonLd data={faqPage(faqItems)} />
+
+      {/* Cross-links — back to the list + how values are calculated (E-E-A-T:
+          every cited value links to its methodology, parity with Adopt Me). */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/steal-a-brainrot/values"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]"
+          >
+            ← All Steal a Brainrot values
+          </Link>
+          <Link
+            href="/steal-a-brainrot/values/methodology"
+            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#C6CEC9] transition hover:border-[rgba(255,255,255,0.12)] hover:bg-white/[0.06]"
+          >
+            How we value items →
+          </Link>
+        </div>
+      </div>
+      </SabHeroBackdrop>
+          <HubFooter
+        gameName={hubNav.current.name}
+        gameSlug={hubNav.current.slug}
+        tools={hubNav.tools}
+        itemsHref={hubNav.itemsHref}
+        accountsHref={hubNav.accountsHref}
+      />
+</main>
+  )
+}
+
+// Shared label:value row for the body sections — grey dividers, tabular-nums,
+// matching the hero's StatRow so every SAB surface reads the same.
+function BodyRow({
+  label,
+  value,
+  capitalize = false,
+}: {
+  label: string
+  value: string
+  capitalize?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
+      <dt className="text-[#9BA8A0]">{label}</dt>
+      <dd className={`font-medium tabular-nums text-[#F1F3F1] ${capitalize ? 'capitalize' : ''}`}>
+        {value}
+      </dd>
+    </div>
+  )
+}

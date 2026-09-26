@@ -1,5 +1,6 @@
 /**
- * Unified daily price-correction cron — all games, one route.
+ * Unified price-correction route — all games, one route. MANUAL TRIGGER ONLY:
+ * it has no vercel.json entry (2026-09-20); the scheduled path is the runner.
  *
  * Each game's reputable pricing runs here, isolated in its own try/catch so a
  * failure in one game (a slow read, a bad row) can never block another. Adding
@@ -10,34 +11,44 @@
  * logic) via runSabCorrection; Adopt Me runs the plain reputable model. Both
  * write a buyer-facing cheapest + average.
  *
- * Scheduled after the collectors land (see vercel.json). Idempotent: re-running
+ * Each game's workflow reprices on the runner right after its collect
+ * (`pnpm reprice --game=<key>`). Idempotent: re-running
  * fully repairs each game's corrected values.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 
-import { runSabCorrection } from '@/lib/pricing/games/sab'
-import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
+import { PRICING_GAMES } from '@/lib/pricing/registry'
 import { PRICE_CACHE_TAG } from '@/lib/sab/priceCache'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
-const CRON_SECRET = process.env.CRON_SECRET
 
 /**
- * The game registry. Each entry owns its own read → price → write, so games
- * stay fully independent. `run` returns a small summary for the response.
+ * Next reads this as a literal only — it cannot follow a re-export or a
+ * computed value (CLAUDE.md). 300s is the Vercel maximum; the scheduled path
+ * lives on the runner precisely because even 300s was not enough for SAB.
  */
-const GAMES: {
-  key: string
-  run: () => Promise<Record<string, unknown>>
-}[] = [
-  { key: 'sab', run: runSabCorrection },
-  { key: 'adopt-me', run: runAdoptMeCorrection },
-]
+export const maxDuration = 300
+
+/**
+ * Repricing normally runs on the GH Actions runner (scripts/reprice.mjs), right
+ * after each game's crawl. This route stays as a THIN MANUAL TRIGGER for one-off
+ * re-runs — it is not on the scheduled path any more.
+ *
+ * It was the scheduled path until 2026-09-14, when the SAB read outgrew the
+ * function budget and it 504'd on every crawl for five days without anyone
+ * noticing. maxDuration below buys the manual path the full budget; the runner
+ * is what makes the scheduled path reliable.
+ *
+ * The game list comes from the shared registry so this route and the runner can
+ * never price different sets of games.
+ */
+const GAMES = PRICING_GAMES
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+  // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+  if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -59,7 +70,10 @@ export async function GET(request: NextRequest) {
   // shared-connection contention here.)
   for (const game of games) {
     try {
-      results[game.key] = { ok: true, ...(await game.run()) }
+      // A held pipeline lock fails fast here: this route has a 300s budget and
+      // is a manual trigger, so "held by <who> since <when>" is the useful
+      // answer, not a wait.
+      results[game.key] = { ok: true, ...(await game.run({ lockWaitSeconds: 0 })) }
     } catch (error: any) {
       anyFailed = true
       console.error(`correct-prices: ${game.key} failed:`, error)

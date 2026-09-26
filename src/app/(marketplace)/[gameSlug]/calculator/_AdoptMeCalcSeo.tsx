@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
-import { variantColor } from '../values/[brainrotSlug]/_adoptMeVariantColor'
+import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { AdoptMeTopValue } from './_adoptMeCalcData'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })

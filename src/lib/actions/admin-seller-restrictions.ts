@@ -1,9 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole } from './admin-permissions'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 export interface RestrictSellerParams {
   userId: string
@@ -32,8 +34,11 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       return { success: false, error: 'Seller not found' }
     }
 
-    // Update seller status
-    const { error: updateError } = await (supabase
+    // Update seller status. AUTH-005: seller_status / seller_restriction_* are
+    // trigger-protected columns; the admin session (already gated by
+    // requireRole above) cannot set them through PostgREST, so write via the
+    // service role.
+    const { error: updateError } = await (createServiceRoleClient()
       .from('profiles')
       .update as any)({
         seller_status: status,
@@ -48,9 +53,11 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
       return { success: false, error: 'Failed to update seller status' }
     }
 
-    // If restricting or banning, pause all active listings
+    // If restricting or banning, pause all active listings. ACC-03: UPDATE on
+    // listings is revoked for JWT callers (the admin session included), so
+    // this is a service-role write behind the requireRole gate above.
     if (status !== 'active') {
-      const { error: pauseError } = await (supabase
+      const { error: pauseError } = await (createServiceRoleClient()
         .from('listings')
         .update as any)({ status: 'paused' })
         .eq('seller_id', userId)
@@ -143,6 +150,9 @@ export async function restrictSeller(params: RestrictSellerParams): Promise<{ su
     revalidatePath(`/admin/active-sellers/${userId}`)
     revalidatePath('/seller/dashboard')
     revalidatePath('/seller/listings')
+    // Step 7b — a restriction pauses every listing of the seller (and
+    // unrestrict reactivates): the category pages must re-render.
+    await revalidateListingSurfaces(createServiceRoleClient() as never, { sellerIds: [userId] })
 
     return { success: true }
   } catch (error: any) {

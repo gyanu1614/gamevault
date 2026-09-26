@@ -6,7 +6,7 @@ import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import BecomeSellerCta from '@/components/account/BecomeSellerCta'
 import { cn } from '@/lib/utils'
+import { safeInternalPath } from '@/lib/utils/safe-link'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
@@ -29,6 +30,7 @@ import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
+import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
 
 // 5 fixed nav tabs with their DB type keys
@@ -157,7 +159,7 @@ function MobileServiceRow({
 }
 
 // ── Tier visual config ────────────────────────────────────────────────────────
-// Colors/bg/border come from the central gemstone ladder (@/lib/seller/tiers).
+// Colors/bg/border come from the central rank ladder (@/lib/seller/tiers).
 // Only the per-tier Lucide glyph is chosen here.
 /**
  * V19/P15.b — `forceScrolled` pins the navbar in its full-width "bar"
@@ -450,7 +452,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   useEffect(() => {
     if (!user?.isApprovedSeller) { setOfflineMode(false); return }
     let active = true
-    getMyStorePaused().then((v) => { if (active) setOfflineMode(v) })
+    // A `.then()` with no `.catch()` here was JAVASCRIPT-NEXTJS-5: on a flaky
+    // mobile connection the server-action POST rejects with WebKit's opaque
+    // "TypeError: Load failed" and, with nothing handling it, reaches Sentry as
+    // an unhandled rejection. Offline Mode is an enrichment — degrade to the
+    // safe default (store online) rather than break the navbar.
+    void safeBackground(() => getMyStorePaused(), false, 'navbar:storePaused').then((v) => {
+      if (active) setOfflineMode(v)
+    })
     return () => { active = false }
   }, [user?.id, user?.isApprovedSeller])
 
@@ -461,7 +470,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     const next = !offlineMode
     setOfflineMode(next)
     setPendingOffline(true)
-    const res = await setStorePaused(next)
+    // A rejected POST here (same "Load failed" transport failure) would skip
+    // setPendingOffline(false) and leave the toggle permanently stuck, so the
+    // network failure degrades into the existing rollback path.
+    const res = await safeBackground(
+      () => setStorePaused(next),
+      { success: false as const },
+      'navbar:setStorePaused',
+    )
     setPendingOffline(false)
     if (!res.success) {
       setOfflineMode(!next) // rollback
@@ -492,10 +508,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       // Count unread messages in those conversations where I'm not the sender
       const { count } = await supabase
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .in('conversation_id', conversationIds)
         .neq('sender_id', user.id)
-        .eq('is_read', false)
+        .eq('is_read', false).limit(1)
 
       return count || 0
     },
@@ -515,13 +531,13 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
       const { count } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .eq('is_read', false)
         // Workstream E — chat messages live under the Messages badge, not the
         // bell. Exclude legacy 'new_message' rows so they stop polluting the
         // bell count.
-        .neq('type', 'new_message')
+        .neq('type', 'new_message').limit(1)
 
       return count || 0
     },
@@ -727,10 +743,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       const { data } = await supabase
-        .from('categories')
-        .select('slug, name, metadata, game_id, game:games!categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
-        .eq('is_active', true)
-        .order('display_order')
+        .from('game_categories')
+        .select('slug, name, type, game_id, game:games!game_categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
+        .eq('is_enabled', true)
+        .order('sort_order')
       return data || []
     },
     staleTime: 1000 * 60 * 5,
@@ -761,7 +777,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     // URL slug. No client-side translation needed.
     const groups: Record<string, Array<{ game: any; categorySlug: string }>> = {}
     navCatsData?.forEach((cat: any) => {
-      const type = cat.metadata?.type
+      const type = cat.type
       if (type && cat.game) {
         if (!groups[type]) groups[type] = []
         // Dedupe by game.slug
@@ -921,7 +937,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform transition-duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
                 // Account pages use the full desktop-parity sidebar on mobile.
                 // Marketplace pages keep the two-pane category menu.
@@ -978,7 +994,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Link href="/" className="flex shrink-0 items-center gap-2 max-lg:mr-auto">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-white.png"
+                src="/brand/logo-mark-white.avif"
                 alt="DropMarket"
                 width={32}
                 height={32}
@@ -1124,7 +1140,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           onClick={() => setNotificationsOpen(false)}
                           className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                           {/* V61 — Marketplace glass panel (was flat black):
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
@@ -1159,7 +1175,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 {recentNotifications.map((notification: any) => (
                                   <Link
                                     key={notification.id}
-                                    href={notification.link || '#'}
+                                    href={safeInternalPath(notification.link)}
                                     onClick={() => {
                                       markAsRead(notification.id)
                                       setNotificationsOpen(false)
@@ -1272,7 +1288,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           onClick={() => setActivityOpen(false)}
                           className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
                           <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1F242C] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
@@ -1386,7 +1402,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         onClick={() => setUserMenuOpen(false)}
                         className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
                       />
-                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:duration-[250ms]">
+                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                         {/* V61 — Marketplace glass panel: near-opaque dark
                             surface + top sheen, wider (360px) with roomier
                             rows so the menu reads as a proper panel, not a
@@ -1931,7 +1947,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="flex items-center gap-2.5"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-white.png" alt="DropMarket" className="h-9 w-9" />
+                    <img src="/brand/logo-mark-white.avif" alt="DropMarket" width={96} height={96} className="h-9 w-9" />
                     <span className="font-display text-[20px] font-extrabold tracking-[-0.03em] text-white">
                       Drop<span className="text-lime-text">Market</span>
                     </span>
@@ -1954,7 +1970,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   <div
                     aria-hidden={mobileMenuTab !== null}
                     className={cn(
-                      'absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 pt-6 transition-transform duration-[320ms] ease-gv [-webkit-overflow-scrolling:touch]',
+                      'absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 pt-6 transition-transform transition-duration-[320ms] ease-gv [-webkit-overflow-scrolling:touch]',
                       mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
                     )}
                   >
@@ -2166,7 +2182,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       <div
                         aria-hidden={mobileMenuTab === null}
                         className={cn(
-                          'absolute inset-0 flex flex-col bg-[var(--color-bg-base)] transition-transform duration-[320ms] ease-gv',
+                          'absolute inset-0 flex flex-col bg-[var(--color-bg-base)] transition-transform transition-duration-[320ms] ease-gv',
                           mobileMenuTab === null && 'pointer-events-none translate-x-full',
                         )}
                       >
@@ -2704,8 +2720,6 @@ function GlobalSearch({
       // (slug fallback "buy-vbucks" → "Vbucks" was the wrong casing).
       const label =
         (row.name as string) ||
-        (row.metadata?.label as string) ||
-        (row.metadata?.name as string) ||
         row.slug
           .replace(/^buy-/, '')
           .replace(/[-_]+/g, ' ')
@@ -2715,7 +2729,7 @@ function GlobalSearch({
       // placeholder SVG by category type from
       // /public/assets/category-icons/. Replace those SVGs to swap the
       // default per-category art.
-      const catType = row.metadata?.type as string | undefined
+      const catType = row.type as string | undefined
       const adminIcon =
         row.game_id && catType
           ? catIconMap.get(`${row.game_id}:${catType}`) ?? null
@@ -2854,6 +2868,9 @@ function GlobalSearch({
   const hasResults = matches.length > 0 || optionHits.length > 0
   const open = focused && (hasResults || trimmed.length > 0)
 
+  // Stable id linking the search combobox to the results listbox it controls.
+  const listboxId = useId()
+
   return (
     <motion.div
       ref={containerRef}
@@ -2873,6 +2890,11 @@ function GlobalSearch({
           onKeyDown={onKeyDown}
           placeholder={expanded ? 'Type to search — e.g. Fortnite, Roblox, Garama…' : 'Type to search…'}
           aria-label="Search games"
+          // role=combobox: aria-expanded/aria-autocomplete are not valid on the
+          // input's implicit `textbox` role. This input is the search combobox
+          // trigger, so declaring the role is the accurate fix.
+          role="combobox"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           aria-expanded={open}
           // V21/P7.s — Both states are rounded-full bordered pills. The
@@ -2924,6 +2946,8 @@ function GlobalSearch({
       <AnimatePresence>
         {open && (
           <div
+            id={listboxId}
+            role="listbox"
             // CSS entrance, not framer (rAF-stall class).
             // V53 — Opaque, matching the mega-menu fix above: this sits in the
             // same transformed navbar subtree, so its backdrop-blur doesn't

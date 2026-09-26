@@ -38,10 +38,13 @@ function AutoCancelCountdown({ expiresAt }: { expiresAt: string }) {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
 
   useEffect(() => {
-    const tick = () =>
-      setSecondsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)))
-    tick()
-    const id = setInterval(tick, 1000)
+    // PAY-019: the interval stops at zero instead of ticking forever.
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+      setSecondsLeft(left)
+      if (left <= 0) clearInterval(id)
+    }, 1000)
+    setSecondsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)))
     return () => clearInterval(id)
   }, [expiresAt])
 

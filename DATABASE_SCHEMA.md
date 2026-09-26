@@ -614,7 +614,7 @@ All tables have RLS enabled with policies for:
 ## 📚 Related Documentation
 
 - **Supabase Dashboard:** https://supabase.com/dashboard/project/cserfvellsliylifjkos
-- **Type Generation:** `npx supabase gen types typescript --project-id cserfvellsliylifjkos`
+- **Type Generation:** `pnpm supabase gen types typescript --project-id cserfvellsliylifjkos`
 - **Migration Files:** `/supabase/migrations/` (reference only)
 - **Progress Tracking:** `/progress/march/`
 

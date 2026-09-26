@@ -1,20 +1,77 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Next 14 only loads src/instrumentation.ts when this is on. Sentry's
+    // withSentryConfig sets it automatically for Next < 15, but it is written
+    // out explicitly here so the requirement is visible at the call site and
+    // survives a future change to the Sentry plugin's defaults.
+    instrumentationHook: true,
+    // Rewrites barrel imports to deep ones per used symbol (build audit
+    // 2026-09-22, §5). @tabler/icons-react is imported as a BARREL in 11
+    // files, which pulls its 74 MB package; lucide-react is the real icon
+    // library (222 files); recharts and date-fns were 31 s and 23 s of module
+    // build time. @mui/icons-material is already deep-imported, listed so a
+    // future barrel import there is optimised too.
+    optimizePackageImports: [
+      '@tabler/icons-react',
+      'lucide-react',
+      '@mui/icons-material',
+      'recharts',
+      'date-fns',
+    ],
+    // Server-only native/heavy packages: required at runtime rather than
+    // bundled and traced (build audit 2026-09-22, §3/§5).
+    //   • svix — transitive via resend, 106 s of module build time, never
+    //     imported directly. The send site imports resend dynamically too.
+    //   • sharp — 17.3 MB of libvips, the largest item in the two biggest
+    //     bundles. It IS used at runtime (lib/games/icons.ts →
+    //     encodeIconVariants, reached by /api/internal/trend-radar/prepare),
+    //     so it stays a dependency;
+    //     externalising keeps it out of the traced bundle without breaking it.
+    //
+    // NOTE: this is `experimental.serverComponentsExternalPackages` on Next
+    // 14.2 — the top-level `serverExternalPackages` spelling is Next 15+ and
+    // is silently IGNORED here (config-schema.js accepts only the former).
+    serverComponentsExternalPackages: ['svix', 'resend', 'sharp'],
+  },
   // Verification builds (agent/CI) set NEXT_DIST_DIR to keep their output OUT
   // of .next — a `next build` racing the running `next dev` corrupts the dev
   // chunk cache (ChunkLoadError / "missing required error components").
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Step 7a — every value item page is prerendered (~560 against the remote
+  // DB). A single slow page used to trip the 60 s default and fail the whole
+  // build, which is why the set was capped at 100 per game.
+  staticPageGenerationTimeout: 180,
   typescript: {
     ignoreBuildErrors: false,
+    // QUAL-003 — a verification build (NEXT_DIST_DIR set) type-checks against a
+    // dedicated tsconfig that already lists `<distDir>/types/**/*.ts` in `include`,
+    // so Next's writeConfigurationDefaults short-circuits instead of appending that
+    // glob to the real tsconfig.json and dirtying the working tree on every build.
+    tsconfigPath: process.env.NEXT_DIST_DIR
+      ? 'tsconfig.build-check.json'
+      : 'tsconfig.json',
   },
   eslint: {
   ignoreDuringBuilds: true,
 },
   images: {
-    // AVIF first, WebP fallback, for images Next DOES optimize (Supabase
-    // uploads, avatars). Hero art is served as pre-compressed AVIF with
-    // `unoptimized`, so it bypasses this entirely.
-    formats: ['image/avif', 'image/webp'],
+    // Transformation budget (build audit 2026-09-22, §6). Vercel bills per
+    // unique (source, width, quality, format). `formats` and `quality` are left
+    // at their defaults (webp / 75), so WIDTH is the only axis that multiplies
+    // — trimming the ladder is the highest-leverage change available.
+    //
+    // Next's default deviceSizes is [640,750,828,1080,1200,1920,2048,3840].
+    // Nothing here is ever displayed above 1120px CSS px (the widest `sizes`
+    // in the tree is the hero's "(max-width:1120px) 100vw, 1120px"), so 2048
+    // is the 2×-DPR ceiling that matters and 3840 only ever billed 4K/5K
+    // re-encodes of images shown at a fraction of that. 750 and 1200 are
+    // dropped as near-duplicates of 828 and 1080.
+    deviceSizes: [640, 828, 1080, 1920, 2048],
+    // Widths for `sizes`-bearing and fixed-width images: game marks, avatars,
+    // card thumbnails and the 220/124px cover art. Default drops 16 and 48,
+    // which nothing requests, and adds 220 to match the two card ladders.
+    imageSizes: [32, 64, 96, 128, 220, 256, 384],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
@@ -214,4 +271,42 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+const { withSentryConfig } = require('@sentry/nextjs/config')
+
+// Sentry build-time instrumentation.
+//
+// SOURCE MAPS: uploaded by the Sentry **Vercel integration**, not from this
+// build. That is why there is no authToken here and why sourcemaps.disable is
+// set — with the plugin's uploader live it would also try to upload, need a
+// SENTRY_AUTH_TOKEN, and fail the build on every machine that hasn't got one
+// (local, CI, the tsc/next build gate). The integration does the upload from
+// Vercel's side using its own credentials.
+module.exports = withSentryConfig(nextConfig, {
+  org: 'dropmarket-ltd',
+  project: 'javascript-nextjs',
+
+  // Build-time source map upload is the Vercel integration's job.
+  sourcemaps: { disable: true },
+
+  // Keep build output quiet outside CI.
+  silent: !process.env.CI,
+
+  // Routes browser events through our own origin so ad-blockers (which block
+  // requests to *.sentry.io outright) don't silently drop client errors.
+  tunnelRoute: '/monitoring',
+
+  // Strips the Sentry SDK's own debug logging from the client bundle.
+  webpack: { treeshake: { removeDebugLogging: true } },
+
+  // Build-cost trims (build audit 2026-09-22, §3: Sentry + OpenTelemetry was
+  // ~260 s of module build time). None of these change what is REPORTED —
+  // /api/sentry-test must stay green.
+  //
+  // `disableLogger` is NOT set: this Sentry version deprecates it in favour of
+  // `webpack.treeshake.removeDebugLogging` above, which is already on and does
+  // the same job (setting both logs a deprecation warning on every build).
+  //
+  // Only upload/instrument the client files Next actually emits, instead of
+  // widening the glob to the whole output directory.
+  widenClientFileUpload: false,
+})

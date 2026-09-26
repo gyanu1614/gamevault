@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  useCallback,
 } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -18,6 +19,8 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import DeleteOutlineIcon from '@mui/icons-material/Delete'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import { cn } from '@/lib/utils'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { parseCalculatorDeepLink, type CalculatorDeepLink, type CalculatorTab } from './_deepLink'
 import { HUB_NAV_CLEAR } from '@/components/content/hubNavGeometry'
 import {
   formatCash,
@@ -73,12 +76,9 @@ interface CalculatorClientProps {
   mutations: CalcMutation[]
   cashPrices: CalcPrice[]
   tradePrices: CalcPrice[]
-  initialBrainrotSlug?: string
-  initialMutationSlug?: string
-  initialTab?: Tab
 }
 
-type Tab = 'cash' | 'trade'
+type Tab = CalculatorTab
 
 
 function makeId(): string {
@@ -100,13 +100,18 @@ export default function CalculatorClient({
   mutations,
   cashPrices,
   tradePrices,
-  initialBrainrotSlug,
-  initialMutationSlug,
-  initialTab = 'cash',
 }: CalculatorClientProps) {
-  // Mode comes from the URL now (?tab=cash), chosen in the navbar's Calculator
-  // menu — there is no in-page switcher to hold local state for.
-  const tab = initialTab
+  // Mode comes from the URL (?tab=cash), chosen in the navbar's Calculator
+  // menu — there is no in-page switcher to hold local state for. The URL is
+  // read on the client (Step 7a): the page is ISR, so the default view is in
+  // the static HTML and the deep link applies after hydration.
+  const [deepLink, setDeepLink] = useState<CalculatorDeepLink>({ tab: 'trade' })
+  const onParams = useCallback(
+    (params: URLSearchParams) => setDeepLink(parseCalculatorDeepLink((k) => params.get(k))),
+    [],
+  )
+  const tab = deepLink.tab
+  const { brainrot: initialBrainrotSlug, mutation: initialMutationSlug } = deepLink
 
   const orderedMutations = useMemo(
     () =>
@@ -131,6 +136,7 @@ export default function CalculatorClient({
 
   return (
     <>
+      <SearchParamsBridge onParams={onParams} />
       {/* Nav renders server-side in the page (HubNav). No breadcrumb — the
           BreadcrumbList JSON-LD keeps the SERP trail. pt clears the nav. */}
       <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
@@ -153,6 +159,8 @@ export default function CalculatorClient({
         <div className="mt-10">
           {tab === 'cash' ? (
             <CashTab
+              // Remount when the deep link lands so the seeded selection applies.
+              key={`${initialBrainrotSlug ?? ''}|${initialMutationSlug ?? ''}`}
               brainrots={brainrots}
               orderedMutations={orderedMutations}
               mutations={mutations}

@@ -31,11 +31,15 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
-import { BadgeCheck, Check, Clock, Flame, Package, ShieldCheck, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
+import { Check, Clock, Flame, Package, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { NumberField } from '@/components/ui/number-field'
+import { CollapsibleText } from '@/components/ui/collapsible-text'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SellerRatingLine } from '@/components/seller/SellerRatingLine'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import { Button } from '@/components/ui/button'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
@@ -56,6 +60,8 @@ export interface BundleOffer {
   sellerName: string
   sellerAvatarUrl?: string | null
   verified: boolean
+  /** Rank key from `profiles.seller_tier` ("bronze" … "legendary"). */
+  sellerTier: string | null
   rating: number | null
   reviews: number
   /** $ per bundle (the listing.price column). */
@@ -101,12 +107,10 @@ export interface BundleCurrencyPageData {
 
 export default function BundleCurrencyPageClient({
   data,
-  viewerId,
   introLine,
   blogRail,
 }: {
   data: BundleCurrencyPageData
-  viewerId: string | null
   /** SEO intro sentence (live stats), server-computed so it lands in
    *  the initial HTML. Rendered under the header tagline. */
   introLine?: string | null
@@ -220,6 +224,12 @@ export default function BundleCurrencyPageClient({
         return rest
     }
   }, [offersForSelection, otherFilter, activeOffer?.listingId])
+  // V14m/Step 7a — the viewer comes from the client auth context now (the
+  // page is ISR; resolving the session on the server made it dynamic). While
+  // auth is still loading a click goes straight to checkout, which enforces
+  // sign-in itself — never bounce a signed-in buyer to the login dialog.
+  const { user: viewer, loading: authLoading } = useAuth()
+  const viewerId = viewer?.id ?? null
   const isOwn = !!viewerId && activeOffer?.sellerId === viewerId
   const cappedQty = Math.min(qty, activeOffer?.stock ?? 1)
 
@@ -229,7 +239,7 @@ export default function BundleCurrencyPageClient({
   // place with checkout as the post-auth redirect (no bounce to home).
   const onBuy = (listingId: string, quantity: number) => {
     const dest = `/checkout/${listingId}?qty=${quantity}`
-    if (!viewerId) {
+    if (!viewerId && !authLoading) {
       openAuth('login', { redirect: dest })
       return
     }
@@ -595,7 +605,7 @@ export default function BundleCurrencyPageClient({
           { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
           { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
           { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm receipt and the seller gets paid — or you get a full refund.' },
+          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}
       />
 
@@ -804,7 +814,9 @@ function OfferPanel({
     <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-border-default bg-bg-overlay p-5 shadow-elevated">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/icons/safedrop-emblem.png"
+        src="/icons/safedrop-emblem.avif"
+        width={128}
+        height={128}
         alt=""
         aria-hidden
         className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-[0.32]"
@@ -840,11 +852,13 @@ function OfferPanel({
           Delivery Instructions
         </div>
         <CollapsibleText
-          text={
-            bestOffer.blurb ||
-            'Seller will message you for delivery details after purchase.'
-          }
-        />
+          lines={3}
+          resetKey={bestOffer.listingId}
+          className="text-[13.5px] leading-relaxed text-text-secondary"
+        >
+          {bestOffer.blurb ||
+            'Seller will message you for delivery details after purchase.'}
+        </CollapsibleText>
       </div>
 
       {/* 4) Quantity */}
@@ -904,38 +918,6 @@ function OfferPanel({
   )
 }
 
-/* ── Collapsible instructions ──────────────────────────────────── */
-
-function CollapsibleText({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false)
-  // V19/P24/P7.g — Soft truncation: line-clamp to 3 lines when
-  // collapsed. We compute a heuristic for "is it actually overflowing"
-  // off line breaks + length so we only render Show more when needed.
-  const looksTruncated =
-    text.split(/\r?\n/).length > 3 || text.length > 180
-  return (
-    <div>
-      <p
-        className={cn(
-          'whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary',
-          !expanded && 'line-clamp-3',
-        )}
-      >
-        {text}
-      </p>
-      {looksTruncated && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1 text-[12px] font-semibold text-lime-text transition-colors hover:text-text-primary"
-        >
-          {expanded ? 'Show less' : 'Show more'}
-        </button>
-      )}
-    </div>
-  )
-}
-
 /* ── Inline label / value row ──────────────────────────────────── */
 
 function KeyValue({
@@ -980,28 +962,9 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
           <span className="truncate text-[13.5px] font-semibold text-text-primary">
             {offer.sellerName}
           </span>
-          {offer.verified && (
-            <BadgeCheck
-              className="h-3.5 w-3.5 shrink-0 text-lime-text"
-              aria-label="Verified"
-            />
-          )}
+          {offer.verified && <VerifiedBadge size={14} />}
         </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-          {offer.rating != null ? (
-            <>
-              <span className="font-semibold text-text-secondary">
-                {offer.rating.toFixed(1)}%
-              </span>
-              <span aria-hidden>·</span>
-              <span>
-                {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-              </span>
-            </>
-          ) : (
-            <span className="font-semibold text-text-secondary">New Seller</span>
-          )}
-        </div>
+        <SellerRatingLine rating={offer.rating} reviews={offer.reviews} />
       </div>
     </div>
   )
@@ -1041,21 +1004,12 @@ function SellerRow({
         {/* Seller — leads the row, clickable chip → /shop/{slug} */}
         <div className="min-w-0 flex-1">
           <SellerChip offer={offer} />
-          <div className="mt-1.5 flex items-center gap-2 text-[12.5px] text-text-tertiary">
-            {offer.rating != null ? (
-              <>
-                <span className="font-semibold text-text-secondary">
-                  {offer.rating.toFixed(1)}%
-                </span>
-                <span aria-hidden>·</span>
-                <span>
-                  {offer.reviews.toLocaleString()} review{offer.reviews === 1 ? '' : 's'}
-                </span>
-              </>
-            ) : (
-              <span className="font-semibold text-text-secondary">New Seller</span>
-            )}
-          </div>
+          <SellerRatingLine
+            rating={offer.rating}
+            reviews={offer.reviews}
+            size="md"
+            className="mt-1.5"
+          />
         </div>
 
         {/* V19/P24/P7.h — Stock + Delivery metric columns, desktop
@@ -1239,10 +1193,7 @@ function SellerChip({
       )}
       <span className={nameClass}>{offer.sellerName}</span>
       {offer.verified && (
-        <ShieldCheck
-          className="h-3.5 w-3.5 shrink-0 text-lime-text"
-          aria-label="Verified"
-        />
+        <VerifiedBadge size={size === 'lg' ? 15 : 14} />
       )}
     </>
   )

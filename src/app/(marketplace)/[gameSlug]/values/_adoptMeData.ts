@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import type { AdoptMePetItem, AdoptMeVariantValue } from './_AdoptMeValuesClient'
 
 /**
@@ -39,7 +39,7 @@ function num(v: number | string | null): number | null {
 }
 
 export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
     (supabase as any)

@@ -20,7 +20,7 @@ import { Shield, Zap, Star, ArrowRight, CheckCircle2, ChevronDown } from 'lucide
 import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
 import { getLandingPageListings } from '@/lib/seo/landingPageInventory'
-import { breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
+import { breadcrumbList, productAggregate, serializeJsonLd } from '@/lib/seo/jsonld'
 import type { ListingWithRelations } from '@/types/database'
 
 import { SITE_URL } from '@/config/site'
@@ -176,22 +176,22 @@ export default async function SEOLandingPage({
       {/* Structured data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqSchema) }}
       />
       {productSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(productSchema) }}
         />
       )}
       {itemListSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListSchema) }}
         />
       )}
 
@@ -283,10 +283,10 @@ export default async function SEOLandingPage({
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">{listing.seller?.username}</span>
-                            {listing.seller?.seller_rating > 0 && (
+                            {(listing.seller?.seller_rating ?? 0) > 0 && (
                               <span className="flex items-center gap-0.5 text-amber-400 text-xs">
                                 <Star className="w-3 h-3 fill-current" />
-                                {listing.seller.seller_rating.toFixed(1)}
+                                {(listing.seller.seller_rating ?? 0).toFixed(1)}
                               </span>
                             )}
                           </div>

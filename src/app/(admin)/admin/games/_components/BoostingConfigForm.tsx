@@ -104,7 +104,7 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
           </button>
         </div>
         <p className="text-[12.5px] text-text-secondary">
-          Ordered low → high. Sellers pick a "from" and "to" tier when listing.
+          Ordered low → high. Sellers pick a &quot;from&quot; and &quot;to&quot; tier when listing.
         </p>
         <div className="space-y-2">
           {draft.tiers.length === 0 ? (

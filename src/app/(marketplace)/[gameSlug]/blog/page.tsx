@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
@@ -23,8 +23,25 @@ import { ArticleGrid } from './_ArticleGrid'
 import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
+import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
+import { cache } from 'react'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
+
+/**
+ * Prerender every game with a hub: the content-hub games plus any game a
+ * published post is filed under (see getBlogHubGameSlugs). With
+ * dynamicParams=false this list IS the set of blog hubs that exist.
+ */
+export async function generateStaticParams() {
+  return (await getBlogHubGameSlugs()).map((gameSlug) => ({ gameSlug }))
+}
 
 interface HubGame {
   name: string
@@ -34,8 +51,13 @@ interface HubGame {
   seo_intro: string | null
 }
 
-async function getGame(gameSlug: string): Promise<HubGame | null> {
-  const supabase = await createClient()
+// STATE-004 — called from generateMetadata and the page body; cache() makes
+// the two runs of one request share a single query.
+// Shared by generateMetadata (hub guard) and the body — one query per render.
+const getPosts = cache(getGamePosts)
+
+const getGame = cache(async function getGame(gameSlug: string): Promise<HubGame | null> {
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('games')
     .select('name, slug, image_url, seo_h1, seo_intro, is_active')
@@ -43,7 +65,7 @@ async function getGame(gameSlug: string): Promise<HubGame | null> {
     .eq('is_active', true)
     .maybeSingle()
   return (data as HubGame | null) ?? null
-}
+})
 
 /**
  * How many items we hold a public price for. Drives the "Items priced" stat,
@@ -52,11 +74,11 @@ async function getGame(gameSlug: string): Promise<HubGame | null> {
  */
 async function getPricedItemCount(gameSlug: string): Promise<number> {
   if (gameSlug !== 'steal-a-brainrot') return 0
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { count, error } = await (supabase as any)
     .from('sab_price_display')
-    .select('brainrot_id', { count: 'exact', head: true })
-    .eq('mutation_slug', 'default')
+    .select('brainrot_id', { count: 'exact' })
+    .eq('mutation_slug', 'default').limit(1)
   if (error) {
     console.error('Unable to count priced items for blog hub:', error)
     return 0
@@ -94,8 +116,10 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  const game = await getGame(gameSlug)
-  if (!game) return { title: 'Not Found' }
+  const [game, posts] = await Promise.all([getGame(gameSlug), getPosts(gameSlug)])
+  // Same rule as the body (Step 7a): a real 404, not a "Not Found" title on a
+  // 200 — see ROUTE-008.
+  if (!game || !isBlogHubGame(gameSlug, posts)) notFound()
   return {
     title: `${game.name} Guides, Values & Trading Tips`,
     description: `Value lists, trading guides, and selling tips for ${game.name} — updated regularly with real DropMarket marketplace data.`,
@@ -115,12 +139,22 @@ export default async function GameBlogIndex({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
-  const game = await getGame(gameSlug)
-  if (!game) notFound()
 
-  const [posts, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
+  // Step 7a — decide 404 before the fan-out. `dynamicParams = false` alone is
+  // not enforced on Vercel (Next only throws its fallback-false 404 outside
+  // minimal mode), so without this every active game answered /{game}/blog
+  // with an empty hub — eight queries per crawl hit. A content-hub game passes
+  // on the compile-time set; anything else needs a published post (one
+  // query, request-cached and reused below). The 404 is then cached by ISR.
+  const posts = await getPosts(gameSlug)
+  if (!isBlogHubGame(gameSlug, posts)) notFound()
+
+  // STATE-007 — every member below takes gameSlug (not game), so getGame does
+  // not gate them; it joins the fan-out instead of running ahead of it. The
+  // 404 guard still runs before anything is rendered.
+  const [game, pricedItems, topValues, heroPets, statStrip, calcExample, hubNav] =
     await Promise.all([
-      getGamePosts(gameSlug),
+      getGame(gameSlug),
       getPricedItemCount(gameSlug),
       // A longer list feeds the auto-scrolling "Live Values" marquee.
       getHubTopValues(gameSlug, 10),
@@ -130,6 +164,8 @@ export default async function GameBlogIndex({
       getHubCalcExample(gameSlug),
       getHubNavData(gameSlug),
     ])
+
+  if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
 
@@ -230,7 +266,7 @@ export default async function GameBlogIndex({
         <ValuesTeaser
           gameSlug={gameSlug}
           items={topValues}
-          footnote="Prices are medians of completed sales and active listings. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
+          footnote="Prices come from active listings by reputable sellers. Bundles, account sales and disputed orders are excluded. Change indicators appear only where we hold enough price history."
         />
 
         {/* Sample items come from the game's own theme, never a hardcoded

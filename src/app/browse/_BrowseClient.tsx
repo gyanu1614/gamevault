@@ -24,8 +24,6 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-export const dynamic = 'force-dynamic'
-
 type SortBy = 'created_at' | 'price' | 'sales'
 
 const SORT_OPTIONS: ComboboxOption[] = [

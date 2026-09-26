@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * AuditLog — V21/P7 (horizontal stepper)
  *

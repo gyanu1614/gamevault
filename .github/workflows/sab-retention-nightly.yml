@@ -1,0 +1,63 @@
+name: SAB Raw Listing Retention (nightly)
+
+# sab_market_raw_listings grew from ~90k to ~137k rows in five days, and that
+# growth is what pushed the repricing read past the Vercel function budget on
+# 2026-09-14 — prices then froze for five days behind a green workflow.
+#
+# Repricing has since moved to the runner and reads only active+matched rows,
+# but the table still grows without bound and every scan over it pays for that.
+# So raw detail older than 30 days is rolled into a per-day summary
+# (sab_raw_listing_daily) and the rows are pruned.
+#
+# Runs at 04:40 UTC — inside the gap between the 03:00 and 06:00 crawls, so it
+# never competes with a collection run for the same rows.
+
+on:
+  schedule:
+    - cron: "40 4 * * *"
+  workflow_dispatch:
+    inputs:
+      retain_days:
+        description: Keep raw listings newer than this many days
+        required: false
+        default: "30"
+      dry_run:
+        description: Only report what would be pruned (true/false)
+        required: false
+        default: "false"
+
+concurrency:
+  group: sab-retention-nightly
+  cancel-in-progress: false
+
+jobs:
+  roll-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Deliberately NOT continue-on-error: retention silently not running is
+      # how the table grew into an outage in the first place.
+      - name: Roll up and prune old raw listings
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: >-
+          pnpm retention:sab
+          --retain-days ${{ inputs.retain_days || '30' }}
+          ${{ (inputs.dry_run == 'true') && '--dry-run' || '' }}

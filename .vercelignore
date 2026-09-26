@@ -1,0 +1,7 @@
+# Local design-tooling scratch output. These are working directories for the
+# design-sync / bundle tooling, not application source — uploading them just
+# inflates the deployment payload (and they are not gitignored, so they can
+# appear in a dirty tree).
+ds-bundle/
+.design-sync/
+.ds-sync/

@@ -5,8 +5,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  * Shared cache tag + cached readers for SAB price data.
  *
  * Price pages are ISR-cached (revalidate = 3600). Reads that go through the
- * cached helpers here also carry PRICE_CACHE_TAG, so the correct-prices cron can
- * call revalidateTag(PRICE_CACHE_TAG) right after it refreshes sab_price_display
+ * cached helpers here also carry PRICE_CACHE_TAG, so the manual correct-prices
+ * route can call revalidateTag(PRICE_CACHE_TAG) right after it refreshes sab_price_display
  * — pages then pick up fresh prices on their next request instead of waiting out
  * the hour, and a render that happened to read a stale snapshot self-heals the
  * moment new prices land.

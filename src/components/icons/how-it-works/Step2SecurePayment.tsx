@@ -1,10 +1,10 @@
 /**
  * Step 2 — "Pay Securely" icon.
  *
- * V34 — 3D payment-card PNG (`public/how-it-works/step-2.png`,
+ * V34 — 3D payment-card AVIF (`public/how-it-works/step-2.avif`,
  * transparent background): purple card + gold coin + green check.
  *
- * ▸ TO SWAP: drop a new PNG in `public/how-it-works/` and point src at
+ * ▸ TO SWAP: drop a new AVIF in `public/how-it-works/` and point src at
  *   it — keep `className` + `...props` passthrough. (The original
  *   stroke-SVG shield lives in git history.)
  */
@@ -18,9 +18,11 @@ export default function Step2SecurePayment({
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
-      src="/how-it-works/step-2.png"
+      src="/how-it-works/step-2.avif"
       alt=""
       aria-hidden="true"
+      width={640}
+      height={640}
       className={className}
       {...props}
     />

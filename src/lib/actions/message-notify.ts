@@ -50,10 +50,10 @@ export async function notifyNewMessage(conversationId: string): Promise<void> {
     // already notified for this batch.
     const { count } = await service
       .from('messages')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('conversation_id', conversationId)
       .eq('sender_id', user.id)
-      .eq('is_read', false)
+      .eq('is_read', false).limit(1)
 
     if ((count ?? 0) > 1) return
 
@@ -103,9 +103,9 @@ export async function notifyNewMessage(conversationId: string): Promise<void> {
     if (isSeller) {
       const { count: sellerMsgCount } = await service
         .from('messages')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('conversation_id', conversationId)
-        .eq('sender_id', user.id)
+        .eq('sender_id', user.id).limit(1)
       // The triggering message is already inserted, so count === 1 means this
       // is the seller's first-ever message in the conversation.
       if ((sellerMsgCount ?? 0) === 1) {

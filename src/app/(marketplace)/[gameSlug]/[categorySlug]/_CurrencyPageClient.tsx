@@ -11,6 +11,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
+import { useAuth } from '@/hooks/use-auth'
 import {
   ShieldCheck, Zap, Store, Star, Minus, Plus, ArrowRight,
   SlidersHorizontal, ChevronDown, Package, Clock,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
+import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
@@ -29,6 +31,7 @@ import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyPageData, Offer } from './_currencyData'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
+import { quantityUnit, priceUnit } from '@/lib/currency/quantity-unit'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -265,15 +268,12 @@ function MetricChipMobile({ icon: Icon, label, value }: { icon: LucideIcon; labe
 export default function CurrencyPageClient({
   data,
   gameImageUrl,
-  viewerId,
   gameSlug,
   introLine,
   blogRail,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
-  /** V14m — Current logged-in user. Used to detect self-purchase. */
-  viewerId?: string | null
   /** V43 — Game slug for the blog rail's relevance filter. */
   gameSlug?: string
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -285,6 +285,12 @@ export default function CurrencyPageClient({
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
   const activeOffer = allOffers.find((o) => o.id === activeId) ?? data.hero
+  // V14m/Step 7a — the viewer comes from the client auth context now (the
+  // page is ISR; resolving the session on the server made it dynamic). While
+  // auth is still loading a click goes straight to checkout, which enforces
+  // sign-in itself — never bounce a signed-in buyer to the login dialog.
+  const { user: viewer, loading: authLoading } = useAuth()
+  const viewerId = viewer?.id ?? null
   // V14m — Is the current viewer the seller of the active offer?
   const isOwnOffer = !!viewerId && !!activeOffer.sellerId && activeOffer.sellerId === viewerId
 
@@ -300,7 +306,7 @@ export default function CurrencyPageClient({
   const goToCheckout = (offerId: string, quantity: number) => {
     // Logged out: open the sign-in modal in place with checkout as the
     // post-auth redirect (no bounce to home; buyer keeps their context).
-    if (!viewerId) {
+    if (!viewerId && !authLoading) {
       openAuth('login', { redirect: `/checkout/${offerId}?qty=${quantity}` })
       return
     }
@@ -401,7 +407,8 @@ export default function CurrencyPageClient({
         <div ref={heroRef} className="mt-3">
           <HeroCard
             offer={activeOffer}
-            unitLabel={data.currency.unitLabel}
+            unitLabel={quantityUnit(data.currency.granularity, data.currency.unitLabel)}
+            granularity={data.currency.granularity ?? 'unit'}
             qty={qty}
             setQty={setQty}
             unit={unit}
@@ -456,8 +463,12 @@ export default function CurrencyPageClient({
                 <SellerRow
                   key={o.id}
                   offer={o}
-                  unitLabel={data.currency.unitLabel}
-                  unitGlyph={data.currency.glyph}
+                  unitLabel={quantityUnit(data.currency.granularity, data.currency.unitLabel)}
+                  perLabel={
+                    (data.currency.granularity ?? 'unit') === 'unit'
+                      ? `${data.currency.glyph} ${data.currency.unitLabel}`
+                      : priceUnit(data.currency.granularity)
+                  }
                   onSelect={() => pickOffer(o.id)}
                   isOwn={!!viewerId && o.sellerId === viewerId}
                 />
@@ -474,7 +485,7 @@ export default function CurrencyPageClient({
           { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
           { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
           { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm receipt and the seller gets paid — or you get a full refund.' },
+          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}
       />
 
@@ -640,10 +651,11 @@ function VariantSelector({ variant }: { variant: CurrencyPageData['currency']['v
 }
 
 function HeroCard({
-  offer, unitLabel, qty, setQty, unit, total, onBuy, buying, isOwnOffer,
+  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer,
 }: {
   offer: Offer
   unitLabel: string
+  granularity: 'unit' | 'thousand' | 'million'
   qty: number
   setQty: (n: number) => void
   unit: number
@@ -654,12 +666,15 @@ function HeroCard({
    *  an "own listing" notice with a link to edit it. */
   isOwnOffer: boolean
 }) {
-  const [descExpanded, setDescExpanded] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const outOfStock = offer.stock === 0
-  // V14 — Step size scales with the seller's minimum. For a 100-floor
-  // (typical Robux), step by 100; for bigger floors keep 1000 chunks.
-  const stepSize = offer.minQty < 1000 ? 100 : 1000
+  // Step in the unit the buyer is actually picking. On a per-K or
+  // per-M game one "unit" is already a big number, so the old
+  // 100/1000 jump (built for per-single-Robux) would leap the buyer
+  // from 1K to 101K. Those games step by 1; only an absolute-count
+  // currency uses the coarse chunks.
+  const stepSize =
+    granularity === 'unit' ? (offer.minQty < 1000 ? 100 : 1000) : 1
   const stepUp = () => setQty(Math.min(offer.stock || qty + stepSize, qty + stepSize))
   const stepDown = () => setQty(Math.max(offer.minQty, qty - stepSize))
 
@@ -668,6 +683,7 @@ function HeroCard({
     <PurchasePanel
       offer={offer}
       unitLabel={unitLabel}
+      granularity={granularity}
       qty={qty}
       setQty={setQty}
       stepUp={stepUp}
@@ -742,33 +758,19 @@ function HeroCard({
             <div className="text-[14px] font-semibold text-text-primary">
               Delivery Instructions
             </div>
-            <p
-              className={cn(
-                'mt-1.5 whitespace-pre-line text-[13px] leading-snug text-text-secondary',
-                !descExpanded && 'line-clamp-5',
-              )}
+            <CollapsibleText
+              lines={5}
+              moreLabel="View more"
+              lessLabel="View less"
+              resetKey={offer.id}
+              className="mt-1.5 text-[13px] leading-snug text-text-secondary"
             >
               {offer.blurb?.trim() || (
                 <span className="italic text-text-tertiary">
                   This seller hasn&apos;t added instructions yet.
                 </span>
               )}
-            </p>
-            {(() => {
-              const txt = offer.blurb ?? ''
-              const lineCount = txt.split(/\r?\n/).length
-              const looksTruncated = lineCount > 5 || txt.length > 220
-              if (!looksTruncated) return null
-              return (
-                <button
-                  type="button"
-                  onClick={() => setDescExpanded((v) => !v)}
-                  className="mt-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:text-lime"
-                >
-                  {descExpanded ? 'View less' : 'View more'}
-                </button>
-              )
-            })()}
+            </CollapsibleText>
           </div>
 
           {offer.badges?.length ? (
@@ -799,7 +801,9 @@ function HeroCard({
           <Card className="relative isolate overflow-hidden border-border-default bg-bg-overlay p-5 sm:p-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icons/safedrop-emblem.png"
+              src="/icons/safedrop-emblem.avif"
+              width={128}
+              height={128}
               alt=""
               aria-hidden
               className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-50"
@@ -891,11 +895,12 @@ function HeroCard({
  * stepper + min/in-stock helper + CTA + trust tiles.
  */
 function PurchasePanel({
-  offer, unitLabel, qty, setQty, stepUp, stepDown, unit, total, onBuy, buying,
+  offer, unitLabel, granularity, qty, setQty, stepUp, stepDown, unit, total, onBuy, buying,
   isOwnOffer, outOfStock,
 }: {
   offer: Offer
   unitLabel: string
+  granularity: 'unit' | 'thousand' | 'million'
   qty: number
   setQty: (n: number) => void
   stepUp: () => void
@@ -911,7 +916,7 @@ function PurchasePanel({
     <>
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
-          Price Per Unit
+          Price Per {priceUnit(granularity)}
         </div>
         <div className="mt-0.5 text-[26px] font-bold tabular-nums leading-none text-text-primary">
           {unitPrice(unit)}
@@ -934,20 +939,32 @@ function PurchasePanel({
             <Minus className="h-4 w-4" />
           </button>
           <span aria-hidden className="h-6 w-px bg-border-subtle" />
-          <input
-            type="number"
-            value={qty}
-            onChange={(e) => {
-              const n = parseInt(e.target.value || '0', 10)
-              setQty(Number.isFinite(n) ? n : offer.minQty)
-            }}
-            onBlur={() => { if (qty < offer.minQty) setQty(offer.minQty) }}
-            min={offer.minQty}
-            max={offer.stock || undefined}
-            aria-label="Quantity"
-            inputMode="numeric"
-            className="h-full min-w-0 flex-1 border-0 bg-transparent text-center text-[17px] font-semibold tabular-nums text-text-primary outline-none [appearance:textfield] sm:text-[18px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          />
+          {/* Number + unit centred as one ("100 M"), matching the seller's
+              Stock / Minimum boxes. The input is sized to its digits so the
+              pair centres; the label makes the unit and the empty space
+              either side focus the field. */}
+          <label className="flex h-full min-w-0 flex-1 cursor-text items-center justify-center gap-1.5 text-[17px] font-semibold tabular-nums text-text-primary sm:text-[18px]">
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={String(qty)}
+              style={{ width: `${Math.max(String(qty).length, 1) + 0.5}ch` }}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 9)
+                const n = parseInt(digits || '0', 10)
+                setQty(Number.isFinite(n) ? n : offer.minQty)
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              onBlur={() => {
+                if (qty < offer.minQty) setQty(offer.minQty)
+                else if (offer.stock > 0 && qty > offer.stock) setQty(offer.stock)
+              }}
+              aria-label={`Quantity in ${unitLabel}`}
+              className="h-full min-w-0 border-0 bg-transparent p-0 text-center outline-none"
+            />
+            <span className="text-text-secondary">{unitLabel}</span>
+          </label>
           <span aria-hidden className="h-6 w-px bg-border-subtle" />
           <button
             type="button"
@@ -959,8 +976,8 @@ function PurchasePanel({
           </button>
         </div>
         <div className="mt-2 flex items-center justify-between px-1 text-[12.5px] font-medium text-text-secondary">
-          <span>Min. Qty.: <span className="font-semibold tabular-nums text-text-primary">{offer.minQty.toLocaleString('en-US')} {unitLabel}</span></span>
-          <span>{outOfStock ? 'Out Of Stock' : <>In Stock: <span className="font-semibold tabular-nums text-text-primary">{offer.stock.toLocaleString('en-US')} {unitLabel}</span></>}</span>
+          <span>Minimum Quantity: <span className="font-semibold tabular-nums text-text-primary">{offer.minQty.toLocaleString('en-US')} {unitLabel}</span></span>
+          <span>{outOfStock ? 'Out Of Stock' : <>Stock: <span className="font-semibold tabular-nums text-text-primary">{offer.stock.toLocaleString('en-US')} {unitLabel}</span></>}</span>
         </div>
       </div>
 
@@ -1081,11 +1098,13 @@ function Fact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; v
 }
 
 function SellerRow({
-  offer, unitLabel, unitGlyph, onSelect, isOwn,
+  offer, unitLabel, perLabel, onSelect, isOwn,
 }: {
   offer: Offer
+  /** Quantity suffix: 'K' / 'M' on bulk games, the currency name otherwise. */
   unitLabel: string
-  unitGlyph: string
+  /** What one price covers, after "per": 'M', or "R$ Robux" on unit games. */
+  perLabel: string
   onSelect: () => void
   /** V14m — When true, the viewer owns this listing — disable Select and
    *  swap in a "Yours" badge so they don't try to buy their own offer. */
@@ -1184,7 +1203,7 @@ function SellerRow({
                   {unitPrice(offer.pricePerUnit)}
                 </div>
                 <div className="mt-1 text-[11px] uppercase tracking-wider text-text-tertiary">
-                  per {unitGlyph} {unitLabel}
+                  per {perLabel}
                 </div>
               </div>
             </div>
@@ -1223,9 +1242,9 @@ function SellerRow({
           <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-border-subtle px-4 py-2.5 sm:hidden">
             <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
               <span className="font-bold tabular-nums text-text-primary">{unitPrice(offer.pricePerUnit)}</span>
-              <span className="text-text-tertiary">per {unitGlyph}</span>
+              <span className="text-text-tertiary">per {perLabel}</span>
             </span>
-            <MetricChipMobile icon={Package} label="Stock" value={offer.stock.toLocaleString('en-US')} />
+            <MetricChipMobile icon={Package} label="Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
             <MetricChipMobile icon={Clock} label="Delivery" value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`} />
           </div>
         </div>
@@ -1273,12 +1292,12 @@ function SellerRow({
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
                   <Fact icon={Star} label="Positive rating" value={offer.rating != null ? `${offer.rating.toFixed(1)}% (${offer.reviews})` : 'New seller'} />
-                  <Fact icon={Package} label="In stock" value={`${offer.stock.toLocaleString('en-US')} ${unitGlyph}`} />
+                  <Fact icon={Package} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
                   <Fact icon={Clock} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
                   <Fact
                     icon={SlidersHorizontal}
-                    label="Min order"
-                    value={`${offer.minQty.toLocaleString('en-US')} ${unitGlyph} · ${money(offer.minQty * offer.pricePerUnit)}`}
+                    label="Minimum Quantity"
+                    value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
                   />
                 </div>
               </div>
@@ -1306,7 +1325,7 @@ function SellerRow({
               )}
               <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
                 <ShieldCheck className="h-3.5 w-3.5 text-lime-text" aria-hidden />
-                SafeDrop Buyer Protection — sellers are paid out only after you confirm delivery
+                SafeDrop Buyer Protection — Item Guaranteed or Full Refund
               </span>
             </div>
           </div>
@@ -1368,8 +1387,8 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
             How delivery and safety work here
           </h3>
           <p className="mt-2">
-            Every order is covered by SafeDrop Buyer Protection, and sellers are paid out only
-            after you confirm delivery of your {currency.name}. No password
+            Every order is covered by SafeDrop Buyer Protection: your {currency.name} arrives
+            as described, or you get your money back. No password
             sharing is ever required — delivery is through in-game gifting or group payouts.
             Not delivered or not as described? You get a full refund.
           </p>

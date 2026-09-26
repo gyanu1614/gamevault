@@ -95,9 +95,9 @@ export const BLOG_POSTS: BlogPost[] = [
     games: [],
     cover: '/section-bg/how-it-works.jpg',
     body: [
-      'Every order on DropMarket is covered by SafeDrop, our buyer protection programme. The promise is simple: get what you ordered, or your money back — and the seller isn’t paid out until the order is actually delivered.',
-      'The seller delivers in-game within their stated window. You confirm receipt from your order page — the seller is paid out once you confirm, or once your protection window closes without an issue.',
-      'If something goes wrong — no delivery, wrong item, mis-described listing — you open a dispute and get a full refund. The seller’s payout is paused while a dispute is open, and a seller is never paid for an order that wasn’t delivered as described.',
+      'Every order on DropMarket is covered by SafeDrop, our buyer protection programme. The promise is simple: get what you ordered, or your money back — whichever seller you buy from.',
+      'The seller delivers in-game within their stated window. You confirm receipt from your order page and the order is complete — or it completes on its own once your protection window closes without an issue.',
+      'If something goes wrong — no delivery, wrong item, mis-described listing — you open a dispute and get a full refund. The order stays open while the dispute is reviewed, and an order that wasn’t delivered as described is always refunded.',
       'This is why the same item often costs less on DropMarket than in official stores while being just as safe: sellers compete on price, and SafeDrop removes the trust problem that usually comes with player-to-player trading.',
     ],
   },
@@ -153,17 +153,17 @@ export const BLOG_POSTS: BlogPost[] = [
       '- Secrets, even unmutated. The tier alone carries demand, and supply is genuinely scarce — a clean Secret listing at a fair price rarely sits long.\n- Mutated mid-tier brainrots with strong income multipliers. Buyers who’ve done the maths know these often out-earn a base Secret at a fraction of the price.\n- Fresh update brainrots. Demand spikes hard in the first days after a new drop, before supply catches up — if you pull one early, that window is when it’s worth most.',
       'Before you price anything, look at the live board. The [Steal a Brainrot items page](/steal-a-brainrot/items) shows every active listing sorted cheapest-first, and five minutes of scrolling tells you exactly where your brainrot sits in the current market — which sellers you’re actually competing with, and at what price.',
       '## How Listing Works',
-      'DropMarket is onboarding its first sellers right now, so the first step is claiming a [founding seller spot](/early-seller?src=sab-blog-sell-guide) — the first 100 lock a lower commission for life. Once you’re in, listing takes minutes: pick Steal a Brainrot and the items category, and describe exactly what you’re selling: name, rarity tier, mutation, and income per second. These attributes aren’t decoration — buyers filter and compare on them, so an accurately-attributed listing ranks against the right competition instead of getting lost among things it isn’t.',
+      'DropMarket is onboarding its first sellers right now, so the first step is claiming a [founding seller spot](/early-seller?src=sab-blog-sell-guide) — the first 100 get a discounted commission for their first year. Once you’re in, listing takes minutes: pick Steal a Brainrot and the items category, and describe exactly what you’re selling: name, rarity tier, mutation, and income per second. These attributes aren’t decoration — buyers filter and compare on them, so an accurately-attributed listing ranks against the right competition instead of getting lost among things it isn’t.',
       'Set your price against comparable live offers, not against what a value list said last month. Then choose your delivery window. If you’re online most evenings, a short manual window — say, one hour — is realistic and converts well. Buyers pay a premium for speed and discount uncertainty, so a tight window you always hit beats a generous one you occasionally miss.',
       '## What It Costs',
-      'DropMarket charges no listing fee — you pay commission only when something actually sells, and commission is set by category. For most categories it lands between 5% and 10%: in-game items are 7%, in-game currency is 5% for most games and 10% for Roblox in-game economies, and top-ups are 5%. Brainrots sell as items, so a $40 Secret costs you $2.80 in commission and the rest is yours. Game accounts are the exception, carrying higher risk-banded rates. The full schedule, including payout fees, is on the [fees page](/fees).',
+      'DropMarket charges no listing fee — you pay commission only when something actually sells, and commission is set by category, with some game economies carrying their own rate. Brainrots sell as items, so the items rate applies and the rest of the sale price is yours. Game accounts are the exception, carrying higher risk-banded rates. The current schedule, read from the same table checkout uses, is on the [seller fees page](/sell/fees); payout fees are on the [fees page](/fees).',
       '## Getting Paid',
       'Every order is covered by SafeDrop Buyer Protection — the buyer gets what they ordered, or their money back — and getting paid follows delivery. When your brainrot sells, you deliver it in-game within your stated window, and the buyer confirms receipt from their order page. Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes, and from there you can request a payout to your verified payout method whenever it suits you.',
       'This structure is exactly what makes strangers comfortable paying you real money. A buyer knows a seller is never paid for an order that wasn’t delivered as described, so your first sale doesn’t require an established reputation — just an accurate listing and reliable delivery. That said, reputation compounds fast: exactly-as-described orders turn into reviews, and reviews turn into buyers picking your offer over a marginally cheaper one. The full lifecycle of a covered order is on the [SafeDrop page](/safedrop).',
       '## The Safety Rules That Protect You',
       'A few rules keep both your sales and your account standing safe:',
       '- Keep every conversation in the order chat. It’s the record that resolves disputes in your favour when you’ve done everything right.\n- Never take a deal off-platform. “Same trade, no fees” is the oldest scam pitch in gaming — off DropMarket there’s no protection for either side, and soliciting off-platform deals gets accounts banned.\n- Never ask for or share account credentials. Brainrot delivery happens in-game, trade to trade — no password ever needs to change hands.\n- Describe mutations and income exactly. An inflated listing doesn’t earn more; it earns a dispute, a refund, and a rating hit that costs you future sales.',
-      'That’s the whole system: list accurately, price against the live market, deliver fast, keep everything on-platform. If your base is full of brainrots you’ve outgrown, [claim a founding seller spot](/early-seller?src=sab-blog-sell-guide) — the first 100 sellers lock a lower commission for life, and it costs nothing until something sells.',
+      'That’s the whole system: list accurately, price against the live market, deliver fast, keep everything on-platform. If your base is full of brainrots you’ve outgrown, [claim a founding seller spot](/early-seller?src=sab-blog-sell-guide) — the first 100 sellers get a discounted commission for their first year, and it costs nothing until something sells.',
     ],
   },
   {
@@ -184,7 +184,7 @@ export const BLOG_POSTS: BlogPost[] = [
       'One more thing an honest guide has to say: most publishers’ terms of service prohibit account selling, and a publisher can act against a traded account regardless of where it was bought. No marketplace can change that. What a marketplace can change is whether you lose your money when something goes wrong.',
       '## How SafeDrop Answers Each Risk',
       'Every account order on DropMarket is covered by [SafeDrop Buyer Protection](/safedrop), and the promise is deliberately blunt: get what you ordered, or your money back. For accounts specifically, the protection is tuned to the risk:',
-      '- Risk-banded protection windows. Account listings carry a protection window of 5, 7, or 14 days depending on the account’s risk band — the riskier the account type, the longer you stay covered after delivery.\n- Recovery is covered. If the original owner reclaims the account within your protection window, you open a dispute — a recovered account is not a delivered order, and it resolves to a full refund.\n- Not delivered or not as described means a full refund. If the account never arrives, the credentials don’t work, or what you got doesn’t match the listing, the dispute process returns your money in full.\n- Sellers aren’t paid for failed orders. A seller is never paid out for an order that wasn’t delivered as described, which removes the entire economics of the sell-then-recover scam.',
+      '- Risk-banded protection windows. Account listings carry a protection window of 5, 7, or 14 days depending on the account’s risk band — the riskier the account type, the longer you stay covered after delivery.\n- Recovery is covered. If the original owner reclaims the account within your protection window, you open a dispute — a recovered account is not a delivered order, and it resolves to a full refund.\n- Not delivered or not as described means a full refund. If the account never arrives, the credentials don’t work, or what you got doesn’t match the listing, the dispute process returns your money in full.\n- Failed orders are refunded. An order that wasn’t delivered as described is refunded in full, which removes the entire economics of the sell-then-recover scam.',
       '## What to Check in a Listing',
       'Protection is the safety net; reading the listing properly keeps you off it. Before you buy — whether you’re browsing [Valorant accounts](/valorant/accounts) or [Fortnite accounts](/fortnite/accounts) — check five things:',
       '- Full email access included. An account without control of its email address is an account you don’t control. This is the single most important line in any account listing.\n- The seller’s history. Rating and completed-order count are hard signals, and an account is the one purchase where an established seller is worth a real premium.\n- Specifics, not vibes. Exact rank and season, region, level, named skins — a listing that describes precisely can be disputed precisely if it turns out to be wrong.\n- The protection window on the listing, so you know your coverage period before you commit rather than after.\n- That the deal stays on-platform. Any seller steering you to Discord or a “direct” payment is removing your protection on purpose. Decline and report.',
@@ -231,6 +231,24 @@ const byDateDesc = (a: BlogPost, b: BlogPost) =>
 /** All posts, newest first. */
 export function getAllPosts(): BlogPost[] {
   return [...BLOG_POSTS].sort(byDateDesc)
+}
+
+/**
+ * Posts that still live at a flat /blog/{slug} URL.
+ *
+ * ROUTE-008. Every game-tagged post was migrated to the DB-backed nested hub
+ * at /{game}/blog/{slug} and 301s there from next.config.js; only the
+ * general (untagged) posts still answer at /blog/{slug}. The tag is the
+ * migration criterion, so `games.length === 0` is exactly the set of
+ * still-flat posts — which is the predicate sitemap.ts already uses to decide
+ * what to emit.
+ *
+ * Use this for anything that must not name a redirected URL: sitemap entries
+ * and generateStaticParams. Prerendering a redirected slug builds an HTML
+ * artifact that the redirect means nobody can ever be served.
+ */
+export function getFlatPosts(): BlogPost[] {
+  return getAllPosts().filter((p) => p.games.length === 0)
 }
 
 export function getPost(slug: string): BlogPost | null {

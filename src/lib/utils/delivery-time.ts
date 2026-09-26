@@ -74,15 +74,17 @@ export function formatDeliveryLabel(s: string | null | undefined): string {
   if (!trimmed) return 'Unspecified'
   if (trimmed.toLowerCase() === 'instant') return 'Instant'
 
-  // Match "5min" / "1 hr" / "30 mins" / "1hrs" — tolerant of spacing and
-  // an existing trailing 's'.
-  const m = trimmed.match(/^(\d+)\s*(min|hr)s?$/i)
+  // Match "5min" / "1 hr" / "30 mins" / "1hrs" / "2d" / "3 days" —
+  // tolerant of spacing and an existing trailing 's'.
+  const m = trimmed.match(/^(\d+)\s*(min|hr|d|day)s?$/i)
   if (m) {
     const n = parseInt(m[1], 10)
+    const u = m[2].toLowerCase()
     // V14t — Spell out "Hour"/"Hours" instead of "Hr"/"Hrs" so it reads
     // alongside "Mins" without a weight mismatch (both are now full words).
-    const unit = m[2].toLowerCase() === 'hr'
-      ? (n === 1 ? 'Hour' : 'Hours')
+    const unit =
+      u === 'hr' ? (n === 1 ? 'Hour' : 'Hours')
+      : u === 'd' || u === 'day' ? (n === 1 ? 'Day' : 'Days')
       : (n === 1 ? 'Min' : 'Mins')
     return `${n} ${unit}`
   }
@@ -91,3 +93,30 @@ export function formatDeliveryLabel(s: string | null | undefined): string {
   // "1-24 hours" still read cleanly.
   return trimmed.replace(/\b\w/g, (c) => c.toUpperCase())
 }
+
+/**
+ * The delivery windows a seller can promise on a MANUAL listing, shortest
+ * first. The single source for the sell wizard and the listings-table
+ * editor, so the two can never offer different choices.
+ *
+ * No "instant" or "5min": a manual delivery cannot honestly promise
+ * either — instant is its own delivery method. No "custom": free text
+ * could not be parsed by the SLA, cancellation or sort code, which all
+ * read this value (see `parseDeliveryMinutes`).
+ *
+ * "24hr" (not "1d") for one day, because existing rows already store it.
+ */
+export const SELLER_DELIVERY_WINDOWS = [
+  { value: '15min', label: '15 Minutes' },
+  { value: '30min', label: '30 Minutes' },
+  { value: '1hr',   label: '1 Hour' },
+  { value: '6hr',   label: '6 Hours' },
+  { value: '12hr',  label: '12 Hours' },
+  { value: '24hr',  label: '1 Day' },
+  { value: '2d',    label: '2 Days' },
+  { value: '3d',    label: '3 Days' },
+  { value: '5d',    label: '5 Days' },
+  { value: '7d',    label: '7 Days' },
+] as const
+
+export type SellerDeliveryWindow = (typeof SELLER_DELIVERY_WINDOWS)[number]['value']

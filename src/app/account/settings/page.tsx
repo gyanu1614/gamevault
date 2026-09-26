@@ -43,6 +43,7 @@ import AccountPageHeader from '@/components/account/AccountPageHeader'
 import TwoFactorSection from '@/components/account/settings/TwoFactorSection'
 import DataPrivacySection from '@/components/account/settings/DataPrivacySection'
 import StoreAvailabilitySection from '@/components/account/settings/StoreAvailabilitySection'
+import PayoutDetailsSection from '@/components/account/settings/PayoutDetailsSection'
 import { Label } from '@/components/ui/label'
 // Mobile-audit — hand-rolled fixed-center modals replaced with the shared
 // dialog base (bottom sheet below sm, centered at sm+, dvh-capped scroll).
@@ -154,7 +155,9 @@ export default function SettingsPage() {
         const supabase = createClient()
         const { data: freshProfile, error } = await supabase
           .from('profiles')
-          .select('*')
+          // STATE-012 — explicit columns: client query, so unused profile
+          // columns would cross the network into the browser.
+          .select('username, full_name, business_name, bio, avatar_url, paypal_email')
           .eq('id', user.id)
           .single() as any
 
@@ -726,23 +729,9 @@ export default function SettingsPage() {
                 <SectionCard>
                   <h2 className="text-sm font-semibold text-text-primary mb-4">Payout Method</h2>
                   <div className="space-y-4">
-                    <p className="text-[13px] leading-relaxed text-text-secondary">
-                      Withdrawals are currently paid in crypto — BTC, ETH, USDT and USDC
-                      (TRON, Ethereum and Polygon networks). You enter your wallet address
-                      when you request a withdrawal. Bank transfer, PayPal and Payoneer are
-                      coming soon.
-                    </p>
-                    <SettingInput label="PayPal Email (Coming Soon)" hint="Saved now, used once PayPal payouts go live">
-                      <div className="relative">
-                        <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                        <input
-                          type="email"
-                          value={paypalEmail}
-                          onChange={(e) => setPaypalEmail(e.target.value)}
-                          className={cn(inputCls, 'pl-10')}
-                        />
-                      </div>
-                    </SettingInput>
+                    {/* PR 7: saved payout details (crypto address / Payoneer email) —
+                        the destination every withdrawal is paid to. */}
+                    <PayoutDetailsSection />
                     <Link
                       href="/account/wallet/withdraw"
                       className="inline-flex items-center gap-2 text-sm font-medium text-lime-text hover:underline"

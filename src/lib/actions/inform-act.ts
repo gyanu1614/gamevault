@@ -194,8 +194,8 @@ export async function submitInformDisclosure(data: SubmitDisclosureData): Promis
     // Determine next version number
     const { count } = await supabase
       .from('inform_disclosures')
-      .select('id', { count: 'exact', head: true })
-      .eq('seller_id', user.id)
+      .select('id', { count: 'exact' })
+      .eq('seller_id', user.id).limit(1)
 
     const nextVersion = (count ?? 0) + 1
 

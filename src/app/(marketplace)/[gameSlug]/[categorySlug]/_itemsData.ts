@@ -303,6 +303,7 @@ export function listingToOffer(
       avatarUrl: seller?.avatar_url ?? null,
       verified,
       ratingPercent,
+      tier: seller?.seller_tier ?? null,
       sales: seller?.total_sales ?? 0,
       reviewCount: seller?.total_reviews ?? 0,
     },

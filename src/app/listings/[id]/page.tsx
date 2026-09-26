@@ -1,400 +1,107 @@
-'use client'
-
 /**
- * /listings/[id] — buyer-facing listing detail.
+ * /listings/[id] — legacy listing resolver.
  *
- * V2 reskin: GV tokens, lime accent for primary actions, NumberField for
- * quantity, Tabs for description / delivery / seller, Tooltip for tier
- * badges, GlassCard for the trust block. Lazy image gallery with
- * thumbnail dock.
+ * ROUTE-006. This route used to be a `'use client'` page that re-rendered the
+ * whole listing detail UI. That had three problems:
+ *
+ *   1. No `generateMetadata`, so every listing inherited root metadata — no
+ *      per-listing title, description, canonical or OG tags, unlike the
+ *      canonical /[gameSlug]/[categorySlug]/[listingSlug] route.
+ *   2. A missing listing rendered an in-body "Listing not found" card under
+ *      HTTP 200 — a soft 404. Commit c8cb309 removed exactly this pattern from
+ *      the marketplace tree; this route was never included.
+ *   3. It is crawlable: /shop/[slug] sets `robots: { index: true }` and links
+ *      here via SellerStorefront, so dead listings became indexable 200s.
+ *
+ * The codebase already treated it as superseded — [categorySlug]/page.tsx
+ * calls it "the legacy /listings/{id} resolver page". So it now does exactly
+ * that job and nothing more: resolve the id to the canonical slug URL and
+ * permanently redirect, or 404 for real.
+ *
+ * Kept (not deleted) because the id-shaped URLs are already published — the
+ * seller storefront, /browse cards and admin review links all point here — and
+ * a 301 preserves them.
  */
 
-import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
-import { useParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import {
-  Star, Eye, ShoppingCart, Shield, Zap, ArrowLeft, Infinity,
-  Clock, CheckCircle2, MessageSquare, TrendingDown,
-} from 'lucide-react'
-import { getListing } from '@/lib/api/listings'
-import { tierByKey } from '@/lib/seller/tiers'
-import { useAuth } from '@/hooks/use-auth'
-import { useAuthDialog } from '@/components/auth/AuthDialog'
-import { Button } from '@/components/ui/button'
-import { NumberField } from '@/components/ui/number-field'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
+import type { Metadata } from 'next'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { cache } from 'react'
 
-// Tier icons — gemstone glyphs keyed to the central tier ladder. Colors/label
-// come from the shared module (@/lib/seller/tiers); only the icon lives here.
-export default function ListingDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { user } = useAuth()
-  const { open: openAuth } = useAuthDialog()
-  const [quantity, setQuantity] = useState(1)
-  const [activeImage, setActiveImage] = useState(0)
+import { createClient } from '@/lib/supabase/server'
+import { isUuid } from '@/lib/ids'
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['listing', params.id],
-    queryFn: () => getListing(params.id as string),
-  })
+interface PageProps {
+  params: Promise<{ id: string }>
+}
 
-  const listing = data?.data
+/**
+ * Resolve the id to the pieces needed to build the canonical URL.
+ *
+ * `cache()` so generateMetadata and the page body share one execution per
+ * request, mirroring the canonical route's own resolver.
+ *
+ * No status filter: an inactive or sold listing still has a canonical home,
+ * and that page owns the "this listing is gone" story (including the
+ * owner/admin preview path, which RLS governs there). Sending the visitor on
+ * is strictly better than a dead end here.
+ */
+const resolveListing = cache(async function resolveListing(id: string) {
+  // Shape-check before touching the DB: a malformed id is a guaranteed miss,
+  // and Postgres would reject it as a cast error rather than an empty result.
+  if (!isUuid(id)) return null
 
-  const hasPriceDrop = useMemo(() => {
-    if (!listing) return false
-    return listing.original_price != null && listing.original_price > listing.price
-  }, [listing])
+  const supabase = await createClient()
 
-  const discountPct = useMemo(() => {
-    if (!listing || !hasPriceDrop) return 0
-    return Math.round(((listing.original_price! - listing.price) / listing.original_price!) * 100)
-  }, [listing, hasPriceDrop])
-
-  if (isLoading) {
-    return (
-      <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-          <div className="space-y-3">
-            <div className="aspect-square animate-pulse rounded-lg bg-bg-raised" />
-            <div className="grid grid-cols-5 gap-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="aspect-square animate-pulse rounded-md bg-bg-raised" />
-              ))}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="h-7 w-3/4 animate-pulse rounded-md bg-bg-raised" />
-            <div className="h-5 w-1/2 animate-pulse rounded-md bg-bg-raised" />
-            <div className="h-12 w-40 animate-pulse rounded-md bg-bg-raised" />
-            <div className="h-32 animate-pulse rounded-xl bg-bg-raised" />
-          </div>
-        </div>
-      </main>
+  const { data } = (await supabase
+    .from('listings')
+    .select(
+      `
+      slug,
+      game:games!listings_game_id_fkey(slug),
+      category:game_categories!listings_game_category_id_fkey(slug)
+    `,
     )
+    .eq('id', id)
+    .single()) as any
+
+  const listingSlug: string | null = data?.slug ?? null
+  const gameSlug: string | null = data?.game?.slug ?? null
+  const categorySlug: string | null = data?.category?.slug ?? null
+
+  // listings.slug is nullable (the DB has a partial index `WHERE slug IS NOT
+  // NULL`), and a listing can outlive its game/category join. Without all
+  // three there is no canonical URL to send anyone to.
+  if (!listingSlug || !gameSlug || !categorySlug) return null
+
+  return { gameSlug, categorySlug, listingSlug }
+})
+
+/**
+ * This route only ever redirects or 404s, so it must never be indexed in its
+ * own right — the canonical page carries the real metadata.
+ */
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
+  const resolved = await resolveListing(id)
+
+  if (!resolved) {
+    return { title: 'Listing Not Found', robots: { index: false, follow: false } }
   }
 
-  if (error || !listing) {
-    return (
-      <main className="mx-auto w-full max-w-md px-4 pt-24 sm:pt-28 lg:pt-32">
-        <div className="rounded-lg border border-error/40 bg-error-bg p-6 text-center">
-          <h1 className="text-lg font-bold text-error">Listing not found</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            This listing may have been removed or is no longer available.
-          </p>
-          <Link
-            href="/browse"
-            className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-md border border-border-default bg-bg-raised px-4 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to browse
-          </Link>
-        </div>
-      </main>
-    )
+  const { gameSlug, categorySlug, listingSlug } = resolved
+  return {
+    robots: { index: false, follow: true },
+    alternates: { canonical: `/${gameSlug}/${categorySlug}/${listingSlug}` },
   }
+}
 
-  const images = listing.images?.length ? listing.images : ['/placeholder-listing.png']
-  const primaryImage = images[activeImage] ?? images[0]
-  const isOwnListing = user?.id === listing.seller_id
-  const maxQuantity = listing.is_unlimited ? 99 : listing.quantity
-  const isSoldOut = !listing.is_unlimited && listing.quantity === 0
-  const isLowStock = !listing.is_unlimited && listing.quantity > 0 && listing.quantity <= 5
+export default async function LegacyListingRedirect({ params }: PageProps) {
+  const { id } = await params
+  const resolved = await resolveListing(id)
 
-  const tier = tierByKey(listing.seller.seller_tier?.toLowerCase())
-  const TierIcon = tier.Icon
+  // A real 404 with a real status code — not a 200 with an error card.
+  if (!resolved) notFound()
 
-  const total = listing.price * quantity
-
-  return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
-      {/* Back link */}
-      <Link
-        href="/browse"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to browse
-      </Link>
-
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-        {/* ── Gallery ─────────────────────────────────────────────────── */}
-        <div className="space-y-3">
-          <div className="relative overflow-hidden rounded-lg border border-border-default bg-bg-raised">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={primaryImage}
-              alt={listing.title}
-              className="aspect-square w-full object-cover"
-            />
-            {/* Game + category chip */}
-            <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 backdrop-blur-md">
-              {listing.game.emoji && <span className="text-xs">{listing.game.emoji}</span>}
-              <span className="text-[11px] font-medium text-white/90">{listing.game.name}</span>
-              <span className="text-white/40">·</span>
-              <span className="text-[11px] text-white/70">{listing.category.name}</span>
-            </div>
-            {hasPriceDrop && (
-              <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-green-500/90 px-2 py-1 text-[11px] font-bold text-white">
-                <TrendingDown className="h-3 w-3" />
-                -{discountPct}%
-              </div>
-            )}
-          </div>
-
-          {/* Thumbnail dock */}
-          {images.length > 1 && (
-            <div className="grid grid-cols-5 gap-2">
-              {images.map((src, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveImage(i)}
-                  className={cn(
-                    'aspect-square overflow-hidden rounded-md border-2 transition-colors',
-                    i === activeImage
-                      ? 'border-lime'
-                      : 'border-border-subtle hover:border-border-strong',
-                  )}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`${listing.title} ${i + 1}`} className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Buy panel ───────────────────────────────────────────────── */}
-        <div className="space-y-5">
-          {/* Title */}
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{listing.title}</h1>
-            <div className="mt-2 flex items-center gap-3 text-xs text-text-tertiary">
-              <span className="inline-flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                {listing.views} views
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <ShoppingCart className="h-3.5 w-3.5" />
-                {listing.sales} sold
-              </span>
-            </div>
-          </div>
-
-          {/* Price */}
-          <div className="rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
-            <div className="flex items-baseline gap-3">
-              <span className="font-mono text-4xl font-bold text-text-primary">
-                ${listing.price.toFixed(2)}
-              </span>
-              {hasPriceDrop && (
-                <span className="font-mono text-base text-text-tertiary line-through">
-                  ${listing.original_price!.toFixed(2)}
-                </span>
-              )}
-            </div>
-            <div className="mt-1 inline-flex items-center gap-1 text-xs text-text-secondary">
-              <Clock className="h-3.5 w-3.5" />
-              Delivers in {listing.delivery_time ?? 'manual'}
-            </div>
-
-            {/* Stock chip */}
-            <div className="mt-3">
-              {listing.is_unlimited ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
-                  <Infinity className="h-3 w-3" />
-                  Unlimited stock
-                </span>
-              ) : isLowStock ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">
-                  Only {listing.quantity} left
-                </span>
-              ) : isSoldOut ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-error/40 bg-error-bg px-2 py-0.5 text-[11px] font-semibold text-error">
-                  Sold out
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border-default bg-bg-inset px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
-                  {listing.quantity} in stock
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Quantity + CTA */}
-          {!isOwnListing && !isSoldOut && (
-            <div className="space-y-3 rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-                  Quantity
-                </label>
-                <NumberField
-                  value={quantity}
-                  onChange={(v) => setQuantity(v)}
-                  minValue={1}
-                  maxValue={maxQuantity}
-                  ariaLabel="Quantity"
-                  className="max-w-[180px]"
-                />
-              </div>
-              <Button
-                size="lg"
-                onClick={() => {
-                  const dest = `/checkout/${listing.id}?qty=${quantity}`
-                  // Logged out → open the sign-in modal in place with checkout
-                  // as the post-auth redirect (no bounce to a full /login page).
-                  if (!user) { openAuth('login', { redirect: dest }); return }
-                  router.push(dest)
-                }}
-                className="h-12 w-full rounded-lg bg-lime text-text-inverse font-bold uppercase tracking-wider shadow-lg shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow"
-              >
-                Buy now — ${total.toFixed(2)}
-              </Button>
-              <p className="text-center text-[11px] text-text-tertiary">
-                Buyer protection covers every purchase.
-              </p>
-            </div>
-          )}
-
-          {isOwnListing && (
-            <div className="rounded-lg border border-warning/40 bg-warning-bg p-4 text-sm text-warning">
-              This is your listing. You can't purchase it.
-            </div>
-          )}
-
-          {/* Trust row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-start gap-2 rounded-xl border border-border-subtle bg-bg-overlay p-3">
-              <Shield className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-              <div>
-                <div className="text-xs font-semibold text-text-primary">30-day protection</div>
-                <div className="mt-0.5 text-[11px] text-text-tertiary">Refund if not as described</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 rounded-xl border border-border-subtle bg-bg-overlay p-3">
-              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-              <div>
-                <div className="text-xs font-semibold text-text-primary">Fast delivery</div>
-                <div className="mt-0.5 text-[11px] text-text-tertiary">{listing.delivery_time ?? 'Manual'}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Seller card */}
-          <Link
-            href={`/shop/${sellerShopSlug(listing.seller) ?? ''}`}
-            className="group flex items-center gap-3 rounded-lg border border-border-default bg-bg-raised p-4 transition-colors hover:bg-bg-raised-hover"
-          >
-            {listing.seller.avatar_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={listing.seller.avatar_url}
-                alt={sellerDisplayName(listing.seller)}
-                className="h-12 w-12 rounded-full object-cover ring-2 ring-border-default"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-overlay text-base font-bold text-text-primary ring-2 ring-border-default">
-                {sellerInitial(listing.seller)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate text-sm font-semibold text-text-primary group-hover:text-lime-text transition-colors">
-                  {sellerDisplayName(listing.seller)}
-                </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider',
-                        tier.colors.text,
-                        tier.colors.bg,
-                        tier.colors.border,
-                      )}
-                    >
-                      <TierIcon className="h-2.5 w-2.5" />
-                      {tier.label}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {tier.label} tier — earned through completed sales and rating.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-tertiary">
-                {listing.seller.seller_rating > 0 && (
-                  <span className="inline-flex items-center gap-0.5">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    {listing.seller.seller_rating.toFixed(1)}
-                    <span className="text-text-disabled">({listing.seller.total_reviews})</span>
-                  </span>
-                )}
-                <span>{listing.seller.total_sales} sales</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Details tabs ───────────────────────────────────────────────── */}
-      <div className="mt-8 rounded-lg border border-border-default bg-bg-raised p-4 sm:p-5">
-        <Tabs defaultValue="description">
-          <TabsList variant="underline">
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="delivery">Delivery & terms</TabsTrigger>
-            <TabsTrigger value="actions">Help</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="description">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
-              {listing.description?.trim() || (
-                <span className="text-text-disabled">No description provided.</span>
-              )}
-            </p>
-          </TabsContent>
-
-          <TabsContent value="delivery">
-            <ul className="space-y-2 text-sm text-text-secondary">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-                Delivery method: <span className="text-text-primary">{listing.delivery_method ?? 'Manual'}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-                Delivery window: <span className="text-text-primary">{listing.delivery_time ?? 'Within 24h'}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-                Region: <span className="text-text-primary">{(listing as { region?: string | null }).region ?? 'Global'}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
-                Platform: <span className="text-text-primary">{(listing as { platform?: string | null }).platform ?? 'All'}</span>
-              </li>
-            </ul>
-          </TabsContent>
-
-          <TabsContent value="actions">
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/account/messages?seller=${listing.seller.id}`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-default bg-bg-overlay px-3 text-sm font-medium text-text-secondary transition-colors hover:border-lime hover:text-lime-text"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Message seller
-              </Link>
-              {/* "Report this listing" button removed — it was a dead control
-                  (no onClick, no report flow exists). Re-add when a report
-                  action is built. */}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </main>
-  )
+  const { gameSlug, categorySlug, listingSlug } = resolved
+  permanentRedirect(`/${gameSlug}/${categorySlug}/${listingSlug}`)
 }

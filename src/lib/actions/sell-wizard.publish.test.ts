@@ -1,0 +1,297 @@
+/**
+ * AUTH-010 — publishListing / bulkPublishListings must not reach the
+ * service-role catalogue writes for a (game, category) pair an admin has not
+ * enabled. Before the fix the only pre-check was the 5-slug whitelist, so any
+ * signed-in user could make the (since-deleted) legacy bridge INSERT a public
+ * `categories` row (and a `category_configs` row) for any real game. Since
+ * Step 1b the gate resolves the game_categories row itself; a seller path
+ * never writes the catalogue.
+ *
+ * AUTH-009 — both publish paths must also refuse anyone who is not an active
+ * seller (profiles.role = 'seller' AND seller_status = 'active') or an active
+ * admin, mirroring the surviving listings INSERT policy. KYC-before-listing is
+ * an explicit owner decision.
+ *
+ * AUTH-031 — the DB now coerces every non-guarded listings INSERT to
+ * pending_approval with NULL moderation columns. The app's publish paths
+ * therefore insert through the SERVICE ROLE (after the seller gate + the
+ * publish-policy decision above), with seller_id pinned to the session user
+ * and no moderation columns in the payload — so auto-approve tiers keep
+ * working while a raw PostgREST insert cannot go live.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+type Res = { data: unknown; error: unknown }
+
+const h = vi.hoisted(() => ({
+  session: null as any,
+  admin: null as any,
+}))
+
+vi.mock('server-only', () => ({}))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('@/lib/seo/indexnow', () => ({ pingIndexNow: vi.fn() }))
+vi.mock('@/lib/actions/new-schema', () => ({
+  getGlobalCategories: vi.fn(), getGamesForGlobalCategory: vi.fn(), getAttributeTemplateFull: vi.fn(),
+}))
+vi.mock('@/lib/supabase/server', () => ({ createClient: async () => h.session }))
+vi.mock('@supabase/supabase-js', () => ({ createClient: () => h.admin }))
+
+import { publishListing, bulkPublishListings } from '@/lib/actions/sell-wizard'
+
+/** Chainable PostgREST stub: from(table) hands out queued results per table and records writes. */
+function mockClient(queues: Record<string, Res[]>, extra: Record<string, unknown> = {}) {
+  const calls: Array<{ table: string; op: string; args: unknown[] }> = []
+  const tables: string[] = []
+  return {
+    calls, tables, ...extra,
+    from(table: string) {
+      tables.push(table)
+      const res = queues[table]?.shift() ?? { data: null, error: null }
+      const b: any = {}
+      for (const m of ['select', 'eq', 'filter', 'in', 'is', 'limit', 'order', 'neq']) b[m] = () => b
+      for (const m of ['insert', 'update', 'upsert', 'delete']) {
+        b[m] = (...args: unknown[]) => { calls.push({ table, op: m, args }); return b }
+      }
+      b.maybeSingle = async () => res
+      b.single = async () => res
+      b.then = (ok: any, ko: any) => Promise.resolve(res).then(ok, ko)
+      return b
+    },
+  }
+}
+
+const USER = { id: 'seller-1' }
+const POLICY = { at_listing_limit: false, needs_moderation: false, auto_approve_single: true, auto_approve_bulk: true, bulk_daily_cap: null, bulk_today_count: 0, listing_limit: 10 }
+
+/** The seller gate is the sell_access_kind RPC (ACC-01); the publish policy is the other RPC. */
+function sessionWith(queues: Record<string, Res[]>, kind = 'seller') {
+  return mockClient(queues, {
+    auth: { getUser: async () => ({ data: { user: USER }, error: null }) },
+    rpc: async (name: string) => (name === 'sell_access_kind' ? { data: kind, error: null } : { data: POLICY, error: null }),
+  })
+}
+
+const INPUT = {
+  game_id: 'game-1', category_slug: 'items', title: 'Sword', description: 'x', price: 5,
+  quantity: 1, min_quantity: 1, delivery_method: 'manual' as const, delivery_time: '1hr', images: [], template_data: {}, status: 'active' as const,
+}
+
+beforeEach(() => { h.session = null; h.admin = null })
+
+describe('AUTH-010 — publish paths require an admin-enabled (game, category) pair', () => {
+  it('publishListing: pair not enabled → rejected before any service-role catalogue access', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: null, error: null }], // not enabled for this game
+    })
+    h.admin = mockClient({})
+    const res = await publishListing(INPUT)
+    expect(res.success).toBe(false)
+    expect((res as any).error).toMatch(/category/i)
+    expect(h.admin.tables).toEqual([])           // service role never touched
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
+  })
+
+  it('bulkPublishListings: pair not enabled → rejected before any service-role catalogue access', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: null, error: null }],
+    })
+    h.admin = mockClient({})
+    const res = await bulkPublishListings('game-1', 'items', [
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+    ])
+    expect(res.success).toBe(false)
+    expect(h.admin.tables).toEqual([])
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
+  })
+
+  it('publishListing: enabled pair → listing inserted against it, no catalogue write', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    })
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+      listings: [{ data: { id: 'l-1', slug: 'sword' }, error: null }],
+    })
+    const res = await publishListing({ ...INPUT, status: 'draft' })
+    expect(res).toEqual({ success: true, data: { id: 'l-1', status: 'draft' } })
+    // catalogue untouched; the ONLY service-role write is the listing itself (AUTH-031)
+    expect(h.admin.calls.filter((c: any) => c.table !== 'listings')).toEqual([])
+    const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')
+    expect(ins).toHaveLength(1)
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
+  })
+})
+
+describe('AUTH-009 / ACC-01 — publish paths refuse non-sellers before touching anything', () => {
+  for (const [label, kind] of [['a plain user', 'none'], ['a restricted seller', 'seller_blocked']] as const) {
+    it(`publishListing: ${label} is rejected with no catalogue or listings access`, async () => {
+      h.session = sessionWith({
+        global_categories: [{ data: { id: 'gc-items' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+      }, kind)
+      h.admin = mockClient({})
+      const res = await publishListing(INPUT)
+      expect(res.success).toBe(false)
+      expect((res as any).error).toMatch(/seller/i)
+      expect(h.admin.tables).toEqual([])
+      expect(h.session.tables).not.toContain('listings')
+    })
+
+    it(`bulkPublishListings: ${label} is rejected with no catalogue or listings access`, async () => {
+      h.session = sessionWith({
+        global_categories: [{ data: { id: 'gc-items' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+      }, kind)
+      h.admin = mockClient({})
+      const res = await bulkPublishListings('game-1', 'items', [
+        { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+      ])
+      expect(res.success).toBe(false)
+      expect(h.admin.tables).toEqual([])
+      expect(h.session.tables).not.toContain('listings')
+    })
+  }
+
+  it('an active admin without role=seller may still publish (parity with the INSERT policy)', async () => {
+    h.session = sessionWith({
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    }, 'admin')
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+      listings: [{ data: { id: 'l-2', slug: 'x' }, error: null }],
+    })
+    const res = await publishListing({ ...INPUT, status: 'draft' })
+    expect(res.success).toBe(true)
+  })
+})
+
+describe('AUTH-031 — the service-role listing insert is pinned to the session user and carries no moderation columns', () => {
+  it('publishListing payload: seller_id = session user, no approved_by / approved_at', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    })
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+      listings: [{ data: { id: 'l-3', slug: 'y' }, error: null }],
+    })
+    // a hostile client cannot smuggle moderation columns through the typed input
+    const res = await publishListing({ ...INPUT, ...({ approved_by: 'seller-1', approved_at: 'now', seller_id: 'someone-else' } as object) })
+    expect(res.success).toBe(true)
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    const payload = ins.args[0] as Record<string, unknown>
+    expect(payload.seller_id).toBe(USER.id)
+    expect(payload).not.toHaveProperty('approved_by')
+    expect(payload).not.toHaveProperty('approved_at')
+  })
+
+  it('bulkPublishListings inserts every row through the service role with seller_id = session user', async () => {
+    h.session = sessionWith({
+      profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    })
+    h.admin = mockClient({
+      games: [{ data: { slug: 'fortnite' }, error: null }],
+    })
+    const res = await bulkPublishListings('game-1', 'items', [
+      { line: 1, title: 'Alpha item', price: 1, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+      { line: 2, title: 'Bravo item', price: 2, quantity: 1, delivery_method: 'manual', delivery_time: '1hr', images: [], template_data: {} } as any,
+    ])
+    expect(res.success).toBe(true)
+    const ins = h.admin.calls.filter((c: any) => c.table === 'listings' && c.op === 'insert')
+    expect(ins).toHaveLength(2)
+    for (const c of ins) expect((c.args[0] as any).seller_id).toBe(USER.id)
+    expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
+  })
+})
+
+describe('ACC-11 — a crafted status never reaches the service-role insert', () => {
+  for (const status of ['paused', 'sold', 'suspended', 'pending_approval', 'archived']) {
+    it(`publishListing refuses status=${status}`, async () => {
+      h.session = sessionWith({
+        profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+        global_categories: [{ data: { id: 'gc-items' }, error: null }],
+        game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+      })
+      h.admin = mockClient({})
+      const res = await publishListing({ ...INPUT, status: status as never })
+      expect(res.success).toBe(false)
+      expect(h.admin.calls).toEqual([])
+    })
+  }
+})
+
+describe('GRO-08 — an applicant may save drafts, never anything else', () => {
+  it('publishListing for an applicant lands as a marked draft without consulting the publish policy', async () => {
+    const rpcNames: string[] = []
+    h.session = mockClient({
+      global_categories: [{ data: { id: 'gc-items' }, error: null }],
+      game_categories: [{ data: { id: 'pair-1', slug: 'buy-items', name: 'Items', type: 'items', legacy_category_id: 'cat-1' }, error: null }],
+    }, {
+      auth: { getUser: async () => ({ data: { user: USER }, error: null }) },
+      rpc: async (name: string) => { rpcNames.push(name); return name === 'sell_access_kind' ? { data: 'applicant', error: null } : { data: POLICY, error: null } },
+    })
+    h.admin = mockClient({ listings: [{ data: { id: 'l-9', slug: 'z' }, error: null }] })
+    const res = await publishListing({ ...INPUT, status: 'active' })
+    expect(res).toEqual({ success: true, data: { id: 'l-9', status: 'draft' } })
+    expect(rpcNames).toEqual(['sell_access_kind'])
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    expect((ins.args[0] as any).status).toBe('draft')
+    expect((ins.args[0] as any).metadata).toEqual({ applicant_draft: true })
+  })
+
+  it('bulk upload stays sellers-only', async () => {
+    h.session = sessionWith({}, 'applicant')
+    h.admin = mockClient({})
+    const res = await bulkPublishListings('game-1', 'items', [])
+    expect(res.success).toBe(false)
+    expect(h.admin.tables).toEqual([])
+  })
+})
+
+describe('currency minimum + landing path', () => {
+  const enabledCurrency = () => sessionWith({
+    profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+    global_categories: [{ data: { id: 'gc-currency' }, error: null }],
+    game_categories: [{ data: { id: 'pair-c', slug: 'buy-currency', name: 'Currency', type: 'currency', legacy_category_id: 'cat-c' }, error: null }],
+    listings: [{ data: null, error: null }], // no existing flexible offer for this game
+    games: [
+      { data: { name: 'Blade Ball', slug: 'blade-ball', image_url: null }, error: null },
+      { data: { slug: 'blade-ball' }, error: null },
+    ],
+    category_configs: [{ data: { config: { unit_label: 'Tokens', quantity_granularity: 'thousand', min_quantity: 1 } }, error: null }],
+  })
+
+  it("keeps a seller's 1 K minimum when the admin floor is 1 (no hard-coded 100)", async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1 })
+    expect(res.success).toBe(true)
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    expect((ins.args[0] as any).min_quantity).toBe(1)
+  })
+
+  it('returns the public category page for a live offer so the wizard lands there', async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1 })
+    expect(res).toMatchObject({ success: true, data: { status: 'active', path: '/blade-ball/buy-currency' } })
+  })
+
+  it('returns no path for a draft (not publicly visible)', async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1, status: 'draft' })
+    expect(res.success && res.data.path).toBeFalsy()
+  })
+})

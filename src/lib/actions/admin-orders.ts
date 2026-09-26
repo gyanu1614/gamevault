@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 
 export type OrderStatus = 'pending' | 'processing' | 'paid' | 'completed' | 'cancelled' | 'refunded'
 export type EscrowStatus = 'pending' | 'held' | 'released' | 'refunded'
@@ -112,9 +113,11 @@ export async function getOrders(filters: OrderFilters = {}) {
       query = query.in('escrow_status', escrowStatus)
     }
 
-    if (search) {
-      // Use textSearch or multiple or conditions for searching across related tables
-      query = query.or(`order_number.ilike.%${search}%`)
+    if (search && search.trim()) {
+      // Normalised lookup: the typed query is upper-cased and stripped of
+      // dashes/spaces and matched against orders.order_number_search, which
+      // the DB generates the same way — GV- and DM- orders alike.
+      query = query.ilike('order_number_search', orderNumberSearchPattern(search))
     }
 
     if (dateFrom) {
@@ -163,25 +166,25 @@ export async function getOrderStats() {
     // Get total orders
     const { count: totalOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' }).limit(1)
 
     // Get completed orders
     const { count: completedOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed')
+      .select('*', { count: 'exact' })
+      .eq('status', 'completed').limit(1)
 
     // Get pending orders
     const { count: pendingOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['pending', 'processing', 'paid'])
+      .select('*', { count: 'exact' })
+      .in('status', ['pending', 'processing', 'paid']).limit(1)
 
     // Get disputed orders
     const { count: disputedOrders } = await supabase
       .from('disputes')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'under_review'])
+      .select('*', { count: 'exact' })
+      .in('status', ['open', 'under_review']).limit(1)
 
     // Get total revenue
     const { data: revenueData } = await supabase

@@ -53,6 +53,17 @@ type RequestRow = {
   created_at: string
   user?: { username?: string | null; email?: string | null } | null
   method?: { display_name?: string | null } | null
+  payment_reference?: string | null
+  /** PR 7 — withdrawal_risk_snapshot(seller). */
+  risk?: {
+    account_age_days?: number | null
+    completed_sales?: number
+    completed_sales_total?: number
+    open_disputes?: number
+    refund_rate_90d?: number
+    payout_details_changed_recently?: boolean
+    matured_minor?: number
+  } | null
 }
 
 type DialogState =
@@ -187,6 +198,7 @@ export default function WithdrawalsClient({
                   <th className={TABLE.th}>Destination</th>
                   <th className={TABLE.th}>Amount</th>
                   <th className={TABLE.th}>Net</th>
+                  <th className={TABLE.th}>Risk</th>
                   <th className={TABLE.th}>Status</th>
                   <th className={TABLE.th}>Actions</th>
                 </tr>
@@ -218,13 +230,16 @@ export default function WithdrawalsClient({
                     </td>
                     <td className={`${TABLE.tdPrimary} tabular-nums`}>{usd(row.net_amount)}</td>
                     <td className={TABLE.td}>
+                      <RiskCell risk={row.risk} />
+                    </td>
+                    <td className={TABLE.td}>
                       <StatusBadge status={row.status} />
-                      {row.transaction_hash && (
+                      {(row.payment_reference || row.transaction_hash) && (
                         <div
                           className="mt-1 max-w-[140px] truncate font-mono text-[10.5px] text-text-tertiary"
-                          title={row.transaction_hash}
+                          title={row.payment_reference || row.transaction_hash || ''}
                         >
-                          {row.transaction_hash}
+                          {row.payment_reference || row.transaction_hash}
                         </div>
                       )}
                     </td>
@@ -381,7 +396,7 @@ export default function WithdrawalsClient({
           <input
             value={txRef}
             onChange={(e) => setTxRef(e.target.value)}
-            placeholder="Tx hash / payment reference (optional)"
+            placeholder="Tx hash / Payoneer payment reference (required — sent to the seller)"
             className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 font-mono text-[12.5px] text-text-primary placeholder:font-sans placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
           />
           <textarea
@@ -403,7 +418,7 @@ export default function WithdrawalsClient({
                   () =>
                     markWithdrawalPaid({
                       requestId: dialog.row.id,
-                      transactionHash: txRef.trim() || undefined,
+                      reference: txRef.trim(),
                       adminNotes: notes.trim() || undefined,
                     }),
                   'Payout settled — request completed.',
@@ -463,6 +478,31 @@ function Destination({
           <span className="text-text-primary">{String(v)}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+
+/** PR 7 — compact risk snapshot: age · sales · disputes · refund rate · recent detail change. */
+function RiskCell({ risk }: { risk: RequestRow['risk'] }) {
+  if (!risk) return <span className="text-text-tertiary">—</span>
+  const age = risk.account_age_days ?? null
+  const flags: string[] = []
+  if (age != null && age < 30) flags.push('new')
+  if ((risk.open_disputes ?? 0) > 0) flags.push(`${risk.open_disputes} open dispute${risk.open_disputes === 1 ? '' : 's'}`)
+  if ((risk.refund_rate_90d ?? 0) >= 0.1) flags.push(`${Math.round((risk.refund_rate_90d ?? 0) * 100)}% refunds`)
+  if (risk.payout_details_changed_recently) flags.push('payout details changed <7d')
+  if ((risk.matured_minor ?? 0) < 0) flags.push('negative balance')
+  return (
+    <div className="min-w-[150px] text-[11.5px] leading-snug">
+      <div className="text-text-secondary">
+        {age == null ? 'age —' : `${age}d old`} · {risk.completed_sales ?? 0} sales ({usd(risk.completed_sales_total ?? 0)})
+      </div>
+      {flags.length ? (
+        <div className="mt-0.5 font-medium text-amber-400">{flags.join(' · ')}</div>
+      ) : (
+        <div className="mt-0.5 text-text-tertiary">no flags</div>
+      )}
     </div>
   )
 }

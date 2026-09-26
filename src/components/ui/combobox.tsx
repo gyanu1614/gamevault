@@ -52,6 +52,15 @@ export interface ComboboxProps {
   invalid?: boolean
   /** Called when the trigger loses focus — let parents track touched state */
   onBlur?: () => void
+  /**
+   * `lime` (default) — house accent on open + a translucent glass panel;
+   * every existing caller uses it. `neutral` — for form surfaces (the sell
+   * wizard): a plain light border on open and a panel in the card grey
+   * (bg-bg-overlay), so the list matches the card it drops out of.
+   */
+  tone?: 'lime' | 'neutral'
+  /** Show the selected option's icon in the closed trigger (default off). */
+  iconInTrigger?: boolean
 }
 
 export function Combobox({
@@ -66,6 +75,8 @@ export function Combobox({
   unsorted,
   invalid,
   onBlur,
+  tone = 'lime',
+  iconInTrigger = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -84,12 +95,16 @@ export function Combobox({
     if (!open) setQuery('')
   }, [open])
 
+  // Stable id linking this combobox to the listbox panel it controls.
+  const listboxId = React.useId()
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <div
           ref={triggerRef}
           role="combobox"
+          aria-controls={listboxId}
           aria-label={ariaLabel}
           aria-expanded={open}
           aria-invalid={invalid || undefined}
@@ -111,15 +126,23 @@ export function Combobox({
             'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-transparent px-3 text-sm transition-colors',
             'border-border-default text-text-primary',
             'hover:border-border-strong',
-            open && 'border-lime-tint-border ring-1 ring-lime/30',
+            open && (tone === 'neutral'
+              ? 'border-text-secondary'
+              : 'border-lime-tint-border ring-1 ring-lime/30'),
             // Invalid (touched + empty) — overrides default border/ring.
             invalid && !open && 'border-error ring-2 ring-error-bg',
             disabled && 'cursor-not-allowed opacity-50',
             className
           )}
         >
-          <span className={cn('truncate', !selected && 'text-text-tertiary')}>
-            {selected?.label ?? placeholder}
+          <span className="flex min-w-0 items-center gap-2">
+            {iconInTrigger && selected?.icon_url && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={selected.icon_url} alt="" className="h-5 w-5 shrink-0 rounded object-cover" />
+            )}
+            <span className={cn('truncate', !selected && 'text-text-tertiary')}>
+              {selected?.label ?? placeholder}
+            </span>
           </span>
           <ChevronDown
             className={cn(
@@ -132,15 +155,21 @@ export function Combobox({
 
       <Popover.Portal>
         <Popover.Content
+          id={listboxId}
+          role="listbox"
           align="start"
           sideOffset={6}
           // Match the trigger's width so the panel is the same size as the box
           // above it. Radix exposes the trigger width via a CSS var.
           style={{ width: 'var(--radix-popover-trigger-width)' }}
           className={cn(
-            // Rectangular, translucent glass panel — matches the account-page theme.
-            'z-50 overflow-hidden rounded-lg border border-border-subtle shadow-elevated',
-            'bg-[rgba(12,12,16,0.92)] backdrop-blur-2xl backdrop-saturate-150',
+            'z-50 overflow-hidden rounded-lg border shadow-elevated',
+            tone === 'neutral'
+              // Form surfaces: the same grey as the cards the field sits
+              // in, so the open list reads as part of the form.
+              ? 'border-border-default bg-bg-overlay'
+              // Default: translucent glass panel — the account-page theme.
+              : 'border-border-subtle bg-[rgba(12,12,16,0.92)] backdrop-blur-2xl backdrop-saturate-150',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'

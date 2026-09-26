@@ -4,8 +4,6 @@
  * design so the form stays a calm single column.
  */
 
-'use client'
-
 import type { ReactNode } from 'react'
 import { PALETTE } from '../../theme'
 

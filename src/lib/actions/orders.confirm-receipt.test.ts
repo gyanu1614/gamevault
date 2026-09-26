@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// confirmOrderReceipt completes an order through the atomic SafeDrop
-// transition RPC (safedrop_transition BUYER_CONFIRMED): the row lock +
-// idempotent ledger journal decide the race against the auto-release cron.
-// These tests pin that seam: exactly one transition call on the win path,
-// and the loser (changed=false) returns success without comms or cashback.
+// confirmOrderReceipt completes an order through ONE service-role RPC
+// (order_confirm_receipt → safedrop_transition BUYER_CONFIRMED with the
+// maturity hold — fee PR 7). The row lock + idempotent ledger journal decide
+// the race against the auto-complete runner. These tests pin that seam:
+// exactly one RPC call on the win path, the loser (changed=false) returns
+// success without comms or cashback, and the RPC's refusal reasons surface.
 
 const h = vi.hoisted(() => ({
   createClient: vi.fn(),
   createServiceRoleClient: vi.fn(),
-  transition: vi.fn(),
+  rpc: vi.fn(),
+  revalidateListingSurfaces: vi.fn(),
   refundToWallet: vi.fn(),
   sendOrderCompletionEmail: vi.fn(),
   sendOrderCompletedSellerEmail: vi.fn(),
   createNotification: vi.fn(),
   awardCashback: vi.fn(),
+  recordReferralCommission: vi.fn(),
   revalidatePath: vi.fn(),
 }))
 
@@ -28,8 +31,9 @@ vi.mock('@/lib/audit', () => ({
 }))
 vi.mock('@/lib/utils/rate-limit', () => ({ rateLimitCreateOrder: vi.fn() }))
 vi.mock('@/lib/loyalty/award', () => ({ awardCashback: h.awardCashback }))
+vi.mock('@/lib/referral/commission', () => ({ recordReferralCommission: h.recordReferralCommission }))
 vi.mock('@/lib/actions/promo', () => ({ recordPromoUsage: vi.fn() }))
-vi.mock('@/lib/escrow/transition', () => ({ transition: h.transition }))
+vi.mock('@/lib/revalidation/listings', () => ({ revalidateListingSurfaces: h.revalidateListingSurfaces }))
 vi.mock('@/lib/wallet/wallet', () => ({ refundToWallet: h.refundToWallet }))
 vi.mock('@/lib/email', () => ({
   sendOrderCompletionEmail: h.sendOrderCompletionEmail,
@@ -85,36 +89,34 @@ const baseOrder = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  h.transition.mockResolvedValue({
-    orderId: ORDER_ID,
-    status: 'completed',
-    escrowStatus: 'released',
-    ledgerTxnId: 'txn-1',
-    changed: true,
+  h.rpc.mockResolvedValue({
+    data: { order_id: ORDER_ID, status: 'completed', escrow_status: 'released', ledger_txn_id: 'txn-1', changed: true },
+    error: null,
   })
+  h.revalidateListingSurfaces.mockResolvedValue({ tags: [] })
   h.awardCashback.mockResolvedValue(undefined)
+  h.recordReferralCommission.mockResolvedValue(undefined)
   h.createNotification.mockResolvedValue(undefined)
   // Comms lookups (profiles/listings) resolve empty — emails skip themselves.
   h.createServiceRoleClient.mockImplementation(() => ({
     from: vi.fn(() => createBuilder({ data: null, error: null })),
+    rpc: h.rpc,
   }))
 })
 
 describe('confirmOrderReceipt ledger transition', () => {
-  it('winner path: applies exactly one BUYER_CONFIRMED transition', async () => {
+  it('winner path: exactly one order_confirm_receipt RPC, listing surfaces revalidated', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
     h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result).toEqual({ success: true })
-    expect(h.transition).toHaveBeenCalledTimes(1)
-    expect(h.transition).toHaveBeenCalledWith(
-      ORDER_ID,
-      'BUYER_CONFIRMED',
-      undefined,
-      'buyer_confirmed'
-    )
+    expect(h.rpc).toHaveBeenCalledTimes(1)
+    expect(h.rpc).toHaveBeenCalledWith('order_confirm_receipt', { p_order_id: ORDER_ID, p_buyer_id: BUYER_ID })
+    // No direct status write from TS — the RPC owns the state machine.
+    expect(readBuilder.update).not.toHaveBeenCalled()
+    expect(h.revalidateListingSurfaces).toHaveBeenCalledWith(expect.anything(), { listingIds: ['listing-1'] })
   })
 
   it('hands cashback only the orderId — award verifies the order itself', async () => {
@@ -126,40 +128,40 @@ describe('confirmOrderReceipt ledger transition', () => {
     // No caller-supplied user/amount/currency: awardCashback derives them
     // from the order row it re-fetches (mintable-money hardening).
     expect(h.awardCashback).toHaveBeenCalledWith({ orderId: ORDER_ID })
+    // DB-017: the referrer's commission is recorded next to cashback, id only.
+    expect(h.recordReferralCommission).toHaveBeenCalledWith(ORDER_ID)
   })
 
   it('lost race: changed=false returns success with no comms or cashback', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
     h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
-    // The cron won the release between our read and the transition — the RPC
-    // reports the order already at 'completed'.
-    h.transition.mockResolvedValue({
-      orderId: ORDER_ID,
-      status: 'completed',
-      changed: false,
-    })
+    // The runner won the release between our read and the RPC — it reports
+    // the order already at 'completed'.
+    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'already_completed' }, error: null })
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result).toEqual({ success: true })
-    expect(h.transition).toHaveBeenCalledTimes(1)
+    expect(h.rpc).toHaveBeenCalledTimes(1)
     expect(h.sendOrderCompletionEmail).not.toHaveBeenCalled()
     expect(h.sendOrderCompletedSellerEmail).not.toHaveBeenCalled()
     expect(h.createNotification).not.toHaveBeenCalled()
     expect(h.awardCashback).not.toHaveBeenCalled()
+    expect(h.recordReferralCommission).not.toHaveBeenCalled()
     expect(h.revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('transition failure surfaces as an error (order not silently completed)', async () => {
+  it('RPC failure surfaces as an error (order not silently completed)', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder }, error: null })
     h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
-    h.transition.mockRejectedValue(new Error('safedrop_transition(BUYER_CONFIRMED) failed: boom'))
+    h.rpc.mockResolvedValue({ data: null, error: { message: 'order_confirm_receipt failed: boom' } })
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result.success).toBe(false)
     expect(h.sendOrderCompletionEmail).not.toHaveBeenCalled()
     expect(h.awardCashback).not.toHaveBeenCalled()
+    expect(h.recordReferralCommission).not.toHaveBeenCalled()
   })
 
   it('already completed at read time: returns success without transitioning', async () => {
@@ -173,35 +175,41 @@ describe('confirmOrderReceipt ledger transition', () => {
 
     expect(result).toEqual({ success: true })
     expect(readBuilder.update).not.toHaveBeenCalled()
-    expect(h.transition).not.toHaveBeenCalled()
+    expect(h.rpc).not.toHaveBeenCalled()
   })
 
-  it('disputed order: refuses to release frozen funds', async () => {
+  it('disputed order: the RPC refuses and the action says so (nothing released)', async () => {
     const readBuilder = createBuilder({
       data: { ...baseOrder, status: 'disputed', escrow_status: 'frozen' },
       error: null,
     })
     h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'disputed' }, error: null })
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
-    expect(result.success).toBe(false)
-    expect(h.transition).not.toHaveBeenCalled()
+    expect(result).toEqual({ success: false, error: 'This order is under dispute review' })
+    expect(h.awardCashback).not.toHaveBeenCalled()
   })
 
-  it('mark-delivered pre-step is guarded on held escrow', async () => {
+  it('unpaid order: the RPC refuses with not_paid', async () => {
+    const readBuilder = createBuilder({ data: { ...baseOrder, status: 'pending', escrow_status: 'pending' }, error: null })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'not_paid' }, error: null })
+
+    const result = await confirmOrderReceipt(ORDER_ID)
+
+    expect(result).toEqual({ success: false, error: 'This order has not been paid yet' })
+  })
+
+  it('never writes status from TS on the delivering → completed path (the RPC stamps delivery)', async () => {
     const readBuilder = createBuilder({ data: { ...baseOrder, status: 'delivering' }, error: null })
-    const deliveredBuilder = createBuilder({ data: null, error: null })
-    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder, deliveredBuilder]))
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
     expect(result).toEqual({ success: true })
-    expect(deliveredBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'delivered' })
-    )
-    // A replay must not drag a completed/disputed order back to 'delivered'.
-    expect(deliveredBuilder.eq).toHaveBeenCalledWith('escrow_status', 'held')
-    expect(h.transition).toHaveBeenCalledTimes(1)
+    expect(readBuilder.update).not.toHaveBeenCalled()
+    expect(h.rpc).toHaveBeenCalledTimes(1)
   })
 })

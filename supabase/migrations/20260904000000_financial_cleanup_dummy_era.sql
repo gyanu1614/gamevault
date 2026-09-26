@@ -64,6 +64,19 @@ BEGIN
     RETURN;
   END IF;
 
+  -- ─── 0b. Sentinel: fresh database (no dummy era to clean) ───────
+  -- This is a one-shot purge of the audited 2026-09-04 production snapshot;
+  -- every pre-assert below is pinned to that exact row-count state. A freshly
+  -- provisioned database (local `supabase start`, CI, a new branch DB) has no
+  -- dummy era at all, so there is nothing to purge and the pinned asserts
+  -- cannot possibly hold. Skip instead of aborting, which otherwise makes the
+  -- whole migration chain — and `supabase start` — unrunnable outside prod.
+  -- On production this is unreachable: the sentinel above fires first.
+  IF NOT EXISTS (SELECT 1 FROM orders) THEN
+    RAISE NOTICE 'financial_cleanup_dummy_era: fresh database (0 orders), nothing to clean, skipping';
+    RETURN;
+  END IF;
+
   -- ─── 1. Pre-assertions (DB must match the 2026-09-04 audit) ─────
   SELECT count(*) INTO v_n FROM orders WHERE id = ANY(v_real_ids) AND payment_provider = 'btcpay';
   IF v_n <> 4 THEN RAISE EXCEPTION 'pre-assert: expected 4 real btcpay orders, found %', v_n; END IF;

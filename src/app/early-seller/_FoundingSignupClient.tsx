@@ -11,6 +11,7 @@ import { useMemo, useRef, useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Percent, ArrowUp, Check, ChevronDown, X, ArrowRight, CircleCheck } from 'lucide-react'
+import { FOUNDING_FEE_PERK_LABEL } from '@/lib/config/founding-seller'
 import { submitEarlySeller } from '@/lib/actions/early-seller'
 import { useAuth } from '@/hooks/use-auth'
 import FoundingNavbar from '@/app/founding/_components/FoundingNavbar'
@@ -184,7 +185,7 @@ export default function FoundingSignupClient({
               Become a Seller
             </h1>
             <p className="mt-4 max-w-[340px] text-[15px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.82)' }}>
-              Be one of the first 100 sellers on DropMarket — lower fees for life, early access, and a badge buyers can see.
+              Be one of the first 100 sellers on DropMarket — a founding fee discount, early access, and a badge buyers can see.
             </p>
           </div>
 
@@ -204,7 +205,7 @@ export default function FoundingSignupClient({
           {/* perks */}
           <ul className="flex flex-col gap-[18px]">
             {[
-              { Icon: Percent, label: '2% lower fees, locked for life' },
+              { Icon: Percent, label: FOUNDING_FEE_PERK_LABEL },
               { Icon: ArrowUp, label: 'List before the public launch' },
               { Icon: Check, label: 'Founding badge on your storefront' },
             ].map(({ Icon, label }) => (

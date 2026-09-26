@@ -19,9 +19,29 @@ import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import AdoptMeMethodology from './_AdoptMeMethodology'
+import GenericMethodologyPage from '../_generic/MethodologyPage'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 86400
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
+
+/** Games served by the generic values_* pipeline (see the values hub route). */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return contentHubSlugsFor('methodology').map((gameSlug) => ({ gameSlug }))
+}
 
 export async function generateMetadata({
   params,
@@ -53,9 +73,21 @@ export async function generateMetadata({
     }
   }
 
+  // Games on the generic values pipeline build metadata from config.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const title = `How DropMarket Prices ${theme.name} — Methodology`
+    return {
+      title,
+      description: `How DropMarket calculates ${theme.name} values: live marketplace listings, reputable-seller filtering, minimum evidence, why we never price individual pets, and the single-source limitation.`,
+      alternates: { canonical: `/${gameSlug}/values/methodology` },
+      openGraph: { title, url: `/${gameSlug}/values/methodology`, type: 'article' },
+    }
+  }
+
   // Only SAB has a methodology page. Every other game answered
   // `200 + empty body + index,follow` here — a soft 404. See the body.
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'methodology')) notFound()
   return {
     title: 'How DropMarket Values Steal a Brainrot Prices — Methodology',
     description:
@@ -78,7 +110,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Where does DropMarket get its Steal a Brainrot price data?',
-    a: 'Prices are derived from real marketplace listings and completed sales across tracked sources, normalized to a single USD cash value per Brainrot and mutation. We prioritize high-value and popular Brainrots and price all of their mutations where data allows.',
+    a: 'Prices are derived from real marketplace listings by reputable sellers across tracked sources, normalized to a single USD cash value per Brainrot and mutation. We prioritize high-value and popular Brainrots and price all of their mutations where data allows.',
   },
   {
     q: 'What does the confidence label on a value mean?',
@@ -105,7 +137,11 @@ export default async function MethodologyPage({
   // `return null` here rendered an empty page with a 200 + index,follow —
   // GSC counted /{game}/values/methodology for every other game as a soft
   // 404. A real 404 is the honest answer.
-  if (gameSlug !== 'steal-a-brainrot') {
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericMethodologyPage gameSlug={gameSlug} />
+  }
+
+  if (!hasHubPage(gameSlug, 'methodology')) {
     notFound()
   }
 
@@ -154,7 +190,7 @@ export default async function MethodologyPage({
       <div className="relative z-10 mx-auto w-full max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
         <Section title="Live marketplace data, updated daily">
           Every DropMarket value comes from real Steal a Brainrot marketplace
-          activity — active listings and completed sales — not a hand-edited
+          activity — active listings from reputable sellers — not a hand-edited
           list. A scheduled job runs each morning (UTC) and captures a fresh
           price snapshot, so each value page shows an <em>&ldquo;as of&rdquo;</em>{' '}
           date that reflects genuinely recent data. Historical snapshots power the

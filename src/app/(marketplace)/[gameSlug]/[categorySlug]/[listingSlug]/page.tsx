@@ -7,7 +7,7 @@
 
 import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
-import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       *,
       seller:public_profiles!listings_seller_id_fkey(is_test),
       game:games!listings_game_id_fkey(name),
-      category:categories!listings_category_id_fkey(name)
+      category:game_categories!listings_game_category_id_fkey(name)
     `)
     .eq('slug', listingSlug)
     .single() as any
@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         .select(`
           *,
           game:games!listings_game_id_fkey(name),
-          category:categories!listings_category_id_fkey(name)
+          category:game_categories!listings_game_category_id_fkey(name)
         `)
         .eq('id', listingSlug)
         .single() as any
@@ -113,7 +113,7 @@ const getListing = cache(async function getListing(listingSlug: string) {
     *,
     seller:public_profiles!listings_seller_id_fkey(*),
     game:games!listings_game_id_fkey(*),
-    category:categories!listings_category_id_fkey(*)
+    category:game_categories!listings_game_category_id_fkey(*)
   `
 
   const fetchOne = async (activeOnly: boolean) => {
@@ -164,12 +164,12 @@ async function getSellerStats(sellerId: string) {
     { count: totalSales },
     { count: activeListings }
   ] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact', head: true })
+    supabase.from('orders').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'completed'),
-    supabase.from('listings').select('*', { count: 'exact', head: true })
+      .eq('status', 'completed').limit(1),
+    supabase.from('listings').select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
-      .eq('status', 'active')
+      .eq('status', 'active').limit(1)
   ])
 
   return {
@@ -230,14 +230,14 @@ async function getCarouselListings({
         id, username, shop_name, shop_slug, avatar_url, seller_tier,
         seller_rating, total_sales, total_reviews, is_verified
       ),
-      category:categories!listings_category_id_fkey(slug, name)
+      category:game_categories!listings_game_category_id_fkey(slug, name)
     `)
     .eq('status', 'active')
     .neq('id', excludeListingId)
     .order('updated_at', { ascending: false })
     .limit(limit)
   if (gameId) query = query.eq('game_id', gameId)
-  if (categoryId) query = query.eq('category_id', categoryId)
+  if (categoryId) query = query.eq('game_category_id', categoryId)
   if (sellerId) query = query.eq('seller_id', sellerId)
   const { data } = await query
   return (data ?? []) as any[]
@@ -281,7 +281,7 @@ async function ListingDetailPage({ params }: PageProps) {
   // (Other Sellers). Accounts are one-of-a-kind and currency has its own
   // page type, so those keep the plain relevance carousel.
   const isItemsCategory =
-    listing.category?.metadata?.type === 'items' ||
+    listing.category?.type === 'items' ||
     listing.category?.slug === 'items'
 
   const [sellerStats, candidates, itemsTaxonomy] = await Promise.all([
@@ -427,7 +427,7 @@ async function ListingDetailPage({ params }: PageProps) {
       {!isPreview && <ViewTracker listingId={listing.id} />}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schemaData) }}
       />
       <JsonLd data={breadcrumbData} />
 

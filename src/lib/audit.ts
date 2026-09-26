@@ -1,10 +1,17 @@
 /**
  * Audit Logging Utility
  * Tracks all critical operations for security and debugging
+ *
+ * AUTH-012: this is server-only LIBRARY code, not a server-action module.
+ * With `'use server'` here every export was a directly invokable action that
+ * accepted a null session and wrote caller-controlled rows to `audit_logs`
+ * under the service role. Now: no directive, a session is required, the
+ * action/table shape is validated, and ip/user-agent come from the request.
  */
 
-'use server'
+import 'server-only'
 
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
@@ -14,11 +21,37 @@ export interface AuditLogData {
   record_id?: string
   old_data?: any
   new_data?: any
-  ip_address?: string
-  user_agent?: string
   request_path?: string
   success?: boolean
   error_message?: string
+}
+
+/** lowercase snake_case token, 3–64 chars — every action name in the codebase fits. */
+const ACTION_SHAPE = /^[a-z][a-z0-9_]{2,63}$/
+
+/** Tables the app audits. Anything else is a forged/malformed call and is dropped. */
+const AUDITED_TABLES = new Set([
+  'listings',
+  'orders',
+  'profiles',
+  'seller_applications',
+  'reviews',
+  'withdrawal_requests',
+  'disputes',
+  'promo_codes',
+  'admin_roles',
+])
+
+/** First hop of x-forwarded-for + user-agent, from the live request. Null outside a request. */
+async function requestIdentity(): Promise<{ ip: string | null; ua: string | null }> {
+  try {
+    const h = await headers()
+    const fwd = h.get('x-forwarded-for')
+    const ip = fwd ? fwd.split(',')[0].trim() : h.get('x-real-ip')
+    return { ip: ip || null, ua: h.get('user-agent') }
+  } catch {
+    return { ip: null, ua: null }
+  }
 }
 
 /**
@@ -26,29 +59,35 @@ export interface AuditLogData {
  */
 export async function logAudit(data: AuditLogData): Promise<void> {
   try {
+    if (!ACTION_SHAPE.test(data.action) || !AUDITED_TABLES.has(data.table_name)) {
+      console.warn('[audit] dropped malformed audit event', { action: data.action, table_name: data.table_name })
+      return
+    }
+
     const supabase = await createClient()
 
-    // Get current user
+    // A session is required — anonymous callers cannot write the audit trail.
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    if (!user) return
 
     // Get user profile for additional context
     let userEmail: string | null = null
     let userRole: string | null = null
 
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email, role')
-        .eq('id', user.id)
-        .single() as any
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, role')
+      .eq('id', user.id)
+      .single() as any
 
-      if (profile) {
-        userEmail = profile.email
-        userRole = profile.role
-      }
+    if (profile) {
+      userEmail = profile.email
+      userRole = profile.role
     }
+
+    const { ip, ua } = await requestIdentity()
 
     // Insert via service role: audit_logs has hardened RLS in some
     // environments (authenticated INSERT blocked), which made these
@@ -56,7 +95,7 @@ export async function logAudit(data: AuditLogData): Promise<void> {
     // is still captured from the session above.
     const service = createServiceRoleClient()
     await (service.from('audit_logs').insert as any)({
-      user_id: user?.id || null,
+      user_id: user.id,
       user_email: userEmail,
       user_role: userRole,
       action: data.action,
@@ -64,8 +103,8 @@ export async function logAudit(data: AuditLogData): Promise<void> {
       record_id: data.record_id || null,
       old_data: data.old_data || null,
       new_data: data.new_data || null,
-      ip_address: data.ip_address || null,
-      user_agent: data.user_agent || null,
+      ip_address: ip,
+      user_agent: ua,
       request_path: data.request_path || null,
       success: data.success !== undefined ? data.success : true,
       error_message: data.error_message || null,

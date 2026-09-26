@@ -141,18 +141,32 @@ export async function createTestListings() {
       originalTier = profile?.seller_tier
     }
 
-    // Temporarily upgrade seller to 'amethyst' tier to bypass pre-moderation
-    // (only quartz, the entry tier, is pre-moderated)
-    console.log('⬆️ Temporarily upgrading seller tier to amethyst to bypass pre-moderation...')
-    const { error: tierError } = await (supabase
-      .from('profiles')
-      .update as any)({ seller_tier: 'amethyst' })
-      .eq('id', sellerId)
+    // Temporarily upgrade the seller to the first rank ABOVE the entry rank to
+    // bypass pre-moderation (only the entry rank is pre-moderated). Read live
+    // from seller_tier_config so this never writes a stale rank literal.
+    const { data: rankRows } = await (supabase
+      .from('seller_tier_config')
+      .select('tier, pre_moderation_listings')
+      .order('sort_order', { ascending: true }) as any)
 
-    if (tierError) {
-      console.error('⚠️ Failed to upgrade tier:', tierError)
+    const bypassTier =
+      (rankRows ?? []).find((r: any) => (r?.pre_moderation_listings ?? 0) === 0)?.tier
+      ?? (rankRows ?? [])[1]?.tier
+
+    if (!bypassTier) {
+      console.error('⚠️ No non-pre-moderated rank found in seller_tier_config; leaving tier as-is')
     } else {
-      console.log('✅ Seller tier upgraded to amethyst')
+      console.log(`⬆️ Temporarily upgrading seller tier to ${bypassTier} to bypass pre-moderation...`)
+      const { error: tierError } = await (supabase
+        .from('profiles')
+        .update as any)({ seller_tier: bypassTier })
+        .eq('id', sellerId)
+
+      if (tierError) {
+        console.error('⚠️ Failed to upgrade tier:', tierError)
+      } else {
+        console.log(`✅ Seller tier upgraded to ${bypassTier}`)
+      }
     }
 
     // STEP 3: Get games and categories
@@ -163,9 +177,10 @@ export async function createTestListings() {
       .order('name') as any
 
     const { data: categories, error: categoriesError } = await supabase
-      .from('categories')
-      .select('id, slug, name')
-      .order('name') as any
+      .from('game_categories')
+      .select('id, game_id, slug, type')
+      .eq('is_enabled', true)
+      .order('sort_order') as any
 
     if (gamesError || !games || games.length === 0) {
       return {
@@ -184,8 +199,14 @@ export async function createTestListings() {
     const robloxGame = games.find((g: any) => g.slug === 'roblox')
     const fortniteGame = games.find((g: any) => g.slug === 'fortnite')
     const valorantGame = games.find((g: any) => g.slug === 'valorant')
-    const accountsCategory = categories.find((c: any) => c.slug === 'accounts')
-    const currencyCategory = categories.find((c: any) => c.slug === 'currency')
+    // Per-game rows now (Step 1b): the account category of each game + Roblox's currency.
+    const byGameType = (gameId: string | undefined, type: string) =>
+      categories.find((c: any) => c.game_id === gameId && c.type === type)
+    const valorantAccounts = byGameType(valorantGame?.id, 'account')
+    const fortniteAccounts = byGameType(fortniteGame?.id, 'account')
+    const robloxCurrency = byGameType(robloxGame?.id, 'currency')
+    const accountsCategory = valorantAccounts && fortniteAccounts ? valorantAccounts : null
+    const currencyCategory = robloxCurrency ?? null
 
     if (!robloxGame || !fortniteGame || !valorantGame) {
       return {
@@ -197,7 +218,7 @@ export async function createTestListings() {
     if (!accountsCategory || !currencyCategory) {
       return {
         success: false,
-        error: 'Required categories not found. Need: accounts, currency',
+        error: 'Required categories not found. Need: valorant/fortnite account + roblox currency (enabled)',
       }
     }
 
@@ -209,7 +230,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: valorantGame.id,
-        category_id: accountsCategory.id,
+        game_category_id: valorantAccounts!.id,
         title: 'Valorant Radiant Account | 5000+ VP | All Agents',
         slug: 'valorant-radiant-account-5000-vp-all-agents',
         description: 'Rare Valorant account with Radiant rank, 5000+ VP, and all agents unlocked. Includes exclusive skins and battle pass rewards.',
@@ -233,7 +254,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: robloxGame.id,
-        category_id: currencyCategory.id,
+        game_category_id: robloxCurrency!.id,
         title: 'Roblox Premium Account | Level 250 | 100K Robux',
         slug: 'roblox-premium-account-level-250-100k-robux',
         description: 'High-level Roblox account with Premium subscription, 100K Robux, and tons of rare items.',
@@ -257,7 +278,7 @@ export async function createTestListings() {
       {
         seller_id: sellerId,
         game_id: fortniteGame.id,
-        category_id: accountsCategory.id,
+        game_category_id: fortniteAccounts!.id,
         title: 'Fortnite OG Account | Rare Skins | Stacked',
         slug: 'fortnite-og-account-rare-skins-stacked',
         description: 'OG Fortnite account with rare skins from Season 1-3, including Black Knight and Renegade Raider.',
@@ -279,7 +300,7 @@ export async function createTestListings() {
       },
     ]
 
-    console.log('📝 Step 3: Inserting listings with ACTIVE status (amethyst tier bypasses pre-moderation)...')
+    console.log('📝 Step 3: Inserting listings with ACTIVE status (bypass rank skips pre-moderation)...')
 
     const { data: createdListings, error } = await (supabase
       .from('listings')
@@ -299,7 +320,7 @@ export async function createTestListings() {
     // STEP 4: Verify listings are active
     const { data: verifyListings } = await supabase
       .from('listings')
-      .select('id, slug, status, game_id, category_id')
+      .select('id, slug, status, game_id, game_category_id')
       .in('slug', TEST_SLUGS)
 
     console.log('🔍 Verification - Final status:', verifyListings)

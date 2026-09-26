@@ -1,0 +1,621 @@
+/**
+ * Checkout fix round A — audit pass 6 (docs/audit/pass-6-checkout.md),
+ * branch fix/checkout-p0. One describe per finding; each was RED before its
+ * commit and drives the REAL RPCs / app functions against the local stack.
+ *
+ *   PAY-002  order_cancel_return_wallet cancels from `pending` only; paid /
+ *            terminal → no-op + ONE deduped admin alert; buyer's explicit
+ *            cancel (p_allow_paid) still cancels a paid order + credits wallet.
+ *   PAY-003  order_confirm_payment claims the listing stock inside the
+ *            confirm transaction; sold out → refunded to the wallet in the
+ *            same transaction; an undelivered cancel returns the stock.
+ *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
+ *   PAY-008  the buyer's cancelOrder is the RPC (no TS composition): pending
+ *            returns the wallet hold; paid credits the full total; a raced
+ *            'delivering' is refused.
+ *   PAY-005  an in-flight racing order (no checkout_url yet) is never
+ *            superseded or re-charged: "payment is being prepared".
+ *   PAY-006  createCharge failure cancels the order + returns the wallet
+ *            hold; every pending order is born with a payment_expires_at.
+ *   PAY-007  checkout is rate-limited per buyer; ≤ 5 open pending orders.
+ *   PAY-014  promo caps bind inside promo_usage_record; checkout awaits it.
+ *
+ * Every row this file causes is removed in afterAll — orders, ledger
+ * journals, and the admin notifications the RPC inserts (for EVERY active
+ * admin on the stack, not just the fixture's).
+ */
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, activateFixtureListing, type Fixture } from './throwaway'
+import { purgeAuditLogs } from './fixture-namespace'
+
+let sessionClient: SupabaseClient | null = null
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => {
+    if (!sessionClient) throw new Error('test: session client not set')
+    return sessionClient
+  },
+}))
+vi.mock('next/cache', () => ({ revalidatePath: () => undefined }))
+vi.mock('server-only', () => ({}))
+let failCreateChargeOnce = false
+vi.mock('@/lib/payments/registry', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/payments/registry')>()
+  return {
+    ...real,
+    getProvider: (name: string) => {
+      const p = real.getProvider(name)
+      return {
+        ...p,
+        createCharge: async (input: any) => {
+          if (failCreateChargeOnce) { failCreateChargeOnce = false; throw new Error('btcpay: create failed 503 <upstream body>') }
+          return p.createCharge(input)
+        },
+      }
+    },
+  }
+})
+vi.mock('@/lib/email', async (importOriginal) => {
+  const real = await importOriginal<Record<string, unknown>>()
+  return Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
+})
+
+let fx: Fixture | null = null
+const CUR = 'USD'
+const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const targetHost = (() => { try { return new globalThis.URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname } catch { return '' } })()
+const TARGET_IS_LOCAL = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(targetHost)
+const itFault = it.skipIf(!TARGET_IS_LOCAL)
+
+/** Run `sql` in one psql transaction with app.money_fault = point (local stack only). */
+function withFault(point: string, sql: string): string {
+  const script = `BEGIN;\nSET LOCAL app.money_fault = '${point}';\n${sql};\nCOMMIT;`
+  try {
+    execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', script], { stdio: 'pipe' })
+    return ''
+  } catch (e: any) {
+    return e?.stderr?.toString() ?? String(e)
+  }
+}
+async function listingRow() {
+  const { data } = await fx!.svc.from('listings').select('quantity, status, is_unlimited').eq('id', fx!.listingId).single()
+  return data as any
+}
+async function setStock(quantity: number, is_unlimited = false) {
+  const { error } = await fx!.svc.from('listings').update({ quantity, is_unlimited, status: 'active' }).eq('id', fx!.listingId)
+  if (error) throw new Error(`listing stock: ${error.message}`)
+}
+async function txnByKey(key: string) {
+  const { data } = await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', key).maybeSingle()
+  return data as { id: string } | null
+}
+const tag = () => Math.random().toString(36).slice(2, 8)
+const createdOrderIds: string[] = []
+
+async function walletMinor(userId: string): Promise<bigint> {
+  const { data, error } = await fx!.svc.rpc('user_wallet_balance', { p_user_id: userId, p_currency: CUR } as any)
+  if (error) throw new Error(`user_wallet_balance: ${error.message}`)
+  return BigInt(data ?? 0)
+}
+async function orderRow(orderId: string) {
+  const { data } = await fx!.svc.from('orders').select('*').eq('id', orderId).single()
+  return data as any
+}
+async function insertOrder(over: Record<string, unknown>) {
+  const { data, error } = await fx!.svc.from('orders').insert({
+    buyer_id: fx!.buyer.id, seller_id: fx!.seller.id, listing_id: fx!.listingId, quantity: 1,
+    unit_price: 1, subtotal: 1, platform_fee_rate: 0, payment_processing_fee_rate: 0,
+    platform_fee: 0, payment_processing_fee: 0, total_amount: 1, seller_payout: 1, currency: CUR,
+    ...over,
+  }).select('id').single()
+  if (error) throw new Error(`order insert: ${error.message}`)
+  createdOrderIds.push((data as any).id)
+  return (data as any).id as string
+}
+/** one_pending_order_per_buyer_listing: park whatever pending order an earlier test left. */
+async function parkPendingOrders(buyerId = fx!.buyer.id) {
+  await fx!.svc.from('orders').update({ status: 'cancelled' })
+    .eq('buyer_id', buyerId).eq('listing_id', fx!.listingId).eq('status', 'pending')
+}
+async function adminAlerts(orderId: string) {
+  const { data } = await fx!.svc.from('notifications').select('user_id')
+    .eq('type', 'payment_review').eq('link', `/account/orders/${orderId}`)
+  return (data ?? []) as { user_id: string }[]
+}
+async function activeAdminCount() {
+  const { count } = await fx!.svc.from('admin_roles').select('user_id', { count: 'exact' }).eq('is_active', true).limit(1)
+  return count ?? 0
+}
+
+describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
+  beforeAll(async () => {
+    process.env.NEXT_PUBLIC_PURCHASES_ENABLED = 'true'
+    process.env.PAYMENT_PROVIDER = 'fake'
+    fx = await makeFixture()
+    await promoteToEstablishedSeller(fx.svc, fx.seller.id)
+    await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id)
+  }, 90_000)
+
+  afterAll(async () => {
+    if (!fx) return
+    const svc = fx.svc
+    const users = [fx.buyer.id, fx.seller.id, fx.admin.id]
+    const failures: string[] = []
+    const del = async (label: string, p: PromiseLike<{ error: { message: string } | null }>) => {
+      const { error } = await p
+      if (error) failures.push(`${label}: ${error.message}`)
+    }
+    const { data: allOrders } = await svc.from('orders').select('id').or(`buyer_id.in.(${users.join(',')}),seller_id.in.(${users.join(',')})`)
+    const orderIds = Array.from(new Set([...(allOrders ?? []).map((o: any) => o.id), ...createdOrderIds]))
+    for (const id of orderIds) {
+      await del(`ledger_test_cleanup_by_order(${id})`, svc.rpc('ledger_test_cleanup_by_order', { p_order_id: id } as any))
+      // Admin alerts go to EVERY active admin on the stack — remove by order link.
+      await del('notifications(admin alerts)', svc.from('notifications').delete().like('link', `%${id}%`))
+      await del('webhook_events', svc.from('webhook_events').delete().eq('provider', 'fake').like('provider_event_id', `fake_${id}:%`))
+    }
+    // cancelOrder writes audit_logs (logOrderAction / logUnauthorizedAccess).
+    // audit_logs is immutable by trigger (even for service_role) and its
+    // user_id FK is ON DELETE SET NULL, so a fixture user with audit rows
+    // cannot be deleted — the run would leak the fixture. Local stack only:
+    // purge this run's rows with the immutability triggers paused.
+    purgeAuditLogs(users, failures) // local stack only (fixture-namespace.ts)
+    try { await fx.cleanup() } catch (e: any) { failures.push(String(e?.message ?? e)) }
+    if (failures.length) throw new Error(`checkout-fix-a cleanup left residue:\n  - ${failures.join('\n  - ')}`)
+  }, 120_000)
+
+  // ── PAY-002 ────────────────────────────────────────────────────────────────
+  describe('PAY-002 — automatic cancel is valid from pending only', () => {
+    const sig = { 'x-fake-signature': process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret' }
+
+    it('CHARGE_FAILED on a PAID order: refused, nothing moves, one deduped alert per admin', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-P2-${tag()}` })
+      const walletBefore = await walletMinor(fx!.buyer.id)
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+
+      const body = (status: string) => JSON.stringify({ chargeId: `fake_${orderId}`, orderId, status, amountMinor: '100', currency: CUR })
+      const first = await handleWebhook('fake', sig, body('failed'))
+      expect(first.status, first.error).toBe(200) // processed, not a provider retry
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('paid')
+      expect(row.escrow_status).toBe('held')
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore)
+
+      // One alert per active admin; pinned on OUR fixture admin (other test
+      // runs on the shared stack may add/remove their own admins mid-test).
+      expect(await activeAdminCount()).toBeGreaterThan(0)
+      const mine = (alerts: { user_id: string }[]) => alerts.filter((a) => a.user_id === fx!.admin.id).length
+      expect(mine(await adminAlerts(orderId))).toBe(1)
+
+      // A second stale failure (sweep, provider retry with a new event id) adds nothing.
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const again = await cancelOrderReturnWallet(orderId, `${orderId}:expired-sweep`)
+      expect(again.refused).toBe(true)
+      expect(again.changed).toBe(false)
+      expect((await orderRow(orderId)).status).toBe('paid')
+      expect(mine(await adminAlerts(orderId))).toBe(1)
+    }, 60_000)
+
+    it('every non-pending status is refused for the automatic caller', async () => {
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      for (const status of ['delivering', 'delivered', 'disputed', 'completed', 'refunded']) {
+        const orderId = await insertOrder({ status, escrow_status: 'held', order_number: `GT-P2-${status}-${tag()}` })
+        const r = await cancelOrderReturnWallet(orderId, 'stale')
+        expect(r.refused, status).toBe(true)
+        expect((await orderRow(orderId)).status).toBe(status)
+      }
+    }, 60_000)
+
+    it('pending stays cancellable and returns the wallet hold (unchanged behaviour)', async () => {
+      await parkPendingOrders()
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P2-pend-${tag()}` })
+      const { error: fund } = await fx!.svc.rpc('wallet_credit', {
+        p_user_id: fx!.buyer.id, p_amount_minor: '100', p_currency: CUR, p_counterparty: 'refunds',
+        p_idempotency_key: `test:ledger:fix-a:fund:${orderId}`, p_event_ref: 'TEST_FUND', p_order_id: null,
+      } as any)
+      if (fund) throw new Error(fund.message)
+      const { error: spend } = await fx!.svc.rpc('wallet_spend', {
+        p_user_id: fx!.buyer.id, p_amount_minor: '100', p_currency: CUR, p_target: 'escrow_held',
+        p_idempotency_key: `checkout_wallet:${orderId}`, p_event_ref: 'CHECKOUT_WALLET_CREDIT', p_order_id: orderId,
+      } as any)
+      if (spend) throw new Error(spend.message)
+      const before = await walletMinor(fx!.buyer.id)
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const r = await cancelOrderReturnWallet(orderId, 'expired')
+      expect(r.refused).toBe(false)
+      expect(r.changed).toBe(true)
+      expect(r.walletTxnId).not.toBeNull()
+      expect((await orderRow(orderId)).status).toBe('cancelled')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 100n)
+      expect((await adminAlerts(orderId)).length).toBe(0)
+      await fx!.svc.rpc('ledger_test_cleanup', { p_prefix: `test:ledger:fix-a:fund:${orderId}` } as any)
+    }, 60_000)
+
+    it('buyer explicit cancel (allowPaid) cancels a paid order and credits the full total to the wallet', async () => {
+      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', total_amount: 2.5, seller_payout: 2, order_number: `GT-P2-buyer-${tag()}` })
+      const before = await walletMinor(fx!.buyer.id)
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const r = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
+      expect(r.refused).toBe(false)
+      expect(r.changed).toBe(true)
+      expect(r.walletTxnId).not.toBeNull()
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('cancelled')
+      expect(row.escrow_status).toBe('refunded')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 250n)
+      // Replay: idempotent, no double credit.
+      const again = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
+      expect(again.changed).toBe(false)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 250n)
+      // allowPaid never reaches past 'paid'.
+      const delivering = await insertOrder({ status: 'delivering', escrow_status: 'held', order_number: `GT-P2-deliv-${tag()}` })
+      const refused = await cancelOrderReturnWallet(delivering, undefined, { allowPaid: true })
+      expect(refused.refused).toBe(true)
+      expect((await orderRow(delivering)).status).toBe('delivering')
+    }, 60_000)
+  })
+
+  // ── PAY-003 / PAY-015 ──────────────────────────────────────────────────────
+  describe('PAY-003 — stock is claimed at payment confirmation, inside the confirm transaction', () => {
+    const sig = { 'x-fake-signature': process.env.FAKE_WEBHOOK_SECRET ?? 'fake-secret' }
+
+    it('two paid orders for the last unit: the first claims it, the second is refunded to the wallet in the same transaction', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await parkPendingOrders(fx!.admin.id)
+      await setStock(1)
+      const a = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-a-${tag()}` })
+      const b = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-P3-b-${tag()}` })
+      const bWalletBefore = await walletMinor(fx!.admin.id)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+
+      const ra = await confirmOrderPayment(a, 'evt-a')
+      expect(ra.outcome).toBe('paid')
+      expect(ra.changed).toBe(true)
+      const rowA = await orderRow(a)
+      expect(rowA.status).toBe('paid')
+      expect(rowA.paid_at).not.toBeNull()
+      expect(rowA.stock_claimed_at).not.toBeNull()
+      expect(await listingRow()).toMatchObject({ quantity: 0, status: 'sold' })
+
+      // Replay of the same confirmation: no-op, stock untouched.
+      const again = await confirmOrderPayment(a, 'evt-a')
+      expect(again.outcome).toBe('noop')
+      expect((await listingRow()).quantity).toBe(0)
+
+      const rb = await confirmOrderPayment(b, 'evt-b')
+      expect(rb.outcome).toBe('oversold_refunded')
+      expect(rb.reason).toBe('insufficient_stock')
+      const rowB = await orderRow(b)
+      expect(rowB.status).toBe('refunded')
+      expect(rowB.escrow_status).toBe('refunded')
+      expect(rowB.stock_claimed_at).toBeNull()
+      expect(await walletMinor(fx!.admin.id)).toBe(bWalletBefore + 100n)
+      expect(await txnByKey(`order:${b}:CHARGE_CONFIRMED:evt-b`)).not.toBeNull()
+      expect(await txnByKey(`order:${b}:REFUNDED:oversold`)).not.toBeNull()
+      expect(await txnByKey(`wallet_refund:${b}`)).not.toBeNull()
+      expect((await listingRow()).quantity).toBe(0)
+
+      // Buyer cancels the paid, undelivered order → the unit is back on sale.
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      const cancelled = await cancelOrderReturnWallet(a, undefined, { allowPaid: true })
+      expect(cancelled.changed).toBe(true)
+      expect((await orderRow(a)).stock_returned_at).not.toBeNull()
+      expect(await listingRow()).toMatchObject({ quantity: 1, status: 'active' })
+      await setStock(5)
+    }, 90_000)
+
+    it('a refund AFTER delivery keeps the stock out; completion of a claimed order does not decrement twice', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(3)
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const delivered = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-d-${tag()}` })
+      expect((await confirmOrderPayment(delivered, 'evt-d')).outcome).toBe('paid')
+      expect((await listingRow()).quantity).toBe(2)
+      await fx!.svc.from('orders').update({ status: 'delivering' }).eq('id', delivered)
+      await fx!.svc.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', delivered)
+      const { refundOrderToWallet } = await import('@/lib/wallet/order-money')
+      await refundOrderToWallet(delivered, 'after-delivery')
+      expect((await orderRow(delivered)).stock_returned_at).toBeNull()
+      expect((await listingRow()).quantity).toBe(2)
+
+      await parkPendingOrders(fx!.buyer.id)
+      const done = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-c-${tag()}` })
+      expect((await confirmOrderPayment(done, 'evt-c')).outcome).toBe('paid')
+      expect((await listingRow()).quantity).toBe(1)
+      await fx!.svc.from('orders').update({ status: 'delivering' }).eq('id', done)
+      await fx!.svc.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', done)
+      const { transition } = await import('@/lib/escrow/transition')
+      await transition(done, 'BUYER_CONFIRMED', undefined, 'buyer_confirmed')
+      expect((await orderRow(done)).status).toBe('completed')
+      expect((await listingRow()).quantity).toBe(1) // claimed at payment — not decremented again
+      await setStock(5)
+    }, 90_000)
+
+    it('the webhook path confirms through the claim', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(2)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-w-${tag()}` })
+      const { handleWebhook } = await import('@/lib/payments/webhook-router')
+      const res = await handleWebhook('fake', sig, JSON.stringify({ chargeId: `fake_${orderId}`, orderId, status: 'paid', amountMinor: '100', currency: CUR }))
+      expect(res.status, res.error).toBe(200)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('paid')
+      expect(row.stock_claimed_at).not.toBeNull()
+      expect(row.paid_at).not.toBeNull()
+      expect((await listingRow()).quantity).toBe(1)
+      await setStock(5)
+    }, 60_000)
+
+    itFault('in-RPC fault after the stock claim rolls back the payment, the stamp and the stock', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      await setStock(2)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P3-f-${tag()}` })
+      const err = withFault('order_confirm_payment:after_stock', `SELECT public.order_confirm_payment('${orderId}'::uuid, 'fault')`)
+      expect(err).toMatch(/injected fault at order_confirm_payment:after_stock/)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('pending')
+      expect(row.paid_at).toBeNull()
+      expect(row.stock_claimed_at).toBeNull()
+      expect((await listingRow()).quantity).toBe(2)
+      expect(await txnByKey(`order:${orderId}:CHARGE_CONFIRMED:fault`)).toBeNull()
+      await setStock(5)
+    }, 60_000)
+  })
+
+  describe('PAY-015 — inventory_claim_for_order releases codes to paid orders only', () => {
+    it('refuses a new claim on a pending order; a paid order claims', async () => {
+      const { encryptDeliveryData } = await import('@/lib/crypto/delivery-encryption')
+      const { error: ie } = await fx!.svc.from('instant_delivery_inventory').insert([{
+        listing_id: fx!.listingId, delivery_type: 'code', status: 'available',
+        delivery_data: encryptDeliveryData('p15-code'), created_by: fx!.seller.id,
+      }])
+      if (ie) throw new Error(`inventory insert: ${ie.message}`)
+      try {
+        await parkPendingOrders(fx!.buyer.id)
+        const pending = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P15-p-${tag()}` })
+        const refused = await (fx!.svc.rpc as any)('inventory_claim_for_order', { p_order_id: pending })
+        expect(refused.error, 'pending order must not receive a code').not.toBeNull()
+        expect(refused.error.code).toBe('23514')
+        const { count } = await fx!.svc.from('instant_delivery_inventory').select('id', { count: 'exact' }).eq('listing_id', fx!.listingId).eq('status', 'sold').limit(1)
+        expect(count ?? 0).toBe(0)
+
+        const paid = await insertOrder({ status: 'paid', escrow_status: 'held', order_number: `GT-P15-ok-${tag()}` })
+        const ok = await (fx!.svc.rpc as any)('inventory_claim_for_order', { p_order_id: paid })
+        expect(ok.error).toBeNull()
+        expect(ok.data.inventory_id).not.toBeNull()
+      } finally {
+        await fx!.svc.from('orders').update({ instant_delivery_inventory_id: null }).eq('listing_id', fx!.listingId).not('instant_delivery_inventory_id', 'is', null)
+        await fx!.svc.from('instant_delivery_inventory').delete().eq('listing_id', fx!.listingId)
+      }
+    }, 60_000)
+  })
+
+  // ── PAY-008 ────────────────────────────────────────────────────────────────
+  describe('PAY-008 — buyer cancelOrder goes through order_cancel_return_wallet', () => {
+    async function fundAndHold(orderId: string, minor: bigint) {
+      const { error: fund } = await fx!.svc.rpc('wallet_credit', {
+        p_user_id: fx!.buyer.id, p_amount_minor: minor.toString(), p_currency: CUR, p_counterparty: 'refunds',
+        p_idempotency_key: `test:ledger:fix-a:fund:${orderId}`, p_event_ref: 'TEST_FUND', p_order_id: null,
+      } as any)
+      if (fund) throw new Error(fund.message)
+      const { error: spend } = await fx!.svc.rpc('wallet_spend', {
+        p_user_id: fx!.buyer.id, p_amount_minor: minor.toString(), p_currency: CUR, p_target: 'escrow_held',
+        p_idempotency_key: `checkout_wallet:${orderId}`, p_event_ref: 'CHECKOUT_WALLET_CREDIT', p_order_id: orderId,
+      } as any)
+      if (spend) throw new Error(spend.message)
+    }
+
+    it('pending order with a wallet hold: cancelled + hold returned, buyer notified with the held amount', async () => {
+      await parkPendingOrders(fx!.buyer.id)
+      const orderId = await insertOrder({ status: 'pending', escrow_status: 'pending', total_amount: 3, order_number: `GT-P8-p-${tag()}` })
+      await fundAndHold(orderId, 150n)
+      const before = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success, res.error).toBe(true)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('cancelled')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 150n)
+      await new Promise((r) => setTimeout(r, 800)) // comms are fire-and-forget
+      const { data: notes } = await fx!.svc.from('notifications').select('message').eq('user_id', fx!.buyer.id).eq('type', 'order_refunded').like('message', `%${row.order_number}%`)
+      expect((notes ?? []).map((n: any) => n.message).join('\n')).toMatch(/\$1\.50 was refunded/)
+      // Replay: the action refuses a cancelled order (pre-check, as before);
+      // the RPC underneath is idempotent — no second credit either way.
+      expect((await cancelOrder(orderId)).success).toBe(false)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 150n)
+      await fx!.svc.rpc('ledger_test_cleanup', { p_prefix: `test:ledger:fix-a:fund:${orderId}` } as any)
+    }, 60_000)
+
+    it('paid order: cancelled + full total credited to the wallet in one RPC', async () => {
+      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', total_amount: 4, seller_payout: 3, order_number: `GT-P8-paid-${tag()}` })
+      const before = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success, res.error).toBe(true)
+      const row = await orderRow(orderId)
+      expect(row.status).toBe('cancelled')
+      expect(row.escrow_status).toBe('refunded')
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 400n)
+      expect(await txnByKey(`wallet_refund:${orderId}`)).not.toBeNull()
+    }, 60_000)
+
+    it('delivering order: refused, nothing moves; another buyer: unauthorized', async () => {
+      const orderId = await insertOrder({ status: 'delivering', escrow_status: 'held', order_number: `GT-P8-d-${tag()}` })
+      sessionClient = fx!.buyer.client
+      const { cancelOrder } = await import('@/lib/actions/orders')
+      const res = await cancelOrder(orderId)
+      expect(res.success).toBe(false)
+      expect((await orderRow(orderId)).status).toBe('delivering')
+      sessionClient = fx!.admin.client
+      const other = await cancelOrder(orderId)
+      expect(other.success).toBe(false)
+      expect(other.error).toMatch(/Unauthorized|not found/i)
+    }, 60_000)
+  })
+
+  // ── PAY-005 / PAY-006 / PAY-007 / PAY-014 (createCheckout) ────────────────
+  describe('createCheckout — PAY-005/006/007/014', () => {
+    const rlKey = () => `checkout:user:${fx!.buyer.id}`
+    async function clearRateLimit() {
+      await fx!.svc.from('rate_limits').delete().eq('key', rlKey())
+    }
+    async function cancelAllPendingFor(buyerId: string) {
+      const { data } = await fx!.svc.from('orders').select('id').eq('buyer_id', buyerId).eq('status', 'pending')
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      for (const o of (data ?? []) as any[]) await cancelOrderReturnWallet(o.id, 'test-reset')
+    }
+
+    it('PAY-005: a racing pending order still creating its charge is neither superseded nor re-charged', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      // The "winner": inserted seconds ago with a `created` payment attempt
+      // (round B: the attempt row, not a url-less order, is the in-flight
+      // marker — createCharge has not answered yet).
+      const inFlight = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P5-${tag()}` })
+      const { data: att, error: ae } = await fx!.svc.from('payment_attempts').insert({
+        order_id: inFlight, provider: 'fake', status: 'created', amount_minor: 107, currency: CUR, order_total_minor: 107,
+        expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+      }).select('id').single()
+      if (ae) throw new Error(`attempt insert: ${ae.message}`)
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/being prepared/)
+      const row = await orderRow(inFlight)
+      expect(row.status).toBe('pending')
+      expect(row.provider_charge_id).toBeNull() // never charged by the loser
+      expect(row.checkout_url).toBeNull()
+      const { data: same } = await fx!.svc.from('payment_attempts').select('status, provider_charge_id').eq('id', (att as any).id).single()
+      expect(same).toMatchObject({ status: 'created', provider_charge_id: null })
+
+      // A STALE created attempt (older than the in-flight window: the minting
+      // request died) is superseded as before — the order is cancelled and
+      // its attempt closed as void.
+      await fx!.svc.from('payment_attempts').update({ created_at: new Date(Date.now() - 10 * 60_000).toISOString() }).eq('id', (att as any).id)
+      const r2 = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r2.success, r2.error).toBe(true)
+      expect(r2.orderId).not.toBe(inFlight)
+      createdOrderIds.push(r2.orderId!)
+      expect((await orderRow(inFlight)).status).toBe('cancelled')
+      const { data: closed } = await fx!.svc.from('payment_attempts').select('status').eq('id', (att as any).id).single()
+      expect((closed as any).status).toBe('void')
+      expect((await orderRow(r2.orderId!)).payment_expires_at).not.toBeNull()
+    }, 90_000)
+
+    it('PAY-006: provider createCharge failure cancels the order and returns the wallet hold; the copy is truthful', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const { error: fund } = await fx!.svc.rpc('wallet_credit', {
+        p_user_id: fx!.buyer.id, p_amount_minor: '50', p_currency: CUR, p_counterparty: 'refunds',
+        p_idempotency_key: `test:ledger:fix-a:fund:p6:${tag()}`, p_event_ref: 'TEST_FUND', p_order_id: null,
+      } as any)
+      if (fund) throw new Error(fund.message)
+      const walletBefore = await walletMinor(fx!.buyer.id)
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      failCreateChargeOnce = true
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/back in your wallet/)
+      expect(r.error).not.toMatch(/503|upstream/) // provider internals never reach the buyer
+      const { data: rows } = await fx!.svc.from('orders').select('id, status, payment_expires_at, provider_charge_id')
+        .eq('buyer_id', fx!.buyer.id).eq('listing_id', fx!.listingId).order('created_at', { ascending: false }).limit(1)
+      const row = (rows as any[])[0]
+      createdOrderIds.push(row.id)
+      expect(row.status).toBe('cancelled')
+      expect(row.provider_charge_id).toBeNull()
+      expect(row.payment_expires_at).not.toBeNull() // stamped at insert (sweepable even if the cancel had failed)
+      expect(await walletMinor(fx!.buyer.id)).toBe(walletBefore) // hold returned
+      expect(await txnByKey(`wallet_refund:${row.id}`)).not.toBeNull()
+    }, 90_000)
+
+    it('PAY-007: at most 5 open pending orders per buyer', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const { data: base } = await fx!.svc.from('listings').select('game_id, game_category_id').eq('id', fx!.listingId).single()
+      const extra: string[] = []
+      for (let i = 0; i < 5; i++) {
+        const { data: l, error } = await fx!.svc.from('listings').insert({
+          seller_id: fx!.seller.id, game_id: (base as any).game_id, game_category_id: (base as any).game_category_id,
+          title: `GUARD-TEST-p7-${i}-${tag()}`, description: 'cap test', price: 1, quantity: 5, status: 'active',
+        }).select('id').single()
+        if (error) throw new Error(`listing insert: ${error.message}`)
+        extra.push((l as any).id)
+        await insertOrder({ listing_id: (l as any).id, status: 'pending', escrow_status: 'pending', order_number: `GT-P7-${i}-${tag()}` })
+      }
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/orders awaiting payment/)
+      const { count } = await fx!.svc.from('orders').select('id', { count: 'exact' }).eq('buyer_id', fx!.buyer.id).eq('status', 'pending').limit(1)
+      expect(count).toBe(5)
+      await cancelAllPendingFor(fx!.buyer.id)
+      for (const id of extra) await fx!.svc.from('orders').delete().eq('listing_id', id)
+      await fx!.svc.from('listings').delete().in('id', extra)
+    }, 120_000)
+
+    it('PAY-007: the checkout budget is charged per buyer inside the action', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      for (let i = 0; i < 20; i++) {
+        const { error } = await (fx!.svc as any).rpc('rate_limit_hit', { p_key: rlKey(), p_limit: 20, p_window_seconds: 60 })
+        if (error) throw new Error(`rate_limit_hit: ${error.message}`)
+      }
+      sessionClient = fx!.buyer.client
+      const { createCheckout } = await import('@/lib/actions/checkout')
+      const r = await createCheckout({ listingId: fx!.listingId, quantity: 1 })
+      expect(r.success).toBe(false)
+      expect(r.error).toMatch(/Too many checkout attempts/)
+      await clearRateLimit()
+    }, 60_000)
+
+    it('PAY-014: promo caps bind inside the RPC; checkout awaits the usage', async () => {
+      await clearRateLimit()
+      await cancelAllPendingFor(fx!.buyer.id)
+      const code = `GTA${tag().toUpperCase()}`
+      const { data: promo, error } = await fx!.svc.from('promo_codes').insert({
+        code, type: 'flat', value: 0.5, usage_limit: 1, per_user_limit: 5, is_active: true,
+      }).select('id').single()
+      if (error) throw new Error(`promo insert: ${error.message}`)
+      const promoId = (promo as any).id
+      try {
+        sessionClient = fx!.buyer.client
+        const { createCheckout } = await import('@/lib/actions/checkout')
+        const first = await createCheckout({ listingId: fx!.listingId, quantity: 1, promoCode: code })
+        expect(first.success, first.error).toBe(true)
+        createdOrderIds.push(first.orderId!)
+        // Awaited, not fire-and-forget: the usage row exists when the action returns.
+        const { count } = await fx!.svc.from('promo_code_usages').select('id', { count: 'exact' }).eq('promo_code_id', promoId).limit(1)
+        expect(count).toBe(1)
+
+        // The cap is enforced by the RPC itself (the lock holder), not only by the pre-validation.
+        const other = await insertOrder({ buyer_id: fx!.admin.id, status: 'pending', escrow_status: 'pending', order_number: `GT-P14-${tag()}` })
+        const refused = await (fx!.svc.rpc as any)('promo_usage_record', {
+          p_promo_code_id: promoId, p_order_id: other, p_user_id: fx!.admin.id, p_discount_amount: 0.5,
+        })
+        expect(refused.error).not.toBeNull()
+        expect(refused.error.code).toBe('23514')
+        expect(refused.error.message).toMatch(/usage limit/)
+        const { data: p } = await fx!.svc.from('promo_codes').select('total_used').eq('id', promoId).single()
+        expect((p as any).total_used).toBe(1)
+
+        // Per-user cap, same lock.
+        await fx!.svc.from('promo_codes').update({ usage_limit: 10, per_user_limit: 1 }).eq('id', promoId)
+        await parkPendingOrders(fx!.buyer.id)
+        const again = await insertOrder({ status: 'pending', escrow_status: 'pending', order_number: `GT-P14-u-${tag()}` })
+        const perUser = await (fx!.svc.rpc as any)('promo_usage_record', {
+          p_promo_code_id: promoId, p_order_id: again, p_user_id: fx!.buyer.id, p_discount_amount: 0.5,
+        })
+        expect(perUser.error?.message ?? '').toMatch(/per-user limit/)
+      } finally {
+        await fx!.svc.from('promo_code_usages').delete().eq('promo_code_id', promoId)
+        await fx!.svc.from('promo_codes').delete().eq('id', promoId)
+      }
+    }, 90_000)
+  })
+})

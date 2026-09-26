@@ -11,8 +11,11 @@
  *   the withdrawal_requests flow.
  */
 
-'use server'
-
+// AUTH-004 — this is a LIBRARY, not an action file. With 'use server' here every
+// export (generateLoginLink(accountId), generateOnboardingLink(accountId), …)
+// was a directly-invokable server action taking an ARBITRARY Stripe account id.
+// Entry points live in src/lib/actions/stripe-connect.ts, which authenticates
+// and passes the session user's own ids.
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'

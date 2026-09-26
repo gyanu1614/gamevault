@@ -6,7 +6,8 @@
  * add/edit flow. Apple-feel using existing glass-* primitives.
  *
  * Steps:
- *   1. Identity   — name, slug, display_name, emoji, sort_order
+ *   1. Identity   — name, slug, display_name, emoji, sort_order,
+ *                  content_tier, ecosystem
  *   2. Branding   — logo upload (existing uploadGameIcon endpoint)
  *   3. Categories — toggle each of the 5 global categories; per-pair
  *      settings (region/platform/delivery modes) appear when enabled
@@ -25,7 +26,7 @@ import {
   ArrowLeft, ArrowRight, Check, Loader2, Upload, Image as ImageIcon,
   Trash2, AlertCircle, Globe2, Monitor, Zap, Clock, Sparkles, Save,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, slugify } from '@/lib/utils'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
   saveGameIdentity,
@@ -38,6 +39,12 @@ import {
   type GameDetail,
   type GameCategoryRow,
 } from '@/lib/actions/admin-game-wizard'
+import {
+  GAME_CONTENT_TIERS,
+  GAME_ECOSYSTEMS,
+  type GameContentTier,
+  type GameEcosystem,
+} from '@/lib/games/validate-game'
 
 // ─── Types passed in by the server-rendered route wrapper ────────────────────
 
@@ -82,15 +89,6 @@ function defaultsForCategory(slug: string): {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
 
 const STEPS = [
   { id: 1, label: 'Identity',    description: 'Name, slug, display' },
@@ -229,6 +227,14 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   const [displayName, setDisplayName] = useState(game?.display_name ?? '')
   const [emoji, setEmoji] = useState(game?.emoji ?? '🎮')
   const [sortOrder, setSortOrder] = useState<number>(game?.sort_order ?? 99)
+  // Phase 1 · Step 1 — two-tier catalogue. `listed` is the default: a new game
+  // is marketplace-only until someone actually builds a values hub for it.
+  const [contentTier, setContentTier] = useState<GameContentTier>(
+    (game?.content_tier as GameContentTier) ?? 'listed',
+  )
+  const [ecosystem, setEcosystem] = useState<GameEcosystem | ''>(
+    (game?.ecosystem as GameEcosystem) ?? '',
+  )
   const [isActive, setIsActive] = useState<boolean>(game?.is_active ?? true)
   const [slugDirty, setSlugDirty] = useState(mode === 'edit') // don't auto-rewrite slug for existing games
 
@@ -311,6 +317,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       emoji,
       sort_order: sortOrder,
       is_active: isActive,
+      content_tier: contentTier,
+      ecosystem: ecosystem || null,
     })
     setIsSaving(false)
     if (!result.success) {
@@ -563,6 +571,39 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                   min={0}
                   max={9999}
                 />
+              </div>
+
+              <div>
+                <Label hint="listed = marketplace only; data = has a values hub">
+                  Content tier
+                </Label>
+                <select
+                  className="w-full rounded-xl border border-border-default bg-bg-base px-3 py-2 text-body-sm text-text-primary"
+                  value={contentTier}
+                  onChange={(e) => setContentTier(e.target.value as GameContentTier)}
+                >
+                  {GAME_CONTENT_TIERS.map((t) => (
+                    <option key={t} value={t}>
+                      {t === 'listed' ? 'Listed — marketplace only' : 'Data — values/content hub'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label hint="drives SEO copy and category defaults">Platform</Label>
+                <select
+                  className="w-full rounded-xl border border-border-default bg-bg-base px-3 py-2 text-body-sm text-text-primary"
+                  value={ecosystem}
+                  onChange={(e) => setEcosystem(e.target.value as GameEcosystem | '')}
+                >
+                  <option value="">— Not set —</option>
+                  {GAME_ECOSYSTEMS.map((eco) => (
+                    <option key={eco} value={eco}>
+                      {eco}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="sm:col-span-2 flex items-center justify-between rounded-xl border border-border-default bg-bg-base px-4 py-3">
@@ -879,7 +920,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           )}
                           {!gameId && (
                             <p className="text-[10px] text-text-disabled">
-                              Save identity step first, then come back here to edit this category's attribute template.
+                              Save identity step first, then come back here to edit this category&apos;s attribute template.
                             </p>
                           )}
                         </div>
@@ -900,6 +941,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 <ReviewRow label="Display name" value={displayName || '—'} />
                 <ReviewRow label="Emoji" value={emoji || '—'} />
                 <ReviewRow label="Sort order" value={String(sortOrder)} />
+                <ReviewRow label="Content tier" value={contentTier} />
+                <ReviewRow label="Platform" value={ecosystem || '— not set —'} />
                 <ReviewRow label="Status" value={isActive ? 'Active' : 'Paused'} />
                 <ReviewRow label="Logo" value={logoUrl ? 'Uploaded' : 'Emoji fallback'} />
                 <ReviewRow label="Cover art" value={coverUrl ? 'Uploaded' : 'None yet'} />

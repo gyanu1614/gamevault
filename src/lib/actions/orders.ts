@@ -3,366 +3,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
-import { logOrderAction, logUnauthorizedAccess, logFailure } from '@/lib/audit'
-import { rateLimitCreateOrder } from '@/lib/utils/rate-limit'
-import { buyerFee, commissionAmount, protectionWindowHours, round2, WARRANTY_ENABLED } from '@/lib/fees'
+import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
-import { transition } from '@/lib/escrow/transition'
-import { refundToWallet } from '@/lib/wallet/wallet'
-
-// P4.1 — import tier helpers from shared util (not from server action)
-import { getTierFeeRate, TIER_WARRANTY_HOURS } from '@/lib/utils/safedrop-tiers'
-import type { SafeDropTier } from '@/lib/utils/safedrop-tiers'
+import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
-// P5.3 — Promo code usage
-import { recordPromoUsage } from '@/lib/actions/promo'
-
-interface CreateOrderData {
-  paymentIntentId: string
-  listingId: string
-  quantity: number
-  safedropTier?: SafeDropTier   // P4.1 — buyer-chosen tier (default: 'standard')
-  isGuest?: boolean
-  guestEmail?: string
-  promoCodeId?: string                // P5.3 — promo code applied
-  promoDiscount?: number              // P5.3 — discount amount (already applied to Stripe charge)
-}
-
-/**
- * Create a new order after successful payment
- */
-export async function createOrder(data: CreateOrderData): Promise<{
-  success: boolean
-  orderId?: string
-  error?: string
-}> {
-  try {
-    const supabase = await createClient()
-
-    // ✅ SECURITY: Derive buyerId from authenticated user only (never trust client)
-    let buyerId: string
-
-    if (data.isGuest && data.guestEmail) {
-      // Handle guest checkout
-      const guestResult = await handleGuestCheckout(data.guestEmail)
-      if (!guestResult.success || !guestResult.userId) {
-        return {
-          success: false,
-          error: guestResult.error || 'Failed to process guest checkout',
-        }
-      }
-      buyerId = guestResult.userId
-    } else {
-      // Require authentication for non-guest checkout
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        return {
-          success: false,
-          error: 'Authentication required',
-        }
-      }
-
-      buyerId = user.id
-    }
-
-    // ✅ SECURITY: Rate limiting - 5 orders per minute per user
-    if (!rateLimitCreateOrder(buyerId)) {
-      return {
-        success: false,
-        error: 'Too many order attempts. Please wait 1 minute before trying again.',
-      }
-    }
-
-    // Get listing with seller info
-    const { data: listingRaw, error: listingError } = await supabase
-      .from('listings')
-      .select(`
-        *,
-        seller:seller_id (
-          id,
-          seller_tier,
-          founding_seller,
-          username
-        ),
-        game:game_id ( slug ),
-        category:category_id ( slug, metadata )
-      `)
-      .eq('id', data.listingId)
-      .single() as any
-    // Cast: Supabase narrow-select inference returns `never` against hand-written database.ts
-    const listing = listingRaw as any
-
-    if (listingError || !listing) {
-      return {
-        success: false,
-        error: 'Listing not found',
-      }
-    }
-
-    // ✅ SECURITY: Verify listing is active
-    if (listing.status !== 'active') {
-      return {
-        success: false,
-        error: 'Listing is not available for purchase',
-      }
-    }
-
-    // ✅ SECURITY: Prevent buying own listing
-    if (listing.seller_id === buyerId) {
-      return {
-        success: false,
-        error: 'Cannot purchase your own listing',
-      }
-    }
-
-    // ✅ SECURITY: Check stock availability
-    if (!listing.is_unlimited && listing.quantity < data.quantity) {
-      return {
-        success: false,
-        error: `Insufficient stock. Only ${listing.quantity} items available`,
-      }
-    }
-
-    // P4.1 — Validate buyer-chosen tier (server-side, never trust client blindly)
-    const validTiers: SafeDropTier[] = ['standard', 'enhanced', 'premium']
-    const safedropTier: SafeDropTier =
-      data.safedropTier && validTiers.includes(data.safedropTier)
-        ? data.safedropTier
-        : 'standard'
-
-    // Calculate amounts — fee spec (lib/fees): buyer pays one Processing &
-    // Buyer Protection fee; seller pays a per-category commission on the
-    // item price only.
-    const subtotal = round2(listing.price * data.quantity)
-    const fee = buyerFee(subtotal)
-    const feeInput = {
-      categoryMetaType: listing.category?.metadata?.type as string | undefined,
-      categorySlug: listing.category?.slug as string | undefined,
-      gameSlug: listing.game?.slug as string | undefined,
-      // Founding sellers pay a permanently reduced commission (lib/fees).
-      // Read straight off the listing's seller join — no extra round-trip.
-      isFounding: listing.seller?.founding_seller === true,
-    }
-    const commission = commissionAmount(subtotal, feeInput)
-
-    // P4.1 — Tier fee (recalculated server-side; warranty upsells are
-    // feature-flagged OFF until payout caps are configured — spec §4)
-    const tierFeeRate = WARRANTY_ENABLED ? getTierFeeRate(safedropTier) : 0
-    const tierFee = round2(subtotal * (tierFeeRate / 100))
-
-    // P5.3 — Promo discount (already deducted from charge; reflect in order total)
-    const promoDiscount = Math.min(data.promoDiscount ?? 0, subtotal)
-    const totalAmount   = round2(subtotal + fee.amount + tierFee - promoDiscount)
-    const sellerPayout  = round2(subtotal - commission) // seller unaffected by promo
-
-    // P4.1 — Protection until: 30 days; warranty_expires_at based on tier
-    const now = new Date()
-    const protectionUntil = new Date(now)
-    protectionUntil.setDate(protectionUntil.getDate() + 30)
-
-    const warrantyHours = TIER_WARRANTY_HOURS[safedropTier]
-    const warrantyExpiresAt = new Date(now.getTime() + warrantyHours * 60 * 60 * 1000)
-
-    // Delivery evidence required for Enhanced+ (manual/screenshot proof) or large orders
-    const deliveryEvidenceRequired = safedropTier !== 'standard' || subtotal >= 100
-
-    // Insert order
-    const { data: orderRaw, error: orderError } = await (supabase
-      .from('orders')
-      .insert as any)({
-        buyer_id: buyerId,
-        seller_id: listing.seller_id,
-        listing_id: data.listingId,
-        quantity: data.quantity,
-        unit_price: listing.price,
-        subtotal: subtotal,
-        platform_fee_rate: fee.marketplacePct,
-        payment_processing_fee_rate: fee.processingPct,
-        platform_fee: fee.marketplaceAmount,
-        payment_processing_fee: fee.processingAmount,
-        total_amount: totalAmount,
-        seller_payout: sellerPayout,
-        stripe_payment_intent_id: data.paymentIntentId,
-        status: 'paid',
-        escrow_status: 'held',
-        delivering_at: now.toISOString(), // Timer starts immediately on payment — seller cannot delay the clock
-        protection_until: protectionUntil.toISOString(),
-        auto_release_at: null,
-        delivery_evidence_required: deliveryEvidenceRequired,
-        vaultshield_level:          safedropTier,
-        vaultshield_tier_fee_rate:  tierFeeRate,
-        vaultshield_tier_fee:       tierFee,
-        warranty_expires_at:        warrantyExpiresAt.toISOString(),
-        is_guest_order:             data.isGuest || false,
-        // P5.3 — promo code
-        promo_code_id:  data.promoCodeId  ?? null,
-        promo_discount: promoDiscount,
-      } as any)
-      .select()
-      .single()
-    // Cast: Supabase narrow-select inference returns `never` against hand-written database.ts
-    const order = orderRaw as any
-
-    if (orderError) {
-      console.error('Error creating order:', orderError)
-      // ✅ AUDIT: Log order creation failure
-      await logFailure('order_created', 'orders', orderError.message, data.listingId)
-      // V21/P3.g — Surface the actual DB error in dev so missing columns
-      // or RLS issues are diagnosable without grepping server logs. The
-      // generic message stays as the fallback for production.
-      const isDev = process.env.NODE_ENV !== 'production'
-      return {
-        success: false,
-        error: isDev
-          ? `Failed to create order: ${orderError.message ?? 'unknown DB error'}`
-          : 'Failed to create order',
-      }
-    }
-
-    // ✅ AUDIT: Log successful order creation
-    await logOrderAction('created', order.id, undefined, {
-      buyer_id: order.buyer_id,
-      seller_id: order.seller_id,
-      listing_id: order.listing_id,
-      total_amount: order.total_amount,
-      vaultshield_level: order.vaultshield_level,
-    })
-
-    // P5.3 — Record promo usage (fire-and-forget)
-    if (data.promoCodeId && promoDiscount > 0) {
-      recordPromoUsage({
-        promoCodeId:    data.promoCodeId,
-        orderId:        order.id,
-        discountAmount: promoDiscount,
-        userId:         buyerId,
-      }).catch(() => {})
-    }
-
-    // Handle instant delivery if applicable
-    if (listing.delivery_method === 'instant') {
-      try {
-        console.log('[CreateOrder] Triggering instant delivery for order:', order.id)
-        const { deliverCodeToBuyer } = await import('@/lib/actions/instant-delivery')
-        const deliveryResult = await deliverCodeToBuyer(order.id, buyerId)
-
-        if (deliveryResult.success && deliveryResult.code) {
-          console.log('[CreateOrder] ✅ Instant delivery completed, marking order as completed')
-
-          // Mark order as completed immediately for instant delivery
-          // This triggers the stock decrement and finalizes the order
-          await (supabase
-            .from('orders')
-            .update as any)({
-              status: 'completed',
-              completed_at: new Date().toISOString(),
-            })
-            .eq('id', order.id)
-
-          console.log('[CreateOrder] Order marked as completed')
-        } else {
-          console.error('[CreateOrder] ❌ Instant delivery failed:', deliveryResult.error)
-          // Non-fatal - order still created successfully
-        }
-      } catch (deliveryError) {
-        console.error('[CreateOrder] Instant delivery error:', deliveryError)
-        // Non-fatal - order still valid, seller can deliver manually
-      }
-    }
-
-    // Create conversation between buyer and seller for this order
-    try {
-      const { error: conversationError } = await (supabase
-        .from('conversations')
-        .insert as any)({
-          buyer_id: buyerId,
-          seller_id: listing.seller_id,
-          listing_id: data.listingId,
-          order_id: order.id,
-          last_message_at: new Date().toISOString(),
-        })
-
-      if (conversationError) {
-        console.error('Error creating conversation:', conversationError)
-        // Don't fail the order if conversation creation fails
-      } else {
-        // Send automatic welcome message
-        await (supabase
-          .from('messages')
-          .insert as any)({
-            conversation_id: (await supabase
-              .from('conversations')
-              .select('id')
-              .eq('order_id', order.id)
-              .single() as any
-            ).data?.id,
-            sender_id: listing.seller_id,
-            content: `Hi! Thank you for your purchase of "${listing.title}". I'll deliver your order shortly. Feel free to message me if you have any questions!`,
-            is_read: false,
-          })
-      }
-    } catch (error) {
-      console.error('Error setting up order conversation:', error)
-      // Don't fail the order
-    }
-
-    // Note: Stock quantity is decremented by the DB trigger `on_order_completed`
-    // which fires when order status → 'completed'. This prevents double-deduction.
-    // We do NOT decrement here at order creation to avoid counting the same purchase twice.
-
-    // Send welcome email for guest users
-    if (data.isGuest && data.guestEmail) {
-      const guestEmail = data.guestEmail
-      await (async () => {
-        const { sendGuestWelcomeEmail } = await import('@/lib/email')
-        await sendGuestWelcomeEmail({
-          to: guestEmail,
-          orderNumber: order.order_number || order.id.slice(0, 8).toUpperCase(),
-          orderId: order.id,
-        })
-      })().catch((err) => console.error('[CreateOrder] Guest welcome email failed:', err))
-    }
-
-    // TODO: Send order confirmation emails
-    // await sendOrderConfirmationEmail(buyerId, order.id)
-    // await sendNewOrderEmail(listing.seller_id, order.id)
-
-    // Workstream E — DO NOT re-add a pre-payment seller notification here.
-    // createOrder is legacy/dead (no live callers — the live path is
-    // createCheckout, which mints a 'pending' order confirmed only by the
-    // CoinGate webhook). The seller's 'new_order' bell notification is now
-    // emitted exactly once, on the webhook's APPLIED CHARGE_CONFIRMED
-    // transition (src/lib/payments/notify.ts). Notifying the seller at order
-    // creation — before payment — would surface an order they're gated out of
-    // (pending orders are hidden from sellers) and would double up with the
-    // webhook notification. Kept intentionally silent.
-
-    revalidatePath('/orders')
-    // V21/P7.d — The previous `/marketplace/{game_id}/{category_id}`
-    // path used UUIDs in a slug-routed URL space — it never matched
-    // a real route. Listing detail revalidates its own page on next
-    // request anyway; revalidating `/` covers the public marketing
-    // surface (homepage features popular listings).
-    revalidatePath('/')
-
-    return {
-      success: true,
-      orderId: order.id,
-    }
-  } catch (error: any) {
-    console.error('Unexpected error creating order:', error)
-    return {
-      success: false,
-      error: error.message || 'Failed to create order',
-    }
-  }
-}
+import { recordReferralCommission } from '@/lib/referral/commission'
 
 /**
  * Get order details
@@ -417,7 +66,7 @@ export async function getOrder(orderId: string): Promise<{
           platform,
           region,
           game_id,
-          category_id
+          game_category_id
         )
       `)
       .eq('id', orderId)
@@ -521,14 +170,12 @@ export async function startDelivering(
       }
     }
 
-    // Update order to delivering status
-    const { error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivering',
-        delivering_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
+    // PR 7: orders.status is a guarded column — every state change is one
+    // service-role RPC (order_mark_delivering → safedrop_transition).
+    const { error: updateError } = await (createServiceRoleClient().rpc as any)('order_mark_delivering', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
+    })
 
     if (updateError) {
       return {
@@ -580,18 +227,12 @@ export async function notifySellerActivity(orderId: string): Promise<void> {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    // The update is atomic + race-safe via the WHERE clause. If two
-    // messages land in the same tick, only the first matching row
-    // flips; the second is a 0-row no-op.
-    await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivering',
-        delivering_at: new Date().toISOString(),
-      })
-      .eq('id', orderId)
-      .eq('seller_id', user.id)
-      .eq('status', 'paid')
+    // The RPC locks the row and only flips a `paid` order owned by this
+    // seller; a second call in the same tick returns changed=false.
+    await (createServiceRoleClient().rpc as any)('order_mark_delivering', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
+    })
 
     revalidatePath(`/account/orders/${orderId}`)
   } catch (e) {
@@ -628,7 +269,7 @@ export async function markOrderAsDelivered(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:category_id ( slug, metadata ) )')
+      .select('*, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:game_categories!listings_game_category_id_fkey ( slug, type ) )')
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
       .single() as any
@@ -646,24 +287,13 @@ export async function markOrderAsDelivered(
       return { success: true }
     }
 
-    // Update order. The per-category protection window (fee spec §1) sets
-    // auto_release_at; the DB trigger only falls back to 48h when the app
-    // doesn't supply one (see update-fee-structure.sql).
-    const windowHours = protectionWindowHours({
-      categoryMetaType: order.listing?.category?.metadata?.type,
-      categorySlug: order.listing?.category?.slug,
-      gameSlug: order.listing?.game?.slug,
+    // PR 7: ONE RPC — SELLER_DELIVERED + delivered_at + auto_release_at from
+    // the admin-editable per-category window (order_completion_windows). The
+    // row lock inside is the race guard; a loser sees changed=false.
+    const { data: delivered, error: updateError } = await (createServiceRoleClient().rpc as any)('order_mark_delivered', {
+      p_order_id: orderId,
+      p_seller_id: user.id,
     })
-    const { data: updatedRows, error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'delivered',
-        delivered_at: new Date().toISOString(),
-        auto_release_at: new Date(Date.now() + windowHours * 3_600_000).toISOString(),
-      })
-      .eq('id', orderId)
-      .in('status', ['paid', 'delivering']) // race guard: only one transition wins
-      .select('id')
 
     if (updateError) {
       console.error('Database error updating order:', updateError)
@@ -674,9 +304,11 @@ export async function markOrderAsDelivered(
     }
 
     // Lost the race (another request already transitioned it) — no comms.
-    if (!updatedRows || updatedRows.length === 0) {
+    if (!delivered || delivered.changed !== true) {
       return { success: true }
     }
+    const windowHours = Number(delivered.window_hours ?? 72)
+    const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())
 
     // Send navbar notification to buyer
     try {
@@ -714,7 +346,7 @@ export async function markOrderAsDelivered(
           orderNumber: (order as any).order_number || orderId.slice(0, 8).toUpperCase(),
           listingTitle: (order as any).listing?.title || 'your item',
           windowHours,
-          confirmBy: new Date(Date.now() + windowHours * 3_600_000).toISOString(),
+          confirmBy,
         })
       }
     })().catch((err) => console.error('[Delivered] Buyer email failed:', err))
@@ -750,17 +382,18 @@ export async function cancelOrder(orderId: string): Promise<{
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
 
-    // Fetch order — must be buyer and status must be 'paid'
+    // Fetch order — must be the buyer; cancellable while pending (unpaid) or
+    // paid-but-undelivered. The RPC re-checks the status under the row lock.
     const { data: orderRaw, error: fetchError } = await supabase
       .from('orders')
-      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number, payment_provider, provider_charge_id')
+      .select('id, buyer_id, seller_id, listing_id, status, escrow_status, currency, total_amount, order_number')
       .eq('id', orderId)
       .single() as any
     const order = orderRaw as any
 
     if (fetchError || !order) return { success: false, error: 'Order not found' }
     if (order.buyer_id !== user.id) {
-      await logUnauthorizedAccess(user.id, 'cancel_order', orderId)
+      await logUnauthorizedAccess('cancel_order', 'orders', orderId)
       return { success: false, error: 'Unauthorized' }
     }
     if (order.status !== 'paid' && order.status !== 'pending') {
@@ -768,45 +401,40 @@ export async function cancelOrder(orderId: string): Promise<{
     }
     const wasUnpaid = order.status === 'pending'
 
-    // Cancel atomically: locks the order, validates paid → cancelled, moves
-    // the held escrow to refunds and flips status in one transaction.
-    const escrowWasHeld = order.escrow_status === 'held'
+    // PAY-008: ONE RPC (DB-015 seam) — locks the order, validates the move,
+    // flips status and returns the buyer's money in the same transaction:
+    //   pending → CANCELLED + exact mirror of the checkout wallet hold;
+    //   paid    → CANCELLED (escrow_held → refunds) + full total credited to
+    //             the wallet as store credit (allowPaid: the buyer's explicit
+    //             cancel is the one caller allowed past 'pending').
+    // The old TS composition (bare transition, then a separate refundToWallet
+    // whose failure was logged as CRITICAL and ignored) could leave a
+    // cancelled order with the buyer's money stranded.
     let cancelResult
     try {
-      cancelResult = await transition(orderId, 'CANCELLED')
-    } catch (transitionError: any) {
-      console.error('Failed to cancel order:', transitionError)
+      // Round B: a pending order's live charge is closed as 'void' and
+      // queued in provider_cancel_outbox inside the same RPC transaction.
+      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true, closeAttemptAs: 'void' })
+    } catch (cancelError: any) {
+      console.error('Failed to cancel order:', cancelError)
       return { success: false, error: 'Cancellation failed — please contact support' }
+    }
+    if (cancelResult.refused) {
+      // Raced past 'paid' (delivery started) between our read and the lock.
+      return { success: false, error: 'Order can only be cancelled before delivery starts' }
     }
     if (!cancelResult.changed) {
       // Already cancelled (double-click / replay) — nothing more to do.
       return { success: true }
     }
+    // Money is back in the wallet exactly when the RPC posted the wallet leg
+    // (a pending order with no wallet hold has nothing to return).
+    const refundIssued = cancelResult.walletTxnId !== null
+    const refundAmount = wasUnpaid
+      ? Number(await heldMinorFor(supabase, orderId)) / 100
+      : (order.total_amount ?? 0)
 
-    // Unpaid (pending) cancel: no provider charge ever settled, but wallet
-    // credit may have been applied at checkout (held for this order). Return
-    // exactly that held amount — the same cross-stream refund the
-    // re-checkout supersede path performs. Idempotent per order.
-    let refundIssued = false
     if (wasUnpaid) {
-      try {
-        const { data: heldRaw } = await (supabase.rpc as any)('checkout_wallet_hold_minor', {
-          p_order_id: orderId,
-        })
-        const heldMinor = BigInt(heldRaw ?? 0)
-        if (heldMinor > 0n) {
-          await refundToWallet({
-            userId: order.buyer_id,
-            amountMinor: heldMinor,
-            currency: (order.currency || 'EUR').toUpperCase(),
-            orderId,
-          })
-          refundIssued = true
-        }
-      } catch (walletError: any) {
-        console.error('[Cancel] CRITICAL: unpaid wallet-hold refund failed:', walletError?.message)
-      }
-
       // The "Order Incomplete" navbar nudge for this order is moot now —
       // webhook cancels clear it in notify.ts, buyer-initiated cancels here.
       await supabase
@@ -816,34 +444,12 @@ export async function cancelOrder(orderId: string): Promise<{
         .eq('type', 'order_incomplete')
         .like('link', `%${orderId}%`)
 
-      // Payssion vouchers stay payable at the provider until told otherwise —
-      // cancel there too so a cancelled order can't be paid into later.
-      // Best-effort; the expiry cron re-tries stragglers.
-      if ((order as any).payment_provider === 'payssion' && (order as any).provider_charge_id) {
-        const { payssionCancelTransaction } = await import('@/lib/payments/providers/payssion')
-        await payssionCancelTransaction((order as any).provider_charge_id).catch((e: any) =>
-          console.error('[Cancel] payssion provider cancel failed:', e)
-        )
-      }
-    }
-
-    // Credit the buyer's wallet with the full amount as store credit.
-    // Idempotent per order ('wallet_refund:<orderId>'), so a replay can't
-    // double-credit. Only when money was actually held for this order.
-    if (!wasUnpaid && escrowWasHeld && (order.total_amount ?? 0) > 0) {
-      try {
-        await refundToWallet({
-          userId: order.buyer_id,
-          amountMinor: BigInt(Math.round((order.total_amount ?? 0) * 100)),
-          currency: (order.currency || 'EUR').toUpperCase(),
-          orderId,
-        })
-        refundIssued = true
-      } catch (walletError: any) {
-        // The order IS cancelled; the wallet credit can be re-run (idempotent
-        // key). Surface loudly but don't undo the cancellation.
-        console.error('[Cancel] CRITICAL: wallet refund credit failed:', walletError?.message)
-      }
+      // The charge (a voucher, an invoice) stays payable at the provider
+      // until voided: drain the outbox row the RPC just wrote. Best-effort —
+      // the reconcile cron retries with backoff; a payment that still lands
+      // is credited to the buyer's wallet by the late-payment path.
+      const { drainCancelOutboxForOrder } = await import('@/lib/payments/cancel-outbox')
+      await drainCancelOutboxForOrder(orderId)
     }
 
     // Best-effort timestamp for the audit trail (status already flipped).
@@ -883,8 +489,8 @@ export async function cancelOrder(orderId: string): Promise<{
           type: 'order_refunded',
           title: refundIssued ? 'Money In Your Wallet' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — $${(order.total_amount ?? 0).toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
-            : `Order #${orderRef} was cancelled — our team is arranging your refund and will confirm once it's issued.`,
+            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
+            : `Order #${orderRef} was cancelled — nothing had been charged.`,
           link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),
         createNotification({
@@ -895,16 +501,16 @@ export async function cancelOrder(orderId: string): Promise<{
           link: `/account/orders/${orderId}`,
         }),
       ])
-      if (buyer?.email) {
+      if (buyer?.email && refundIssued) {
         const { sendOrderRefundedEmail } = await import('@/lib/email')
         await sendOrderRefundedEmail({
           to: buyer.email,
           name: buyer.full_name || buyer.username || 'Gamer',
           orderNumber: orderRef,
           listingTitle: cancelledListing?.title || 'your item',
-          amount: order.total_amount ?? 0,
+          amount: refundAmount,
           destination: 'your DropMarket wallet',
-          pending: !refundIssued,
+          pending: false,
         })
       }
     })().catch((err) => console.error('[Cancel] Refund comms failed:', err))
@@ -917,6 +523,12 @@ export async function cancelOrder(orderId: string): Promise<{
     console.error('Error cancelling order:', error)
     return { success: false, error: error.message || 'Failed to cancel order' }
   }
+}
+
+/** Wallet credit (minor units) that was held for an order at checkout — comms copy only. */
+async function heldMinorFor(supabase: any, orderId: string): Promise<bigint> {
+  const { data } = await (supabase.rpc as any)('checkout_wallet_hold_minor', { p_order_id: orderId })
+  return BigInt(data ?? 0)
 }
 
 /**
@@ -961,73 +573,35 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
-    // An UNPAID order must never be confirmable — without this, a buyer
-    // could walk a pending order straight to 'completed' (found when the
-    // dead PUBLIC_API_URL fallback left every order stuck at 'pending'
-    // yet the test flow still "completed" one).
-    if (order.status === 'pending' || order.status === 'cancelled' || order.status === 'refunded') {
-      return { success: false, error: 'This order has not been paid yet' }
-    }
-
-    // A disputed order's money is frozen — confirming receipt must not
-    // release it while an admin is reviewing. (The transition map allows
-    // disputed → completed for ADMIN resolutions; guard the buyer path.)
-    if (order.status === 'disputed') {
-      return { success: false, error: 'This order is under dispute review' }
-    }
-
-    // If order is not yet delivered, mark as delivered first
-    // This allows buyer to confirm receipt even if seller hasn't marked as delivered
-    const now = new Date().toISOString()
-
-    if (order.status !== 'delivered') {
-      // First transition to delivered. Guarded on escrow_status = 'held' so a
-      // replay racing the CAS below can't drag an already-completed (released)
-      // or disputed (frozen) order's status back to 'delivered'. Zero rows
-      // matched is not an error — the CAS below decides who owns completion.
-      const { error: deliveredError } = await (supabase
-        .from('orders')
-        .update as any)({
-          status: 'delivered',
-          delivered_at: now,
-        })
-        .eq('id', orderId)
-        .eq('escrow_status', 'held')
-
-      if (deliveredError) {
-        console.error('Error marking order as delivered:', deliveredError)
-        return {
-          success: false,
-          error: deliveredError.message || 'Failed to mark order as delivered',
-        }
-      }
-    }
-
-    // Complete atomically through the SafeDrop transition RPC: it locks the
-    // order row, validates delivered → completed, posts the ledger journal
-    // (escrow_held → platform take + seller_available — the seller's payout
-    // is credited to their internal seller balance, NOT a Stripe transfer)
-    // and flips status/escrow_status in ONE DB transaction. The row lock +
-    // idempotent journal replace the old CAS + transferEscrowToSeller pair:
-    // exactly one caller (buyer confirm vs auto-release cron) applies the
-    // move; the loser sees changed=false.
-    let release
-    try {
-      release = await transition(orderId, 'BUYER_CONFIRMED', undefined, 'buyer_confirmed')
-    } catch (transitionError: any) {
-      console.error('Database error completing order:', transitionError)
+    // PR 7: ONE RPC — (SELLER_DELIVERED if the seller never marked it) +
+    // BUYER_CONFIRMED release with the maturity hold, in one transaction. The
+    // RPC refuses (changed=false + reason) unpaid, disputed and already-
+    // released orders, and locks the row so exactly one of buyer confirm /
+    // auto-complete applies the move; the loser sees changed=false.
+    const { data: release, error: releaseError } = await (createServiceRoleClient().rpc as any)('order_confirm_receipt', {
+      p_order_id: orderId,
+      p_buyer_id: user.id,
+    })
+    if (releaseError) {
+      console.error('Database error completing order:', releaseError)
       return {
         success: false,
-        error: transitionError?.message || 'Failed to complete order',
+        error: releaseError.message || 'Failed to complete order',
       }
     }
 
-    if (!release.changed) {
-      // Lost the race: another path (auto-release cron, concurrent confirm)
-      // already completed the order. The winner owns the seller credit and
-      // completion comms — doing them here would double-send.
+    if (!release || release.changed !== true) {
+      const reason = String(release?.reason ?? '')
+      if (reason === 'not_paid') return { success: false, error: 'This order has not been paid yet' }
+      if (reason === 'disputed') return { success: false, error: 'This order is under dispute review' }
+      // already_completed / not_held / race lost: the winner owns the seller
+      // credit and completion comms — doing them here would double-send.
       return { success: true }
     }
+
+    // Completion decrements stock (trigger) — keep the public listing pages in
+    // step, exactly as transition() does for the auto-complete path.
+    await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
 
     // Buyer completion receipt (fire-and-forget, non-blocking). When
     // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
@@ -1108,6 +682,14 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       awardCashback({ orderId }).catch(() => {})
     }
 
+    // DB-017 — the referrer's commission (10% of the platform fee, read from
+    // the order row) was never recorded: recordReferralCommission had no
+    // caller. Fire-and-forget like cashback; once per order (partial unique
+    // index referral_earnings_one_commission_per_order).
+    recordReferralCommission(orderId).catch((err) =>
+      console.error('[Orders] referral commission failed (retryable):', err)
+    )
+
     // Revalidate both seller and buyer paths for real-time updates
     revalidatePath(`/account/orders/${orderId}`)
     revalidatePath('/account/loyalty')
@@ -1174,56 +756,31 @@ export async function openDispute(
       }
     }
 
-    // Check if order can be disputed
-    if (order.status === 'completed' || order.status === 'refunded') {
-      return {
-        success: false,
-        error: 'This order cannot be disputed',
+    // PR 7: ONE RPC — window check (dispute_window_days from delivered_at),
+    // one-open-per-order, BUYER_DISPUTED through safedrop_transition (freezes
+    // the seller amount after completion), disputes row, audit row and the
+    // two deduped in-app notifications, all in one transaction.
+    const { data: opened, error: openError } = await (createServiceRoleClient().rpc as any)('order_dispute_open', {
+      p_order_id: orderId,
+      p_actor_id: user.id,
+      p_actor_role: 'buyer',
+      p_reason: dbCategory,
+      p_title: `Order #${order.order_number || orderId.slice(0, 8)} - ${category}`,
+      p_description: reason,
+    })
+    if (openError) {
+      console.error('Database error opening dispute:', openError)
+      return { success: false, error: openError.message || 'Failed to open dispute' }
+    }
+    if (!opened || opened.opened !== true) {
+      const why = String(opened?.reason ?? '')
+      if (why === 'window_closed') {
+        return { success: false, error: `The dispute window for this order closed on ${new Date(opened.window_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}. Contact support if you still need help.` }
       }
+      if (why === 'already_open') return { success: false, error: 'A dispute is already open for this order' }
+      return { success: false, error: 'This order cannot be disputed' }
     }
-
-    // Update order to disputed status
-    const { error: updateError } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'disputed',
-        escrow_status: 'frozen',
-        disputed_at: new Date().toISOString(),
-        dispute_reason: reason,
-      })
-      .eq('id', orderId)
-
-    if (updateError) {
-      console.error('Database error opening dispute:', updateError)
-      return {
-        success: false,
-        error: updateError.message || 'Failed to open dispute',
-      }
-    }
-
-    // Create dispute record in disputes table
-    const disputeTitle = `Order #${order.order_number || orderId.slice(0, 8)} - ${category}`
-
-    const { error: disputeError } = await (supabase
-      .from('disputes')
-      .insert as any)({
-        transaction_id: orderId,
-        order_reference: order.order_number || orderId.slice(0, 8),
-        buyer_id: order.buyer_id,
-        seller_id: order.seller_id,
-        reason: dbCategory as any,
-        title: disputeTitle,
-        description: reason,
-        disputed_amount: order.total_amount,
-        status: 'open',
-        priority: 'normal',
-      })
-
-    if (disputeError) {
-      console.error('Error creating dispute record:', disputeError)
-      // Don't fail the whole operation if dispute record creation fails
-      // The order is already marked as disputed
-    }
+    const disputeError = null
 
     // Send dispute notification message to order conversation
     try {
@@ -1255,20 +812,7 @@ export async function openDispute(
       // Non-fatal - dispute is already created
     }
 
-    // Create navbar notifications for both buyer and seller
-    try {
-      const { createDisputeNotifications } = await import('@/lib/utils/notifications')
-      await createDisputeNotifications({
-        buyerId: order.buyer_id,
-        sellerId: order.seller_id,
-        orderId,
-        orderNumber: order.order_number,
-      })
-      console.log('[Dispute] Navbar notifications created for buyer and seller')
-    } catch (error) {
-      console.error('[Dispute] Failed to create navbar notifications:', error)
-      // Non-fatal - dispute is already created
-    }
+    // In-app notifications for both parties were written by the RPC (notify_once).
 
     // Notify admin team
     try {
@@ -1339,99 +883,6 @@ export async function openDispute(
     return {
       success: false,
       error: error.message || 'Failed to open dispute',
-    }
-  }
-}
-
-/**
- * Handle guest checkout - create account if needed
- */
-export async function handleGuestCheckout(email: string): Promise<{
-  success: boolean
-  userId?: string
-  error?: string
-}> {
-  try {
-    const supabase = await createClient()
-
-    // Check if user already exists by email
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle() as any
-
-    if (existingProfile) {
-      return {
-        success: true,
-        userId: existingProfile.id,
-      }
-    }
-
-    // Create guest user account
-    // Generate a random password (guest won't know it, they'll reset via email)
-    const randomPassword = crypto.randomUUID() + crypto.randomUUID()
-
-    // Create auth user
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password: randomPassword,
-      options: {
-        data: {
-          is_guest: true,
-          created_via: 'guest_checkout',
-        },
-      },
-    })
-
-    if (signUpError || !authData.user) {
-      console.error('Error creating guest auth user:', signUpError)
-      return {
-        success: false,
-        error: 'Failed to create guest account. Please try again or sign up manually.',
-      }
-    }
-
-    const userId = authData.user.id
-
-    // Create profile (should be auto-created by trigger, but ensure it exists)
-    const { error: profileError } = await (supabase
-      .from('profiles')
-      .upsert as any)({
-        id: userId,
-        email,
-        username: `guest_${userId.substring(0, 8)}`,
-        is_guest: true,
-        created_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
-
-    if (profileError) {
-      console.error('Error creating guest profile:', profileError)
-      // Don't fail here - profile might exist from trigger
-    }
-
-    // Send the account-claim link: the account was created with a random
-    // password the guest never sees, so this password-setup email is how
-    // they claim it. Never fail checkout if the email fails.
-    await (async () => {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
-      })
-      if (resetError) throw resetError
-    })().catch((err) => console.error('[GuestCheckout] Account-claim email failed:', err))
-
-    console.log(`Guest account created for ${email} with ID ${userId}`)
-
-    return {
-      success: true,
-      userId,
-    }
-  } catch (error: any) {
-    console.error('Error handling guest checkout:', error)
-    return {
-      success: false,
-      error: error.message || 'Failed to process guest checkout',
     }
   }
 }

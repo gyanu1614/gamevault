@@ -197,6 +197,20 @@
     border-radius: 0;
   }
 
+  /* Sell wizard (.sell-form). Every text field there shows focus through
+     its OWN border, which turns near-white. The site-wide ring above
+     doubled that — and on fields with an affix ($ … USD, 1,000 K) the
+     inner <input> painted a second lime box inside the field's border.
+     So text controls drop the ring here; everything else keeps one, in
+     neutral white to match the form's non-lime focus language. Same
+     scoped-override pattern as .hub-chrome above. */
+  .sell-form :focus-visible {
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35);
+  }
+  .sell-form :is(input, textarea, select):focus-visible {
+    box-shadow: none;
+  }
+
   /* Prevent mobile Safari/Chrome from auto-zooming when an input is
      focused. Browsers zoom whenever a form control's font-size is < 16px.
      Scoped to coarse pointers (touch) so desktop keeps its exact type sizes;

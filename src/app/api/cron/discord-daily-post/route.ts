@@ -6,7 +6,7 @@
  * reason to return, and the wedge against the big competitors who don't publish
  * good daily price data.
  *
- * Runs at 10:30 UTC (see vercel.json) — after correct-sab-prices (10:00) so the
+ * Runs at 10:30 UTC (see vercel.json) — after correct-prices (10:00) so the
  * post reflects the freshly-corrected, fake-filtered values.
  *
  * No gateway, no bot presence: just an authenticated cron making one HTTP POST.
@@ -17,17 +17,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { buildDailyPost, sendToWebhook } from '@/lib/discord/dailyPost'
+import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const CRON_SECRET = process.env.CRON_SECRET
 const WEBHOOK_URL = process.env.DISCORD_VALUE_WEBHOOK_URL
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    // PAY-020: constant-time bearer compare, fails closed when CRON_SECRET is unset.
+    if (!isCronAuthorized(request.headers)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

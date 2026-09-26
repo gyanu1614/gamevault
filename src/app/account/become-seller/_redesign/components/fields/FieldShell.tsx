@@ -4,8 +4,6 @@
  * muted hint line, the control, then a forest-red error when present.
  */
 
-'use client'
-
 import type { ReactNode } from 'react'
 import { PALETTE } from '../../theme'
 

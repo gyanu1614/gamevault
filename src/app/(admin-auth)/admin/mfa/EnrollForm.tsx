@@ -151,7 +151,7 @@ export function EnrollForm() {
                 onClick={() => setStep('verify')}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
               >
-                I've scanned the QR code →
+                I&apos;ve scanned the QR code →
               </button>
             </>
           )}

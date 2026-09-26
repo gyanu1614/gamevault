@@ -17,7 +17,7 @@
 
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 // ============================================
 // TYPES
@@ -124,12 +124,17 @@ function fail<T = never>(e: any): Result<T>   {
 // GLOBAL CATEGORIES
 // ============================================
 
+/**
+ * Primary global categories for pickers (sell wizard, bulk upload).
+ * Sub-categories (parent_id set) are never offered as a picker choice.
+ */
 export async function getGlobalCategories(opts?: { includeDisabled?: boolean }): Promise<Result<GlobalCategory[]>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     let q = supabase
       .from('global_categories')
       .select('*')
+      .is('parent_id', null)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
     if (!opts?.includeDisabled) q = q.eq('is_active', true)
@@ -141,7 +146,7 @@ export async function getGlobalCategories(opts?: { includeDisabled?: boolean }):
 
 export async function getGlobalCategoryBySlug(slug: string): Promise<Result<GlobalCategory | null>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     const { data, error } = await supabase
       .from('global_categories')
       .select('*')
@@ -159,7 +164,7 @@ export async function getGlobalCategoryBySlug(slug: string): Promise<Result<Glob
 /** All categories enabled for a single game, joined with the global row for display. */
 export async function getGameCategoriesFor(gameId: string): Promise<Result<GameCategory[]>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     const { data, error } = await supabase
       .from('game_categories')
       .select(`
@@ -177,7 +182,7 @@ export async function getGameCategoriesFor(gameId: string): Promise<Result<GameC
 /** All games that have a given global category enabled — feeds Step 2 of the seller wizard. */
 export async function getGamesForGlobalCategory(globalCategorySlug: string): Promise<Result<GameCategory[]>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     // First resolve the global category id.
     const { data: gc, error: gcErr } = await supabase
       .from('global_categories')
@@ -207,7 +212,7 @@ export async function getGameCategoryByPair(
   globalCategorySlug: string,
 ): Promise<Result<GameCategory | null>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     const { data: gc, error: gcErr } = await supabase
       .from('global_categories')
       .select('id')
@@ -236,7 +241,7 @@ export async function getGameCategoryByPair(
 /** Bare template row by game_category_id. */
 export async function getAttributeTemplate(gameCategoryId: string): Promise<Result<AttributeTemplate | null>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     const { data, error } = await supabase
       .from('attribute_templates')
       .select('*')
@@ -254,7 +259,7 @@ export async function getAttributeTemplate(gameCategoryId: string): Promise<Resu
  */
 export async function getAttributeTemplateFull(gameCategoryId: string): Promise<Result<AttributeTemplateFull | null>> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
 
     const { data: tpl, error: tplErr } = await supabase
       .from('attribute_templates')

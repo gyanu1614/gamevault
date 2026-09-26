@@ -10,6 +10,7 @@ import { OrderStatus } from '@/lib/api/seller-compatible'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useUrlFilters } from '@/hooks/use-url-filters'
 import Image from 'next/image'
 import {
   Search,
@@ -39,6 +40,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -64,6 +66,18 @@ interface AdvancedFilters {
   searchQuery: string
 }
 
+/**
+ * URL-backed filter defaults. A dimension at its default is dropped from the
+ * query string, so the common view stays at a clean /account/orders.
+ */
+const ORDER_FILTER_DEFAULTS = {
+  status: 'all',
+  games: '',
+  category: '',
+  dateRange: 'all',
+  searchQuery: '',
+}
+
 function OrdersContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -81,16 +95,47 @@ function OrdersContent() {
   const setActiveTab = (t: ViewTab) =>
     router.push(`/account/orders?type=${t === 'sales' ? 'sold' : 'purchases'}`)
 
-  // Combined filter state
-  const [filters, setFilters] = useState<AdvancedFilters>({
-    status: 'all',
-    games: [],
-    category: null,
-    dateRange: 'all',
-    customDateStart: null,
-    customDateEnd: null,
-    searchQuery: ''
-  })
+  // Combined filter state.
+  // STATE-011 — the filter dimensions live in the URL so a filtered view can be
+  // linked, bookmarked and restored by back/forward, matching `type` above.
+  // `games` is a multi-select, so it round-trips as a comma-joined list.
+  // The custom date pair stays in local state: it is only meaningful while
+  // dateRange === 'custom', and Date objects do not belong in a query string.
+  const { values: urlFilters, setValues: setUrlFilters } = useUrlFilters(
+    ORDER_FILTER_DEFAULTS,
+  )
+  const [customDates, setCustomDates] = useState<{
+    customDateStart: Date | null
+    customDateEnd: Date | null
+  }>({ customDateStart: null, customDateEnd: null })
+
+  const filters: AdvancedFilters = useMemo(
+    () => ({
+      status: urlFilters.status as FilterStatus,
+      games: urlFilters.games ? urlFilters.games.split(',').filter(Boolean) : [],
+      category: urlFilters.category || null,
+      dateRange: urlFilters.dateRange as AdvancedFilters['dateRange'],
+      customDateStart: customDates.customDateStart,
+      customDateEnd: customDates.customDateEnd,
+      searchQuery: urlFilters.searchQuery,
+    }),
+    [urlFilters, customDates],
+  )
+
+  /** Accepts the same object the old useState setter took. */
+  const setFilters = (next: AdvancedFilters) => {
+    setCustomDates({
+      customDateStart: next.customDateStart,
+      customDateEnd: next.customDateEnd,
+    })
+    setUrlFilters({
+      status: next.status,
+      games: next.games.join(','),
+      category: next.category ?? '',
+      dateRange: next.dateRange,
+      searchQuery: next.searchQuery,
+    })
+  }
 
   // Dropdown open state
   const [openDropdown, setOpenDropdown] = useState<'status' | 'game' | 'category' | 'date' | null>(null)
@@ -166,7 +211,9 @@ function OrdersContent() {
       const disputeIds = disputes.map((d: any) => d.id)
       const { data: resolutions } = await supabase
         .from('dispute_resolutions')
-        .select('*')
+        // STATE-012 — explicit columns: client query, so unused columns would
+        // be shipped to the browser. Only favored_party is read (plus the join key).
+        .select('dispute_id, favored_party')
         .in('dispute_id', disputeIds) as any
 
       if (!resolutions) return
@@ -212,7 +259,7 @@ function OrdersContent() {
 
     // Category filter
     if (filters.category) {
-      filtered = filtered.filter(o => o.listing?.category_id === filters.category)
+      filtered = filtered.filter(o => o.listing?.game_category_id === filters.category)
     }
 
     // Date range filter
@@ -240,10 +287,11 @@ function OrdersContent() {
       })
     }
 
-    // Search filter
+    // Search filter (order numbers match dash/space/case-insensitively)
     if (filters.searchQuery) {
+      const orderKey = normalizeOrderNumber(filters.searchQuery)
       filtered = filtered.filter(o =>
-        o.order_number?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        (orderKey.length > 0 && normalizeOrderNumber(o.order_number).includes(orderKey)) ||
         o.listing?.title?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         (o as any).seller?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         (o as any).buyer?.username?.toLowerCase().includes(filters.searchQuery.toLowerCase())
@@ -794,7 +842,7 @@ function OrdersContent() {
                         (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
                       )
                       const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
-                      const orderNo = (order.order_number || order.id.slice(0, 8).toUpperCase()).replace(/^GV-/, 'DM-')
+                      const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
                       return (
                         <tr
@@ -836,7 +884,7 @@ function OrdersContent() {
                               className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-white/[0.03] px-2 py-1 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
                               aria-label={`Copy order id ${orderNo}`}
                             >
-                              #{orderNo.replace(/^DM-/, '')}
+                              {orderNo}
                               <CopyIcon className="h-3 w-3 opacity-60" />
                             </button>
                           </td>

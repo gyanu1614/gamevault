@@ -15,7 +15,7 @@ import { notFound } from 'next/navigation'
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sabCard } from '@/lib/sab/theme'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
@@ -23,14 +23,31 @@ import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build. Driven by the content config
+ * (`pages.priceIndex`) rather than a hardcoded slug — today that resolves to
+ * exactly ['steal-a-brainrot'], so the built set is unchanged.
+ */
+export function generateStaticParams() {
+  return contentHubSlugsFor('priceIndex').map((gameSlug) => ({ gameSlug }))
+}
 
 type TopValue = { slug: string; name: string; rarity: string; priceUsd: number }
 type Mover = { slug: string; name: string; from: number; to: number; pct: number }
 
 async function getTopValues(): Promise<TopValue[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,market_value_usd,mutation_slug')
@@ -53,7 +70,7 @@ async function getTopValues(): Promise<TopValue[]> {
  * Returns [] when there's <2 distinct dates (page shows a "collecting" note).
  */
 async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[]; days: number }> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data: mut } = await supabase
     .from('sab_mutations')
     .select('id')
@@ -116,7 +133,7 @@ export async function generateMetadata({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  if (gameSlug !== 'steal-a-brainrot') return { title: 'Not Found' }
+  if (!hasHubPage(gameSlug, 'priceIndex')) return { title: 'Not Found' }
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const title = `Steal a Brainrot Price Index (${monthYear}) — Top Values & Movers`
   return {
@@ -133,7 +150,7 @@ export default async function PriceIndexPage({
   params: Promise<{ gameSlug: string }>
 }) {
   const { gameSlug } = await params
-  if (gameSlug !== 'steal-a-brainrot') notFound()
+  if (!hasHubPage(gameSlug, 'priceIndex')) notFound()
 
   const [topValues, movers, hubNav] = await Promise.all([
     getTopValues(),

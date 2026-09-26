@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * V43 — Accepted payments: full-bleed monochrome wordmark marquee
  * (Eldorado-style strip). Duplicated track + the `animate-marquee`

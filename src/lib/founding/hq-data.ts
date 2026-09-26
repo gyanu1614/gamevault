@@ -18,6 +18,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createClient } from '@/lib/supabase/server'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
 import { foundingTokenMatches } from './token'
+import { optional, required } from './resilience'
 import { FOUNDING_SPOT_CAP, type FoundingProgress } from '@/lib/config/founding-seller'
 
 export type FoundingViewMode = 'founder' | 'preview' | 'generic'
@@ -135,8 +136,8 @@ async function resolveFounderFromToken(
   // Join order = how many signups are older-or-equal to this one.
   const { count } = await supabase
     .from('early_seller_signups')
-    .select('id', { count: 'exact', head: true })
-    .lte('created_at', row.created_at)
+    .select('id', { count: 'exact' })
+    .lte('created_at', row.created_at).limit(1)
 
   const founder: FoundingFounder = {
     name: firstName(row.username),
@@ -185,15 +186,15 @@ async function resolveSellerJourney(email: string): Promise<SellerJourney> {
     //    (went live at least once — that's what ticks step 4).
     const { count } = await supabase
       .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('seller_id', profile.id)
+      .select('id', { count: 'exact' })
+      .eq('seller_id', profile.id).limit(1)
     listingCount = count ?? 0
 
     const { count: pubCount } = await supabase
       .from('listings')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('seller_id', profile.id)
-      .in('status', ['active', 'sold', 'paused', 'archived'])
+      .in('status', ['active', 'sold', 'paused', 'archived']).limit(1)
     publishedCount = pubCount ?? 0
   }
 
@@ -370,8 +371,8 @@ async function resolveLoggedInFounder(): Promise<{
     if (wl?.created_at) {
       const { count } = await svc
         .from('early_seller_signups')
-        .select('id', { count: 'exact', head: true })
-        .lte('created_at', wl.created_at)
+        .select('id', { count: 'exact' })
+        .lte('created_at', wl.created_at).limit(1)
       joinNumber = count ?? 0
 
       // Self-heal the routing flag: this account's email is on the waitlist, so
@@ -417,17 +418,35 @@ export async function getFoundingHqData({
   token?: string
   isAdmin: boolean
 }): Promise<FoundingHqData> {
-  const progress = await getFoundingProgress()
+  // The progress counter is decoration on the rail — never a reason to fail.
+  const progress = await optional(() => getFoundingProgress(), null, 'founding:progress')
 
   // 1. Magic-link founder (waitlist applicant, no account needed).
-  const resolved = await resolveFounderFromToken(id, token)
+  //
+  // This one IS load-bearing: the whole point of the magic link is to resolve
+  // WHO arrived. If it fails we cannot tell a real founder from a stranger, and
+  // silently degrading to the generic landing would tell a founder their invite
+  // is dead. required() surfaces the retryable state instead (see
+  // app/founding/error.tsx) — this is the read that produced
+  // JAVASCRIPT-NEXTJS-5 from an in-app webview.
+  const resolved = id && token
+    ? await required(() => resolveFounderFromToken(id, token), 'founding:founder')
+    : null
   if (resolved) {
-    const journey = await resolveSellerJourney(resolved.email)
+    // The journey is enrichment: without it we still greet them and show their
+    // spot, so a dropped request costs the tracker, not the page.
+    const journey = await optional(
+      () => resolveSellerJourney(resolved.email),
+      null,
+      'founding:journey',
+    )
     return { mode: 'founder', founder: resolved.founder, progress, journey, user: null, cap: FOUNDING_SPOT_CAP }
   }
 
   // 2. A signed-in user viewing their own HQ — real identity + real status.
-  const loggedIn = await resolveLoggedInFounder()
+  // Enrichment: failing this falls through to the generic landing, which is a
+  // correct (if less personal) page, so it must not take the route down.
+  const loggedIn = await optional(() => resolveLoggedInFounder(), null, 'founding:session')
   if (loggedIn) {
     return {
       mode: 'founder',

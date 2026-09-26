@@ -8,7 +8,7 @@
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 
 // V14r — Shared delivery formatter so buyer and seller surfaces agree.
-import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
+import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 
 export interface VolumeTier {
   min: number
@@ -60,6 +60,12 @@ export interface Currency {
   tagline: string
   trust: { trades: string; avgDelivery: string; shield: string }
   unitLabel: string
+  /**
+   * What one unit of quantity means in this category. Drives the price
+   * label ("Price Per 1K") and the quantity suffix, so a per-K game
+   * never advertises a per-single-token figure.
+   */
+  granularity: 'unit' | 'thousand' | 'million'
   variants: Variant[]
   /** V21/P7.i — Optional category logo (e.g. Robux icon) admin-uploaded
    *  via category_configs.currency_icon_url. Renders in the left card
@@ -95,7 +101,7 @@ export interface CurrencyPageData {
  * (so the page falls through to the generic items grid).
  */
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
-import { createClient as createAnonClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 export async function getCurrencyShell(
   gameSlug: string,
@@ -106,16 +112,16 @@ export async function getCurrencyShell(
   // which meant new games created via the admin wizard fell through to
   // the legacy `CategoryPageLayout`. Now any (game, category) pair where
   // categories.metadata.type === 'currency' renders the rich layout.
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data: row } = await supabase
-    .from('categories')
-    .select('metadata, game:games!categories_game_id_fkey(slug)')
+    .from('game_categories')
+    .select('type, game:games!game_categories_game_id_fkey(slug)')
     .eq('slug', categorySlug)
     .eq('game.slug', gameSlug)
-    .eq('is_active', true)
+    .eq('is_enabled', true)
     .limit(1)
     .maybeSingle() as any
-  if (!row || row.metadata?.type !== 'currency') return null
+  if (!row || row.type !== 'currency') return null
 
   // Fetch the per-game currency config. If admin hasn't set one yet,
   // hydrate a minimal shell from the slug so the page still renders
@@ -139,6 +145,7 @@ export async function getCurrencyShell(
         tagline: 'In-game currency.',
         trust: { trades: '0', avgDelivery: '—', shield: 'SafeDrop' },
         unitLabel: labelFromSlug,
+        granularity: 'unit',
         variants: [],
       },
       hero: BLANK_HERO,
@@ -156,6 +163,7 @@ export async function getCurrencyShell(
       tagline: cfg.tagline,
       trust: { trades: '0', avgDelivery: '—', shield: 'SafeDrop' },
       unitLabel: cfg.unit_label,
+      granularity: cfg.quantity_granularity ?? 'unit',
       variants: [],
     },
     hero: BLANK_HERO,
@@ -187,17 +195,16 @@ const BLANK_HERO: Offer = {
 const DEFAULT_STEPS = [
   { n: 1, title: 'Pick an offer',          body: 'Compare verified sellers by price, rating, and delivery speed.' },
   { n: 2, title: 'Pay at checkout',        body: 'Every order is covered by SafeDrop Buyer Protection.' },
-  { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method — most orders complete in minutes. Confirm receipt and the seller gets paid. Not delivered or not as described? Full refund." },
+  { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method — most orders complete in minutes. Confirm and the order is complete. Not delivered or not as described? Full refund." },
 ]
 
 /** Parse the wizard's delivery_time string ("10min" / "instant" / "1hr"). */
 function parseDeliveryTime(s: string | null | undefined): { min: number; max: number } {
   if (!s) return { min: 10, max: 10 }
   if (s === 'instant') return { min: 0, max: 1 }
-  const m = s.match(/^(\d+)\s*(min|hr)$/)
-  if (!m) return { min: 10, max: 10 }
-  const n = parseInt(m[1], 10)
-  const minutes = m[2] === 'hr' ? n * 60 : n
+  // Shared parser: the local min|hr regex fell back to 10 minutes for the
+  // wizard's day windows, so a 7-day offer sorted as one of the fastest.
+  const minutes = parseDeliveryMinutes(s, 10)
   return { min: minutes, max: minutes }
 }
 
@@ -237,10 +244,18 @@ export function listingToOffer(listing: any): Offer {
     verified,
     rating,
     reviews,
+    // Price is stored in the category's granularity unit: for a
+    // `thousand` game the seller typed "$3.80 per 1K" and 3.8 is what
+    // is stored. Nothing divides it down to a per-single-token figure
+    // — the buyer page multiplies qty (also in K) by this directly.
     pricePerUnit: Number(listing.price ?? 0),
-    // V14 — Currency listings enforce a 100-unit floor. Defensive: bump up
-    // any legacy row that slipped in below the new minimum.
-    minQty: Math.max(100, listing.min_quantity ?? 100),
+    // The floor is the per-game admin `min_quantity`, applied by the
+    // caller which has the config; a listing carries the seller's own
+    // (equal or higher) minimum. This used to be Math.max(100, …),
+    // which forced a min of 100 onto every currency game and made a
+    // 1K-granularity game advertise "100 Tokens" when its real
+    // minimum was 1 (= 1K).
+    minQty: Math.max(1, listing.min_quantity ?? 1),
     stock,
     deliveryMin,
     deliveryMax,

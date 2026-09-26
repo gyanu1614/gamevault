@@ -1,7 +1,8 @@
 /**
  * POST /api/checkout — create an order + CoinGate charge, return the redirect URL.
  *
- * Body: { listingId, quantity?, promoDiscount?, walletAmount? }
+ * Body: { listingId, quantity?, promoCode?, walletAmount?, paymentMethodId? }
+ * `promoDiscount` is NOT accepted (AUTH-003) — the discount is derived server-side.
  * Optional header `Idempotency-Key` (hardening §C): a repeated key returns the
  * stored result instead of creating a second order/charge — guards against a
  * double-tap or retried network call.
@@ -18,10 +19,16 @@ import {
   storeIdempotentResult,
   validateIdempotencyKey,
 } from '@/lib/utils/idempotency'
+import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
+  // Order creation is expensive (DB writes + a provider charge), so it is
+  // limited before any other work — including the auth lookup.
+  const limit = await checkRateLimitByIp('checkout', req.headers)
+  if (limit.limited) return rateLimitResponse(limit)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -50,7 +57,7 @@ export async function POST(req: NextRequest) {
   const result = await createCheckout({
     listingId: body.listingId,
     quantity: body.quantity,
-    promoDiscount: body.promoDiscount,
+    promoCode: typeof body.promoCode === 'string' ? body.promoCode : undefined,
     walletAmount: body.walletAmount,
   })
 

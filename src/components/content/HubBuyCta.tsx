@@ -6,6 +6,7 @@
  */
 
 import { HubCtaBand } from './HubCtaBand'
+import { HUB_COPY } from '@/lib/content/theme'
 
 export function HubBuyCta({
   gameName,
@@ -31,7 +32,7 @@ export function HubBuyCta({
       bgSrc={bgSrc}
       className={className}
       title={title ?? `Skip the grind — buy the ${gameName} item you want`}
-      body="Every order is covered by SafeDrop — the seller is paid only after you confirm delivery."
+      body={HUB_COPY.safedrop}
       ctaLabel={`Buy ${gameName} items`}
       ctaHref={buyHref}
     />

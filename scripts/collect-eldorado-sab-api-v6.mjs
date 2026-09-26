@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { hostname } from "node:os";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local", quiet: true });
@@ -184,7 +186,196 @@ async function supabaseRows(table, select, order) {
   return all;
 }
 
-async function buildQueue(requestedName) {
+/**
+ * ROUTE-012: newest MATCHED raw listing per brainrot — the collector's real
+ * "when did we last actually look at this item" signal.
+ *
+ * Why this exists: neither price table carries a per-item timestamp.
+ * sab_price_corrections.computed_at and sab_price_display.price_updated_at are
+ * both batch stamps, identical across every row of a run (verified on prod:
+ * 1 distinct value across 356 default rows). Sorting by either makes the
+ * staleness key a constant for every item, so the sort collapses to its
+ * name.localeCompare() tiebreaker and the queue becomes strictly alphabetical —
+ * the first `--max-brainrots` names are re-crawled forever and everything past
+ * the cutoff is never reached. That is exactly what happened: the crawl stopped
+ * at "M" and ~145 tradeable items had not been looked at in a month.
+ *
+ * observed_at on the listings themselves IS per item, so it rotates.
+ *
+ * The `parse_status=matched` filter is not cosmetic — it makes the query use
+ * the partial index (brainrot_id, mutation_id, observed_at DESC)
+ * WHERE parse_status = 'matched'. Without it the same query intermittently
+ * exceeds the statement timeout; with it, 355 items resolve in ~6s at
+ * concurrency 8 with zero failures.
+ *
+ * Requires the service role: anon is denied sab_market_raw_listings. The
+ * workflow already provides SUPABASE_SERVICE_ROLE_KEY. When it is absent (local
+ * runs on the anon key) this degrades to an empty map and the caller falls back
+ * to the previous behaviour rather than failing the crawl.
+ */
+/**
+ * A never-crawled Brainrot is the stalest thing there is, but it must stay a
+ * FINITE number: Infinity * rarity_weight is Infinity for every rarity, which
+ * silently collapses the weighting and sorts the never-crawled block
+ * alphabetically — so Epics would be collected ahead of Secrets, the exact
+ * opposite of the priority we want.
+ */
+export const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
+
+/** Hours since we last observed this item, capped. `now` is injectable for tests. */
+export function stalenessHours(row, now = Date.now()) {
+  const lastPriced = Date.parse(row.last_priced_at ?? "");
+  if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
+  return Math.min(
+    NEVER_PRICED_STALENESS_HOURS,
+    (now - lastPriced) / (60 * 60 * 1000),
+  );
+}
+
+/**
+ * ROUTE-012: the queue's eligibility + ordering, extracted so it can be tested
+ * directly. Stalest first, weighted by rarity so high-value Secrets/OGs come due
+ * sooner than commons. A flat staleness sort would refresh the whole catalog
+ * evenly and starve the items buyers actually convert on; a flat priority sort
+ * would re-crawl the same head every run and never rotate.
+ *
+ * The rotation only works when `last_priced_at` genuinely differs between items.
+ * When it is the same value for everything (or null everywhere, as it was before
+ * this fix) the primary sort key is constant and the comparator falls through to
+ * its name tiebreaker, making the order alphabetical and permanently starving
+ * everything past `--max-brainrots`.
+ */
+export function selectEligible(
+  queue,
+  { usePanelRefresh, refreshAfterMs, progress, collectorVersion, now = Date.now() },
+) {
+  const eligible = queue.filter((row) => {
+    if (usePanelRefresh) {
+      const lastPriced = Date.parse(row.last_priced_at ?? "");
+      // Never crawled, or not crawled recently enough — either way, go look.
+      return !Number.isFinite(lastPriced) || now - lastPriced >= refreshAfterMs;
+    }
+
+    const attempt = progress?.attempts?.[row.id];
+    if (!attempt) return true;
+
+    // Retry old empty results once because v6 adds Eldorado Search Items
+    // fallback. Collected rows and v6 empties remain completed.
+    return (
+      attempt.status === "empty" &&
+      attempt.collector_version !== collectorVersion
+    );
+  });
+
+  if (usePanelRefresh) {
+    eligible.sort(
+      (left, right) =>
+        stalenessHours(right, now) * right.rarity_weight -
+          stalenessHours(left, now) * left.rarity_weight ||
+        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    );
+  }
+
+  return eligible;
+}
+
+async function fetchNewestListingByBrainrot(brainrotIds) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const newest = new Map();
+
+  if (!base || !serviceKey || !brainrotIds.length) return newest;
+
+  const CONCURRENCY = 8;
+  let failures = 0;
+
+  for (let index = 0; index < brainrotIds.length; index += CONCURRENCY) {
+    const batch = brainrotIds.slice(index, index + CONCURRENCY);
+
+    await Promise.all(
+      batch.map(async (brainrotId) => {
+        const url = new URL("/rest/v1/sab_market_raw_listings", base);
+        url.searchParams.set("select", "observed_at");
+        url.searchParams.set("brainrot_id", `eq.${brainrotId}`);
+        url.searchParams.set("parse_status", "eq.matched");
+        url.searchParams.set("order", "observed_at.desc");
+        url.searchParams.set("limit", "1");
+
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            const response = await fetch(url, {
+              headers: {
+                apikey: serviceKey,
+                authorization: `Bearer ${serviceKey}`,
+                accept: "application/json",
+              },
+            });
+            if (response.ok) {
+              const rows = await response.json();
+              const observedAt = rows?.[0]?.observed_at ?? null;
+              if (observedAt) newest.set(brainrotId, observedAt);
+              return;
+            }
+          } catch {
+            // fall through to the retry
+          }
+          if (attempt < 3) await sleep(400 * attempt);
+        }
+        failures += 1;
+      }),
+    );
+  }
+
+  if (failures) {
+    console.warn(
+      `  listing-freshness lookup failed for ${failures} brainrot(s); ` +
+        `they are treated as never-crawled (max staleness).`,
+    );
+  }
+
+  return newest;
+}
+
+/**
+ * Which brainrots are in the crawl's scope at all — extracted so the rule can
+ * be tested, because the previous rule silently froze the catalogue's best
+ * items (2026-09-20).
+ *
+ * `rotateCovered` is the panel-refresh mode. Coverage (mutation_gap / priority)
+ * is an ORDERING signal there, never a filter: a fully-covered item must keep
+ * rotating on staleness like any other, or its listings are never re-observed,
+ * the expire job never gets the repeat look it needs to end anything, coverage
+ * never drops, and the item leaves the rotation for good. That is exactly what
+ * happened — 10 runs and 1,665 crawl slots never touched a 14/14 item — and
+ * the batch-stamped price_updated_at hid it until incremental writes made it
+ * visible as 688 rows / 70 brainrots frozen on the backfill timestamp.
+ *
+ * In backfill mode (no --refresh-after-hours) the coverage filter still
+ * applies: that mode exists to fill gaps, and a 14/14 item has none.
+ */
+export function scopeQueue(
+  queue,
+  { tradeableIds, haveTradeableFlag, rotateCovered },
+) {
+  let scoped = queue;
+  // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
+  // stays fast and fresh on the items that matter. Only enforced once the flag
+  // exists (haveTradeableFlag); before the first nightly recompute we crawl
+  // everything as before.
+  if (haveTradeableFlag) {
+    scoped = scoped.filter((row) => tradeableIds.has(row.id));
+  }
+  if (!rotateCovered) {
+    // Include any brainrot still missing mutations (gap > 0) OR without a solid
+    // default price. Previously this only took missing/low DEFAULT prices, which
+    // skipped items that have a good default but many blank mutations — exactly
+    // the coverage we want to fill.
+    scoped = scoped.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+  }
+  return scoped;
+}
+
+async function buildQueue(requestedName, { rotateCovered = false } = {}) {
   const [brainrots, correctionRows, mutations, calculatorRows, tradeableRows] =
     await Promise.all([
       supabaseRows(
@@ -206,7 +397,13 @@ async function buildQueue(requestedName) {
       // 1000-row cap; degrade to empty coverage (crawl everything) if it fails.
       supabaseRows(
         "sab_price_corrections",
-        "brainrot_id,mutation_id,value_usd,confidence_label,is_publishable",
+        // ROUTE-012: `computed_at` was missing here, so `last_priced_at` below was
+        // ALWAYS null and the staleness sort collapsed to its alphabetical
+        // tiebreaker. Select it. NOTE it is a batch stamp (identical across every
+        // row of a correction run), so it dates the last CORRECTION, not this
+        // item's last crawl — which is why the raw-listing fallback below is the
+        // signal that actually rotates the queue.
+        "brainrot_id,mutation_id,value_usd,confidence_label,is_publishable,computed_at",
         "brainrot_id.asc,mutation_id.asc",
       ).catch((error) => {
         console.warn(
@@ -242,6 +439,7 @@ async function buildQueue(requestedName) {
       mutation_slug: mutationSlugById.get(row.mutation_id),
       confidence_label: row.confidence_label,
       market_value_usd: row.value_usd,
+      price_updated_at: row.computed_at ?? null,
     }));
 
   // Set of tradeable brainrot ids. If the column doesn't exist yet (migration
@@ -283,6 +481,13 @@ async function buildQueue(requestedName) {
     return 1;
   };
 
+  // ROUTE-012: per-item "when did we last actually crawl this" — the only
+  // signal in the system that differs between items, and therefore the only one
+  // that can make the staleness sort rotate. See fetchNewestListingByBrainrot.
+  const newestListingAt = await fetchNewestListingByBrainrot(
+    brainrots.map((brainrot) => brainrot.id),
+  );
+
   let queue = brainrots.map((brainrot) => {
     const price = defaultPrices.get(brainrot.id);
     const confidence = price?.confidence_label ?? "missing";
@@ -305,11 +510,18 @@ async function buildQueue(requestedName) {
       priority_score: priorityScore,
       priority: confidence === "missing" ? 0 : confidence === "low" ? 1 : 2,
 
-      // When this Brainrot's price last moved. The collector runs on the anon
-      // key, which is denied sab_market_raw_listings, so this is the only
-      // last-touched signal available to it — and unlike the progress file it
-      // is real shared state, so CI and local runs agree.
-      last_priced_at: price?.price_updated_at ?? null,
+      // When we last actually LOOKED at this Brainrot.
+      //
+      // ROUTE-012: prefer the newest matched raw listing, which is genuinely
+      // per-item. The correction/display timestamps are batch stamps shared by
+      // every row, so using them makes this field identical everywhere and the
+      // staleness sort degenerates into alphabetical order. They stay as a
+      // fallback for the case where the service-role lookup is unavailable
+      // (local runs on the anon key), where the previous behaviour is no worse
+      // than before. Null here means "never crawled" → maximum staleness, so a
+      // brand-new item is picked up on the very next run.
+      last_priced_at:
+        newestListingAt.get(brainrot.id) ?? price?.price_updated_at ?? null,
       rarity_weight: rarityWeight(brainrot.rarity),
     };
   });
@@ -321,18 +533,7 @@ async function buildQueue(requestedName) {
     );
     if (!queue.length) throw new Error(`Brainrot not found: ${requestedName}`);
   } else {
-    // Crawl only the curated tradeable set — skip junk nobody buys so the cycle
-    // stays fast and fresh on the items that matter. Only enforced once the flag
-    // exists (haveTradeableFlag); before the first nightly recompute we crawl
-    // everything as before.
-    if (haveTradeableFlag) {
-      queue = queue.filter((row) => tradeableIds.has(row.id));
-    }
-    // Include any brainrot still missing mutations (gap > 0) OR without a solid
-    // default price. Previously this only took missing/low DEFAULT prices, which
-    // skipped items that have a good default but many blank mutations — exactly
-    // the coverage we now want to fill.
-    queue = queue.filter((row) => row.mutation_gap > 0 || row.priority < 2);
+    queue = scopeQueue(queue, { tradeableIds, haveTradeableFlag, rotateCovered });
   }
 
   // Highest priority_score first (rarity → coverage gap → value); ties break
@@ -1493,6 +1694,112 @@ async function collectOne({
   };
 }
 
+/**
+ * Pipeline lock around the IMPORT phase — the thin fetch-based twin of
+ * src/lib/pricing/pipeline-lock.ts (this script cannot import app TypeScript;
+ * the SQL functions are the contract, this loop is ~40 lines).
+ *
+ * 2026-09-19 20:04Z: an 18-minute manual `pnpm reprice --game=sab --full` from
+ * the owner's machine overlapped this script's import. Batch 22 hit HTTP 546,
+ * then "canceling statement due to lock timeout" on every retry, and the job
+ * died with 10,837 listings crawled and not landed — and neither log named
+ * the other writer. Now whoever comes second queues behind a NAMED holder for
+ * a bounded time, then fails saying who and since when.
+ *
+ * Only the import phase is guarded: the Eldorado fetch phase before it does
+ * not write, so a manual reprice may run alongside that part. The TTL bounds
+ * a crashed holder (the job itself is capped at 120 minutes).
+ */
+const PIPELINE_LOCK_NAME = "sab-pipeline";
+const IMPORT_LOCK_TTL_SECONDS = 90 * 60;
+const IMPORT_LOCK_POLL_SECONDS = 15;
+
+function pipelineLockHolder() {
+  const where = process.env.GITHUB_RUN_ID
+    ? `gh-run-${process.env.GITHUB_RUN_ID}`
+    : hostname();
+  return `crawl:${where}:${process.pid}`;
+}
+
+async function pipelineLockRpc(fn, args) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const response = await fetch(new URL(`/rest/v1/rpc/${fn}`, base), {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`${fn} failed (${response.status}): ${body.slice(0, 300)}`);
+  return body ? JSON.parse(body) : null;
+}
+
+/** Run `work` holding the pipeline lock; always releases. */
+async function withImportLock(work) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    console.warn(
+      "\n⚠️ SUPABASE_SERVICE_ROLE_KEY not set — importing WITHOUT the pipeline lock. " +
+        "Make sure no reprice is running.",
+    );
+    return work();
+  }
+
+  const holder = pipelineLockHolder();
+  const waitSeconds = Number(process.env.SAB_PIPELINE_LOCK_WAIT_SECONDS ?? 20 * 60);
+  const waitMs = (Number.isFinite(waitSeconds) ? waitSeconds : 20 * 60) * 1000;
+  const startedAt = Date.now();
+  let announced = false;
+
+  for (;;) {
+    const rows = await pipelineLockRpc("sab_pipeline_lock_acquire", {
+      p_name: PIPELINE_LOCK_NAME,
+      p_holder: holder,
+      p_ttl_seconds: IMPORT_LOCK_TTL_SECONDS,
+    });
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (row?.acquired === true) break;
+
+    const waited = Date.now() - startedAt;
+    if (!announced) {
+      console.log(
+        `\n⏳ ${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}) — waiting up to ${Math.round(waitMs / 1000)}s ` +
+          `before importing.`,
+      );
+      announced = true;
+    }
+    if (waited >= waitMs) {
+      throw new Error(
+        `${PIPELINE_LOCK_NAME} is held by ${row?.holder} since ${row?.acquired_at} ` +
+          `(expires ${row?.expires_at}); gave up after waiting ${Math.round(waited / 1000)}s. ` +
+          `Two writers must not overlap. The crawled feed is in the run artifact — ` +
+          `re-send it with publish_only_run_id once the other writer finishes.`,
+      );
+    }
+    await sleep(Math.min(IMPORT_LOCK_POLL_SECONDS * 1000, waitMs - waited));
+  }
+  if (announced) console.log(`✅ ${PIPELINE_LOCK_NAME} acquired by ${holder} after waiting.`);
+
+  try {
+    return await work();
+  } finally {
+    try {
+      await pipelineLockRpc("sab_pipeline_lock_release", {
+        p_name: PIPELINE_LOCK_NAME,
+        p_holder: holder,
+      });
+    } catch (error) {
+      // The TTL frees it; not worth failing a finished import over.
+      console.warn(`⚠️ ${PIPELINE_LOCK_NAME} release failed (${error.message}); it expires on its own.`);
+    }
+  }
+}
+
 function runImporter(outputPath) {
   return new Promise((resolveImport, rejectImport) => {
     const child = spawn(
@@ -1508,6 +1815,54 @@ function runImporter(outputPath) {
   });
 }
 
+/**
+ * ROUTE-017. Classify a crawl that produced no listings.
+ *
+ * Both outcomes below are SUCCESS — the workflow runs every 3h against a 6h
+ * staleness filter, so a tick that finds nothing due is the filter doing its
+ * job, and there is nothing to import either way (the edge function rejects an
+ * empty `listings` array with a 400). Failing on them made routine quiet ticks
+ * red, which is precisely how a genuinely broken run hides in a wall of red.
+ *
+ * But they are NOT the same event, and the message has to say which:
+ *   - no_eligible_targets — the queue filtered everything out; nothing was due.
+ *   - no_listings_parsed  — we DID crawl targets and they yielded zero offers.
+ * The second means the mappings or the upstream API are suspect and deserves a
+ * look; the first does not.
+ */
+export function classifyEmptyRun({
+  targetCount,
+  listingCount,
+  usePanelRefresh,
+  refreshAfterHours,
+}) {
+  if (listingCount > 0) {
+    return { ok: true, empty: false, reason: null, message: null };
+  }
+
+  if (!targetCount) {
+    return {
+      ok: true,
+      empty: true,
+      reason: "no_eligible_targets",
+      message: usePanelRefresh
+        ? `Nothing to do: no eligible targets — every Brainrot has been priced within ${refreshAfterHours}h. ` +
+          "This is the staleness filter working; the next tick past the window will pick them up."
+        : "Nothing to do: no eligible targets — backfill mode has attempted every Brainrot already. " +
+          "Use --reset-progress to retry prior attempts, or --refresh-after-hours to rotate by staleness.",
+    };
+  }
+
+  return {
+    ok: true,
+    empty: true,
+    reason: "no_listings_parsed",
+    message:
+      `Nothing to do: ${targetCount} target(s) were crawled but no listings parsed. ` +
+      "Review target_summaries in the feed for skipped or unavailable Eldorado mappings.",
+  };
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const observedAt = new Date().toISOString();
@@ -1517,7 +1872,11 @@ async function main() {
     totalMutations,
     expectedIncomeByVariant,
     totals,
-  } = await buildQueue(options.brainrot);
+  } = await buildQueue(options.brainrot, {
+    // Panel refresh rotates EVERY tradeable item on staleness; only backfill
+    // narrows to coverage gaps. See scopeQueue.
+    rotateCovered: options.refreshAfterHours > 0,
+  });
   const progress = await readProgress(options.progressPath, options.resetProgress);
   // Eligibility.
   //
@@ -1534,7 +1893,7 @@ async function main() {
   // PANEL REFRESH (--refresh-after-hours): eligibility comes from the DATABASE
   // (`price_updated_at`), not the inert progress file, so CI and local runs
   // agree and the queue actually rotates. Stale items become eligible again,
-  // which both restores coverage growth and gives /api/cron/expire-sab-listings
+  // which both restores coverage growth and gives the expire step (pnpm sab:expire)
   // the repeated observations it needs before absence means anything.
   const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
   const usePanelRefresh = options.refreshAfterHours > 0;
@@ -1544,49 +1903,12 @@ async function main() {
   // silently collapses the weighting and sorts the never-priced block
   // alphabetically — so Epics would be collected ahead of Secrets, the exact
   // opposite of the priority we want.
-  const NEVER_PRICED_STALENESS_HOURS = 24 * 365;
-
-  const stalenessHours = (row) => {
-    const lastPriced = Date.parse(row.last_priced_at ?? "");
-    if (!Number.isFinite(lastPriced)) return NEVER_PRICED_STALENESS_HOURS;
-    return Math.min(
-      NEVER_PRICED_STALENESS_HOURS,
-      (Date.now() - lastPriced) / (60 * 60 * 1000),
-    );
-  };
-
-  const eligible = queue.filter((row) => {
-    if (usePanelRefresh) {
-      const lastPriced = Date.parse(row.last_priced_at ?? "");
-      // Never priced, or not priced recently enough — either way, go look.
-      return (
-        !Number.isFinite(lastPriced) || Date.now() - lastPriced >= refreshAfterMs
-      );
-    }
-
-    const attempt = progress.attempts[row.id];
-    if (!attempt) return true;
-
-    // Retry old empty results once because v6 adds Eldorado Search Items
-    // fallback. Collected rows and v6 empties remain completed.
-    return (
-      attempt.status === "empty" &&
-      attempt.collector_version !== COLLECTOR_VERSION
-    );
+  const eligible = selectEligible(queue, {
+    usePanelRefresh,
+    refreshAfterMs,
+    progress,
+    collectorVersion: COLLECTOR_VERSION,
   });
-
-  if (usePanelRefresh) {
-    // Stalest first, but weighted by rarity so high-value Secrets/OGs come due
-    // sooner than commons. A flat staleness sort would refresh the whole
-    // catalog evenly and starve the items buyers actually convert on; a flat
-    // priority sort would re-crawl the same head every day and never rotate.
-    eligible.sort(
-      (left, right) =>
-        stalenessHours(right) * right.rarity_weight -
-          stalenessHours(left) * left.rarity_weight ||
-        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-    );
-  }
 
   const targets = eligible.slice(0, options.maxBrainrots);
 
@@ -1605,7 +1927,17 @@ async function main() {
   console.log(`  selected this run: ${targets.length}`);
 
   if (!targets.length) {
-    console.log("No eligible targets remain. Use --reset-progress to retry prior attempts.");
+    // ROUTE-017: exit 0. Nothing due is the staleness filter working, not a fault.
+    console.log(
+      `\n${
+        classifyEmptyRun({
+          targetCount: 0,
+          listingCount: 0,
+          usePanelRefresh,
+          refreshAfterHours: options.refreshAfterHours,
+        }).message
+      }`,
+    );
     return;
   }
 
@@ -1728,10 +2060,16 @@ async function main() {
   console.log(`Progress saved to ${options.progressPath}`);
 
   if (!listings.length) {
-    if (options.send) {
-      throw new Error("No Eldorado listings parsed; nothing was imported.");
-    }
-    console.log("\nNo listings collected. Review target_summaries for skipped or unavailable Eldorado mappings.");
+    // ROUTE-017: exit 0 under --send too. There is nothing to import (the edge
+    // function 400s on an empty `listings` array), so throwing only turned a
+    // recoverable, often routine state into a red run.
+    const empty = classifyEmptyRun({
+      targetCount: targets.length,
+      listingCount: 0,
+      usePanelRefresh,
+      refreshAfterHours: options.refreshAfterHours,
+    });
+    console.log(`\n${empty.message}`);
     return;
   }
   if (!options.send) {
@@ -1741,65 +2079,26 @@ async function main() {
   if (!process.env.SAB_MARKET_IMPORT_SECRET) {
     throw new Error("SAB_MARKET_IMPORT_SECRET is required with --send");
   }
-  await runImporter(options.outputPath);
+  await withImportLock(() => runImporter(options.outputPath));
 
-  // Reprice IMMEDIATELY after the whole crawl has landed. The correction cron
-  // is a single point-in-time read of the raw table; if it runs on its own
-  // clock while a multi-batch crawl is still importing, it prices a partial
-  // snapshot and stores a stale cheapest (Elefanto Frigo showed $259.99 while a
-  // $248 reputable listing existed). Triggering it HERE — after the last batch
-  // — closes that race by construction, for manual crawls too (a workflow-only
-  // step wouldn't cover `npm run sab:eldorado:send` run locally). Mirrors what
-  // adopt-me-daily.yml already does. Best-effort: the 10:00 UTC Vercel cron is
-  // an idempotent backstop, so a failure here never fails the crawl.
-  await triggerPostCrawl();
+  // Nothing is triggered from here any more. Expire and reprice both run as
+  // their own workflow steps straight after this script, on the runner
+  // (`pnpm sab:expire`, `pnpm reprice --game=sab`), where neither has a 300s
+  // function budget and where a failure fails the job. Calling the routes from
+  // here is what let a five-day repricing outage hide in a log (2026-09-14) and
+  // what turned an expire-route timeout into a dead collect step (2026-09-20).
+  // A manual local `--send` should be followed by those two commands.
 }
 
-/**
- * After the whole crawl lands: (1) EXPIRE listings that vanished from the fresh
- * results (sold/removed — a gone listing must stop setting the price), THEN
- * (2) REPRICE from the cleaned-up active set. Order matters: expiring first
- * means the reprice never sees a dead $200 listing that's no longer on Eldorado.
- *
- * No-op (with a note) when the trigger env isn't set, so a bare `--send` still
- * works; never throws — these are follow-ups, not part of the import's success.
- * The scheduled crons remain idempotent backstops.
- */
-async function triggerPostCrawl() {
-  const apiUrl = process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
-  const secret = process.env.CRON_SECRET;
-  if (!apiUrl || !secret) {
-    console.log(
-      "\nSkipping post-crawl expire+reprice (set PUBLIC_API_URL + CRON_SECRET to enable). " +
-        "The scheduled crons will catch up.",
-    );
-    return;
-  }
-  const base = apiUrl.replace(/\/$/, "");
-  // Expire is a GET, correct-prices a POST — match each route's verb.
-  await triggerCron("Expiring vanished listings", `${base}/api/cron/expire-sab-listings`, "GET", secret);
-  await triggerCron("Repricing after crawl", `${base}/api/cron/correct-prices?game=sab`, "POST", secret);
-}
+// ROUTE-012: only run when invoked as a script, so the queue-ordering helpers
+// above can be unit-tested by importing this module without starting a crawl.
+const invokedDirectly =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 
-async function triggerCron(label, url, method, secret) {
-  try {
-    console.log(`\n${label} → ${url.replace(/https?:\/\/[^/]+/, "")} …`);
-    const response = await fetch(url, {
-      method,
-      headers: { authorization: `Bearer ${secret}` },
-    });
-    const body = await response.text();
-    if (!response.ok) {
-      console.error(`${label} failed (${response.status}): ${body.slice(0, 300)}`);
-      return;
-    }
-    console.log(`${label} ok: ${body.slice(0, 300)}`);
-  } catch (error) {
-    console.error(`${label} threw: ${error.message}`);
-  }
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(`\nEldorado collection failed: ${error.message}`);
+    process.exitCode = 1;
+  });
 }
-
-main().catch((error) => {
-  console.error(`\nEldorado collection failed: ${error.message}`);
-  process.exitCode = 1;
-});

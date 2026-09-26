@@ -23,7 +23,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import SearchIcon from '@mui/icons-material/Search'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import CheckIcon from '@mui/icons-material/Check'
-import { variantColor } from './[brainrotSlug]/_adoptMeVariantColor'
+import { variantColor } from './[itemSlug]/_adoptMeVariantColor'
 import { CompactVariantPicker } from './_CompactVariantPicker'
 
 /* ── Rarity → accent. Adopt Me's five tiers only. ─────────────────────────── */
@@ -466,7 +466,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 
       {/* ── Disclaimer (structure the brief + data rules require) ─────────── */}
       <p className="mt-8 border-t border-[#1A1420] pt-5 font-mono text-[11px] leading-relaxed text-[#9AA6B3]">
-        Prices are medians of completed sales and active listings. Bundles, account
+        Prices come from active listings by reputable sellers. Bundles, account
         sales and disputed orders are excluded. Cash values marked “Est.” are derived
         from the variant ladder until we hold enough real sales; change indicators
         appear only where we hold enough price history.

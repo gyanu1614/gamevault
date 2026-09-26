@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { AdminOrderActions } from './_AdminOrderActions'
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -87,40 +88,48 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
 
   const order = orderResult.order
 
-  // Fetch buyer and seller profiles
-  const { data: buyer } = await supabase
-    .from('profiles')
-    .select('id, username, email, avatar_url')
-    .eq('id', order.buyer_id)
-    .single() as any
+  // STATE-007 — buyer, seller, game and category all key off the already-loaded
+  // order and none consumes another, so they run as one fan-out instead of
+  // four serial round-trips. The two conditional reads resolve to null when
+  // the listing carries no game/category.
+  const [{ data: buyer }, { data: seller }, gameRes, categoryRes, { data: openDispute }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, username, email, avatar_url')
+      .eq('id', order.buyer_id)
+      .single() as any,
+    supabase
+      .from('profiles')
+      .select('id, username, email, avatar_url, shop_name')
+      .eq('id', order.seller_id)
+      .single() as any,
+    order.listing?.game_id
+      ? (supabase
+          .from('games')
+          .select('id, name, slug, image_url, emoji')
+          .eq('id', order.listing.game_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+    order.listing?.game_category_id
+      ? (supabase
+          .from('game_categories')
+          .select('id, name, slug')
+          .eq('id', order.listing.game_category_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+    // PR 7 — the open dispute (if any) drives the money controls below.
+    supabase
+      .from('disputes')
+      .select('id')
+      .eq('transaction_id', orderId)
+      .not('status', 'in', '("resolved_buyer_favor","resolved_seller_favor","resolved_partial","closed")')
+      .maybeSingle() as any,
+  ])
 
-  const { data: seller } = await supabase
-    .from('profiles')
-    .select('id, username, email, avatar_url, shop_name')
-    .eq('id', order.seller_id)
-    .single() as any
-
-  // Fetch game and category
-  let game: { id: string; name: string; slug: string; image_url: string | null; emoji: string } | null = null
-  let category: { id: string; name: string; slug: string } | null = null
-
-  if (order.listing?.game_id) {
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('id, name, slug, image_url, emoji')
-      .eq('id', order.listing.game_id)
-      .single() as any
-    game = gameData
-  }
-
-  if (order.listing?.category_id) {
-    const { data: categoryData } = await supabase
-      .from('categories')
-      .select('id, name, slug')
-      .eq('id', order.listing.category_id)
-      .single() as any
-    category = categoryData
-  }
+  const game = (gameRes as any).data as
+    | { id: string; name: string; slug: string; image_url: string | null; emoji: string }
+    | null
+  const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
 
   return (
     <div className="space-y-5">
@@ -339,13 +348,22 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </div>
           )}
 
+          {/* PR 7 — Money controls: mark disputed / resolve */}
+          <AdminOrderActions
+            orderId={order.id}
+            status={order.status}
+            totalAmount={Number(order.total_amount ?? 0)}
+            sellerPayout={Number(order.seller_payout ?? 0)}
+            openDisputeId={(openDispute as any)?.id ?? null}
+          />
+
           {/* Quick Actions */}
           <div className="rounded-xl border border-border-default bg-bg-raised p-5">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              {order.dispute_id && (
+              {((openDispute as any)?.id || order.dispute_id) && (
                 <Link
-                  href={`/admin/disputes/${order.dispute_id}`}
+                  href={`/admin/disputes/${(openDispute as any)?.id ?? order.dispute_id}`}
                   className="block w-full px-3 py-2 text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors text-center"
                 >
                   View Dispute

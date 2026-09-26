@@ -4,8 +4,6 @@
  * top of the right pane. Light world (forest text on ivory), lime fill only.
  */
 
-'use client'
-
 import { PALETTE, REDESIGN_STEPS } from '../theme'
 
 interface MobileProgressProps {

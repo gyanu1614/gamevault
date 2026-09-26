@@ -70,7 +70,7 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
 
     const { data: order } = (await supabase
       .from('orders')
-      .select('id, buyer_id, status, payment_provider, provider_charge_id')
+      .select('id, buyer_id, status')
       .eq('id', orderId)
       .single()) as any
     if (!order) return { success: false, error: 'Order not found' }
@@ -81,20 +81,24 @@ export async function getPaymentPageStatus(orderId: string): Promise<PaymentPage
       return { success: true, orderStatus: order.status }
     }
 
-    if (order.payment_provider !== 'btcpay' || !order.provider_charge_id) {
+    // Round B: the invoice to poll is the order's OPEN payment attempt.
+    const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+    const attempt = await openAttemptForOrder(order.id)
+    if (attempt?.provider !== 'btcpay' || !attempt.provider_charge_id) {
       return { success: true, orderStatus: order.status }
     }
+    const invoiceId = attempt.provider_charge_id
 
     const { btcpayFetchInvoice, btcpayFetchPaymentMethods } = await import(
       '@/lib/payments/providers/btcpay'
     )
-    const invoice = await btcpayFetchInvoice(order.provider_charge_id)
+    const invoice = await btcpayFetchInvoice(invoiceId)
     // Methods are best-effort display data (partial-payment progress); a
     // failure here must not blank the whole poll.
     let methods: PaymentMethodStatus[] = []
     let tronDestination: string | undefined
     try {
-      const raw = await btcpayFetchPaymentMethods(order.provider_charge_id)
+      const raw = await btcpayFetchPaymentMethods(invoiceId)
       methods = raw.map((m) => ({
         paymentMethodId: m.paymentMethodId,
         due: m.due,

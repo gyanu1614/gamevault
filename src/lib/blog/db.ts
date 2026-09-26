@@ -9,11 +9,17 @@
  * These are async (DB round-trips); the file-based helpers in posts.ts stay as
  * the seed/import source and a synchronous fallback for any surface not yet
  * migrated.
+ *
+ * Every read here is filtered to status = 'published', i.e. strictly public,
+ * so they use the cookie-free anon client. That is what lets the blog routes
+ * honour their `revalidate` instead of being forced dynamic by cookies().
+ * Drafts are read by the admin surfaces through the session/service client.
  */
 
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import type { BlogPost } from './posts'
+import { cache } from 'react'
 
 export type BlogPostType = 'guide' | 'value' | 'seller'
 
@@ -82,7 +88,7 @@ const SELECT =
 
 /** All published posts scoped to a game (its nested /[game]/blog collection). */
 export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
     .select(SELECT)
@@ -94,11 +100,13 @@ export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {
 }
 
 /** A single published post by game + slug (the nested article URL). */
-export async function getGamePost(
+// STATE-004 — called from generateMetadata and the page body; cache() makes
+// the two runs of one request share a single query.
+export const getGamePost = cache(async function getGamePost(
   gameSlug: string,
   slug: string,
 ): Promise<DbBlogPost | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
     .select(SELECT)
@@ -108,7 +116,7 @@ export async function getGamePost(
     .maybeSingle()
   if (error || !data) return null
   return rowToPost(data as unknown as BlogPostRow)
-}
+})
 
 /**
  * Game-relevant rail: published posts tagged for the game (via game_slugs),
@@ -119,7 +127,7 @@ export async function getPostsTaggedForGame(
   gameSlug: string,
   limit = 4,
 ): Promise<DbBlogPost[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
     .select(SELECT)
@@ -133,7 +141,7 @@ export async function getPostsTaggedForGame(
 
 /** All published posts (site-wide /blog index), newest first. */
 export async function getAllPublishedPosts(): Promise<DbBlogPost[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
     .select(SELECT)

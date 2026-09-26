@@ -142,3 +142,76 @@ describe('coingate: parseWebhook verification chain', () => {
     await expect(provider().parseWebhook(goodHeaders(), 'status=paid')).rejects.toThrow(/missing id/)
   })
 })
+
+// ─── createCharge: the buyer-visible title carries the order number ───────
+describe('coingate: createCharge title', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  const captureCreate = () => {
+    const bodies: Record<string, string>[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      if (String(url).endsWith('/orders') && init?.method === 'POST') {
+        bodies.push(Object.fromEntries(init.body as URLSearchParams))
+        return { ok: true, json: async () => ({ id: 42, status: 'new', payment_url: 'https://pay.test/42' }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { bodies, provider: makeCoinGateProvider({ fetchImpl }) }
+  }
+  const base = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: money(1234n, 'USD'),
+    returnUrl: 'https://app.test.local/account/orders/x',
+  }
+
+  it('shows the stored order_number; order_id stays the UUID link', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'DM-ABCD-EFGH' })
+    expect(bodies[0].title).toBe('DropMarket order DM-ABCD-EFGH')
+    expect(bodies[0].order_id).toBe(base.orderId)
+  })
+
+  it('an older GV- number is shown as stored', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'GV-123456' })
+    expect(bodies[0].title).toBe('DropMarket order GV-123456')
+  })
+
+  it('falls back to the 8-char id prefix only when the order has no number', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base })
+    expect(bodies[0].title).toBe('DropMarket order 0F1E2D3C')
+  })
+})
+
+// ─── voidCharge (round B Part 2, PAY-004) ─────────────────────────────────
+describe('coingate: voidCharge', () => {
+  const harness = (status: string) => {
+    const calls: string[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      calls.push(`${init?.method ?? 'GET'} ${String(url)}`)
+      if (/\/orders\/555$/.test(String(url))) {
+        return { ok: true, json: async () => ({ id: 555, order_id: 'order-1', status, price_amount: '1.00', price_currency: 'USD' }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makeCoinGateProvider({ fetchImpl }) }
+  }
+
+  it('paid / confirming → paid', async () => {
+    for (const s of ['paid', 'confirming']) expect((await harness(s).provider.voidCharge('555')).outcome).toBe('paid')
+  })
+
+  it('expired / canceled / invalid / refunded → already_closed', async () => {
+    for (const s of ['expired', 'canceled', 'invalid', 'refunded']) expect((await harness(s).provider.voidCharge('555')).outcome).toBe('already_closed')
+  })
+
+  it('new / pending → unsupported: CoinGate has no cancel for a standard order (it expires itself); only the GET is made', async () => {
+    for (const s of ['new', 'pending']) {
+      const { calls, provider } = harness(s)
+      const r = await provider.voidCharge('555')
+      expect(r.outcome).toBe('unsupported')
+      expect(r.rawStatus).toBe(s)
+      expect(calls).toEqual([expect.stringMatching(/^GET .*\/orders\/555$/)])
+    }
+  })
+})

@@ -252,7 +252,7 @@ export function CalculatorSeo({
               <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Purchase Price</h3>
               <p className="mt-1.5 leading-7 text-[#9AA6B3]">
                 What a Brainrot actually sells for in cash, rather than what a value list claims.
-                Every price here comes from completed sales and live listings — you can{' '}
+                Every price here comes from live marketplace listings by reputable sellers — you can{' '}
                 <Link href="/steal-a-brainrot/buy-items" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
                   buy Steal a Brainrot items
                 </Link>{' '}

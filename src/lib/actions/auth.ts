@@ -3,12 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { z } from 'zod'
-import { applyReferralAtSignup } from '@/lib/actions/referral'
+import { applyReferralAtSignup } from '@/lib/referral/commission'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
-import { DEFAULT_TIER } from '@/lib/seller/tiers'
+import { getEntryTier } from '@/lib/seller/entry-tier'
+import { rateLimitAction } from '@/lib/security/rate-limit'
 
 // Signup with username
 export async function signup(formData: {
@@ -29,6 +29,13 @@ export async function signup(formData: {
   redirectTo?: string
 }) {
   try {
+    // Credential-stuffing / mass-signup budget. Charged before any Supabase
+    // call so a flood never reaches the auth provider. Returned in this
+    // action's own { error } shape so callers that read
+    // `requiresEmailConfirmation` keep narrowing cleanly.
+    const limited = await rateLimitAction('auth')
+    if (limited) return { error: limited.error }
+
     const supabase = await createClient()
 
     // Build the confirmation-link destination. A caller-supplied redirectTo is
@@ -145,10 +152,10 @@ export async function signup(formData: {
       }
     }
 
-    // Apply referral code if provided (non-critical). It writes to the new
-    // user's profiles row + referral_earnings through the cookie client, so
-    // it also needs the session — skipped in email-confirmation mode.
-    if (data.session && data.user?.id && formData.referralCode) {
+    // Apply referral code if provided (non-critical). Runs under the service
+    // role (AUTH-008) so it no longer needs the session; the new user's id is
+    // the only input. Deduped + self-referral-safe inside.
+    if (data.user?.id && formData.referralCode) {
       await applyReferralAtSignup(data.user.id, formData.referralCode).catch((err) => {
         // Non-critical — don't block signup if referral fails
         console.error('❌ Referral apply failed:', err)
@@ -163,7 +170,11 @@ export async function signup(formData: {
 
     // The profile will be automatically created by the database trigger
     // User is logged in automatically (email confirmation disabled)
-    revalidatePath('/', 'layout')
+    //
+    // No revalidation: the nav, account menu and founding badge all read the
+    // session through `useAuth()` in the browser, so nothing server-rendered
+    // changes when a session appears. Invalidating here dropped every
+    // prerendered page (build audit 2026-09-22, §4).
     return { data, error: null, success: true }
   } catch (err: any) {
     console.error('❌ Unexpected error in signup:', err)
@@ -174,6 +185,10 @@ export async function signup(formData: {
 // Login
 export async function login(formData: { email: string; password: string }) {
   try {
+    // Password-guessing budget, per IP.
+    const limited = await rateLimitAction('auth')
+    if (limited) return limited
+
     const supabase = await createClient()
 
     console.log('🔍 Attempting login for:', formData.email)
@@ -198,7 +213,7 @@ export async function login(formData: { email: string; password: string }) {
 
     console.log('✅ Login successful:', data.user?.id)
 
-    revalidatePath('/', 'layout')
+    // No revalidation — see signup(). Auth-dependent chrome is client-side.
     return { data, error: null }
   } catch (err: any) {
     console.error('❌ Unexpected error in login:', err)
@@ -209,6 +224,11 @@ export async function login(formData: { email: string; password: string }) {
 // Resend the signup confirmation email (email-confirmation mode)
 export async function resendConfirmationEmail(email: string) {
   try {
+    // Unauthenticated and sends mail — without a budget this is a free
+    // mail-bomb aimed at any address the caller names.
+    const limited = await rateLimitAction('auth')
+    if (limited) return limited
+
     const supabase = await createClient()
 
     const { error } = await supabase.auth.resend({
@@ -249,7 +269,8 @@ export async function logout() {
     return { error: error.message }
   }
 
-  revalidatePath('/', 'layout')
+  // No revalidation — see signup(). The client session listener clears the
+  // nav; the prerendered pages are identical logged out.
   redirect('/')
 }
 
@@ -325,12 +346,19 @@ export async function updateProfile(formData: {
     return { error: error.message }
   }
 
-  revalidatePath('/', 'layout')
+  // The viewer's own profile is read in the browser (`useAuth()` refetches
+  // and the realtime `profiles` subscription pushes the change), so there is
+  // no server-rendered copy to invalidate. A seller's PUBLIC storefront is
+  // revalidated by the paths that change it, not by the owner editing a bio.
   return { data, error: null }
 }
 
 // Request password reset
 export async function resetPassword(email: string) {
+  // Unauthenticated and sends mail — same mail-bomb exposure as the resend.
+  const limited = await rateLimitAction('auth')
+  if (limited) return limited
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -411,7 +439,10 @@ export async function syncProfileEmail() {
 
   if (!user?.email) return { error: null }
 
-  const { error } = await (supabase
+  // AUTH-005: profiles.email is trigger-protected (it mirrors auth.users); the
+  // user's own session cannot write it, so mirror via the service role, scoped
+  // to the verified session user.
+  const { error } = await (createServiceRoleClient()
     .from('profiles')
     .update as any)({ email: user.email })
     .eq('id', user.id)
@@ -526,8 +557,8 @@ export async function uploadProfileAvatar(avatarData: string) {
 
     console.log('✅ Avatar uploaded successfully:', cacheBustedUrl)
 
-    revalidatePath('/', 'layout')
-    revalidatePath('/account/settings')
+    // /account/settings is a client component reading the session directly,
+    // and the avatar reaches the nav through `useAuth()`. Nothing to revalidate.
     return { success: true, avatarUrl: cacheBustedUrl }
   } catch (err: any) {
     // Raw messages here reached the UI verbatim (Postgres/Storage internals,
@@ -570,16 +601,21 @@ export async function registerAsSeller(formData: {
     }
 
     // "Already a seller" must key on role/is_seller — NOT seller_tier, which now
-    // defaults to the entry tier ('quartz') on every profile, seller or not.
+    // defaults to the entry rank on every profile, seller or not.
     if (profile.role === 'seller' || profile.is_seller) {
       return { error: 'You are already a seller' }
     }
 
-    // Update profile to make user a seller (entry tier by default)
+    // Update profile to make user a seller (entry rank by default). The rank
+    // name is read live from seller_tier_config, never hard-coded — a literal
+    // here breaks against profiles_seller_tier_check whenever the ladder is
+    // re-keyed.
+    const entryTier = await getEntryTier(supabase)
+
     const { data, error } = await (supabase
       .from('profiles')
       .update as any)({
-        seller_tier: DEFAULT_TIER,
+        seller_tier: entryTier,
         ...(formData.businessName && { business_name: formData.businessName }),
         ...(formData.paypalEmail && { paypal_email: formData.paypalEmail }),
       })
@@ -594,7 +630,9 @@ export async function registerAsSeller(formData: {
 
     console.log('✅ User registered as seller:', user.id)
 
-    revalidatePath('/', 'layout')
+    // Seller-only nav entries come from `useAuth()`; the public storefront
+    // does not exist until the application is approved (admin path, which
+    // revalidates the storefront itself).
     return { data, error: null, success: true }
   } catch (err: any) {
     console.error('❌ Unexpected error in seller registration:', err)

@@ -11,7 +11,7 @@ export async function debugListings() {
   // Check all listings
   const { data: allListings, error: listingsError } = await supabase
     .from('listings')
-    .select('id, slug, title, game_id, category_id, status, seller_id')
+    .select('id, slug, title, game_id, game_category_id, status, seller_id')
     .limit(20)
 
   // Check all games
@@ -22,7 +22,7 @@ export async function debugListings() {
 
   // Check all categories
   const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
+    .from('game_categories')
     .select('id, slug, name')
     .limit(20)
 

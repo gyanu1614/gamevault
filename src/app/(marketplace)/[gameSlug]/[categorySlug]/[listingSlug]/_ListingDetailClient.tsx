@@ -244,8 +244,8 @@ export default function ListingDetailClient({
   // seller's available quantity. Instant-delivery listings are single-unit.
   const maxQty = listing.isUnlimited ? 99 : Math.max(1, listing.quantity ?? 1)
 
-  // Gemstone tier badge — driven by the central ladder. tierByKey tolerates
-  // unknown/legacy tier strings by falling back to Quartz.
+  // Rank badge — driven by the central ladder. tierByKey tolerates
+  // unknown/legacy tier strings by falling back to the entry rank.
   const tierDef = tierByKey(listing.seller.tier?.toLowerCase())
   const sellerName = sellerDisplayName(listing.seller)
   const sellerInitial = sellerName.charAt(0).toUpperCase()
@@ -523,7 +523,9 @@ export default function ListingDetailClient({
                     but below every row. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/icons/safedrop-emblem.png"
+                  src="/icons/safedrop-emblem.avif"
+                  width={128}
+                  height={128}
                   alt=""
                   aria-hidden
                   className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-50"
@@ -1283,7 +1285,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
     () => [
       {
         q: `Is it safe to buy ${gameName} ${cat} on DropMarket?`,
-        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Buyer Protection. Sellers are paid out only after you confirm delivery of your ${gameName} ${cat}, so you're paying for an outcome: get what you ordered, or your money back. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
+        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Buyer Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
       },
       {
         q: `How fast is ${gameName} ${cat} delivery?`,
@@ -1291,7 +1293,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `What if I don't receive my ${gameName} ${cat}?`,
-        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Because sellers are paid out only after you confirm delivery, an undelivered ${gameName} ${cat} order means a full refund for you — the seller is never paid for it. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
+        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Buyer Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
       },
       {
         q: `Do I need to share my password to buy ${gameName} ${cat}?`,

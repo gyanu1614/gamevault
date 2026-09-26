@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import { JsonLd, breadcrumbList, itemList, faqPage } from '@/lib/seo/jsonld'
 import { ValuesSeo, valuesFaq } from './_ValuesSeo'
@@ -14,11 +14,34 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
+import GenericValuesHubPage from './_generic/ValuesHubPage'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 3600
+/**
+ * Closed set: generateStaticParams lists every slug this route serves, so an
+ * unknown slug is a static 404 with no function invocation (Step 7a — the
+ * crawl of 233 `/{game}/…` hub URLs was rendering an empty page each).
+ */
+export const dynamicParams = false
+
+/**
+ * Games served by the generic values_* pipeline rather than a per-game reader.
+ * SAB and Adopt Me still use their own tables until Phase 2 migrates them.
+ */
+const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
+
+/**
+ * Prerender the game slug(s) this route serves; every other slug notFound()s
+ * below, so there is nothing else to build.
+ */
+export function generateStaticParams() {
+  return contentHubSlugsFor('values').map((gameSlug) => ({ gameSlug }))
+}
 
 interface PageProps {
   params: Promise<{ gameSlug: string }>
@@ -81,7 +104,25 @@ export async function generateMetadata({
     }
   }
 
-  if (gameSlug !== 'steal-a-brainrot') {
+  // Games on the generic values pipeline build their metadata from config, so
+  // a new game needs no edit here.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    const theme = getGameContentTheme(gameSlug)
+    const monthYear = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    const title = `${theme.name} Value List (${monthYear}) — Egg & Account Prices`
+    return {
+      title,
+      description: `${theme.name} values for ${monthYear}: what sealed eggs sell for by area and what accounts go for by income, priced from live marketplace listings.`,
+      alternates: { canonical: `/${gameSlug}/values` },
+      openGraph: { title, url: `/${gameSlug}/values`, type: 'website' },
+    }
+  }
+
+  if (!hasHubPage(gameSlug, 'values')) {
     return { title: 'Values Not Found' }
   }
 
@@ -157,7 +198,7 @@ export interface MoverItem {
  * the section self-hides rather than inventing movement.
  */
 async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const since = new Date()
   since.setUTCDate(since.getUTCDate() - 8)
@@ -221,7 +262,7 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 }
 
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Default-mutation prices + all priced mutations come from the cached, tagged
   // reader (sab_price_display, indexed → ~5ms). Tagged so the whole grid
@@ -414,7 +455,13 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
     return <AdoptMeValuesPage />
   }
 
-  if (gameSlug !== 'steal-a-brainrot') {
+  // Games on the generic values_* pipeline render through the shared hub
+  // components — no per-game page component.
+  if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    return <GenericValuesHubPage gameSlug={gameSlug} />
+  }
+
+  if (!hasHubPage(gameSlug, 'values')) {
     notFound()
   }
 
@@ -475,9 +522,9 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           title="Steal a Brainrot - Value"
           lead={
             <>
-              Real cash values from completed DropMarket sales — not community
-              guesses. Every Brainrot, its income per second, and what it trades
-              for right now.
+              Real cash values from live marketplace listings, reputable
+              sellers only — not community guesses. Every Brainrot, its income
+              per second, and what it trades for right now.
             </>
           }
         />
@@ -492,7 +539,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
               Biggest movers this week
             </h2>
             <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
-              Based on completed sales · 7d
+              Based on live listings · 7d
             </span>
           </div>
           <div className="grid gap-px border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.08)] sm:grid-cols-3">

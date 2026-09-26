@@ -7,6 +7,10 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { revalidateTag, unstable_cache } from 'next/cache'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
+import { PAUSED_SELLERS_TAG } from '@/lib/revalidation/tags'
 
 /**
  * Update seller presence to online
@@ -239,6 +243,10 @@ export async function setStorePaused(paused: boolean): Promise<{
       console.error('Error setting store paused:', error)
       return { success: false, error: error.message }
     }
+    // Step 7b — the paused-seller set is a shared cached read on every
+    // category page, and pausing hides every listing of this seller.
+    revalidateTag(PAUSED_SELLERS_TAG)
+    await revalidateListingSurfaces(supabase as never, { sellerIds: [user.id] })
     return { success: true }
   } catch (error: any) {
     console.error('Error in setStorePaused:', error)
@@ -253,18 +261,31 @@ export async function setStorePaused(paused: boolean): Promise<{
  * show listings than to blank the catalogue on a transient read error).
  */
 export async function getPausedSellerIds(): Promise<string[]> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('seller_presence')
-      .select('seller_id')
-      .eq('store_paused', true)
-    if (error || !data) return []
-    return (data as any[]).map((r) => r.seller_id).filter(Boolean)
-  } catch {
-    return []
-  }
+  return readPausedSellerIds()
 }
+
+// Step 7b — identical on every category page (~600 prerendered at build), so
+// it is one tagged cache entry instead of one read per page. setStorePaused
+// revalidates PAUSED_SELLERS_TAG; the hourly revalidate is the backstop.
+const readPausedSellerIds = unstable_cache(
+  async (): Promise<string[]> => {
+    try {
+      // Public read, cookie-free (Step 7a): every ISR marketplace page calls
+      // this; the session client would make them all render per request.
+      const supabase = createAnonClient()
+      const { data, error } = await supabase
+        .from('seller_presence')
+        .select('seller_id')
+        .eq('store_paused', true)
+      if (error || !data) return []
+      return (data as any[]).map((r) => r.seller_id).filter(Boolean)
+    } catch {
+      return []
+    }
+  },
+  ['paused-seller-ids'],
+  { tags: [PAUSED_SELLERS_TAG], revalidate: 3600 },
+)
 
 /** Read the current seller's store-paused flag (false on any error). */
 export async function getMyStorePaused(): Promise<boolean> {

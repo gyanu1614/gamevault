@@ -37,7 +37,7 @@ const DEFAULT_STEPS: HowItWorksStepCopy[] = [
   { title: 'Choose Your Item', body: 'Compare offers, buy with confidence.' },
   { title: 'Pay Securely', body: 'Every order is covered by SafeDrop Buyer Protection.' },
   { title: 'Get Your Delivery', body: 'Fast in-game delivery, tracked live.' },
-  { title: 'Confirm Delivery', body: 'Confirm receipt, seller gets paid — or full refund.' },
+  { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or full refund.' },
 ]
 
 const STEP_ICONS = [Step1ChooseItem, Step2SecurePayment, Step3Delivery, Step4Confirm]

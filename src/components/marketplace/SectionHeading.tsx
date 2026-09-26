@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * V31 — Section heading system for the listing detail page.
  *

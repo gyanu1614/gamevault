@@ -1,5 +1,7 @@
-import { Resend } from 'resend'
-import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
+import type { Resend } from 'resend'
+
+import { assertEmailTransportAllowed } from './transport-guard'
+import { DISCORD_INVITE_URL, FOUNDING_FEE_PERK_SENTENCE } from '@/lib/config/founding-seller'
 import {
   emailShell,
   emailText,
@@ -15,23 +17,42 @@ import {
   EMAIL_TOKENS,
 } from './shell'
 
-// Lazily construct the Resend client on first send, not at module load.
-// `new Resend(undefined)` throws immediately, which would crash any page that
-// merely imports this module (e.g. /admin/early-sellers) when RESEND_API_KEY
-// isn't set — common in local dev. This defers that so pages render, and when
-// the key is absent it no-ops the send (logs a warning) instead of throwing.
+// Lazily LOAD and construct the Resend client on first send, not at module
+// load. `new Resend(undefined)` throws immediately, which would crash any page
+// that merely imports this module (e.g. /admin/early-sellers) when
+// RESEND_API_KEY isn't set — common in local dev. This defers that so pages
+// render, and when the key is absent it no-ops the send (logs a warning)
+// instead of throwing.
+//
+// The IMPORT is dynamic too (build audit 2026-09-22, §3): `resend` pulls in
+// `svix`, which cost 106 s of module build time and was traced into every
+// bundle that touches this module, even though it is only reachable on a real
+// send. `import type` above keeps the types free. Combined with
+// serverExternalPackages in next.config.js, svix/resend stay out of the
+// function bundles.
 let _client: Resend | null = null
-function getResendClient(): Resend | null {
+async function getResendClient(): Promise<Resend | null> {
   const key = process.env.RESEND_API_KEY
   if (!key) return null
-  if (!_client) _client = new Resend(key)
+  if (!_client) {
+    const { Resend: ResendCtor } = await import('resend')
+    _client = new ResendCtor(key)
+  }
   return _client
 }
 
 const resend = {
   emails: {
     async send(payload: Parameters<Resend['emails']['send']>[0]) {
-      const client = getResendClient()
+      // Never let a test run reach the real provider. Throws rather than
+      // no-ops so a test can't silently "pass" while asserting nothing.
+      assertEmailTransportAllowed(
+        process.env,
+        typeof (payload as { subject?: unknown }).subject === 'string'
+          ? ((payload as { subject?: string }).subject as string)
+          : undefined,
+      )
+      const client = await getResendClient()
       if (!client) {
         console.warn('[email] RESEND_API_KEY not set — skipping email send.')
         return { data: null, error: null }
@@ -52,6 +73,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
  * titles, usernames and dispute reasons are attacker-controlled — without
  * this a seller could inject markup into buyers' inboxes.
  */
+/** Low-level sender for templates that live in their own module (PR 7: fee notice). */
+export async function sendTransactionalEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const { data, error } = await resend.emails.send({ from: FROM_EMAIL, replyTo: REPLY_TO, to, subject, html })
+  return error ? { success: false as const, error } : { success: true as const, data }
+}
+
+/** escapeHtml for templates outside this module. */
+export function escapeHtmlText(s: string): string {
+  return escapeHtml(s)
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -333,7 +365,7 @@ export async function sendDisputeOpenedEmail({
 }: {
   to: string
   name: string
-  /** Human order reference (e.g. GV-123456) shown in the email. */
+  /** Human order reference (e.g. DM-ABCD-EFGH; older orders GV-123456) shown in the email. */
   disputeId: string
   /** Order UUID — the CTA links to the order page (no public /disputes route). */
   orderId: string
@@ -516,8 +548,8 @@ export async function sendOrderCompletionEmail({
         emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailText(
           autoReleased
-            ? `This order was covered by SafeDrop for its full protection window — the seller is only paid now that the window has closed.`
-            : `This order was covered by SafeDrop from checkout until you confirmed delivery — the seller is only paid now that you have.`,
+            ? `This order was covered by SafeDrop for its full protection window — the window has closed and the order is complete.`
+            : `This order was covered by SafeDrop from checkout until you confirmed delivery — the order is now complete.`,
         ) +
         emailButton('View Your Order →', `${APP_URL}/account/orders/${orderId}`) +
         emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
@@ -557,7 +589,7 @@ export async function sendOrderPaidEmail({
         emailText(`Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller's been told to start delivery.`) +
         emailDetail('Total paid', `$${totalPaid.toFixed(2)}`) +
         emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
-        emailText(`You're covered by SafeDrop — the seller isn't paid until your order completes, and you get a full refund if it never arrives.`) +
+        emailText(`You're covered by SafeDrop Buyer Protection — Item Guaranteed or Full Refund. If it never arrives, you get a full refund.`) +
         emailButton('Track Your Order →', `${APP_URL}/account/orders/${orderId}`) +
         emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
     }),
@@ -843,18 +875,24 @@ export async function sendWithdrawalProcessedEmail({
   status,
   reason,
   txReference,
+  net,
+  fee,
 }: {
   to: string
   name: string
   amount: number
   /** Display name of the withdrawal method, e.g. 'Bank Transfer'. */
   method: string
-  status: 'approved' | 'rejected' | 'completed'
+  status: 'requested' | 'approved' | 'rejected' | 'completed'
   /** Rejection reason (required when status is 'rejected'). */
   reason?: string
-  /** On-chain tx hash / bank reference (shown when status is 'completed'). */
+  /** On-chain tx hash / Payoneer reference (shown when status is 'completed'). */
   txReference?: string
+  /** PR 7: the quoted net / fee, shown when known. */
+  net?: number
+  fee?: number
 }) {
+  const requested = status === 'requested'
   const approved = status === 'approved'
   const completed = status === 'completed'
   const { data, error } = await resend.emails.send({
@@ -862,41 +900,51 @@ export async function sendWithdrawalProcessedEmail({
     replyTo: REPLY_TO,
     to,
     subject: completed
-      ? `Withdrawal sent — $${amount.toFixed(2)} paid out`
+      ? `Withdrawal sent — $${(net ?? amount).toFixed(2)} paid out`
       : approved
-        ? `Withdrawal approved — $${amount.toFixed(2)} on the way`
-        : `Withdrawal request declined`,
+        ? `Withdrawal approved — $${(net ?? amount).toFixed(2)} on the way`
+        : requested
+          ? `Withdrawal requested — $${amount.toFixed(2)}`
+          : `Withdrawal request declined`,
     html: emailShell({
       preview: completed
-        ? `$${amount.toFixed(2)} has been sent to your ${method}.`
+        ? `$${(net ?? amount).toFixed(2)} has been sent to your ${method}.`
         : approved
-          ? `$${amount.toFixed(2)} is on the way to your ${method}.`
-          : `We couldn't process your withdrawal this time.`,
-      icon: completed || approved ? 'payout' : 'rejected',
-      heading: completed ? 'Withdrawal sent' : approved ? 'Withdrawal approved' : 'Withdrawal declined',
+          ? `$${(net ?? amount).toFixed(2)} is on the way to your ${method}.`
+          : requested
+            ? `We received your withdrawal request for $${amount.toFixed(2)}.`
+            : `We couldn't process your withdrawal this time.`,
+      icon: completed || approved || requested ? 'payout' : 'rejected',
+      heading: completed ? 'Withdrawal sent' : approved ? 'Withdrawal approved' : requested ? 'Withdrawal requested' : 'Withdrawal declined',
       body:
         emailText(
           completed
             ? `Hi ${escapeHtml(name)} — your withdrawal has been sent to your payout method. Depending on the method, it can take a little while to land.`
             : approved
               ? `Hi ${escapeHtml(name)} — your withdrawal is approved and on its way to your payout method.`
-              : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
+              : requested
+                ? `Hi ${escapeHtml(name)} — we received your withdrawal request. The amount is set aside from your balance while our team reviews it, usually within 1&ndash;2 business days.`
+                : `Hi ${escapeHtml(name)} — we couldn't process your withdrawal this time. Your funds stay safe in your seller balance.`,
         ) +
         emailOrderSummary([
           ['Amount', `$${amount.toFixed(2)}`],
+          ...(fee != null ? ([['Fee', `-$${fee.toFixed(2)}`]] as [string, string][]) : []),
+          ...(net != null ? ([['You receive', `$${net.toFixed(2)}`]] as [string, string][]) : []),
           ['Method', escapeHtml(method)],
           ...(completed && txReference
             ? ([['Reference', escapeHtml(txReference)]] as [string, string][])
             : []),
         ]) +
-        (!approved && !completed && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
+        (!approved && !completed && !requested && reason ? emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) : '') +
         emailButton('View Your Wallet', `${APP_URL}/account/wallet`) +
         emailFooterNote(
           completed
             ? `Sent from our side — arrival depends on your payout method, usually within 1&ndash;5 business days.`
             : approved
               ? `Arrival depends on your payout method — usually 1&ndash;5 business days.`
-              : `Questions? Just reply to this email.`,
+              : requested
+                ? `Changed your mind? You can cancel the request from your wallet while it is pending.`
+                : `Questions? Just reply to this email.`,
         ),
     }),
   })
@@ -1096,7 +1144,7 @@ export async function sendFoundingHqInviteEmail({
       n: 1,
       title: 'Your Founding Seller application is ready',
       html:
-        `Everything's set on our side. Open your private setup page to pick your store name, get verified, and post your first listing — you keep 2% lower fees for life and a founding badge on your storefront.` +
+        `Everything's set on our side. Open your private setup page to pick your store name, get verified, and post your first listing — you get ${FOUNDING_FEE_PERK_SENTENCE} and a founding badge on your storefront.` +
         emailButton('Open My Seller Setup', hqUrl),
     })
 
@@ -1167,7 +1215,7 @@ function emailDiscordBlock({ n, title, html, href }: { n: number; title: string;
         <td style="vertical-align:top;">
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;"><tr>
             <td style="padding-right:10px;vertical-align:middle;">
-              <img src="${APP_URL}/email-icons/discord.png" width="34" height="34" alt="Discord" style="display:block;width:34px;height:34px;border-radius:9px;">
+              <img src="${EMAIL_TOKENS.ASSET_URL}/email-icons/discord.png" width="34" height="34" alt="Discord" style="display:block;width:34px;height:34px;border-radius:9px;">
             </td>
             <td style="vertical-align:middle;">
               <p class="dm-strong" style="margin:0;font-family:${FONT};font-size:15.5px;font-weight:700;color:${INK};">${title}</p>
@@ -1218,4 +1266,162 @@ export async function sendEarlySellerAdminNotificationEmail({
   })
 
   return error ? { success: false, error } : { success: true, data }
+}
+
+/**
+ * PR 7 — halfway reminder inside the SafeDrop Protection window. Sent at most
+ * once per order (the claim is atomic in order_confirm_reminders_claim).
+ */
+export async function sendOrderConfirmReminderEmail({
+  to,
+  name,
+  orderId,
+  orderNumber,
+  listingTitle,
+  gameSlug,
+  autoCompleteAt,
+}: {
+  to: string
+  name: string
+  orderId: string
+  orderNumber: string
+  listingTitle: string
+  gameSlug?: string | null
+  /** ISO timestamp when the order completes automatically. */
+  autoCompleteAt: string
+}) {
+  const completesText = new Date(autoCompleteAt).toUTCString().replace(' GMT', ' UTC')
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Did you receive order #${orderNumber}? Please confirm`,
+    html: emailShell({
+      preview: `A quick check on order #${orderNumber} — confirm receipt or tell us what went wrong.`,
+      icon: 'delivered',
+      heading: 'Please confirm your order',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — the seller marked order #${orderNumber} as delivered a little while ago. If everything arrived as described, please confirm receipt to complete the order.`) +
+        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
+        emailBox({
+          accent: true,
+          title: 'SafeDrop Protection',
+          html: `You are covered until <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${completesText}</strong>. If you do nothing, the order completes automatically then. Something not right? Open a dispute from the order page before that time and we will look into it for you.`,
+        }) +
+        emailButton('Confirm Receipt →', `${APP_URL}/account/orders/${orderId}`) +
+        emailFooterNote(`Not what you ordered? <a href="${APP_URL}/account/orders/${orderId}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">Open a dispute</a> — Item Guaranteed or Full Refund.`),
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
+/**
+ * PR 7 — payout details changed (security notice). Withdrawals are paused
+ * for the freeze window so the account owner can react to an unexpected change.
+ */
+export async function sendPayoutDetailsChangedEmail({
+  to,
+  name,
+  kind,
+  summary,
+  freezeUntil,
+}: {
+  to: string
+  name: string
+  kind: 'crypto' | 'payoneer'
+  /** Human summary of the new destination (masked address / email). */
+  summary: string
+  /** ISO timestamp when withdrawals reopen, or null when no freeze applies. */
+  freezeUntil: string | null
+}) {
+  const untilText = freezeUntil ? new Date(freezeUntil).toUTCString().replace(' GMT', ' UTC') : null
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: 'Your payout details were changed',
+    html: emailShell({
+      preview: `Your ${kind === 'crypto' ? 'crypto payout address' : 'Payoneer email'} was updated.`,
+      icon: 'payout',
+      heading: 'Payout details changed',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — the ${kind === 'crypto' ? 'crypto payout address' : 'Payoneer email'} on your DropMarket seller account was just updated.`) +
+        emailOrderSummary([['New destination', escapeHtml(summary)]]) +
+        (untilText
+          ? emailBox({
+              accent: true,
+              title: 'Withdrawals paused briefly',
+              html: `For your security, withdrawals are paused until <strong class="dm-strong" style="color:${EMAIL_TOKENS.INK};">${untilText}</strong> whenever payout details change.`,
+            })
+          : '') +
+        emailButton('Review Payout Settings →', `${APP_URL}/account/settings?tab=payouts`) +
+        emailFooterNote(`Didn't make this change? Reset your password and <a href="mailto:${REPLY_TO}" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">contact support</a> straight away — nothing can be withdrawn during the pause.`),
+    }),
+  })
+  return error ? { success: false, error } : { success: true, data }
+}
+
+/**
+ * GRO-08 — after approval, the drafts the applicant built during review were
+ * submitted automatically. One email lists what went live / into review and
+ * what still needs finishing.
+ */
+export async function sendApplicantDraftsSubmittedEmail({
+  to,
+  name,
+  submitted,
+  skipped,
+}: {
+  to: string
+  name: string
+  submitted: Array<{ title: string; status: 'active' | 'pending_approval' }>
+  skipped: Array<{ title: string; reason: string }>
+}) {
+  try {
+    const row = (title: string, note: string, color: string) =>
+      `<tr><td style="padding:6px 0;font-size:13px;line-height:1.5;color:${EMAIL_TOKENS.INK};border-bottom:1px solid ${EMAIL_TOKENS.LINE};">${escapeHtml(title)}<br><span style="font-size:12px;color:${color};">${escapeHtml(note)}</span></td></tr>`
+    const submittedRows = submitted
+      .map((s) => row(s.title, s.status === 'active' ? 'Live now' : 'Submitted for review', EMAIL_TOKENS.FOREST_2))
+      .join('')
+    const skippedRows = skipped.map((s) => row(s.title, `Still a draft — ${s.reason}`, EMAIL_TOKENS.MUTED)).join('')
+
+    const body =
+      emailText(
+        `Hi ${escapeHtml(name)} — you\'re approved, and the ${submitted.length + skipped.length === 1 ? 'listing' : 'listings'} you drafted while your application was under review ${submitted.length > 0 ? 'went out automatically' : 'are waiting for you'}.`,
+      ) +
+      (submitted.length > 0
+        ? emailBox({ accent: true, title: `Submitted (${submitted.length})`, html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${submittedRows}</table>` })
+        : '') +
+      (skipped.length > 0
+        ? emailBox({ title: `Needs a finishing touch (${skipped.length})`, html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${skippedRows}</table>` })
+        : '') +
+      emailButton('Open My Listings', `${APP_URL}/account/listings`) +
+      emailFooterNote('Listings marked "Submitted for review" go live once our team has checked them.')
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to,
+      subject:
+        submitted.length > 0
+          ? `Your ${submitted.length} draft ${submitted.length === 1 ? 'listing is' : 'listings are'} on their way`
+          : 'Your draft listings are waiting for you',
+      html: emailShell({
+        preview: 'Your drafts from the application period were submitted.',
+        icon: 'sale',
+        heading: 'Your drafts are moving',
+        body,
+      }),
+    })
+    if (error) {
+      console.error('Failed to send drafts-submitted email:', error)
+      return { success: false, error }
+    }
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email service error:', error)
+    return { success: false, error }
+  }
 }

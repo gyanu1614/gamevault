@@ -22,6 +22,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const CANCELLED_STATES = new Set(['cancelled', 'failed', 'expired', 'rejected', 'blocked', 'error'])
+/** Statuses reached THROUGH a successful payment (safedrop state machine). */
+const PAID_LIFECYCLE = new Set(['paid', 'delivering', 'delivered', 'completed'])
 
 export async function GET(
   req: NextRequest,
@@ -38,29 +40,44 @@ export async function GET(
 
   const { data: order } = (await supabase
     .from('orders')
-    .select('id, buyer_id, status, listing_id, quantity, payment_provider, provider_charge_id')
+    .select('id, buyer_id, status, listing_id, quantity')
     .eq('id', orderId)
     .single()) as any
   if (!order || order.buyer_id !== user.id) return to('/account/orders')
 
   const backToCheckout = `/checkout/${order.listing_id}?qty=${order.quantity ?? 1}&cancelled=1`
   if (order.status !== 'pending') {
-    return order.status === 'cancelled' ? to(backToCheckout) : to(`/account/orders/${orderId}?paid=1`)
+    // PAY-020: `?paid=1` means "a payment just landed" (collapses history).
+    // Only the paid lifecycle earns it; a refunded / disputed order lands
+    // on its plain order page, a cancelled one back at checkout.
+    if (order.status === 'cancelled') return to(backToCheckout)
+    if (PAID_LIFECYCLE.has(order.status)) return to(`/account/orders/${orderId}?paid=1`)
+    return to(`/account/orders/${orderId}`)
   }
 
   // Pending here usually means the buyer cancelled on the provider page and
   // beat the webhook home — ask the provider which it was. Best-effort: on
-  // any error fall through to the awaiting-payment panel.
+  // any error — including the PAY-016 probe deadline — fall through to the
+  // awaiting-payment panel; the webhook is the authority either way.
   try {
-    if (order.payment_provider === 'payssion' && order.provider_charge_id) {
+    const { RETURN_PROBE_TIMEOUT_MS, withTimeout } = await import('@/lib/payments/timeouts')
+    // Round B: the charge to ask about is the order's OPEN attempt (the
+    // order's mirror columns are display data, never the authority).
+    const { openAttemptForOrder } = await import('@/lib/payments/attempts')
+    const attempt = await openAttemptForOrder(order.id)
+    if (attempt?.provider === 'payssion' && attempt.provider_charge_id) {
       // Order-bound lookup: the details signature includes the order id.
       const { payssionTransactionState } = await import('@/lib/payments/providers/payssion')
-      const state = await payssionTransactionState(order.provider_charge_id, order.id)
+      const state = await payssionTransactionState(attempt.provider_charge_id, order.id, {
+        timeoutMs: RETURN_PROBE_TIMEOUT_MS,
+      })
       if (CANCELLED_STATES.has(state)) return to(backToCheckout)
-    } else if (order.payment_provider && order.provider_charge_id) {
+    } else if (attempt?.provider && attempt.provider_charge_id) {
       const { getProvider } = await import('@/lib/payments/registry')
-      const { rawStatus } = await getProvider(order.payment_provider).getCharge(
-        order.provider_charge_id
+      const { rawStatus } = await withTimeout(
+        getProvider(attempt.provider).getCharge(attempt.provider_charge_id),
+        RETURN_PROBE_TIMEOUT_MS,
+        'return-route charge probe'
       )
       if (CANCELLED_STATES.has(rawStatus)) return to(backToCheckout)
     }

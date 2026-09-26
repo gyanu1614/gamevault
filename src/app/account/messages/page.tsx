@@ -24,6 +24,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { classifyOfferType } from '@/lib/utils/offer-type'
 import MessageList from '@/components/chat/MessageList'
 import { cn } from '@/lib/utils'
+import { normalizeOrderNumber } from '@/lib/orders/order-number'
 
 type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'top-up' | 'dm'
 
@@ -130,12 +131,15 @@ export default function MessagesPage() {
     if (tab === 'dm' && conv.order) return false
     if (tab !== 'all' && tab !== 'unread' && tab !== 'dm') {
       const cat = conv.order?.listing?.category
-      if (!conv.order || classifyOfferType(cat?.metadata?.type ?? undefined, cat?.slug) !== tab) return false
+      if (!conv.order || classifyOfferType(cat?.type ?? undefined, cat?.slug) !== tab) return false
     }
     if (!searchQuery) return true
     const otherUser = conv.buyer_id === user?.id ? conv.seller : conv.buyer
-    const hay = `${otherUser?.username ?? ''} ${conv.order?.order_number ?? ''} ${conv.order?.listing?.title ?? ''}`.toLowerCase()
-    return hay.includes(searchQuery.toLowerCase())
+    const hay = `${otherUser?.username ?? ''} ${conv.order?.listing?.title ?? ''}`.toLowerCase()
+    if (hay.includes(searchQuery.toLowerCase())) return true
+    // Order numbers match dash/space/case-insensitively (GV- and DM- alike).
+    const orderKey = normalizeOrderNumber(searchQuery)
+    return orderKey.length > 0 && normalizeOrderNumber(conv.order?.order_number).includes(orderKey)
   })
 
   if (authLoading || isLoadingConversations) {

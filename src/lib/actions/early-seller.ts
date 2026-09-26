@@ -11,6 +11,7 @@
  */
 
 import { headers } from 'next/headers'
+import { rateLimitAction } from '@/lib/security/rate-limit'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import {
@@ -95,8 +96,8 @@ export async function getFoundingProgress(): Promise<FoundingProgress | null> {
     // Granted founding sellers = the honest "claimed" number.
     const grantedRes = await (supabase as any)
       .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('founding_seller', true)
+      .select('id', { count: 'exact' })
+      .eq('founding_seller', true).limit(1)
 
     const granted = grantedRes.count ?? 0
 
@@ -113,7 +114,7 @@ export async function getFoundingProgress(): Promise<FoundingProgress | null> {
     // Early days: show real waitlist momentum instead of a near-zero claimed count.
     const waitlistRes = await (supabase as any)
       .from('early_seller_signups')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' }).limit(1)
 
     const waitlist = waitlistRes.count ?? 0
     // Nothing to brag about yet — hide the widget rather than show "0".
@@ -150,6 +151,11 @@ export async function submitEarlySeller(
   if (!email || !EMAIL_RE.test(email)) {
     return { ok: false, error: 'Please enter a valid email address.' }
   }
+
+  // Public, unauthenticated form — budget it so it cannot be scripted into a
+  // signup-spam firehose. Mapped onto this action's { ok, error } shape.
+  const limited = await rateLimitAction('contact')
+  if (limited) return { ok: false, error: limited.error }
 
   // Light request context for abuse review — never shown publicly.
   let ip: string | null = null

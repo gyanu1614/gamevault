@@ -3,15 +3,18 @@
 /**
  * Admin Category Management — /admin/categories
  *
- * CRUD interface for the `categories` table with icon upload support.
- * Uses service-role server actions for ALL reads + writes (bypasses RLS).
- * Supports emoji icons and uploaded image icons.
+ * Flat list of every per-game category row (`game_categories`) with inline
+ * edit, pause / resume, disable and icon upload. Uses service-role server
+ * actions for ALL reads + writes (bypasses RLS).
+ *
+ * Step 1b: rows are CREATED from the game wizard (/admin/games), never here.
+ * "Delete" disables the row; it is never removed.
  */
 
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusCircle, Pencil, Eye, EyeOff, Save, X, Loader2, Trash2, Upload, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { Pencil, Eye, EyeOff, Save, X, Loader2, Trash2, Upload, Image as ImageIcon, Sparkles, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,7 +22,6 @@ import { PageHeader, StatusBadge } from '../components/kit'
 import {
   fetchAdminCategories,
   updateCategory,
-  insertCategory,
   toggleCategoryActive,
   deleteCategory,
   uploadCategoryIcon,
@@ -30,26 +32,36 @@ import {
 
 interface Category {
   id: string
+  game_id: string
+  game_name: string
+  game_slug: string
+  global_slug: string
   name: string
   slug: string
+  type: string
   description: string | null
   icon_emoji: string | null
   icon_url: string | null
   icon_type: 'emoji' | 'image' | 'svg'
   sort_order: number
-  is_active: boolean
+  is_enabled: boolean
   listing_count?: number
 }
 
 const EMPTY_CATEGORY: Omit<Category, 'id' | 'listing_count'> = {
+  game_id: '',
+  game_name: '',
+  game_slug: '',
+  global_slug: '',
   name: '',
   slug: '',
+  type: '',
   description: '',
   icon_emoji: '📦',
   icon_url: null,
   icon_type: 'emoji',
   sort_order: 99,
-  is_active: true,
+  is_enabled: true,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -178,6 +190,7 @@ function EditRow({
       <td className="px-4 py-3">
         <span className="text-xs text-text-tertiary">Save first to upload image</span>
       </td>
+      <td className="px-4 py-3 text-sm text-text-secondary">{form.game_name}</td>
       <td className="px-4 py-3">
         <Input
           value={form.name}
@@ -246,7 +259,6 @@ function EditRow({
 export default function AdminCategoriesPage() {
   const queryClient = useQueryClient()
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [addingNew, setAddingNew] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -263,8 +275,8 @@ export default function AdminCategoriesPage() {
 
   // ── Toggle active (pause / resume) with double confirmation ─────────────────
   const handleToggleActive = async (category: Category) => {
-    const action = category.is_active ? 'pause' : 'resume'
-    const firstMsg = category.is_active
+    const action = category.is_enabled ? 'pause' : 'resume'
+    const firstMsg = category.is_enabled
       ? `Pause "${category.name}"? It will be hidden from the marketplace.`
       : `Resume "${category.name}"? It will become visible in the marketplace.`
 
@@ -272,7 +284,7 @@ export default function AdminCategoriesPage() {
     if (!window.confirm(`Are you sure you want to ${action} "${category.name}"? Click OK to confirm.`)) return
 
     setTogglingId(category.id)
-    const result = await toggleCategoryActive(category.id, !category.is_active)
+    const result = await toggleCategoryActive(category.id, !category.is_enabled)
     if (result.success) {
       refresh()
       queryClient.invalidateQueries({ queryKey: ['nav-categories'] })
@@ -292,9 +304,8 @@ export default function AdminCategoriesPage() {
       description: data.description,
       icon_emoji: data.icon_emoji,
       icon_url: data.icon_url,
-      icon_type: data.icon_type ?? undefined,
       sort_order: data.sort_order,
-      is_active: data.is_active,
+      is_enabled: data.is_enabled,
     })
     if (result.success) {
       refresh()
@@ -306,36 +317,13 @@ export default function AdminCategoriesPage() {
     setSavingId(null)
   }
 
-  // ── Add new category ─────────────────────────────────────────────────────────
-  const handleAddNew = async (data: Partial<Category>) => {
-    setSavingId('new')
-    const result = await insertCategory({
-      name: data.name!,
-      slug: data.slug!,
-      description: data.description,
-      icon_emoji: data.icon_emoji,
-      icon_url: data.icon_url,
-      icon_type: data.icon_type ?? undefined,
-      sort_order: data.sort_order,
-      is_active: data.is_active,
-    })
-    if (result.success) {
-      refresh()
-      queryClient.invalidateQueries({ queryKey: ['nav-categories'] })
-      setAddingNew(false)
-    } else {
-      alert(`Error: ${result.error}`)
-    }
-    setSavingId(null)
-  }
-
-  // ── Delete category permanently with double confirmation ─────────────────────
+  // ── Disable category (never a row delete) with double confirmation ───────────
   const handleDeleteCategory = async (category: Category) => {
     if (!window.confirm(
-      `DELETE "${category.name}"?\n\nThis will permanently remove the category. This cannot be undone.`
+      `Disable "${category.name}" for ${category.game_name}?\n\nIt disappears from the marketplace and the sell wizard; its listings stay attached and you can resume it later.`
     )) return
     if (!window.confirm(
-      `FINAL WARNING: Permanently delete "${category.name}"?\n\nClick OK to delete forever.`
+      `Disable "${category.name}"? Click OK to confirm.`
     )) return
 
     setDeletingId(category.id)
@@ -350,10 +338,10 @@ export default function AdminCategoriesPage() {
   }
 
   const filtered = (categories || []).filter((c) =>
-    !filterText || c.name.toLowerCase().includes(filterText.toLowerCase()) || c.slug.includes(filterText.toLowerCase())
+    !filterText || c.name.toLowerCase().includes(filterText.toLowerCase()) || c.slug.includes(filterText.toLowerCase()) || c.game_name.toLowerCase().includes(filterText.toLowerCase())
   )
 
-  const activeCount = (categories || []).filter((c) => c.is_active).length
+  const activeCount = (categories || []).filter((c) => c.is_enabled).length
 
   return (
     <div>
@@ -378,13 +366,14 @@ export default function AdminCategoriesPage() {
               className="h-9 w-48 border-border-default bg-bg-base text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
             />
             <Button
+              asChild
               size="sm"
               className="h-9 gap-2 bg-lime-pressed font-bold text-text-inverse hover:bg-lime"
-              onClick={() => { setAddingNew(true); setEditingId(null) }}
-              disabled={addingNew}
             >
-              <PlusCircle className="h-4 w-4" />
-              Add Category
+              <Link href="/admin/games">
+                <Gamepad2 className="h-4 w-4" />
+                Add via Game Wizard
+              </Link>
             </Button>
           </>
         }
@@ -407,6 +396,7 @@ export default function AdminCategoriesPage() {
               <tr className="border-b border-border-subtle bg-bg-overlay">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Emoji</th>
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Icon Upload</th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Game</th>
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Name</th>
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Slug</th>
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Description</th>
@@ -417,25 +407,15 @@ export default function AdminCategoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {/* Add new row */}
-              {addingNew && (
-                <EditRow
-                  category={{}}
-                  onSave={handleAddNew}
-                  onCancel={() => setAddingNew(false)}
-                  saving={savingId === 'new'}
-                />
-              )}
-
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-text-tertiary">
+                  <td colSpan={10} className="py-16 text-center text-text-tertiary">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-text-tertiary">
+                  <td colSpan={10} className="py-16 text-center text-text-tertiary">
                     No categories found
                   </td>
                 </tr>
@@ -454,12 +434,12 @@ export default function AdminCategoriesPage() {
                       key={category.id}
                       className={cn(
                         'border-b border-border-subtle transition-colors',
-                        category.is_active
+                        category.is_enabled
                           ? 'hover:bg-state-hover'
                           : 'bg-red-500/[0.04] hover:bg-red-500/[0.06]'
                       )}
                     >
-                      <td className={cn('px-4 py-3 text-xl', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 text-xl', !category.is_enabled && 'opacity-50')}>
                         {category.icon_emoji || '📦'}
                       </td>
                       <td className="px-4 py-3">
@@ -473,21 +453,27 @@ export default function AdminCategoriesPage() {
                           onUploadSuccess={refresh}
                         />
                       </td>
+                      <td className={cn('px-4 py-3 text-sm', !category.is_enabled && 'opacity-50')}>
+                        <Link href={`/${category.game_slug}/${category.slug}`} className="text-text-secondary hover:text-text-primary hover:underline" target="_blank">
+                          {category.game_name}
+                        </Link>
+                        <span className="ml-1.5 font-mono text-[10px] uppercase text-text-tertiary">{category.type}</span>
+                      </td>
                       <td className="px-4 py-3">
-                        <span className={cn('font-semibold text-text-primary', !category.is_active && 'opacity-50')}>
+                        <span className={cn('font-semibold text-text-primary', !category.is_enabled && 'opacity-50')}>
                           {category.name}
                         </span>
-                        {!category.is_active && (
+                        {!category.is_enabled && (
                           <span className="ml-2 text-xs font-normal text-error">(paused)</span>
                         )}
                       </td>
-                      <td className={cn('px-4 py-3 font-mono text-xs text-text-tertiary', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 font-mono text-xs text-text-tertiary', !category.is_enabled && 'opacity-50')}>
                         {category.slug}
                       </td>
-                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_enabled && 'opacity-50')}>
                         {category.description || <span className="text-text-disabled">—</span>}
                       </td>
-                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_active && 'opacity-50')}>
+                      <td className={cn('px-4 py-3 text-text-secondary', !category.is_enabled && 'opacity-50')}>
                         {category.sort_order}
                       </td>
                       <td className="px-4 py-3">
@@ -497,8 +483,8 @@ export default function AdminCategoriesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge
-                          status={category.is_active ? 'Active' : 'Paused'}
-                          tone={category.is_active ? 'success' : 'error'}
+                          status={category.is_enabled ? 'Active' : 'Paused'}
+                          tone={category.is_enabled ? 'success' : 'error'}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -506,7 +492,7 @@ export default function AdminCategoriesPage() {
                           {/* Edit */}
                           <button
                             title="Edit"
-                            onClick={() => { setEditingId(category.id); setAddingNew(false) }}
+                            onClick={() => setEditingId(category.id)}
                             className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -514,30 +500,30 @@ export default function AdminCategoriesPage() {
 
                           {/* Pause / Resume */}
                           <button
-                            title={category.is_active ? 'Pause (hide from marketplace)' : 'Resume (show in marketplace)'}
+                            title={category.is_enabled ? 'Pause (hide from marketplace)' : 'Resume (show in marketplace)'}
                             onClick={() => handleToggleActive(category)}
                             disabled={togglingId === category.id}
                             className={cn(
                               'rounded-lg p-1.5 transition-colors',
-                              category.is_active
+                              category.is_enabled
                                 ? 'text-text-tertiary hover:bg-yellow-500/10 hover:text-warning'
                                 : 'text-success hover:bg-green-500/10 hover:text-success'
                             )}
                           >
                             {togglingId === category.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : category.is_active ? (
+                            ) : category.is_enabled ? (
                               <EyeOff className="h-3.5 w-3.5" />
                             ) : (
                               <Eye className="h-3.5 w-3.5" />
                             )}
                           </button>
 
-                          {/* Delete permanently */}
+                          {/* Disable (never a row delete) */}
                           <button
-                            title="Delete permanently"
+                            title="Disable category"
                             onClick={() => handleDeleteCategory(category)}
-                            disabled={deletingId === category.id || (category.listing_count ?? 0) > 0}
+                            disabled={deletingId === category.id || !category.is_enabled}
                             className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-red-500/10 hover:text-error disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             {deletingId === category.id ? (
@@ -563,7 +549,7 @@ export default function AdminCategoriesPage() {
         <span>• <strong className="text-text-secondary">Icon Upload</strong> — upload PNG/JPG/SVG (max 2MB)</span>
         <span>• <strong className="text-text-secondary">Order</strong> — lower number = shown first in navbar</span>
         <span>• <EyeOff className="inline w-3 h-3 text-warning" /> Pause hides from marketplace — category stays here so you can resume it</span>
-        <span>• <Trash2 className="inline w-3 h-3 text-error" /> Delete is permanent and disabled if category has listings</span>
+        <span>• <Trash2 className="inline w-3 h-3 text-error" /> Disable removes it from the marketplace; the row and its listings stay (resume with <Eye className="inline w-3 h-3" />)</span>
       </div>
     </div>
   )

@@ -10,6 +10,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 
 export interface ApplicationStatusResult {
@@ -77,8 +78,10 @@ export async function getApplicationStatus(): Promise<{
       }
     }
 
-    // Check if can reapply using database function
-    const { data: reapplyCheck, error: reapplyError } = await (supabase.rpc as any)(
+    // Check if can reapply using database function. Service role: the RPC is
+    // service-only (DB-006 — it reveals any uuid's application state); the
+    // user id comes from the verified session above, never from the caller.
+    const { data: reapplyCheck, error: reapplyError } = await (createServiceRoleClient().rpc as any)(
       'can_seller_reapply',
       { user_id_param: user.id }
     )

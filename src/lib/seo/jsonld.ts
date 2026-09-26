@@ -244,12 +244,32 @@ export function productOffer({
 }
 
 /**
+ * Serialize a JSON-LD object for embedding in a <script> tag (DLT-002).
+ *
+ * `JSON.stringify` escapes neither `<` nor `/`, so any user-controlled string
+ * containing `</script>` closes the element and the rest is parsed as HTML.
+ * Seller listing titles reach these blocks with nothing but `.trim()` applied,
+ * so this is a live stored-XSS vector, not a theoretical one.
+ *
+ * `<` is a standard JSON string escape: the parsed value is byte-for-byte
+ * the original, so consumers (Google, validators) see identical data. Escaping
+ * every `<` rather than only `</script` also closes the `<!--` comment-state
+ * variant, which can hide a breakout from a naive `</script`-only filter.
+ *
+ * ALWAYS use this instead of JSON.stringify when the result reaches
+ * dangerouslySetInnerHTML — pinned by jsonld-escaping.guard.test.ts.
+ */
+export function serializeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c')
+}
+
+/**
  * Server-component helper — renders one JSON-LD script tag in the
  * initial HTML. Plain createElement (no JSX) so this stays a .ts file.
  */
 export function JsonLd({ data }: { data: object }) {
   return React.createElement('script', {
     type: 'application/ld+json',
-    dangerouslySetInnerHTML: { __html: JSON.stringify(data) },
+    dangerouslySetInnerHTML: { __html: serializeJsonLd(data) },
   })
 }

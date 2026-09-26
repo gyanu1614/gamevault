@@ -14,11 +14,19 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { handleWebhook } from '@/lib/payments/webhook-router'
+import { checkRateLimit, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // Per-provider budget (not per-IP): a provider's callbacks arrive from many
+  // IPs, and one noisy provider must not throttle another's. Charged before
+  // signature verification so a flood of forged callbacks cannot pin the CPU
+  // on HMAC work.
+  const limit = await checkRateLimit('webhook', 'provider:coingate')
+  if (limit.limited) return rateLimitResponse(limit)
+
   // Raw body — do NOT JSON.parse here; the adapter parses + verifies it.
   const rawBody = await req.text()
 
@@ -38,8 +46,12 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await handleWebhook('coingate', headers, rawBody)
+  // PAY-020: the failure detail (which verification stage rejected the
+  // request, what dispatch threw) is for OUR logs; an unauthenticated caller
+  // only learns that the request was rejected.
+  if (!result.ok) console.error('[webhook:coingate] %d %s', result.status, result.error)
   return NextResponse.json(
-    { ok: result.ok, deduped: result.deduped ?? false, processed: result.processed ?? 0, error: result.error },
+    { ok: result.ok, deduped: result.deduped ?? false, processed: result.processed ?? 0, ...(result.ok ? {} : { error: 'rejected' }) },
     { status: result.status }
   )
 }

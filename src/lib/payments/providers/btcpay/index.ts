@@ -22,6 +22,7 @@ import type {
   CreateChargeInput,
   CreateChargeResult,
   ParsedWebhook,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
 import {
@@ -33,7 +34,9 @@ import {
   BTCPAY_INVOICE_EXPIRY_MINUTES,
   BTCPAY_MONITORING_MINUTES,
 } from './env'
-import { btcpayToCanonical, btcpayEventId, type BtcpayInvoice } from './status-map'
+import { btcpayToCanonical, btcpayEventId, btcpayPaidFromMethods, type BtcpayInvoice } from './status-map'
+import { displayOrderRef } from '@/lib/orders/order-number'
+import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -77,10 +80,19 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
   async function getInvoice(id: string): Promise<BtcpayInvoice> {
     const res = await fetchImpl(
       `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${id}`,
-      { headers: authHeaders() }
+      { headers: authHeaders(), signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
     )
     if (!res.ok) throw new Error(`btcpay: invoice re-fetch failed ${res.status}`)
     return (await res.json()) as BtcpayInvoice
+  }
+
+  async function getPaymentMethods(id: string): Promise<BtcpayPaymentMethod[]> {
+    const res = await fetchImpl(
+      `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${id}/payment-methods`,
+      { headers: authHeaders(), signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
+    )
+    if (!res.ok) throw new Error(`btcpay: payment-methods fetch failed ${res.status}`)
+    return (await res.json()) as BtcpayPaymentMethod[]
   }
 
   return {
@@ -106,7 +118,8 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
         // set by us at creation, never from the webhook body).
         metadata: {
           orderId: input.orderId,
-          itemDesc: `DropMarket order ${input.orderId}`,
+          // Buyer-visible on the invoice: the order number, as stored.
+          itemDesc: `DropMarket order ${displayOrderRef(input.orderNumber, input.orderId)}`,
           ...(input.metadata ?? {}),
         },
         checkout: {
@@ -119,10 +132,12 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
           redirectAutomatically: true,
         },
       })
+      // PAY-016: a hung provider socket must not pin a serverless invocation.
       const res = await fetchImpl(`${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices`, {
         method: 'POST',
         headers: authHeaders(),
         body,
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`btcpay: create failed ${res.status} ${await res.text()}`)
       const inv = (await res.json()) as BtcpayInvoice
@@ -143,6 +158,45 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
       assertBtcpayConfigured()
       const inv = await getInvoice(providerChargeId)
       return { rawStatus: inv.status }
+    },
+
+    /**
+     * Round B Part 2: close a live invoice. Greenfield has no "cancel"; the
+     * equivalent is marking it Invalid (POST /status) — the checkout page
+     * then refuses — and archiving it (DELETE) so it leaves the store's
+     * active list. Settled/Processing means money arrived or is being
+     * confirmed: never touched. Expired/Invalid is already closed.
+     */
+    async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+      assertBtcpayConfigured()
+      const inv = await getInvoice(providerChargeId)
+      if (inv.status === 'Settled' || inv.status === 'Processing') {
+        return { outcome: 'paid', rawStatus: inv.status }
+      }
+      if (inv.status === 'Expired' || inv.status === 'Invalid') {
+        return { outcome: 'already_closed', rawStatus: inv.status }
+      }
+      const base = `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${providerChargeId}`
+      const mark = await fetchImpl(`${base}/status`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: 'Invalid' }),
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+      })
+      if (!mark.ok) throw new Error(`btcpay: mark invalid failed ${mark.status} ${await mark.text()}`)
+      // Archiving is housekeeping (the invoice is already unpayable); a
+      // failure here must not make the outbox retry the whole void.
+      try {
+        const archive = await fetchImpl(base, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+        })
+        if (!archive.ok) console.warn(`[btcpay] archive of voided invoice ${providerChargeId} failed ${archive.status}`)
+      } catch (e) {
+        console.warn(`[btcpay] archive of voided invoice ${providerChargeId} failed:`, e)
+      }
+      return { outcome: 'voided', rawStatus: 'Invalid' }
     },
 
     async parseWebhook(headers, rawBody): Promise<ParsedWebhook> {
@@ -177,7 +231,19 @@ export function makeBtcpayProvider(deps?: { fetchImpl?: typeof fetch }): Payment
       if (inv.storeId && inv.storeId !== btcpayStoreId()) {
         throw new Error('btcpay: re-fetched invoice storeId mismatch')
       }
-      const events = btcpayToCanonical(inv)
+      // PAY-011: a PaidOver settlement carries what was actually received so
+      // the confirm RPC can credit the excess. Best-effort — an unreachable
+      // methods endpoint or an unusable rate leaves `paid` absent; the
+      // confirmation itself never waits on it.
+      let paid
+      if (inv.status === 'Settled' && inv.additionalStatus === 'PaidOver') {
+        try {
+          paid = btcpayPaidFromMethods(await getPaymentMethods(payload.invoiceId), inv.currency)
+        } catch (e) {
+          console.warn(`[btcpay] PaidOver on ${inv.id}: payment methods unavailable, excess not computed:`, e)
+        }
+      }
+      const events = btcpayToCanonical(inv, paid)
       return { providerEventId: btcpayEventId(inv), events }
     },
   }
@@ -195,6 +261,7 @@ export async function btcpayFetchInvoice(invoiceId: string): Promise<BtcpayInvoi
   const res = await fetch(`${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${invoiceId}`, {
     headers: authHeaders(),
     cache: 'no-store',
+    signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
   })
   if (!res.ok) throw new Error(`btcpay: invoice fetch failed ${res.status}`)
   return (await res.json()) as BtcpayInvoice
@@ -204,7 +271,7 @@ export async function btcpayFetchPaymentMethods(invoiceId: string): Promise<Btcp
   assertBtcpayConfigured()
   const res = await fetch(
     `${btcpayBase()}/api/v1/stores/${btcpayStoreId()}/invoices/${invoiceId}/payment-methods`,
-    { headers: authHeaders(), cache: 'no-store' }
+    { headers: authHeaders(), cache: 'no-store', signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) }
   )
   if (!res.ok) throw new Error(`btcpay: payment-methods fetch failed ${res.status}`)
   return (await res.json()) as BtcpayPaymentMethod[]

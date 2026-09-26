@@ -8,7 +8,7 @@
  * Uses Framer Motion AnimatePresence for smooth enter/exit.
  */
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -85,7 +85,7 @@ export default function CategoryPageLayout({
               className="hidden md:block flex-shrink-0 overflow-hidden"
             >
               <div className="w-[268px]">
-                <FiltersSidebar maxPrice={roundedMax} inline />
+                <Suspense fallback={null}><FiltersSidebar maxPrice={roundedMax} inline /></Suspense>
               </div>
             </motion.div>
           )}
@@ -125,7 +125,7 @@ export default function CategoryPageLayout({
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <FiltersSidebar maxPrice={roundedMax} inline />
+                  <Suspense fallback={null}><FiltersSidebar maxPrice={roundedMax} inline /></Suspense>
                 </div>
               </motion.div>
             </>
@@ -135,11 +135,17 @@ export default function CategoryPageLayout({
         {/* ── Content area (animates width when sidebar opens) ─────────── */}
         <motion.div layout="size" className="flex-1 min-w-0">
           {children}
-          <LoadMoreListings
-            currentPage={currentPage}
-            hasMore={hasMore}
-            listingsPerPage={12}
-          />
+          {/* FiltersSidebar / LoadMoreListings read useSearchParams(). On the
+              ISR category page that would client-render everything up to the
+              nearest boundary — so each gets its own, keeping the grid in the
+              static HTML (Step 7a). */}
+          <Suspense fallback={null}>
+            <LoadMoreListings
+              currentPage={currentPage}
+              hasMore={hasMore}
+              listingsPerPage={12}
+            />
+          </Suspense>
         </motion.div>
       </div>
     </div>

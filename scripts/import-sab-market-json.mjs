@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const DEFAULT_ENDPOINT =
   "https://cserfvellsliylifjkos.supabase.co/functions/v1/sab-market-import";
@@ -12,8 +13,12 @@ const SUPPORTED_SOURCES = new Set([
   "zeusx",
 ]);
 
-function parseArgs(argv) {
-  const send = argv.includes("--send");
+export function parseArgs(argv) {
+  // ROUTE-017: --publish-only re-sends only the final batch with publish:true,
+  // to recover a crawl whose rows landed but whose publish step failed. It is
+  // meaningless as a dry run, so it implies --send.
+  const publishOnly = argv.includes("--publish-only");
+  const send = publishOnly || argv.includes("--send");
   const input = argv.find(
     (argument) => !argument.startsWith("--"),
   );
@@ -24,6 +29,7 @@ function parseArgs(argv) {
 
   return {
     send,
+    publishOnly,
     inputPath: resolve(process.cwd(), input),
   };
 }
@@ -368,6 +374,110 @@ function groupBySource(records) {
   return groups;
 }
 
+// ROUTE-011: the publish:true call re-aggregates the WHOLE dataset server-side
+// (sab_publish_market_estimates), so it is by far the heaviest request in the
+// import and the one that intermittently exceeds the Postgres statement timeout
+// (57014) or the gateway's budget. It runs exactly once per crawl, at the very
+// end, so failing it discards a crawl that has already succeeded — three of the
+// last 25 scheduled runs died precisely here. The upsert is idempotent, so a
+// retry is safe for intermediate batches too.
+const SEND_MAX_ATTEMPTS = 4;
+
+/**
+ * PostgREST/Postgres SQLSTATEs that will NEVER succeed on retry, whatever HTTP
+ * status they arrive under. The import endpoint wraps an RPC failure in its own
+ * 500, so status alone cannot distinguish "the database is busy" from "this
+ * statement is invalid" — the SQLSTATE can.
+ *
+ * ROUTE-013: 21000 is the one that bit us. A full-refresh function did an
+ * unqualified DELETE, safe-update mode rejected it, the edge function reported
+ * it as a 500, and the retry loop dutifully re-sent the same doomed statement
+ * four times before failing — turning a clear, instant error into four minutes
+ * of identical failures.
+ */
+const NON_RETRYABLE_SQLSTATES = [
+  "21000", // cardinality_violation — incl. "DELETE requires a WHERE clause"
+  "42501", // insufficient_privilege
+  "42703", // undefined_column
+  "42P01", // undefined_table
+  "42883", // undefined_function
+  "23502", // not_null_violation
+  "23503", // foreign_key_violation
+  "23505", // unique_violation
+  "22P02", // invalid_text_representation
+  "PGRST", // PostgREST's own schema-cache / request errors (PGRST2xx, PGRST1xx)
+];
+
+export function isRetryableImportError(error) {
+  const status = Number(error?.status ?? 0);
+  const text = `${error?.details ?? ""} ${error?.message ?? ""}`;
+
+  // Decide on the error's IDENTITY before its HTTP status. A permanent schema or
+  // constraint failure is permanent even when it surfaces as a 500.
+  if (NON_RETRYABLE_SQLSTATES.some((code) => text.includes(code))) return false;
+  if (/requires a where clause/i.test(text)) return false;
+  // ROUTE-017: a malformed listing_url throws the bare `TypeError: Invalid URL`
+  // from new URL() — no status, no SQLSTATE — so it reached the final
+  // `status >= 500` and was rejected only by luck (0 >= 500 is false). Wrapped
+  // in a 5xx, or under 408/429, the same unparseable row would be re-sent 4x.
+  // Keyed on the phrase, not on "url": a statement timeout whose text happens
+  // to contain a URL must still retry.
+  if (/invalid url/i.test(text)) return false;
+
+  // Transient by identity, whatever the status.
+  if (
+    text.includes("57014") ||
+    /statement timeout/i.test(text) ||
+    /gateway timeout|fetch failed|socket|ECONNRESET|EAI_AGAIN|ETIMEDOUT/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+
+  // 4xx is the client's fault and will not fix itself — never retry it. (408
+  // and 429 are the two exceptions: both explicitly mean "try again".)
+  if (status === 408 || status === 429) return true;
+  if (status >= 400 && status < 500) return false;
+
+  // A bare 5xx with no recognisable SQLSTATE is assumed transient (the gateway
+  // or the database was briefly unavailable).
+  return status >= 500;
+}
+
+const pause = (milliseconds) =>
+  new Promise((done) => setTimeout(done, milliseconds));
+
+async function sendBatchWithRetry(options, label) {
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= SEND_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await sendBatch(options);
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableImportError(error) ||
+        attempt === SEND_MAX_ATTEMPTS
+      ) {
+        break;
+      }
+      const backoffMs = 2000 * attempt;
+      console.warn(
+        `\n${label} failed (attempt ${attempt}/${SEND_MAX_ATTEMPTS}: ` +
+          `${error.message}) — retrying in ${backoffMs}ms…`,
+      );
+      await pause(backoffMs);
+    }
+  }
+
+  throw lastError;
+}
+
 async function sendBatch({
   endpoint,
   secret,
@@ -408,20 +518,75 @@ async function sendBatch({
     !response.ok ||
     responseBody.ok !== true
   ) {
-    throw new Error(
+    const failure = new Error(
       `${sourceSlug} import failed: ${
         responseBody.details ??
         responseBody.error ??
         `HTTP ${response.status}`
       }`,
     );
+    // ROUTE-011: let the caller decide whether this is worth retrying.
+    failure.status = response.status;
+    failure.details =
+      responseBody.details ?? responseBody.error ?? "";
+    throw failure;
   }
 
   return responseBody;
 }
 
+/**
+ * ROUTE-011 + ROUTE-017. Plan the import's requests.
+ *
+ * ROUTE-011: insert every batch WITHOUT publishing — the server's publish step
+ * re-runs a full-dataset aggregation, so publishing on each 500-row batch means
+ * dozens of full recomputes per crawl and intermittently trips the Postgres
+ * statement timeout (57014). We insert everything first, then publish ONCE by
+ * re-sending the final batch with publish:true (an idempotent upsert), because
+ * an empty final publish would be a wasted recompute — and the edge function
+ * rejects an empty `listings` array with a 400 anyway.
+ *
+ * ROUTE-017 (publishOnly): the publish step is seconds of work at the tail of a
+ * 30-40 minute scrape and the most failure-prone call in the pipeline. Keeping
+ * only the final batch lets a failed publish be retried in one request against
+ * rows already in sab_market_raw_listings, instead of re-scraping Eldorado.
+ * It is deliberately the SAME batch a full --send would have published on, so
+ * the recovery path exercises the identical request.
+ */
+export function buildBatchPlan(groups, { publishOnly = false } = {}) {
+  const batchPlan = [];
+
+  for (const [sourceSlug, listings] of groups) {
+    for (
+      let batchStart = 0;
+      batchStart < listings.length;
+      batchStart += 500
+    ) {
+      batchPlan.push({
+        sourceSlug,
+        batch: listings.slice(batchStart, batchStart + 500),
+        label: `${sourceSlug} batch ${Math.floor(batchStart / 500) + 1}`,
+        publish: false,
+      });
+    }
+  }
+
+  if (!batchPlan.length) return batchPlan;
+
+  // Publish on the very last batch of the whole import.
+  const final = batchPlan[batchPlan.length - 1];
+  final.publish = true;
+
+  if (publishOnly) {
+    final.label = `${final.label} (publish-only)`;
+    return [final];
+  }
+
+  return batchPlan;
+}
+
 async function main() {
-  const { send, inputPath } = parseArgs(
+  const { send, publishOnly, inputPath } = parseArgs(
     process.argv.slice(2),
   );
 
@@ -511,42 +676,43 @@ async function main() {
     process.env.SAB_MARKET_IMPORT_URL ??
     DEFAULT_ENDPOINT;
 
-  // Insert every batch WITHOUT publishing — the server's publish step re-runs a
-  // full-dataset aggregation, so publishing on each 500-row batch means dozens
-  // of full recomputes per crawl and intermittently trips the Postgres
-  // statement timeout (57014). We insert everything first, then publish ONCE at
-  // the end. We still track the last (source, listings) batch to publish on:
-  // an empty final publish would be a wasted recompute, so we publish by
-  // re-sending the final batch with publish:true (idempotent upsert).
-  const batchPlan = [];
-  for (const [sourceSlug, listings] of groups) {
-    for (
-      let batchStart = 0;
-      batchStart < listings.length;
-      batchStart += 500
-    ) {
-      batchPlan.push({
-        sourceSlug,
-        batch: listings.slice(batchStart, batchStart + 500),
-        label: `${sourceSlug} batch ${Math.floor(batchStart / 500) + 1}`,
-      });
-    }
+  // See buildBatchPlan for why publishing happens once, on the final batch.
+  const batchPlan = buildBatchPlan(groups, {
+    publishOnly,
+  });
+
+  if (publishOnly && !batchPlan.length) {
+    // ROUTE-017: an empty feed has no final batch to re-send, and the edge
+    // function rejects an empty `listings` array with a 400. Nothing to do.
+    console.log(
+      "\nNothing to publish: the feed contains no listings for any source.",
+    );
+    return;
+  }
+
+  if (publishOnly) {
+    console.log(
+      `\nPublish-only: re-sending the final batch (${batchPlan[0].batch.length} listing(s)) ` +
+      "with publish:true. The upsert is idempotent on (source, external_listing_id), " +
+      "so already-imported rows are a no-op; this runs the publish → evidence → display chain.",
+    );
   }
 
   for (let i = 0; i < batchPlan.length; i += 1) {
-    const { sourceSlug, batch, label } = batchPlan[i];
-    // Publish only on the very last batch of the whole import.
-    const isFinal = i === batchPlan.length - 1;
+    const { sourceSlug, batch, label, publish } = batchPlan[i];
 
-    const response = await sendBatch({
-      endpoint,
-      secret,
-      sourceSlug,
-      listings: batch,
-      publish: isFinal,
-    });
+    const response = await sendBatchWithRetry(
+      {
+        endpoint,
+        secret,
+        sourceSlug,
+        listings: batch,
+        publish,
+      },
+      label,
+    );
 
-    console.log(`\n${label}${isFinal ? " (final — publishing)" : ""}:`);
+    console.log(`\n${label}${publish ? " (publishing)" : ""}:`);
     console.log(JSON.stringify(response.result, null, 2));
 
     if (response.publication) {
@@ -569,9 +735,17 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error(
-    `\nBulk import failed: ${error.message}`,
-  );
-  process.exitCode = 1;
-});
+// ROUTE-011: only run when invoked as a script, so the retry predicate above can
+// be unit-tested by importing this module without kicking off a real import.
+const invokedDirectly =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(
+      `\nBulk import failed: ${error.message}`,
+    );
+    process.exitCode = 1;
+  });
+}

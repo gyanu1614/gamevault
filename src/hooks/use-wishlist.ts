@@ -85,8 +85,8 @@ export function useWishlist() {
           seller_id,
           game_id,
           games (id, name, slug, emoji, image_url),
-          categories (id, name, slug),
-          seller:profiles!listings_seller_id_fkey (id, username, seller_tier, is_verified)
+          categories:game_categories!listings_game_category_id_fkey (id, name, slug),
+          seller:public_profiles!listings_seller_id_fkey (id, username, seller_tier, is_verified)
         `)
         .in('id', listingIds) as any
 

@@ -14,10 +14,11 @@
  *   old ValuesHeader.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import NorthEastIcon from '@mui/icons-material/NorthEast'
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
@@ -31,17 +32,25 @@ const TOOL_LABEL: Record<'values' | 'calculator', string> = {
 
 export function HubNav({
   data,
-  calcMode,
+  calcMode: calcModeOverride,
 }: {
   data: HubNavData
   /**
-   * Which calculator mode is showing, when we're on the calculator page. Comes
-   * from the page's own resolved searchParams rather than useSearchParams(),
-   * which would drag every hub page into a Suspense boundary at build time.
+   * Which calculator mode is showing, when we're on the calculator page.
+   * Optional override (Adopt Me pins 'trade'); otherwise read from `?tab=` on
+   * the client through SearchParamsBridge, which keeps the nav out of the
+   * useSearchParams() static-rendering bailout (Step 7a — the page used to
+   * pass its own searchParams, which made the ISR route render per request).
    */
   calcMode?: 'cash' | 'trade'
 }) {
   const pathname = usePathname() ?? ''
+  const [urlCalcMode, setUrlCalcMode] = useState<'cash' | 'trade'>('trade')
+  const onParams = useCallback(
+    (params: URLSearchParams) => setUrlCalcMode(params.get('tab') === 'cash' ? 'cash' : 'trade'),
+    [],
+  )
+  const calcMode = calcModeOverride ?? urlCalcMode
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -117,6 +126,7 @@ export function HubNav({
     // lighter than the page base (#171B21) so the bar reads as its own surface
     // rather than a black void.
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[#121714]">
+      {calcModeOverride === undefined && <SearchParamsBridge onParams={onParams} />}
       {/* Full-bleed row: no max-width cap, so the brand sits at the true left
           edge of the page and the storefront buttons at the true right edge.
           Only the page gutter insets them. The tab group stays centred on the
@@ -135,11 +145,14 @@ export function HubNav({
         <div className="flex shrink-0 items-center gap-2 self-stretch sm:gap-3 md:flex-1">
           <Link href="/" aria-label="DropMarket home" className="shrink-0">
             <Image
-              src="/brand/logo-mark-white.png"
+              src="/brand/logo-mark-white.avif"
               alt="DropMarket"
               width={34}
               height={34}
               className="h-[28px] w-[28px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)] sm:h-[34px] sm:w-[34px]"
+              // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+              // it to WebP bills a transformation and saves nothing.
+              unoptimized
             />
           </Link>
           <span aria-hidden className="hidden h-[26px] w-px bg-[#26332C] sm:block" />

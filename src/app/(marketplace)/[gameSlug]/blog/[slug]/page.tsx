@@ -10,8 +10,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getGamePost, getPostsTaggedForGame } from '@/lib/blog/db'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts } from '@/lib/blog/db'
 import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
@@ -28,6 +28,18 @@ import { ArticleToc } from './_ArticleToc'
 
 export const revalidate = 3600
 
+/**
+ * Prerender every published game-tagged post, mirroring the flat /blog/[slug]
+ * sibling. Post bodies are near-immutable; new posts still render on demand
+ * and are picked up by the revalidate window above.
+ */
+export async function generateStaticParams() {
+  const posts = await getAllPublishedPosts()
+  return posts
+    .filter((p) => p.primaryGameSlug)
+    .map((p) => ({ gameSlug: p.primaryGameSlug as string, slug: p.slug }))
+}
+
 const POST_TYPE_LABEL: Record<string, string> = {
   value: 'Value list',
   seller: 'Seller guide',
@@ -42,7 +54,7 @@ const RELATED_DATE = new Intl.DateTimeFormat('en-GB', {
 })
 
 async function getGame(gameSlug: string) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const base = 'name, slug, image_url, is_active, cover_url'
 
@@ -242,7 +254,7 @@ export default async function GameBlogArticle({
             <div className="mt-6 flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-white.png"
+                src="/brand/logo-mark-white.avif"
                 alt=""
                 width={26}
                 height={26}

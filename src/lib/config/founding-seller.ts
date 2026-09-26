@@ -3,9 +3,11 @@
  * bits of the Phase 0 onboarding sequence (Discord invite, perk copy). Safe to
  * import from both client and server components: no server-only dependencies.
  *
- * The MONEY side of the perk (the commission discount) lives in src/lib/fees
- * (FOUNDING_DISCOUNT_PTS) and is the source of truth for payouts. The value
- * mirrored here is FOR DISPLAY ONLY — keep the two in sync when retuning.
+ * The MONEY side of the perk is DATA: platform_fee_settings
+ * (founding_discount_pct / founding_months), applied by resolve_seller_fee
+ * (fee engine PR 1). The wording here is display-only and deliberately
+ * carries no number that could drift from that row — the live terms are on
+ * /sell/fees, which reads the table.
  */
 
 /**
@@ -15,15 +17,17 @@
 export const DISCORD_INVITE_URL = 'https://discord.gg/z5ghW37JRu'
 
 /**
- * Percentage-points-off wording for the founding commission perk. Mirrors
- * FOUNDING_DISCOUNT_PTS in src/lib/fees (which governs actual payouts) — this
- * copy is display-only; update both together.
+ * The founding fee perk, in words. Chip form (perk lists) and sentence form
+ * (hero copy, email). Non-numeric on purpose (fee-copy.guard): the programme's
+ * actual discount and duration are platform settings read by the resolver and
+ * published on /sell/fees.
  */
-export const FOUNDING_DISCOUNT_PTS_DISPLAY = 2
+export const FOUNDING_FEE_PERK_LABEL = 'Half-price commission for your first year'
+export const FOUNDING_FEE_PERK_SENTENCE = 'half-price commission for your first year'
 
 /** One-line perk summaries reused across the form success state and the email. */
 export const FOUNDING_PERKS: readonly string[] = [
-  `A permanently reduced commission — ${FOUNDING_DISCOUNT_PTS_DISPLAY} points off every category rate, locked to your account for life.`,
+  `${FOUNDING_FEE_PERK_LABEL} — the founding rate on every category, applied automatically to each sale.`,
   'Early listing access before the marketplace opens to the public.',
   'A founding-seller badge on your storefront that buyers can see.',
 ] as const

@@ -1,12 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import {
-  Inter,
-  Figtree,
-  JetBrains_Mono,
-  Archivo,
-  Roboto_Condensed,
-} from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -14,7 +8,6 @@ import { FooterGameLinks } from '@/components/footer-game-links'
 import { Toaster } from 'sonner'
 import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
 import { Analytics } from "@vercel/analytics/next"
-import { AllHeroesPreload } from '@/components/hero-backdrop'
 
 // Two text faces, split by surface:
 //   • MARKETPLACE (storefront, everything by default) → Inter, exposed as
@@ -24,42 +17,61 @@ import { AllHeroesPreload } from '@/components/hero-backdrop'
 //     --font-figtree. globals.css remaps --font-inter → --font-figtree inside
 //     the `.hub-chrome` wrapper, so hub pages pick up Figtree with no
 //     component changes; the marketplace keeps Inter.
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+//
+// SELF-HOSTED (build audit 2026-09-22, §3): these were `next/font/google`,
+// which fetches the font files from Google at BUILD time — three families per
+// build, and it flaked twice during the audit with a `next/font` TypeError.
+// The files now live in ./fonts, so the build does no network I/O for fonts
+// and cannot fail on Google being slow or unreachable.
+//
+// One variable woff2 per family covers the whole weight range (Google serves
+// the same file for every static weight anyway), so this is also 14 requests
+// fewer than the per-weight form. `latin` subset only, as before.
+const inter = localFont({
+  src: './fonts/inter-variable.woff2',
+  weight: '100 900',
   variable: '--font-inter',
   display: 'swap',
 })
 
-const figtree = Figtree({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+// preload:false — Figtree is scoped to `.hub-chrome` (globals.css remaps
+// --font-inter inside the content hub). next/font preloads every font declared
+// in the root layout, so a marketplace route was fetching Figtree at high
+// priority to render zero glyphs with it. It still loads on hub routes that
+// use it, just without competing with the LCP everywhere else.
+const figtree = localFont({
+  src: './fonts/figtree-variable.woff2',
+  weight: '300 900',
   variable: '--font-figtree',
   display: 'swap',
+  preload: false,
 })
 
 // JetBrains Mono — order IDs, timestamps, mono data
 // (Geist Mono not available in next/font/google for Next.js 14; JetBrains Mono is equivalent quality)
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+// preload:false — mono is for order IDs, timestamps and tabular data. 54 files
+// use it, but never above the fold on a hub/sell/landing page, so preloading it
+// spent priority on a font the first paint does not need.
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-variable.woff2',
+  weight: '100 800',
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 })
 
 // Archivo — display face under evaluation for the seller-program card titles.
 // Variable width axis, so `font-variation-settings: 'wdth' N` actually moves.
 // Its own variable, NOT --font-display: that one is bound to Inter on <body>
 // and is read across the whole site.
-const archivo = Archivo({
-  // No explicit `weight`: next/font rejects `axes` alongside pinned weights
-  // ("Axes can only be defined for variable fonts") because listing weights
-  // requests static instances. Omitting it loads the full variable range,
-  // which covers 400-800 AND keeps the wdth axis live.
-  axes: ['wdth'],
-  display: 'swap',
-  subsets: ['latin'],
+const archivo = localFont({
+  // Self-hosted like the faces above. One variable file carries both axes
+  // (wght 100-900, wdth 62-125), so the wdth axis stays live.
+  src: './fonts/archivo-variable.woff2',
+  weight: '100 900',
   variable: '--font-archivo',
+  display: 'swap',
+  preload: false,
 })
 
 // Roboto Condensed — the step numerals on the buyer-steps section ONLY.
@@ -70,11 +82,12 @@ const archivo = Archivo({
 // Display — which won on bounding-box proportion alone — has almost no flag
 // and scored worst of eleven candidates. Bounding boxes do not capture glyph
 // shape; the profile does.
-const bigShoulders = Roboto_Condensed({
+const bigShoulders = localFont({
+  src: './fonts/roboto-condensed-700.woff2',
   weight: '700',
-  display: 'swap',
-  subsets: ['latin'],
   variable: '--font-numeral',
+  display: 'swap',
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -124,12 +137,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* V21/P7.g — Warm-preload every hero AVIF at app load so
-            SPA navigations between routes show their backdrops
-            instantly without a black flash. fetchpriority=low so
-            this doesn't compete with the LCP hero on the landing
-            page. */}
-        <AllHeroesPreload />
+        {/* Hero preloading is ROUTE-AWARE: each segment layout emits its own
+            <HeroBackdropPreload> for the one hero it renders — `marketplace`
+            in (marketplace), `sell` in (sell), `account` in /account, `home`
+            on the landing page.
+
+            V21/P7.g used to warm-preload all five heroes here so SPA
+            navigations never showed a black flash. It cost every route ~2MB
+            of images it does not display — `order.avif` alone is 1.24MB, and
+            it was the single largest download on the landing page, which
+            never shows that hero. Removed in Step 1c/Fix 1. */}
       </head>
       <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} ${bigShoulders.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>

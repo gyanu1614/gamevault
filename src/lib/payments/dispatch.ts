@@ -57,7 +57,18 @@ export function orderEventFor(event: CanonicalEvent): OrderEvent | null {
  */
 export async function dispatch(
   event: CanonicalEvent,
-  providerEventId: string
+  providerEventId: string,
+  /** Round B: the provider the event came from — binds its charge id to the
+   *  order's payment attempt inside the money RPCs. */
+  providerName?: string,
+  opts?: {
+    /** CHARGE_FAILED only: how the open attempt closes. The expiry sweep
+     *  passes 'void' (we closed it); a provider webhook leaves the default
+     *  ('failed' — the provider reported it dead). */
+    closeAttemptAs?: 'failed' | 'void'
+    /** The sweep asked the provider before cancelling: its answer. */
+    providerVoidOutcome?: 'voided' | 'already_closed' | 'unsupported'
+  }
 ): Promise<{ applied: boolean; orderId?: string; status?: string }> {
   const orderEvent = orderEventFor(event)
   if (orderEvent === null) {
@@ -69,147 +80,114 @@ export async function dispatch(
     return { applied: false }
   }
 
+  // DB-015: the two money-bearing events that also touch the buyer's wallet
+  // run transition + wallet leg in ONE DB transaction. A failure throws out of
+  // dispatch → the router marks the event failed and answers 500, so the
+  // provider retries; both RPCs are idempotent, so the retry converges.
+  //   REFUND_COMPLETED → order_refund_to_wallet: escrow_held → refunds (gross)
+  //     + refunds → user_wallet for what the PROVIDER refunded, clamped to the
+  //     order total (partial refunds are real; a quirk can never over-credit).
+  //     Store-credit refunds are 100% (Refund & Dispute Policy). NOT for
+  //     CHARGEBACK_OPENED — a chargeback claws the cash back through the
+  //     provider, no wallet credit.
+  //   CHARGE_FAILED → order_cancel_return_wallet: CANCELLED + exact mirror of
+  //     the checkout wallet hold (checkout_wallet:<id>) back to user_wallet.
+  //
+  // SUPPORT RUNBOOK — manual external refunds: no code path calls the
+  // provider's refund() (CoinGate's throws 'not yet implemented'), so a
+  // REFUND_COMPLETED event only arrives after someone refunds manually in the
+  // provider dashboard. If the buyer was ALREADY given store credit (ledger
+  // txn keyed 'wallet_refund:<orderId>' — or
+  // 'wallet_refund:<orderId>:partial:<disputeId>' from a partial dispute), a
+  // manual external refund on top is DOUBLE compensation. Always check
+  // ledger_transactions for those keys before refunding at the provider.
   let result
+  // PAY-003: a confirmed payment whose stock was already gone is refunded
+  // to the buyer's wallet inside the confirm transaction; the comms below
+  // must then be the REFUND comms, not the paid ones.
+  let notifyEvent: OrderEvent = orderEvent
+  const charge =
+    providerName && 'providerChargeId' in event && event.providerChargeId
+      ? { provider: providerName, providerChargeId: event.providerChargeId }
+      : undefined
   try {
-    result = await transition(event.orderId, orderEvent, providerEventId)
-  } catch (err) {
-    // A CONFIRMED charge that can't apply means real money arrived for an
-    // order that is no longer payable (cancelled/superseded voucher paid
-    // late, buyer cancelled mid-flight). That must never die silently in a
-    // failed webhook row — page the admins, then rethrow so the event stays
-    // recorded as failed (the dedupe claim stops retry spam).
     if (event.type === 'CHARGE_CONFIRMED') {
-      await alertAdminsPaymentForClosedOrder(event.orderId, event.providerChargeId, err).catch(
-        () => {}
+      const { confirmOrderPayment } = await import('@/lib/wallet/order-money')
+      const confirmed = await confirmOrderPayment(event.orderId, providerEventId, charge, {
+        amountMinor: event.settled.amountMinor,
+        currency: event.settled.currency,
+        paidMinor: event.paid?.amountMinor,
+      })
+      if (confirmed.outcome === 'late_credited') {
+        // Round B Part 3 (PAY-009): money for a charge the order no longer
+        // wanted — credited to the buyer's wallet inside the RPC (buyer and
+        // admins notified there, once). The order is untouched and this is
+        // a PROCESSED event: no throw, no failed row, no provider retry.
+        console.warn(
+          `[Dispatch] late payment on order ${event.orderId} (charge ${event.providerChargeId}, status ${confirmed.status}): ${confirmed.creditedMinor} minor credited to the buyer wallet`
+        )
+        return { applied: false, orderId: confirmed.orderId, status: confirmed.status }
+      }
+      if (confirmed.outcome === 'oversold_refunded') {
+        console.warn(
+          `[Dispatch] order ${event.orderId} paid but out of stock (${confirmed.reason ?? 'unknown'}) — refunded to the buyer wallet in the same transaction`
+        )
+        notifyEvent = 'REFUNDED'
+      }
+      result = confirmed
+    } else if (event.type === 'REFUND_COMPLETED') {
+      const { refundOrderToWallet } = await import('@/lib/wallet/order-money')
+      result = await refundOrderToWallet(event.orderId, providerEventId, event.amount?.amountMinor)
+    } else if (event.type === 'CHARGE_FAILED') {
+      const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
+      result = await cancelOrderReturnWallet(event.orderId, providerEventId, {
+        charge,
+        closeAttemptAs: opts?.closeAttemptAs,
+        providerVoidOutcome: opts?.providerVoidOutcome,
+      })
+      // PAY-002: a stale/late failure for an order that is already paid (or
+      // terminal) is refused inside the RPC — nothing moved, admins were
+      // alerted once. Not an error: the event is processed (no provider retry).
+      if (result.refused) {
+        console.warn(
+          `[Dispatch] CHARGE_FAILED refused for order ${event.orderId} (status ${result.status}, charge ${event.providerChargeId}): order is not pending`
+        )
+      } else if (result.reason === 'stale_attempt') {
+        // Round B: the charge that failed is no longer the order's open
+        // attempt (a retry superseded it); the live attempt is untouched.
+        console.warn(
+          `[Dispatch] CHARGE_FAILED for superseded charge ${event.providerChargeId} on order ${event.orderId}: no-op`
+        )
+      }
+    } else {
+      result = await transition(event.orderId, orderEvent, providerEventId)
+    }
+  } catch (err) {
+    // Round B: money for a closed order no longer lands here — the RPC
+    // credits the buyer's wallet and notes admins once (Part 3). What still
+    // throws is a genuine fault (unknown order, a charge bound to another
+    // order, the database itself): log it and rethrow so the router marks
+    // the event failed and answers 500 — the provider retries, and the
+    // reconciler caps a poison row and alerts ONCE, in SQL (Part 4). No
+    // TS-side notification insert: every admin page is admin_alert_once.
+    if (event.type === 'CHARGE_CONFIRMED') {
+      console.error(
+        `[Dispatch] CHARGE_CONFIRMED for order ${event.orderId} (charge ${event.providerChargeId}) could not be applied:`,
+        err
       )
     }
     throw err
   }
 
   if (result.changed) {
-    // Provider-completed refunds land in the buyer's WALLET as store credit
-    // (Refund & Dispute Policy: store-credit refunds are 100%): the REFUNDED
-    // transition moved escrow_held → refunds; this credit completes the chain
-    // refunds → user_wallet. Idempotent on 'wallet_refund:<orderId>', so a
-    // replayed webhook can't double-credit. NOT for CHARGEBACK_OPENED — a
-    // chargeback claws the cash back through the provider, no wallet credit.
-    //
-    // SUPPORT RUNBOOK — manual external refunds: no code path calls the
-    // provider's refund() (CoinGate's throws 'not yet implemented'), so a
-    // REFUND_COMPLETED event only arrives after someone refunds manually in
-    // the provider dashboard. If the buyer was ALREADY given store credit
-    // (ledger txn keyed 'wallet_refund:<orderId>' — or
-    // 'wallet_refund:<orderId>:partial:<disputeId>' from a partial dispute),
-    // a manual external refund on top is DOUBLE compensation. Always check
-    // ledger_transactions for those keys before refunding at the provider.
-    // AWAITED but wrapped: a credit failure must never fail the webhook (the
-    // idempotent key makes it safely retryable).
-    if (event.type === 'REFUND_COMPLETED') {
-      await (async () => {
-        const { createServiceRoleClient } = await import('@/lib/supabase/service')
-        const service = createServiceRoleClient()
-        const { data: order } = await service
-          .from('orders')
-          .select('buyer_id, total_amount, currency')
-          .eq('id', event.orderId)
-          .single() as any
-        if (order?.buyer_id && (order.total_amount ?? 0) > 0) {
-          // Credit what the PROVIDER actually refunded (partial refunds are
-          // real), clamped to the order total so a provider quirk can never
-          // over-credit. Falls back to the order total when the event
-          // carries no usable amount.
-          const totalMinor = BigInt(Math.round(Number(order.total_amount) * 100))
-          const eventMinor = event.amount?.amountMinor ?? 0n
-          const creditMinor =
-            eventMinor > 0n && eventMinor < totalMinor ? eventMinor : totalMinor
-          const { refundToWallet } = await import('@/lib/wallet/wallet')
-          await refundToWallet({
-            userId: order.buyer_id,
-            amountMinor: creditMinor,
-            currency: (order.currency || 'EUR').toUpperCase(),
-            orderId: event.orderId,
-          })
-        }
-      })().catch((err) =>
-        console.error('[Dispatch] Wallet refund credit failed (retryable):', err)
-      )
-    }
-
-    // A failed/expired charge cancels the order — but CANCELLED only moves
-    // escrow_held → the platform 'refunds' account. Any WALLET credit the
-    // buyer applied at checkout (checkout_wallet:<id> → escrow_held) must
-    // come back to their wallet, exactly like createCheckout's supersede
-    // path. Idempotent on 'wallet_refund:<orderId>'; zero-hold orders no-op.
-    // Wrapped: a credit failure must never fail the webhook (retryable).
-    if (event.type === 'CHARGE_FAILED') {
-      await (async () => {
-        const { createServiceRoleClient } = await import('@/lib/supabase/service')
-        const service = createServiceRoleClient()
-        const { data: heldMinorRaw } = await (service.rpc as any)('checkout_wallet_hold_minor', {
-          p_order_id: event.orderId,
-        })
-        const heldMinor = BigInt(heldMinorRaw ?? 0)
-        if (heldMinor > 0n) {
-          const { data: order } = await service
-            .from('orders')
-            .select('buyer_id, currency')
-            .eq('id', event.orderId)
-            .single() as any
-          if (order?.buyer_id) {
-            const { refundToWallet } = await import('@/lib/wallet/wallet')
-            await refundToWallet({
-              userId: order.buyer_id,
-              amountMinor: heldMinor,
-              currency: (order.currency || 'EUR').toUpperCase(),
-              orderId: event.orderId,
-            })
-          }
-        }
-      })().catch((err) =>
-        console.error('[Dispatch] Wallet hold return on failed charge failed (retryable):', err)
-      )
-    }
-
     // Comms ride on top of an APPLIED transition only (a replayed/no-op
     // webhook must not re-email anyone). AWAITED — on serverless the function
     // freezes once the webhook response is sent, so an unawaited send would
     // be silently dropped — but errors are swallowed: comms failure never
     // fails the payment.
     const { notifyOrderTransition } = await import('@/lib/payments/notify')
-    await notifyOrderTransition(orderEvent, event.orderId, event).catch(() => {})
+    await notifyOrderTransition(notifyEvent, event.orderId, notifyEvent === orderEvent ? event : undefined).catch(() => {})
   }
 
   return { applied: result.changed, orderId: result.orderId, status: result.status }
-}
-
-/**
- * Service-role admin page for "money arrived for a non-payable order" — the
- * one payment failure that must reach a human (webhook context has no user
- * session, so this bypasses the session-bound notification helpers).
- */
-async function alertAdminsPaymentForClosedOrder(
-  orderId: string,
-  providerChargeId: string,
-  err: unknown
-): Promise<void> {
-  console.error(
-    `[Dispatch] CRITICAL: confirmed payment for non-payable order ${orderId} (charge ${providerChargeId}):`,
-    err
-  )
-  const { createServiceRoleClient } = await import('@/lib/supabase/service')
-  const service = createServiceRoleClient()
-  const { data: admins } = (await service
-    .from('admin_roles')
-    .select('user_id')
-    .eq('is_active', true)
-    .limit(10)) as any
-  const rows = (admins ?? []).map((a: any) => ({
-    user_id: a.user_id,
-    type: 'payment_review',
-    title: 'Payment Needs Review',
-    message: `Charge ${providerChargeId} paid a closed order (${orderId.slice(0, 8).toUpperCase()}) — refund or credit manually.`,
-    link: `/account/orders/${orderId}`,
-    is_read: false,
-  }))
-  if (rows.length) await service.from('notifications').insert(rows)
 }

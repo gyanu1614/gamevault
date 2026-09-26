@@ -16,7 +16,7 @@
  */
 
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { buildItemSlug, withDisambiguator } from '@/lib/utils/item-seo-slug'
 
 export interface ResolvedItem {
@@ -35,15 +35,17 @@ export async function resolveItemBySlug(
 ): Promise<ResolvedItem | null> {
   const slug = rawSlug.toLowerCase()
   if (!slug) return null
-  const supabase = await createClient()
+  // Cookie-free (Step 7a): runs in the ISR route gate.
+  const supabase = createAnonClient()
 
   // Find the per-game items category id so we can scope the lookup.
   const { data: catRow } = await supabase
-    .from('categories')
+    .from('game_categories')
     .select('id, slug')
     .eq('game_id', gameId)
-    .or('slug.eq.items,metadata->>type.eq.items')
-    .eq('is_active', true)
+    .eq('type', 'items')
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
     .limit(1)
     .maybeSingle() as any
   if (!catRow?.id) return null
@@ -52,7 +54,7 @@ export async function resolveItemBySlug(
     .from('listings')
     .select('id, slug, title, template_data, updated_at')
     .eq('game_id', gameId)
-    .eq('category_id', catRow.id)
+    .eq('game_category_id', catRow.id)
     .eq('status', 'active')
     .order('updated_at', { ascending: false })
     .limit(500) as any

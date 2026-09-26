@@ -11,22 +11,38 @@
  * list on error so a hiccup never blanks a whole marketplace page.
  */
 
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { unstable_cache } from 'next/cache'
+import { TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
 
 /** Ids of test/demo seller accounts to exclude from public listing queries. */
 export async function getTestSellerIds(): Promise<string[]> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await (supabase
-      .from('profiles') as any)
-      .select('id')
-      .eq('is_test', true)
-    if (error || !data) return []
-    return (data as { id: string }[]).map((r) => r.id).filter(Boolean)
-  } catch {
-    return []
-  }
+  return readTestSellerIds()
 }
+
+// Step 7b — identical on every prerendered category page: one tagged cache
+// entry per build/hour instead of one read per page. Test flags change rarely
+// (admin); the nightly full revalidate covers the rest.
+const readTestSellerIds = unstable_cache(
+  async (): Promise<string[]> => {
+    try {
+      // Cookie-free (Step 7a): called from ISR pages via getCategoryStats.
+      const supabase = createAnonClient()
+      // DLT-001: reads the public_profiles projection, never the base table —
+      // anon holds no grant on profiles' sensitive columns.
+      const { data, error } = await (supabase
+        .from('public_profiles') as any)
+        .select('id')
+        .eq('is_test', true)
+      if (error || !data) return []
+      return (data as { id: string }[]).map((r) => r.id).filter(Boolean)
+    } catch {
+      return []
+    }
+  },
+  ['test-seller-ids'],
+  { tags: [TEST_SELLERS_TAG], revalidate: 3600 },
+)
 
 /**
  * Apply the test-seller exclusion to a Supabase listings query. No-op when

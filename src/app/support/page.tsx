@@ -25,7 +25,7 @@ const QUICK_LINKS = [
     href: '/safedrop',
     Icon: ShieldCheck,
     title: 'How You’re Protected',
-    body: 'SafeDrop Buyer Protection: pay, receive, confirm — sellers are paid after you are happy.',
+    body: 'SafeDrop Buyer Protection: pay, receive, confirm — Item Guaranteed or Full Refund.',
   },
   {
     href: '/legal/terms',

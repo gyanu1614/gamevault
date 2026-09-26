@@ -1,5 +1,6 @@
 'use client'
 
+import { slugify } from '@/lib/utils'
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -33,14 +34,6 @@ function fileToPayload(
 }
 
 type GameOption = { slug: string; name: string }
-
-const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .trim()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 
 const label = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400'
 const field =

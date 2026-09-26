@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
 import { ShoppingCart, Zap } from 'lucide-react'
 
@@ -248,9 +249,9 @@ export function DailyStatsToast() {
 
       const { count } = await supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('status', 'completed')
-        .gte('created_at', today.toISOString())
+        .gte('created_at', today.toISOString()).limit(1)
 
       if (count && count > 0) {
         showStatsToast(count)
@@ -258,9 +259,11 @@ export function DailyStatsToast() {
       }
     }
 
-    // Show stats toast after 5 seconds
+    // Show stats toast after 5 seconds. Wrapped because a bare call here is
+    // fire-and-forget: a "Load failed" on a mobile connection would reject with
+    // nothing handling it. A missing stats toast is not worth an error.
     const timeout = setTimeout(() => {
-      fetchTodayStats()
+      void safeBackground(fetchTodayStats, undefined, 'dailyStatsToast')
     }, 5000)
 
     return () => clearTimeout(timeout)

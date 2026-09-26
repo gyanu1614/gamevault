@@ -5,6 +5,7 @@
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
+import { isUuid } from '@/lib/ids'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
+import { displayOrderRef } from '@/lib/orders/order-number'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
@@ -39,16 +41,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 type OrderRole = 'buyer' | 'seller' | 'admin'
 
-async function checkOrderAccess(
-  orderId: string,
+/**
+ * STATE-004 — reads buyer_id/seller_id off the order the page already fetched
+ * instead of re-querying the same row for the same two columns.
+ */
+function checkOrderAccess(
+  order: { buyer_id?: string | null; seller_id?: string | null } | null,
   userId: string,
-): Promise<{ hasAccess: boolean; userRole: OrderRole | null }> {
-  const supabase = await createClient()
-  const { data: order } = await supabase
-    .from('orders')
-    .select('buyer_id, seller_id')
-    .eq('id', orderId)
-    .single() as any
+): { hasAccess: boolean; userRole: OrderRole | null } {
   if (!order) return { hasAccess: false, userRole: null }
   const isBuyer  = order.buyer_id  === userId
   const isSeller = order.seller_id === userId
@@ -118,11 +118,15 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // ROUTE-009 — a malformed id can never match a row; 404 before querying,
+  // matching this route's miss behaviour below.
+  if (!isUuid(orderId)) notFound()
+
   const orderResult = await getOrder(orderId)
   if (!orderResult.success || !orderResult.order) notFound()
 
   const order = orderResult.order
-  const { hasAccess, userRole } = await checkOrderAccess(orderId, user.id)
+  const { hasAccess, userRole } = checkOrderAccess(order, user.id)
   if (!hasAccess || !userRole) notFound()
 
   // Workstream E — pending orders are the buyer's "awaiting payment" surface
@@ -132,27 +136,30 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // here). Admins keep full visibility.
   if (order.status === 'pending' && userRole === 'seller') notFound()
 
-  // Fetch game and category data separately (nested joins not supported without explicit FK)
-  let game: { id: string; name: string; slug: string; image_url: string | null } | null = null
-  let category: { id: string; name: string; slug: string } | null = null
+  // Fetch game and category data separately (nested joins not supported without
+  // explicit FK). STATE-007 — both key off the already-loaded order.listing and
+  // neither consumes the other, so they fan out instead of running serially.
+  const [gameRes, categoryRes] = await Promise.all([
+    order.listing?.game_id
+      ? (supabase
+          .from('games')
+          .select('id, name, slug, image_url')
+          .eq('id', order.listing.game_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+    order.listing?.game_category_id
+      ? (supabase
+          .from('game_categories')
+          .select('id, name, slug')
+          .eq('id', order.listing.game_category_id)
+          .single() as any)
+      : Promise.resolve({ data: null }),
+  ])
 
-  if (order.listing?.game_id) {
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('id, name, slug, image_url')
-      .eq('id', order.listing.game_id)
-      .single() as any
-    game = gameData
-  }
-
-  if (order.listing?.category_id) {
-    const { data: categoryData } = await supabase
-      .from('categories')
-      .select('id, name, slug')
-      .eq('id', order.listing.category_id)
-      .single() as any
-    category = categoryData
-  }
+  const game = (gameRes as any).data as
+    | { id: string; name: string; slug: string; image_url: string | null }
+    | null
+  const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
 
   // Attach game and category to order.listing for downstream components
   if (order.listing) {
@@ -206,6 +213,19 @@ export default async function OrderDetailPage({ params }: PageProps) {
     }
   }
 
+  // PR 7 — the buyer may open a dispute for dispute_window_days after
+  // delivery, even once the order has completed. The number is admin-editable
+  // (platform_fee_settings, readable by every signed-in user).
+  const { data: moneySettings } = await supabase
+    .from('platform_fee_settings')
+    .select('dispute_window_days')
+    .eq('id', true)
+    .maybeSingle() as any
+  const disputeWindowDays = Number(moneySettings?.dispute_window_days ?? 7)
+  const disputeUntil = order.delivered_at
+    ? new Date(new Date(order.delivered_at).getTime() + disputeWindowDays * 86_400_000).toISOString()
+    : null
+
   // Computed timing values
   const now = new Date()
 
@@ -218,12 +238,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const protectionRemaining = protectionDate ? Math.max(0, protectionDate.getTime() - now.getTime()) : 0
   const protectionDays    = Math.floor(protectionRemaining / (1000 * 60 * 60 * 24))
 
-  // V21/P3.b — Display-layer rebrand: GV- → DM-. DB rows keep their
-  // legacy order_number until a migration regenerates them; the URL
-  // resolver work is tracked separately. New orders are emitted with
-  // DM- prefix at the action level.
-  const rawOrderNum    = order.order_number || order.id.slice(0, 8).toUpperCase()
-  const orderNum       = rawOrderNum.replace(/^GV-/, 'DM-')
+  // The stored order_number IS the number (DM-XXXX-XXXX since migration
+  // 20260921234649; older GV- rows stay as issued and render as stored).
+  const orderNum       = displayOrderRef(order.order_number, order.id)
   const listingImageUrl = order.listing?.images?.[0]
   const gameImageUrl   = game?.image_url
   const listingTitle   = order.listing?.title
@@ -331,6 +348,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       />
       <OrderClient
         order={order}
+        disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
         itemImageUrl={listingImageUrl ?? gameImageUrl ?? null}

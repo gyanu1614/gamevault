@@ -31,6 +31,7 @@ import {
   normalizeDiditStatus,
 } from '@/app/account/become-seller/_redesign/integrations'
 import { DIDIT_EVIDENCE_PREFIX } from '@/lib/utils/seller-verification'
+import { checkRateLimit, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -58,6 +59,13 @@ function verifySignature(rawBody: string, signature: string, secret: string): bo
 }
 
 export async function POST(req: NextRequest) {
+  // Per-provider budget (not per-IP): a provider's callbacks arrive from many
+  // IPs, and one noisy provider must not throttle another's. Charged before
+  // signature verification so a flood of forged callbacks cannot pin the CPU
+  // on HMAC work.
+  const limit = await checkRateLimit('webhook', 'provider:didit')
+  if (limit.limited) return rateLimitResponse(limit)
+
   // Raw body — Didit signs the raw bytes, so read text BEFORE any parsing.
   const rawBody = await req.text()
 

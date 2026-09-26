@@ -52,10 +52,19 @@ export const GAME_CURRENCY_SLUGS: Record<string, string> = {
 }
 
 /**
- * Category type (from categories.metadata.type) → canonical slug rule.
- * Function form so currency can plug in the per-game name.
+ * Category type (game_categories.type — the fee / warranty key; the same
+ * literals lib/fees keys on) → canonical slug rule. Function form so
+ * currency can plug in the per-game name.
+ *
+ * Step 1b: mirrors the DB CHECK on game_categories.type and
+ * global_categories.default_type. Add a value in both places.
  */
-export type CategoryType = 'currency' | 'account' | 'items' | 'service' | 'top_up'
+export const CATEGORY_TYPES = ['currency', 'account', 'items', 'service', 'top_up', 'gift_card'] as const
+export type CategoryType = (typeof CATEGORY_TYPES)[number]
+
+export function isCategoryType(value: unknown): value is CategoryType {
+  return typeof value === 'string' && (CATEGORY_TYPES as readonly string[]).includes(value)
+}
 
 export function getCanonicalCategorySlug(
   gameSlug: string,
@@ -84,6 +93,10 @@ export function getCanonicalCategorySlug(
       // Services aren't "bought" linguistically — searchers query
       // "{game} boosting" not "buy {game} boosting". Keep bare.
       return serviceSubtype ?? 'boosting'
+    case 'gift_card':
+      // Distinct type (own fee row), not a top-up. Established slug on every
+      // marketplace; no "buy-" prefix.
+      return 'gift-cards'
     default:
       return null
   }

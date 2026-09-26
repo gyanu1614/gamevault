@@ -5,7 +5,7 @@ import { PopularGames } from '@/features/home/components/PopularGames'
 import { LatestListings } from '@/features/home/components/LatestListings'
 import { HeroBillboard } from '@/features/home/components/HeroBillboard'
 import { getPriceIndexSummary } from '@/features/home/lib/price-index'
-import { organization, ORGANIZATION_ID } from '@/lib/seo/jsonld'
+import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
   title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
@@ -82,7 +82,7 @@ export default async function Page({
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(s) }}
         />
       ))}
 

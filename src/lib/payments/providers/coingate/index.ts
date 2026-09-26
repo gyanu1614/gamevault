@@ -16,6 +16,7 @@ import type {
   CreateChargeInput,
   CreateChargeResult,
   ParsedWebhook,
+  VoidChargeResult,
 } from '@/lib/payments/types'
 import { minorToDecimal } from '@/lib/payments/providers/coingate/amount'
 import {
@@ -28,6 +29,8 @@ import {
 import { callbackTokenFor, callbackTokenMatches } from './callback-token'
 import { isAllowedIp } from './ip-allowlist'
 import { coinGateToCanonical, coinGateEventId, type CoinGateOrder } from './status-map'
+import { displayOrderRef } from '@/lib/orders/order-number'
+import { PROVIDER_FETCH_TIMEOUT_MS } from '@/lib/payments/timeouts'
 
 function authHeaders(): Record<string, string> {
   return {
@@ -55,7 +58,10 @@ export function makeCoinGateProvider(deps?: {
   const now = deps?.now ?? (() => Date.now())
 
   async function getOrder(id: string): Promise<CoinGateOrder> {
-    const res = await fetchImpl(`${coinGateBase()}/orders/${id}`, { headers: authHeaders() })
+    const res = await fetchImpl(`${coinGateBase()}/orders/${id}`, {
+      headers: authHeaders(),
+      signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+    })
     if (!res.ok) throw new Error(`coingate: re-fetch failed ${res.status}`)
     return (await res.json()) as CoinGateOrder
   }
@@ -81,12 +87,14 @@ export function makeCoinGateProvider(deps?: {
         callback_url: `${publicApiUrl()}/api/webhooks/coingate?token=${token}`,
         success_url: input.returnUrl,
         cancel_url: input.cancelUrl ?? input.returnUrl,
-        title: `DropMarket order ${input.orderId}`,
+        // Buyer-visible on CoinGate's page: the order number, as stored.
+        title: `DropMarket order ${displayOrderRef(input.orderNumber, input.orderId)}`,
       })
       const res = await fetchImpl(`${coinGateBase()}/orders`, {
         method: 'POST',
         headers: authHeaders(),
         body,
+        signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`coingate: create failed ${res.status} ${await res.text()}`)
       const o = (await res.json()) as any
@@ -97,6 +105,25 @@ export function makeCoinGateProvider(deps?: {
       assertCoinGateConfigured()
       const o = await getOrder(providerChargeId)
       return { rawStatus: o.status }
+    },
+
+    /**
+     * Round B Part 2. CoinGate's API v2 has no cancel for a standard order
+     * (only Binance-checkout orders and a void REQUEST on paid invoices);
+     * a `new` order expires by itself after 2 h, a `pending` one after
+     * 20 min. So the honest answer is the provider's current truth:
+     * paid/confirming → paid, terminal → already_closed, otherwise
+     * `unsupported` — the outbox records it and the late-payment credit
+     * path covers a payment that lands after we stopped wanting it.
+     */
+    async voidCharge(providerChargeId: string): Promise<VoidChargeResult> {
+      assertCoinGateConfigured()
+      const o = await getOrder(providerChargeId)
+      if (o.status === 'paid' || o.status === 'confirming') return { outcome: 'paid', rawStatus: o.status }
+      if (['expired', 'canceled', 'invalid', 'refunded', 'partially_refunded'].includes(o.status)) {
+        return { outcome: 'already_closed', rawStatus: o.status }
+      }
+      return { outcome: 'unsupported', rawStatus: o.status }
     },
 
     async parseWebhook(headers, rawBody): Promise<ParsedWebhook> {

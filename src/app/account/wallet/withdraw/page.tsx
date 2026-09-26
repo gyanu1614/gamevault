@@ -1,6 +1,6 @@
 'use client'
 
-import { validatePayoutAddress, CHAIN_LABELS, chunkAddress } from '@/lib/crypto/address-validation'
+import { CHAIN_LABELS, chunkAddress } from '@/lib/crypto/address-validation'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -23,31 +23,47 @@ import { cn } from '@/lib/utils'
 import CoinBadge from '@/components/wallet/CoinBadge'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAuth } from '@/hooks/use-auth'
-// Ledger-backed withdrawable balance (funds-flow cutover): seller_available
-// (released sale proceeds) + user_wallet (store credit) — the exact pool the
-// withdrawal hold draws against. Replaces the old sum-of-completed-orders
-// figure that ignored prior withdrawals.
-import { getMyWithdrawableBalance } from '@/lib/actions/wallet-ledger'
+// PR 7: every balance figure and every fee number on this page comes from two
+// SQL functions — wallet_available_balance (available / pending / frozen /
+// locked + the seller gate) and withdrawal_quote (fee %, flat, minimum fee,
+// net, first refusal). The destination is the seller's SAVED payout details.
+import { getMyWalletOverview, type WalletOverview } from '@/lib/actions/wallet-ledger'
+import { getMyPayoutDetails, type PayoutDetails } from '@/lib/actions/payout-details'
 import {
   getWithdrawalMethods,
-  calculateWithdrawalFee,
+  quoteWithdrawal,
   createWithdrawalRequest,
-  type WithdrawalMethod
+  type WithdrawalMethod,
+  type WithdrawalQuote,
 } from '@/lib/actions/withdrawals'
+
+const fmtDate = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+const fmtDateTime = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
+const trimNum = (n: number) => Number(n).toFixed(2).replace(/\.?0+$/, '')
+/** "3% + $5" / "3% (min $5)" — the quote's terms as words. */
+function feeTerms(q: WithdrawalQuote): string {
+  const parts = [q.feePct > 0 ? `${trimNum(q.feePct)}%` : '', q.feeFixed > 0 ? `$${trimNum(q.feeFixed)}` : ''].filter(Boolean)
+  const base = parts.join(' + ') || 'no fee'
+  return q.feeMin > 0 ? `${base}, min $${trimNum(q.feeMin)}` : base
+}
 
 // Payment method icons mapping
 export default function WithdrawPage() {
   const router = useRouter()
   const { user } = useAuth()
-  // null = still loading; number = ledger-derived withdrawable total.
+  // null = still loading; number = matured seller balance + store credit.
   const [availableBalance, setAvailableBalance] = useState<number | null>(null)
+  const [overview, setOverview] = useState<WalletOverview | null>(null)
+  const [payoutDetails, setPayoutDetails] = useState<PayoutDetails | null>(null)
+  const [quote, setQuote] = useState<WithdrawalQuote | null>(null)
 
   const [methods, setMethods] = useState<WithdrawalMethod[]>([])
   const [selectedMethod, setSelectedMethod] = useState<WithdrawalMethod | null>(null)
   const [amount, setAmount] = useState('')
   const [fee, setFee] = useState<number>(0)
   const [netAmount, setNetAmount] = useState<number>(0)
-  const [paymentDetails, setPaymentDetails] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [isLoadingMethods, setIsLoadingMethods] = useState(true)
@@ -56,36 +72,44 @@ export default function WithdrawPage() {
     loadMethods()
   }, [])
 
-  // Load the withdrawable balance from the ledger.
+  // Load the balance breakdown + saved payout details (one RPC each).
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const result = await getMyWithdrawableBalance()
-      if (!cancelled) {
-        setAvailableBalance(result.success && result.balance ? result.balance.total : 0)
+      const [bal, details] = await Promise.all([getMyWalletOverview(), getMyPayoutDetails()])
+      if (cancelled) return
+      if (bal.success && bal.overview) {
+        setOverview(bal.overview)
+        setAvailableBalance(Math.max(0, bal.overview.available + bal.overview.wallet))
+      } else {
+        setAvailableBalance(0)
       }
+      if (details.success && details.details) setPayoutDetails(details.details)
     })()
     return () => {
       cancelled = true
     }
   }, [])
 
-  // Calculate fee when amount changes
+  // Live quote from the RPC when the amount or method changes. The page never
+  // computes a fee; it renders exactly what withdrawal_quote returns.
   useEffect(() => {
-    const calculateFee = async () => {
-      if (amount && selectedMethod && parseFloat(amount) > 0) {
-        const result = await calculateWithdrawalFee(parseFloat(amount), selectedMethod.id)
-        if (result.success && result.fee !== undefined && result.net !== undefined) {
-          setFee(result.fee)
-          setNetAmount(result.net)
+    const run = async () => {
+      if (selectedMethod) {
+        const amt = parseFloat(amount)
+        const result = await quoteWithdrawal(selectedMethod.id, Number.isFinite(amt) && amt > 0 ? amt : 0)
+        if (result.success && result.quote) {
+          setQuote(result.quote)
+          setFee(result.quote.feeAmount)
+          setNetAmount(result.quote.net)
+          return
         }
-      } else {
-        setFee(0)
-        setNetAmount(0)
       }
+      setQuote(null)
+      setFee(0)
+      setNetAmount(0)
     }
-
-    const debounce = setTimeout(calculateFee, 300)
+    const debounce = setTimeout(run, 250)
     return () => clearTimeout(debounce)
   }, [amount, selectedMethod])
 
@@ -100,21 +124,9 @@ export default function WithdrawPage() {
     setIsLoadingMethods(false)
   }
 
-  /** Example address shape, so sellers can eyeball a wrong-chain paste. */
-  const addressPlaceholder = (chain?: string | null) => {
-    switch (chain) {
-      case 'bitcoin':  return 'bc1… or 1… / 3…'
-      case 'tron':     return 'T…'
-      case 'ethereum':
-      case 'polygon':  return '0x…'
-      default:         return 'Enter your wallet address'
-    }
-  }
-
   const handleMethodSelect = (method: WithdrawalMethod) => {
     setSelectedMethod(method)
     setAmount('')
-    setPaymentDetails({})
   }
 
   const handleSubmit = async () => {
@@ -143,27 +155,11 @@ export default function WithdrawPage() {
       return
     }
 
-    // Validate payment details
-    const requiredFields = getRequiredFields(selectedMethod.method_type)
-    for (const field of requiredFields) {
-      if (!paymentDetails[field.key]?.trim()) {
-        toast.error(`${field.label} is required`)
-        return
-      }
-    }
-
-    // Crypto sends can't be reversed, so the destination is checked here for
-    // fast feedback AND again server-side, which is the authoritative gate.
-    if (selectedMethod.method_type === 'crypto') {
-      const check = validatePayoutAddress(
-        selectedMethod.coin ?? '',
-        selectedMethod.chain ?? '',
-        paymentDetails.wallet_address ?? '',
-      )
-      if (!check.valid) {
-        toast.error(check.error || 'Invalid wallet address')
-        return
-      }
+    // The quote is the gate (account age, payout-details freeze, negative
+    // balance, open withdrawal, saved destination, minimum, available).
+    if (!quote?.ok) {
+      toast.error(quote?.message || 'This withdrawal cannot be requested right now.')
+      return
     }
 
     // Everything validated — show the review step. Crypto sends are final,
@@ -179,16 +175,11 @@ export default function WithdrawPage() {
 
     setIsSubmitting(true)
     try {
+      // Destination = the saved payout details; the RPC re-runs the quote
+      // inside its transaction and snapshots every fee field on the row.
       const result = await createWithdrawalRequest({
         amount: amountNum,
         methodId: selectedMethod.id,
-        paymentDetails:
-          selectedMethod.method_type === 'crypto'
-            ? {
-                wallet_address: (paymentDetails.wallet_address ?? '').trim(),
-                network: selectedMethod.chain ?? '',
-              }
-            : paymentDetails,
       })
 
       if (result.success) {
@@ -206,33 +197,21 @@ export default function WithdrawPage() {
     }
   }
 
-  const getRequiredFields = (methodType: string) => {
-    if (methodType === 'crypto') {
-      // Address only. `network` used to be a free-text box placeholdered
-      // "e.g., ERC20, TRC20" — which is how a live request ended up asking
-      // for BITCOIN over TRON. The network is a property of the method the
-      // seller picked, so it is derived, never typed.
-      return [
-        {
-          key: 'wallet_address',
-          label: `${(selectedMethod?.coin ?? '').toUpperCase() || 'Wallet'} Address`,
-          placeholder: addressPlaceholder(selectedMethod?.chain),
-        },
-      ]
-    } else if (selectedMethod?.method_name === 'bank_transfer') {
-      return [
-        { key: 'account_name', label: 'Account Holder Name', placeholder: 'Johnathan Doe' },
-        { key: 'account_number', label: 'Account Number', placeholder: '**** **** **** 4590' },
-        { key: 'bank_name', label: 'Bank Name', placeholder: 'Global Royal Bank' },
-        { key: 'routing_number', label: 'Routing Number', placeholder: 'Enter routing number' }
-      ]
-    } else if (selectedMethod?.method_name === 'paypal' || selectedMethod?.method_name === 'payoneer') {
-      return [
-        { key: 'email', label: 'Email Address', placeholder: 'your@email.com' }
-      ]
+  /** The saved destination for the selected method, or null when none is saved. */
+  const savedDestination = (() => {
+    if (!selectedMethod || !payoutDetails) return null
+    if (selectedMethod.method_type === 'crypto') {
+      const ok =
+        !!payoutDetails.cryptoAddress &&
+        payoutDetails.cryptoChain === (selectedMethod.chain ?? '') &&
+        payoutDetails.cryptoCoin === (selectedMethod.coin ?? '')
+      return ok ? { label: `${(payoutDetails.cryptoCoin ?? '').toUpperCase()} · ${CHAIN_LABELS[payoutDetails.cryptoChain as keyof typeof CHAIN_LABELS] ?? payoutDetails.cryptoChain}`, value: payoutDetails.cryptoAddress!, mono: true } : null
     }
-    return []
-  }
+    if (selectedMethod.method_name === 'payoneer') {
+      return payoutDetails.payoneerEmail ? { label: 'Payoneer account', value: payoutDetails.payoneerEmail, mono: false } : null
+    }
+    return null
+  })()
 
   if (availableBalance === null) {
     return (
@@ -242,8 +221,15 @@ export default function WithdrawPage() {
     )
   }
 
-  const requiredFields = selectedMethod ? getRequiredFields(selectedMethod.method_type) : []
   const amountNum = parseFloat(amount) || 0
+  const gate = overview?.gate
+  const gateMessage = gate && !gate.eligible
+    ? gate.reason === 'account_age'
+      ? `Withdrawals open ${gate.minAgeDays} days after your seller account is approved — from ${fmtDate(gate.unlockAt)}.`
+      : `You changed your payout details recently. Withdrawals reopen ${fmtDateTime(gate.freezeUntil)}.`
+    : overview?.negative
+      ? 'Your balance is below zero after a refund. Withdrawals reopen once new sales bring it back above zero.'
+      : null
 
   /** Sticky summary rail — balance, and once a method is chosen, the maths. */
   const summaryRail = (
@@ -259,6 +245,46 @@ export default function WithdrawPage() {
           ${(availableBalance ?? 0).toFixed(2)}
         </p>
         <p className="mt-1 text-[12px] text-text-tertiary">Ready to withdraw.</p>
+        {overview && (
+          <dl className="mt-3 space-y-1.5 border-t border-border-subtle pt-3 text-[12px]">
+            {overview.pending > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">Pending release{overview.nextMaturityAt ? ` · ${fmtDateTime(overview.nextMaturityAt)}` : ''}</dt>
+                <dd className="tabular-nums font-semibold text-text-primary">${overview.pending.toFixed(2)}</dd>
+              </div>
+            )}
+            {overview.frozen > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">Set aside for open disputes</dt>
+                <dd className="tabular-nums font-semibold text-text-primary">${overview.frozen.toFixed(2)}</dd>
+              </div>
+            )}
+            {overview.locked > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">In a withdrawal in progress</dt>
+                <dd className="tabular-nums font-semibold text-text-primary">${overview.locked.toFixed(2)}</dd>
+              </div>
+            )}
+            {overview.wallet > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">Store credit (included)</dt>
+                <dd className="tabular-nums font-semibold text-text-primary">${overview.wallet.toFixed(2)}</dd>
+              </div>
+            )}
+            {overview.negative && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-secondary">Balance after refunds</dt>
+                <dd className="tabular-nums font-semibold text-error">-${Math.abs(overview.available).toFixed(2)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {gateMessage && (
+          <p className="mt-3 flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+            {gateMessage}
+          </p>
+        )}
       </div>
 
       {selectedMethod ? (
@@ -273,9 +299,18 @@ export default function WithdrawPage() {
                 <span className="font-semibold text-text-primary">${amountNum.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Processing fee</span>
+                <span className="text-text-secondary">Fee{quote ? ` (${feeTerms(quote)})` : ''}</span>
                 <span className="font-semibold text-text-primary">-${fee.toFixed(2)}</span>
               </div>
+              {quote?.minimum != null && (
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-text-tertiary">Minimum withdrawal</span>
+                  <span className="text-text-tertiary">${quote.minimum.toFixed(2)}</span>
+                </div>
+              )}
+              {quote && !quote.ok && amountNum > 0 && quote.message && (
+                <p className="rounded-lg border border-warning/25 bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">{quote.message}</p>
+              )}
               <div className="my-2 h-px bg-border-subtle" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
@@ -288,7 +323,7 @@ export default function WithdrawPage() {
             <div className="mt-4 flex flex-col gap-2">
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !amount || amountNum <= 0}
+                disabled={isSubmitting || !amount || amountNum <= 0 || !quote?.ok}
                 className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? (
@@ -298,7 +333,7 @@ export default function WithdrawPage() {
                 )}
               </button>
               <button
-                onClick={() => { setSelectedMethod(null); setAmount(''); setPaymentDetails({}) }}
+                onClick={() => { setSelectedMethod(null); setAmount(''); setQuote(null) }}
                 disabled={isSubmitting}
                 className="min-h-[44px] w-full rounded-lg border border-border-default bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
               >
@@ -312,7 +347,7 @@ export default function WithdrawPage() {
               <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
               {selectedMethod.method_type === 'crypto'
                 ? 'Crypto transfers process within 24–48 hours after admin review.'
-                : 'Bank/PayPal transfers arrive within 1–3 business days after admin review.'}
+                : 'Payoneer transfers arrive within 1–3 business days after admin review.'}
             </p>
             <p className="flex items-start gap-2 text-[12px] text-text-secondary">
               <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-lime-text" />
@@ -326,10 +361,10 @@ export default function WithdrawPage() {
             How Payouts Work
           </h2>
           <ol className="space-y-2 text-[12px] leading-relaxed text-text-secondary">
-            <li>1. Pick the coin and network you want to be paid in.</li>
-            <li>2. Enter the amount and your wallet address.</li>
-            <li>3. We hold the balance and review the request.</li>
-            <li>4. Once sent, the transaction hash appears in your wallet.</li>
+            <li>1. Choose how you want to be paid: crypto (pick the coin and network) or Payoneer.</li>
+            <li>2. Enter the amount — it goes to the destination saved in your payout settings.</li>
+            <li>3. The amount is set aside from your balance while our team reviews the request.</li>
+            <li>4. Once sent, the payment reference appears in your wallet.</li>
           </ol>
         </div>
       )}
@@ -481,73 +516,34 @@ export default function WithdrawPage() {
                     </div>
                   </div>
 
-                  {/* Destination */}
-                  {requiredFields.length > 0 && (
-                    <div className="rounded-lg border border-border-subtle card-frost p-5">
-                      <h2 className="mb-3 text-sm font-bold text-text-primary">
-                        {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Payout Details'}
-                      </h2>
+                  {/* Destination — the saved payout details, never typed here */}
+                  <div className="rounded-lg border border-border-subtle card-frost p-5">
+                    <h2 className="mb-3 text-sm font-bold text-text-primary">
+                      {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Payout Details'}
+                    </h2>
+                    {savedDestination ? (
                       <div className="space-y-3">
-                        {/* Wrong-network sends are the most common way to lose
-                            crypto permanently and are unrecoverable. State the
-                            network BEFORE the address field, not after. */}
-                        {selectedMethod.method_type === 'crypto' && selectedMethod.chain && (
-                          <div className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2.5">
-                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                            <p className="text-[12px] leading-relaxed text-text-secondary">
-                              Send only over{' '}
-                              <span className="font-semibold text-text-primary">
-                                {CHAIN_LABELS[selectedMethod.chain as keyof typeof CHAIN_LABELS] ??
-                                  selectedMethod.chain}
-                              </span>
-                              . Funds sent to an address on any other network can’t be recovered.
-                            </p>
-                          </div>
-                        )}
-
-                        {requiredFields.map((field) => {
-                          const value = paymentDetails[field.key] || ''
-                          const check =
-                            selectedMethod.method_type === 'crypto' && value.trim()
-                              ? validatePayoutAddress(
-                                  selectedMethod.coin ?? '',
-                                  selectedMethod.chain ?? '',
-                                  value,
-                                )
-                              : null
-                          const invalid = check ? !check.valid : false
-
-                          return (
-                            <div key={field.key}>
-                              <label className="mb-1 block text-[12px] font-medium text-text-secondary">
-                                {field.label}
-                              </label>
-                              <input
-                                type="text"
-                                spellCheck={false}
-                                autoComplete="off"
-                                value={value}
-                                onChange={(e) => setPaymentDetails({ ...paymentDetails, [field.key]: e.target.value })}
-                                placeholder={field.placeholder}
-                                className={cn(
-                                  'w-full rounded-lg border bg-bg-base/60 px-3 py-2.5 font-mono text-sm text-text-primary transition-colors placeholder:font-sans placeholder:text-text-disabled focus:outline-none focus:ring-2',
-                                  invalid
-                                    ? 'border-error/50 focus:border-error focus:ring-error/20'
-                                    : 'border-border-default focus:border-lime focus:ring-lime/20',
-                                )}
-                              />
-                              {check && !check.valid && (
-                                <p className="mt-1 text-[12px] text-error">{check.error}</p>
-                              )}
-                              {check?.valid && (
-                                <p className="mt-1 text-[12px] text-lime-text">Address looks valid.</p>
-                              )}
-                            </div>
-                          )
-                        })}
+                        <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">{savedDestination.label}</p>
+                          <p className={cn('mt-1 break-all text-[13px] text-text-primary', savedDestination.mono && 'font-mono')}>{savedDestination.value}</p>
+                        </div>
+                        <p className="text-[12px] text-text-secondary">
+                          Paid to the destination saved in your{' '}
+                          <Link href="/account/settings?tab=payouts" className="font-semibold text-lime-text hover:underline">payout settings</Link>.
+                          Changing it pauses withdrawals for {overview ? '48' : '48'} hours.
+                        </p>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2.5">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                        <p className="text-[12px] leading-relaxed text-text-secondary">
+                          No {selectedMethod.method_type === 'crypto' ? `${(selectedMethod.coin ?? '').toUpperCase()} address on ${CHAIN_LABELS[selectedMethod.chain as keyof typeof CHAIN_LABELS] ?? selectedMethod.chain}` : 'Payoneer email'} saved yet.{' '}
+                          <Link href="/account/settings?tab=payouts" className="font-semibold text-lime-text hover:underline">Add it in payout settings</Link>{' '}
+                          — withdrawals open 48 hours after payout details change.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -589,13 +585,19 @@ export default function WithdrawPage() {
                     <p className="mb-1.5 text-[12px] text-text-secondary">Destination address</p>
                     <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5">
                       <p className="flex flex-wrap gap-x-2 gap-y-1 font-mono text-[13px] leading-relaxed text-text-primary">
-                        {chunkAddress(paymentDetails.wallet_address ?? '').map((group, i) => (
+                        {chunkAddress(savedDestination?.value ?? '').map((group, i) => (
                           <span key={i}>{group}</span>
                         ))}
                       </p>
                     </div>
                   </div>
                 </>
+              )}
+              {selectedMethod.method_name === 'payoneer' && savedDestination && (
+                <div>
+                  <p className="mb-1.5 text-[12px] text-text-secondary">Payoneer account</p>
+                  <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-[13px] text-text-primary">{savedDestination.value}</div>
+                </div>
               )}
 
               <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-raised/50 p-3 text-sm">
@@ -617,8 +619,8 @@ export default function WithdrawPage() {
               </div>
 
               <p className="text-[12px] text-text-tertiary">
-                Your balance is held while an admin reviews this request. If it’s rejected, the
-                funds return to your available balance.
+                The amount is set aside from your balance while our team reviews this request. If it’s declined, it
+                returns to your available balance.
               </p>
 
               <div className="flex gap-3">

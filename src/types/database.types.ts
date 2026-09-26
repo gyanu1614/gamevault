@@ -5999,10 +5999,6 @@ export type Database = {
         Returns: string
       }
       cleanup_expired_idempotency_keys: { Args: never; Returns: number }
-      cleanup_old_audit_logs: {
-        Args: { days_to_keep?: number }
-        Returns: number
-      }
       decrypt_delivery_data: {
         Args: { p_decryption_key: string; p_encrypted_data: string }
         Returns: string
@@ -6011,7 +6007,6 @@ export type Database = {
         Args: { p_data: string; p_encryption_key: string }
         Returns: string
       }
-      freeze_escrow: { Args: { order_id: string }; Returns: undefined }
       generate_listing_slug: {
         Args: { listing_id: string; title_text: string }
         Returns: string
@@ -6046,48 +6041,6 @@ export type Database = {
           name: string
           slug: string
         }[]
-      }
-      get_listings_pending_moderation: {
-        Args: never
-        Returns: {
-          approved_at: string | null
-          approved_by: string | null
-          category_id: string
-          created_at: string
-          currency: string
-          delivery_method: string | null
-          delivery_method_type: string | null
-          delivery_time: string | null
-          description: string
-          game_id: string
-          id: string
-          images: string[] | null
-          min_quantity: number | null
-          moderation_notes: string | null
-          original_price: number | null
-          platform: string | null
-          price: number
-          quantity: number | null
-          region: string | null
-          rejected_at: string | null
-          rejected_by: string | null
-          rejection_reason: string | null
-          sales: number | null
-          seller_id: string
-          slug: string | null
-          status: string | null
-          template_data: Json | null
-          title: string
-          updated_at: string
-          view_count: number
-          views: number | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "listings"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       get_my_permissions: { Args: never; Returns: string[] }
       get_orders_ready_for_auto_release: {
@@ -6148,44 +6101,11 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      get_pending_trustpilot_invitations: {
-        Args: never
-        Returns: {
-          buyer_id: string
-          created_at: string
-          email: string
-          id: string
-          invitation_token: string | null
-          order_id: string
-          review_rating: number | null
-          review_submitted: boolean
-          review_submitted_at: string | null
-          review_url: string | null
-          scheduled_for: string | null
-          sent_at: string
-          updated_at: string
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "trustpilot_invitations"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
       get_seller_tier_info: { Args: { p_user_id: string }; Returns: Json }
       get_user_banner: { Args: { user_id_param: string }; Returns: Json }
-      get_user_role: { Args: { user_id?: string }; Returns: string }
       has_permission: {
         Args: { required_permission: string }
         Returns: boolean
-      }
-      has_role: {
-        Args: { required_role: string; user_id?: string }
-        Returns: boolean
-      }
-      increment_listing_views: {
-        Args: { listing_uuid: string }
-        Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin_safe: { Args: never; Returns: boolean }
@@ -6194,11 +6114,6 @@ export type Database = {
         Returns: boolean
       }
       mark_inactive_sellers_offline: { Args: never; Returns: undefined }
-      mark_trustpilot_invitation_sent: {
-        Args: { invitation_id: string }
-        Returns: undefined
-      }
-      refund_escrow: { Args: { order_id: string }; Returns: undefined }
       reject_listing: {
         Args: { admin_id: string; listing_id: string; reason: string }
         Returns: undefined
@@ -6211,14 +6126,6 @@ export type Database = {
           rejection_reason_param: string
         }
         Returns: Json
-      }
-      release_escrow: {
-        Args: { method?: string; order_id: string }
-        Returns: undefined
-      }
-      release_escrow_to_seller_balance: {
-        Args: { p_amount: number; p_order_id: string; p_seller_id: string }
-        Returns: undefined
       }
       seller_is_in_payout_hold: {
         Args: { p_seller_id: string }

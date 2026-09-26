@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 /**
  * Data for the blog-hub teaser strips. Kept small and defensive: every query
@@ -41,7 +41,7 @@ export async function getHubCalcExample(
 ): Promise<HubCalcExample | null> {
   if (gameSlug !== 'adopt-me') return null
 
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const [petsRes, valsRes] = await Promise.all([
     (supabase as any)
       .from('adopt_me_pets')
@@ -134,7 +134,7 @@ export interface HubStat {
 export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
   if (gameSlug !== 'adopt-me') return []
 
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [petsRes, valsRes, histRes] = await Promise.all([
     (supabase as any)
@@ -276,7 +276,7 @@ export async function getHubTopValues(
   if (gameSlug === 'adopt-me') return getAdoptMeTopValues(limit)
   if (gameSlug !== 'steal-a-brainrot') return []
 
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [catalogRes, priceRes] = await Promise.all([
     (supabase as any)
@@ -357,7 +357,7 @@ export async function getHubTopValues(
  * to a real page.
  */
 async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
     (supabase as any)

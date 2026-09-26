@@ -14,21 +14,34 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
-import { getAllPosts, getPost } from '@/lib/blog/posts'
+import { getFlatPosts, getPost } from '@/lib/blog/posts'
 import { SITE_NAME, SITE_URL } from '@/config/site'
+import { serializeJsonLd } from '@/lib/seo/jsonld'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
+/**
+ * ROUTE-008 — prerender only the posts that still answer at /blog/{slug}.
+ *
+ * Every game-tagged post was migrated to /{game}/blog/{slug} and 301s there
+ * from next.config.js, so prerendering it built an HTML artifact the redirect
+ * guaranteed nobody could ever be served (6 of 9 posts).
+ */
 export function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }))
+  return getFlatPosts().map((p) => ({ slug: p.slug }))
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const post = getPost(slug)
-  if (!post) return { title: 'Post Not Found' }
+  // ROUTE-008 — 404 from metadata rather than returning a "Post Not Found"
+  // title. The body calls notFound() too, but deciding it here keeps the
+  // status correct if a loading.tsx is ever added to this route: a Suspense
+  // boundary flushes 200 before the body runs, which is the soft-404 trap the
+  // marketplace routes were fixed for (commit c8cb309).
+  if (!post) notFound()
   return {
     title: post.title,
     description: post.excerpt,
@@ -151,11 +164,11 @@ export default async function BlogPostPage({ params }: PageProps) {
     <main className="min-h-screen pb-24">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <article className="mx-auto w-full max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14">
         <Link

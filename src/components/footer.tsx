@@ -48,7 +48,7 @@ const LINK_GROUPS: Array<{
       // Beta: the become-seller wizard is post-launch; motivated sellers should
       // land on the founding-seller waitlist, not a dead end.
       { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
-      { name: 'Fees', href: '/fees' },
+      { name: 'Seller Fees', href: '/sell/fees' },
       { name: 'Blog', href: '/blog' },
       { name: 'Company', href: '/company' },
     ],
@@ -74,6 +74,7 @@ const LINK_GROUPS: Array<{
       { name: 'Acceptable Use', href: '/acceptable-use' },
       { name: 'Risk Disclosure', href: '/risk' },
       { name: 'AML Policy', href: '/aml' },
+      { name: 'Fees & Charges', href: '/fees' },
     ],
   },
 ]
@@ -144,7 +145,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
             <Link href="/" className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/logo-mark-lime.png"
+                src="/brand/logo-mark-lime.avif"
                 alt="DropMarket"
                 width={44}
                 height={44}

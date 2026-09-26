@@ -18,6 +18,7 @@ import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Percent, Zap, BadgeCheck } from 'lucide-react'
 import { PALETTE } from '@/app/account/become-seller/_redesign/theme'
+import { FOUNDING_FEE_PERK_LABEL } from '@/lib/config/founding-seller'
 
 interface FoundingRailProps {
   /** Greeting name; null in generic mode (no personal data). */
@@ -31,7 +32,7 @@ interface FoundingRailProps {
 }
 
 const PERKS = [
-  { icon: Percent, label: '2% lower fees, locked for life' },
+  { icon: Percent, label: FOUNDING_FEE_PERK_LABEL },
   { icon: Zap, label: 'List before the public launch' },
   { icon: BadgeCheck, label: 'Founding badge on your storefront' },
 ] as const
@@ -86,7 +87,7 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
           <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-white/70">
             {name
               ? 'One of the first traders on DropMarket. Here’s where you stand, the latest from us, and the door to start selling.'
-              : 'Be one of the first hundred sellers on DropMarket — lower fees for life, first dibs on listing, and a badge buyers can see.'}
+              : 'Be one of the first hundred sellers on DropMarket — a founding fee discount, first dibs on listing, and a badge buyers can see.'}
           </p>
         </div>
 

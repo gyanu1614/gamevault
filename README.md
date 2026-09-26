@@ -75,15 +75,15 @@ src/
 ## Local Development
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (pnpm — do not use npm)
+pnpm install
 
 # Copy environment variables
 cp .env.local.example .env.local
 # Fill in Supabase and Stripe keys
 
 # Run dev server
-npm run dev
+pnpm dev
 ```
 
 Open http://localhost:3000

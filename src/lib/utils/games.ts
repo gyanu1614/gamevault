@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 
 // Game mapping type
 export interface Game {
@@ -9,43 +11,44 @@ export interface Game {
   image_url: string | null
 }
 
-// Cache for games to avoid repeated queries
-let gamesCache: Game[] | null = null
-let gamesCacheTime: number = 0
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
 /**
- * Fetch all games from database with caching
+ * Fetch all active games.
+ *
+ * STATE-010 — this used to memoize into a module-scope variable with a
+ * hand-rolled 5-minute TTL. That is process-global state shared across every
+ * request and every user on a warm lambda, invisible to revalidateTag and
+ * unbounded until redeploy. The data is public and read-only so nothing leaked,
+ * but the mechanism was wrong: unstable_cache gives the same benefit plus
+ * managed invalidation, and it is tagged with GAME_DIRECTORY_TAG so the admin
+ * game mutations expire it immediately instead of serving up to 5 minutes of
+ * stale rows.
+ *
+ * The read is cookie-free, which is also what makes it cacheable at all.
  */
-export async function getAllGames(): Promise<Game[]> {
-  const now = Date.now()
+export const getAllGames = unstable_cache(
+  async (): Promise<Game[]> => {
+    try {
+      const supabase = createAnonClient()
+      const { data, error } = await supabase
+        .from('games')
+        .select('id, name, slug, emoji, image_url')
+        .eq('is_active', true)
+        .order('name')
 
-  // Return cached data if available and fresh
-  if (gamesCache && (now - gamesCacheTime) < CACHE_DURATION) {
-    return gamesCache
-  }
+      if (error) {
+        console.error('Error fetching games:', error)
+        return []
+      }
 
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('games')
-      .select('id, name, slug, emoji, image_url')
-      .eq('is_active', true)
-      .order('name')
-
-    if (error) {
-      console.error('Error fetching games:', error)
+      return (data ?? []) as unknown as Game[]
+    } catch (error) {
+      console.error('Error in getAllGames:', error)
       return []
     }
-
-    gamesCache = data || []
-    gamesCacheTime = now
-    return gamesCache
-  } catch (error) {
-    console.error('Error in getAllGames:', error)
-    return []
-  }
-}
+  },
+  ['all-active-games'],
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+)
 
 /**
  * Convert game IDs to game names

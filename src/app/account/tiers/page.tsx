@@ -2,7 +2,9 @@
  * /account/tiers — Seller Tier Comparison Page
  *
  * Shows:
- *  1. Current tier + commission rate summary (top hero)
+ *  1. Current tier + rank discount summary (top hero) — points off the
+ *     seller's category rate (fee engine A6), never an absolute fee: the
+ *     rate itself is per category and lives on /sell/fees
  *  2. Progress bars toward the next tier
  *  3. Full comparison grid of all 6 tiers
  */
@@ -12,15 +14,15 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, TrendingUp, Shield, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getAllTierConfigs, getMyTierInfo } from '@/lib/actions/seller-tiers'
+import { getAllTierConfigs, getMyTierInfo, getRankFloorPct } from '@/lib/actions/seller-tiers'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import TierBadge from '@/components/seller/tiers/TierBadge'
-import TierCard, { type TierConfig } from '@/components/seller/tiers/TierCard'
+import TierCard, { rankDiscountLabel, type TierConfig } from '@/components/seller/tiers/TierCard'
 import TierProgressBar from '@/components/seller/tiers/TierProgressBar'
 
 export const metadata: Metadata = {
   title: 'Seller Tiers',
-  description: 'Understand your seller tier, commission rate, and how to level up.',
+  description: 'Understand your seller tier, the discount it takes off your category rate, and how to level up.',
 }
 
 export default async function SellerTiersPage() {
@@ -30,17 +32,18 @@ export default async function SellerTiersPage() {
   if (!user) redirect('/login?redirect=/account/tiers')
 
   // ── Data ────────────────────────────────────────────────────────────────────
-  const [allTiers, myData] = await Promise.all([
+  const [allTiers, myData, floorPct] = await Promise.all([
     getAllTierConfigs(),
     getMyTierInfo(),
+    getRankFloorPct(),
   ])
 
   const currentTier = (myData?.tierInfo.current_tier ?? DEFAULT_TIER) as string
   const eligibleTier = (myData?.tierInfo.eligible_tier ?? currentTier) as string
-  const commissionPct = myData
-    ? (myData.tierInfo.commission_rate * 100).toFixed(1)
-    : (tierByKey('quartz').commissionRate * 100).toFixed(2)
-  const listingLimit = myData?.tierInfo.listing_limit ?? tierByKey('quartz').listingLimit
+  const currentDiscount = rankDiscountLabel(
+    Number((allTiers.find((t: TierConfig) => t.tier === currentTier) as TierConfig | undefined)?.discount_pts ?? 0),
+  )
+  const listingLimit = myData?.tierInfo.listing_limit ?? tierByKey(DEFAULT_TIER).listingLimit
 
   // Build next-tier requirement object for TierProgressBar
   const nextTierConfig = myData?.tierInfo.next_tier
@@ -72,7 +75,7 @@ export default async function SellerTiersPage() {
           </Link>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Seller Tiers</h1>
           <p className="mt-1.5 text-sm text-zinc-500">
-            Complete more sales and maintain great ratings to earn lower commission rates.
+            Complete more sales and maintain great ratings to earn a bigger discount off your category rate.
           </p>
         </div>
       </div>
@@ -94,7 +97,7 @@ export default async function SellerTiersPage() {
               )}
             </div>
             <div className="flex gap-6 sm:gap-8">
-              <Stat label="Commission rate" value={`${commissionPct}%`} icon={<TrendingUp className="w-4 h-4" />} />
+              <Stat label="Off your category rate" value={currentDiscount} icon={<TrendingUp className="w-4 h-4" />} />
               <Stat
                 label="Listing limit"
                 value={listingLimit === null ? 'Unlimited' : String(listingLimit)}
@@ -131,6 +134,7 @@ export default async function SellerTiersPage() {
                 config={tier}
                 isCurrent={tier.tier === currentTier}
                 isEligible={tier.tier === eligibleTier && tier.tier !== currentTier}
+                floorPct={floorPct}
               />
             ))}
           </div>
@@ -150,7 +154,15 @@ export default async function SellerTiersPage() {
             </li>
             <li className="flex gap-2">
               <span className="text-lime-text flex-shrink-0">•</span>
-              Your new commission rate applies to all orders placed after the upgrade.
+              Your new rank discount applies to all orders placed after the upgrade.
+            </li>
+            <li className="flex gap-2">
+              <span className="text-lime-text flex-shrink-0">•</span>
+              <span>
+                The discount comes off your category rate and never takes it below the platform floor
+                {floorPct != null ? ` of ${Number(floorPct).toFixed(2).replace(/\.?0+$/, '')}%` : ''}. Category rates are on the{' '}
+                <Link href="/sell/fees" className="text-lime-text hover:underline">Seller Fees page</Link>.
+              </span>
             </li>
             <li className="flex gap-2">
               <span className="text-lime-text flex-shrink-0">•</span>

@@ -4,20 +4,29 @@
  * Renders a LegalDoc from src/lib/legal/documents.ts in the site design
  * system: document header with entity meta, sectioned body (paragraphs,
  * lists, tables, warning notes), and a cross-link strip to the other
- * legal documents. Content supports **bold** and *italic* inline marks.
+ * legal documents. Content supports **bold**, *italic* and [text](/path)
+ * inline marks.
  */
 
 import Link from 'next/link'
 import { Fragment } from 'react'
 import { LEGAL_DOCS, LEGAL_ENTITY, type LegalBlock, type LegalDoc } from '@/lib/legal/documents'
 
-/** Minimal inline renderer: **bold** and *italic*. */
+/** Minimal inline renderer: **bold**, *italic* and [text](/internal-path) links. */
 function Inline({ md }: { md: string }) {
-  // Split on **bold** first, then *italic* within the plain runs.
-  const parts = md.split(/(\*\*[^*]+\*\*)/g)
+  // Split on [text](href) and **bold** first, then *italic* within the plain runs.
+  const parts = md.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g)
   return (
     <>
       {parts.map((part, i) => {
+        const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part)
+        if (link) {
+          return (
+            <Link key={i} href={link[2]} className="font-semibold text-lime-text hover:underline">
+              {link[1]}
+            </Link>
+          )
+        }
         if (part.startsWith('**') && part.endsWith('**')) {
           return (
             <strong key={i} className="font-semibold text-text-primary">

@@ -1,4 +1,22 @@
+import * as Sentry from "npm:@sentry/deno";
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+// Sentry must be initialized before anything else runs so its instrumentation
+// is in place for the whole module. The DSN comes from a function secret:
+//
+//   npx supabase secrets set SENTRY_DSN="https://...ingest.sentry.io/..."
+//
+// Absent secret => enabled:false => the SDK is inert. That is the intended
+// state locally and in `supabase functions serve`; it must never throw here,
+// because a crash at module scope takes the whole function down.
+Sentry.init({
+  dsn: Deno.env.get("SENTRY_DSN"),
+  enabled: Boolean(Deno.env.get("SENTRY_DSN")),
+  tracesSampleRate: 0.1,
+  initialScope: {
+    tags: { edge_function: "sab-market-import" },
+  },
+});
 
 type ImportRequest = {
   source_slug?: unknown;
@@ -8,17 +26,15 @@ type ImportRequest = {
 type RevalidationResult =
   | {
       ok: true;
-      skipped: true;
-      reason: string;
-    }
-  | {
-      ok: true;
       skipped: false;
       status: number;
     }
   | {
+      // ROUTE-010: every non-ok shape carries an `error`, including the
+      // "not configured" case, which previously reported ok:true and hid a
+      // pipeline that was never revalidating anything.
       ok: false;
-      skipped: false;
+      skipped: boolean;
       status?: number;
       error: string;
     };
@@ -66,8 +82,9 @@ function jsonResponse(
   });
 }
 
-async function revalidateMarketPages():
-  Promise<RevalidationResult> {
+async function revalidateMarketPages(
+  changedSlugs: string[],
+): Promise<RevalidationResult> {
   const revalidateUrl = Deno.env.get(
     "SAB_MARKET_REVALIDATE_URL",
   );
@@ -78,12 +95,15 @@ async function revalidateMarketPages():
     "VERCEL_AUTOMATION_BYPASS_SECRET",
   );
 
+  // ROUTE-010: missing configuration used to report ok:true/skipped, so a
+  // pipeline that never revalidated anything looked healthy. Treat it as the
+  // misconfiguration it is.
   if (!revalidateUrl || !revalidateSecret) {
     return {
-      ok: true,
+      ok: false,
       skipped: true,
-      reason:
-        "Revalidation URL or secret is not configured",
+      error:
+        "SAB_MARKET_REVALIDATE_URL or SAB_MARKET_REVALIDATE_SECRET is not configured",
     };
   }
 
@@ -103,6 +123,10 @@ async function revalidateMarketPages():
       headers,
       body: JSON.stringify({
         reason: "sab-market-import",
+        // Per-item revalidation: only the items whose published prices
+        // actually moved this crawl. The route falls back to the whole-game
+        // tag when this is absent, so an older deployment still works.
+        changedSlugs,
       }),
       signal: AbortSignal.timeout(8_000),
     });
@@ -350,13 +374,132 @@ Deno.serve(async (request) => {
       );
     }
 
-    const revalidation =
-      await revalidateMarketPages();
+    // ROUTE-014: refresh the evidence snapshot FIRST. sab_price_display is
+    // derived from the estimates chain, which now reads
+    // sab_market_evidence_display — so refreshing the display table before the
+    // evidence would materialize prices from the PREVIOUS crawl's evidence.
+    // Order here is load-bearing: publish -> evidence -> display.
+    //
+    // Hard failure: publishing estimates that the correction pipeline will then
+    // read from a stale snapshot is the silent-staleness failure mode that hid a
+    // month of frozen prices (ROUTE-010). A failed refresh leaves the previous
+    // snapshot intact, so returning 500 keeps the last good state rather than a
+    // half-updated one.
+    const {
+      data: evidenceRows,
+      error: evidenceError,
+    } = await supabaseAdmin.rpc(
+      "sab_refresh_evidence_display",
+    );
 
+    if (evidenceError) {
+      console.error(
+        "Estimates published but sab_market_evidence_display refresh failed:",
+        evidenceError,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Listings imported but evidence snapshot refresh failed",
+          details: evidenceError.message,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+        },
+        500,
+      );
+    }
+
+    // ROUTE-010: materialize sab_price_display from the freshly published
+    // estimates. Every price page reads that table for its values AND for the
+    // "Updated …" timestamp, and until now its ONLY writer was the daily
+    // correct-prices cron (runSabCorrection). A crawl could publish estimates
+    // perfectly and still never reach the page, which is exactly why the values
+    // pages sat at "Aug 13" while crawls kept passing. Refreshing here closes
+    // that gap so a successful crawl is visible without waiting for the cron.
+    // ...and report WHICH items changed, so the revalidation below can be per
+    // item instead of per game. `_changed` does the same refresh and returns
+    // the brainrot slugs whose published prices actually moved (migration
+    // 20260922172054). The whole-game tag marked all ~500 item pages stale on
+    // every crawl — ~80% of the monthly ISR budget (build audit 2026-09-22, §4).
+    const {
+      data: displayRows,
+      error: displayError,
+    } = await supabaseAdmin.rpc(
+      "sab_refresh_price_display_changed",
+    );
+
+    if (displayError) {
+      console.error(
+        "Estimates published but sab_price_display refresh failed:",
+        displayError,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Listings imported but price display refresh failed",
+          details: displayError.message,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+        },
+        500,
+      );
+    }
+
+    // The RPC returns one row per changed slug.
+    const changedSlugs = Array.isArray(displayRows)
+      ? (displayRows as Array<{ brainrot_slug?: string | null }>)
+        .map((row) =>
+          typeof row === "string" ? row : row?.brainrot_slug ?? null
+        )
+        .filter((slug): slug is string =>
+          typeof slug === "string" && slug.length > 0
+        )
+      : [];
+
+    const revalidation = await revalidateMarketPages(
+      changedSlugs,
+    );
+
+    // ROUTE-010: a failed revalidation means fresh prices are in the database
+    // but the public pages keep serving the cached old ones — silent staleness,
+    // which is the failure mode that hid a stale deployment URL (HTTP 410 GONE)
+    // for weeks. Surface it as a hard failure so the workflow goes red.
     if (!revalidation.ok) {
-      console.warn(
+      console.error(
         "Market pages were not revalidated:",
         revalidation,
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            "Prices published but market pages were not revalidated",
+          details:
+            revalidation.error ??
+            `Revalidation failed with HTTP ${revalidation.status ?? "unknown"}`,
+          result: importResult,
+          publication: {
+            ok: true,
+            published_rows: publishedRows ?? 0,
+          },
+          // sab_refresh_price_display_changed returns ROWS (the changed
+          // slugs), not a count — Number() on an array is NaN. The useful
+          // number here is how many items actually moved.
+          price_rows_changed: changedSlugs.length,
+          revalidation,
+        },
+        502,
       );
     }
 
@@ -367,6 +510,10 @@ Deno.serve(async (request) => {
         ok: true,
         published_rows: publishedRows ?? 0,
       },
+      evidence_refreshed: Number(evidenceRows ?? 0),
+      // sab_refresh_price_display_changed returns ROWS (the changed slugs),
+      // not a count. The useful number is how many items actually moved.
+      price_rows_changed: changedSlugs.length,
       revalidation,
     });
   } catch (error) {
@@ -374,6 +521,14 @@ Deno.serve(async (request) => {
       "Unexpected market import error:",
       error,
     );
+
+    // This catch is the only thing standing between a thrown error and a bare
+    // 500, so it is where the error has to be reported — the response body
+    // deliberately says nothing useful to the caller. flush() before returning:
+    // the isolate can be torn down the moment the response is sent, which
+    // would drop an in-flight event.
+    Sentry.captureException(error);
+    await Sentry.flush(2000);
 
     return jsonResponse(
       {

@@ -12,8 +12,10 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import type { PromoCode } from '@/types/database'
+import { promoRefusalMessage } from '@/lib/checkout/promo'
 
 // ── Buyer: validate a promo code at checkout ──────────────────────────────────
 
@@ -72,9 +74,9 @@ export async function validatePromoCode(
     if (user && promo.per_user_limit > 0) {
       const { count } = await supabase
         .from('promo_code_usages')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('promo_code_id', promo.id)
-        .eq('user_id', user.id)
+        .eq('user_id', user.id).limit(1)
 
       if ((count ?? 0) >= promo.per_user_limit) {
         return { valid: false, error: 'You have already used this promo code' }
@@ -113,37 +115,39 @@ export async function validatePromoCode(
 
 // ── Internal: record usage after order is created ────────────────────────────
 
+export type PromoUsageResult = { ok: true; totalUsed: number } | { ok: false; error: string }
+
+/** Buyer-safe copy for a refused usage (the RPC message names the cap). */
 export async function recordPromoUsage(params: {
   promoCodeId: string
   orderId: string
   discountAmount: number
   userId: string | null
-}): Promise<void> {
+}): Promise<PromoUsageResult> {
   const { promoCodeId, orderId, discountAmount, userId } = params
   try {
-    const supabase = await createClient()
-
-    // Insert usage record
-    await supabase.from('promo_code_usages').insert({
-      promo_code_id:   promoCodeId,
-      user_id:         userId,
-      order_id:        orderId,
-      discount_amount: discountAmount,
-    } as any)
-
-    // Increment total_used counter
-    const { data: current } = await supabase
-      .from('promo_codes')
-      .select('total_used')
-      .eq('id', promoCodeId)
-      .single()
-    if (current) {
-      await (supabase.from('promo_codes') as any)
-        .update({ total_used: ((current as any).total_used ?? 0) + 1 })
-        .eq('id', promoCodeId)
+    // DB-016: usage row + total_used increment in ONE DB transaction under the
+    // promo row lock (promo_usage_record RPC), once per (promo, order). The old
+    // SELECT total_used / UPDATE n+1 lost updates under concurrent redemptions
+    // and — run on the session client — never matched a row for a buyer at
+    // all (promo_codes is admin-write only), so the usage cap never bound.
+    // PAY-014: the cap now binds INSIDE the RPC; a refusal is returned, not
+    // swallowed — createCheckout awaits it before the discount stands.
+    const service = createServiceRoleClient()
+    const { data, error } = await (service.rpc as any)('promo_usage_record', {
+      p_promo_code_id: promoCodeId,
+      p_order_id: orderId,
+      p_user_id: userId,
+      p_discount_amount: discountAmount,
+    })
+    if (error) {
+      console.error('[promo] recordPromoUsage refused:', error.message)
+      return { ok: false, error: promoRefusalMessage(String(error.message ?? '')) }
     }
-  } catch (err) {
+    return { ok: true, totalUsed: Number(data?.total_used ?? 0) }
+  } catch (err: any) {
     console.error('[promo] recordPromoUsage error:', err)
+    return { ok: false, error: promoRefusalMessage(String(err?.message ?? '')) }
   }
 }
 

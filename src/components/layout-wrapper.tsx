@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
-import { BetaBanner } from '@/components/beta-banner'
 
 export function LayoutWrapper({
   children,
@@ -19,11 +18,17 @@ export function LayoutWrapper({
   // Don't show navbar and footer on admin pages
   const isAdminPage = pathname?.startsWith('/admin')
 
-  // V19/P15.b — Sell wizard pages keep the global navbar (forced into
-  // its scrolled full-width mode via Navbar's `forceScrolled` prop —
-  // see navbar-floating.tsx). Footer stays hidden so the wizard owns
-  // the canvas below.
-  const isSellWizard = pathname?.startsWith('/sell')
+  // The sell wizard is a focused task surface, not a browsing page: it
+  // strips the global navbar AND footer so nothing competes with the
+  // form, and the wizard's own progress rail sits where the navbar was.
+  // /sell/fees is the public fee schedule (normal chrome); only the wizard
+  // routes (/sell/new, /sell/edit, /sell/bulk) get the stripped shell. An
+  // exact segment match also keeps /seller/* and /seller-agreement out.
+  const isSellWizard =
+    /^\/sell\/(new|edit|bulk)(\/|$)/.test(pathname ?? '') ||
+    // The dev harness must render the same chrome-less shell as the real
+    // route, or it measures a layout nobody sees.
+    !!pathname?.startsWith('/dev/sell-wizard-preview')
 
   // V19/P24/P7.r — /checkout/* has its own slim layout: stripped
   // navbar + checkout-specific footer so the buyer can't leak out
@@ -71,29 +76,15 @@ export function LayoutWrapper({
 
   const hasSidebar = isSellerPageWithSidebar || isAccountPage
 
-  // TEMPORARY — homepage rebuild. The homepage is being rebuilt section by
-  // section against the layout contract in CLAUDE.md; it renders as an empty
-  // scroll surface with only the navbar until sections are added back. The
-  // footer (incl. the game-links matrix) is suppressed here so the empty
-  // page can be verified on its own. Remove this flag when the rebuild lands.
-  // Was: suppress the footer on '/' while the homepage was an empty scroll
-  // surface. The rebuild has sections now, so the footer renders there again.
-  const isHomepageRebuild = false
-
   return (
     <div className={`flex min-h-screen flex-col${isValuesHub ? ' hub-chrome' : ''}`}>
-      {/* Beta announcement bar — normal-flow so it scrolls away with the
-          page; the fixed navbar reads its remaining height and rides just
-          below it. Self-hides on chrome-less shells (admin/checkout/seller
-          application) to match the navbar rules below. */}
-      {/* BetaBanner removed — beta signal now lives in the homepage hero eyebrow */}
       {/* P5 — Checkout strips the global navbar: the page carries its
           own slim header (brand left · secure badge right). */}
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
           the floating pill reads as an overlay above a page that already has
           its own left rail. */}
-      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && (
-        <Navbar forceScrolled={isSellWizard || hasSidebar} />
+      {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && (
+        <Navbar forceScrolled={hasSidebar} />
       )}
       <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it
@@ -106,8 +97,7 @@ export function LayoutWrapper({
         !isCheckout &&
         !isSellerApplication &&
         !hasSidebar &&
-        !isValuesHub &&
-        !isHomepageRebuild && (
+        !isValuesHub && (
           // Direction A: the games directory is a slot INSIDE the footer
           // rather than its own band above it — see the note in footer.tsx.
           <Footer gameDirectory={footerGameLinks} />

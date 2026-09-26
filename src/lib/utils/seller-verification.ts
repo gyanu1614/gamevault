@@ -207,3 +207,41 @@ export function getVerificationLabel(verified: number, total: number): string {
   if (verified === total) return 'Complete'
   return 'In Progress'
 }
+
+// ─── Approval-time identity assessment (audit ACC-02) ────────────────────────
+
+export interface IdentityAssessment {
+  /** Didit approved session, or a VERIFIED government ID + a VERIFIED selfie. */
+  verified: boolean
+  viaDidit: boolean
+  /** Documents that were never uploaded. */
+  missing: string[]
+  /** Documents uploaded but not yet marked verified by an admin. */
+  unverified: string[]
+}
+
+/**
+ * What approveApplication computes BEFORE granting the seller role. Unlike
+ * calculateVerificationStatus (a review-progress score that counts an upload
+ * as "done"), this asks whether the identity check actually passed:
+ * an admin has verified the ID and the selfie, or Didit did.
+ */
+export function assessIdentityForApproval(
+  documents: SellerDocument[] | null | undefined,
+): IdentityAssessment {
+  const docs = documents || []
+  if (findDiditEvidence(docs)) return { verified: true, viaDidit: true, missing: [], unverified: [] }
+
+  const idDocs = docs.filter((d) => d.document_type === 'id_front' || d.document_type === 'id_back')
+  const selfies = docs.filter((d) => d.document_type === 'selfie_with_id')
+  const missing: string[] = []
+  const unverified: string[] = []
+
+  if (idDocs.length === 0) missing.push('Government ID')
+  else if (!idDocs.some((d) => d.verified === true)) unverified.push('Government ID')
+
+  if (selfies.length === 0) missing.push('Selfie with ID')
+  else if (!selfies.some((d) => d.verified === true)) unverified.push('Selfie with ID')
+
+  return { verified: missing.length === 0 && unverified.length === 0, viaDidit: false, missing, unverified }
+}

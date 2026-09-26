@@ -30,6 +30,7 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { Bolt, Clock, ThumbsUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
 
@@ -44,27 +45,6 @@ const fmtCount = (n: number) => {
   if (n >= 10_000) return `${Math.round(n / 1_000)}K`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
   return n.toLocaleString('en-US')
-}
-
-function VerifiedDot({ size = 14 }: { size?: number }) {
-  return (
-    <span
-      aria-label="Verified seller"
-      title="Verified seller"
-      style={{ width: size, height: size }}
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-lime"
-    >
-      <svg viewBox="0 0 12 12" className="h-2 w-2" fill="none" aria-hidden>
-        <path
-          d="M2.5 6.2 4.7 8.4 9.5 3.6"
-          stroke="var(--color-text-inverse)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  )
 }
 
 /** Plain seller avatar (image or initial fallback). */
@@ -298,32 +278,46 @@ export default function ItemCard({
             onClick={stop}
             className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
           >
-            {/* Plain seller avatar. */}
-            <SellerAvatar seller={offer.seller} size={34} />
+            <SellerAvatar seller={offer.seller} size={32} />
 
-            {/* Seller identity — name + verified on top, rating below. */}
-            <div className="flex min-w-0 flex-col gap-0.5 leading-tight">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span className="max-w-[104px] truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-micro)' }}>
+            {/* Identity above, reputation below. Both lines are right-
+                aligned so the block reads as one column flush to the
+                card edge instead of two ragged lines; `items-end` plus
+                the avatar's own centring keeps the pair optically
+                balanced against the 32px circle. */}
+            <div className="flex min-w-0 flex-col items-end gap-[3px] leading-none">
+              <div className="flex min-w-0 items-center gap-1">
+                <span className="max-w-[112px] truncate text-[12.5px] font-semibold text-text-primary">
                   {sellerName}
                 </span>
-                {offer.seller.verified && <VerifiedDot size={12} />}
+                {offer.seller.verified && <VerifiedBadge size={13} />}
               </div>
-              {/* Sub-line — rating + order count, so it reads at roughly the
-                  name's width instead of a lonely short number. */}
-              <span className="inline-flex items-center gap-1.5" style={{ fontSize: 'var(--fs-micro)' }}>
-                <span className="inline-flex items-center gap-1 font-semibold text-success">
-                  <ThumbsUp className="h-3 w-3 fill-success" aria-hidden />
-                  <span className="tabular-nums">
-                    {offer.seller.ratingPercent != null
-                      ? `${offer.seller.ratingPercent.toFixed(0)}%`
-                      : 'New Seller'}
+
+              {/* Reputation. A rated seller gets the figure; an unrated
+                  one gets a quiet "New seller" — never inside the green
+                  thumbs-up, where it read as though it were a score. */}
+              {offer.seller.ratingPercent != null &&
+              offer.seller.reviewCount > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px]">
+                  <ThumbsUp
+                    className="h-[11px] w-[11px] shrink-0 fill-success text-success"
+                    aria-hidden
+                  />
+                  <span className="font-semibold tabular-nums text-success">
+                    {Number.isInteger(offer.seller.ratingPercent)
+                      ? offer.seller.ratingPercent
+                      : offer.seller.ratingPercent.toFixed(1)}
+                    %
+                  </span>
+                  <span className="tabular-nums text-text-tertiary">
+                    ({fmtCount(offer.seller.reviewCount)})
                   </span>
                 </span>
-                <span className="tabular-nums text-text-tertiary">
-                  · {fmtCount(offer.seller.sales)} orders
+              ) : (
+                <span className="text-[11px] text-text-tertiary">
+                  New seller
                 </span>
-              </span>
+              )}
             </div>
           </SmartLink>
         )}

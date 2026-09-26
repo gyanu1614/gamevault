@@ -14,7 +14,7 @@ name: SAB Eldorado Daily Market Collection
 # ever revisited — which is why listing disappearance carried no signal and
 # ended_at was null on every row.
 #
-# Re-crawling the same panel daily is also what /api/cron/expire-sab-listings
+# Re-crawling the same panel daily is also what the expire step (pnpm sab:expire)
 # depends on: absence only means something if we actually looked again.
 
 on:
@@ -36,15 +36,31 @@ on:
         description: Re-crawl anything not priced within this many hours (0 = backfill only)
         required: false
         default: "6"
+      publish_only_run_id:
+        description: >-
+          Recovery: re-publish a FAILED run's feed instead of crawling. Paste that
+          run's id (the number in its URL); its uploaded feed artifact is
+          downloaded and only the final batch is re-sent with publish:true.
+        required: false
+        default: ""
   schedule:
-    # Every 3h over the CURATED tradeable set (~300 items, not all 498). The
-    # collector's staleness queue (--refresh-after-hours 6) makes each 3h run
-    # grab whichever tradeable items aged past 6h → about half the set per run,
-    # whole curated set every ~6h. No item's listings go older than ~6h, and we
+    # Every 12h over the CURATED tradeable set (not all 498) — Gyanu's call
+    # 2026-09-22: prices refresh twice a day, everything else daily. Was 3h
+    # (8 runs/day); each run marked all ~500 item pages stale, which was ~80%
+    # of the monthly ISR budget (build audit §4). Revalidation is now per
+    # changed item, so the remaining cost is proportional to real price
+    # movement rather than to the crawl cadence.
+    #
+    # The collector's
+    # staleness queue (--refresh-after-hours 6) makes each 3h run grab whichever
+    # tradeable items aged past 6h → about half the set per run, whole curated
+    # set every ~6h. EVERY tradeable item rotates, including fully-covered ones
+    # (2026-09-20: a 14/14 item used to leave the rotation for good — see
+    # scopeQueue in the collector). No item's listings go older than ~6h, and we
     # spend zero budget on junk nobody trades. Self-balancing (a new item is max-
     # stale → crawled next run) and self-healing (a failed run just leaves items
     # for the next tick — no static half to black out).
-    - cron: "0 */3 * * *"
+    - cron: "0 */12 * * *"
 
 concurrency:
   group: sab-eldorado-daily-market
@@ -58,6 +74,9 @@ jobs:
 
     permissions:
       contents: read
+      # ROUTE-017: publish_only_run_id downloads a PRIOR run's feed artifact,
+      # which actions/download-artifact can only do with the Actions API.
+      actions: read
 
     env:
       SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
@@ -65,28 +84,55 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       # The popularity step writes popularity_rank directly to sab_brainrots.
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      # Let the collector reprice as its LAST step (correct-prices?game=sab) once
-      # the whole crawl has landed — closes the snapshot-lag race that let a
-      # stale cheapest publish. The 10:00 UTC Vercel cron stays as a backstop.
+      # Used by the freshness check at the end of the job. The collector no
+      # longer calls any Vercel route: expire and reprice both run on this
+      # runner as their own steps (2026-09-20).
       PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
+      # ROUTE-017 recovery path. The publish step (publish:true →
+      # sab_publish_market_estimates → sab_refresh_evidence_display →
+      # sab_refresh_price_display) is seconds of work at the tail of a 30-40
+      # minute scrape, and it is the most failure-prone call in the pipeline —
+      # it is what trips the statement timeout (ROUTE-011) and what tripped the
+      # safe-update guard (ROUTE-013). Recovering it used to mean re-scraping
+      # Eldorado for rows already sitting in sab_market_raw_listings. Instead we
+      # pull the failed run's own feed artifact and re-send just its final batch.
+      - name: Download the failed run's feed (publish-only recovery)
+        if: inputs.publish_only_run_id != ''
+        uses: actions/download-artifact@v5
+        with:
+          name: eldorado-sab-market-${{ inputs.publish_only_run_id }}
+          path: data/sab-market-feeds
+          run-id: ${{ inputs.publish_only_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-publish without crawling
+        if: inputs.publish_only_run_id != ''
+        run: >-
+          pnpm sab:import:publish-only
+          data/sab-market-feeds/eldorado-api-latest.json
 
       - name: Collect and import Eldorado market data (priority queue)
+        if: inputs.publish_only_run_id == ''
         run: >-
-          npm run sab:eldorado:send --
+          pnpm sab:eldorado:send
           --max-brainrots ${{ inputs.max_brainrots || '210' }}
           --max-pages ${{ inputs.max_pages || '10' }}
           --samples-per-variant 25
@@ -98,12 +144,55 @@ jobs:
       # (usePopularItems). Runs after the market collect so the freshest catalog
       # is in place. Non-fatal: a failure here must not fail the price import.
       - name: Refresh Popular ranking
+        if: inputs.publish_only_run_id == ''
         continue-on-error: true
-        run: npm run sab:eldorado:popularity
+        run: pnpm sab:eldorado:popularity
+
+      # Listing lifecycle, on the runner (see scripts/expire-listings.mjs).
+      # The collector used to call /api/cron/expire-sab-listings for this; that
+      # route was killed at Vercel's 300s budget in 3 of 8 runs, and since PR #76
+      # made the failure fatal, each of those runs also skipped its reprice.
+      # Runs BEFORE the reprice so ended listings leave the evidence set in the
+      # same cycle.
+      #
+      # Deliberately NOT continue-on-error: a silent lifecycle failure is how
+      # ended_at stayed null on 16k rows for months.
+      - name: Expire vanished SAB listings
+        if: inputs.publish_only_run_id == ''
+        run: pnpm sab:expire
+
+      # Repricing, on the runner (see scripts/reprice.mjs for the full why).
+      # This replaces the POST to /api/cron/correct-prices that the collector
+      # used to make: that route 504'd on every run from 2026-09-14 and the
+      # failure was swallowed, so prices froze for five days behind a green
+      # workflow.
+      #
+      # Deliberately NOT continue-on-error: a failed reprice must fail the job.
+      - name: Reprice SAB
+        if: inputs.publish_only_run_id == ''
+        run: pnpm reprice --game=sab
+
+      # Freshness guard (ROUTE-014). The vercel.json cron is daily-only —
+      # Vercel Hobby rejects sub-daily schedules — so the real 3-hourly cadence
+      # lives here, same pattern as expire-pending-payments.yml. Runs LAST, after
+      # the crawl and its repricing have landed, so it checks the state this run
+      # actually produced rather than the previous run's snapshot.
+      #
+      # Deliberately NOT continue-on-error: a stale hop must fail the run. A
+      # silent staleness is exactly what ROUTE-014 exists to catch (prices sat on
+      # an Aug 13 snapshot for a month while every layer reported success).
+      - name: Check SAB pipeline freshness
+        run: |
+          code=$(curl -s -o /tmp/freshness.json -w "%{http_code}" -m 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.PUBLIC_API_URL }}/api/cron/check-sab-freshness")
+          cat /tmp/freshness.json
+          echo
+          [ "$code" = "200" ] || { echo "::error::freshness check failed (HTTP $code)"; exit 1; }
 
       - name: Upload collection report
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: always() && inputs.publish_only_run_id == ''
+        uses: actions/upload-artifact@v5
         with:
           name: eldorado-sab-market-${{ github.run_id }}
           path: data/sab-market-feeds/eldorado-api-latest.json

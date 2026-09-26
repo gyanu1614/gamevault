@@ -21,6 +21,10 @@ const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const RUN = `walit-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 const rand12 = () => Math.floor(Math.random() * 0xffffffffffff).toString(16).padStart(12, '0')
 const USER = `00000000-0000-4000-8000-${rand12()}`
+// refundToWallet keys on the order id (wallet_refund:<order>), outside the
+// test:ledger: prefix — cleaned by order id in afterAll (it leaked one row per
+// run until fix/money-atomicity).
+const FAKE_ORDER = `00000000-0000-4000-8000-${rand12()}`
 const CUR = 'EUR'
 
 let svc: SupabaseClient | null = null
@@ -41,11 +45,10 @@ beforeAll(async () => {
 afterAll(async () => {
   if (!svc || !ready) return
   // Remove this run's ledger txns (idempotency keys are RUN-prefixed) + genesis-free.
-  try {
-    await (svc as any).rpc('ledger_test_cleanup', { p_prefix: `test:ledger:${RUN}%` })
-  } catch {
-    /* the wallet keys aren't test:ledger-prefixed; cleanup below */
-  }
+  const a = await (svc as any).rpc('ledger_test_cleanup', { p_prefix: `test:ledger:${RUN}%` })
+  const b = await (svc as any).rpc('ledger_test_cleanup_by_order', { p_order_id: FAKE_ORDER })
+  const left = [a.error, b.error].filter(Boolean).map((e: any) => e.message)
+  if (left.length) throw new Error(`wallet integration cleanup failed: ${left.join('; ')}`)
 })
 
 const maybe = URL && KEY ? describe : describe.skip
@@ -83,9 +86,7 @@ maybe('ledger-backed wallet (integration, real DB)', () => {
 
   it('refundToWallet credits via the refunds counterparty', async () => {
     if (!ready) return
-    // refundToWallet keys on the orderId; use a synthetic one.
-    const fakeOrder = `00000000-0000-4000-8000-${rand12()}`
-    await refundToWallet({ userId: USER, amountMinor: 1500n, currency: CUR, orderId: fakeOrder })
+    await refundToWallet({ userId: USER, amountMinor: 1500n, currency: CUR, orderId: FAKE_ORDER })
     expect(await getWalletBalance(USER, CUR)).toBe(4500n)
   })
 

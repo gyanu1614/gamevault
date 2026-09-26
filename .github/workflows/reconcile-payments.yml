@@ -1,0 +1,29 @@
+# Every-15-min payment reconciler (checkout fix round B). Lives here because
+# Vercel Hobby only allows once-daily cron schedules; this route is
+# deliberately NOT in vercel.json (a daily pass would leave a superseded
+# invoice payable for a day). GH Actions schedules are best-effort (can
+# drift a few minutes), which is fine — every step is idempotent.
+#
+#   /api/cron/reconcile-payments
+#     · drains provider_cancel_outbox (void charges we closed) with backoff
+#     · re-runs webhook events stuck `received` > 15 min (PAY-010)
+#
+# Secrets: CRON_SECRET (existing — the same bearer expire-pending-payments
+# uses). Nothing else.
+name: Reconcile Payments
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call reconcile endpoint
+        run: |
+          code=$(curl -s -o /tmp/out -w "%{http_code}" -m 90 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/reconcile-payments)
+          cat /tmp/out; echo
+          [ "$code" = "200" ] || { echo "::error::reconcile failed (HTTP $code)"; exit 1; }

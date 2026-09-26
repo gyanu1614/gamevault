@@ -116,12 +116,15 @@ export function SwooshLink({
                   {/* Brand lockup — DropMarket logo + name, contextual suffix. */}
                   <div className="flex items-center gap-3">
                     <Image
-                      src="/brand/logo-mark-white.png"
+                      src="/brand/logo-mark-white.avif"
                       alt=""
                       width={44}
                       height={44}
                       priority
                       className="h-10 w-10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:h-11 sm:w-11"
+                      // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+                      // it to WebP bills a transformation and saves nothing.
+                      unoptimized
                     />
                     <span className="inline-flex items-center whitespace-nowrap text-[22px] font-bold tracking-tight text-white sm:text-[26px]">
                       DropMarket

@@ -5,8 +5,6 @@
  * that tip to lime; 2×2 grid on small screens. Purely presentational.
  */
 
-'use client'
-
 import type { ComponentType } from 'react'
 import { PALETTE } from '../theme'
 import { IconList, IconPay, IconDeliver, IconPaid } from './HowItWorksIcons'

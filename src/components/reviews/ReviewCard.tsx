@@ -78,7 +78,11 @@ export default function ReviewCard({
   const thumbBg = isPositive ? 'bg-success-bg' : 'bg-error-bg'
 
   // Format timestamp
-  const timeAgo = formatDistanceToNow(new Date(review.created_at), { addSuffix: true })
+  // created_at is nullable in the DB; fall back to now rather than passing
+  // null into Date() (which yields Invalid Date and throws in formatDistanceToNow).
+  const timeAgo = formatDistanceToNow(new Date(review.created_at ?? Date.now()), {
+    addSuffix: true,
+  })
 
   // Get game and listing info
   const gameName = getGameName(review)

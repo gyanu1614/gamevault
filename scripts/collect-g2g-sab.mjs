@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 import dotenv from "dotenv";
 
@@ -134,6 +135,161 @@ function comparable(text) {
   return compact(text).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/**
+ * ROUTE-016: newest MATCHED G2G raw listing per Brainrot — the collector's real
+ * "when did we last actually look at this item" signal, and the only value in
+ * the system that differs BETWEEN items and therefore makes the staleness sort
+ * rotate.
+ *
+ * Scoped to the G2G source on purpose. Eldorado's equivalent lookup is
+ * source-agnostic, which is right for Eldorado, but reusing that here would let
+ * Eldorado's own 3-hourly crawls mark every Brainrot "recently seen" and G2G
+ * would then re-crawl nothing at all — a fresh freeze with the opposite sign.
+ * This must answer "when did *G2G* last see it".
+ *
+ * The parse_status=matched filter is not cosmetic: it makes the query use the
+ * partial index (brainrot_id, mutation_id, observed_at DESC)
+ * WHERE parse_status = 'matched'. ROUTE-012 measured the unfiltered form
+ * intermittently exceeding the statement timeout on this same table.
+ *
+ * Keyed by NAME, not id: the queue comes from G2G's taxonomy, whose `fa` codes
+ * are G2G's own and have no relation to sab_brainrots.id, so names are the only
+ * join available. Matched through comparable() — the same normalisation the
+ * parser uses — so punctuation and casing differences do not silently drop an
+ * item into "never crawled".
+ *
+ * Requires the service role: anon is denied sab_market_raw_listings. When the
+ * key is absent (local runs, or before the workflow secret is wired) this
+ * returns an empty map and every item reads as never-crawled — which selects the
+ * rarity-weighted head, i.e. no worse than the previous behaviour, and never
+ * fails the crawl.
+ */
+async function fetchNewestG2GListingByName(names) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const newest = new Map();
+
+  if (!base || !serviceKey || !names.length) {
+    if (!serviceKey) {
+      console.warn(
+        "  SUPABASE_SERVICE_ROLE_KEY absent — cannot read per-item crawl " +
+          "freshness; treating every Brainrot as never-crawled (rarity order).",
+      );
+    }
+    return newest;
+  }
+
+  const headers = {
+    apikey: serviceKey,
+    authorization: `Bearer ${serviceKey}`,
+    accept: "application/json",
+  };
+
+  // Resolve the G2G source id once. Without it the listing query would span
+  // every source and answer the wrong question (see the note above).
+  let sourceId = null;
+  try {
+    const sourceUrl = new URL("/rest/v1/sab_market_sources", base);
+    sourceUrl.searchParams.set("select", "id");
+    sourceUrl.searchParams.set("slug", `eq.${SOURCE_SLUG}`);
+    sourceUrl.searchParams.set("limit", "1");
+    const response = await fetch(sourceUrl, { headers });
+    if (response.ok) sourceId = (await response.json())?.[0]?.id ?? null;
+  } catch {
+    // fall through — handled below
+  }
+
+  if (!sourceId) {
+    console.warn(
+      `  could not resolve the '${SOURCE_SLUG}' market source; treating every ` +
+        "Brainrot as never-crawled (rarity order).",
+    );
+    return newest;
+  }
+
+  // Map catalog names → ids so the per-item lookups can filter on brainrot_id
+  // (indexed) rather than joining through the catalog on every request.
+  const idsByName = new Map();
+  try {
+    for (let offset = 0; ; offset += 1000) {
+      const catalogUrl = new URL("/rest/v1/sab_brainrot_catalog", base);
+      catalogUrl.searchParams.set("select", "id,name");
+      catalogUrl.searchParams.set("order", "name.asc");
+      catalogUrl.searchParams.set("offset", String(offset));
+      catalogUrl.searchParams.set("limit", "1000");
+      const response = await fetch(catalogUrl, { headers });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const rows = await response.json();
+      for (const row of rows) idsByName.set(comparable(row.name), row.id);
+      if (rows.length < 1000) break;
+    }
+  } catch (error) {
+    console.warn(
+      `  brainrot catalog read failed (${error.message}); treating every ` +
+        "Brainrot as never-crawled (rarity order).",
+    );
+    return newest;
+  }
+
+  const CONCURRENCY = 8;
+  let failures = 0;
+  let unmatched = 0;
+
+  const targets = names
+    .map((name) => ({ name, id: idsByName.get(comparable(name)) }))
+    .filter((row) => {
+      if (!row.id) unmatched += 1;
+      return Boolean(row.id);
+    });
+
+  for (let index = 0; index < targets.length; index += CONCURRENCY) {
+    const batch = targets.slice(index, index + CONCURRENCY);
+
+    await Promise.all(
+      batch.map(async ({ name, id }) => {
+        const url = new URL("/rest/v1/sab_market_raw_listings", base);
+        url.searchParams.set("select", "observed_at");
+        url.searchParams.set("source_id", `eq.${sourceId}`);
+        url.searchParams.set("brainrot_id", `eq.${id}`);
+        url.searchParams.set("parse_status", "eq.matched");
+        url.searchParams.set("order", "observed_at.desc");
+        url.searchParams.set("limit", "1");
+
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            const response = await fetch(url, { headers });
+            if (response.ok) {
+              const observedAt = (await response.json())?.[0]?.observed_at ?? null;
+              if (observedAt) newest.set(comparable(name), observedAt);
+              return;
+            }
+          } catch {
+            // fall through to the retry
+          }
+          if (attempt < 3) await sleep(400 * attempt);
+        }
+        failures += 1;
+      }),
+    );
+  }
+
+  if (unmatched) {
+    console.warn(
+      `  ${unmatched} G2G taxonomy name(s) have no sab_brainrot_catalog match; ` +
+        "treated as never-crawled (they sort to the head, which is correct — " +
+        "we have no evidence we ever looked at them).",
+    );
+  }
+  if (failures) {
+    console.warn(
+      `  crawl-freshness lookup failed for ${failures} Brainrot(s); ` +
+        "they are treated as never-crawled (max staleness).",
+    );
+  }
+
+  return newest;
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { headers: REQUEST_HEADERS });
   if (response.status === 429) {
@@ -204,8 +360,17 @@ async function loadTaxonomy(refresh) {
   return taxonomy;
 }
 
-/** Flatten the taxonomy into a single ranked Brainrot queue. */
-function buildQueue(taxonomy, requestedName) {
+/**
+ * Flatten the taxonomy into a single Brainrot queue.
+ *
+ * ROUTE-016: this no longer decides the ORDER. It used to sort by
+ * (rarity_weight, name) and that was the whole ordering — both keys constant
+ * across runs, so the queue was a fixed permutation and everything past
+ * --max-brainrots was unreachable forever. Ordering now lives in
+ * selectEligible(), which weights staleness by rarity so the queue rotates.
+ * `newestByName` supplies the per-item staleness signal.
+ */
+export function buildQueue(taxonomy, requestedName, newestByName = new Map()) {
   const rarityWeight = (rarity) => {
     const r = String(rarity ?? "").toLowerCase();
     if (r.includes("og")) return 5;
@@ -226,6 +391,10 @@ function buildQueue(taxonomy, requestedName) {
         rarity_fa: rarity.fa,
         brainrot_fa: brainrot.fa,
         rarity_weight: rarityWeight(rarity.name),
+
+        // When G2G last saw this Brainrot. Null = never → maximum (finite)
+        // staleness, so a brand-new Brainrot is picked up on the next run.
+        last_crawled_at: newestByName.get(comparable(brainrot.name)) ?? null,
       });
     }
   }
@@ -236,13 +405,8 @@ function buildQueue(taxonomy, requestedName) {
     if (!queue.length) throw new Error(`Brainrot not found in G2G taxonomy: ${requestedName}`);
   }
 
-  // High-value rarities first — the ones cash buyers convert on.
-  queue.sort(
-    (left, right) =>
-      right.rarity_weight - left.rarity_weight ||
-      left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
-  );
-
+  // Deliberately NOT sorted here — see the note above. selectEligible() orders
+  // by staleness * rarity_weight, which is what lets the queue rotate.
   return queue;
 }
 
@@ -375,16 +539,93 @@ async function writeProgress(path, progress) {
   );
 }
 
+/**
+ * ROUTE-016: a never-crawled Brainrot is the stalest thing there is, but it must
+ * stay a FINITE number. Infinity * rarity_weight is Infinity for every rarity,
+ * which collapses the weighting and sorts the never-crawled block
+ * alphabetically — so Epics would be collected ahead of Secrets, the exact
+ * opposite of the priority we want.
+ */
+export const NEVER_CRAWLED_STALENESS_HOURS = 24 * 365;
+
+/** Hours since we last observed this item on G2G, capped. `now` is injectable. */
+export function stalenessHours(row, now = Date.now()) {
+  const lastSeen = Date.parse(row.last_crawled_at ?? "");
+  if (!Number.isFinite(lastSeen)) return NEVER_CRAWLED_STALENESS_HOURS;
+  return Math.min(
+    NEVER_CRAWLED_STALENESS_HOURS,
+    (now - lastSeen) / (60 * 60 * 1000),
+  );
+}
+
+/**
+ * ROUTE-016: eligibility + ordering for the G2G queue.
+ *
+ * TWO defects fixed here, and the second is the one that actually froze the
+ * queue.
+ *
+ * (1) ELIGIBILITY read the progress FILE. `attempted_at` lives in
+ * data/sab-market-feeds/g2g-api-progress.json, which is committed to the repo
+ * and which this workflow never commits back — so every scheduled run starts
+ * from the same frozen snapshot (one entry, 2026-07-31, from a single-Brainrot
+ * test run). Nothing a run learns survives it. The workflow header claimed the
+ * refresh was "DB-driven ... mirrors the Eldorado job"; it was not, and this is
+ * the same inert-fix trap ROUTE-012 found on the Eldorado side, where the DB
+ * signal the header advertised was never actually read.
+ *
+ * (2) ORDERING never considered staleness at all. buildQueue() sorted ONCE by
+ * rarity_weight then name.localeCompare, and selectTargets only filtered. Both
+ * keys are constant across runs, so the order is a fixed permutation: all OGs
+ * alphabetically, then Secrets, and so on. `--max-brainrots 120` against a
+ * 385-Brainrot taxonomy therefore takes the SAME 120 every run and the other 265
+ * are unreachable — 78 Secrets and 26 Brainrot Gods among them, the tiers cash
+ * buyers actually convert on. Note this is strictly worse than Eldorado's bug:
+ * there, a rotating signal existed and was merely unread, so the sort merely
+ * degenerated; here staleness was not in the comparator at all.
+ *
+ * The fix is Eldorado's: sort by stalenessHours * rarity_weight, descending,
+ * fed by a genuinely PER-ITEM signal (newest matched G2G raw listing). Rarity
+ * still dominates among equally-stale items, so high-value tiers come due
+ * sooner, but nothing can be starved forever because staleness grows without
+ * bound while rarity_weight is a small constant.
+ */
+export function selectEligible(
+  queue,
+  { usePanelRefresh, refreshAfterMs, progress, now = Date.now() },
+) {
+  const eligible = queue.filter((row) => {
+    if (usePanelRefresh) {
+      // DB-driven: "have we looked at this item recently", not "does a committed
+      // file remember an attempt".
+      const lastSeen = Date.parse(row.last_crawled_at ?? "");
+      return !Number.isFinite(lastSeen) || now - lastSeen >= refreshAfterMs;
+    }
+
+    // Backfill mode keeps the progress-file behaviour: only never-attempted
+    // items. This mode is for local one-shot use, not the scheduled run.
+    return !progress?.attempts?.[row.id];
+  });
+
+  if (usePanelRefresh) {
+    eligible.sort(
+      (left, right) =>
+        stalenessHours(right, now) * right.rarity_weight -
+          stalenessHours(left, now) * left.rarity_weight ||
+        left.name.localeCompare(right.name, "en", { sensitivity: "base" }),
+    );
+  }
+
+  return eligible;
+}
+
 function selectTargets(queue, progress, options) {
   const refreshAfterMs = options.refreshAfterHours * 60 * 60 * 1000;
   const usePanelRefresh = options.refreshAfterHours > 0;
 
-  const eligible = queue.filter((row) => {
-    const attempt = progress.attempts[row.id];
-    if (!attempt) return true;
-    if (!usePanelRefresh) return false;
-    const attemptedAt = Date.parse(attempt.attempted_at ?? "");
-    return !Number.isFinite(attemptedAt) || Date.now() - attemptedAt >= refreshAfterMs;
+  const eligible = selectEligible(queue, {
+    usePanelRefresh,
+    refreshAfterMs,
+    progress,
   });
 
   return { eligible, usePanelRefresh };
@@ -410,7 +651,15 @@ async function main() {
   const observedAt = new Date().toISOString();
 
   const taxonomy = await loadTaxonomy(options.refreshTaxonomy);
-  const queue = buildQueue(taxonomy, options.brainrot);
+
+  // ROUTE-016: per-item crawl freshness from the DB, so the queue rotates
+  // instead of re-taking the same rarity-ordered head every run.
+  const taxonomyNames = taxonomy.rarities.flatMap((rarity) =>
+    rarity.brainrots.map((brainrot) => brainrot.name),
+  );
+  const newestByName = await fetchNewestG2GListingByName(taxonomyNames);
+
+  const queue = buildQueue(taxonomy, options.brainrot, newestByName);
   const progress = await readProgress(options.progressPath, options.resetProgress);
   const { eligible, usePanelRefresh } = selectTargets(queue, progress, options);
   const targets = eligible.slice(0, options.maxBrainrots);
@@ -421,6 +670,24 @@ async function main() {
     `  mode: ${usePanelRefresh ? `panel refresh (>${options.refreshAfterHours}h)` : "backfill (new only)"}`,
   );
   console.log(`  eligible: ${eligible.length} | selected this run: ${targets.length}`);
+
+  // ROUTE-016: print the staleness spread. This is the number that proves the
+  // queue can rotate — 1 distinct value means the sort has collapsed to its name
+  // tiebreaker and the tail is being starved, which is the bug this replaced.
+  if (usePanelRefresh) {
+    const distinct = new Set(queue.map((row) => row.last_crawled_at ?? "never")).size;
+    const neverCrawled = queue.filter((row) => !row.last_crawled_at).length;
+    console.log(
+      `  crawl-freshness signal: ${distinct} distinct value(s) across ` +
+        `${queue.length} brainrots (${neverCrawled} never crawled)`,
+    );
+    if (distinct <= 1 && queue.length > 1) {
+      console.warn(
+        "  ⚠️  the freshness signal is constant — the queue cannot rotate and " +
+          "everything past --max-brainrots will be starved (see ROUTE-016).",
+      );
+    }
+  }
 
   if (!targets.length) {
     console.log("No eligible targets. Use --reset-progress or --refresh-after-hours to re-crawl.");
@@ -512,7 +779,15 @@ async function main() {
   await runImporter(options.outputPath);
 }
 
-main().catch((error) => {
-  console.error(`\nG2G collection failed: ${error.message}`);
-  process.exitCode = 1;
-});
+// ROUTE-016: only run when invoked as a script, so the queue-ordering helpers
+// above can be unit-tested by importing this module without starting a crawl.
+const invokedDirectly =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(`\nG2G collection failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

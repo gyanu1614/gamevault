@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         {/* Header */}
         <div className="text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mark-lime.png" alt="DropMarket" width={48} height={48} className="mx-auto h-12 w-12" />
+          <img src="/brand/logo-mark-lime.avif" alt="DropMarket" width={48} height={48} className="mx-auto h-12 w-12" />
           <h1 className="mt-6 text-3xl font-bold">Reset your password</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Enter your email address and we&rsquo;ll send you a password reset link

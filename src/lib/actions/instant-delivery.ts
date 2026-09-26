@@ -8,6 +8,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import {
   encryptDeliveryData,
   decryptDeliveryData,
@@ -128,6 +130,10 @@ export async function addInstantDeliveryInventory(
       }
     }
 
+    // Step 7b — sync_listing_quantity_with_inventory (DB trigger) just changed
+    // listings.quantity; the category page shows stock.
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+
     return {
       success: true,
       count: data?.length || 0,
@@ -154,9 +160,9 @@ export async function getAvailableInventoryCount(
 
     const { count, error } = await supabase
       .from('instant_delivery_inventory')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('listing_id', listingId)
-      .eq('status', 'available')
+      .eq('status', 'available').limit(1)
 
     if (error) {
       console.error('Error getting inventory count:', error)
@@ -306,59 +312,41 @@ export async function deliverCodeToBuyer(
       }
     }
 
-    // Find an available inventory item for this listing
-    console.log('[InstantDelivery] Finding available inventory for listing:', order.listing_id)
-    const { data: availableInventory, error: inventoryError } = await supabase
-      .from('instant_delivery_inventory')
-      .select('id, delivery_data, delivery_type')
-      .eq('listing_id', order.listing_id)
-      .eq('status', 'available')
-      .limit(1)
-      .single() as any
-
-    if (inventoryError || !availableInventory) {
-      console.error('[InstantDelivery] No inventory available:', inventoryError)
-      return { success: false, error: 'No codes available for this listing' }
-    }
-
-    console.log('[InstantDelivery] Found available inventory:', availableInventory.id)
-
-    // Mark as sold
-    console.log('[InstantDelivery] Marking inventory as sold...')
-    const { error: updateError } = await (supabase
-      .from('instant_delivery_inventory')
-      .update as any)({
-        status: 'sold',
-        sold_to_order_id: orderId,
-        sold_at: new Date().toISOString(),
-        decrypted_at: new Date().toISOString(),
-        decrypted_by_user_id: buyerId
-      })
-      .eq('id', availableInventory.id)
-
-    if (updateError) {
-      console.error('[InstantDelivery] Error marking inventory as sold:', updateError)
+    // DB-016: claim ONE available code atomically. The RPC locks the order,
+    // takes an available row with FOR UPDATE SKIP LOCKED and stamps both the
+    // inventory row and orders.instant_delivery_inventory_id in the same
+    // transaction — two concurrent buyers can no longer receive the same
+    // code, and a failure anywhere inside leaves the code available. A retry
+    // returns the existing claim instead of consuming a second code.
+    // Service-role seam: the inventory UPDATE policy is service_role only.
+    console.log('[InstantDelivery] Claiming available inventory for listing:', order.listing_id)
+    const service = createServiceRoleClient()
+    const { data: claim, error: claimError } = await (service.rpc as any)('inventory_claim_for_order', {
+      p_order_id: orderId,
+    })
+    if (claimError) {
+      console.error('[InstantDelivery] Claim failed:', claimError)
       return { success: false, error: 'Failed to reserve code' }
     }
+    if (!claim?.inventory_id) {
+      console.error('[InstantDelivery] No inventory available for listing:', order.listing_id)
+      return { success: false, error: 'No codes available for this listing' }
+    }
+    console.log('[InstantDelivery] Claimed inventory:', claim.inventory_id, claim.already_claimed ? '(existing claim)' : '')
 
     // Decrypt the code
-    console.log('[InstantDelivery] Decrypting code...')
-    const decryptedCode = decryptDeliveryData(availableInventory.delivery_data)
+    const decryptedCode = decryptDeliveryData(claim.delivery_data)
 
-    // Update order with decrypted code
-    console.log('[InstantDelivery] Updating order with decrypted code...')
-    const { error: orderUpdateError } = await (supabase
+    // Plaintext copy on the order for the buyer's order page. Best-effort:
+    // the claim above is the record of delivery; a retry returns the same
+    // code from the inventory row, never a second one.
+    const { error: orderUpdateError } = await (service
       .from('orders')
-      .update as any)({
-        instant_delivery_code: decryptedCode,
-        instant_delivery_inventory_id: availableInventory.id,
-        instant_delivery_delivered_at: new Date().toISOString()
-      })
+      .update as any)({ instant_delivery_code: decryptedCode })
       .eq('id', orderId)
-
+      .is('instant_delivery_code', null)
     if (orderUpdateError) {
-      console.error('[InstantDelivery] Error updating order with code:', orderUpdateError)
-      // Code is marked as sold but order not updated - should be handled in error recovery
+      console.error('[InstantDelivery] Error stamping plaintext code on order (claim stands):', orderUpdateError)
     } else {
       console.log('[InstantDelivery] ✅ Successfully delivered code to order')
     }
@@ -366,7 +354,7 @@ export async function deliverCodeToBuyer(
     return {
       success: true,
       code: decryptedCode,
-      deliveryType: availableInventory.delivery_type as DeliveryType
+      deliveryType: claim.delivery_type as DeliveryType
     }
 
   } catch (error) {
@@ -456,6 +444,9 @@ export async function deleteAvailableInventory(
       console.error('Error deleting inventory:', error)
       return { success: false, error: 'Failed to delete inventory' }
     }
+
+    // Step 7b — quantity trigger, as above.
+    await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
 
     return { success: true, deletedCount: count || 0 }
 

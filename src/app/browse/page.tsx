@@ -11,16 +11,22 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import BrowseClient from './_BrowseClient'
 
+/**
+ * The server shell is a static game/category directory; the live listing grid
+ * is client-fetched by _BrowseClient, so the shell itself can cache.
+ */
+export const revalidate = 900
+
 export const metadata: Metadata = {
   title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
   description:
-    'Browse every game on DropMarket — buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Buyer Protection: sellers are paid only after you confirm delivery.',
+    'Browse every game on DropMarket — buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Buyer Protection: Item Guaranteed or Full Refund.',
   keywords: [
     'buy game accounts',
     'sell game accounts',
@@ -53,7 +59,7 @@ const CATEGORY_SHORTCUTS = [
 const FAQS = [
   {
     q: 'Is it safe to buy game accounts and items on DropMarket?',
-    a: 'Yes. Every order is held by SafeDrop Buyer Protection — the seller is paid only after you confirm you received exactly what was described. If something is wrong, you get your money back.',
+    a: 'Yes. Every order is covered by SafeDrop Buyer Protection — you get exactly what was described, or you get your money back. Confirm and the order is complete.',
   },
   {
     q: 'What can I buy on the marketplace?',
@@ -65,7 +71,11 @@ const FAQS = [
   },
   {
     q: 'How much does it cost to sell?',
-    a: 'Sellers pay a 5–10% fee — far below the 17–26% the big marketplaces charge — so listings start cheaper here and stay cheaper.',
+    a: 'Sellers pay some of the lowest fees in the market — set per category and published on our Seller Fees page — so listings start cheaper here and stay cheaper.',
+  },
+  {
+    q: 'What does it cost to buy?',
+    a: 'Lowest fees for buyers and sellers: the price you see at checkout is the price you pay. A small marketplace fee keeps SafeDrop Protection on every order, and the processing fee for the payment method you pick is quoted on its tile before you pay — the current terms are on our Fees page.',
   },
 ]
 
@@ -78,7 +88,7 @@ interface GameRow {
 }
 
 async function getBrowseDirectory() {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: games } = (await supabase
     .from('games')
@@ -92,11 +102,11 @@ async function getBrowseDirectory() {
 
   // First active category per game → the card links to a real page.
   const { data: cats } = (await supabase
-    .from('categories')
-    .select('game_id, slug, display_order')
+    .from('game_categories')
+    .select('game_id, slug, sort_order')
     .in('game_id', list.map((g) => g.id))
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as unknown as {
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })) as unknown as {
       data: { game_id: string; slug: string }[] | null
     }
 
@@ -139,7 +149,7 @@ export default async function BrowsePage() {
           <Link href="/safedrop" className="font-semibold text-lime-text hover:underline">
             SafeDrop Buyer Protection
           </Link>
-          . Sellers are paid only after you confirm delivery.
+          . Item Guaranteed or Full Refund.
         </p>
       </header>
 

@@ -23,9 +23,9 @@ import type { ListingWithRelations } from '@/types/database'
 // than just nulling the embedded seller.
 const LISTING_SELECT = `
   id, slug, title, price, currency, images, delivery_time, is_unlimited, quantity, views, sales,
-  seller:profiles!listings_seller_id_fkey!inner(id, username, avatar_url, seller_rating, is_test),
+  seller:public_profiles!listings_seller_id_fkey!inner(id, username, avatar_url, seller_rating, is_test),
   game:games!listings_game_id_fkey(id, name, slug, emoji),
-  category:categories!listings_category_id_fkey(id, name, slug, icon)
+  category:game_categories!listings_game_category_id_fkey(id, name, slug, icon_emoji)
 `
 
 /**
@@ -70,10 +70,10 @@ export const getLandingPageListings = cache(async function getLandingPageListing
     // unscoped lookup happily matched — filtering four pages to a category no
     // listing belongs to. Scope by game, and require an active row.
     let categoryQuery = supabase
-      .from('categories')
+      .from('game_categories')
       .select('id')
       .eq('slug', page.categorySlug)
-      .eq('is_active', true)
+      .eq('is_enabled', true)
     if (gameId) categoryQuery = categoryQuery.eq('game_id', gameId)
 
     const { data: category } = (await categoryQuery.maybeSingle()) as {
@@ -81,7 +81,7 @@ export const getLandingPageListings = cache(async function getLandingPageListing
       error: unknown
     }
     if (!category) return []
-    query = query.eq('category_id', category.id)
+    query = query.eq('game_category_id', category.id)
   }
 
   const { data, error } = await query

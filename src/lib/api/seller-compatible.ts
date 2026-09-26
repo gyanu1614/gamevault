@@ -5,8 +5,11 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { revalidateMyListingSurfaces } from '@/lib/actions/revalidate-listing-surfaces'
+import { updateListing as updateListingAction, bulkUpdateListings as bulkUpdateListingsAction } from '@/lib/actions/listings'
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
+import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 
 const supabase = createClient()
 
@@ -14,11 +17,20 @@ const supabase = createClient()
 // TYPES (matching your existing schema)
 // =====================================================
 
+/**
+ * Step 7b — after a listing write from the browser, ask the server to
+ * revalidate the category pages this seller has listings in. Best-effort:
+ * the write already happened; the action is session-scoped and rate-limited.
+ */
+function revalidateMine(): void {
+  void revalidateMyListingSurfaces().catch((e) => console.error('[seller-api] revalidate failed:', e))
+}
+
 export type ListingStatus =
   | 'draft' | 'active' | 'sold' | 'archived' | 'suspended' | 'paused'
   | 'pending_approval' | 'changes_requested' | 'rejected'
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
-// Seller tiers now come from the central gemstone ladder — re-exported so
+// Seller ranks now come from the central rank ladder — re-exported so
 // existing importers of `SellerTier` from this module keep working.
 export type { SellerTier }
 
@@ -27,6 +39,8 @@ export interface Listing {
   seller_id: string
   game_id: string
   category_id: string
+  /** Step 1b — the game_categories row; category_id is the Phase-A legacy mirror. */
+  game_category_id?: string | null
   title: string
   description: string
   price: number
@@ -45,6 +59,8 @@ export interface Listing {
   slug?: string | null
   /** Minimum purchase quantity (currency offers). */
   min_quantity?: number | null
+  /** Fixed-bundle currency listings only (category_configs bundles[].id). */
+  bundle_id?: string | null
   /** Short sequential offer ID (#33404) — null until the migration runs. */
   offer_number?: number | null
   /** Admin moderation notes — what to change (surfaced to the seller
@@ -63,8 +79,8 @@ export interface Listing {
     id: string
     name: string
     slug: string
-    /** categories.metadata — carries the category type ('currency' | 'items' | …). */
-    metadata?: { type?: string } | null
+    /** game_categories.type — the fee / warranty key ('currency' | 'items' | …). */
+    type?: string | null
   }
 }
 
@@ -189,7 +205,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('seller_id', user.id)  // CRITICAL: Only show current user's listings
       .order('created_at', { ascending: false })
@@ -201,7 +217,7 @@ export const listingsApi = {
       query = query.eq('game_id', filters.game_id)
     }
     if (filters?.category_id) {
-      query = query.eq('category_id', filters.category_id)
+      query = query.eq('game_category_id', filters.category_id)
     }
     if (filters?.search) {
       query = query.ilike('title', `%${filters.search}%`)
@@ -226,7 +242,7 @@ export const listingsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('id', id)
       .eq('seller_id', user.id)  // CRITICAL: Only allow access to own listings
@@ -237,63 +253,16 @@ export const listingsApi = {
   },
 
   /**
-   * Create a new listing
-   */
-  async create(listing: {
-    game_id: string
-    category_id: string
-    title: string
-    description: string
-    price: number
-    quantity?: number
-    is_unlimited?: boolean
-    delivery_time?: string
-    delivery_method?: string
-    images?: string[]
-    status?: ListingStatus
-  }): Promise<Listing> {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data, error } = await (supabase
-      .from('listings')
-      .insert as any)([{
-        seller_id: user.id,
-        ...listing,
-      }])
-      .select(`
-        *,
-        game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
-      `)
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  /**
-   * Update a listing
+   * Update a listing.
+   *
+   * ACC-03 — sellers no longer UPDATE listings through PostgREST (the grant
+   * is revoked); the validated server action owns the write: ownership check,
+   * shared validator, service-role write, category-page revalidation.
    */
   async update(id: string, updates: Partial<Listing>): Promise<Listing> {
-    // CRITICAL: Verify ownership before updating
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data, error } = await (supabase
-      .from('listings')
-      .update as any)(updates)
-      .eq('id', id)
-      .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
-      .select(`
-        *,
-        game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
-      `)
-      .single()
-
-    if (error) throw error
-    return data
+    const res = await updateListingAction(id, updates as never)
+    if (!res.success) throw new Error(res.error || 'Failed to update listing')
+    return res.listing as Listing
   },
 
   /**
@@ -311,23 +280,15 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 
   /**
-   * Bulk update listings
+   * Bulk update listings — same validated server action path as `update`.
    */
   async bulkUpdate(ids: string[], updates: Partial<Listing>): Promise<void> {
-    // CRITICAL: Verify ownership before bulk updating
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { error } = await (supabase
-      .from('listings')
-      .update as any)(updates)
-      .in('id', ids)
-      .eq('seller_id', user.id)  // CRITICAL: Only allow updating own listings
-
-    if (error) throw error
+    const res = await bulkUpdateListingsAction(ids, updates as never)
+    if (!res.success) throw new Error(res.error || 'Failed to update listings')
   },
 
   /**
@@ -345,6 +306,7 @@ export const listingsApi = {
       .eq('seller_id', user.id)  // CRITICAL: Only allow deleting own listings
 
     if (error) throw error
+    revalidateMine()
   },
 }
 
@@ -373,6 +335,7 @@ export const ordersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           game:games!listings_game_id_fkey (
             id,
@@ -380,11 +343,11 @@ export const ordersApi = {
             slug,
             image_url
           ),
-          category:categories!listings_category_id_fkey (
+          category:game_categories!listings_game_category_id_fkey (
             id,
             name,
             slug,
-            metadata
+            type
           )
         ),
         buyer:buyer_id (
@@ -410,7 +373,7 @@ export const ordersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
@@ -491,6 +454,7 @@ export const ordersApi = {
       .single()
 
     if (error) throw error
+    revalidateMine()
     return data
   },
 }
@@ -520,6 +484,7 @@ export const buyerOrdersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           delivery_method,
           delivery_time,
@@ -529,11 +494,11 @@ export const buyerOrdersApi = {
             slug,
             image_url
           ),
-          category:categories!listings_category_id_fkey (
+          category:game_categories!listings_game_category_id_fkey (
             id,
             name,
             slug,
-            metadata
+            type
           )
         ),
         seller:seller_id (
@@ -556,7 +521,7 @@ export const buyerOrdersApi = {
       query = query.eq('status', filters.status)
     }
     if (filters?.search && filters.search.trim()) {
-      query = query.or(`order_number.ilike.%${filters.search}%`)
+      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
     }
 
     const { data, error } = await query
@@ -581,6 +546,7 @@ export const buyerOrdersApi = {
           title,
           game_id,
           category_id,
+          game_category_id,
           images,
           delivery_method,
           delivery_time
@@ -780,7 +746,7 @@ export const analyticsApi = {
       .select(`
         *,
         game:game_id (id, name, slug, emoji, image_url),
-        category:category_id (id, name, slug, metadata)
+        category:game_categories!listings_game_category_id_fkey (id, name, slug, type)
       `)
       .eq('seller_id', user.id)
       .order('sales', { ascending: false })
@@ -1003,7 +969,7 @@ export const settingsApi = {
       .single() as any
 
     if (error) throw error
-    // Null/legacy tier values fall back to the entry gemstone tier (Quartz).
+    // Null/legacy tier values fall back to the entry rank (Bronze).
     return { ...data, seller_tier: (data?.seller_tier as SellerTier) || DEFAULT_TIER }
   },
 }
@@ -1061,7 +1027,7 @@ export interface Conversation {
       title: string
       images: string[]
       game?: { name: string; slug: string; image_url?: string | null }
-      category?: { name: string; slug: string; metadata?: { type?: string } | null }
+      category?: { name: string; slug: string; type?: string | null }
     }
   }
 }
@@ -1091,7 +1057,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)
@@ -1115,10 +1081,10 @@ export const messagesApi = {
         // Get unread count
         const { count } = await supabase
           .from('messages')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
           .eq('conversation_id', conv.id)
           .eq('is_read', false)
-          .neq('sender_id', user.id)
+          .neq('sender_id', user.id).limit(1)
 
         return {
           ...conv,
@@ -1273,7 +1239,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)
@@ -1348,7 +1314,7 @@ export const messagesApi = {
             title,
             images,
             game:game_id(name, slug, image_url),
-            category:category_id(name, slug, metadata)
+            category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
       `)

@@ -10,8 +10,12 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { revalidateGameCategorySurfaces } from '@/lib/revalidation/listings'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { createClient as createAnonClient } from '@/lib/supabase/server'
+// The public reads below run inside ISR pages (category, currency shell),
+// so they use the cookie-free anon client. Step 7a: this import used to alias
+// the SESSION client as `createAnonClient`, which made every caller dynamic.
+import { createAnonClient } from '@/lib/supabase/anon'
 import type {
   CategoryConfigByType,
   CategoryConfigType,
@@ -36,7 +40,7 @@ export async function fetchCategoryConfig<T extends CategoryConfigType>(
   gameId: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data } = await supabase
     .from('category_configs')
     .select('config')
@@ -55,7 +59,7 @@ export async function fetchCategoryConfigBySlug<T extends CategoryConfigType>(
   gameSlug: string,
   categoryType: T,
 ): Promise<CategoryConfigByType[T] | null> {
-  const supabase = await createAnonClient()
+  const supabase = createAnonClient()
   const { data: game } = await supabase
     .from('games')
     .select('id')
@@ -98,8 +102,10 @@ export async function upsertCategoryConfig<T extends CategoryConfigType>(
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}`)
-    // Bust the marketplace page too — pricing/copy may have changed.
-    revalidatePath('/', 'layout')
+    // Category copy/pricing shows on THIS game's category pages. Revalidating
+    // the root layout dropped all ~950 prerendered pages to refresh a handful
+    // (build audit 2026-09-22, §4).
+    await revalidateGameCategorySurfaces(supabase as never, gameId)
 
     return { success: true, data: { id: (data as { id: string }).id } }
   } catch (e: any) {

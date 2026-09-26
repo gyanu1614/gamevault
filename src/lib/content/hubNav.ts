@@ -1,7 +1,9 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
-import { hasGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasGameContentTheme } from '@/lib/content/theme'
 
 /**
  * Data for the shared content-hub navbar: the game switcher list and the
@@ -9,9 +11,9 @@ import { hasGameContentTheme } from '@/lib/content/theme'
  *
  * Tabs and buy buttons are DATA-DRIVEN per game:
  *  - Buy buttons come from the game's active categories (items / accounts).
- *  - Tool tabs (Values, Calculator) come from GAME_TOOLS — only games whose
- *    tool routes actually exist. Today that is SAB only; adding a game's
- *    tools = one entry here once its routes ship.
+ *  - Tool tabs (Values, Calculator) come from the game's content-theme
+ *    config (`navTools`), so a game's nav, its enabled pages and its theme are
+ *    declared in one place rather than drifting across files.
  */
 
 export interface HubNavGame {
@@ -32,11 +34,24 @@ export interface HubNavData {
   sellHref: string | null
 }
 
-const GAME_TOOLS: Record<string, Array<'values' | 'calculator'>> = {
-  'steal-a-brainrot': ['values', 'calculator'],
-  // Adopt Me: values + the WFL calculator are both live now.
-  'adopt-me': ['values', 'calculator'],
-}
+/**
+ * A game's active categories. Cookie-free + unstable_cache so the content-hub
+ * nav (rendered on every hub page) does not force those routes dynamic; tagged
+ * with GAME_DIRECTORY_TAG so admin category edits invalidate it immediately.
+ */
+const getCachedGameCategories = unstable_cache(
+  async (gameId: string): Promise<Array<{ slug: string; type: string | null }>> => {
+    const supabase = createAnonClient()
+    const { data } = await (supabase as any)
+      .from('game_categories')
+      .select('slug, type')
+      .eq('game_id', gameId)
+      .eq('is_enabled', true)
+    return (data ?? []) as Array<{ slug: string; type: string | null }>
+  },
+  ['hub-nav-game-categories'],
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+)
 
 export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   const games = await getAllGames()
@@ -46,21 +61,12 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   let itemsHref: string | null = null
   let accountsHref: string | null = null
   if (current) {
-    const supabase = await createClient()
-    const { data } = await (supabase as any)
-      .from('categories')
-      .select('slug, metadata')
-      .eq('game_id', current.id)
-      .eq('is_active', true)
-    const rows = (data ?? []) as Array<{
-      slug: string
-      metadata: { type?: string } | null
-    }>
+    const rows = await getCachedGameCategories(current.id)
     const hasItems = rows.some(
-      (r) => r.slug === 'buy-items' || r.metadata?.type === 'items',
+      (r) => r.slug === 'buy-items' || r.type === 'items',
     )
     const hasAccounts = rows.some(
-      (r) => r.slug === 'buy-accounts' || r.metadata?.type === 'account',
+      (r) => r.slug === 'buy-accounts' || r.type === 'account',
     )
     if (hasItems) itemsHref = `/${gameSlug}/buy-items`
     if (hasAccounts) accountsHref = `/${gameSlug}/buy-accounts`
@@ -77,7 +83,7 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
       slug: gameSlug,
       imageUrl: current?.image_url ?? null,
     },
-    tools: GAME_TOOLS[gameSlug] ?? [],
+    tools: getGameContentTheme(gameSlug).navTools,
     itemsHref,
     accountsHref,
     // Sell landing exists for any game with a content hub (mirrors the /sell

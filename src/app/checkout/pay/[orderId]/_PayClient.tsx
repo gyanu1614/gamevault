@@ -54,9 +54,10 @@ export interface PayMethod {
   rate: string | null
 }
 
+import { nextPollDelayMs, countdownShouldContinue, POLL_BASE_MS } from './poll-policy'
+
 type ViewState = 'waiting' | 'seen' | 'confirming' | 'paid' | 'partial' | 'expired' | 'unreachable'
 
-const POLL_MS = 4000
 
 // ─── Ledger Receipt tokens (handoff README) ─────────────────────────
 const L = {
@@ -540,22 +541,46 @@ export default function PayClient({
   }
 
   // ── Countdown ─────────────────────────────────────────────────────
+  // PAY-019: stops at zero (the view flips to expired once) instead of
+  // ticking negative seconds every second for as long as the tab is open.
   useEffect(() => {
     if (!expiresAt || !(view === 'waiting' || view === 'seen' || view === 'partial')) return
     const t = setInterval(() => {
       const left = new Date(expiresAt).getTime() - Date.now()
       setRemainingMs(left)
-      if (left <= 0)
+      if (!countdownShouldContinue(left)) {
+        clearInterval(t)
         setView((v) => (v === 'waiting' || v === 'seen' || v === 'partial' ? 'expired' : v))
+      }
     }, 1000)
     return () => clearInterval(t)
   }, [expiresAt, view])
 
   // ── Status poll (webhook truth + chain-watch sugar) ───────────────
+  // PAY-019: a setTimeout chain (never two calls in flight), base rate while
+  // a payment can land, ×2 backoff to 60 s in expired / unreachable, and
+  // nothing at all once paid. Schedule in poll-policy.ts.
   useEffect(() => {
     if (view === 'paid') return
-    const t = setInterval(async () => {
-      const res = await getPaymentPageStatus(orderId)
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let delay = nextPollDelayMs(view, POLL_BASE_MS) ?? POLL_BASE_MS
+    const schedule = () => {
+      timer = setTimeout(tick, delay)
+    }
+    const tick = async () => {
+      if (cancelled) return
+      let res
+      try {
+        res = await getPaymentPageStatus(orderId)
+      } catch {
+        res = { success: false } as Awaited<ReturnType<typeof getPaymentPageStatus>>
+      }
+      if (cancelled) return
+      const next = nextPollDelayMs(view, delay)
+      if (next === null) return
+      delay = next
+      schedule()
       if (!res.success) return
       if (res.orderStatus && res.orderStatus !== 'pending') {
         stamp('confirmed')
@@ -594,8 +619,12 @@ export default function PayClient({
           })
           break
       }
-    }, POLL_MS)
-    return () => clearInterval(t)
+    }
+    schedule()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [orderId, router, view])
 
   // ── Confirmed celebration ─────────────────────────────────────────

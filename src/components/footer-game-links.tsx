@@ -16,9 +16,10 @@
  */
 
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'
+import { getGameContentTheme } from '@/lib/content/theme'
 
 type CategoryLink = { label: string; href: string }
 type GameGroup = {
@@ -45,35 +46,14 @@ function categoryLabel(slug: string, name: string | null, metaLabel?: string | n
 const MAX_CATS = 4
 
 async function getDirectory(): Promise<GameGroup[]> {
-  const supabase = await createClient()
-
-  const [{ data: games }, { data: cats }] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, slug, name, is_active, sort_order')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .limit(24) as unknown as Promise<{
-      data: { id: string; slug: string; name: string; sort_order: number | null }[] | null
-    }>,
-    supabase
-      .from('categories')
-      .select('game_id, slug, name, metadata, display_order, is_active')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true }) as unknown as Promise<{
-      data: {
-        game_id: string
-        slug: string
-        name: string | null
-        metadata: { label?: string; type?: string } | null
-      }[] | null
-    }>,
-  ])
+  // Cookie-free + unstable_cache (see gameDirectoryCache.ts): this renders on
+  // every route, so a cookie-bound read here would force the whole app dynamic.
+  const { games, categories: cats } = await getCachedGameDirectory()
 
   const catsByGame = new Map<string, { slug: string; label: string }[]>()
   for (const c of cats ?? []) {
     const list = catsByGame.get(c.game_id) ?? []
-    list.push({ slug: c.slug, label: categoryLabel(c.slug, c.name, c.metadata?.label) })
+    list.push({ slug: c.slug, label: categoryLabel(c.slug, c.name, undefined) })
     catsByGame.set(c.game_id, list)
   }
 
@@ -82,13 +62,16 @@ async function getDirectory(): Promise<GameGroup[]> {
     let gameCats: CategoryLink[] = raw
       .slice(0, MAX_CATS)
       .map((c) => ({ label: c.label, href: `/${g.slug}/${c.slug}` }))
-    // Flagship: surface the Steal a Brainrot money tools alongside its
-    // marketplace categories (high-intent, keyword-rich anchors).
-    if (g.slug === 'steal-a-brainrot') {
+    // Flagship: surface the game's money tools alongside its marketplace
+    // categories (high-intent, keyword-rich anchors). Config-driven via
+    // `footerTools`, which is on for Steal a Brainrot only — so the rendered
+    // footer is unchanged.
+    const theme = getGameContentTheme(g.slug)
+    if (theme.footerTools) {
       gameCats = [
         ...gameCats.slice(0, MAX_CATS - 2),
-        { label: 'Value List', href: '/steal-a-brainrot/values' },
-        { label: 'Value Calculator', href: '/steal-a-brainrot/calculator' },
+        { label: 'Value List', href: `/${g.slug}/values` },
+        { label: 'Value Calculator', href: `/${g.slug}/calculator` },
       ]
     }
     return {

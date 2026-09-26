@@ -1,5 +1,5 @@
 import 'server-only'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import {
   VARIANTS,
   type Variant,
@@ -24,7 +24,7 @@ function num(v: number | string | null): number | null {
 }
 
 export async function getAdoptMeCalcPets(): Promise<CalcPet[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
     (supabase as any)
@@ -90,7 +90,7 @@ export type AdoptMeTopValue = {
  * link targets), newest prices via the reputable columns.
  */
 export async function getAdoptMeTopValues(limit = 20): Promise<AdoptMeTopValue[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
     (supabase as any)

@@ -53,6 +53,40 @@ export interface GameContentTheme {
    * theme means every game hub inherits a correct sample from its own entry.
    */
   calculatorExample: CalcPromoExample
+  /**
+   * Which hub pages this game publishes. The hub routes read this instead of
+   * hardcoding a slug list, so enabling a page for a new game is a config
+   * change rather than an edit to five route files.
+   */
+  pages: HubPageSet
+  /** Tool tabs shown in HubNav, in display order. */
+  navTools: Array<'values' | 'calculator'>
+  /**
+   * What this game calls one tradable thing ("Brainrot", "Pet", "Egg") and one
+   * of its forms ("Mutation", "Variant"). Shared components read these instead
+   * of embedding SAB vocabulary. `variantNoun: null` = the game has no variant
+   * axis, so variant UI is omitted entirely.
+   */
+  itemNoun: string
+  itemNounPlural: string
+  variantNoun: string | null
+  /**
+   * Surface this game's money tools (Value List / Value Calculator) in the
+   * footer directory alongside its marketplace categories. Flagship-only
+   * today: turning it on for a second game ADDS footer links, which is a
+   * visible change, so it stays opt-in per game rather than implied by
+   * `pages.values`.
+   */
+  footerTools: boolean
+}
+
+/** The hub pages a game can publish. Absent/false = the route notFound()s. */
+export interface HubPageSet {
+  values: boolean
+  calculator: boolean
+  priceIndex: boolean
+  methodology: boolean
+  blog: boolean
 }
 
 /** Static worked-example for the blog calculator promo (see `calculatorExample`). */
@@ -68,6 +102,48 @@ export interface CalcPromoExample {
   /** Small qualifier under the verdict. */
   qualifier: string
 }
+
+/**
+ * Shared hub copy — the SafeDrop model, stated the same way everywhere.
+ *
+ * These live here, not in the per-game entries, because they are claims about
+ * DropMarket rather than about a game: every current and future game inherits
+ * them, and there is exactly one place to change them.
+ *
+ * TWO RULES, both load-bearing:
+ *
+ *  1. PRICING. We price ACTIVE third-party listings from reputable sellers. We
+ *     do not have completed-sale history, so no hub string may claim "completed
+ *     sales" or "completed DropMarket sales" — that was a factual overclaim on
+ *     every hub surface.
+ *  2. PROTECTION. Never describe payout timing or where money sits. DropMarket
+ *     acts as the seller's commercial agent; "the seller is paid only after you
+ *     confirm delivery", "escrow" and "we hold funds" all describe custody we
+ *     do not perform, and they cut against the agent model. Say what the BUYER
+ *     gets instead: the outcome, and the refund.
+ */
+export const HUB_COPY = {
+  /** The one-line protection promise. Outcome, never mechanics. */
+  safedrop:
+    'Every order is covered by SafeDrop — get exactly what you ordered, or your money back.',
+  /** Short form, for tight surfaces (footer, badges). */
+  safedropShort: 'Get exactly what you ordered, or your money back.',
+  /**
+   * Lowercase clause, for continuing a sentence ("…a safer place to buy them —
+   * get exactly what you ordered"). Stored ready to use rather than
+   * lower-cased at render time: a `{expr}` in JSX emits its own text node, so
+   * React inserts a `<!-- -->` separator into the HTML and the page no longer
+   * matches its own copy byte for byte.
+   */
+  safedropClause: 'get exactly what you ordered, or your money back.',
+  /** How prices are sourced. Accurate: active listings, reputable sellers. */
+  pricingBasis: 'priced from live marketplace listings, reputable sellers only',
+  /** Sentence-initial variant of the above. */
+  pricingBasisSentence:
+    'Prices come from live marketplace listings, reputable sellers only.',
+  /** The qualifier under a calculator/promo verdict. */
+  pricingQualifier: 'Based on live marketplace listings',
+} as const
 
 /** Neutral tokens — identical across every game. */
 export const CONTENT_NEUTRALS = {
@@ -112,9 +188,9 @@ const DEFAULT_THEME: GameContentTheme = {
   ambient: ambientFor('110,140,116', 90, 44),
   heroTitle: 'Item values, trading and cash-out guides',
   heroLead:
-    'What items are actually worth — priced from completed sales, not trading-server rumours.',
+    'What items are actually worth — priced from live marketplace listings, reputable sellers only, not trading-server rumours.',
   heroAbout:
-    'These guides track what buyers really pay, and what that means whether you are buying, selling or holding. Every value is built from completed sales and active listings on DropMarket, never from estimates.',
+    'These guides track what buyers really pay, and what that means whether you are buying, selling or holding. Every value is built from live marketplace listings by reputable sellers, never from estimates.',
   // Neutral, game-agnostic fallback — no item names, so an unthemed game never
   // shows another game's items. Reads as an illustrative placeholder.
   calculatorExample: {
@@ -122,8 +198,23 @@ const DEFAULT_THEME: GameContentTheme = {
     give: 'Your side of the trade',
     letter: 'F',
     verdict: 'See if the trade is fair',
-    qualifier: 'Based on completed sales',
+    qualifier: HUB_COPY.pricingQualifier,
   },
+  // An unthemed game has no hub routes today (every hub page notFound()s a
+  // slug with no theme), so the fallback publishes nothing. Adding a real
+  // entry below is what turns pages on.
+  pages: {
+    values: false,
+    calculator: false,
+    priceIndex: false,
+    methodology: false,
+    blog: false,
+  },
+  navTools: [],
+  itemNoun: 'Item',
+  itemNounPlural: 'Items',
+  variantNoun: null,
+  footerTools: false,
 }
 
 const THEMES: Record<string, GameContentTheme> = {
@@ -138,7 +229,7 @@ const THEMES: Record<string, GameContentTheme> = {
     ambient: ambientFor('63,163,92', 90, 44),
     heroTitle: 'Steal a Brainrot values, trading and cash-out guides',
     heroLead:
-      'Everything worth knowing about what Brainrots are actually worth — priced from completed sales, not trading-server rumours.',
+      'Everything worth knowing about what Brainrots are actually worth — priced from live marketplace listings, reputable sellers only, not trading-server rumours.',
     heroAbout:
       'Steal a Brainrot is a Roblox base-building game where players steal and defend Brainrots that generate income per second. Almost all trading happens around Secrets and mutated variants, and prices move whenever an event adds or retires supply. These guides track what people really pay, and what that means if you are buying, selling or holding.',
     // SAB items + SAB mutation vocabulary (Default / Lava …).
@@ -147,8 +238,66 @@ const THEMES: Record<string, GameContentTheme> = {
       give: 'Bunny and Eggy · Lava — $183.72',
       letter: 'L',
       verdict: 'You come out behind',
-      qualifier: 'Based on completed sales',
+      qualifier: HUB_COPY.pricingQualifier,
     },
+    // Exactly the pages SAB serves today — price-index is SAB-only.
+    pages: {
+      values: true,
+      calculator: true,
+      priceIndex: true,
+      methodology: true,
+      blog: true,
+    },
+    navTools: ['values', 'calculator'],
+    itemNoun: 'Brainrot',
+    itemNounPlural: 'Brainrots',
+    variantNoun: 'Mutation',
+    footerTools: true,
+  },
+  'steal-an-egg': {
+    name: 'Steal an Egg',
+    initials: 'SAE',
+    // Warm gold — an egg/hatch palette, distinct from SAB's forest green and
+    // Adopt Me's violet so the three hubs read apart at a glance.
+    accent: '#D8A23B',
+    accentText: '#E8C687',
+    accentBorder: '#3A2E17',
+    accentDeep: '#151008',
+    onAccent: '#120C03',
+    ambient: ambientFor('216,162,59', 105, 42),
+    heroTitle: 'Steal an Egg values, eggs, pets and account prices',
+    // Honest lead: the market prices SEALED eggs by area and ACCOUNTS by
+    // income. It does not price individual pets, and this says so rather than
+    // implying a pet value list we cannot back with listings.
+    heroLead:
+      'What eggs and accounts actually sell for in real money — priced from live marketplace listings, with every pet and the egg it hatches from.',
+    heroAbout:
+      'Steal an Egg is a Roblox game where players race to steal eggs from themed areas and hatch pets that generate income per second. Almost all real-money trading is in sealed eggs — sold by area rather than by pet, because what hatches is random — and in accounts priced by their income. These pages track what buyers actually pay for both, and show every pet with the egg it comes from.',
+    // Steal An Egg has no variant/mutation axis, so the promo uses the two
+    // things the market really prices: an egg by area, and an account by income.
+    calculatorExample: {
+      offer: 'Titan Temple Egg · from $0.25',
+      give: 'Account · 50–100B/s',
+      letter: 'F',
+      verdict: 'Compare eggs and accounts',
+      qualifier: 'Priced from live listings',
+    },
+    // No calculator or price-index at launch: with ~126 priced items and no
+    // variant axis there is nothing for a WFL calculator to weigh yet.
+    pages: {
+      values: true,
+      calculator: false,
+      priceIndex: false,
+      methodology: true,
+      blog: false,
+    },
+    navTools: ['values'],
+    itemNoun: 'Egg',
+    itemNounPlural: 'Eggs',
+    // The game has no mutation/variant system — verified against the wiki
+    // taxonomy, which has no variant field. Variant UI is omitted entirely.
+    variantNoun: null,
+    footerTools: false,
   },
   'adopt-me': {
     name: 'Adopt Me',
@@ -180,6 +329,19 @@ const THEMES: Record<string, GameContentTheme> = {
       verdict: 'Check if this trade is fair',
       qualifier: 'Cash values estimated until sales land',
     },
+    // Adopt Me has no price-index route today; everything else is live.
+    pages: {
+      values: true,
+      calculator: true,
+      priceIndex: false,
+      methodology: true,
+      blog: true,
+    },
+    navTools: ['values', 'calculator'],
+    itemNoun: 'Pet',
+    itemNounPlural: 'Pets',
+    variantNoun: 'Variant',
+    footerTools: false,
   },
 }
 
@@ -190,6 +352,31 @@ export function getGameContentTheme(gameSlug: string): GameContentTheme {
 /** True when the game has a real theme rather than the fallback. */
 export function hasGameContentTheme(gameSlug: string): boolean {
   return gameSlug in THEMES
+}
+
+/**
+ * Every game slug with a content hub — the prerender set for the hub routes'
+ * generateStaticParams. Compile-time constant, so it stays in sync with the
+ * hasGameContentTheme() gate those pages use to notFound() everything else.
+ */
+export const CONTENT_HUB_GAME_SLUGS = Object.keys(THEMES)
+
+/** One hub page, as named in `HubPageSet`. */
+export type HubPage = keyof HubPageSet
+
+/**
+ * Slugs that publish a given hub page — the prerender set for that route's
+ * generateStaticParams, and the gate its page body uses to notFound() anything
+ * else. Replaces the hardcoded `['steal-a-brainrot']` literals that each hub
+ * route used to carry, so turning a page on for a game is a config edit here.
+ */
+export function contentHubSlugsFor(page: HubPage): string[] {
+  return CONTENT_HUB_GAME_SLUGS.filter((slug) => THEMES[slug]!.pages[page])
+}
+
+/** True when this game publishes this hub page. */
+export function hasHubPage(gameSlug: string, page: HubPage): boolean {
+  return THEMES[gameSlug]?.pages[page] === true
 }
 
 /**

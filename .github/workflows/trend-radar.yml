@@ -1,0 +1,99 @@
+# Trend radar (Phase 1 · Step 2) — every 6 hours.
+#
+# Same pattern as expire-pending-payments.yml: Vercel Hobby only allows daily
+# cron, so the real cadence lives here and each step is a single signed POST
+# to an internal route. The routes do the work (Roblox discovery + metrics,
+# signals, game preparation, Discord alert); this workflow only sequences
+# them and fails loudly on a non-200.
+#
+#   collect  → discovery + metrics + signals (+ Eldorado chart diff on Mondays)
+#   prepare  → unhandled events → pending games (idempotent-repair)
+#   nightly  → rollup + prune + decay, once a day (separate schedule below)
+#
+# Secrets: PUBLIC_API_URL (existing), TREND_RADAR_SECRET (new; same value as
+# the Vercel env var of that name). Nothing else — no Supabase keys on the
+# runner for this workflow.
+#
+# Rate limits: the routes cap Roblox at 1 req/s with jitter and stop cleanly
+# on the second 429 (`tripped:true` in the JSON, still HTTP 200), so a
+# throttled run shows up in the log rather than retrying through the ban.
+name: Trend Radar
+on:
+  schedule:
+    # Daily (Gyanu 2026-09-22: only prices are sub-daily). Was every 6h; a
+    # game trending is a multi-day signal, and each run is a Roblox-paced
+    # crawl, so four passes a day bought resolution nothing reads.
+    - cron: '17 6 * * *'     # collect + prepare, once a day (offset from other crons)
+    - cron: '41 4 * * *'     # nightly rollup + decay
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Evaluate and print, write nothing (collect + prepare with ?dry=1)'
+        type: boolean
+        default: false
+      rmt:
+        description: 'Force the Eldorado chart diff this run'
+        type: boolean
+        default: false
+      job:
+        description: 'Which job to run'
+        type: choice
+        options: [collect-and-prepare, nightly]
+        default: collect-and-prepare
+
+jobs:
+  collect-and-prepare:
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'collect-and-prepare' || github.event.schedule == '17 */6 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Decide flags
+        id: flags
+        run: |
+          dry=""; rmt=""
+          [ "${{ inputs.dry_run }}" = "true" ] && dry="dry=1"
+          # Eldorado's fee page changes rarely: diff it on Monday's first run, or on demand.
+          if [ "${{ inputs.rmt }}" = "true" ] || { [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" -lt 6 ]; }; then rmt="rmt=1"; fi
+          q=$(printf '%s&%s' "$dry" "$rmt" | sed 's/^&//; s/&$//')
+          echo "collect_query=${q}" >> "$GITHUB_OUTPUT"
+          echo "prepare_query=${dry}" >> "$GITHUB_OUTPUT"
+          echo "collect: ?${q}  prepare: ?${dry}"
+
+      - name: Collect (discovery + metrics + signals)
+        run: |
+          code=$(curl -s -o /tmp/collect.json -w "%{http_code}" -m 290 -X POST \
+            -H "x-trend-radar-secret: ${{ secrets.TREND_RADAR_SECRET }}" \
+            "${{ secrets.PUBLIC_API_URL }}/api/internal/trend-radar/collect?${{ steps.flags.outputs.collect_query }}")
+          cat /tmp/collect.json; echo
+          [ "$code" = "200" ] || { echo "::error::collect failed (HTTP $code)"; exit 1; }
+          if grep -q '"ok":false' /tmp/collect.json; then echo "::warning::collect ended early — see JSON (tripped / endpoint failure)"; fi
+
+      - name: Prepare (events → pending games + Discord)
+        run: |
+          code=$(curl -s -o /tmp/prepare.json -w "%{http_code}" -m 290 -X POST \
+            -H "x-trend-radar-secret: ${{ secrets.TREND_RADAR_SECRET }}" \
+            "${{ secrets.PUBLIC_API_URL }}/api/internal/trend-radar/prepare?${{ steps.flags.outputs.prepare_query }}")
+          cat /tmp/prepare.json; echo
+          [ "$code" = "200" ] || { echo "::error::prepare failed (HTTP $code)"; exit 1; }
+
+      - name: Upload run summaries
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: trend-radar-${{ github.run_id }}
+          path: /tmp/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  nightly:
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'nightly' || github.event.schedule == '41 4 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Nightly (rollup + prune + decay)
+        run: |
+          code=$(curl -s -o /tmp/nightly.json -w "%{http_code}" -m 290 -X POST \
+            -H "x-trend-radar-secret: ${{ secrets.TREND_RADAR_SECRET }}" \
+            "${{ secrets.PUBLIC_API_URL }}/api/internal/trend-radar/nightly")
+          cat /tmp/nightly.json; echo
+          [ "$code" = "200" ] || { echo "::error::nightly failed (HTTP $code)"; exit 1; }

@@ -4,7 +4,7 @@ import { payssionToCanonical, payssionEventId, type PayssionTxn } from './status
 import { createSigVariants, notifySigMatches, refundSig, detailsSig } from './sig'
 import { makePayssionProvider } from './index'
 import { providerNameForMethod } from '@/lib/payments/registry'
-import { payssionExpiryIso, splitPayssionMethodsByCountry } from './methods'
+import { payssionExpiryIso, splitPayssionMethodsByCountry, PAYSSION_METHODS } from './methods'
 import { fromDecimal } from '@/lib/money'
 
 // Configure the adapter for pure/mocked tests. ||= only fills fallbacks —
@@ -131,10 +131,13 @@ describe('payssion: routing + per-method expiry', () => {
     ]) {
       expect(providerNameForMethod(pm)).toBe('payssion')
     }
-    // Not in the registry (not enabled on the app) → never routed to payssion.
-    // paysafecard: still 491 live despite the account manager's email.
-    expect(providerNameForMethod('paysafecard')).not.toBe('payssion')
-    expect(providerNameForMethod('p24_pl')).not.toBe('payssion')
+    // B4 (probe 2026-09-24): the EU rails, paysafecard's 491 cleared.
+    for (const pm of ['trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz', 'paysafecard']) {
+      expect(providerNameForMethod(pm)).toBe('payssion')
+    }
+    // Not in the registry (never wired / not a pm_id) → never routed to payssion.
+    expect(providerNameForMethod('skrill')).not.toBe('payssion')
+    expect(providerNameForMethod('bancomat_it')).not.toBe('payssion')
     expect(providerNameForMethod('BTC-CHAIN')).not.toBe('payssion')
     expect(providerNameForMethod(undefined)).not.toBe('payssion')
   })
@@ -143,7 +146,9 @@ describe('payssion: routing + per-method expiry', () => {
     const now = Date.now()
     expect(new Date(payssionExpiryIso('boleto_br', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('oxxo_mx', now)).getTime() - now).toBe(48 * 60 * 60_000)
-    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']) {
+    expect(new Date(payssionExpiryIso('paysafecard', now)).getTime() - now).toBe(48 * 60 * 60_000)
+    for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl',
+      'trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz']) {
       expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
     }
   })
@@ -266,5 +271,176 @@ describe('payssion: parseWebhook verification chain', () => {
   it('MONEY: completed but underpaid (paid < amount) does NOT confirm', async () => {
     const { events } = await provider({ paid: '5.00' }).parseWebhook({}, notifyBody('completed'))
     expect(events[0].type).toBe('CHARGE_PENDING')
+  })
+})
+
+// ─── createCharge: the buyer-visible description carries the order number ──
+describe('payssion: createCharge description', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  const captureCreate = () => {
+    const bodies: Record<string, string>[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      if (String(url).includes('/payment/create')) {
+        bodies.push(Object.fromEntries(new URLSearchParams(String(init?.body ?? ''))))
+        return {
+          ok: true,
+          json: async () => ({ result_code: 200, redirect_url: 'https://pay.test/x', transaction: { transaction_id: 't1', state: 'pending' } }),
+        } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { bodies, provider: makePayssionProvider({ fetchImpl }) }
+  }
+  const base = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: fromDecimal('12.34', 'USD'),
+    returnUrl: 'https://app.test.local/checkout/return/x',
+    metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+  }
+
+  it('shows the stored order_number, not the UUID or its 8-char prefix', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'DM-ABCD-EFGH' })
+    expect(bodies[0].description).toBe('DropMarket order DM-ABCD-EFGH')
+    // the machine link back to us is still the UUID
+    expect(bodies[0].track_id).toBe(base.orderId)
+    expect(bodies[0].order_id).toBe(base.orderId)
+  })
+
+  it('an older GV- number is shown as stored', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: 'GV-123456' })
+    expect(bodies[0].description).toBe('DropMarket order GV-123456')
+  })
+
+  it('falls back to the 8-char id prefix only when the order has no number', async () => {
+    const { bodies, provider } = captureCreate()
+    await provider.createCharge({ ...base, orderNumber: null })
+    expect(bodies[0].description).toBe('DropMarket order 0F1E2D3C')
+  })
+})
+
+// ─── PAY-016: every outbound call carries a deadline ─────────────────────
+describe('payssion: provider fetches carry an AbortSignal timeout (PAY-016)', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  it('create and details requests pass an AbortSignal', async () => {
+    const signals: unknown[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      signals.push(init?.signal)
+      if (String(url).includes('/payment/create')) {
+        return { ok: true, json: async () => ({ result_code: 200, redirect_url: 'https://pay.test/x', transaction: { transaction_id: 't1', state: 'pending' } }) } as any
+      }
+      return { ok: true, json: async () => ({ result_code: 200, transaction: { transaction_id: 't1', state: 'completed', order_id: 'o', paid: '1', amount: '1', currency: 'USD' } }) } as any
+    }) as any
+    const provider = makePayssionProvider({ fetchImpl })
+    await provider.createCharge({
+      orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+      amount: fromDecimal('12.34', 'USD'),
+      returnUrl: 'https://app.test.local/checkout/return/x',
+      metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+    })
+    await provider.getCharge('t1')
+    expect(signals.length).toBe(2)
+    for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
+  })
+})
+
+// ─── voidCharge (round B Part 2, PAY-004/013) ─────────────────────────────
+describe('payssion: voidCharge', () => {
+  const harness = (cancel: { code: number; state?: string }, details?: { state: string }) => {
+    const calls: string[] = []
+    const fetchImpl = (async (url: any, init: any) => {
+      const u = String(url)
+      calls.push(u.replace(/^.*\/api\/v1/, ''))
+      if (u.endsWith('/payment/cancel')) {
+        return { ok: true, json: async () => ({ result_code: cancel.code, ...(cancel.state ? { transaction: { transaction_id: 'T1', state: cancel.state } } : {}) }) } as any
+      }
+      if (u.endsWith('/payment/details')) {
+        return { ok: true, json: async () => ({ result_code: 200, transaction: txn(details?.state ?? 'pending', { transaction_id: 'T1' }) }) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls, provider: makePayssionProvider({ fetchImpl }) }
+  }
+
+  it('cancel accepted (200, state cancelled) → voided, no details call', async () => {
+    const { calls, provider } = harness({ code: 200, state: 'cancelled' })
+    const r = await provider.voidCharge('T1')
+    expect(r.outcome).toBe('voided')
+    expect(r.rawStatus).toBe('cancelled')
+    expect(calls).toEqual(['/payment/cancel'])
+  })
+
+  it('cancel refused, details say completed / paid_more → paid (the money is coming)', async () => {
+    for (const s of ['completed', 'paid_more']) {
+      expect((await harness({ code: 400 }, { state: s }).provider.voidCharge('T1')).outcome).toBe('paid')
+    }
+  })
+
+  it('cancel refused, details say failed/expired/cancelled → already_closed', async () => {
+    for (const s of ['failed', 'expired', 'cancelled']) {
+      expect((await harness({ code: 400 }, { state: s }).provider.voidCharge('T1')).outcome).toBe('already_closed')
+    }
+  })
+
+  it('cancel refused while the transaction is still pending → throws (the outbox retries with backoff)', async () => {
+    await expect(harness({ code: 400 }, { state: 'pending' }).provider.voidCharge('T1')).rejects.toThrow(/cancel refused/)
+  })
+})
+
+// ─── overpayment (round B Part 3, PAY-011) ────────────────────────────────
+describe('payssion: CHARGE_CONFIRMED carries what was actually paid', () => {
+  it('paid > amount → `paid` Money present (the excess is credited by order_confirm_payment)', () => {
+    const ev = payssionToCanonical(txn('paid_more', { amount: '14.98', paid: '20.00' }))[0]
+    expect(ev.type).toBe('CHARGE_CONFIRMED')
+    expect((ev as any).settled).toEqual(fromDecimal('14.98', 'USD'))
+    expect((ev as any).paid).toEqual(fromDecimal('20.00', 'USD'))
+  })
+  it('paid == amount → `paid` equals settled', () => {
+    const ev = payssionToCanonical(txn('completed', { amount: '14.98', paid: '14.98' }))[0]
+    expect((ev as any).paid).toEqual(fromDecimal('14.98', 'USD'))
+  })
+})
+
+// ─── PAY-017 (round B Part 4): the 402 fallback must never mint twice ─────
+describe('payssion: createCharge 402 handling', () => {
+  process.env.PUBLIC_API_URL ||= 'https://app.test.local'
+  const harness = (first: any, second: any = { result_code: 200, redirect_url: 'https://pay.test/2', transaction: { transaction_id: 't2', state: 'pending' } }) => {
+    let n = 0
+    const fetchImpl = (async (url: any) => {
+      if (String(url).includes('/payment/create')) {
+        n++
+        return { ok: true, json: async () => (n === 1 ? first : second) } as any
+      }
+      return { ok: false, status: 404, text: async () => 'nope' } as any
+    }) as any
+    return { calls: () => n, provider: makePayssionProvider({ fetchImpl }) }
+  }
+  const input = {
+    orderId: '0f1e2d3c-1111-2222-3333-444444444444',
+    amount: fromDecimal('12.34', 'USD'),
+    returnUrl: 'https://app.test.local/checkout/return/x',
+    metadata: { pm_id: Object.keys(PAYSSION_METHODS)[0] },
+  }
+
+  it('a bare 402 (signature only) retries once with the fallback signature', async () => {
+    const h = harness({ result_code: 402 })
+    const r = await h.provider.createCharge(input)
+    expect(r.providerChargeId).toBe('t2')
+    expect(h.calls()).toBe(2)
+  })
+
+  it('a 402 that STILL carries a transaction + redirect is that transaction — used, never re-minted', async () => {
+    const h = harness({ result_code: 402, redirect_url: 'https://pay.test/1', transaction: { transaction_id: 't1', state: 'pending' } })
+    const r = await h.provider.createCharge(input)
+    expect(r.providerChargeId).toBe('t1')
+    expect(r.checkoutUrl).toBe('https://pay.test/1')
+    expect(h.calls()).toBe(1)
+  })
+
+  it('a 402 with a transaction but no redirect throws naming the id and does not retry', async () => {
+    const h = harness({ result_code: 402, transaction: { transaction_id: 't1' } })
+    await expect(h.provider.createCharge(input)).rejects.toThrow(/t1/)
+    expect(h.calls()).toBe(1)
   })
 })

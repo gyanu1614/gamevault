@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
+import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 // Ledger-backed money paths (funds-flow cutover): the order transition moves
 // held escrow to refunds atomically, then the wallet credit (refunds →
 // user_wallet) makes the buyer whole as store credit. The legacy
@@ -81,18 +82,14 @@ export async function createCancellationRequest(
     }
 
     // Parse delivery time to hours
-    const getDeliveryHours = (deliveryTime?: string | null): number => {
-      if (!deliveryTime) return 0
-      const t = deliveryTime.toLowerCase().trim()
-      if (t.includes('20min') || t.includes('20 min')) return 0.33
-      if (t.includes('1hr') || t.includes('1 hour') || t.includes('0-1 hour')) return 1
-      if (t.includes('3hr') || t.includes('3 hour')) return 3
-      if (t.includes('6hr') || t.includes('6 hour') || t.includes('1-6 hour')) return 6
-      if (t.includes('12hr') || t.includes('12 hour') || t.includes('6-12 hour')) return 12
-      if (t.includes('24hr') || t.includes('1 day') || t.includes('12-24 hour') || t.includes('1-24 hour')) return 24
-      if (t.includes('3 day') || t.includes('1-3 day')) return 72
-      return 0
-    }
+    // Parsed by the shared util rather than substring matching. The old
+    // matcher knew a fixed list of strings and returned 0 for anything
+    // else — so the wizard's day windows ("2d".."7d") read as 0 hours
+    // and a 7-day listing failed the >= 6h check below. Every value the
+    // old matcher knew resolves to the same bucket here; unparseable
+    // values still fall back to 0 (ineligible), as before.
+    const getDeliveryHours = (deliveryTime?: string | null): number =>
+      parseDeliveryMinutes(deliveryTime, 0) / 60
 
     // Check delivery time requirement (>= 6 hours)
     const deliveryHours = getDeliveryHours(order.listing?.delivery_time)

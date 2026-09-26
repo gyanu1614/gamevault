@@ -38,7 +38,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
   const [onlineOnly, setOnlineOnly] = useState(searchParams.get('online') === 'true')
   const [showMobile, setShowMobile] = useState(false)
 
-  // Available options — gemstone tiers from the central ladder
+  // Available options — seller ranks from the central ladder
   const tierOptions = TIERS.map((t) => ({
     value: t.key,
     label: t.label,

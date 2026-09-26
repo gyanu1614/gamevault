@@ -136,7 +136,7 @@ export function getTemplateStats() {
   }
 }
 
-export default {
+const templateManager = {
   getTemplateFields,
   hasTemplate,
   getAllTemplateKeys,
@@ -145,3 +145,5 @@ export default {
   getGameCategories,
   getTemplateStats
 }
+
+export default templateManager

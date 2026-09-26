@@ -1,5 +1,3 @@
-'use client'
-
 import { ShoppingCart, CheckCircle2, Clock, AlertTriangle, DollarSign, Coins } from 'lucide-react'
 import { StatCard, type ChipTone } from '../../components/kit'
 

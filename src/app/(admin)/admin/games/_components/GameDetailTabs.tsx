@@ -11,6 +11,8 @@
  *   • Items        — link to the existing template builder route.
  *   • Accounts     — per-game required listing fields, delivery, policy.
  *   • Boosting     — tier ladder, avg delivery, instructions placeholder.
+ *   • Fees         — seller commission per enabled category (fee engine
+ *                    PR 5): live rate, scheduled rules, promos, risk band.
  *
  * Currency/Accounts/Boosting tabs are only shown when the matching
  * global category is enabled for this game — we don't surface config
@@ -26,8 +28,9 @@ import { CurrencyConfigForm } from './CurrencyConfigForm'
 import { AccountConfigForm } from './AccountConfigForm'
 import { BoostingConfigForm } from './BoostingConfigForm'
 import { SeoOverrideForm } from './SeoOverrideForm'
+import { FeesTab } from './FeesTab'
 
-type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'seo'
+type Tab = 'setup' | 'currency' | 'items' | 'accounts' | 'boosting' | 'fees' | 'seo'
 
 // Mirrors the GameWizard's existing types so this file doesn't have
 // to import internal interfaces. The shapes come from
@@ -102,6 +105,9 @@ export default function GameDetailTabs({
               Boosting
             </TabsTrigger>
           )}
+          <TabsTrigger value="fees" className="data-[state=active]:bg-bg-overlay">
+            Fees
+          </TabsTrigger>
           <TabsTrigger value="seo" className="data-[state=active]:bg-bg-overlay">
             SEO
           </TabsTrigger>
@@ -149,6 +155,10 @@ export default function GameDetailTabs({
           </TabsContent>
         )}
 
+        <TabsContent value="fees" className="mt-6">
+          <FeesTab rows={initialGameCategories} gameName={game.name} />
+        </TabsContent>
+
         <TabsContent value="seo" className="mt-6">
           <SeoOverrideForm gameId={game.id} gameName={game.name} />
         </TabsContent>
@@ -170,10 +180,10 @@ function CategoryEmptyHint({
     return (
       <div className="rounded-2xl border border-dashed border-border-default bg-bg-raised/60 p-8 text-center">
         <p className="text-[14px] font-semibold text-text-primary">
-          {type} isn't enabled for this game.
+          {type} isn&apos;t enabled for this game.
         </p>
         <p className="mt-1.5 text-[12.5px] text-text-secondary">
-          Enable it in the Setup tab's Categories step, then come back here to configure.
+          Enable it in the Setup tab&apos;s Categories step, then come back here to configure.
         </p>
       </div>
     )

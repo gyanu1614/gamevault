@@ -1,5 +1,3 @@
-'use client'
-
 import { AlertTriangle, User, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

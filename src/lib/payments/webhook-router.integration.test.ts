@@ -10,10 +10,19 @@
  * Self-skips if env or the webhook_events / safedrop RPCs are absent. Creates a
  * throwaway order (status 'paid' is the post-charge state; we drive a fresh
  * order at 'pending' to exercise CHARGE_CONFIRMED) and cleans it up.
+ *
+ * REFUSES a non-local Supabase URL unless ALLOW_REMOTE_GUARD_TESTS=1. This
+ * test drives the REAL dispatch chain, which fans out to notify.ts → live
+ * Resend emails and in-app notifications. Run against production on
+ * 2026-09-12 it emailed real sellers ("You made a sale — …TEST-WH-…") and left
+ * orphaned notifications on real accounts: afterAll cleans orders,
+ * ledger rows and webhook_events, but never the notifications the dispatch
+ * inserts. Same guard and same opt-out as src/test/guards/throwaway.ts.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { handleWebhook } from '@/lib/payments/webhook-router'
+import { assertGuardTargetAllowed } from '@/test/guards/throwaway'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -31,6 +40,9 @@ const TOTAL = 100.0,
 
 beforeAll(async () => {
   if (!URL || !KEY) return
+  // Fail loudly BEFORE creating anything: this test's dispatch sends real
+  // email and writes notifications that its cleanup does not remove.
+  assertGuardTargetAllowed(URL, process.env)
   svc = createClient(URL, KEY, { auth: { persistSession: false } })
 
   // Probe webhook_events RPC.
@@ -96,6 +108,14 @@ afterAll(async () => {
   }
   try {
     await (svc as any).from('webhook_events').delete().eq('provider', 'fake').like('provider_event_id', `${chargeId}:%`)
+  } catch {
+    /* ignore */
+  }
+  // The dispatch chain inserts buyer + seller notifications that nothing else
+  // here removes — that is what leaked onto real accounts on 2026-09-12.
+  try {
+    await (svc as any).from('notifications').delete().like('message', `%${orderId}%`)
+    await (svc as any).from('notifications').delete().like('link', `%${orderId}%`)
   } catch {
     /* ignore */
   }

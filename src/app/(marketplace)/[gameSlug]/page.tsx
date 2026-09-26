@@ -10,8 +10,9 @@ import { tierByKey } from '@/lib/seller/tiers'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { isGameHubIndexable } from '@/lib/games/indexability'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import { ArrowRight, Calculator, Package, TrendingUp } from 'lucide-react'
 import Image from 'next/image'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
@@ -22,6 +23,7 @@ import { SabLanding } from './values/_SabLanding'
 import { SabNavExtras } from './values/_SabNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
+import { cache } from 'react'
 
 interface PageProps {
   params: Promise<{
@@ -29,15 +31,68 @@ interface PageProps {
   }>
 }
 
+/**
+ * Game storefront. Carries listing counts + featured listings, so it wants a
+ * shorter window than the content hub; 15 min balances freshness against
+ * rendering this route dynamically on every request.
+ */
+export const revalidate = 900
+
+/**
+ * Prerender every active game's storefront. Cookie-free read; games added
+ * later still render on demand and are picked up by the window above.
+ */
+export async function generateStaticParams() {
+  const supabase = createAnonClient()
+  const { data } = await supabase.from('games').select('slug').eq('is_active', true)
+  return ((data ?? []) as { slug: string }[]).map((g) => ({ gameSlug: g.slug }))
+}
+
+// STATE-004 — generateMetadata and the page body both need this row; cache()
+// makes the two runs of one request share a single query.
+const getGameData = cache(async function getGameData(gameSlug: string) {
+  const supabase = createAnonClient()
+
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    // STATE-012 — explicit columns. The 7 read directly off `game` in this
+    // file, plus the 4 seo_* overrides resolveGameSeo() reads via `overrides`.
+    .select(
+      'id, name, slug, description, ecosystem, content_tier, image_url, seo_indexable, seo_title, seo_description, seo_h1, seo_intro',
+    )
+    .eq('slug', gameSlug)
+    .eq('is_active', true)
+    .single() as any
+
+  if (gameError || !game) {
+    return null
+  }
+
+  const { data: categories, error: categoriesError } = await supabase
+    .from('game_categories')
+    .select('id, name, slug, description, icon_emoji, icon_url, type, sub_types')
+    .eq('game_id', game.id)
+    .eq('is_enabled', true)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true }) as any
+
+  if (categoriesError) {
+    console.error('Error fetching categories:', categoriesError)
+  }
+
+  return {
+    ...game,
+    categories: categories || []
+  }
+})
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
-  const { data: game } = await supabase
-    .from('games')
-    .select('id, name, description, ecosystem, seo_title, seo_description, seo_h1, seo_intro, seo_indexable')
-    .eq('slug', gameSlug)
-    .single() as any
+  // STATE-004 — shares one cached read with the page body, instead of querying
+  // games + categories a second time here with a different column set.
+  const game = await getGameData(gameSlug)
 
   // 404 from metadata so the status is decided before anything streams —
   // consistent with the category/listing routes, where a Suspense boundary
@@ -45,16 +100,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!game) notFound()
 
   // Category labels the game has enabled (for template copy + accounts flag).
-  const { data: gameCats } = (await supabase
-    .from('categories')
-    .select('name, slug, metadata')
-    .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })) as any
-  const categoryLabels: string[] = (gameCats ?? []).map(
-    (c: any) => c.name || (c.metadata?.label ?? c.slug),
+  const gameCats = (game.categories ?? []) as any[]
+  const categoryLabels: string[] = gameCats.map(
+    (c: any) => c.name || c.slug,
   )
-  const hasAccounts = (gameCats ?? []).some((c: any) => c.metadata?.type === 'account')
+  const hasAccounts = gameCats.some((c: any) => c.type === 'account')
 
   // Index bar (mirrors sitemap.ts): an empty hub — no active listings
   // and no curated currency config — stays out of the index until it
@@ -64,10 +114,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .from('listings')
       // SEO hygiene: only REAL (non-test) active listings count toward
       // indexability, so a game with only test listings stays noindex.
-      .select('id, seller:profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact', head: true })
+      .select('id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)', { count: 'exact' })
       .eq('game_id', game.id)
       .eq('status', 'active')
-      .eq('seller.is_test', false),
+      .eq('seller.is_test', false).limit(1),
     supabase
       .from('category_configs')
       .select('game_id')
@@ -75,10 +125,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       .eq('category_type', 'currency')
       .limit(1),
   ] as const) as any
-  // Indexability: admin override (seo_indexable) wins; otherwise auto by
-  // real content (active listings or a curated currency config).
-  const autoIndexable = (listingCount ?? 0) > 0 || (curatedCfg?.length ?? 0) > 0
-  const indexable = game.seo_indexable ?? autoIndexable
+  // Indexability — ONE definition, shared with sitemap.ts so the robots meta
+  // and the sitemap can never disagree. See lib/games/indexability.ts.
+  const indexable = isGameHubIndexable({
+    contentTier: game.content_tier,
+    activeListingCount: listingCount ?? 0,
+    hasCuratedCurrencyConfig: (curatedCfg?.length ?? 0) > 0,
+    seoIndexable: game.seo_indexable,
+  })
 
   // Auto-SEO engine: admin overrides merged with smart templates.
   const seo = resolveGameSeo({
@@ -105,44 +159,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-async function getGameData(gameSlug: string) {
-  const supabase = await createClient()
-
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('*')
-    .eq('slug', gameSlug)
-    .eq('is_active', true)
-    .single() as any
-
-  if (gameError || !game) {
-    return null
-  }
-
-  const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, name, slug, description, icon, metadata')
-    .eq('game_id', game.id)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true })
-    .order('name', { ascending: true }) as any
-
-  if (categoriesError) {
-    console.error('Error fetching categories:', categoriesError)
-  }
-
-  return {
-    ...game,
-    categories: categories || []
-  }
-}
 
 async function getCategoryListingCounts(gameId: string) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: counts, error } = await supabase
     .from('listings')
-    .select('category_id, seller:profiles!listings_seller_id_fkey!inner(is_test)')
+    .select('game_category_id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('game_id', gameId)
     .eq('status', 'active')
     .eq('seller.is_test', false) as any
@@ -154,21 +177,21 @@ async function getCategoryListingCounts(gameId: string) {
 
   const countMap: Record<string, number> = {}
   counts?.forEach((item: any) => {
-    countMap[item.category_id] = (countMap[item.category_id] || 0) + 1
+    countMap[item.game_category_id] = (countMap[item.game_category_id] || 0) + 1
   })
 
   return countMap
 }
 
 async function getFeaturedListings(gameId: string, limit: number = 6) {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   const { data: listings } = await supabase
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
-      category:categories!listings_category_id_fkey(name, slug)
+      seller:public_profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
+      category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('game_id', gameId)
     .eq('status', 'active')
@@ -189,7 +212,7 @@ export type SabTopValue = {
 
 // Top brainrots by live default cash value, for the SAB landing carousel.
 async function getSabTopValues(): Promise<SabTopValue[]> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data: rows } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,image_url,market_value_usd,mutation_slug')
@@ -212,14 +235,14 @@ async function getSabTopValues(): Promise<SabTopValue[]> {
  * the real landscape `ItemCard`. Real inventory is thin pre-launch, so we
  * INCLUDE test/own sellers here (no is_test filter) — this is a marketing
  * surface, not an SEO-indexed listing count. Accounts are detected by the
- * joined category metadata.type === 'account'.
+ * joined category type === 'account'.
  */
 async function getSabLandingOffers(gameId: string): Promise<{
   itemOffers: ItemOffer[]
   accountOffers: ItemOffer[]
   minPriceUsd: number | null
 }> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
 
   // Same select shape as the buy-items page's RawListing so listingToOffer()
   // gets everything it needs (seller rating/reviews/sales, category, template).
@@ -230,11 +253,11 @@ async function getSabLandingOffers(gameId: string): Promise<{
         `
         id, slug, title, price, original_price, delivery_time,
         quantity, is_unlimited, images, template_data, status,
-        seller:profiles!listings_seller_id_fkey(
+        seller:public_profiles!listings_seller_id_fkey(
           id, username, shop_name, shop_slug, avatar_url, seller_tier,
           seller_rating, total_reviews, total_sales, is_verified
         ),
-        category:categories!listings_category_id_fkey(slug, name, metadata)
+        category:game_categories!listings_game_category_id_fkey(slug, name, type)
       `,
       )
       .eq('game_id', gameId)
@@ -250,7 +273,7 @@ async function getSabLandingOffers(gameId: string): Promise<{
   const prices: number[] = []
 
   for (const row of (rows ?? []) as any[]) {
-    const isAccount = row.category?.metadata?.type === 'account'
+    const isAccount = row.category?.type === 'account'
     const offer = listingToOffer(row, isAccount ? accountsTaxonomy : itemsTaxonomy)
     if (Number.isFinite(offer.pricePerUnit) && offer.pricePerUnit > 0) {
       prices.push(offer.pricePerUnit)
@@ -277,8 +300,12 @@ export default async function GameBrowsePage({ params }: PageProps) {
     notFound()
   }
 
-  const listingCounts = await getCategoryListingCounts(game.id)
-  const featuredListings = await getFeaturedListings(game.id)
+  // STATE-007 — both take only game.id and neither consumes the other, so they
+  // fan out together (matching the Promise.all in the very next block).
+  const [listingCounts, featuredListings] = await Promise.all([
+    getCategoryListingCounts(game.id),
+    getFeaturedListings(game.id),
+  ])
   const categories = game.categories || []
 
   // Top brainrot values for the SAB landing carousel (marketplace inventory is
@@ -295,7 +322,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const seo = resolveGameSeo({
     name: game.name,
     categoryLabels: categories.map((c: any) => c.name || c.slug),
-    hasAccounts: categories.some((c: any) => c.metadata?.type === 'account'),
+    hasAccounts: categories.some((c: any) => c.type === 'account'),
     ecosystem: game.ecosystem,
     description: game.description,
     overrides: game,
@@ -373,6 +400,11 @@ export default async function GameBrowsePage({ params }: PageProps) {
                   src={game.image_url}
                   alt={game.name}
                   fill
+                  // Rendered in a fixed 128px box (w-32 h-32). Without `sizes`,
+                  // `fill` assumes 100vw and Next generates the whole device
+                  // ladder up to 3840px for a thumbnail — one of the sources of
+                  // the 4K/5K transformations in the 2026-09-22 build audit.
+                  sizes="128px"
                   className="object-cover"
                 />
               </div>
@@ -457,8 +489,32 @@ export default async function GameBrowsePage({ params }: PageProps) {
           <h2 className="text-3xl font-bold text-text-primary mb-8">Browse by Category</h2>
 
           {categories.length === 0 ? (
-            <div className="text-center py-12 bg-bg-overlay border border-border-subtle rounded-xl">
-              <p className="text-text-secondary">No categories available for this game yet</p>
+            /* Phase 1 · Step 1 — a `listed` game with no categories yet must
+               not read as broken. Point at the two things that ARE available:
+               selling into it, and asking for a category. */
+            <div className="rounded-xl border border-border-subtle bg-bg-overlay px-6 py-12 text-center">
+              <p className="text-text-primary font-semibold">
+                Categories For {game.name} Are Opening Soon
+              </p>
+              <p className="mx-auto mt-2 max-w-xl text-body-sm text-text-secondary">
+                No one has listed {game.name} yet. Sellers can start here first
+                — every order is covered by SafeDrop, item guaranteed or a full
+                refund.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={`/${gameSlug}/sell`}
+                  className="inline-flex items-center justify-center rounded-lg bg-lime px-5 py-2.5 text-body-sm font-semibold text-black transition-opacity hover:opacity-90"
+                >
+                  Sell {game.name}
+                </Link>
+                <Link
+                  href={`mailto:support@dropmarket.gg?subject=${encodeURIComponent(`Category request: ${game.name}`)}`}
+                  className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-5 py-2.5 text-body-sm font-semibold text-text-primary transition-colors hover:bg-bg-overlay"
+                >
+                  Request A Category
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -469,7 +525,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
                   categorySlug={category.slug}
                   name={category.name}
                   description={category.description}
-                  icon={category.icon}
+                  icon={category.icon_emoji}
                   listingCount={listingCounts[category.id] || 0}
                 />
               ))}
@@ -613,7 +669,17 @@ function ListingPreviewCard({
         {/* Image */}
         <div className="relative h-48 bg-gradient-to-br from-[rgba(86,184,127,0.12)] to-[rgba(255,255,255,0.05)]">
           {imageUrl ? (
-            <Image src={imageUrl} alt={title} fill className="object-cover" />
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              // Card image in a 192px-tall tile; the grid is 1/2/3 up. Without
+              // `sizes`, `fill` assumes 100vw and bills the full ladder up to
+              // 3840px — 6 of these render per game landing page × 264 pages
+              // (build audit 2026-09-22, §6).
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-5xl">
               🎮

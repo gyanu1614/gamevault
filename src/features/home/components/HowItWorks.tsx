@@ -12,7 +12,7 @@
  *   - stage-1.svg  (You Pay)
  *   - stage-2.svg  (You're Covered)
  *   - stage-3.svg  (They Deliver)
- *   - stage-4.svg  (Seller Gets Paid)
+ *   - stage-4.svg  (Order Complete)
  *
  * Use Storyset's "SVG AND CSS" export (single .svg with embedded CSS
  * animations). Rendered via plain <img> so the CSS animations inside
@@ -76,9 +76,9 @@ const STAGES: Stage[] = [
   },
   {
     step: '04',
-    label: 'Seller Gets Paid',
+    label: 'Order Complete',
     copy: [
-      { type: 'plain',  text: 'Confirm the drop and the seller is paid out. Something off? ' },
+      { type: 'plain',  text: 'Confirm the drop and the order is complete. Something off? ' },
       { type: 'accent', text: 'We step in' },
       { type: 'plain',  text: " — full refund if it's not delivered or not as described." },
     ],

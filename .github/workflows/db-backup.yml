@@ -1,0 +1,146 @@
+name: Database Backup
+
+# Nightly encrypted logical backup of the production Supabase database.
+#
+# The dump is never written anywhere unencrypted beyond the runner's ephemeral
+# disk: it is gzipped and then encrypted to an age PUBLIC key held in repo
+# secrets, so this workflow (and anyone with repo access) can CREATE a backup
+# but cannot READ one. Decryption needs the private key, which lives only with
+# the owner. Restore instructions: scripts/restore-backup.md
+#
+# Every step is fail-loud: `set -euo pipefail`, no `continue-on-error`, and the
+# artifact upload errors if the encrypted file is missing.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 05:00 UTC daily.
+    - cron: "0 5 * * *"
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify required secrets are present
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is not set."
+            missing=1
+          fi
+          if [ -z "${BACKUP_AGE_PUBLIC_KEY:-}" ]; then
+            echo "::error::Repository secret BACKUP_AGE_PUBLIC_KEY is not set."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          case "${BACKUP_AGE_PUBLIC_KEY}" in
+            age1*) ;;
+            *)
+              echo "::error::BACKUP_AGE_PUBLIC_KEY must be an age PUBLIC key (starts with 'age1'). Never store the private key (AGE-SECRET-KEY-...) in repo secrets."
+              exit 1
+              ;;
+          esac
+
+      - name: Install the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install age
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y age
+          age --version
+
+      # `supabase db dump` is schema-only by default and has no "include data"
+      # flag — `--data-only` is a separate mode. So a full backup is TWO passes
+      # concatenated: schema (DDL) first, then data (INSERTs, with triggers
+      # disabled via session_replication_role). Restoring the combined file with
+      # psql replays them in that order, which is what a fresh project needs.
+      - name: Dump the database (schema + data, public and auth)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql --schema public,auth
+          test -s schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f data.sql --schema public,auth --data-only
+          test -s data.sql
+          cat schema.sql data.sql > dump.sql
+          rm -f schema.sql data.sql
+          test -s dump.sql
+          echo "Dump size: $(du -h dump.sql | cut -f1)"
+
+      - name: Compress and encrypt the dump
+        env:
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          gzip -9 dump.sql
+          test -s dump.sql.gz
+          age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" \
+            --output "dump-${stamp}.sql.gz.age" dump.sql.gz
+          test -s "dump-${stamp}.sql.gz.age"
+          # Remove the plaintext so a later step cannot accidentally upload it.
+          rm -f dump.sql.gz
+          echo "Encrypted size: $(du -h "dump-${stamp}.sql.gz.age" | cut -f1)"
+
+      - name: Upload the encrypted backup artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: db-backup-${{ env.STAMP }}
+          path: dump-${{ env.STAMP }}.sql.gz.age
+          retention-days: 30
+          if-no-files-found: error
+
+      # DLT-004: a scheduled workflow surfaces in no PR check, and GitHub
+      # notifies only the last committer. With retention-days: 30, a silent
+      # failure that persists ~30 days leaves ZERO recoverable backups. This
+      # step is the alarm. It runs on failure OR cancellation (a 60-minute
+      # timeout kill is a cancellation, not a failure) and never fails the job
+      # itself -- an alert that breaks the run would hide the original error.
+      - name: Alert on backup failure
+        if: ${{ failure() || cancelled() }}
+        env:
+          DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set — the nightly backup failed and nobody was paged."
+            exit 0
+          fi
+          # jq -Rs builds a correctly escaped JSON string, so no shell value is
+          # ever interpolated into the payload unquoted.
+          payload="$(jq -nc \
+            --arg content "🔴 **Nightly DB backup ${OUTCOME}** — no new backup was stored. Backups expire after 30 days, so repeated failures end with nothing to restore from. Run: ${RUN_URL}" \
+            '{content: $content, allowed_mentions: {parse: []}}')"
+          code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || echo 000)"
+          if [ "$code" != "204" ] && [ "$code" != "200" ]; then
+            echo "::warning::Discord alert POST returned HTTP $code"
+          fi
+          exit 0

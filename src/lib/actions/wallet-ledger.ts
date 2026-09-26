@@ -179,3 +179,69 @@ export async function getMyWithdrawableBalance(): Promise<{
     return { success: false, error: err?.message ?? 'Failed to fetch balance' }
   }
 }
+
+
+// ── PR 7: the seller balance breakdown (ONE SQL function) ──────────────────
+export interface WalletOverview {
+  currency: string
+  /** Matured, not frozen — what a withdrawal can draw on. May be negative. */
+  available: number
+  /** Buyer-confirmed credits still inside the completion hold. */
+  pending: number
+  nextMaturityAt: string | null
+  /** Seller amounts of orders under dispute (post-completion). */
+  frozen: number
+  /** Held by open withdrawal requests. */
+  locked: number
+  /** Store credit (refunds, cashback) — also withdrawable. */
+  wallet: number
+  negative: boolean
+  gate: {
+    eligible: boolean
+    reason: 'account_age' | 'payout_details_freeze' | null
+    sellerSince: string | null
+    unlockAt: string | null
+    freezeUntil: string | null
+    minAgeDays: number
+  }
+  completionHoldHours: number
+  disputeWindowDays: number
+}
+
+/** getMyWalletOverview — wallet_available_balance() for the session user. */
+export async function getMyWalletOverview(): Promise<{ success: boolean; overview?: WalletOverview; error?: string }> {
+  try {
+    const userId = await sessionUserId()
+    if (!userId) return { success: false, error: 'Not authenticated' }
+    const service = createServiceRoleClient()
+    const { data, error } = await (service.rpc as any)('wallet_available_balance', { p_seller_id: userId, p_currency: 'USD' })
+    if (error) throw new Error(`wallet_available_balance failed: ${error.message}`)
+    const d = data as any
+    const minor = (v: unknown) => Number(v ?? 0) / 100
+    return {
+      success: true,
+      overview: {
+        currency: String(d.currency ?? 'USD'),
+        available: minor(d.available_minor),
+        pending: minor(d.pending_minor),
+        nextMaturityAt: d.next_maturity_at ?? null,
+        frozen: minor(d.frozen_minor),
+        locked: minor(d.locked_minor),
+        wallet: minor(d.wallet_minor),
+        negative: Boolean(d.negative),
+        gate: {
+          eligible: Boolean(d.gate?.eligible),
+          reason: (d.gate?.reason ?? null) as WalletOverview['gate']['reason'],
+          sellerSince: d.gate?.seller_since ?? null,
+          unlockAt: d.gate?.unlock_at ?? null,
+          freezeUntil: d.gate?.freeze_until ?? null,
+          minAgeDays: Number(d.gate?.min_age_days ?? 30),
+        },
+        completionHoldHours: Number(d.completion_hold_hours ?? 24),
+        disputeWindowDays: Number(d.dispute_window_days ?? 7),
+      },
+    }
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Failed to fetch balance' }
+  }
+}

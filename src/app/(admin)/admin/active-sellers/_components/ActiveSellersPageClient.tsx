@@ -31,6 +31,7 @@ import {
   ArrowUpNarrowWide,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { finiteOrNull, money } from '@/lib/seller/format-amount'
 import { useNow } from '@/hooks/use-now'
 import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hooks/use-active-sellers'
 import type { ActiveSeller, ActiveSellerSort } from '@/lib/actions/admin-active-sellers'
@@ -60,7 +61,7 @@ const BAND_STYLE: React.CSSProperties = {
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
 }
 
-/** seller_tier_config badge_color → dark-surface chip classes (gemstone tokens). */
+/** seller_tier_config badge_color → dark-surface chip classes (rank tokens). */
 export const TIER_CHIP_CLASSES: Record<string, string> = {
   zinc: 'bg-white/[0.1] text-white/85',
   violet: 'bg-violet-500/[0.16] text-violet-300',
@@ -93,10 +94,6 @@ function relativeTime(iso: string | null | undefined, now: number | null): strin
   if (hours < 24) return `${hours}h ago`
   const days = Math.round(hours / 24)
   return `${days}d ago`
-}
-
-function money(n: number): string {
-  return `$${n.toFixed(2)}`
 }
 
 const SORT_OPTIONS: { key: ActiveSellerSort; label: string }[] = [
@@ -235,7 +232,7 @@ export default function ActiveSellersPageClient({
           s.stats.active_listings,
           s.stats.pending_listings,
           s.stats.completed_sales,
-          s.stats.revenue.toFixed(2),
+          (finiteOrNull(s.stats.revenue) ?? 0).toFixed(2),
           s.founding_seller,
           s.is_test,
           s.created_at,

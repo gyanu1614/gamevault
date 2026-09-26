@@ -113,17 +113,21 @@ export function HubFooter({
           <div className="max-w-sm">
             <Link href="/" className="inline-flex items-center gap-2.5">
               <Image
-                src="/brand/logo-mark-white.png"
+                src="/brand/logo-mark-white.avif"
                 alt="DropMarket"
                 width={28}
                 height={28}
                 className="h-7 w-7"
+                // Already an optimised 2 KB AVIF rendered at ~30px — re-encoding
+                // it to WebP bills a transformation and saves nothing.
+                unoptimized
               />
               <span className="text-[17px] font-bold text-[#F1F3F1]">DropMarket</span>
             </Link>
             <p className="mt-3 text-[13.5px] leading-6 text-[#8B978F]">
-              Real {gameName} prices from completed sales, and a safer place to buy
-              them — the seller is paid on delivery.
+              Real {gameName} prices from live marketplace listings, and a safer
+              place to buy them — get exactly what you ordered, or your money
+              back.
             </p>
 
             {/* Socials + direct support — the professional bit. */}

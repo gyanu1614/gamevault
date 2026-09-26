@@ -8,51 +8,31 @@ import { describe, expect, it } from 'vitest'
 import {
   buyerFee,
   cashRefundAmount,
-  commissionAmount,
-  commissionPct,
-  netProceeds,
   payoutFee,
-  protectionWindowHours,
   round2,
   storeCreditRefundAmount,
 } from './index'
 
-const CURRENCY = { categoryMetaType: 'currency', categorySlug: 'buy-vbucks', gameSlug: 'fortnite' }
-const ACCOUNT_MID = { categoryMetaType: 'account', categorySlug: 'buy-accounts', gameSlug: 'fortnite' }
-
 describe('worked example A — $100 standard currency sale', () => {
-  it('buyer pays $107.00', () => {
+  // Checkout B3: the PROCESSING fee is quoted per payment method by the
+  // database (buyer_fee_quote) — TypeScript keeps only the marketplace fee.
+  it('the marketplace fee is $2.00 (2%); no processing fee is computed here', () => {
     const fee = buyerFee(100)
-    expect(fee.amount).toBe(7)
-    expect(round2(100 + fee.amount)).toBe(107)
+    expect(fee.marketplacePct).toBe(2)
+    expect(fee.marketplaceAmount).toBe(2)
+    expect(fee.amount).toBe(2)
+    expect(round2(100 + fee.amount)).toBe(102)
+    expect((fee as any).processingPct).toBeUndefined()
   })
-  it('commission 5% = $5.00, seller nets $95.00', () => {
-    expect(commissionPct(CURRENCY)).toBe(5)
-    expect(commissionAmount(100, CURRENCY)).toBe(5)
-    expect(netProceeds(100, CURRENCY)).toBe(95)
-  })
-  it('DropMarket gross = $12.00 (buyer fee + commission)', () => {
-    expect(round2(buyerFee(100).amount + commissionAmount(100, CURRENCY))).toBe(12)
-  })
-  it('48h payout hold', () => {
-    expect(protectionWindowHours(CURRENCY)).toBe(48)
-  })
+  // Seller commission is resolved by the database (resolve_seller_fee) —
+  // pinned by fee-resolver.guard / fee-checkout-snapshot.guard, not here.
+  // The protection window is a row in order_completion_windows (fee PR 7) —
+  // pinned by order-completion.guard, not here.
 })
 
 describe('worked example B — $300 mid-risk account sale', () => {
-  it('buyer pays $321.00', () => {
-    expect(round2(300 + buyerFee(300).amount)).toBe(321)
-  })
-  it('commission 15% = $45.00, seller nets $255.00', () => {
-    expect(commissionPct(ACCOUNT_MID)).toBe(15)
-    expect(commissionAmount(300, ACCOUNT_MID)).toBe(45)
-    expect(netProceeds(300, ACCOUNT_MID)).toBe(255)
-  })
-  it('DropMarket gross = $66.00', () => {
-    expect(round2(buyerFee(300).amount + commissionAmount(300, ACCOUNT_MID))).toBe(66)
-  })
-  it('7-day (168h) hold for mid-risk accounts', () => {
-    expect(protectionWindowHours(ACCOUNT_MID)).toBe(168)
+  it('marketplace fee $6.00 before the method quote', () => {
+    expect(round2(300 + buyerFee(300).amount)).toBe(306)
   })
 })
 
@@ -76,56 +56,9 @@ describe('worked example E — cash refund of example A (PSP fee $3.75)', () => 
   })
 })
 
-describe('spec rules', () => {
-  it('Roblox in-game economies pay 10% on currency', () => {
-    expect(commissionPct({ categoryMetaType: 'currency', gameSlug: 'steal-a-brainrot' })).toBe(10)
-  })
-  it('Robux itself is standard 5%', () => {
-    expect(commissionPct({ categoryMetaType: 'currency', gameSlug: 'roblox' })).toBe(5)
-  })
-  it('GTA accounts are high risk: 20% and 14 days', () => {
-    const gta = { categoryMetaType: 'account', gameSlug: 'gta-v' }
-    expect(commissionPct(gta)).toBe(20)
-    expect(protectionWindowHours(gta)).toBe(14 * 24)
-  })
-  it('top-ups: 5% and 48h', () => {
-    const t = { categoryMetaType: 'top_up', gameSlug: 'fortnite' }
-    expect(commissionPct(t)).toBe(5)
-    expect(protectionWindowHours(t)).toBe(48)
-  })
+describe('spec rules (buyer side; protection windows and seller commission are database data)', () => {
   it('crypto payout: 3% + $10', () => {
     expect(payoutFee(100, 'crypto').fee).toBe(13)
     expect(payoutFee(100, 'crypto').net).toBe(87)
-  })
-})
-
-describe('founding-seller discount (FOUNDING_DISCOUNT_PTS = 2)', () => {
-  const SAB = { categoryMetaType: 'currency', gameSlug: 'steal-a-brainrot' } // 10%
-  const ITEMS = { categoryMetaType: 'item', gameSlug: 'fortnite' }           // 7%
-
-  it('is off by default — no isFounding flag leaves rates unchanged', () => {
-    expect(commissionPct(CURRENCY)).toBe(5)
-    expect(commissionPct({ ...CURRENCY, isFounding: false })).toBe(5)
-  })
-
-  it('takes 2 points off each category rate for founding sellers', () => {
-    expect(commissionPct({ ...SAB, isFounding: true })).toBe(8) // Roblox economy 10 → 8
-    expect(commissionPct({ ...ITEMS, isFounding: true })).toBe(5) // items 7 → 5
-    expect(commissionPct({ ...CURRENCY, isFounding: true })).toBe(3) // standard currency 5 → 3
-    expect(commissionPct({ ...ACCOUNT_MID, isFounding: true })).toBe(13) // mid-risk account 15 → 13
-  })
-
-  it('floors at 0 — a promo/zero-rate category never goes negative', () => {
-    // currencyPromo is 0; even a founding seller can't pay less than nothing.
-    const promo = { categoryMetaType: 'currency', gameSlug: 'steal-a-brainrot' }
-    expect(commissionPct({ ...promo, isFounding: true })).toBeGreaterThanOrEqual(0)
-  })
-
-  it('flows through to commissionAmount and netProceeds', () => {
-    // $100 SAB sale: normal 10% = $10 (net $90); founding 8% = $8 (net $92).
-    expect(commissionAmount(100, SAB)).toBe(10)
-    expect(netProceeds(100, SAB)).toBe(90)
-    expect(commissionAmount(100, { ...SAB, isFounding: true })).toBe(8)
-    expect(netProceeds(100, { ...SAB, isFounding: true })).toBe(92)
   })
 })

@@ -10,8 +10,9 @@
  */
 
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { PUBLIC_SELLER_PROFILE_SELECT, PUBLIC_REVIEW_SELECT } from '@/lib/shop/public-profile'
 import { SITE_URL } from '@/config/site'
-import React from 'react'
+import React, { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
@@ -25,6 +26,36 @@ function getServiceClient() {
   )
 }
 
+/**
+ * STATE-004 — the seller profile, by shop_slug with a username fallback for
+ * backward compatibility. generateMetadata and the page body both need it, and
+ * each ran the primary + fallback pair separately (up to 4 profiles reads per
+ * render). cache() makes the two runs of one request share a single lookup.
+ */
+const getSellerProfile = cache(async function getSellerProfile(slug: string) {
+  const supabase = getServiceClient()
+
+  const shopSlugQuery = await supabase
+    .from('profiles')
+    // AUTH-001 — explicit allowlist; this row is serialized to anonymous visitors.
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
+    .eq('shop_slug', slug)
+    .single()
+
+  if (shopSlugQuery.data) return { profile: shopSlugQuery.data as any, error: null }
+
+  // Fallback: try by username for backward compatibility
+  const usernameQuery = await supabase
+    .from('profiles')
+    .select(PUBLIC_SELLER_PROFILE_SELECT)
+    .eq('username', slug)
+    .single()
+
+  if (usernameQuery.data) return { profile: usernameQuery.data as any, error: null }
+
+  return { profile: null, error: shopSlugQuery.error || usernameQuery.error }
+})
+
 interface PageProps {
   params: Promise<{
     slug: string
@@ -35,38 +66,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   const supabase = getServiceClient()
 
-  // Fetch seller data for rich metadata - try shop_slug first, then username
-  let profile = null
-
-  const shopSlugQuery = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      seller_applications!seller_applications_user_id_fkey (
-        status
-      )
-    `)
-    .eq('shop_slug', slug)
-    .single()
-
-  if (shopSlugQuery.data) {
-    profile = shopSlugQuery.data
-  } else {
-    const usernameQuery = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        seller_applications!seller_applications_user_id_fkey (
-          status
-        )
-      `)
-      .eq('username', slug)
-      .single()
-
-    if (usernameQuery.data) {
-      profile = usernameQuery.data
-    }
-  }
+  // Fetch seller data for rich metadata — shared with the page body via cache().
+  const { profile } = await getSellerProfile(slug)
 
   // Check if seller is approved
   const hasApprovedApplication = profile?.seller_applications?.some(
@@ -83,14 +84,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Get seller stats
   const { count: totalSales } = await supabase
     .from('orders')
-    .select('*', { count: 'exact', head: true })
+    .select('*', { count: 'exact' })
     .eq('seller_id', profile.id)
-    .eq('status', 'completed')
+    .eq('status', 'completed').limit(1)
 
   const { data: ratingData } = await supabase
     .from('reviews')
     .select('rating')
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
 
   const avgRating = ratingData && ratingData.length > 0
     ? (ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length).toFixed(1)
@@ -171,47 +173,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ISR Configuration - Revalidate every 60 seconds
 export const revalidate = 60
 
+/**
+ * Seller storefronts are an open-ended, constantly growing set, so none are
+ * prerendered at build time. Declaring generateStaticParams still opts the
+ * route into ISR: each shop is rendered once on first request and then served
+ * from the cache for the 60s window above, instead of on every request.
+ */
+export function generateStaticParams() {
+  return []
+}
+
 export default async function SellerShopPage({ params }: PageProps) {
   const { slug } = await params
   const supabase = getServiceClient()
 
-  // Get seller profile by shop_slug or username (for backward compatibility)
-  let profile = null
-  let error = null
-
-  // Try by shop_slug first
-  const shopSlugQuery = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      seller_applications!seller_applications_user_id_fkey (
-        status
-      )
-    `)
-    .eq('shop_slug', slug)
-    .single()
-
-  if (shopSlugQuery.data) {
-    profile = shopSlugQuery.data
-  } else {
-    // Fallback: try by username for backward compatibility
-    const usernameQuery = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        seller_applications!seller_applications_user_id_fkey (
-          status
-        )
-      `)
-      .eq('username', slug)
-      .single()
-
-    if (usernameQuery.data) {
-      profile = usernameQuery.data
-    } else {
-      error = shopSlugQuery.error || usernameQuery.error
-    }
-  }
+  const { profile, error } = await getSellerProfile(slug)
 
   // Check if seller is approved (has at least one approved application)
   const hasApprovedApplication = profile?.seller_applications?.some(
@@ -238,7 +214,7 @@ export default async function SellerShopPage({ params }: PageProps) {
     .select(`
       *,
       game:games(name, slug, image_url),
-      category:categories(name, slug)
+      category:game_categories!listings_game_category_id_fkey(name, slug)
     `)
     .eq('seller_id', profile.id)
     .eq('status', 'active')
@@ -247,26 +223,24 @@ export default async function SellerShopPage({ params }: PageProps) {
   // Get seller's reviews
   const { data: reviews } = await supabase
     .from('reviews')
-    .select(`
-      *,
-      buyer:profiles!reviews_buyer_id_fkey(username, avatar_url),
-      order:orders(order_number)
-    `)
+    .select(PUBLIC_REVIEW_SELECT)
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
     .order('created_at', { ascending: false })
     .limit(20)
 
   // Calculate seller stats
   const { count: totalSales } = await supabase
     .from('orders')
-    .select('*', { count: 'exact', head: true })
+    .select('*', { count: 'exact' })
     .eq('seller_id', profile.id)
-    .eq('status', 'completed')
+    .eq('status', 'completed').limit(1)
 
   const { data: ratingData } = await supabase
     .from('reviews')
     .select('rating')
     .eq('seller_id', profile.id)
+    .eq('is_visible', true)
 
   const avgRating = ratingData && ratingData.length > 0
     ? ratingData.reduce((sum, r) => sum + r.rating, 0) / ratingData.length

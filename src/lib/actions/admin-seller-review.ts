@@ -3,18 +3,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin, requireRole } from './admin-permissions'
-import { DEFAULT_TIER } from '@/lib/seller/tiers'
+import { getEntryTier } from '@/lib/seller/entry-tier'
 import { revalidatePath } from 'next/cache'
+import { revalidateSellerStorefront } from '@/lib/revalidation/listings'
 import {
   sendApplicationApprovedEmail,
   sendApplicationInReviewEmail,
   sendApplicationRejectedEmail,
   sendInfoRequestedEmail,
+  sendApplicantDraftsSubmittedEmail,
 } from '@/lib/email'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { logAudit } from '@/lib/audit'
 import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
+import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
+import { submitApplicantDrafts } from '@/lib/listings/submit-applicant-drafts'
 
 // Create service role client that bypasses RLS
 function getServiceClient() {
@@ -98,23 +102,23 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     // Get total users count
     const { count: usersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' }).limit(1)
 
     stats.totalUsers = usersCount || 0
 
     // Get active sellers count (users with seller role)
     const { count: sellersCount } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'seller')
+      .select('*', { count: 'exact' })
+      .eq('role', 'seller').limit(1)
 
     stats.activeSellers = sellersCount || 0
 
     // Get open disputes count
     const { count: disputesCount } = await supabase
       .from('disputes')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'under_review'])
+      .select('*', { count: 'exact' })
+      .in('status', ['open', 'under_review']).limit(1)
 
     stats.openDisputes = disputesCount || 0
 
@@ -582,7 +586,25 @@ export async function approveApplication(
    * actual fee perk. This is where the two get connected, on approval.
    */
   asFounding = false,
-) {
+  options: {
+    /**
+     * ACC-02 — approval computes the identity check BEFORE the role is
+     * granted. When the ID + selfie are missing or not yet verified the
+     * action returns { requiresAcknowledgement: true, kycGap } and grants
+     * nothing; the admin UI shows the gap and may approve anyway by
+     * re-calling with this flag. KYC-before-listing stays an admin decision
+     * (owner ruling 2026-08-04) — this makes it an informed one.
+     */
+    acknowledgeKycGap?: boolean
+  } = {},
+): Promise<{
+  success: boolean
+  error?: string
+  founding?: boolean
+  message?: string
+  requiresAcknowledgement?: boolean
+  kycGap?: IdentityAssessment
+}> {
   try {
     const admin = await requireRole(['admin', 'super_admin'])
     const supabase = await createClient()
@@ -626,6 +648,23 @@ export async function approveApplication(
     // making the identity update the one guaranteed to have already landed.
     const serviceClient = getServiceClient()
 
+    // ACC-02 — identity check BEFORE anything is granted: a verified ID and
+    // selfie (or an approved Didit session). Service client so RLS on the
+    // documents table cannot hide a row from the decision.
+    const { data: kycDocs } = await serviceClient
+      .from('seller_kyc_documents')
+      .select('document_type, file_path, verified')
+      .eq('application_id', applicationId) as any
+    const kyc = assessIdentityForApproval(kycDocs ?? [])
+    if (!kyc.verified && !options.acknowledgeKycGap) {
+      return {
+        success: false,
+        requiresAcknowledgement: true,
+        kycGap: kyc,
+        error: 'Identity documents are missing or not verified',
+      }
+    }
+
     const { data: currentProfile } = await serviceClient
       .from('profiles')
       .select('badges')
@@ -661,6 +700,8 @@ export async function approveApplication(
       }
     }
 
+    const entryTier = await getEntryTier(serviceClient)
+
     const { error: roleError } = await (serviceClient
       .from('profiles')
       .update as any)({
@@ -669,9 +710,14 @@ export async function approveApplication(
         shop_name: shopName,
         shop_slug: shopSlug,
         // Approval means KYC passed → mark verified (drives the blue Verified
-        // badge) and start them at the entry gemstone tier.
+        // badge) and start them at the entry rank. The rank name is read live
+        // from seller_tier_config — hard-coding it broke approval outright when
+        // the ladder was re-keyed (profiles_seller_tier_check).
         is_verified: true,
-        seller_tier: DEFAULT_TIER,
+        seller_tier: entryTier,
+        // ACC-02 — what the identity check actually found. 'pending' when the
+        // admin approved over a gap; nothing gates on it yet (owner decision).
+        kyc_status: kyc.verified ? 'approved' : 'pending',
         // Only ever set founding true here — never false, so this can't revoke
         // a founding status granted elsewhere.
         ...(grantFounding ? { founding_seller: true } : {}),
@@ -685,12 +731,9 @@ export async function approveApplication(
 
     // Which verifications are complete, from the actually-uploaded KYC docs
     // (parity with the legacy admin-sellers copy this action replaced).
-    const { data: kycDocs } = await supabase
-      .from('seller_kyc_documents')
-      .select('document_type')
-      .eq('application_id', applicationId) as any
-    const docTypes: string[] = kycDocs?.map((d: any) => d.document_type) || []
-    const identity_verified = docTypes.some((t) => ['id_front', 'id_back', 'selfie_with_id'].includes(t))
+    // Identity is the real assessment above, not "a document exists".
+    const docTypes: string[] = (kycDocs ?? []).map((d: any) => d.document_type)
+    const identity_verified = kyc.verified
     const address_verified = docTypes.includes('proof_of_address')
     const business_verified = docTypes.some((t) => ['certificate_of_incorporation', 'business_license', 'director_id'].includes(t))
     const tax_verified = docTypes.some((t) => ['w9_form', 'w8ben_form', 'bank_statement'].includes(t))
@@ -715,12 +758,31 @@ export async function approveApplication(
 
     // Send email notification
     const userEmail = (application.profiles as any)?.email || application.alternate_email
+    const sellerName = application.full_legal_name || (application.profiles as any)?.full_name || 'Seller'
     if (userEmail) {
       await sendApplicationApprovedEmail({
         to: userEmail,
-        name: application.full_legal_name || (application.profiles as any)?.full_name || 'Seller',
+        name: sellerName,
         displayName: application.display_name,
       })
+    }
+
+    // GRO-08 — the drafts built during review go out now, through the normal
+    // publish rules (validator + publish policy). Best-effort: the approval
+    // is already committed; a failure here is logged, never surfaced as a
+    // failed approval, and the seller still has the drafts.
+    try {
+      const drafts = await submitApplicantDrafts(serviceClient as never, application.user_id)
+      if (userEmail && drafts.submitted.length + drafts.skipped.length > 0) {
+        await sendApplicantDraftsSubmittedEmail({
+          to: userEmail,
+          name: sellerName,
+          submitted: drafts.submitted,
+          skipped: drafts.skipped,
+        })
+      }
+    } catch (draftErr) {
+      console.error('[approveApplication] applicant drafts submission failed:', draftErr)
     }
 
     // Best-effort audit trail
@@ -729,7 +791,12 @@ export async function approveApplication(
         action: 'seller_application_approved',
         table_name: 'seller_applications',
         record_id: applicationId,
-        new_data: { status: 'approved', notes: notes || null },
+        new_data: {
+          status: 'approved',
+          notes: notes || null,
+          identity_verified: kyc.verified,
+          ...(kyc.verified ? {} : { kyc_gap_acknowledged: true, kyc_missing: kyc.missing, kyc_unverified: kyc.unverified }),
+        },
       })
     } catch (auditErr) {
       console.error('[approveApplication] audit log failed:', auditErr)
@@ -779,7 +846,11 @@ export async function approveApplication(
 
     revalidatePath('/admin/sellers')
     revalidatePath(`/admin/sellers/${applicationId}`)
-    if (grantFounding) revalidatePath('/') // storefronts render the founding badge
+    // The founding badge renders on THIS seller's storefront and beside their
+    // offers — not on every page (build audit 2026-09-22, §4).
+    if (grantFounding && application.user_id) {
+      await revalidateSellerStorefront(getServiceClient() as never, application.user_id)
+    }
 
     return {
       success: true,

@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * ShopLink — wraps seller chips/cards in a link to the seller's canonical
  * storefront, and degrades to a plain element when there is no slug.
