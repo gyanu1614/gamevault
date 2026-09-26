@@ -50,26 +50,35 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/account/analytics') ||
         pathname.startsWith('/account/earnings')
 
+      // ACC-07 — the sell surface (/sell, /sell/new, /sell/bulk, /sell/edit/*;
+      // /sell/fees is public and never reaches here). Exact segment match: a
+      // bare startsWith('/sell') would also catch /seller and /seller-agreement.
+      const isSellSurface = pathname === '/sell' || pathname.startsWith('/sell/')
+
       // CRITICAL: Block restricted/banned sellers from creating/editing listings
       const isListingMutation = pathname.startsWith('/account/listings/new') ||
-                                pathname.startsWith('/sell/') ||
+                                isSellSurface ||
                                 pathname.includes('/edit')
 
-      // Beta C — single source of truth: profiles.role is what admin approval
-      // flips (admin-seller-review.ts) and what the client trusts
-      // (use-auth.tsx, SellerOnlyGate). Previously this gate queried
-      // seller_applications.status='approved' while the client trusted
-      // profiles.role — a freshly-approved user with the role set could still
-      // be bounced (or vice-versa). Now both read the same column. One
-      // profiles read covers the seller-only gate AND the restriction check.
+      // ONE source of truth for "may this account sell?": the sell_access_kind
+      // RPC (migration 20260925204757), pinned to the caller. The same answer
+      // gates the listings trigger, the INSERT policy, the storage policy and
+      // the server actions, so the page gate can never disagree with them.
+      //   seller | seller_blocked  profiles.role = 'seller' (status decides)
+      //   admin                    active admin (may publish, parity with RLS)
+      //   applicant                application in the pipeline: wizard + drafts
+      //   none                     everyone else
       if (isSellerOnlyRoute || isListingMutation) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, seller_status')
-          .eq('id', user.id)
-          .single() as any
+        // (cast: the edge client is typed from database.types.ts, which does
+        // not carry the Functions map; the RPC is pinned server-side anyway.)
+        const { data: kindRaw } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>)(
+          'sell_access_kind',
+          { p_user: user.id },
+        )
+        const kind: string = typeof kindRaw === 'string' ? kindRaw : 'none'
+        const hasSellerRole = kind === 'seller' || kind === 'seller_blocked'
 
-        if (isSellerOnlyRoute && profile?.role !== 'seller') {
+        if (isSellerOnlyRoute && !hasSellerRole) {
           // Not an approved seller — push to home with a query flag
           // so the homepage can surface a toast if it wants to.
           const homeUrl = new URL('/', request.url)
@@ -77,9 +86,15 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(homeUrl)
         }
 
-        if (isListingMutation && profile?.seller_status && profile.seller_status !== 'active') {
+        if (isListingMutation && kind === 'seller_blocked') {
           // Redirect restricted/banned sellers to restrictions page
           return NextResponse.redirect(new URL('/account/restrictions', request.url))
+        }
+
+        if (isSellSurface && !(kind === 'seller' || kind === 'admin' || kind === 'applicant')) {
+          // Buyers and accounts with no application in the pipeline start
+          // at the seller application, not inside the wizard.
+          return NextResponse.redirect(new URL('/account/become-seller', request.url))
         }
       }
 
