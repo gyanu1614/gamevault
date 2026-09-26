@@ -1,6 +1,6 @@
 # /sell security hardening — handoff
 
-**Date:** 2026-09-25 · **Branch:** `fix/sell-security` (worktree `../gamevault-sell-security`, stack slot 34) · **PR:** https://github.com/gyanu1614/gamevault/pull/100 · **Not merged, no `db push`, nothing emailed.** One commit per finding; audit = `docs/audit/sell-full-audit.md` §4–5.
+**Date:** 2026-09-25 · **Branch:** `fix/sell-security` (worktree `../gamevault-sell-security`, stack slot 34) · **PR:** https://github.com/gyanu1614/gamevault/pull/100 · **Not merged, no `db push`, nothing emailed.** `origin/main` (PR #99, `760ca791`) merged in: the validator is the server's min-order rule, #99's `resolveMinQuantity` stays the wizard's client rule (floor defaults to 1 when the game has no config — aligned), #99's category landing path kept. One commit per finding; audit = `docs/audit/sell-full-audit.md` §4–5.
 
 ## Findings closed
 | ID | What holds now |
@@ -22,7 +22,7 @@
 `supabase/migrations/20260925204757_sell_security_listing_guard.sql` — revoke + policy drops, `validate_listing_write` trigger, `sell_access_kind[_of]`, price CHECK, price-history fix, listing-images policy split, applicant INSERT policy, `sell_security_version` probe. Applied from scratch by `pnpm test:full`. Grants posture allow-list carries `sell_access_kind`.
 
 ## Verification
-`tsc` clean · guards: `sell-security-listing-guard` (12) · `sell-security-seller-status` (7) · `sell-security-checkout` (2) · `sell-security-access` (7) · units: validate (18), images (6), listings.update (9), listings.status (5), sell-wizard.publish (17), sell-wizard.upload (6), middleware.sell-gate (12), submit-applicant-drafts (6), admin-seller-review.approve (4), seller-verification.assess (4). Full `pnpm test:full` on a fresh stack: 215 files / 1930 tests passed, 2 skipped, 0 failed. Types regenerated (`--db-url`; see gotcha).
+`tsc` clean · guards: `sell-security-listing-guard` (12) · `sell-security-seller-status` (7) · `sell-security-checkout` (2) · `sell-security-access` (7) · units: validate (18), images (6), listings.update (9), listings.status (5), sell-wizard.publish (17), sell-wizard.upload (6), middleware.sell-gate (12), submit-applicant-drafts (6), admin-seller-review.approve (4), seller-verification.assess (4). Full `pnpm test:full` on a fresh stack (after the main merge): 217 files / 1962 tests passed, 2 skipped, 0 failed. Types regenerated (`--db-url`; see gotcha).
 
 ## Your decisions
 1. **ACC-10 (reported, not implemented).** The public SELECT policy (`status = 'active'`) exposes every column: `approved_by, approved_at, rejected_by, rejected_at, rejection_reason, moderation_notes, changes_requested_by, changes_requested_at, metadata, template_version_used, views, sales, delivery_method_type`. Recommended: a `public_listings` view `WITH (security_invoker = true)` selecting only the marketplace columns, and `REVOKE SELECT` on the base table from `anon` (keep `authenticated` for owner/admin reads via RLS) — every public reader in `@/lib/supabase/anon` switches to the view. Needs a Step-7a-style sweep of readers; own PR.
