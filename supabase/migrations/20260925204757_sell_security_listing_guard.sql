@@ -30,6 +30,9 @@
 -- ACC-06 — $0 listings: CHECK (price > 0) replaces the baseline's >= 0; the
 --   validator adds the $0.01 floor, numeric(12,4) rounding and the per-game
 --   currency floor / ceiling.
+-- ACC-05 — minimum order size: min_quantity <= quantity unless unlimited (the
+--   config floor, the bundle-id check and the cap live in the validator;
+--   createCheckout now refuses quantity < min_quantity).
 -- ============================================================================
 
 -- ── ACC-03: no direct UPDATE for JWT callers ────────────────────────────────
@@ -108,6 +111,21 @@ BEGIN
       RAISE EXCEPTION 'listings: this category is not enabled for this game'
         USING ERRCODE = '23514';
     END IF;
+  END IF;
+
+  -- ACC-05 (every caller): a listing nobody can buy — minimum order above
+  -- the stock — is refused on INSERT and whenever the minimum is set, and for
+  -- JWT callers whenever the stock is set. A sold-out row (quantity 0) and
+  -- unlimited stock are exempt; a trusted stock decrement below the minimum
+  -- (an order completing) is a legitimate state and is left alone.
+  IF (TG_OP = 'INSERT'
+      OR NEW.min_quantity IS DISTINCT FROM OLD.min_quantity
+      OR (NOT v_trusted AND NEW.quantity IS DISTINCT FROM OLD.quantity))
+     AND NOT COALESCE(NEW.is_unlimited, false)
+     AND COALESCE(NEW.quantity, 0) > 0
+     AND COALESCE(NEW.min_quantity, 1) > NEW.quantity THEN
+    RAISE EXCEPTION 'listings: minimum order (%) cannot exceed the stock (%)', NEW.min_quantity, NEW.quantity
+      USING ERRCODE = '23514';
   END IF;
 
   -- ACC-03 (every caller): delivery_method is a closed set.

@@ -88,6 +88,28 @@ describe.skipIf(!hasEnv)('sell security Part 1 — listing validator + DB guard 
     })
   })
 
+  describe('ACC-05 — a minimum order above the stock is refused, for any caller', () => {
+    it('INSERT min > quantity fails; raising the minimum above stock fails; a sold-out row is exempt', async () => {
+      if (!ready) return
+      const ins = await fx!.svc.from('listings').insert({
+        seller_id: fx!.seller.id, game_id: gameId, game_category_id: pairId,
+        title: fx!.ns.listingTitle(), description: 'x', price: 1, quantity: 5, min_quantity: 10, status: 'draft',
+      }).select('id')
+      expect(ins.error?.code).toBe('23514')
+      const id = await mkListing({ quantity: 5, min_quantity: 2 })
+      const upd = await fx!.svc.from('listings').update({ min_quantity: 9 }).eq('id', id).select('id')
+      expect(upd.error?.code).toBe('23514')
+      expect((await row(id)).min_quantity).toBe(2)
+      // a trusted stock decrement below the minimum (an order completing) is allowed
+      expect((await fx!.svc.from('listings').update({ quantity: 1 }).eq('id', id)).error).toBeNull()
+      // sold out: quantity 0 with any minimum is fine
+      expect((await fx!.svc.from('listings').update({ quantity: 0 }).eq('id', id)).error).toBeNull()
+      // unlimited stock never conflicts
+      const unl = await mkListing({ quantity: 1, min_quantity: 100, is_unlimited: true })
+      expect((await row(unl)).min_quantity).toBe(100)
+    })
+  })
+
   describe('ACC-03 — seller edits cannot bypass validation', () => {
     it('a seller cannot UPDATE their own listing through PostgREST at all — not even the price', async () => {
       if (!ready) return

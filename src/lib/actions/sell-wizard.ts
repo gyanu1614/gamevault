@@ -702,19 +702,6 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       }
     }
 
-    // V14 — Enforce minimum 100-unit order for currency listings. Mirrors
-    // the wizard floor so the client and server agree.
-    // V19/P24/P5 — Bundle listings sell whole-bundle-only, so the
-    // 100-floor doesn't apply (a bundle of "600 V-Bucks" is one unit).
-    let resolvedMinQuantity = v.min_quantity
-    if (
-      gameCategory.type === 'currency' &&
-      !v.bundle_id &&
-      resolvedMinQuantity < 100
-    ) {
-      resolvedMinQuantity = 100
-    }
-
     // V13 — Currency listings auto-fill title + image from the game record
     // so sellers don't have to. The wizard hides those fields in the UI.
     const { title: resolvedTitle, images: resolvedImages } =
@@ -733,7 +720,9 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       price: v.price,
       original_price: v.original_price,
       quantity: v.quantity,
-      min_quantity: resolvedMinQuantity,
+      // ACC-05 — the validator resolved this from category_configs
+      // (min_quantity floor, bundle → 1, capped at stock).
+      min_quantity: v.min_quantity,
       delivery_method: v.delivery_method,
       delivery_time: v.delivery_time,
       images: resolvedImages,
@@ -840,14 +829,6 @@ export async function updateListingFromWizard(
     if (!validated.ok) return { success: false, error: validated.error }
     const v = validated.value
 
-    // V14k — Same currency-floor enforcement as publish.
-    // V19/P24/P5 — Bundle listings skip the 100-floor (each bundle
-    // is its own atomic unit).
-    let resolvedMinQuantity = v.min_quantity
-    if (categoryType === 'currency' && !v.bundle_id && resolvedMinQuantity < 100) {
-      resolvedMinQuantity = 100
-    }
-
     const { title: resolvedTitle, images: resolvedImages } =
       await resolveCurrencyTitleAndImages(supabase, existing.game_id, categoryType, rules.currencyConfig, v)
 
@@ -867,7 +848,7 @@ export async function updateListingFromWizard(
       price: v.price,
       original_price: v.original_price,
       quantity: v.quantity,
-      min_quantity: resolvedMinQuantity,
+      min_quantity: v.min_quantity,
       delivery_method: v.delivery_method,
       delivery_time: v.delivery_time,
       images: resolvedImages,

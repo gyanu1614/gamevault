@@ -51,7 +51,7 @@ describe('ACC-03 — delivery method / window are closed sets', () => {
   it('title 5..100 outside currency; images are http(s) URLs, at most 10', () => {
     expect(validateListingWrite({ ...base, title: 'abc' }, ITEMS)).toMatchObject({ ok: false })
     expect(validateListingWrite({ ...base, title: 'x'.repeat(101) }, ITEMS)).toMatchObject({ ok: false })
-    expect(validateListingWrite({ ...base, title: '' }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true })
+    expect(validateListingWrite({ ...base, title: '', quantity: 1000, min_quantity: 100 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true })
     expect(validateListingWrite({ ...base, images: ['javascript:alert(1)'] }, ITEMS)).toMatchObject({ ok: false })
     expect(validateListingWrite({ ...base, images: Array(11).fill('https://x.y/a.png') }, ITEMS)).toMatchObject({ ok: false })
   })
@@ -109,6 +109,44 @@ describe('ACC-06 — server-side price validation', () => {
     expect(validateListingPatch({ price: 0 }, ITEMS, existing)).toMatchObject({ ok: false })
     expect(validateListingPatch({ price: 2.00005 }, ITEMS, existing)).toMatchObject({ ok: true, value: { price: 2.0001 } })
     expect(validateListingPatch({ price: 0.05 }, CURRENCY, existing)).toMatchObject({ ok: false })
+  })
+})
+
+describe('ACC-05 — minimum order size comes from the config, bundle ids from the config (BUG-02/06/08 server side)', () => {
+  const FLEX = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 1, quantity_granularity: 'thousand' as const, bundles: [] } }
+  const FLEX_500 = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 500, bundles: [] } }
+  const BUNDLED = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 100, bundles: [{ id: 'vb-800', name: '800 V-Bucks', amount: 800 }] } }
+  const cur = { ...base, title: '', price: 0.01 }
+
+  it('flexible currency: the admin floor replaces the literal 100 (min 1 stays 1, a 10K stock is buyable)', () => {
+    expect(validateListingWrite({ ...cur, quantity: 10, min_quantity: 1 }, FLEX)).toMatchObject({ ok: true, value: { min_quantity: 1, bundle_id: null } })
+    // a crafted request cannot undercut a floor above 100
+    expect(validateListingWrite({ ...cur, quantity: 5000, min_quantity: 50 }, FLEX_500)).toMatchObject({ ok: true, value: { min_quantity: 500 } })
+    // no config row → the default floor (100) applies
+    expect(validateListingWrite({ ...cur, quantity: 5000, min_quantity: 1 }, { categoryType: 'currency', currencyConfig: null })).toMatchObject({ ok: true, value: { min_quantity: 100 } })
+  })
+
+  it('stock below the floor cannot be listed; the minimum is capped at the stock', () => {
+    expect(validateListingWrite({ ...cur, quantity: 50, min_quantity: 1 }, FLEX_500)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, quantity: 3, min_quantity: 10 }, ITEMS)).toMatchObject({ ok: true, value: { min_quantity: 3 } })
+    expect(validateListingWrite({ ...cur, quantity: 600, min_quantity: 900 }, FLEX_500)).toMatchObject({ ok: true, value: { min_quantity: 600 } })
+  })
+
+  it('bundle mode: bundle_id is required and must exist in the config; a bundle sells whole (min 1)', () => {
+    expect(validateListingWrite({ ...cur, quantity: 3, min_quantity: 1, bundle_id: null }, BUNDLED)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...cur, quantity: 3, min_quantity: 1, bundle_id: 'from-another-game' }, BUNDLED)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...cur, quantity: 3, min_quantity: 7, bundle_id: 'vb-800' }, BUNDLED)).toMatchObject({ ok: true, value: { min_quantity: 1, bundle_id: 'vb-800' } })
+  })
+
+  it('a bundle_id on a flexible currency or any other category is refused', () => {
+    expect(validateListingWrite({ ...cur, quantity: 1000, min_quantity: 1, bundle_id: 'vb-800' }, FLEX)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...base, bundle_id: 'vb-800' }, ITEMS)).toMatchObject({ ok: false })
+  })
+
+  it('patch: min/quantity edits obey the same floor and cap', () => {
+    expect(validateListingPatch({ min_quantity: 10 }, ITEMS, existing)).toMatchObject({ ok: true, value: { min_quantity: 5 } })
+    expect(validateListingPatch({ quantity: 50 }, FLEX_500, { ...existing, quantity: 1000, min_quantity: 500 })).toMatchObject({ ok: false })
+    expect(validateListingPatch({ quantity: 50 }, ITEMS, { ...existing, is_unlimited: true })).toMatchObject({ ok: true })
   })
 })
 

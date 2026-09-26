@@ -28,7 +28,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture } from './throwaway'
+import { hasEnv, makeFixture, promoteToEstablishedSeller, type Fixture, activateFixtureListing } from './throwaway'
 
 // ── fault switches (set by each test, read by the mocks) ──────────────────
 let sessionClient: SupabaseClient | null = null
@@ -187,7 +187,7 @@ describe.skipIf(!hasEnv)('DB-015/016/017 — money-path seams are atomic (integr
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('money_atomicity_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    await fx.svc.from('listings').update({ status: 'active' }).eq('id', fx.listingId)
+    await activateFixtureListing(fx.svc, fx.listingId, fx.admin.id)
     const { data: m } = await fx.svc.from('withdrawal_methods').select('id').limit(1).maybeSingle()
     if (m) methodId = (m as any).id
     else {

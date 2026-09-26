@@ -147,6 +147,11 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     if (!listing.is_unlimited && listing.quantity < quantity) {
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
     }
+    // ACC-05(e) — the seller's minimum order size was never enforced here.
+    const minQuantity = Math.max(1, Math.floor(Number(listing.min_quantity ?? 1)))
+    if (quantity < minQuantity) {
+      return { success: false, error: `This offer has a minimum order of ${minQuantity}` }
+    }
 
     // Server-computed amounts (promo clamped, no client money trusted). Fee
     // spec: the buyer pays the flat marketplace fee (lib/fees buyerFee, 2%)

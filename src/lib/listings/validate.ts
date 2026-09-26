@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 import { SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
-import type { CurrencyConfig } from '@/lib/types/category-configs'
+import { DEFAULT_CURRENCY_CONFIG, type CurrencyConfig } from '@/lib/types/category-configs'
 
 export const DELIVERY_METHODS = ['manual', 'instant'] as const
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number]
@@ -133,6 +133,50 @@ export function resolvePrice(raw: number, ctx: ListingRuleContext, label = 'pric
   return { ok: true, value: price }
 }
 
+/**
+ * ACC-05 / BUG-02 — minimum order size and bundle id.
+ *
+ *   currency, bundle mode   bundle_id must be one of config.bundles; a bundle
+ *                           sells whole, so min_quantity = 1 (BUG-06 server).
+ *   currency, flexible mode bundle_id must be null; the floor is the admin's
+ *                           config.min_quantity (default 100 — the literal
+ *                           100 that overrode the config is gone); stock
+ *                           below the floor cannot be listed (BUG-08).
+ *   every other category    bundle_id must be null; floor 1.
+ * The minimum is then capped at the stock unless the listing is unlimited.
+ */
+export function resolveMinimumAndBundle(
+  input: { min_quantity: number; quantity: number; bundle_id: string | null; is_unlimited?: boolean },
+  ctx: ListingRuleContext,
+): ValidationResult<{ min_quantity: number; bundle_id: string | null }> {
+  const isCurrency = ctx.categoryType === 'currency'
+  const bundles = isCurrency ? (ctx.currencyConfig?.bundles ?? []) : []
+  let floor = 1
+  let bundleId: string | null = null
+
+  if (bundles.length > 0) {
+    if (!input.bundle_id) return { ok: false, error: 'pick a bundle for this currency' }
+    if (!bundles.some((b) => b.id === input.bundle_id)) {
+      return { ok: false, error: 'that bundle does not exist for this game' }
+    }
+    bundleId = input.bundle_id
+  } else {
+    if (input.bundle_id) return { ok: false, error: 'bundle_id is not valid for this listing' }
+    if (isCurrency) {
+      const configured = Number(ctx.currencyConfig?.min_quantity)
+      floor = Number.isInteger(configured) && configured >= 1 ? configured : DEFAULT_CURRENCY_CONFIG.min_quantity
+    }
+  }
+
+  if (!input.is_unlimited && input.quantity > 0 && input.quantity < floor) {
+    return { ok: false, error: `stock must be at least ${floor} — the minimum order size for this game` }
+  }
+  let min = Math.max(Math.floor(input.min_quantity), floor)
+  if (!input.is_unlimited && input.quantity > 0) min = Math.min(min, input.quantity)
+  if (bundleId) min = 1
+  return { ok: true, value: { min_quantity: min, bundle_id: bundleId } }
+}
+
 /** 'instant' delivery has no window; a manual listing must promise one of
  *  SELLER_DELIVERY_WINDOWS (free text breaks the SLA / cancellation parsers). */
 export function resolveDeliveryTime(
@@ -177,6 +221,12 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
     originalPrice = op.value
   }
 
+  const minimum = resolveMinimumAndBundle(
+    { min_quantity: v.min_quantity, quantity: v.quantity, bundle_id: v.bundle_id ?? null },
+    ctx,
+  )
+  if (!minimum.ok) return minimum
+
   return {
     ok: true,
     value: {
@@ -185,14 +235,14 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
       price: price.value,
       original_price: originalPrice,
       quantity: v.quantity,
-      min_quantity: v.min_quantity,
+      min_quantity: minimum.value.min_quantity,
       delivery_method: v.delivery_method,
       delivery_time: delivery.value,
       images: v.images,
       template_data: v.template_data,
       region: v.region ?? null,
       platform: v.platform ?? null,
-      bundle_id: v.bundle_id ?? null,
+      bundle_id: minimum.value.bundle_id,
       status: v.status,
     },
   }
@@ -228,6 +278,7 @@ export interface ExistingListingForPatch {
   min_quantity: number
   is_unlimited: boolean
   delivery_method: DeliveryMethod | string
+  bundle_id?: string | null
 }
 
 /**
@@ -261,6 +312,22 @@ export function validateListingPatch(
     const op = resolvePrice(p.original_price, ctx, 'original price')
     if (!op.ok) return op
     p.original_price = op.value
+  }
+
+  if (p.min_quantity !== undefined || p.quantity !== undefined) {
+    const minimum = resolveMinimumAndBundle(
+      {
+        min_quantity: p.min_quantity ?? existing.min_quantity,
+        quantity: p.quantity ?? existing.quantity,
+        bundle_id: existing.bundle_id ?? null,
+        is_unlimited: existing.is_unlimited,
+      },
+      ctx,
+    )
+    if (!minimum.ok) return minimum
+    if (minimum.value.min_quantity !== (p.min_quantity ?? existing.min_quantity)) {
+      p.min_quantity = minimum.value.min_quantity
+    }
   }
 
   const method = (p.delivery_method ?? existing.delivery_method) as DeliveryMethod
