@@ -2,6 +2,8 @@
 @import "../styles/tokens.css";
 /* ── Shadcn/ui Compatibility Shim ── */
 @import "../styles/shadcn-compat.css";
+/* ── Theme V2 — "Quiet Trust" scoped override ── */
+@import "../styles/theme-v2.css";
 
 @tailwind base;
 @tailwind components;
@@ -16,7 +18,7 @@
     --gv-surface-2: var(--color-bg-overlay);
     --gv-surface-3: var(--color-bg-overlay-2);
     --gv-primary:   var(--color-accent-default);
-    --gv-primary-glow: rgba(198,255,61,0.35);
+    --gv-primary-glow: rgba(86,184,127,0.35);
     --gv-cyan:      var(--color-info);
     --gv-cyan-glow: rgba(88,155,255,0.3);
 
@@ -57,10 +59,19 @@
   --navbar-bottom: calc(60px + var(--beta-banner-offset, 0px));
   --navbar-height: 60px;
 
-  --color-glow-violet:      #1E1636;
-  --color-glow-violet-soft: #16112A;
-  --color-bg-top:           #100C18;
-  --color-bg-bottom:        #08080C;
+  /* Navbar surface vars — used by navbar-floating.tsx inline styles */
+  --navbar-bg:               rgba(31, 36, 44, 0.78);
+  --navbar-mobile-bg:        #171B21;
+  --navbar-dropdown-bg:      #1F242C;
+
+  /* Footer */
+  --footer-bg: #171B21;
+  --footer-top-glow: radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.06), transparent 70%);
+
+  --color-glow-violet:      #171B21;
+  --color-glow-violet-soft: #171B21;
+  --color-bg-top:           #171B21;
+  --color-bg-bottom:        #12161C;
   --color-vignette:         rgba(0,0,0,0.55);
 
   --gradient-hero-glow:
@@ -162,7 +173,7 @@
      longer paints a bright green box around inputs/buttons on click. */
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 1.5px rgba(198, 255, 61, 0.3);
+    box-shadow: 0 0 0 1.5px rgba(86, 184, 127, 0.3);
     border-radius: var(--radius-sm);
   }
 
@@ -302,6 +313,873 @@
 
 .has-backdrop { position: relative; }
 .has-backdrop > *:not(.hero-backdrop) { position: relative; z-index: 1; }
+
+/* ================================================================
+   PAGE LAYOUT PRIMITIVES
+   Three classes. Verified against GameBoost's live DOM, which runs
+   the same model: one stage, a naked rhythm column, and a measure
+   that sections opt INTO.
+
+   .page-stage   — the ONLY element that paints the page ground,
+                   clips, and owns the stacking context. No section
+                   ever sets a background, border or overflow; that
+                   is what produced every seam we chased. `isolate`
+                   scopes all z-index inside to this subtree, so
+                   content z-20 / bleeding rows z-10 stay predictable.
+
+   .page-rhythm  — full-width flex column. Owns vertical rhythm and
+                   NOTHING else: no max-width, no padding, no
+                   background. Uses gap (not space-y) because we hide
+                   whole sections per breakpoint and `space-y` leaves
+                   phantom margins on display:none siblings.
+
+   .page-measure — the content measure, applied BY a section that
+                   wants to be constrained. A section that says
+                   nothing is full-bleed. Full-bleed needs no escape
+                   hatch because there is nothing to escape.
+                   Matches the site-wide standard (max-w-7xl + gutters).
+
+   Ambient artwork belongs to the stage at a negative z-index, not to
+   a section — that is what lets it bleed across section boundaries
+   instead of being clipped at one.
+   ================================================================ */
+.page-stage {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--color-bg-base);
+  /* Always covers the viewport so the page never shows the body ground
+     beneath it. Tailwind min-h-* utilities override this when a page
+     wants more. */
+  min-height: 100vh;
+}
+
+/* TEMPORARY — homepage rebuild. Scroll room on the empty surface so the
+   ground and the navbar's scroll behaviour can be checked. Delete when
+   sections land. */
+.page-stage--rebuild-scroll {
+  min-height: 300vh;
+}
+
+/* ================================================================
+   ART BACKDROP MOTION
+   Two ambient loops shared by every full-bleed art surface (hero,
+   pre-footer CTA band) via ArtBackdrop. Authored-time loops with no
+   state, so they stay in CSS rather than the React render loop —
+   only the cursor parallax needs JS.
+   ================================================================ */
+@keyframes dm-breathe {
+  0%, 100% { transform: translate3d(0, 0.5%, 0) scale(1.014); }
+  50%      { transform: translate3d(0, -0.9%, 0) scale(1.036); }
+}
+
+@keyframes dm-lightdrift {
+  0%, 100% { transform: translate3d(-2.4%, 0.9%, 0); }
+  50%      { transform: translate3d(2.4%, -0.9%, 0); }
+}
+
+/* ================================================================
+   GRID SPOTLIGHT
+   A graph-paper grid that is invisible at rest and reveals as a soft
+   patch around the pointer, tracking it.
+
+   Lives on a full-bleed layer that extends past its section vertically
+   (GridSpotlight.tsx), which is what lets the reveal fade to nothing
+   well before any edge — a mask bounded by the section box can only
+   grow to ~50% x 39% before it clips an edge and draws the very
+   section boundary the layout rules forbid.
+
+   Two masks multiply: the spotlight (follows the cursor) and a soft
+   containment ellipse (keeps the grid away from the layer's own
+   edges). --spot-x/y are written by rAF-coalesced mousemove, so no
+   React render runs per frame.
+   ================================================================ */
+[data-grid-spotlight] {
+  --spot-x: 50%;
+  --spot-y: 50%;
+  --spot-opacity: 0;
+  --spot-radius: 280px;
+
+  opacity: var(--spot-opacity);
+  transition: opacity 320ms ease-out;
+
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.12) 0 1px,
+      transparent 1px 64px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.12) 0 1px,
+      transparent 1px 64px
+    );
+
+  -webkit-mask-image:
+    radial-gradient(
+      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 100%
+    ),
+    radial-gradient(ellipse 60% 46% at 50% 50%, #000 0%, #000 40%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(
+      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 100%
+    ),
+    radial-gradient(ellipse 60% 46% at 50% 50%, #000 0%, #000 40%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Hover-only by nature: never shown where there is no pointer to follow,
+   and never animated when the user has asked for less motion. */
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  [data-grid-spotlight] { display: none; }
+}
+
+/* ================================================================
+   SELLER CARD — bento shell
+
+   Shared by all three cards. The bento's shape lives in SellerCta;
+   this is only the shell: surface, border, radius, padding.
+
+   Surface and border are derived from --foreground rather than a
+   fixed hex, so the card tracks the palette. --foreground is
+   aliased to --color-text-primary in shadcn-compat.css, and the 8%
+   border lands on the same value as --color-border-subtle.
+   ================================================================ */
+.seller-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+/* ================================================================
+   CARD 1 — left breakout + diagonal split
+
+   The figure crosses the card's LEFT border and is cut on the right
+   by the same diagonal that draws the tonal split, so the split line
+   and the figure's edge are one line. Card 3 owns the wave; this is a
+   straight diagonal, deliberately a different device.
+   ================================================================ */
+/* Card 1 clips its own art now — no breakout, so no stacking context and no
+   overflow escape. `overflow: hidden` on the shell does the cut. */
+.seller-card--breakout-left {
+  overflow: hidden;
+}
+
+/* Card 2's 0% hero. `container-type` is what makes the numeral's 28cqw
+   resolve against the CARD rather than the viewport — a vw unit pinned at
+   its cap while the card shrank and let the glyph run into the title. */
+.seller-card--fee {
+  container-type: inline-size;
+}
+
+/* Gradient-filled glyph. background-clip:text needs a transparent colour,
+   and the -webkit- prefix is still required in Safari. */
+/* NOT `position: relative` — the element carries Tailwind's `absolute`, and
+   this rule has higher specificity, so it was pulling a 142px-tall glyph
+   back into the flow and growing the card. `absolute` still establishes a
+   containing block, so the ::before's `inset: 0` resolves against the
+   glyph exactly as before. */
+.seller-fee-numeral {
+  background-image: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.05) 55%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Shine sweep, masked to the glyph shape so the light travels THROUGH the
+   letterforms rather than across a rectangle over them. The mask is the
+   text itself, painted by the pseudo-element's own content. */
+.seller-fee-numeral::before {
+  content: "0%";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.14) 50%,
+    transparent 62%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* 11s total, but the sweep occupies only the first 35% of the cycle —
+     the remaining 65% holds still, so it reads as one slow pass rather
+     than a loop that keeps drawing the eye. */
+  animation: seller-fee-shine 11s linear infinite;
+}
+
+@keyframes seller-fee-shine {
+  0%   { background-position: -110% 0; }
+  35%  { background-position: 110% 0; }
+  100% { background-position: 110% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Gradient fill stays; the sweep goes entirely. */
+  .seller-fee-numeral::before { animation: none; content: none; }
+}
+
+.seller-card--breakout-left .seller-figure-left {
+  position: absolute;
+  /* 92% at rotate(30deg). 44% is the hard floor: sampling the asset's alpha
+     through the rotation, it is the last value with zero opaque pixels over
+     the title and body — 42% starts touching. Sitting on it, so any further
+     left shift needs the text column to narrow first. */
+  left: 44%;
+  top: 28%;
+  width: 92%;
+  height: auto;
+  max-width: none;
+  transform: rotate(30deg);
+  transform-origin: center;
+  /* Above the glow and pattern, below the text column. */
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Corner glow. Colour stops come from the step's own data, so the hue is a
+   content decision rather than a CSS constant. */
+
+/* Silhouette pattern. Masked from the lower LEFT on purpose, so it and the
+   glow occupy opposite corners instead of stacking. */
+.seller-card--breakout-left .seller-pattern {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  /* 72% tile of ak-pattern-v3: four whole rifles placed by maximising the
+     minimum wrap-aware distance between them, which lifted the closest pair
+     from 22% to 33% of the tile diagonal — v2's shapes clustered down the
+     left while its right-hand third sat empty. Each rifle is pasted at all
+     nine wrap offsets, so a shape crossing a seam is continued whole on the
+     other side instead of being cut. (v1 had the opposite problem: its own
+     artwork ran off all four edges, so every seam sliced a rifle in half.) */
+  background-size: 72% auto;
+  background-repeat: repeat;
+  background-position: center;
+  /* The reference silhouettes are DARKER than their ground (measured 44%
+     darker: ground rgb(20,160,169) vs silhouette rgb(10,90,121)), not
+     lighter. The asset ships white, and multiplying by white is a no-op, so
+     `invert(1)` flips it to black first — then it darkens like the
+     reference instead of glowing. */
+  filter: invert(1);
+  mix-blend-mode: multiply;
+  /* 0.30 against the saturated surface — it reads weaker there than it did
+     against graphite, where it ran at 0.55. */
+  opacity: 0.3;
+  -webkit-mask-image: radial-gradient(130% 110% at 28% 62%, #000 0%, #000 45%, transparent 88%);
+  mask-image: radial-gradient(130% 110% at 28% 62%, #000 0%, #000 45%, transparent 88%);
+}
+
+@media (min-width: 1100px) {
+  .seller-card--breakout .seller-figure {
+    right: -80px;
+  }
+}
+
+/* ── Compositing layers ──────────────────────────────────────────
+   The figure has to read as part of one photograph, not a cutout
+   dropped on a panel. Four passes do that, and the order matters:
+
+     base surface → light field (0) → colour spill (1) → wave →
+     figure (2) → grain (3) → text (4)
+
+   Desktop only: below the 2-column bento there is no breakout to
+   integrate and the figure is a quiet background element.
+   ──────────────────────────────────────────────────────────────── */
+@media (min-width: 900px) {
+  /* One light source, upper right — the direction the render is lit from.
+     Oversized and pushed off the corner so the falloff crosses the whole
+     card rather than sitting in it as a visible blob. */
+  /* Both light layers live in a wrapper that clips them to the card.
+     The card itself is `overflow: visible` so the FIGURE can break out —
+     which meant these oversized fields escaped too, painting a grey wash
+     73px above the card and over card 2. Only the figure gets to leave. */
+  .seller-light-clip {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .seller-light-field {
+    position: absolute;
+    top: -25%;
+    right: -15%;
+    width: 90%;
+    height: 130%;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 65% 35%,
+      rgba(190, 205, 225, 0.09) 0%,
+      rgba(150, 165, 190, 0.04) 40%,
+      transparent 70%
+    );
+  }
+
+  /* Dot grid — texture under everything. Masked to the middle band so it
+     never sits behind the copy or under the figure: transparent until 30%,
+     solid through 62%, gone by 78% (the wave enters at 62%). */
+  .seller-dot-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0.045;
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--foreground) 100%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      #000 30%,
+      #000 62%,
+      transparent 78%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      #000 30%,
+      #000 62%,
+      transparent 78%
+    );
+  }
+
+  /* Ambient coins. Above the surface and the dot grid, below the wave and
+     the figure. Monochrome and heavily knocked back — texture, not icons.
+
+     The tint is a filter chain rather than mix-blend-mode: overlay on this
+     near-black surface takes its multiply branch and crushed the coins to
+     near-invisible mush at these opacities, which killed the form the 3D
+     render is there to provide. sepia+hue-rotate keeps the modelling and
+     just cools it. */
+  .seller-coins {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .seller-decor {
+    position: absolute;
+    display: block;
+  }
+
+  /* The bottom-breaking object is cut by the SAME hard line as the figure:
+     identical clip-path, so both terminate on one shared edge rather than
+     each fading on its own. That shared line is what makes the two edge
+     breaks read as one composition. Negative insets leave top/left/right
+     free; 0 cuts at the bottom. */
+  .seller-decor--cut {
+    -webkit-clip-path: inset(-9999px -9999px 0 -9999px);
+    clip-path: inset(-9999px -9999px 0 -9999px);
+  }
+
+  .seller-coins img {
+    position: relative;
+    display: block;
+  }
+
+  /* Contact shadow — blur and alpha are per-object, set inline. */
+  .seller-decor-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    height: 10px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+  }
+
+  /* 'clipped' variant: coin A straddles the card's left border. The card is
+     overflow:visible so the figure can break out, which would let A float
+     over the page too — this wrapper clips it back to the card's bounds so
+     the border still draws across it. */
+  .seller-coins--clipped {
+    overflow: hidden;
+    border-radius: inherit;
+  }
+
+  /* Bounce light: her warm tones spilling left onto the surface. Sits above
+     the cool field so the two mix, and its right edge meets the wave. */
+  .seller-colour-spill {
+    position: absolute;
+    top: 0;
+    right: 38%;
+    width: 40%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 85% 55%,
+      rgba(210, 150, 100, 0.06) 0%,
+      transparent 65%
+    );
+  }
+}
+
+/* Grain over EVERYTHING including the figure — the single layer that stops
+   the render looking pasted on. Above the figure, below the text, so the
+   copy stays crisp.
+
+   soft-light, not overlay: on this near-black surface overlay's multiply
+   branch crushed the card several levels darker and the noise read as dirt.
+   soft-light keeps the same texture without shifting the base value. */
+.seller-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .seller-grain { display: none; }
+}
+
+/* The card's own border is drawn by a pseudo-element so it can fade out
+   under the figure: a 1px line cutting across her where she overhangs the
+   right edge is what breaks the composite. Full strength on the left two
+   thirds, gone by the right quarter. */
+/* Card 3 lets the figure break out: the 48px top overhang and the right
+   overhang both depend on this. `overflow: visible` was lost in the same
+   over-wide splice that removed the figure's geometry. */
+.seller-card--breakout {
+  border-color: transparent;
+  overflow: visible;
+  z-index: 2;
+  isolation: isolate;
+}
+.seller-card--breakout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  border-radius: inherit;
+  -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 25%);
+  mask-image: linear-gradient(to left, transparent 0%, #000 25%);
+}
+
+/* The grade sits the figure into the card's light: pulled slightly down in
+   saturation and brightness so her brightest pixel stays under the heading's
+   white, with a 1px dark drop-shadow feathering the cutout silhouette. */
+.seller-card--breakout .seller-figure {
+  z-index: 2;
+  filter: saturate(0.76) brightness(0.93) contrast(0.98)
+    drop-shadow(0 0 1px rgba(0, 0, 0, 0.3));
+}
+
+/* Card 3's figure. */
+.seller-card--breakout .seller-figure {
+  position: absolute;
+  right: -20px;
+  bottom: 0;
+  height: calc(100% + 48px);
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  object-position: bottom;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Left edge only — the wave curve is the boundary; the right edge is the
+     breakout and the top overflows, both crisp. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 22%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 22%);
+  /* Hard cut at the bottom, flush with the card border. */
+  -webkit-clip-path: inset(-9999px -9999px 0 -9999px);
+  clip-path: inset(-9999px -9999px 0 -9999px);
+  filter: saturate(0.76) brightness(0.93) contrast(0.98)
+    drop-shadow(0 0 1px rgba(0, 0, 0, 0.3));
+}
+
+/* Below the 2-column bento the breakout is off; the figure sits behind
+   full-width text as a quiet background element. */
+@media (max-width: 899px) {
+  .seller-card--breakout .seller-figure { opacity: 0.45; }
+}
+
+/* Mobile: no breakout, no wave clip, and the figure drops right back so the
+   full-width copy reads over it. The clip wrapper is neutralised here — the
+   curve is a two-column device and has nothing to divide in a single stack. */
+@media (max-width: 767px) {
+  .seller-card--breakout .seller-figure {
+    opacity: 0.3;
+    right: 0;
+    height: 100%;
+  }
+  .seller-card--breakout [style*="card3-wave"],
+  .seller-card--breakout .seller-wave-clip {
+    clip-path: none !important;
+    -webkit-clip-path: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .seller-card { padding: 24px; }
+}
+
+/* Row heights, so the header and all three cards clear one screen.
+
+   All three tiers live here rather than half here and half in Tailwind
+   min-h utilities: a `sm:min-h-[Npx]` utility has the same specificity as
+   these class rules and ships later in the cascade, so it silently won and
+   pinned the cards at one height on every viewport.
+
+   Fixed pixel heights only fit one viewport size — at 900px tall they were
+   fine, at 720px the section ran past the fold. From lg they scale with the
+   viewport instead, minus the parts that don't scale:
+
+     --seller-bento-overhead = navbar (57) + header block (66)
+                             + row gap (20) + breathing room (32)
+
+   The header block dropped from 121px to 66px when its subtext was removed,
+   so the overhead constant came down 63px with it — leaving that stale was
+   under-budgeting the rows and keeping card 3 flatter than it needed to be.
+
+   The remainder is split 53/47 between the two rows. The wide bottom card
+   stays shorter than the pair above it, but only just: at 240px against 320
+   it read as flattened. Clamped at both ends so the cards stay sane on very
+   short and very tall screens.
+
+   Below lg the bento is a single stack and scrolling is expected, so the
+   heights are plain. */
+.seller-card--row1 { min-height: auto; }
+.seller-card--row2 { min-height: auto; }
+
+/* Below 768px the cards are a single stack and content sizes them — no
+   fixed heights at all. */
+@media (min-width: 768px) {
+  .seller-card--row1 { min-height: 320px; }
+  .seller-card--row2 { min-height: 290px; }
+}
+
+@media (min-width: 1024px) {
+  .seller-card {
+    --seller-bento-overhead: 175px;
+  }
+  .seller-card--row1 {
+    min-height: clamp(280px, calc((100vh - var(--seller-bento-overhead)) * 0.47), 340px);
+  }
+  .seller-card--row2 {
+    /* 240px floor for the breakout card. */
+    min-height: clamp(260px, calc((100vh - var(--seller-bento-overhead)) * 0.42), 310px);
+  }
+}
+
+/* ================================================================
+   SELLER CARD — light variant (card 1)
+
+   Reassigns the shell's surface and spends both pseudo-elements on
+   the corner wash and the square grid.
+
+   BUILT LAYER BY LAYER — this is the bare surface. Colour comes next.
+
+   Values measured off the reference (card 3 of the three-card
+   image, sampled at 643px wide) and scaled to a 390px card:
+     card body    #FFFFFF   — pure white, not off-white
+     corner wash  ground 218/255  ->  rgba(0,0,0,0.14)
+     wash extent  flat to ~22% of card width, gone by ~50%
+     grid pitch   27px ref  ->  4.20% of card width  ->  16.5px
+     tile mark    9px ref (pitch / 3)  ->  5.5px, ~1px corner radius
+
+   The marks are WHITE SQUARES, not dark dots. In the reference the
+   grid is holes punched in the grey wash, showing the card through
+   it — which is why they vanish outside the wash instead of
+   carrying on across the card, and why no mask is needed here.
+   ================================================================ */
+/* Card 1 now matches cards 2 and 3: the white surface and its square grid
+   were removed — the card no longer reads as a light card. */
+.seller-card--light {
+  background-color: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+/* Grey corner wash — ONE corner, top-left. Flat near the corner, then out
+   to nothing: the reference holds a steady ~218 until roughly 22% of the
+   card's width and is clean white by 50%, which is the 44% inner stop below
+   (44% of the 50%-width radius).
+
+   One corner, not two: a symmetric pair leaves a bright notch at top-centre
+   that the reference doesn't have. Which corner varies per card in the
+   reference (card 2 uses top-right), so this is a choice, not a rule — add
+   the mirrored `at 100% 0%` stop to get both. */
+
+/* The square grid. White marks on a 16.5px pitch, drawn as an SVG tile
+   because CSS gradients can't tile a square with a gap around it without
+   stacking two repeating gradients. Invisible against the white card and
+   only readable where the wash sits behind them — exactly as in the
+   reference, so this layer needs no mask. */
+
+/* Pill button — inverted against its card. */
+/* Pill CTA — the section's only call to action, so it carries the accent.
+   It used to be pure white, which made it the brightest thing in the section
+   and put it ahead of the heading in the reading order. Green sits it back
+   behind the heading while staying clearly the action.
+
+   --color-text-inverse is the token's own paired ink ("ink on green fill").
+   The light card gets no override: green on white reads fine, and inverting
+   it there would reintroduce a second, competing treatment. */
+/* Solid accent fill. */
+.seller-btn {
+  position: relative;
+  isolation: isolate;
+  /* Solid fill, then a vertical gloss over it, then a 1px inset top
+     highlight. The shine border sits on top of all three as a border layer
+     and never touches the fill. */
+  background-color: var(--color-accent-default);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 46%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-archivo);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 28px;
+  transition: background-color 180ms;
+}
+
+/* ── Shine border ────────────────────────────────────────────────
+   A border-only band. The two-layer mask punches the fill out of a
+   padding-box rectangle, leaving just the 1px frame — so the shine
+   can never cross the fill or reach the label.
+   ──────────────────────────────────────────────────────────────── */
+.shine-border {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: var(--shine-width, 1px);
+  /* Soft stops: a band, not a hard line. */
+  background: linear-gradient(
+      115deg,
+      transparent 20%,
+      var(--shine-color, rgba(255, 255, 255, 0.24)) 42%,
+      var(--shine-color, rgba(255, 255, 255, 0.24)) 58%,
+      transparent 80%
+    )
+    0 0 / 300% 100% no-repeat;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: shine-sweep var(--shine-duration, 9s) linear infinite;
+}
+
+/* Travel occupies the first 40% of the cycle; the remaining 60% holds
+   off-screen. One slow pass per cycle rather than continuous motion. */
+@keyframes shine-sweep {
+  0%   { background-position: 150% 0; }
+  40%  { background-position: -150% 0; }
+  100% { background-position: -150% 0; }
+}
+
+/* Attention response: a quicker, slightly stronger pass. */
+.seller-btn:hover .shine-border {
+  --shine-color: rgba(255, 255, 255, 0.3);
+  animation-duration: 3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine-border {
+    animation: none;
+    /* Static 1px border at the resting colour — no movement at all. */
+    background: var(--shine-color, rgba(255, 255, 255, 0.24));
+  }
+  .seller-btn:hover .shine-border { animation: none; }
+}
+.seller-btn:hover  { background-color: var(--color-accent-hover); }
+.seller-btn:active { background-color: var(--color-accent-pressed); }
+
+/* Game card hover: art sits very slightly dimmed at rest and comes to full
+   strength under the pointer. Card art is NOT normalised the way hero art
+   is — there's no copy over it to protect, so the game's own colours read
+   at full saturation. The rest-state filter is an inline style, which a
+   utility class can't override; this rule can. */
+.group:hover [data-card-art] {
+  filter: brightness(1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-card-art] { transition: none !important; }
+}
+
+/* Hero atmosphere: a wide diagonal highlight drifting across the art. */
+@keyframes dm-sheen {
+  0%, 100% { transform: translate3d(-8%, 0, 0); }
+  50%      { transform: translate3d(8%, 0, 0); }
+}
+
+/* Drifting specks. Fade in and out so they never pop at the loop seam. */
+@keyframes dm-mote {
+  0%, 100% { transform: translate3d(0, 0, 0);        opacity: 0; }
+  15%      {                                          opacity: 0.5; }
+  50%      { transform: translate3d(6px, -22px, 0);  opacity: 0.9; }
+  85%      {                                          opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-band-art],
+  [data-light-drift],
+  [data-hero-sheen],
+  [data-hero-mote] {
+    animation: none !important;
+    transform: none !important;
+    translate: none !important;
+  }
+  /* Motes park at their keyframed opacity of 0 when the animation is off,
+     which would hide them entirely — hold them visible but still instead. */
+  [data-hero-mote] { opacity: 0.5 !important; }
+}
+
+.page-rhythm {
+  display: flex;
+  flex-direction: column;
+  gap: 5rem; /* gap-20 */
+}
+
+.page-measure {
+  width: 100%;
+  max-width: 80rem; /* max-w-7xl */
+  margin-inline: auto;
+  padding-inline: 1rem; /* px-4 */
+}
+
+@media (min-width: 640px) {
+  .page-rhythm { gap: 8rem; } /* sm:gap-32 */
+  .page-measure { padding-inline: 1.5rem; } /* sm:px-6 */
+}
+
+@media (min-width: 1280px) {
+  .page-measure { padding-inline: 2rem; } /* xl:px-8 */
+}
+
+/* ── Section titles ───────────────────────────────────────────────────
+   ONE treatment for every page-level section title on the homepage, so the
+   page reads as a set rather than five sections that each chose their own
+   scale. Before this, the five titles ran at 18px, clamp(22-34),
+   clamp(26-36) and clamp(28-40) with two different weights.
+
+   Per the type rules in CLAUDE.md, a section title is the one place the
+   scale may move with the viewport, via a modest clamp — hence a raw
+   clamp() here rather than a fontSize token, which cannot express one.
+
+   The title is ALWAYS centred, including in sections that carry an action
+   link; the link sits at the right of the same row and is taken out of flow
+   so it cannot push the title off centre.
+
+   Flat white at this size read as bland, so the glyphs carry a vertical
+   sheen — bright at the cap line falling to a cooler grey at the baseline,
+   the same top-lit direction the cards and numerals use. `background-clip:
+   text` paints the gradient INTO the glyphs. */
+.section-title {
+  --section-title-accent: var(--color-accent-text);
+  position: relative;
+  /* Own stacking context, so the bloom's z-index:-1 is scoped to THIS
+     element. Without it the bloom resolves against `.page-stage`, which
+     paints a background and sets `isolation: isolate`, and a negative
+     index there renders the bloom behind that background — invisible. */
+  isolation: isolate;
+  text-align: center;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  /* Fallback for any engine that drops the clip: a visible colour is set
+     first, so the text can never render transparent-on-transparent. */
+  color: var(--color-text-primary);
+  background-image: linear-gradient(
+    177deg,
+    #ffffff 0%,
+    #eef2f7 42%,
+    #b9c2cf 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* The accent mark sits BEHIND the title as a soft elliptical bloom, not as
+   a rule beneath it. A rule only worked on the two titles with nothing
+   under them — the four that carry subtext or an action link had to opt out,
+   which defeated the point of one shared treatment. A bloom sits behind the
+   glyphs, so every title can carry it regardless of what follows.
+
+   Deliberately weak (0.16): at full strength it reads as a highlighter.
+   `blur` keeps it shapeless so it never looks like a drawn object. */
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(420px, 78%);
+  height: 118%;
+  transform: translate(-50%, -50%);
+  /* Safe here: the title isolates, so -1 is behind the title's own text
+     but NOT behind `.page-stage`'s background. */
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--section-title-accent) 16%, transparent) 0%,
+    transparent 70%
+  );
+  filter: blur(26px);
+}
+
+/* Opt-out for any surface where the bloom would land on busy art. */
+.section-title--bare::before {
+  content: none;
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .section-title {
+    -webkit-text-fill-color: currentColor;
+    background-image: none;
+  }
+}
 
 /* V22 — Optional extra dim for a specific hero (e.g. account area), applied
    via HeroBackdrop's className. Adds a small uniform scrim on top of the
@@ -492,9 +1370,9 @@
   @keyframes ticker-scroll { to { transform: translateX(-50%); } }
 
   @keyframes pulse-dot {
-    0%   { box-shadow: 0 0 0 0 rgba(198,255,61,0.45); }
-    70%  { box-shadow: 0 0 0 7px rgba(198,255,61,0); }
-    100% { box-shadow: 0 0 0 0 rgba(198,255,61,0); }
+    0%   { box-shadow: 0 0 0 0 rgba(86,184,127,0.45); }
+    70%  { box-shadow: 0 0 0 7px rgba(86,184,127,0); }
+    100% { box-shadow: 0 0 0 0 rgba(86,184,127,0); }
   }
   @keyframes pulse-success {
     0%   { box-shadow: 0 0 0 0 rgba(63,217,134,0.5); }
@@ -803,4 +1681,405 @@
     --navbar-bottom: calc(84px + var(--beta-banner-offset, 0px));
     --navbar-height: 84px;
   }
+}
+
+/* ── Buyer steps ──────────────────────────────────────────────────────
+   The numeral is the ground layer. It sits BEHIND the card, offset up and
+   left so the card overlaps its lower-right, and fades toward its own
+   bottom. The fade is a mask, not an opacity: opacity dims every part of
+   the glyph equally and reads flat, while a mask keeps the top edge solid
+   and lets the foot dissolve into the page — which is what makes it read
+   as carved out rather than painted on. */
+.buyer-step {
+  /* The numeral overflows the grid cell on purpose; the row must not clip
+     it, and it must not create page-level scroll either. */
+  overflow: visible;
+}
+
+.buyer-step__num {
+  position: absolute;
+  /* left: the sliver showing beside the card, measured off the reference
+     (59px of a 299px card = 20% of card width).
+     top: 40, not 22 — the glyph's INK is 154px tall inside a 173px line box,
+     so the span's own top is not where the ink starts. Centring the ink in
+     a 252px card puts its top at (252-154)/2 = 49, which needs the span at
+     40. At 22 the numeral sat 18px high of the card's centre line. */
+  left: -24px;
+  top: 40px;
+  z-index: 0;
+  /* Roboto Condensed 700 — picked by matching the GLYPH SHAPE, not just the
+     bounding box: the reference '1' is a wide angled flag over a thin stem,
+     and Roboto Condensed reproduces that profile closely. */
+  font-family: var(--font-numeral), var(--font-archivo), system-ui, sans-serif;
+  font-weight: 700;
+  /* 216px: the reference numeral's INK measures 62% of the card's height
+     (156px on a 252px card); Roboto Condensed's digit cap is 0.721em. */
+  font-size: 216px;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  /* Roboto Condensed has no width axis, so the extra width is a horizontal
+     scale. 1.08 only: scaling thickens the vertical strokes without touching
+     the horizontals, so past a few percent the weight visibly distorts.
+     Anchored left so the sliver against the card stays where it was. */
+  transform: scaleX(1.08);
+  transform-origin: left center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Near-white at very low alpha rather than a grey: a grey numeral goes
+     muddy against the page's blue-biased dark, where a low-alpha white
+     picks up the ground beneath it. */
+  /* 0.20, not 0.07: measured off the reference, its numeral sits at 3.79x
+     the page luminance while 0.07 gave only 1.71x — a smudge rather than a
+     shape. 0.20 lands in the same band. */
+  color: rgba(233, 237, 242, 0.2);
+  /* Two-axis fade: solid at the top-left where the sliver is exposed, and
+     dissolving down-and-right into the region the card covers. A single
+     vertical ramp left the hidden part as bright as the visible part, so
+     it read as a flat shape behind glass rather than something receding. */
+  -webkit-mask-image: linear-gradient(155deg, #000 18%, rgba(0, 0, 0, 0.45) 58%, transparent 92%);
+  mask-image: linear-gradient(155deg, #000 18%, rgba(0, 0, 0, 0.45) 58%, transparent 92%);
+}
+
+.buyer-step__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* Narrower than the column: the reference's cards do not fill their track
+     edge-to-edge, and the gap is what gives each numeral room to sit
+     alongside without colliding with the neighbouring card. */
+  max-width: 195px;
+  margin-inline: auto;
+  border-radius: 18px;
+  /* Portrait, not landscape: the reference card measures h/w = 1.12.
+     A min-height in aspect terms rather than a fixed px so the card still
+     grows if the copy runs long. */
+  /* Portrait: the reference card measures h/w = 1.12. A fixed min-height
+     per breakpoint rather than aspect-ratio, which would squash the text
+     when the copy runs long, or cqw, which collapses a grid item's width. */
+  /* Height restored to 252: only the WIDTH was meant to come down. */
+  min-height: 252px;
+  height: 252px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 26px 20px 24px;
+  text-align: center;
+  /* Genuinely translucent, so the numeral shows THROUGH the card rather
+     than being covered by it. The blur is what separates the two layers —
+     without it the numeral reads as sitting on the card, not behind it. */
+  background-color: rgba(233, 237, 242, 0.045);
+  border: 1px solid rgba(233, 237, 242, 0.07);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  /* Inset highlight along the top edge only — the light source is above,
+     matching the rest of the page. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.06),
+    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+}
+
+.buyer-step__icon {
+  display: block;
+  /* 36% of the card's height, measured off the reference (123px icon on a
+     339px card). The previous 62px was roughly half that. */
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 26px;
+}
+
+.buyer-step__title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+.buyer-step__sub {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  /* 500 + 78% (was 400 + 55%): at 55% the line sat barely above the glass
+     and read as disabled. Still a clear step below the title. */
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+@media (min-width: 640px) {
+  .buyer-step__num { font-size: 199px; }
+}
+@media (min-width: 1024px) {
+  .buyer-step__num { font-size: 216px; }
+}
+
+/* Glossy icon treatment. The gradient and glow are applied through CSS
+   rather than per-icon props: Lucide draws with `currentColor`, so the
+   stroke is repainted with the shared gradient and lifted with a drop
+   shadow. Boldness from light, not from stroke weight. */
+/* The gradient must be set on the CHILD shapes, not the <svg>: a
+   `objectBoundingBox` gradient on a zero-area element (<line>, <path> with
+   no fill) resolves to nothing, which silently erased the credit card's
+   centre line. Per-child it resolves against each shape's own box. */
+.buyer-step__glyph svg {
+  filter: url(#buyer-step-gloss-glow);
+}
+
+.buyer-step__glyph svg > * {
+  stroke: url(#buyer-step-gloss);
+}
+
+/* Safari resolves url() filters on SVG children inconsistently; the
+   box-shadow-free fallback keeps the gradient even if the filter drops. */
+@supports not (filter: url(#buyer-step-gloss-glow)) {
+  .buyer-step__glyph svg {
+    filter: drop-shadow(0 1.5px 3px rgba(16, 128, 240, 0.5));
+  }
+}
+
+/* ── Buyer-step ambient life ──────────────────────────────────────────
+   Always-on rather than hover, because the cards are not clickable. Two
+   quiet effects, both on long cycles with a rest gap so the eye reads one
+   slow pass instead of continuous motion — four cards animating in unison
+   looks like a loading skeleton, so each is offset by --step-delay.
+
+   No particles: four independent particle fields on one row is a lot of
+   motion for a process explainer, and it would fight the Seller CTA above. */
+
+/* 1. A light band that travels the card's BORDER once, then goes fully dark
+      before the next card begins — strictly one at a time, never two lit at
+      once. Each card runs the SAME 12.8s cycle, offset by 2.7s, so the pass
+      moves 1 -> 2 -> 3 -> 4 and then the row rests for 2.5s before looping.
+
+      Opacity is animated alongside the angle: without it the rim would sit
+      visible at its end angle while the next card lights up. */
+.buyer-step__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from var(--sheen-angle, 0deg),
+    transparent 0deg,
+    transparent 300deg,
+    rgba(46, 155, 255, 0.5) 340deg,
+    rgba(124, 196, 255, 0.8) 352deg,
+    rgba(46, 155, 255, 0.5) 358deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: buyer-step-rim 12.8s linear infinite;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@property --sheen-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* 17.2% of 12.8s = 2.2s of travel, then dark for the rest of the cycle. */
+@keyframes buyer-step-rim {
+  0%     { --sheen-angle: 0deg;   opacity: 0; }
+  2%     { opacity: 1; }
+  15%    { opacity: 1; }
+  17.2%  { --sheen-angle: 360deg; opacity: 0; }
+  100%   { --sheen-angle: 360deg; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buyer-step__card::after,
+  .buyer-step__sheen {
+    animation: none;
+  }
+  /* Rest state keeps the glow, drops the rim entirely. */
+  .buyer-step__card::after { opacity: 0; }
+  .buyer-step__sheen { opacity: 0.6; }
+}
+
+/* ── Homepage FAQ glass cards ─────────────────────────────────────────
+   No perimeter outline at all. Two previous passes tried a 1px border and
+   then a graded gradient ring; both still drew a visible box around each
+   card, which is what made a stack of six read as chunks. The card is now
+   defined by a LIT TOP EDGE and a shadow beneath — the way a pane of glass
+   lying on a dark surface actually reads — plus a left accent rail that
+   grows on hover and stays for the open card.
+
+   Radius drops to 10px: nearly rectangular, per the site's rectangular card
+   direction, and far enough from a pill that the row reads as a list. */
+.faq-glass {
+  position: relative;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.055) 0%,
+    rgba(233, 237, 242, 0.02) 55%,
+    rgba(233, 237, 242, 0.008) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  backdrop-filter: blur(20px) saturate(1.15);
+  /* Lit top edge only — no side or bottom stroke. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.13),
+    0 12px 30px -26px rgba(0, 0, 0, 0.75);
+  transition:
+    background 280ms ease,
+    box-shadow 280ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Accent rail on the leading edge. Scales from the vertical centre, so it
+   grows out from the middle rather than wiping in from the top — a small
+   thing, but it reads as the card responding rather than a bar sliding in.
+   Square ends: a rounded rail on a near-square card looks like a stray pill. */
+.faq-glass::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--color-accent-text) 22%,
+    var(--color-accent-text) 78%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition:
+    opacity 280ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Metallic sheen — a soft diagonal band of light across the glass, still
+   until hover, then travelling once. Costs no colour. */
+.faq-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 34%,
+    rgba(233, 237, 242, 0.06) 47%,
+    rgba(233, 237, 242, 0.1) 50%,
+    rgba(233, 237, 242, 0.06) 53%,
+    transparent 66%
+  );
+  background-size: 220% 100%;
+  background-position: 130% 0;
+  transition:
+    opacity 260ms ease,
+    background-position 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-glass:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.085) 0%,
+    rgba(233, 237, 242, 0.032) 55%,
+    rgba(233, 237, 242, 0.014) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.18),
+    0 16px 34px -28px rgba(0, 0, 0, 0.8);
+  transform: translateX(2px);
+}
+
+.faq-glass:hover::before {
+  opacity: 1;
+  background-position: -30% 0;
+}
+
+.faq-glass:hover::after {
+  opacity: 0.55;
+  transform: scaleY(1);
+}
+
+/* Open: the rail stays lit and the glass sits slightly brighter. */
+.faq-glass--open {
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.09) 0%,
+    rgba(233, 237, 242, 0.035) 55%,
+    rgba(233, 237, 242, 0.015) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.16),
+    0 18px 38px -30px rgba(0, 0, 0, 0.85);
+}
+
+.faq-glass--open::after {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass,
+  .faq-glass::after {
+    transition: opacity 200ms ease;
+  }
+  .faq-glass:hover {
+    transform: none;
+  }
+  .faq-glass::before {
+    display: none;
+  }
+}
+
+/* Answer reveal. `grid-template-rows: 0fr -> 1fr` animates to the content's
+   own height with no JS measurement and no max-height guess (a guess makes
+   the content race open and then sit still for the rest of the duration).
+   The child needs `min-h-0; overflow: hidden` or it refuses to shrink below
+   its intrinsic height and the 0fr row has no effect. */
+.faq-glass__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.faq-glass__reveal--open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  /* Fade in over the back half of the expansion, so text arrives as the
+     space for it finishes opening rather than during the movement. */
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass__reveal,
+  .faq-glass__reveal--open {
+    transition: opacity 160ms ease;
+  }
+}
+
+.faq-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass::before { transition: opacity 260ms ease; }
+  .faq-glass:hover::before { background-position: 50% 0; }
 }

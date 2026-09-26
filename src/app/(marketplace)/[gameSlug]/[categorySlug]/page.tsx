@@ -14,7 +14,6 @@ import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
 import Image from 'next/image'
 import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
-import GameDirectory from '@/components/marketplace/GameDirectory'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { getCurrencyShell as getCurrencyShellUncached, listingToOffer } from './_currencyData'
 import GenericListingsClient, { type GenericGridListing } from './_GenericListingsClient'
@@ -26,7 +25,6 @@ import {
 } from './_routeGate'
 import { getAllEnabledCategoryPairs } from '@/lib/seo/category-pairs'
 import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
-import { getGameDirectory } from '@/lib/games/directory'
 import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
 import { unstable_cache } from 'next/cache'
 import RouteSkeleton from './_RouteSkeleton'
@@ -48,6 +46,7 @@ import type {
   BundleOffer,
 } from './_BundleCurrencyPageClient'
 import { BlogRail } from '@/components/blog/BlogRail'
+import { CategoryGuide } from '@/components/marketplace/CategoryGuide'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions } from '@/lib/types/category-configs'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
@@ -126,7 +125,7 @@ function buildIntroLine(
     const avg = stats.avgDeliveryLabel ? ` — average delivery ${stats.avgDeliveryLabel}` : ''
     return `${stats.count} live ${gameName} ${categoryLabel} ${
       stats.count === 1 ? 'listing' : 'listings'
-    } from $${formatStatPrice(stats.lowPrice)}${priceSuffix ? `/${priceSuffix}` : ''}${avg}. Every order covered by SafeDrop Buyer Protection.`
+    } from $${formatStatPrice(stats.lowPrice)}${priceSuffix ? `/${priceSuffix}` : ''}${avg}. Every order covered by SafeDrop Protection.`
   }
   return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes with the lowest fees for buyers and sellers.`
 }
@@ -159,9 +158,9 @@ function emptyTitleFor(gameName: string, categoryName: string): string {
 /** Unique-per-game description for a zero-inventory category page. */
 function emptyDescriptionFor(gameName: string, categoryName: string): string {
   const variants = [
-    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes with the lowest fees for buyers and sellers. Every order is covered by SafeDrop Buyer Protection.`,
+    `Be the first to sell ${gameName} ${categoryName} on DropMarket — list in minutes with the lowest fees for buyers and sellers. Every order is covered by SafeDrop Protection.`,
     `Looking to buy or sell ${gameName} ${categoryName}? DropMarket connects verified traders with SafeDrop buyer protection — item guaranteed or your money back.`,
-    `${gameName} ${categoryName} on DropMarket: the lowest fees for buyers and sellers, fast delivery, and SafeDrop Buyer Protection on every trade. Be an early seller and set the price.`,
+    `${gameName} ${categoryName} on DropMarket: the lowest fees for buyers and sellers, fast delivery, and SafeDrop Protection on every trade. Be an early seller and set the price.`,
     `Trade ${gameName} ${categoryName} the safe way. With SafeDrop, your item is guaranteed — get exactly what you ordered, or your money back.`,
   ]
   return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]
@@ -196,7 +195,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         .join(' ')
       return {
         title: `Buy ${prettyTitle} (${game.name}) — Cheap & Instant`,
-        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Covered by SafeDrop Buyer Protection. Instant delivery available.`,
+        description: `Buy ${prettyTitle} for ${game.name} from verified sellers. Covered by SafeDrop Protection. Instant delivery available.`,
         keywords: [
           `${game.name.toLowerCase()} ${prettyTitle.toLowerCase()}`,
           `buy ${prettyTitle.toLowerCase()}`,
@@ -539,7 +538,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           <JsonLd
             data={productAggregate({
               name: `${gameName} ${categoryLabel}`,
-              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
               brand: gameName,
               lowPrice: stats.lowPrice,
               highPrice: stats.highPrice,
@@ -562,13 +561,6 @@ async function CategoryBrowsePage({ params }: PageProps) {
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
         />
-        {game?.id && (
-          <RelatedGames
-            currentGameId={game.id}
-            categorySlug={categorySlug}
-            categoryName={categoryLabel}
-          />
-        )}
       </>
     )
   }
@@ -688,7 +680,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           <JsonLd
             data={productAggregate({
               name: `${gameName} ${categoryLabel}`,
-              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              description: `Buy ${gameName} ${categoryLabel} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
               brand: gameName,
               lowPrice: stats.lowPrice,
               highPrice: stats.highPrice,
@@ -716,13 +708,6 @@ async function CategoryBrowsePage({ params }: PageProps) {
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
         />
-        {game?.id && (
-          <RelatedGames
-            currentGameId={game.id}
-            categorySlug={categorySlug}
-            categoryName={categoryLabel}
-          />
-        )}
       </>
     )
   }
@@ -809,7 +794,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           <JsonLd
             data={productAggregate({
               name: `${game.name} ${category.name}`,
-              description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+              description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
               brand: game.name,
               lowPrice: stats.lowPrice,
               highPrice: stats.highPrice,
@@ -836,7 +821,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
             categoryLabel={category.name}
             tagline={
               (category as any).description ||
-              `Browse verified ${game.name} listings — every order covered by SafeDrop Buyer Protection.`
+              `Browse verified ${game.name} listings — every order covered by SafeDrop Protection.`
             }
             offers={offers}
             taxonomy={taxonomy}
@@ -844,10 +829,15 @@ async function CategoryBrowsePage({ params }: PageProps) {
             stats={stats}
           />
         </Suspense>
-        <RelatedGames
-          currentGameId={game.id}
+        {/* Editorial SEO guide after the listings end. Reuses `stats`
+            (request-memoised) so its live numbers match the header and
+            the JSON-LD exactly. */}
+        <CategoryGuide
+          gameSlug={gameSlug}
           categorySlug={categorySlug}
+          gameName={game.name}
           categoryName={category.name}
+          stats={stats}
         />
       </>
     )
@@ -875,7 +865,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         <JsonLd
           data={productAggregate({
             name: `${game.name} ${category.name}`,
-            description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+            description: `Buy ${game.name} ${category.name} from verified sellers — get what you ordered, or your money back with SafeDrop Protection.`,
             brand: game.name,
             lowPrice: stats.lowPrice,
             highPrice: stats.highPrice,
@@ -903,7 +893,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'radial-gradient(ellipse 60% 50% at 10% 0%, rgba(198,255,61,0.14), transparent 60%)',
+                'radial-gradient(ellipse 60% 50% at 10% 0%, rgba(86,184,127,0.14), transparent 60%)',
             }}
           />
           <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
@@ -955,42 +945,15 @@ async function CategoryBrowsePage({ params }: PageProps) {
         />
       </div>
 
-      {/* ── Related games — same category on other games ─────────────── */}
-      <RelatedGames
-        currentGameId={game.id}
+      {/* Editorial SEO guide after the listings end — see the items branch. */}
+      <CategoryGuide
+        gameSlug={gameSlug}
         categorySlug={categorySlug}
+        gameName={game.name}
         categoryName={category.name}
+        stats={stats}
       />
     </div>
   )
 }
 
-// ─── Related games ─────────────────────────────────────────────────────────────
-
-/**
- * Cross-links the same category slug on up to 6 OTHER games that
- * actually have it active. Real <a> links (next/link) so crawlers can
- * follow the lateral money-page mesh. Server component — renders
- * nothing when no sibling game carries the category.
- */
-/**
- * RelatedGames — kept name + call signature for back-compat, but now
- * renders the full game directory (every active game + its subcategories)
- * above the footer. Big SEO win: internal-links every game×category page
- * from every marketplace page. Collapsed with "Show All" (GameDirectory).
- */
-async function RelatedGames({
-  categoryName,
-}: {
-  currentGameId: string
-  categorySlug: string
-  categoryName: string
-}) {
-  // Step 7b — the directory (every active game + its enabled categories) is
-  // the same on all ~600 prerendered pages: one tagged cache read
-  // (lib/games/directory), not two queries per page at build.
-  const directoryGames = await getGameDirectory()
-  if (directoryGames.length === 0) return null
-
-  return <GameDirectory games={directoryGames} heading={`Buy ${categoryName} for Every Game`} />
-}

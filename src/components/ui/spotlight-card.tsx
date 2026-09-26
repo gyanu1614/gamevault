@@ -14,12 +14,14 @@
 import { useRef, type ReactNode, type CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 
-type Glow = 'green' | 'amber'
+type Glow = 'green' | 'amber' | 'blue'
 
 // hsl hue + saturation/lightness per accent (matches the forest green / founding amber).
 const GLOW: Record<Glow, { hue: number; sat: number; light: number }> = {
   green: { hue: 140, sat: 45, light: 60 },
   amber: { hue: 42, sat: 90, light: 65 },
+  // Matches the buyer-steps icon blue (#2E9BFF).
+  blue: { hue: 209, sat: 100, light: 59 },
 }
 
 export function SpotlightCard({

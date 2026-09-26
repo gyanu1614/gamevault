@@ -1,10 +1,13 @@
 /**
- * FooterGameLinks — GameBoost-style "Popular Games" directory that sits in
- * its own section ABOVE the footer (rendered by layout-wrapper, not inside
- * the footer itself). Each active game gets a logo + name heading linking
+ * FooterGameLinks — the game directory rendered INSIDE the footer (passed
+ * to <Footer gameDirectory={...}> by layout-wrapper). It carries no heading
+ * of its own: GameBoost, the pattern this copies, opens straight into the
+ * game grid inside its footer. An earlier version of this comment claimed
+ * GameBoost used a band ABOVE the footer — verified false against the live
+ * site; no competitor surveyed does that. Each active game gets a logo + name heading linking
  * to its canonical landing, with its category links stacked beneath —
- * game-scoped anchor text ("Fortnite Accounts") via an sr-only prefix, the
- * same SEO trick GameBoost uses (visible label stays short).
+ * game-scoped anchor text written out in full ("Fortnite Accounts"), the
+ * same interlinking GameBoost uses.
  *
  * Why a server component (not the client usePopularGames hook): these must
  * be real <a> links in the initial HTML on EVERY page so search engines see
@@ -93,32 +96,36 @@ export async function FooterGameLinks() {
   const collapsible = games.length > 6
 
   const grid = (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
           {games.map((g) => (
             <div key={g.slug} className="min-w-0">
-              <Link href={g.href} className="group flex items-center gap-2.5">
+              <Link href={g.href} className="group flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={g.icon}
                   alt=""
-                  width={36}
-                  height={36}
+                  width={28}
+                  height={28}
                   loading="lazy"
-                  className="h-9 w-9 shrink-0 rounded-lg border border-white/10 object-cover"
+                  className="h-7 w-7 shrink-0 rounded-lg border border-white/10 object-cover"
                 />
-                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-lime-text">
+                <span className="truncate text-[14px] font-semibold text-white transition-colors group-hover:text-lime-text">
                   {g.name}
                 </span>
               </Link>
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-[7px] space-y-0">
                 {g.cats.map((c) => (
                   <li key={c.href}>
                     <Link
                       href={c.href}
-                      className="text-xs text-text-secondary transition-colors hover:text-white"
+                      className="text-[12px] leading-[19.5px] text-text-secondary transition-colors hover:text-white"
                     >
-                      <span className="sr-only">{g.name} </span>
-                      {c.label}
+                      {/* Visible, not sr-only: "Fortnite Accounts" is the
+                          anchor text we want indexed AND the label a reader
+                          scans. GameBoost writes it out in full for the same
+                          reason — the interlinking is the whole point of this
+                          block. */}
+                      {g.name} {c.label}
                     </Link>
                   </li>
                 ))}
@@ -129,20 +136,11 @@ export async function FooterGameLinks() {
   )
 
   return (
-    <section aria-label="Popular games" className="border-t border-border-subtle bg-bg-base">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-7 flex items-baseline justify-between gap-4">
-          <h2 className="text-[15px] font-bold tracking-tight text-white">Popular Games</h2>
-          <Link
-            href="/browse"
-            className="shrink-0 text-xs font-semibold text-text-tertiary transition-colors hover:text-lime-text"
-          >
-            Browse All Listings →
-          </Link>
-        </div>
-
-        {collapsible ? <GamesDirectoryCollapse>{grid}</GamesDirectoryCollapse> : grid}
-      </div>
-    </section>
+    // No heading, no "Browse all" link and no border: this renders INSIDE
+    // the footer now, so a title row and a rule would read as a second
+    // section. GameBoost's directory opens straight into the game grid.
+    <nav aria-label="Game directory" className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+      {collapsible ? <GamesDirectoryCollapse>{grid}</GamesDirectoryCollapse> : grid}
+    </nav>
   )
 }

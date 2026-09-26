@@ -104,3 +104,5 @@ data/sab-market-feeds/*.json
 /growth/
 docs/growth/
 src/types/database.generated.ts
+# Blender sources for the CS2 weapon render (26MB) — build inputs, not app code
+art/cs2/
