@@ -1,6 +1,6 @@
 # Checkout regions — flat, region-ordered method selector — handoff
 
-**Date:** 2026-09-26 · **Branch:** `feat/checkout-regions` (worktree `../gamevault-checkout-regions`, own stack) · **PR:** __PR_URL__ · No migration, no RPC change, no server change: the page still renders from `eligibleMethods()` and `createCheckout` still refuses anything the page would not show.
+**Date:** 2026-09-26 · **Branch:** `feat/checkout-regions` (worktree `../gamevault-checkout-regions`, own stack) · **PR:** https://github.com/gyanu1614/gamevault/pull/102 · No migration, no RPC change, no server change: the page still renders from `eligibleMethods()` and `createCheckout` still refuses anything the page would not show.
 
 ## What changed (approved 2026-09-26)
 - **Tabs gone.** The Crypto | E-Wallet | Card (soon) bar and the country dropdown are replaced by ONE flat list of rectangular rows (radio · label · one-line note · quoted fee · brand mark tile), in the screenshot's layout on our light ivory/forest theme.
