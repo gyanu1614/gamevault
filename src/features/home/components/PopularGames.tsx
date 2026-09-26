@@ -19,12 +19,10 @@ export async function PopularGames() {
 
   return (
     <section className="page-measure">
-      {/* Page-level section title: centred, and the one place the type
-          scale is allowed to move with the viewport (per the type rules,
-          a modest clamp on a page title). */}
-      <h2 className="text-center font-semibold leading-[1.1] tracking-[-0.02em] text-text-primary text-[clamp(22px,4.2vw,34px)]">
-        Popular Games
-      </h2>
+      {/* `.section-title` (globals.css) owns the size, weight and centring
+          for every page-level section title, so the homepage reads as one
+          set. Do not re-declare the scale here. */}
+      <h2 className="section-title">Popular Games</h2>
 
       {/* Two rows of six. A fixed grid rather than a carousel: the whole
           set is visible at once, so nothing is hidden behind a swipe. */}

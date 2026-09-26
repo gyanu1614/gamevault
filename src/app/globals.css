@@ -1080,6 +1080,161 @@
   .page-measure { padding-inline: 2rem; } /* xl:px-8 */
 }
 
+/* ── Hero billboard (section 1) ───────────────────────────────────────
+   The signature geometry from the design brief: ONE clipped corner at 45°
+   rather than a plain rounded rect. Applied via clip-path so the corner cut
+   is a real shape — a border-radius cannot produce a straight diagonal.
+
+   Because clip-path removes the border too, the "edge" on a notched
+   element has to be painted by a same-shape layer sitting behind it, one
+   pixel larger. See `.notch-slab` below.
+
+   The brief specced flat sand/lavender/mint fields with black type. We use
+   SATURATED GRADIENT fields instead, matching the seller cards' material
+   (teal #0A4D5E→#096D4F, violet #3A2A52→#1E1730) — the homepage surface
+   rule forbids a section owning a bright background colour, and those
+   gradients are the treatment the page already validated. */
+.notch {
+  --notch: 22px;
+  -webkit-clip-path: polygon(
+    0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%
+  );
+  clip-path: polygon(
+    0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%
+  );
+}
+
+/* Hairline for a notched element: a same-shape layer behind it, inset by
+   -1px, so the 1px that peeks out reads as the edge. */
+.notch-slab {
+  position: relative;
+  isolation: isolate;
+}
+
+.notch-slab::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: linear-gradient(
+    145deg,
+    rgba(233, 237, 242, 0.22) 0%,
+    rgba(233, 237, 242, 0.05) 45%,
+    rgba(233, 237, 242, 0.02) 100%
+  );
+  --notch: 23px;
+  -webkit-clip-path: polygon(
+    0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%
+  );
+  clip-path: polygon(
+    0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%
+  );
+}
+
+/* Props drift — the brief's ±6px idle. One shared animation; each prop
+   offsets its delay and duration so they never move in lockstep. */
+@keyframes hero-prop-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--prop-rot, 0deg)); }
+  50%      { transform: translate3d(0, -6px, 0) rotate(var(--prop-rot, 0deg)); }
+}
+
+.hero-prop {
+  animation: hero-prop-drift var(--prop-dur, 6s) ease-in-out infinite;
+  animation-delay: var(--prop-delay, 0s);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-prop { animation: none; }
+}
+
+/* ── Section titles ───────────────────────────────────────────────────
+   ONE treatment for every page-level section title on the homepage, so the
+   page reads as a set rather than five sections that each chose their own
+   scale. Before this, the five titles ran at 18px, clamp(22-34),
+   clamp(26-36) and clamp(28-40) with two different weights.
+
+   Per the type rules in CLAUDE.md, a section title is the one place the
+   scale may move with the viewport, via a modest clamp — hence a raw
+   clamp() here rather than a fontSize token, which cannot express one.
+
+   The title is ALWAYS centred, including in sections that carry an action
+   link; the link sits at the right of the same row and is taken out of flow
+   so it cannot push the title off centre.
+
+   Flat white at this size read as bland, so the glyphs carry a vertical
+   sheen — bright at the cap line falling to a cooler grey at the baseline,
+   the same top-lit direction the cards and numerals use. `background-clip:
+   text` paints the gradient INTO the glyphs. */
+.section-title {
+  --section-title-accent: var(--color-accent-text);
+  position: relative;
+  /* Own stacking context, so the bloom's z-index:-1 is scoped to THIS
+     element. Without it the bloom resolves against `.page-stage`, which
+     paints a background and sets `isolation: isolate`, and a negative
+     index there renders the bloom behind that background — invisible. */
+  isolation: isolate;
+  text-align: center;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  /* Fallback for any engine that drops the clip: a visible colour is set
+     first, so the text can never render transparent-on-transparent. */
+  color: var(--color-text-primary);
+  background-image: linear-gradient(
+    177deg,
+    #ffffff 0%,
+    #eef2f7 42%,
+    #b9c2cf 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* The accent mark sits BEHIND the title as a soft elliptical bloom, not as
+   a rule beneath it. A rule only worked on the two titles with nothing
+   under them — the four that carry subtext or an action link had to opt out,
+   which defeated the point of one shared treatment. A bloom sits behind the
+   glyphs, so every title can carry it regardless of what follows.
+
+   Deliberately weak (0.16): at full strength it reads as a highlighter.
+   `blur` keeps it shapeless so it never looks like a drawn object. */
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(420px, 78%);
+  height: 118%;
+  transform: translate(-50%, -50%);
+  /* Safe here: the title isolates, so -1 is behind the title's own text
+     but NOT behind `.page-stage`'s background. */
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--section-title-accent) 16%, transparent) 0%,
+    transparent 70%
+  );
+  filter: blur(26px);
+}
+
+/* Opt-out for any surface where the bloom would land on busy art. */
+.section-title--bare::before {
+  content: none;
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .section-title {
+    -webkit-text-fill-color: currentColor;
+    background-image: none;
+  }
+}
+
 /* V22 — Optional extra dim for a specific hero (e.g. account area), applied
    via HeroBackdrop's className. Adds a small uniform scrim on top of the
    shared hero so just this surface reads darker, without touching the
@@ -1580,4 +1735,405 @@
     --navbar-bottom: calc(84px + var(--beta-banner-offset, 0px));
     --navbar-height: 84px;
   }
+}
+
+/* ── Buyer steps ──────────────────────────────────────────────────────
+   The numeral is the ground layer. It sits BEHIND the card, offset up and
+   left so the card overlaps its lower-right, and fades toward its own
+   bottom. The fade is a mask, not an opacity: opacity dims every part of
+   the glyph equally and reads flat, while a mask keeps the top edge solid
+   and lets the foot dissolve into the page — which is what makes it read
+   as carved out rather than painted on. */
+.buyer-step {
+  /* The numeral overflows the grid cell on purpose; the row must not clip
+     it, and it must not create page-level scroll either. */
+  overflow: visible;
+}
+
+.buyer-step__num {
+  position: absolute;
+  /* left: the sliver showing beside the card, measured off the reference
+     (59px of a 299px card = 20% of card width).
+     top: 40, not 22 — the glyph's INK is 154px tall inside a 173px line box,
+     so the span's own top is not where the ink starts. Centring the ink in
+     a 252px card puts its top at (252-154)/2 = 49, which needs the span at
+     40. At 22 the numeral sat 18px high of the card's centre line. */
+  left: -24px;
+  top: 40px;
+  z-index: 0;
+  /* Roboto Condensed 700 — picked by matching the GLYPH SHAPE, not just the
+     bounding box: the reference '1' is a wide angled flag over a thin stem,
+     and Roboto Condensed reproduces that profile closely. */
+  font-family: var(--font-numeral), var(--font-archivo), system-ui, sans-serif;
+  font-weight: 700;
+  /* 216px: the reference numeral's INK measures 62% of the card's height
+     (156px on a 252px card); Roboto Condensed's digit cap is 0.721em. */
+  font-size: 216px;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  /* Roboto Condensed has no width axis, so the extra width is a horizontal
+     scale. 1.08 only: scaling thickens the vertical strokes without touching
+     the horizontals, so past a few percent the weight visibly distorts.
+     Anchored left so the sliver against the card stays where it was. */
+  transform: scaleX(1.08);
+  transform-origin: left center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Near-white at very low alpha rather than a grey: a grey numeral goes
+     muddy against the page's blue-biased dark, where a low-alpha white
+     picks up the ground beneath it. */
+  /* 0.20, not 0.07: measured off the reference, its numeral sits at 3.79x
+     the page luminance while 0.07 gave only 1.71x — a smudge rather than a
+     shape. 0.20 lands in the same band. */
+  color: rgba(233, 237, 242, 0.2);
+  /* Two-axis fade: solid at the top-left where the sliver is exposed, and
+     dissolving down-and-right into the region the card covers. A single
+     vertical ramp left the hidden part as bright as the visible part, so
+     it read as a flat shape behind glass rather than something receding. */
+  -webkit-mask-image: linear-gradient(155deg, #000 18%, rgba(0, 0, 0, 0.45) 58%, transparent 92%);
+  mask-image: linear-gradient(155deg, #000 18%, rgba(0, 0, 0, 0.45) 58%, transparent 92%);
+}
+
+.buyer-step__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* Narrower than the column: the reference's cards do not fill their track
+     edge-to-edge, and the gap is what gives each numeral room to sit
+     alongside without colliding with the neighbouring card. */
+  max-width: 195px;
+  margin-inline: auto;
+  border-radius: 18px;
+  /* Portrait, not landscape: the reference card measures h/w = 1.12.
+     A min-height in aspect terms rather than a fixed px so the card still
+     grows if the copy runs long. */
+  /* Portrait: the reference card measures h/w = 1.12. A fixed min-height
+     per breakpoint rather than aspect-ratio, which would squash the text
+     when the copy runs long, or cqw, which collapses a grid item's width. */
+  /* Height restored to 252: only the WIDTH was meant to come down. */
+  min-height: 252px;
+  height: 252px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 26px 20px 24px;
+  text-align: center;
+  /* Genuinely translucent, so the numeral shows THROUGH the card rather
+     than being covered by it. The blur is what separates the two layers —
+     without it the numeral reads as sitting on the card, not behind it. */
+  background-color: rgba(233, 237, 242, 0.045);
+  border: 1px solid rgba(233, 237, 242, 0.07);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  /* Inset highlight along the top edge only — the light source is above,
+     matching the rest of the page. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.06),
+    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+}
+
+.buyer-step__icon {
+  display: block;
+  /* 36% of the card's height, measured off the reference (123px icon on a
+     339px card). The previous 62px was roughly half that. */
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 26px;
+}
+
+.buyer-step__title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+.buyer-step__sub {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  /* 500 + 78% (was 400 + 55%): at 55% the line sat barely above the glass
+     and read as disabled. Still a clear step below the title. */
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+@media (min-width: 640px) {
+  .buyer-step__num { font-size: 199px; }
+}
+@media (min-width: 1024px) {
+  .buyer-step__num { font-size: 216px; }
+}
+
+/* Glossy icon treatment. The gradient and glow are applied through CSS
+   rather than per-icon props: Lucide draws with `currentColor`, so the
+   stroke is repainted with the shared gradient and lifted with a drop
+   shadow. Boldness from light, not from stroke weight. */
+/* The gradient must be set on the CHILD shapes, not the <svg>: a
+   `objectBoundingBox` gradient on a zero-area element (<line>, <path> with
+   no fill) resolves to nothing, which silently erased the credit card's
+   centre line. Per-child it resolves against each shape's own box. */
+.buyer-step__glyph svg {
+  filter: url(#buyer-step-gloss-glow);
+}
+
+.buyer-step__glyph svg > * {
+  stroke: url(#buyer-step-gloss);
+}
+
+/* Safari resolves url() filters on SVG children inconsistently; the
+   box-shadow-free fallback keeps the gradient even if the filter drops. */
+@supports not (filter: url(#buyer-step-gloss-glow)) {
+  .buyer-step__glyph svg {
+    filter: drop-shadow(0 1.5px 3px rgba(16, 128, 240, 0.5));
+  }
+}
+
+/* ── Buyer-step ambient life ──────────────────────────────────────────
+   Always-on rather than hover, because the cards are not clickable. Two
+   quiet effects, both on long cycles with a rest gap so the eye reads one
+   slow pass instead of continuous motion — four cards animating in unison
+   looks like a loading skeleton, so each is offset by --step-delay.
+
+   No particles: four independent particle fields on one row is a lot of
+   motion for a process explainer, and it would fight the Seller CTA above. */
+
+/* 1. A light band that travels the card's BORDER once, then goes fully dark
+      before the next card begins — strictly one at a time, never two lit at
+      once. Each card runs the SAME 12.8s cycle, offset by 2.7s, so the pass
+      moves 1 -> 2 -> 3 -> 4 and then the row rests for 2.5s before looping.
+
+      Opacity is animated alongside the angle: without it the rim would sit
+      visible at its end angle while the next card lights up. */
+.buyer-step__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from var(--sheen-angle, 0deg),
+    transparent 0deg,
+    transparent 300deg,
+    rgba(46, 155, 255, 0.5) 340deg,
+    rgba(124, 196, 255, 0.8) 352deg,
+    rgba(46, 155, 255, 0.5) 358deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: buyer-step-rim 12.8s linear infinite;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@property --sheen-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* 17.2% of 12.8s = 2.2s of travel, then dark for the rest of the cycle. */
+@keyframes buyer-step-rim {
+  0%     { --sheen-angle: 0deg;   opacity: 0; }
+  2%     { opacity: 1; }
+  15%    { opacity: 1; }
+  17.2%  { --sheen-angle: 360deg; opacity: 0; }
+  100%   { --sheen-angle: 360deg; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buyer-step__card::after,
+  .buyer-step__sheen {
+    animation: none;
+  }
+  /* Rest state keeps the glow, drops the rim entirely. */
+  .buyer-step__card::after { opacity: 0; }
+  .buyer-step__sheen { opacity: 0.6; }
+}
+
+/* ── Homepage FAQ glass cards ─────────────────────────────────────────
+   No perimeter outline at all. Two previous passes tried a 1px border and
+   then a graded gradient ring; both still drew a visible box around each
+   card, which is what made a stack of six read as chunks. The card is now
+   defined by a LIT TOP EDGE and a shadow beneath — the way a pane of glass
+   lying on a dark surface actually reads — plus a left accent rail that
+   grows on hover and stays for the open card.
+
+   Radius drops to 10px: nearly rectangular, per the site's rectangular card
+   direction, and far enough from a pill that the row reads as a list. */
+.faq-glass {
+  position: relative;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.055) 0%,
+    rgba(233, 237, 242, 0.02) 55%,
+    rgba(233, 237, 242, 0.008) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  backdrop-filter: blur(20px) saturate(1.15);
+  /* Lit top edge only — no side or bottom stroke. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.13),
+    0 12px 30px -26px rgba(0, 0, 0, 0.75);
+  transition:
+    background 280ms ease,
+    box-shadow 280ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Accent rail on the leading edge. Scales from the vertical centre, so it
+   grows out from the middle rather than wiping in from the top — a small
+   thing, but it reads as the card responding rather than a bar sliding in.
+   Square ends: a rounded rail on a near-square card looks like a stray pill. */
+.faq-glass::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--color-accent-text) 22%,
+    var(--color-accent-text) 78%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition:
+    opacity 280ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Metallic sheen — a soft diagonal band of light across the glass, still
+   until hover, then travelling once. Costs no colour. */
+.faq-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 34%,
+    rgba(233, 237, 242, 0.06) 47%,
+    rgba(233, 237, 242, 0.1) 50%,
+    rgba(233, 237, 242, 0.06) 53%,
+    transparent 66%
+  );
+  background-size: 220% 100%;
+  background-position: 130% 0;
+  transition:
+    opacity 260ms ease,
+    background-position 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-glass:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.085) 0%,
+    rgba(233, 237, 242, 0.032) 55%,
+    rgba(233, 237, 242, 0.014) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.18),
+    0 16px 34px -28px rgba(0, 0, 0, 0.8);
+  transform: translateX(2px);
+}
+
+.faq-glass:hover::before {
+  opacity: 1;
+  background-position: -30% 0;
+}
+
+.faq-glass:hover::after {
+  opacity: 0.55;
+  transform: scaleY(1);
+}
+
+/* Open: the rail stays lit and the glass sits slightly brighter. */
+.faq-glass--open {
+  background: linear-gradient(
+    180deg,
+    rgba(233, 237, 242, 0.09) 0%,
+    rgba(233, 237, 242, 0.035) 55%,
+    rgba(233, 237, 242, 0.015) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.16),
+    0 18px 38px -30px rgba(0, 0, 0, 0.85);
+}
+
+.faq-glass--open::after {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass,
+  .faq-glass::after {
+    transition: opacity 200ms ease;
+  }
+  .faq-glass:hover {
+    transform: none;
+  }
+  .faq-glass::before {
+    display: none;
+  }
+}
+
+/* Answer reveal. `grid-template-rows: 0fr -> 1fr` animates to the content's
+   own height with no JS measurement and no max-height guess (a guess makes
+   the content race open and then sit still for the rest of the duration).
+   The child needs `min-h-0; overflow: hidden` or it refuses to shrink below
+   its intrinsic height and the 0fr row has no effect. */
+.faq-glass__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.faq-glass__reveal--open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  /* Fade in over the back half of the expansion, so text arrives as the
+     space for it finishes opening rather than during the movement. */
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass__reveal,
+  .faq-glass__reveal--open {
+    transition: opacity 160ms ease;
+  }
+}
+
+.faq-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-glass::before { transition: opacity 260ms ease; }
+  .faq-glass:hover::before { background-position: 50% 0; }
 }

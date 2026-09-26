@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('listings')
     .select(`
       *,
-      seller:profiles!listings_seller_id_fkey(is_test),
+      seller:public_profiles!listings_seller_id_fkey(is_test),
       game:games!listings_game_id_fkey(name),
       category:categories!listings_category_id_fkey(name)
     `)
@@ -111,7 +111,7 @@ const getListing = cache(async function getListing(listingSlug: string) {
 
   const SELECT = `
     *,
-    seller:profiles!listings_seller_id_fkey(*),
+    seller:public_profiles!listings_seller_id_fkey(*),
     game:games!listings_game_id_fkey(*),
     category:categories!listings_category_id_fkey(*)
   `
@@ -226,7 +226,7 @@ async function getCarouselListings({
     .select(`
       id, slug, title, price, original_price, delivery_time, quantity,
       is_unlimited, description, images, template_data, status,
-      seller:profiles!listings_seller_id_fkey(
+      seller:public_profiles!listings_seller_id_fkey(
         id, username, shop_name, shop_slug, avatar_url, seller_tier,
         seller_rating, total_sales, total_reviews, is_verified
       ),

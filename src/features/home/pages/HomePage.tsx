@@ -18,6 +18,10 @@ import type { ReactNode } from 'react'
 import { HomeHeroArt } from '../components/HomeHeroArt'
 import { HomeHero } from '../components/HomeHero'
 import { SellerCta } from '../components/SellerCta'
+import { BuyerSteps } from '../components/BuyerSteps'
+import { HomeFaq } from '../components/HomeFaq'
+import { PreFooterCtaBand } from '../components/PreFooterCtaBand'
+import { TrustStrip } from '../components/TrustStrip'
 
 /**
  * Sections that fetch their own data are rendered on the server and passed
@@ -28,9 +32,12 @@ import { SellerCta } from '../components/SellerCta'
 export function HomePage({
   popularGames,
   latestListings,
+  hero,
 }: {
   popularGames?: ReactNode
   latestListings?: ReactNode
+  /** TEMPORARY — the new billboard, passed in behind ?hero=billboard. */
+  hero?: ReactNode
 }) {
   return (
     <div className="page-stage">
@@ -38,7 +45,7 @@ export function HomePage({
       <HomeHeroArt backdropSrc="/hero/home.avif" />
 
       <div className="page-rhythm">
-        <HomeHero />
+        {hero ?? <HomeHero />}
 
         {/* Section 2 pulls up into the lower half of the hero art, which is
             why the art runs past the hero section. */}
@@ -46,11 +53,28 @@ export function HomePage({
 
         {latestListings}
 
+        {/* Order per the agreed eight: how-it-works/trust is 4, the seller
+            programme is 5. */}
+        <BuyerSteps />
+
         <SellerCta />
 
-        {/* Scroll room only — no placeholder box. An empty section renders
-            nothing rather than an empty bordered container. */}
-        <div className="h-[40vh]" aria-hidden />
+        <HomeFaq />
+      </div>
+
+      {/* Pre-footer CTA band — section 7. Deliberately OUTSIDE `.page-rhythm`:
+          it is a full-bleed band that carries its own background, height and
+          centring, so inside the measure it would be boxed in and the rhythm
+          gap would fight its own spacing. Being outside it also loses the
+          rhythm gap entirely, so the separation from the FAQ is set here —
+          matching the 128px the rhythm container uses between sections. */}
+      <div className="mt-20">
+        <PreFooterCtaBand artSrc="/cta-heroes/footer-cta.jpg" />
+      </div>
+
+      {/* Proof points, on the page surface directly under the band. */}
+      <div className="mt-14 pb-16">
+        <TrustStrip />
       </div>
     </div>
   )

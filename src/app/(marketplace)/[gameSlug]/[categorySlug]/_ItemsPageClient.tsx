@@ -12,20 +12,17 @@
  * changes — Steal-a-Brainrot, Adopt Me, Blox Fruits, MM2, all the same.
  */
 
-import { sellerDisplayName } from '@/lib/seller/identity'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import * as Popover from '@radix-ui/react-popover'
-import { Check, ChevronDown, Search, SlidersHorizontal, Gamepad2, X, ShieldCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Search, Gamepad2, ShieldCheck } from 'lucide-react'
 import ItemCard from './_ItemCard'
 import type {
   ItemOffer,
   ItemsTaxonomy,
   ItemSort,
-  TaxonomyOption,
 } from './_itemsTypes'
-import { PRICE_BANDS } from './_itemsTypes'
+import { MultiSelectFilter, PriceRangeFilter, SingleSelectFilter, iconForFilter, titleCase } from './_ItemFilters'
+import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 
 /** Local price formatter for stat chips (mirrors seo/page-stats without
  *  pulling that server-only module into this client component). */
@@ -36,12 +33,30 @@ function formatStatPrice(price: number): string {
 }
 
 const PAGE_SIZE = 24
+
+/**
+ * Delivery-time filter options. Non-overlapping windows, so ticking several
+ * simply widens the match. Built from each listing's seller-set delivery
+ * time via the shared `parseDeliveryMinutes`; only windows that at least
+ * one listing on the page falls into are offered.
+ */
+const DELIVERY_BUCKETS: { slug: string; label: string; test: (m: number) => boolean }[] = [
+  { slug: 'under-20m', label: 'Up to 20 Mins', test: (m) => m <= 20 },
+  { slug: '20m-1h', label: '20 Mins – 1 Hour', test: (m) => m > 20 && m <= 60 },
+  { slug: '1h-6h', label: '1 – 6 Hours', test: (m) => m > 60 && m <= 360 },
+  { slug: '6h-24h', label: '6 – 24 Hours', test: (m) => m > 360 && m <= 1440 },
+  { slug: 'over-24h', label: 'Over 24 Hours', test: (m) => m > 1440 },
+]
+const bucketOf = (raw: string | null) => {
+  const m = parseDeliveryMinutes(raw)
+  return DELIVERY_BUCKETS.find((b) => b.test(m))?.slug ?? null
+}
 const SORT_OPTIONS: { slug: ItemSort; label: string }[] = [
   { slug: 'recommended', label: 'Recommended' },
   { slug: 'price-asc', label: 'Price: Low to High' },
   { slug: 'price-desc', label: 'Price: High to Low' },
-  { slug: 'top-rated', label: 'Top rated' },
-  { slug: 'best-sellers', label: 'Most sales' },
+  { slug: 'top-rated', label: 'Top Rated' },
+  { slug: 'best-sellers', label: 'Most Sales' },
 ]
 
 
@@ -101,11 +116,15 @@ export default function ItemsPageClient({
   // /steal-a-brainrot/buy-items?attr_category=garama. We read each
   // `attr_<slug>` param and keep only those whose option actually exists
   // in this category's taxonomy (defensive against stale links).
+  // Multi-select: `attr_<slug>=a,b` seeds two values; the old single-value
+  // form (`attr_<slug>=a`, used by navbar search links) still works.
   const initialAttrFilters = useMemo(() => {
-    const seeded: Record<string, string> = {}
+    const seeded: Record<string, string[]> = {}
     for (const f of taxonomy.filters ?? []) {
-      const v = searchParams.get(`attr_${f.slug}`)
-      if (v && f.options.some((o) => o.slug === v)) seeded[f.slug] = v
+      const raw = searchParams.get(`attr_${f.slug}`)
+      if (!raw) continue
+      const valid = raw.split(',').filter((v) => f.options.some((o) => o.slug === v))
+      if (valid.length) seeded[f.slug] = valid
     }
     return seeded
     // Seed once from the initial params; subsequent filter changes are
@@ -113,13 +132,13 @@ export default function ItemsPageClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // V15b — One filter value per attribute, keyed by attribute slug.
-  // Default sentinel is 'all'. A filter is only "active" (i.e. applied
-  // AND visible in the UI) when its value is not 'all'.
-  const [attrFilters, setAttrFilters] = useState<Record<string, string>>(initialAttrFilters)
-  const setAttrFilter = (slug: string, value: string) => {
+  // Selected values per attribute, keyed by attribute slug. An empty (or
+  // missing) list means the filter is off. Several values in one filter
+  // match ANY of them; different filters must ALL match.
+  const [attrFilters, setAttrFilters] = useState<Record<string, string[]>>(initialAttrFilters)
+  const setAttrFilter = (slug: string, values: string[]) => {
     setAttrFilters((prev) => {
-      const next = { ...prev, [slug]: value }
+      const next = { ...prev, [slug]: values }
       // V15b — Reset descendants when a parent changes so stale child
       // selections don't silently filter out everything.
       if (taxonomy.filters) {
@@ -128,22 +147,35 @@ export default function ItemsPageClient({
           const dependsOnUs = child.conditionalRules.some(
             (r) => r.triggerAttrSlug === slug,
           )
-          if (dependsOnUs) next[child.slug] = 'all'
+          if (dependsOnUs) next[child.slug] = []
         }
       }
       return next
     })
   }
-  const getAttrFilter = (slug: string) => attrFilters[slug] ?? 'all'
+  const getAttrFilter = (slug: string): string[] => attrFilters[slug] ?? []
 
-  const [filterPrice, setFilterPrice] = useState<string>('any')
+  // Price slider limits: the cheapest and dearest listing on this page.
+  const priceBounds = useMemo<[number, number]>(() => {
+    const prices = offers.map((o) => o.pricePerUnit).filter((p) => p > 0)
+    if (prices.length === 0) return [0, 0]
+    return [Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))]
+  }, [offers])
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null)
+
+  const [delivery, setDelivery] = useState<string[]>([])
+  const deliveryOptions = useMemo(() => {
+    const present = new Set(offers.map((o) => bucketOf(o.deliveryTime)))
+    return DELIVERY_BUCKETS.filter((b) => present.has(b.slug)).map((b) => ({ slug: b.slug, label: b.label }))
+  }, [offers])
+
   const [sort, setSort] = useState<ItemSort>('recommended')
   const [page, setPage] = useState(1)
 
   // Reset pagination whenever filters change.
   useEffect(() => {
     setPage(1)
-  }, [debouncedQ, attrFilters, filterPrice, sort])
+  }, [debouncedQ, attrFilters, priceRange, delivery, sort])
 
   // V15b — Conditional-rule evaluator that runs against the CURRENT
   // filter state (not against a listing's data). Used to decide which
@@ -154,18 +186,21 @@ export default function ItemsPageClient({
     if (!attr) return false
     const rules = attr.conditionalRules
     if (rules.length === 0) return true
+    // A child filter shows once its parent has a selection and at least one
+    // selected parent value satisfies the rule.
     for (const r of rules) {
-      const parentValue = getAttrFilter(r.triggerAttrSlug)
-      if (parentValue === 'all') return false
+      const parentValues = getAttrFilter(r.triggerAttrSlug)
+      if (parentValues.length === 0) return false
       const triggers = r.triggerValues
-      let pass = false
-      switch (r.operator) {
-        case 'equals':     pass = triggers[0] === parentValue; break
-        case 'not_equals': pass = triggers[0] !== parentValue; break
-        case 'in':         pass = triggers.includes(parentValue); break
-        case 'not_in':     pass = !triggers.includes(parentValue); break
+      const passes = (v: string) => {
+        switch (r.operator) {
+          case 'equals':     return triggers[0] === v
+          case 'not_equals': return triggers[0] !== v
+          case 'in':         return triggers.includes(v)
+          case 'not_in':     return !triggers.includes(v)
+        }
       }
-      if (!pass) return false
+      if (!parentValues.some(passes)) return false
     }
     return true
   }
@@ -177,33 +212,35 @@ export default function ItemsPageClient({
   )
 
   const filtered = useMemo(() => {
-    const band = PRICE_BANDS.find((b) => b.slug === filterPrice) ?? PRICE_BANDS[0]
     return offers.filter((o) => {
       // Apply every ACTIVE filter whose dropdown is currently visible.
       // Listings that are missing the attribute fall through (defensive —
       // legacy rows without template_data wouldn't be filtered out unless
       // the seller actively picks a value).
       for (const f of visibleFilters) {
-        const v = getAttrFilter(f.slug)
-        if (v === 'all') continue
+        const picked = getAttrFilter(f.slug)
+        if (picked.length === 0) continue
         const listingValue = o.attributeValues[f.slug]
         if (!listingValue) return false
-        if (Array.isArray(listingValue)) {
-          if (!listingValue.includes(v)) return false
-        } else if (listingValue !== v) {
-          return false
-        }
+        const values = Array.isArray(listingValue) ? listingValue : [listingValue]
+        if (!values.some((v) => picked.includes(v))) return false
       }
-      if (o.pricePerUnit < band.min) return false
-      if (band.max !== null && o.pricePerUnit > band.max) return false
+      if (priceRange && (o.pricePerUnit < priceRange[0] || o.pricePerUnit > priceRange[1])) {
+        return false
+      }
+      if (delivery.length > 0) {
+        const b = bucketOf(o.deliveryTime)
+        if (!b || !delivery.includes(b)) return false
+      }
       if (debouncedQ) {
-        const hay = `${o.name} ${sellerDisplayName(o.seller)} ${o.seller.username}`.toLowerCase()
+        // Item name only — this box searches items, not sellers.
+        const hay = o.name.toLowerCase()
         if (!hay.includes(debouncedQ)) return false
       }
       return true
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offers, attrFilters, filterPrice, debouncedQ, visibleFilters])
+  }, [offers, attrFilters, priceRange, delivery, debouncedQ, visibleFilters])
 
   const sorted = useMemo(() => {
     const arr = [...filtered]
@@ -247,14 +284,10 @@ export default function ItemsPageClient({
   const clearFilters = () => {
     setQ('')
     setAttrFilters({})
-    setFilterPrice('any')
+    setPriceRange(null)
+    setDelivery([])
     setSort('recommended')
   }
-
-  const priceOptions: TaxonomyOption[] = PRICE_BANDS.map((b) => ({ slug: b.slug, label: b.label }))
-
-  const findLabel = (opts: TaxonomyOption[], slug: string) =>
-    opts.find((o) => o.slug === slug)?.label ?? slug
 
   return (
     <main className="min-h-screen">
@@ -263,7 +296,9 @@ export default function ItemsPageClient({
           gradient bleeds through. The hero is now a transparent
           layer with just a bottom hairline; matches the currency
           pages. */}
-      <section className="relative overflow-hidden border-b border-border-subtle">
+      {/* No bottom divider — the band ends with the filter row and the
+          results start below it; a full-width rule added nothing. */}
+      <section className="relative overflow-hidden">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
           {/* V15s — Page header restored: big game logo on the left,
               single-line "{Game} Items" title beside it. Sits between
@@ -332,62 +367,79 @@ export default function ItemsPageClient({
             </div>
           </div>
 
-          {/* Single-row filter bar: search | filter chips | sort — all inline.
-              Scrolls horizontally on narrow viewports; search stays pinned left. */}
-          <div className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* Filter bar: search | filter chips | sort | clear.
+
+              sm+: WRAPS onto a second row rather than scrolling. The old
+              bar scrolled sideways with a hidden scrollbar, so a chip past
+              the edge (e.g. Price) was simply cut off with no sign there
+              was more.
+              Mobile: still a horizontal scroller (wrapping would stack four
+              rows of chips above the results), with the right edge faded
+              out so it reads as "slides".
+
+              Control height is raised HERE, not in tokens.css: the two
+              height vars are overridden on this row and cascade to every
+              control in it, so search, chips and sort stay one height and
+              nothing else on the site changes. */}
+          <div
+            className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 [mask-image:linear-gradient(to_right,#000_82%,transparent)] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none] [&::-webkit-scrollbar]:hidden"
+            style={{ ['--h-input' as string]: '42px', ['--h-btn-secondary' as string]: '42px' }}
+          >
             {/* Search — wider anchor on the left */}
             <div className="relative shrink-0 min-w-[220px] sm:min-w-[300px]">
               <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+                // z-10: the input's backdrop-blur gives it its own layer, which
+                // otherwise paints over this icon (it comes first in the DOM).
+                className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-secondary"
                 aria-hidden
               />
               <input
                 type="search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search items or sellers…"
-                aria-label="Search items"
-                className="w-full rounded border border-border-default bg-bg-overlay pl-10 pr-3 text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime focus:ring-2 focus:ring-lime-tint-bg"
+                placeholder="Search for an Item"
+                aria-label="Search for an item"
+                // A recessed well, darker than the filter buttons beside it,
+                // so the search reads as the place you type rather than one
+                // more grey button. Interaction is an OUTLINE ONLY: hover
+                // turns the border white; focus changes nothing (the caret is
+                // the cue, and the site-wide green :focus-visible ring is
+                // switched off here).
+                className="w-full rounded border border-white/[0.13] bg-black/25 pl-10 pr-3 text-text-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] outline-none backdrop-blur-sm transition-colors placeholder:text-white/45 hover:border-white/40 focus-visible:shadow-none"
                 style={{ height: 'var(--h-input)', fontSize: 'var(--fs-body)' }}
               />
             </div>
 
-            {/* Filter chips */}
+            {/* Attribute filters (admin-defined per game), then Price and
+                Delivery Time. All multi-select except Price (a range). */}
             {visibleFilters.map((f) => (
-              <FilterSelect
+              <MultiSelectFilter
                 key={f.slug}
-                label={f.label}
-                value={getAttrFilter(f.slug)}
-                defaultSlug="all"
-                options={[
-                  { slug: 'all', label: `All ${f.label.toLowerCase()}` },
-                  ...f.options,
-                ]}
+                label={titleCase(f.label)}
+                icon={iconForFilter(f.label)}
+                options={f.options}
+                selected={getAttrFilter(f.slug)}
                 onChange={(v) => setAttrFilter(f.slug, v)}
               />
             ))}
-            <FilterSelect
-              label="Price"
-              value={filterPrice}
-              defaultSlug="any"
-              options={priceOptions}
-              onChange={setFilterPrice}
-            />
+            {priceBounds[1] > priceBounds[0] && (
+              <PriceRangeFilter bounds={priceBounds} value={priceRange} onChange={setPriceRange} />
+            )}
+            {deliveryOptions.length > 1 && (
+              <MultiSelectFilter
+                label="Delivery Time"
+                icon={iconForFilter('delivery')}
+                options={deliveryOptions}
+                selected={delivery}
+                onChange={setDelivery}
+              />
+            )}
 
             {/* Sort */}
             <div className="shrink-0">
-              <SortSelect value={sort} onChange={setSort} />
+              <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
             </div>
 
-            {/* Clear — far right, unobtrusive */}
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="shrink-0 whitespace-nowrap px-1.5 font-semibold text-text-tertiary underline decoration-border-default underline-offset-[3px] transition-colors hover:text-text-primary"
-              style={{ minHeight: 'var(--h-btn-secondary)', fontSize: 'var(--fs-micro)' }}
-            >
-              Clear
-            </button>
           </div>
         </div>
       </section>
@@ -438,302 +490,10 @@ export default function ItemsPageClient({
       </div>
     </main>
   )
-
-  function FilterSelect({
-    label,
-    value,
-    defaultSlug,
-    options,
-    onChange,
-  }: {
-    label: string
-    value: string
-    defaultSlug: string
-    options: TaxonomyOption[]
-    onChange: (slug: string) => void
-  }) {
-    return (
-      <SearchableFilterChip
-        label={label}
-        value={value}
-        defaultSlug={defaultSlug}
-        options={options}
-        onChange={onChange}
-      />
-    )
-  }
 }
 
-/* ─── Searchable filter chip ────────────────────────────────────────────
-   V15v — The trigger button IS the search input.
-   - Closed: shows the selected label (or "All {label}") with a lime dot
-     when active and an X clear button when active (or chevron when not).
-   - Open: focuses the input, query starts empty, popover hangs below
-     with the live-filtered options. cmdk under the hood for keyboard
-     nav (arrows + enter + escape).
-   - Pick an option → popover closes, chip shows the new label.
-   - X button → resets value without opening.
-   ─────────────────────────────────────────────────────────────────── */
-
-interface SearchableFilterChipProps {
-  label: string
-  value: string
-  defaultSlug: string
-  options: TaxonomyOption[]
-  onChange: (slug: string) => void
-}
-
-function SearchableFilterChip({
-  label, value, defaultSlug, options, onChange,
-}: SearchableFilterChipProps) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const inputRef = useRef<HTMLInputElement | null>(null)
-
-  const isActive = value !== defaultSlug
-  const selectedLabel = useMemo(
-    () => options.find((o) => o.slug === value)?.label ?? value,
-    [options, value],
-  )
-  const placeholder = open ? `Search ${label.toLowerCase()}…` : (isActive ? selectedLabel : `All ${label.toLowerCase()}`)
-
-  useEffect(() => {
-    if (!open) setQuery('')
-  }, [open])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return options
-    return options.filter((o) => o.label.toLowerCase().includes(q))
-  }, [options, query])
-
-  const pick = (slug: string) => {
-    onChange(slug)
-    setOpen(false)
-    inputRef.current?.blur()
-  }
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      setOpen(false)
-      inputRef.current?.blur()
-    }
-  }
-
-  return (
-    // V15w — Use Radix Popover.Root with Portal so the dropdown panel
-    // renders at <body> root, escaping any parent stacking context that
-    // would clip it or paint cards over it. Popover.Anchor binds the
-    // panel's position to the input below; modal=false so focus stays
-    // on the input as the user types.
-    <Popover.Root
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (next) {
-          // Defer to next tick so the input is mounted+visible before focusing.
-          setTimeout(() => inputRef.current?.focus(), 0)
-        }
-      }}
-    >
-      <Popover.Anchor asChild>
-        <div className="relative inline-flex shrink-0 min-w-[148px]" style={{ height: 'var(--h-btn-secondary)' }}>
-          {/* The input IS the trigger. Clicking it sets open=true via the
-              onClick handler; Radix's Popover.Trigger is intentionally NOT
-              used here so the input retains focus naturally. */}
-          <input
-            ref={inputRef}
-            type="text"
-            value={open ? query : ''}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setOpen(true)}
-            onClick={() => setOpen(true)}
-            onKeyDown={onKeyDown}
-            placeholder={placeholder}
-            aria-label={`Filter by ${label}`}
-            aria-expanded={open}
-            aria-haspopup="listbox"
-            style={{ height: 'var(--h-btn-secondary)', fontSize: 'var(--fs-body)' }}
-            className={cn(
-              'w-full rounded border border-border-default bg-bg-overlay pl-4 font-medium text-text-primary outline-none transition-colors',
-              'hover:border-border-strong',
-              'focus:border-lime focus:bg-bg-base focus:ring-2 focus:ring-lime-tint-bg',
-              // V15x — Cursor: pointer when closed (acts as a button),
-              // text-caret when open (acts as a search input).
-              open ? 'cursor-text' : 'cursor-pointer',
-              isActive && !open
-                ? 'placeholder:text-text-primary placeholder:font-medium'
-                : 'placeholder:text-text-tertiary',
-              isActive && !open && 'border-lime-tint-border bg-lime-tint-bg/30',
-              isActive && !open ? 'pl-7' : 'pl-4',
-              'pr-9',
-            )}
-          />
-          {isActive && !open && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-lime"
-            />
-          )}
-          {isActive ? (
-            <button
-              type="button"
-              aria-label={`Clear ${label} filter`}
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                onChange(defaultSlug)
-                setOpen(false)
-              }}
-              className="absolute right-1.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border-subtle bg-bg-base/60 text-text-secondary transition-colors hover:border-error/40 hover:bg-error-bg hover:text-error"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          ) : (
-            <ChevronDown
-              aria-hidden
-              className={cn(
-                'pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary transition-transform',
-                open && 'rotate-180 text-text-secondary',
-              )}
-            />
-          )}
-        </div>
-      </Popover.Anchor>
-
-      <Popover.Portal>
-        <Popover.Content
-          sideOffset={6}
-          align="start"
-          // Don't steal focus from the input on open/close.
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          // Don't close when the input below receives a pointer (the
-          // input is OUTSIDE the Content, so Radix would otherwise treat
-          // its clicks as "outside" and close).
-          onPointerDownOutside={(e) => {
-            const target = e.target as HTMLElement
-            if (target === inputRef.current || inputRef.current?.contains(target)) {
-              e.preventDefault()
-            }
-          }}
-          // Same guard for focus moving out — keep panel open while the
-          // input is focused.
-          onFocusOutside={(e) => {
-            if (document.activeElement === inputRef.current) {
-              e.preventDefault()
-            }
-          }}
-          className={cn(
-            // z-[60] guarantees the panel paints above sticky nav, sticky
-            // sub-nav, and any z-50 sibling. Portal already takes it out
-            // of the cards' stacking context.
-            'z-[60] overflow-hidden rounded border border-border-default bg-bg-overlay shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
-            'min-w-[var(--radix-popover-trigger-width,220px)]',
-            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-          )}
-        >
-          <div className="max-h-[280px] overflow-y-auto p-1.5" style={{ fontSize: 'var(--fs-meta)' }}>
-            {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-center text-text-tertiary" style={{ fontSize: 'var(--fs-micro)' }}>
-                No matches for &quot;{query}&quot;
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {filtered.map((o) => {
-                  const selected = o.slug === value
-                  return (
-                    <button
-                      key={o.slug}
-                      type="button"
-                      onClick={() => pick(o.slug)}
-                      className={cn(
-                        'flex w-full items-center justify-between gap-3 rounded px-2.5 py-1.5 text-left font-medium transition-colors',
-                        selected
-                          ? 'bg-bg-raised-hover text-text-primary'
-                          : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                      )}
-                    >
-                      <span className="truncate">{o.label}</span>
-                      {selected && <Check className="h-3.5 w-3.5 shrink-0 text-lime-text" />}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  )
-}
-
-/** Small dot separator for the floating header stat line. */
 function Dot() {
   return <span aria-hidden className="text-text-disabled">·</span>
-}
-
-function SortSelect({
-  value,
-  onChange,
-}: {
-  value: ItemSort
-  onChange: (s: ItemSort) => void
-}) {
-  // Compact "Filter" pill — the active sort is shown as a checkmark inside.
-  const isDefault = value === SORT_OPTIONS[0]?.slug
-  return (
-    <Popover.Root>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          aria-label="Sort and filter"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-3 font-semibold text-text-primary transition-colors hover:border-border-strong"
-          style={{ minHeight: 'var(--h-btn-secondary)', fontSize: 'var(--fs-meta)' }}
-        >
-          <SlidersHorizontal className={cn('h-4 w-4', isDefault ? 'text-text-tertiary' : 'text-lime-text')} aria-hidden />
-          <span className="max-sm:sr-only">Filter</span>
-          <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          sideOffset={6}
-          align="end"
-          className={cn(
-            'z-50 min-w-[210px] rounded border border-border-default bg-bg-overlay p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]',
-            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-          )}
-        >
-          <div className="flex flex-col gap-0.5" style={{ fontSize: 'var(--fs-meta)' }}>
-            {SORT_OPTIONS.map((o) => {
-              const selected = o.slug === value
-              return (
-                <Popover.Close key={o.slug} asChild>
-                  <button
-                    type="button"
-                    onClick={() => onChange(o.slug)}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-3 rounded px-2.5 py-1.5 text-left font-medium transition-colors',
-                      selected
-                        ? 'bg-bg-raised-hover text-text-primary'
-                        : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                    )}
-                  >
-                    <span className="truncate">{o.label}</span>
-                    {selected && <Check className="h-3.5 w-3.5 shrink-0 text-lime-text" />}
-                  </button>
-                </Popover.Close>
-              )
-            })}
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  )
 }
 
 function EmptyState({ onClear }: { onClear: () => void }) {

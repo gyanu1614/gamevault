@@ -1,6 +1,12 @@
 import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
-import { Inter, Figtree, JetBrains_Mono, Archivo } from 'next/font/google'
+import {
+  Inter,
+  Figtree,
+  JetBrains_Mono,
+  Archivo,
+  Roboto_Condensed,
+} from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
@@ -54,6 +60,21 @@ const archivo = Archivo({
   display: 'swap',
   subsets: ['latin'],
   variable: '--font-archivo',
+})
+
+// Roboto Condensed — the step numerals on the buyer-steps section ONLY.
+// Chosen by rasterising each candidate's '1' and comparing its ink-width
+// profile down the glyph against the reference's. The reference '1' has a
+// wide angled FLAG at the top over a thin stem (profile 2,31,59,59,30,2,2…);
+// Roboto Condensed matches it closely (4,32,59,56,30…) where Big Shoulders
+// Display — which won on bounding-box proportion alone — has almost no flag
+// and scored worst of eleven candidates. Bounding boxes do not capture glyph
+// shape; the profile does.
+const bigShoulders = Roboto_Condensed({
+  weight: '700',
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-numeral',
 })
 
 export const metadata: Metadata = {
@@ -110,7 +131,7 @@ export default function RootLayout({
             page. */}
         <AllHeroesPreload />
       </head>
-      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+      <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} ${bigShoulders.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

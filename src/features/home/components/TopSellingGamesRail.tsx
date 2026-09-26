@@ -48,7 +48,7 @@ export function TopSellingGamesRail() {
   return (
     <div
       ref={emblaRef}
-      className="relative mt-5 overflow-hidden"
+      className="relative mt-6 overflow-hidden sm:mt-8"
       style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
     >
       <div className="-ml-3 flex touch-pan-y sm:-ml-4">

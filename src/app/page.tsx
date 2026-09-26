@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { PopularGames } from '@/features/home/components/PopularGames'
 import { LatestListings } from '@/features/home/components/LatestListings'
+import { HeroBillboard } from '@/features/home/components/HeroBillboard'
+import { getPriceIndexSummary } from '@/features/home/lib/price-index'
 import { organization, ORGANIZATION_ID } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
@@ -47,7 +49,17 @@ const SCHEMAS = [
   organization(),
 ]
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<{ hero?: string }>
+}) {
+  // TEMPORARY — compare the new billboard against the current hero with
+  // ?hero=billboard. Delete this flag (and the old HomeHero branch) once
+  // the surface is signed off.
+  const sp = await searchParams
+  const useBillboard = sp?.hero === 'billboard'
+  const priceIndex = useBillboard ? await getPriceIndexSummary() : null
   return (
     <>
       {/* V20/P22 — Preload the hero backdrop so it's already cached by
@@ -76,7 +88,11 @@ export default function Page() {
 
       {/* Popular Games fetches on the server and is handed to the client
           page as a child — see the note in HomePage. */}
-      <HomePage popularGames={<PopularGames />} latestListings={<LatestListings />} />
+      <HomePage
+        popularGames={<PopularGames />}
+        latestListings={<LatestListings />}
+        hero={useBillboard ? <HeroBillboard priceIndex={priceIndex} /> : undefined}
+      />
     </>
   )
 }

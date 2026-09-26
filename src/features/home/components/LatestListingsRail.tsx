@@ -61,7 +61,7 @@ export function LatestListingsRail({ listings }: { listings: LatestListing[] }) 
     <div
       ref={emblaRef}
       // `relative` lifts the rail above the section's ::before grid backdrop.
-      className="relative mt-5 overflow-hidden"
+      className="relative mt-6 overflow-hidden sm:mt-8"
       style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
     >
       <div className="-ml-3 flex touch-pan-y sm:-ml-4">

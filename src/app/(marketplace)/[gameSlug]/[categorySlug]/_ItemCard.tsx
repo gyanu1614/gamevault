@@ -148,13 +148,15 @@ export default function ItemCard({
   return (
     <article
       className={cn(
-        // V48 — Bundle-tile hover language: gentle lift + deepened
-        // shadow + surface fill (was color-fill only). Thumbnail stays
-        // static and there's no lime tint — the card remains
-        // data-forward; only the surface gains depth.
+        // Hover = highlight in place: the surface lightens one step and the
+        // border brightens toward white, with a faint lit top edge. NO lift
+        // and no drop shadow — the card must not move. Colour + border only,
+        // so it transitions `colors` and `box-shadow`, never `transform`.
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
-        'transition-all duration-200',
-        'hover:-translate-y-0.5 hover:border-border-strong hover:bg-bg-overlay-2 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
+        'transition-[background-color,border-color,box-shadow] duration-200',
+        // bg-inset, NOT bg-overlay-2: overlay-2 is the same hex as the resting
+        // bg-overlay (#252B34), so hovering to it changed nothing.
+        'hover:border-white/25 hover:bg-bg-inset hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -208,7 +210,12 @@ export default function ItemCard({
         </div>
 
         {/* Right column — square thumbnail + optional Best deal flag */}
-        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md bg-bg-base sm:w-[110px]">
+        {/* No background on the thumbnail slot — it is transparent, so a
+            PNG cutout (most pet/item art) floats directly on the card and
+            takes the card's colour, including on hover. An opaque image
+            fills the slot with object-cover and keeps its rounded corners,
+            so it looks exactly as it did on the old dark tile. */}
+        <div className="relative z-10 aspect-square h-full w-[88px] shrink-0 self-start overflow-hidden rounded-md sm:w-[110px]">
           {offer.imageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -239,7 +246,7 @@ export default function ItemCard({
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="tabular-nums leading-none text-text-primary" style={{ fontSize: 'var(--fs-price)', fontWeight: 'var(--fw-heading)', fontFamily: 'var(--font-mono, monospace)', fontVariantNumeric: 'tabular-nums' }}>
+          <span className="tabular-nums leading-none text-text-primary" style={{ fontSize: 'var(--fs-price)', fontWeight: 'var(--fw-heading)', fontVariantNumeric: 'tabular-nums' }}>
             {fmtPrice(offer.pricePerUnit)}
           </span>
           {discountPct > 0 && offer.originalPrice != null && (

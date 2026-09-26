@@ -16,6 +16,7 @@
  */
 
 import { HubCtaBand } from '@/components/content/HubCtaBand'
+import { gameCtaArt } from '@/lib/content/game-cta-art'
 
 interface HubSellerCtaProps {
   /** Game slug — the /early-seller source tag + the per-game backdrop file. */
@@ -26,14 +27,9 @@ interface HubSellerCtaProps {
   src: string
 }
 
-/** Games that ship their own dedicated seller-band art in public/seller-cta/.
- *  Everyone else reuses the buy banner so buy + sell share one look. */
-const GAMES_WITH_SELLER_ART = new Set(['steal-a-brainrot'])
-
 export function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProps) {
-  const bgSrc = GAMES_WITH_SELLER_ART.has(gameSlug)
-    ? `/seller-cta/${gameSlug}.png`
-    : `/cta-heroes/${gameSlug}.jpg`
+  // Shared with the category-page guide so both show the same art.
+  const bgSrc = gameCtaArt(gameSlug)
 
   return (
     <HubCtaBand

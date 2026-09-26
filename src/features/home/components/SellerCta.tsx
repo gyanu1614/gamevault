@@ -115,9 +115,7 @@ export function SellerCta() {
           heading reads as the bento's own label rather than as a floating
           section header. The gap is the grid's own row gap, so the heading
           and the first row of cards pair up. */}
-      <h2 className="text-center font-semibold leading-[1.15] tracking-[-0.02em] text-text-primary text-[clamp(26px,3vw,36px)]">
-        Sell on DropMarket
-      </h2>
+      <h2 className="section-title">Sell on DropMarket</h2>
 
       {/* One column until the cards are wide enough to sit side by side.
           The third card spans both columns on the bottom row. */}

@@ -38,18 +38,16 @@ export async function LatestListings() {
           so it fades to nothing well before any edge. */}
       <GridSpotlight />
 
-      {/* Heading left, link right — same pattern as any section that has an
-          action link (see the section header rule in CLAUDE.md).
-          `relative` lifts the content above the grid layer. */}
-      <div className="relative flex items-baseline justify-between gap-4">
-        <h2 className="min-w-0 truncate text-[18px] font-semibold tracking-[-0.02em] text-text-primary">
-          Latest Listings
-        </h2>
-        {/* shrink-0 + nowrap: without them flex squeezes the link at narrow
-            widths and the label breaks across two lines. */}
+      {/* Title centred on the section, action link at the right of the same
+          row. The link is absolutely positioned rather than a flex sibling:
+          as a sibling its width shifts the title off the section's centre,
+          and the title must line up with every other centred section title
+          on the page. `relative` also lifts content above the grid layer. */}
+      <div className="relative">
+        <h2 className="section-title">Latest Listings</h2>
         <Link
           href="/browse"
-          className="group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+          className="group absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary sm:inline-flex"
         >
           Browse Marketplace
           <ArrowRight
@@ -61,15 +59,28 @@ export async function LatestListings() {
 
       <LatestListingsRail listings={listings} />
 
+      {/* Below-rail fallback for narrow screens, where an absolutely
+          positioned link would sit on top of the title. */}
+      <div className="relative mt-6 flex justify-center sm:hidden">
+        <Link
+          href="/browse"
+          className="group inline-flex items-center gap-1.5 whitespace-nowrap text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          Browse Marketplace
+          <ArrowRight
+            aria-hidden
+            className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5"
+          />
+        </Link>
+      </div>
+
       {/* Row 2 — Top Selling Games. Layout shell only for now. */}
-      <div className="relative mt-14">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="min-w-0 truncate text-[18px] font-semibold tracking-[-0.02em] text-text-primary">
-            Top Selling Games
-          </h2>
+      <div className="relative mt-20">
+        <div className="relative">
+          <h2 className="section-title">Top Selling Games</h2>
           <Link
             href="/browse"
-            className="group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+            className="group absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary sm:inline-flex"
           >
             All Games
             <ArrowRight
@@ -80,6 +91,19 @@ export async function LatestListings() {
         </div>
 
         <TopSellingGamesRail />
+
+        <div className="mt-6 flex justify-center sm:hidden">
+          <Link
+            href="/browse"
+            className="group inline-flex items-center gap-1.5 whitespace-nowrap text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+          >
+            All Games
+            <ArrowRight
+              aria-hidden
+              className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5"
+            />
+          </Link>
+        </div>
       </div>
     </section>
   )

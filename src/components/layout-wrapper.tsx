@@ -76,7 +76,9 @@ export function LayoutWrapper({
   // scroll surface with only the navbar until sections are added back. The
   // footer (incl. the game-links matrix) is suppressed here so the empty
   // page can be verified on its own. Remove this flag when the rebuild lands.
-  const isHomepageRebuild = pathname === '/'
+  // Was: suppress the footer on '/' while the homepage was an empty scroll
+  // surface. The rebuild has sections now, so the footer renders there again.
+  const isHomepageRebuild = false
 
   return (
     <div className={`flex min-h-screen flex-col${isValuesHub ? ' hub-chrome' : ''}`}>
@@ -106,10 +108,9 @@ export function LayoutWrapper({
         !hasSidebar &&
         !isValuesHub &&
         !isHomepageRebuild && (
-          <>
-            {footerGameLinks}
-            <Footer />
-          </>
+          // Direction A: the games directory is a slot INSIDE the footer
+          // rather than its own band above it — see the note in footer.tsx.
+          <Footer gameDirectory={footerGameLinks} />
         )}
     </div>
   )
