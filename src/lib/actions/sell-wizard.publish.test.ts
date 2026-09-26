@@ -222,3 +222,40 @@ describe('AUTH-031 — the service-role listing insert is pinned to the session 
     expect(h.session.calls.filter((c: any) => c.table === 'listings')).toHaveLength(0)
   })
 })
+
+describe('currency minimum + landing path', () => {
+  const enabledCurrency = () => sessionWith({
+    profiles: [{ data: { role: 'seller', seller_status: 'active' }, error: null }],
+    global_categories: [{ data: { id: 'gc-currency' }, error: null }],
+    game_categories: [{ data: { id: 'pair-c', slug: 'buy-currency', name: 'Currency', type: 'currency', legacy_category_id: 'cat-c' }, error: null }],
+    listings: [{ data: null, error: null }], // no existing flexible offer for this game
+    games: [
+      { data: { name: 'Blade Ball', slug: 'blade-ball', image_url: null }, error: null },
+      { data: { slug: 'blade-ball' }, error: null },
+    ],
+    category_configs: [{ data: { config: { unit_label: 'Tokens', quantity_granularity: 'thousand', min_quantity: 1 } }, error: null }],
+  })
+
+  it("keeps a seller's 1 K minimum when the admin floor is 1 (no hard-coded 100)", async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1 })
+    expect(res.success).toBe(true)
+    const ins = h.admin.calls.find((c: any) => c.table === 'listings' && c.op === 'insert')!
+    expect((ins.args[0] as any).min_quantity).toBe(1)
+  })
+
+  it('returns the public category page for a live offer so the wizard lands there', async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1 })
+    expect(res).toMatchObject({ success: true, data: { status: 'active', path: '/blade-ball/buy-currency' } })
+  })
+
+  it('returns no path for a draft (not publicly visible)', async () => {
+    h.session = enabledCurrency()
+    h.admin = mockClient({ listings: [{ data: { id: 'l-c', slug: 'tokens' }, error: null }] })
+    const res = await publishListing({ ...INPUT, category_slug: 'currency', quantity: 500, min_quantity: 1, status: 'draft' })
+    expect(res.success && res.data.path).toBeFalsy()
+  })
+})

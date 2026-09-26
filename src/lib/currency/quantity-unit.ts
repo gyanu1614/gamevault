@@ -38,3 +38,25 @@ export function priceUnit(
   if (granularity === 'million') return 'M'
   return 'Unit'
 }
+
+/**
+ * Units for one listing row (seller offers table): what the price covers
+ * and what stock / minimum are counted in. Bundle listings are priced and
+ * stocked per bundle; flexible currency uses K / M or the currency name;
+ * everything else — or a currency row whose config has not loaded — is
+ * per Unit.
+ */
+export function listingUnits(opts: {
+  type: string | null | undefined
+  bundleId: string | null | undefined
+  config:
+    | { quantity_granularity?: QuantityGranularity | null; unit_label?: string | null }
+    | null
+    | undefined
+}): { price: string; quantity: string } {
+  if (opts.type !== 'currency') return { price: 'Unit', quantity: 'Unit' }
+  if (opts.bundleId) return { price: 'Bundle', quantity: 'Bundle' }
+  if (!opts.config) return { price: 'Unit', quantity: 'Unit' }
+  const u = quantityUnit(opts.config.quantity_granularity, opts.config.unit_label)
+  return { price: u, quantity: u }
+}

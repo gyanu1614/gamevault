@@ -58,6 +58,8 @@ export interface Listing {
   slug?: string | null
   /** Minimum purchase quantity (currency offers). */
   min_quantity?: number | null
+  /** Fixed-bundle currency listings only (category_configs bundles[].id). */
+  bundle_id?: string | null
   /** Short sequential offer ID (#33404) — null until the migration runs. */
   offer_number?: number | null
   /** Admin moderation notes — what to change (surfaced to the seller

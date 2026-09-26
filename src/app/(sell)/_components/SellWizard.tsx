@@ -75,6 +75,7 @@ import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, type PlatformFields, type PlatformFieldKind } from '@/lib/types/category-configs'
 import { visiblePlatformKinds } from './PlatformFieldsBlock'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
+import { resolveMinQuantity } from '@/lib/currency/min-quantity'
 import type {
   GlobalCategory,
   AttributeTemplateFull,
@@ -984,25 +985,12 @@ export default function SellWizard({
       // is always 1. A flexible currency uses the seller's figure,
       // clamped up to the per-game admin floor so a stale form value
       // can never publish below it.
-      const adminFloor = Math.max(1, currencyConfig?.min_quantity ?? 1)
-      const typedMin = parseInt(minQuantity, 10)
-      const stockValue = parseInt(quantity, 10)
-      const minQuantityValue = bundleId
-        ? 1
-        : (() => {
-            const wanted = Math.max(
-              adminFloor,
-              Number.isFinite(typedMin) ? typedMin : adminFloor,
-            )
-            // A minimum above stock is unsellable: the buyer's stepper
-            // would open below the floor it is clamped to and no order
-            // could ever be placed. Cap at stock, but never below the
-            // admin floor — if stock is under the floor the listing is
-            // out of range anyway and the floor is the honest value.
-            return Number.isFinite(stockValue) && stockValue > 0
-              ? Math.max(adminFloor, Math.min(wanted, stockValue))
-              : wanted
-          })()
+      const minQuantityValue = resolveMinQuantity({
+        requested: parseInt(minQuantity, 10),
+        adminFloor: currencyConfig?.min_quantity,
+        stock: parseInt(quantity, 10),
+        isBundle: !!bundleId,
+      })
 
       const payload = {
         game_id: selectedGame.game_id,
@@ -1068,7 +1056,14 @@ export default function SellWizard({
       queryClient.invalidateQueries({ queryKey: ['seller', 'listings'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
       succeeded = true
-      startTransition(() => router.push('/account/listings'))
+      // A new live offer lands on the page buyers see it on — the game's
+      // currency page for currency, items page for items. Edits, drafts and
+      // offers waiting for review go back to the offers table.
+      const landingPath =
+        !isEditMode && 'path' in res.data && typeof res.data.path === 'string'
+          ? res.data.path
+          : '/account/listings'
+      startTransition(() => router.push(landingPath))
     } finally {
       // Re-enable only if we're staying on the page (failure/error). On
       // success the navigation unmounts this wizard, so leaving the button
