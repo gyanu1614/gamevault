@@ -58,11 +58,12 @@ export default function Page() {
       <link
         rel="preload"
         as="image"
-        href="/assets/heroes/home.avif"
+        // Must match HomeHeroArt's backdropSrc (HomePage.tsx), or the page
+        // preloads an image it never shows (it was /assets/heroes/home.avif,
+        // 279 KB, unused, while the real 78 KB hero was not preloaded).
+        href="/hero/home.avif"
         type="image/avif"
-        // @ts-expect-error — `fetchpriority` is valid HTML, React types
-        // lag the spec. High priority puts it ahead of carousel images.
-        fetchpriority="high"
+        fetchPriority="high"
       />
 
       {/* JSON-LD */}

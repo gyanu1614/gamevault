@@ -147,7 +147,9 @@ export function FaqCards({
                 )}
                 // Hidden-but-mounted content must leave the a11y tree and the
                 // tab order, or the closed answers' links stay focusable.
-                inert={glass && !open ? true : undefined}
+                // React 18 has no boolean `inert`: `true` warns and is dropped.
+                // The empty string renders the attribute (inert="").
+                {...(glass && !open ? { inert: '' as unknown as boolean } : {})}
               >
                 <div className={cn(glass && 'min-h-0 overflow-hidden')}>
                   <div
