@@ -26,19 +26,25 @@ import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight, Check, Loader2, Upload, X as IconX, Image as ImageIcon,
-  ChevronLeft, Search, DollarSign, Package, Clock, Zap, FileSpreadsheet,
-  History, Flame,
-  Coins, Backpack, UserSquare2, Trophy, ShoppingBag, Gamepad2,
+  ChevronLeft, Clock, Zap, FileSpreadsheet, Minus, Plus,
+  Coins, Backpack, UserSquare2, Trophy,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { round2 } from '@/lib/fees'
 import { previewSellerFee, type SellerFeePreview } from '@/lib/actions/fee-preview'
-import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { Combobox } from '@/components/ui/combobox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { formatDeliveryLabel, SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
 import { Checkbox } from '@/components/ui/checkbox'
-import { NumberField } from '@/components/ui/number-field'
 import {
   Dialog,
   DialogContent,
@@ -68,6 +74,7 @@ import {
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, type PlatformFields, type PlatformFieldKind } from '@/lib/types/category-configs'
 import { visiblePlatformKinds } from './PlatformFieldsBlock'
+import { quantityUnit } from '@/lib/currency/quantity-unit'
 import type {
   GlobalCategory,
   AttributeTemplateFull,
@@ -77,31 +84,10 @@ import type {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 1, label: 'Category', hint: 'Choose a category' },
-  { id: 2, label: 'Game',     hint: 'Choose a game' },
-  { id: 3, label: 'Details',  hint: 'Tell us about the offer' },
+  { id: 1, label: 'Category', hint: 'Choose A Category' },
+  { id: 2, label: 'Game',     hint: 'Choose A Game' },
+  { id: 3, label: 'Details',  hint: 'Offer Details' },
 ] as const
-
-// `short` is the compact mobile label — grid-cols-3 at 360px leaves ~85px
-// per tile, so "30 Minutes" clips; sm+ keeps the full label.
-const DELIVERY_TIMES = [
-  { value: '20min', label: '20 Minutes', short: '20 Min' },
-  { value: '1hr',   label: '1 Hour',     short: '1 Hr' },
-  { value: '3hr',   label: '3 Hours',    short: '3 Hrs' },
-  { value: '6hr',   label: '6 Hours',    short: '6 Hrs' },
-  { value: '12hr',  label: '12 Hours',   short: '12 Hrs' },
-  { value: '24hr',  label: '1 Day',      short: '1 Day' },
-]
-
-// V13 — Currency sellers think in minutes. Tighter preset grid.
-const DELIVERY_TIMES_CURRENCY = [
-  { value: 'instant', label: 'Instant',    short: 'Instant' },
-  { value: '5min',    label: '5 Minutes',  short: '5 Min' },
-  { value: '15min',   label: '15 Minutes', short: '15 Min' },
-  { value: '30min',   label: '30 Minutes', short: '30 Min' },
-  { value: '1hr',     label: '1 Hour',     short: '1 Hr' },
-  { value: 'custom',  label: 'Custom',     short: 'Custom' },
-]
 
 const RECENT_GAMES_KEY = 'gv_sell_recent_games'
 // R16 — sessionStorage key for the wizard snapshot so refresh keeps the
@@ -229,62 +215,116 @@ function buildChildIndex(attrs: Attribute[]) {
  * leading number/check badge. Active = lime text. Completed = clickable,
  * subtle hover bg. Future = dimmed. No bordered box around the label.
  */
-function StepBar({ step, onJumpToStep }: { step: number; onJumpToStep: (target: number) => void }) {
-  const pct = (step / STEPS.length) * 100
-
+function StepBar({
+  step,
+  onJumpToStep,
+  onBack,
+  backLabel,
+}: {
+  step: number
+  onJumpToStep: (target: number) => void
+  onBack: () => void
+  backLabel: string
+}) {
   return (
-    <nav aria-label="Progress" className="mb-4">
-      {/* Step row — plain labels, no pill chrome */}
-      <ol className="mb-3 flex items-center justify-between gap-1 sm:gap-2">
-        {STEPS.map((s) => {
-          const done = step > s.id
-          const active = step === s.id
-          const clickable = done // can only jump backwards to a completed step
-          return (
-            <li key={s.id} className="min-w-0 flex-1">
-              <button
-                type="button"
-                disabled={!clickable && !active}
-                onClick={() => clickable && onJumpToStep(s.id)}
-                className={cn(
-                  // Layout — no border, no background fill by default.
-                  // min-h-[36px] + text-xs keep the completed-step jump
-                  // readable and reliably tappable on phones.
-                  'group flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-md px-1.5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors sm:gap-2 sm:px-3',
-                  // State — color only, no enclosing pill
-                  active && 'text-lime-text',
-                  done && 'cursor-pointer text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                  !active && !done && 'cursor-default text-text-disabled',
-                )}
-                aria-current={active ? 'step' : undefined}
-              >
-                <span
-                  className={cn(
-                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
-                    active && 'bg-lime text-text-inverse',
-                    done && 'bg-success text-text-inverse',
-                    !active && !done && 'border border-border-default text-text-tertiary',
-                  )}
-                >
-                  {done ? <Check className="h-3 w-3" strokeWidth={3} /> : s.id}
-                </span>
-                <span className="truncate">{s.label}</span>
-              </button>
-            </li>
-          )
-        })}
-      </ol>
+    // The wizard's own navbar. The global nav is stripped on /sell, so
+    // without this the page had no brand anchor and no way out except a
+    // back link floating in the body. One bar now carries all three:
+    // identity (logo), escape (back), and position (the segments).
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-subtle bg-[rgba(10,10,15,0.85)] backdrop-blur">
+      {/* The brand row spans the viewport like a real navbar; only the
+          step segments stay on the form's measure, so the rails line up
+          with the fields below them. */}
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        {/* Row 1 — brand left, back right. */}
+        <div className="flex h-14 items-center justify-between gap-3">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-mark-white.avif"
+              alt="DropMarket"
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0"
+            />
+            <span className="text-[15px] font-bold text-text-primary">
+              DropMarket
+            </span>
+          </Link>
 
-      {/* Rail */}
-      <div className="relative h-1 w-full overflow-hidden rounded-full bg-bg-raised-hover">
-        <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-lime"
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        />
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex shrink-0 items-center gap-1 rounded-md py-1.5 text-[13px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {backLabel}
+          </button>
+        </div>
+
+        {/* Row 2 — the three step segments, flush to the bar's bottom
+            edge so the rails read as one continuous progress strip. */}
       </div>
-    </nav>
+
+      {/* Segments use main's exact container (mx-auto max-w-3xl px-4
+          sm:px-6) so each rail sits flush with the field edges below. */}
+      <nav
+        aria-label="Progress"
+        className="mx-auto w-full max-w-3xl px-4 sm:px-6"
+      >
+        <ol className="flex gap-1.5">
+            {STEPS.map((s) => {
+              const done = step > s.id
+              const active = step === s.id
+              const clickable = done // only backwards, to a completed step
+
+              return (
+                <li key={s.id} className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    disabled={!clickable}
+                    onClick={() => clickable && onJumpToStep(s.id)}
+                    aria-current={active ? 'step' : undefined}
+                    aria-label={
+                      clickable
+                        ? `Back to step ${s.id}, ${s.label}`
+                        : `Step ${s.id}, ${s.label}${active ? ' (current)' : ''}`
+                    }
+                    className={cn(
+                      'group block w-full pb-2.5 text-left',
+                      clickable ? 'cursor-pointer' : 'cursor-default',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'mb-2 block truncate text-[11px] font-semibold uppercase tracking-wider transition-colors',
+                        active && 'text-lime-text',
+                        done && 'text-text-tertiary group-hover:text-text-secondary',
+                        !done && !active && 'text-text-disabled',
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'block h-[3px] w-full rounded-full transition-colors duration-300',
+                        // Explicit rgba, not `bg-lime/45`: the lime token is
+                        // a CSS variable, and Tailwind's slash-opacity cannot
+                        // apply an alpha channel to `var(...)`, so the
+                        // completed segment rendered fully transparent.
+                        done &&
+                          'bg-[rgba(198,255,61,0.45)] group-hover:bg-[rgba(198,255,61,0.75)]',
+                        active && 'bg-lime',
+                        !done && !active && 'bg-border-default',
+                      )}
+                    />
+                  </button>
+                </li>
+              )
+          })}
+        </ol>
+      </nav>
+    </header>
   )
 }
 
@@ -399,6 +439,27 @@ export default function SellWizard({
   const [images, setImages] = useState<string[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  /**
+   * Step the seller asked to jump back to while Step 3 held unsaved
+   * input. Holding it here (rather than jumping straight away) is what
+   * lets the confirm dialog be the gate.
+   */
+  const [pendingJump, setPendingJump] = useState<1 | 2 | 3 | null>(null)
+
+  /**
+   * True when Step 3 holds work the seller would lose by going back.
+   * Deliberately ignores the fields that carry defaults (quantity 1,
+   * delivery 1hr) — warning about untouched defaults would train people
+   * to dismiss the dialog.
+   */
+  const hasStep3Input =
+    description.trim().length > 0 ||
+    price.trim().length > 0 ||
+    title.trim().length > 0 ||
+    images.length > 0 ||
+    Object.values(fieldValues).some(
+      (v) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0),
+    )
   // Synchronous re-entrancy guard. `submitting` state drives the button's
   // disabled/spinner UI, but state updates are async — a very fast double
   // click can enter handlePublish twice before the re-render disables the
@@ -919,6 +980,30 @@ export default function SellWizard({
           templateData[a.slug] = v
         }
       }
+      // Bundle listings are sold one bundle at a time, so their minimum
+      // is always 1. A flexible currency uses the seller's figure,
+      // clamped up to the per-game admin floor so a stale form value
+      // can never publish below it.
+      const adminFloor = Math.max(1, currencyConfig?.min_quantity ?? 1)
+      const typedMin = parseInt(minQuantity, 10)
+      const stockValue = parseInt(quantity, 10)
+      const minQuantityValue = bundleId
+        ? 1
+        : (() => {
+            const wanted = Math.max(
+              adminFloor,
+              Number.isFinite(typedMin) ? typedMin : adminFloor,
+            )
+            // A minimum above stock is unsellable: the buyer's stepper
+            // would open below the floor it is clamped to and no order
+            // could ever be placed. Cap at stock, but never below the
+            // admin floor — if stock is under the floor the listing is
+            // out of range anyway and the floor is the honest value.
+            return Number.isFinite(stockValue) && stockValue > 0
+              ? Math.max(adminFloor, Math.min(wanted, stockValue))
+              : wanted
+          })()
+
       const payload = {
         game_id: selectedGame.game_id,
         category_slug: selectedCategory.slug,
@@ -927,9 +1012,12 @@ export default function SellWizard({
         price: parseFloat(price),
         original_price: originalPrice ? parseFloat(originalPrice) : null,
         quantity: parseInt(quantity, 10),
-        // V19/P24/P7.b — Min-order-qty input dropped from the wizard;
-        // always send 1. Server-side floors (if any) still apply.
-        min_quantity: 1,
+        // The seller's own minimum order size, in the category's
+        // granularity unit (a `thousand` game stores 1 for "1K"). Was
+        // hardcoded to 1 while the input was absent from the wizard,
+        // which meant the per-game admin floor never reached the row
+        // and the buyer stepper fell back to a magic 100.
+        min_quantity: minQuantityValue,
         delivery_method: deliveryMethod,
         delivery_time: deliveryTime,
         images,
@@ -1040,55 +1128,69 @@ export default function SellWizard({
   // gone (V19/P13), that empty band was reachable as the user could
   // scroll up into nothing. pt-20 = navbar height + 16px breath.
   return (
-    <main className="mx-auto w-full max-w-4xl px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20 sm:px-6 sm:pb-24 sm:pt-20 lg:max-w-5xl lg:pt-20">
-      {/* Wizard card — elevated grey surface on bg-bg-base. Per spec §2,
-          no lime tint on the wrapper; sub-cards inside go one shade deeper
-          (bg-bg-overlay) for visual hierarchy.
-          Breadcrumbs removed in R8 — the clickable step chips inside StepBar
-          serve as the only step navigation. */}
-      <section
-        ref={cardRef}
-        className="relative isolate overflow-visible rounded-3xl border border-border-default bg-bg-raised p-4 shadow-elevated sm:p-5 lg:p-6"
-      >
-        {/* V19/P15.c — Back affordance via shadcn Button (ghost). On
-            step 1 (or any step in edit mode) it leaves the wizard back
-            to the seller's listings. On steps 2/3 of a new listing it
-            walks back one step so the seller can change their
-            category/game pick without losing in-progress data. */}
-        <div className="mb-3 -ml-2 -mt-1 sm:mb-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (isEditMode || step === 1) {
-                router.push('/account/listings')
-                return
-              }
-              setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
-            }}
-            className="gap-1 text-text-tertiary hover:text-text-primary"
-            aria-label={isEditMode || step === 1 ? 'Back to listings' : 'Back to previous step'}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            {isEditMode || step === 1 ? 'Back to Listings' : 'Back'}
-          </Button>
-        </div>
-
+    // Focused canvas: one narrow centred column on the page background.
+    // max-w-3xl (768px, Eldorado's form width) — a reading measure for a
+    // form; 672px read as thin and tall. Wider still and rows
+    // make label/field pairs drift apart. Bottom padding clears the
+    // sticky action bar on every breakpoint, not just mobile.
+    // Steps 1 and 2 are short (a heading and a handful of tiles). Pinned
+    // to the top they left ~450px of dead space underneath and read as a
+    // fragment of a page. Centring the column in the space between the
+    // top rail and the sticky action bar makes the choice the subject of
+    // the screen. Step 3 is long, so it falls back to top-aligned and
+    // simply scrolls.
+    <main
+      className={cn(
+        // pt clears the fixed wizard navbar (96px: brand row + segment
+        // row) and leaves ~32px (40px on sm+) before the title, the same
+        // on all three steps.
+        // `sell-form` scopes the focus-ring override in globals.css.
+        'sell-form mx-auto flex w-full flex-col px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-32 sm:px-6 sm:pt-[8.5rem]',
+        'max-w-3xl',
+        // min-h-0 + the sticky bar's height as bottom padding: using
+        // 100dvh WITH padding made the box taller than the viewport and
+        // reintroduced a scrollbar on a screen that has nothing to scroll.
+        // Top-aligned, not centred: centring parked the title in the
+        // middle of the viewport with a large empty band under the bar.
+        step < 3 && 'min-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))]',
+      )}
+    >
+      {/* No card. The form IS the page — the progress line is pinned to
+          the viewport top, the heading sits on the background, and the
+          only surfaces below are the inputs themselves. */}
+      <section ref={cardRef} className="relative isolate overflow-visible">
         <StepBar
           step={step}
+          backLabel={isEditMode || step === 1 ? 'Back to Listings' : 'Back'}
+          onBack={() => {
+            if (isEditMode || step === 1) {
+              router.push('/account/listings')
+              return
+            }
+            setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
+          }}
           // V14o — In edit mode the seller can't change category/game on
           // an existing row (would orphan template_data + category_id), so
           // disable jumping back to Steps 1/2. Keeps them focused on the
           // editable details on Step 3.
-          onJumpToStep={(target) => setStep((s) => (isEditMode ? s : (target < s ? target : s)))}
+          onJumpToStep={(target) => {
+            if (isEditMode || target >= step) return
+            // Going back from Details re-picks the category or game,
+            // which resets the per-template fields — warn before the
+            // seller loses typed work. Steps 1 -> 2 carry nothing.
+            if (step === 3 && hasStep3Input) {
+              setPendingJump(target as 1 | 2 | 3)
+              return
+            }
+            setStep(target as 1 | 2 | 3)
+          }}
         />
 
         {/* Step header.
             Step 1 / 2 just show the hint text.
             Step 3 swaps in the "Sell Game Items" title with a game-logo
             sub-header — the chosen game is now context, not a question. */}
-        <div className="mb-3 sm:mb-4">
+        <div className="mb-4 sm:mb-5">
           {step === 3 && selectedGame ? (
             (() => {
               // V13 — On currency we want the buyer-facing currency name
@@ -1109,19 +1211,19 @@ export default function SellWizard({
                 ? `${selectedGame.game_name} ${unit ?? ''}`.trim()
                 : `${selectedGame.game_name} ${selectedCategory?.name ?? 'Listing'}`
               return (
-                <div className="flex items-center justify-center gap-3 text-left sm:gap-4">
+                <div className="flex items-center justify-center gap-3 text-left">
                   {selectedGame.game_logo_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={selectedGame.game_logo_url}
                       alt=""
-                      className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-border-default sm:h-12 sm:w-12"
+                      className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-border-default"
                     />
                   ) : (
                     <span className="text-3xl">{selectedGame.game_emoji ?? '🎮'}</span>
                   )}
                   <div className="min-w-0">
-                    <h1 className="text-xl font-bold leading-tight tracking-tight text-text-primary sm:text-2xl lg:text-[28px]">
+                    <h1 className="text-[24px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
                       {/* V19/P16 — Render a width-stable skeleton while
                           the currency config is loading. Same line
                           height as the real title so the row doesn't
@@ -1137,16 +1239,22 @@ export default function SellWizard({
               )
             })()
           ) : (
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-lime-tint-border bg-lime-tint-bg text-lime-text sm:h-11 sm:w-11">
-                {step === 1 ? (
-                  <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
-                ) : (
-                  <Gamepad2 className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
-                )}
-              </div>
-              <h1 className="text-xl font-semibold tracking-tight text-text-primary sm:text-2xl lg:text-3xl">
-                {STEPS[step - 1].hint}
+            // Compact heading. The decorative icon medallion and the
+            // lg:text-3xl H1 together pushed the actual choices ~660px
+            // down the viewport — the content the seller came for sat
+            // below the fold on a laptop. Hierarchy now comes from
+            // weight and colour rather than raw scale.
+            // Title only, no subline: the heading IS the label for the
+            // card directly under it, and a subtitle between them made the
+            // two read as separate things.
+            <div className="text-center">
+              <h1 className="text-[24px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
+                {/* Context, not the question: the question ("Choose A
+                    Game") is the title bar of the card below, the same way
+                    every Step 3 card is titled. */}
+                {step === 1
+                  ? 'Create An Offer'
+                  : `Sell ${selectedCategory?.name ?? 'Items'}`}
               </h1>
             </div>
           )}
@@ -1284,6 +1392,7 @@ export default function SellWizard({
                   unitLabel={currencyConfig?.unit_label ?? null}
                   unitLabelLoading={currencyConfigLoading}
                   granularity={currencyConfig?.quantity_granularity ?? 'unit'}
+                  adminMinQuantity={currencyConfig?.min_quantity ?? 1}
                   platformFields={currencyConfig?.platform_fields ?? null}
                   region={region} onRegion={setRegion}
                   platform={platform} onPlatform={setPlatform}
@@ -1303,36 +1412,23 @@ export default function SellWizard({
           </motion.div>
         </AnimatePresence>
 
-      {/* V13 — Tiny tier/limit status sits just above the footer on Step 3
-          so the big lime banner can go. Desktop only; on mobile the sticky
-          publish bar already shows the most important info. */}
-      {step === 3 && (
-        <div className="mt-6 hidden sm:flex sm:justify-end">
-          <PolicyStatusFooter policy={policy} />
-        </div>
-      )}
-
       {/* Footer / publish row.
           Desktop (sm+): inline at the bottom of the wizard card with the
             standard mt-8 border-t pt-6 treatment.
           Mobile (< sm): fixed at the bottom of the viewport with a
             backdrop so the seller can hit Publish without scrolling
             all the way to the end. main.pb-24 already leaves space. */}
-      <div className={cn(
-        // Mobile sticky bar
-        'fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-2',
-        // pb includes the iPhone home-indicator inset so the CTAs never sit
-        // under the gesture bar; sm:pb-0 below restores the desktop inline row.
-        'border-t border-border-subtle bg-bg-raised/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur',
-        // Desktop inline
-        'sm:relative sm:mt-3 sm:bg-transparent sm:px-0 sm:pt-3 sm:pb-0 sm:backdrop-blur-none',
-      )}>
+      {/* Actions sit at the END of the page, in flow. A fixed bar floated
+          over the content on every step and stole vertical space on a
+          phone; all three steps are short enough to scroll to the end. */}
+      <div className="mt-8 border-t border-border-subtle pt-5">
+      <div className="flex w-full items-center justify-between gap-2">
         {step > 1 ? (
           <button
             type="button"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             disabled={submitting}
-            className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40 sm:h-10 sm:px-4"
+            className={cn(BTN_SECONDARY, 'disabled:opacity-40')}
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -1344,7 +1440,7 @@ export default function SellWizard({
           // hover so it doesn't compete with Continue.
           <Link
             href="/sell/bulk"
-            className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-lime-text sm:h-10 sm:px-4"
+            className={BTN_SECONDARY}
           >
             <FileSpreadsheet className="h-4 w-4" />
             Bulk upload
@@ -1356,12 +1452,7 @@ export default function SellWizard({
             type="button"
             onClick={() => setStep((s) => Math.min(3, s + 1))}
             disabled={!canGoNext}
-            className={cn(
-              'inline-flex h-11 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-all sm:h-10 sm:px-5',
-              canGoNext
-                ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
-                : 'cursor-not-allowed bg-bg-raised text-text-disabled'
-            )}
+            className={canGoNext ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
           >
             Continue
             <ArrowRight className="h-4 w-4" />
@@ -1374,18 +1465,54 @@ export default function SellWizard({
             type="button"
             onClick={() => handlePublish(false)}
             disabled={!canPublish || submitting}
-            className={cn(
-              'inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold uppercase tracking-wider transition-all sm:h-12 sm:px-8 sm:text-base',
-              canPublish && !submitting
-                ? 'bg-lime text-text-inverse shadow-lg shadow-elevated hover:bg-lime-hover hover:shadow-glow'
-                : 'cursor-not-allowed bg-bg-raised text-text-disabled'
-            )}
+            // Same size as Continue, Title Case (not uppercase): the final
+            // step's CTA is the same kind of action, just the last one. A
+            // min width stops the button shrinking to the spinner.
+            className={cn(canPublish && !submitting ? BTN_PRIMARY : BTN_PRIMARY_DISABLED, 'min-w-[136px]')}
           >
-            {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (isEditMode ? 'Save Changes' : 'Create Offer')}
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (isEditMode ? 'Save Changes' : 'Create Offer')}
           </button>
         )}
       </div>
+      </div>
       </section>
+
+      {/* Unsaved-work guard for a backwards step jump. */}
+      <Dialog
+        open={pendingJump !== null}
+        onOpenChange={(open) => { if (!open) setPendingJump(null) }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Go Back?</DialogTitle>
+            <DialogDescription>
+              Changing your{' '}
+              {pendingJump === 1 ? 'category' : 'game'} clears the offer
+              details you have filled in. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setPendingJump(null)}
+              className={BTN_SECONDARY}
+            >
+              Keep Editing
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const target = pendingJump
+                setPendingJump(null)
+                if (target) setStep(target)
+              }}
+              className={BTN_DANGER}
+            >
+              Discard Details
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
@@ -1395,10 +1522,30 @@ export default function SellWizard({
 // R12 — Category tile theme per slug: icon + gradient bg + accent ring.
 // Each category gets a distinct gradient tint so the grid reads as a
 // well-branded chooser rather than 'five generic dark cards'.
+/**
+ * Masks the shared house category glyph (public/icons/categories/*.svg),
+ * the same set the homepage hero chips and the navbar use. Masking rather
+ * than <img> lets the glyph take its colour from the plate it sits on.
+ */
+function categoryGlyphStyle(icon: string): React.CSSProperties {
+  const url = `url(/icons/categories/${icon}.svg)`
+  return {
+    maskImage: url,
+    WebkitMaskImage: url,
+    maskSize: 'contain',
+    WebkitMaskSize: 'contain',
+    maskRepeat: 'no-repeat',
+    WebkitMaskRepeat: 'no-repeat',
+    maskPosition: 'center',
+    WebkitMaskPosition: 'center',
+  }
+}
+
 const CATEGORY_THEME: Record<
   string,
   {
-    Icon: LucideIcon
+    /** Slug of the house SVG under public/icons/categories. */
+    icon: string
     iconBg: string    // gradient classes for the icon plate
     ring: string      // hover/active ring accent
     /**
@@ -1411,31 +1558,31 @@ const CATEGORY_THEME: Record<
   }
 > = {
   currency: {
-    Icon: Coins,
+    icon: 'currency',
     iconBg: 'bg-gradient-to-br from-amber-400/30 via-yellow-500/20 to-orange-500/20',
     ring: 'group-hover:border-amber-400/40',
     example: 'Robux, Gold',
   },
   items: {
-    Icon: Backpack,
+    icon: 'items',
     iconBg: 'bg-gradient-to-br from-rose-500/30 via-pink-500/20 to-red-500/20',
     ring: 'group-hover:border-rose-400/40',
     example: 'Pets, Skins, Knives',
   },
   accounts: {
-    Icon: UserSquare2,
+    icon: 'accounts',
     iconBg: 'bg-gradient-to-br from-sky-400/30 via-blue-500/20 to-indigo-500/20',
     ring: 'group-hover:border-sky-400/40',
     example: 'Ranked, Progression',
   },
   'top-up': {
-    Icon: Zap,
+    icon: 'top-up',
     iconBg: 'bg-gradient-to-br from-yellow-300/30 via-amber-400/25 to-yellow-500/20',
     ring: 'group-hover:border-yellow-400/40',
     example: 'Crystals, UC, Crew',
   },
   boosting: {
-    Icon: Trophy,
+    icon: 'boosting',
     iconBg: 'bg-gradient-to-br from-lime/25 via-lime/15 to-emerald-500/15',
     ring: 'group-hover:border-lime-tint-border',
     example: 'Rank Pushes, Win Boosts',
@@ -1454,12 +1601,15 @@ function Step1Category({
   // so the 5-category set reads as 2-2-1 (centered) instead of an
   // off-balance 3-2 grid.
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-wrap justify-center gap-2.5">
+    // 2x2 on desktop, single column on a phone. CSS Grid rather than
+    // flex-wrap so the cells are equal width and the row count is
+    // explicit (see 3.E: grid over flex-math).
+    <SubCard title="Choose A Category">
+    <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
       {categories.map((c, i) => {
         const active = selected?.id === c.id
         const disabled = !c.is_active
         const theme = CATEGORY_THEME[c.slug] ?? CATEGORY_THEME.items
-        const Icon = theme.Icon
         return (
           <motion.button
             key={c.id}
@@ -1470,18 +1620,20 @@ function Step1Category({
             // server-rendered; staggered fade-in made the tiles feel "loaded
             // later" than the navbar.
             initial={false}
-            whileHover={!disabled ? { y: -1 } : undefined}
-            transition={{ duration: 0.22 }}
+
             className={cn(
-              // Flex basis: full width on mobile, half on sm+, third on lg+.
-              // Calc subtracts half the gap (10px / 2 = 5px = 0.3125rem) so
-              // the cards land flush without overflowing the row.
-              'group relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-3.5',
-              'basis-full sm:basis-[calc(50%-0.3125rem)] lg:basis-[calc(33.333%-0.4167rem)]',
+              // A 2-col grid cell (the parent owns the columns now). The
+              // old 3-per-row flex basis left the 4th category orphaned
+              // on its own row; with 4 fixed categories a 2x2 grid fills
+              // exactly, with no stray cell.
+              // Inside the card now, so translucent rather than a second
+              // solid surface (a card inside a card), rectangular like the
+              // other controls, and colour-only on hover (no lift).
+              'group relative flex items-center gap-3 overflow-hidden rounded-md border p-3 text-left transition-colors',
               disabled && 'cursor-not-allowed opacity-50',
               active
-                ? 'border-lime bg-lime-tint-bg shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
-                : cn('border-border-subtle bg-bg-overlay hover:border-border-strong hover:bg-bg-raised-hover', theme.ring),
+                ? 'border-lime bg-lime-tint-bg'
+                : cn('border-white/[0.08] bg-white/[0.03] hover:border-white/[0.16] hover:bg-white/[0.06]', theme.ring),
             )}
           >
             {/* Icon plate — smaller than the previous tile design */}
@@ -1491,7 +1643,11 @@ function Step1Category({
                 theme.iconBg,
               )}
             >
-              <Icon className="h-5 w-5 text-text-primary sm:h-6 sm:w-6" strokeWidth={1.75} />
+              <span
+                aria-hidden
+                style={categoryGlyphStyle(theme.icon)}
+                className="block h-5 w-5 bg-text-primary sm:h-6 sm:w-6"
+              />
             </div>
 
             <div className="min-w-0 flex-1">
@@ -1529,6 +1685,7 @@ function Step1Category({
         )
       })}
     </div>
+    </SubCard>
   )
 }
 
@@ -1574,139 +1731,92 @@ function Step2Game({
     return filtered // already sorted by sort_order in the action
   }, [games, filter, sortMode, recentGameIds])
 
-  const hasRecent = recentGameIds.length > 0
+  /** The seller's last few games, newest first, as quick chips. */
+  const recentGames = useMemo(
+    () =>
+      recentGameIds
+        .map((id) => games.find((g) => g.game_id === id))
+        .filter((g): g is NonNullable<typeof g> => !!g)
+        .slice(0, 5),
+    [recentGameIds, games],
+  )
 
   return (
+    // The picker lives in a titled card (SubCard, the Step 3 panel), so all
+    // three steps share one pattern: page title = context ("Sell Items"),
+    // card title = the question ("Choose A Game").
+    <SubCard title="Choose A Game">
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-        <input
-          value={filter}
-          onChange={(e) => onFilter(e.target.value)}
-          placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
-          className="h-11 w-full rounded-md border border-border-default bg-transparent pl-9 pr-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
-        />
-      </div>
-
-      {/* Popular / Recent tabs */}
-      <div className="flex items-center gap-1 rounded-xl border border-border-default bg-bg-base p-1">
-        <SortTab active={sortMode === 'popular'} onClick={() => onSortMode('popular')} icon={Flame} label="Popular" />
-        {/* Recent stays enabled even when empty — a native title tooltip
-            never shows on touch, so the empty state below explains it
-            inline instead of a dead greyed-out tab. */}
-        <SortTab
-          active={sortMode === 'recent'}
-          onClick={() => onSortMode('recent')}
-          icon={History}
-          label="Recent"
-        />
-      </div>
-
+      {/* A searchable dropdown rather than a wall of tiles. The catalogue
+          runs to hundreds of games; a grid made the seller hunt visually
+          and truncated every label. Combobox (Radix Popover + cmdk) gives
+          type-ahead, keyboard nav and the small per-game icon for free —
+          and it is the same control the rest of the app already uses. */}
       {loading ? (
-        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
-          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-lime-text" />
+        <div className="flex h-11 items-center gap-2 rounded-md border border-border-default px-3 text-sm text-text-tertiary">
+          <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           Loading games…
         </div>
-      ) : sortMode === 'recent' && !hasRecent ? (
-        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
-          <History className="mx-auto mb-2 h-5 w-5 text-text-disabled" />
-          No recent games yet — games you pick in the wizard will show up here.
-        </div>
-      ) : ordered.length === 0 ? (
-        <div className="rounded-2xl border border-border-subtle bg-bg-base p-10 text-center text-sm text-text-tertiary">
-          {games.length === 0
-            ? `No games have ${category.name} enabled yet. An admin needs to enable it.`
-            : `No games match "${filter}".`}
-        </div>
+      ) : games.length === 0 ? (
+        <p className="py-4 text-center text-sm text-text-tertiary">
+          No games have {category.name} enabled yet. An admin needs to enable it.
+        </p>
       ) : (
-        // R11.b — denser game grid: up to 8 tiles per row on xl screens.
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-          {ordered.map((g, i) => {
-            const active = selected?.game_id === g.game_id
-            // V17s — Sell wizard always shows the LOGO (icon), never
-            // the cover. Cover art is reserved for the marketing-side
-            // homepage Popular Games shelf. The sell flow is utilitarian
-            // and benefits from consistent, easy-to-scan icons.
-            return (
-              <motion.button
-                key={g.game_id}
-                type="button"
-                onClick={() => onSelect(g)}
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.18, delay: Math.min(i * 0.02, 0.3) }}
-                whileHover={{ y: -2 }}
-                className={cn(
-                  'group relative overflow-hidden rounded-xl border text-left transition-all',
-                  active
-                    ? 'border-lime shadow-[0_0_0_2px_rgba(198,255,61,0.18)]'
-                    : 'border-border-default hover:border-border-strong hover:bg-bg-base'
-                )}
-              >
-                {(
-                  // V17t — Neutral icon tile, no lime tint or radial
-                  // gradient. The logos themselves carry color; the
-                  // backdrop should stay quiet so a grid of games
-                  // doesn't read as a wall of lime.
-                  <div className="flex flex-col">
-                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-bg-base">
-                      {g.game_logo_url ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={g.game_logo_url}
-                          alt={g.game_name}
-                          className="relative h-3/4 w-3/4 object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
-                        />
-                      ) : (
-                        <div className="relative text-3xl">{g.game_emoji ?? '🎮'}</div>
-                      )}
-                    </div>
-                    <div className="border-t border-border-subtle bg-bg-inset px-2 py-1.5">
-                      <div className="truncate text-xs font-semibold text-text-primary">{g.game_name}</div>
-                    </div>
-                  </div>
-                )}
-                {active && (
-                  <span className="absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse shadow-lg shadow-glow">
-                    <Check className="h-3 w-3" strokeWidth={3} />
-                  </span>
-                )}
-              </motion.button>
-            )
-          })}
+        <Combobox
+          value={selected?.game_id ?? ''}
+          onChange={(id) => {
+            const g = games.find((x) => x.game_id === id)
+            if (g) onSelect(g)
+          }}
+          options={games.map((g) => ({
+            value: g.game_id,
+            label: g.game_name,
+            icon_url: g.game_logo_url ?? null,
+          }))}
+          placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
+          emptyText="No games match that search."
+          ariaLabel="Choose a game"
+          tone="neutral"
+          iconInTrigger
+        />
+      )}
+
+      {/* Recently used, as quick chips under the field — keeps the one
+          genuinely useful part of the old Popular/Recent tabs without
+          re-introducing a second browsing surface. */}
+      {recentGames.length > 0 && (
+        // One row, never a second: overflow scrolls sideways (scrollbar
+        // hidden) and the right edge fades so a cut-off chip reads as
+        // "more this way" rather than as clipped.
+        <div className="flex items-center gap-2 border-t border-border-subtle pt-4">
+          <span className="mr-1 shrink-0 text-[13px] font-medium text-text-tertiary">Recent</span>
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {recentGames.map((g) => (
+            <button
+              key={g.game_id}
+              type="button"
+              onClick={() => onSelect(g)}
+              className={cn(
+                // Rectangular chips (rounded-md), matching the card and the
+                // inputs — pills were the only round shapes left on the page.
+                'inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border px-3 text-[13px] font-medium transition-colors',
+                selected?.game_id === g.game_id
+                  ? 'border-lime bg-lime-tint-bg text-lime-text'
+                  : 'border-border-default bg-bg-overlay text-text-secondary hover:border-border-strong hover:text-text-primary',
+              )}
+            >
+              {g.game_logo_url && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={g.game_logo_url} alt="" className="h-5 w-5 rounded object-cover" />
+              )}
+              {g.game_name}
+            </button>
+          ))}
+          </div>
         </div>
       )}
-
-      {/* V19/P24/P7.b — Game-step Region + Platform pickers removed.
-          Both live in Step 3 (Details) now, driven by the per-(game,
-          currency) platform_fields admin config. Picking a game on
-          this step always jumps straight to Details. */}
     </div>
-  )
-}
-
-function SortTab({
-  active, onClick, icon: Icon, label,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors sm:h-8',
-        active
-          ? 'bg-lime-tint-bg text-lime-text'
-          : 'text-text-secondary hover:text-text-primary',
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-    </button>
+    </SubCard>
   )
 }
 
@@ -1938,7 +2048,7 @@ function FieldInput({
   return (
     <div>
       <label className="mb-1.5 block">
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+        <span className="text-[13px] font-medium text-text-secondary">
           {attribute.name}
           {attribute.is_required && <span className="ml-1 text-error">*</span>}
         </span>
@@ -1967,7 +2077,7 @@ function FieldInput({
           rows={3}
           aria-invalid={showError || undefined}
           aria-required={attribute.is_required || undefined}
-          className={cn(inputCls, 'h-auto py-2')}
+          className={cn(inputCls, 'h-auto py-2 sm:h-auto')}
         />
       )}
 
@@ -2022,6 +2132,8 @@ function FieldInput({
             label: o.label,
             icon_url: o.icon_url,
           }))}
+          tone="neutral"
+          iconInTrigger
         />
       )}
 
@@ -2076,7 +2188,7 @@ function FieldInput({
       ) : (
         attribute.help_text &&
         !(['select', 'multiselect', 'image_select', 'boolean'] as const).includes(attribute.type as any) && (
-          <FieldHint className="mt-1.5">{attribute.help_text}</FieldHint>
+          <TipBox>{attribute.help_text}</TipBox>
         )
       )}
     </div>
@@ -2134,6 +2246,11 @@ interface Step4Props {
    */
   granularity?: 'unit' | 'thousand' | 'million'
   /**
+   * Per-game floor from the admin currency config. The seller may set
+   * their own minimum at or above this, never below it.
+   */
+  adminMinQuantity?: number
+  /**
    * V19/P3 — Per-(game, currency) platform-style requirements. Each
    * enabled kind gets a Select in the publish card. Null when not a
    * currency category or when admin hasn't configured any platform
@@ -2172,17 +2289,8 @@ interface Step4Props {
  * Used by Step 4 ("Price per K") and the Stock card suffix. Falling
  * back to "unit" keeps non-currency callers working.
  */
-function formatPriceSuffix(
-  granularity: 'unit' | 'thousand' | 'million' | undefined,
-  unitLabel: string | null | undefined,
-): string {
-  switch (granularity) {
-    case 'thousand': return 'K'
-    case 'million':  return 'M'
-    case 'unit':
-    default:         return unitLabel || 'unit'
-  }
-}
+// Shared with the buyer page so a seller's "100 M" is the buyer's "100 M".
+const formatPriceSuffix = quantityUnit
 
 /**
  * Step4Publish — the static publish fields, rendered as 5 separate SubCards
@@ -2210,8 +2318,6 @@ function Step4Publish(p: Step4Props) {
   // V19/P24/P7.b — Custom-delivery dialog replaces window.prompt().
   // Local state lives at this scope because the trigger and the
   // submit handler need to reach `p.setDeliveryTime`.
-  const [customOpen, setCustomOpen] = useState(false)
-  const [customDraft, setCustomDraft] = useState('10')
   const discount = p.originalPrice && priceNum > 0
     ? Math.round(((parseFloat(p.originalPrice) - priceNum) / parseFloat(p.originalPrice)) * 100)
     : 0
@@ -2229,13 +2335,12 @@ function Step4Publish(p: Step4Props) {
   const titleInvalid = touched.title && !p.title.trim()
   const priceInvalid = touched.price && !(parseFloat(p.price) > 0)
 
-  // V13 — Currency listings skip Title + Photos (auto-filled server-side)
-  // and the Description sub-card is re-labelled "Instructions" so buyers
-  // understand it's a how-to, not marketing copy.
+  // V13 — Currency listings skip Title + Photos (auto-filled server-side).
+  // The text card is "Description" on every category.
   const isCurrency = p.categorySlug === 'currency'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Title — hidden for currency */}
       {!isCurrency && (
         <SubCard title="Title">
@@ -2244,48 +2349,19 @@ function Step4Publish(p: Step4Props) {
               value={p.title}
               onChange={(e) => p.setTitle(e.target.value)}
               onBlur={() => mark('title')}
-              placeholder="e.g., Mythical Brainrot — Tralalero Tralala — Mutation: Golden"
+              // Generic on purpose: the old example was a Steal a Brainrot
+              // item, which read as wrong on every other game.
+              placeholder="Type here…"
               maxLength={100}
               aria-invalid={titleInvalid || undefined}
               aria-required
               className={inputCls}
             />
-            {titleInvalid ? (
-              <FieldError>This field is required.</FieldError>
-            ) : (
-              <FieldHint>
-                Add the most searchable words at the front. Titles have a 100 character limit.
-              </FieldHint>
-            )}
+            {titleInvalid && <FieldError>Offer title is required.</FieldError>}
+            <TipBox>Lead with the words buyers search for. Max 100 characters.</TipBox>
           </FieldRow>
         </SubCard>
       )}
-
-      {/* V13 — Currency listings have title + image auto-filled on the
-          server, so the seller just sees a small confirmation here.
-          Label uses the real "Game Currency" pair (e.g. "Roblox Robux"). */}
-      {isCurrency && (() => {
-        // V19/P16 — Hold the banner until the unit label is loaded so
-        // it doesn't flash "Currency" then swap to "Tokens".
-        if (p.unitLabelLoading) {
-          return (
-            <div className="rounded-2xl border border-border-default bg-bg-overlay/40 px-4 py-3">
-              <span className="inline-block h-3.5 w-72 max-w-full animate-pulse rounded-md bg-bg-overlay" />
-            </div>
-          )
-        }
-        const unit = p.unitLabel ?? 'Currency'
-        const label = p.gameName ? `${p.gameName} ${unit}` : unit
-        return (
-          <div className="rounded-2xl border border-lime-tint-border bg-lime-tint-bg/40 px-4 py-3">
-            <p className="text-[13px] text-text-secondary">
-              <span className="font-semibold text-lime-text">{label}</span>
-              {' '}— Title and Image are set automatically. You only need to fill
-              Instructions, Price, and Delivery Time.
-            </p>
-          </div>
-        )
-      })()}
 
       {/* V19/P24/P7.b — Listing details (platform / region / device)
           moved ABOVE the bundle picker. Each enabled kind renders as
@@ -2306,11 +2382,7 @@ function Step4Publish(p: Step4Props) {
         </SubCard>
       )}
 
-      {/* V19/P24/P3 — Bundle picker. Visual grid (like Step 3's
-          image_select) instead of a hidden dropdown — admins put
-          art on the bundles, so the seller should see it. Built on
-          Radix RadioGroup for proper keyboard nav + radio semantics,
-          rendered as tiles with thumbnail + name + amount. */}
+      {/* V19/P24/P3 — Bundle picker (searchable dropdown with bundle art). */}
       {isCurrency && (p.bundles?.length ?? 0) > 0 && (
         <SubCard title="Bundle">
           {/* V19/P24/P6 — Eager dup banner. When the seller already
@@ -2334,81 +2406,55 @@ function Step4Publish(p: Step4Props) {
               </Link>
             </div>
           )}
-          {/* V19/P24/P3 — Fixed-width tiles (~128px) in a flex-wrap so
-              tiles pack from the left regardless of count. A single
-              tile sits at its natural width on the left instead of
-              stretching to fill the row. Mobile gets a tighter ~112px
-              tile so two fit side by side on a narrow screen. */}
-          <RadioGroup
-            value={p.bundleId || undefined}
-            onValueChange={p.onBundleId}
-            className="flex flex-wrap gap-2 sm:gap-3"
-            aria-required
-          >
-            {[...(p.bundles ?? [])]
+          {/* Dropdown with the admin's bundle art beside each name — the
+              same control as the game picker. The tile grid showed every
+              bundle at once, which on a game with a dozen bundles pushed
+              the rest of the form a screen down. `unsorted` keeps the
+              admin's sort_order: an A→Z sort would put "1000 V-Bucks"
+              before "200 V-Bucks". */}
+          <Combobox
+            value={p.bundleId ?? ''}
+            onChange={(id) => p.onBundleId(id)}
+            options={[...(p.bundles ?? [])]
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-              .map((bundle) => {
-                const on = p.bundleId === bundle.id
-                return (
-                  <label
-                    key={bundle.id}
-                    className={cn(
-                      'relative flex w-[112px] cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 transition-colors sm:w-[128px]',
-                      on
-                        ? 'border-lime bg-lime-tint-bg'
-                        : 'border-border-default bg-bg-inset hover:bg-bg-raised-hover',
-                    )}
-                  >
-                    <RadioGroupItem value={bundle.id} className="sr-only" />
-                    {/* V19/P24/P7.b — object-contain so the seller sees
-                        the full bundle art (matches the buyer-page
-                        tile). Background goes darker to give the art
-                        breathing room instead of cropping it. */}
-                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-bg-overlay sm:h-16 sm:w-16">
-                      {bundle.icon_url ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={bundle.icon_url} alt="" className="h-full w-full object-contain p-1" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-text-disabled" />
-                      )}
-                    </div>
-                    <span className="line-clamp-1 w-full text-center text-[12.5px] font-semibold text-text-primary">
-                      {bundle.name || '(unnamed bundle)'}
-                    </span>
-                    {on && (
-                      <span
-                        aria-hidden
-                        className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-lime text-text-inverse"
-                      >
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </span>
-                    )}
-                  </label>
-                )
-              })}
-          </RadioGroup>
-          <FieldHint className="mt-3">
-            Pick the bundle you’re selling. Buyers see your listing under this exact bundle.
-          </FieldHint>
+              .map((b) => ({
+                value: b.id,
+                label: b.name || '(unnamed bundle)',
+                icon_url: b.icon_url ?? null,
+              }))}
+            unsorted
+            placeholder="Choose the bundle you are selling"
+            emptyText="No bundles match that search."
+            ariaLabel="Choose a bundle"
+            tone="neutral"
+          iconInTrigger
+          />
+          <TipBox>Buyers see your listing under this exact bundle.</TipBox>
         </SubCard>
       )}
 
-      {/* Description (or Instructions for currency) */}
-      <SubCard title={isCurrency ? 'Instructions' : 'Description'}>
+      {/* Description — one label for every category (was "Instructions" on currency). */}
+      <SubCard
+        title="Description"
+        right={
+          <span className="text-xs tabular-nums text-text-tertiary">
+            {p.description.length}/{isCurrency ? 1000 : 2000}
+          </span>
+        }
+      >
         <FieldRow>
-          <textarea
+          <AutoGrowTextarea
             value={p.description}
-            onChange={(e) => p.setDescription(e.target.value)}
+            onChange={p.setDescription}
             placeholder={isCurrency ? 'Type here…' : 'What’s included, condition, delivery notes, terms…'}
-            rows={isCurrency ? 6 : 5}
             maxLength={isCurrency ? 1000 : 2000}
-            className={cn(inputCls, 'h-32 resize-none overflow-y-auto py-2 sm:h-36', isCurrency && 'sm:h-44')}
+            ariaLabel="Description"
           />
-          <FieldHint>
+          <TipBox>
             {isCurrency
-              ? 'Step-by-step instructions buyers will see on the offer card. Line breaks allowed.'
-              : 'Be specific. Include condition, delivery method, and any terms.'}
-          </FieldHint>
+              ? 'Shown to buyers on your offer. Line breaks are allowed.'
+              : 'Include condition, delivery method and any terms.'}
+          </TipBox>
         </FieldRow>
       </SubCard>
 
@@ -2463,9 +2509,7 @@ function Step4Publish(p: Step4Props) {
             </label>
           )}
         </div>
-        <FieldHint className="mt-3">
-          Images at least 800px square. First photo is your main thumbnail.
-        </FieldHint>
+        <TipBox>At least 800px square. Your first photo is the thumbnail.</TipBox>
       </SubCard>
       )}
 
@@ -2478,12 +2522,12 @@ function Step4Publish(p: Step4Props) {
           back to a server-side floor). Fee breakdown removed
           everywhere — buyers pay the listed price, sellers can do
           the math from a separate fees page if needed. */}
-      <SubCard title="Pricing & stock">
-        {(() => {
-          const selectedBundle = p.bundleId
-            ? p.bundles?.find((b) => b.id === p.bundleId)
-            : null
-          const isBundleMode = !!selectedBundle
+      {(() => {
+          // Bundle mode is a property of the GAME's currency config (it
+          // sells in fixed bundles), not of whether a bundle is picked
+          // yet. Keying it off the pick showed "Price per V-Bucks" and a
+          // Min Order field until the seller chose a bundle.
+          const isBundleMode = isCurrency && (p.bundles?.length ?? 0) > 0
           // V19/P24/P7.c — Bundles ARE the unit, so the seller reads
           // "1 unit" / "1,000 units" instead of "1 V-Bucks". Flexible
           // currencies still use the granularity suffix ("K Tokens"),
@@ -2493,44 +2537,125 @@ function Step4Publish(p: Step4Props) {
             : isCurrency
               ? formatPriceSuffix(p.granularity, p.unitLabel)
               : null
+          const adminMin = Math.max(1, p.adminMinQuantity ?? 1)
+          const stockNow = Number.isFinite(parseInt(p.quantity, 10))
+            ? parseInt(p.quantity, 10)
+            : 1
+          const typedMinNow = parseInt(p.minQuantity, 10)
+          const minAboveStock =
+            Number.isFinite(typedMinNow) && stockNow > 0 && typedMinNow > stockNow
+          const numOr = (raw: string, fallback: number) => {
+            const n = parseInt(raw, 10)
+            return Number.isFinite(n) ? n : fallback
+          }
           return (
             <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Price */}
+              {/* Quantity first, then Price: how much you have comes before
+                  what each unit costs. Separate cards, two decisions; every
+                  price helper lives INSIDE the Price card. */}
+              <SubCard title="Quantity">
+                {isCurrency && !isBundleMode ? (
+                  // Stock + minimum: two plain boxes, stock on the left. No
+                  // steppers here — at these magnitudes nobody steps by one,
+                  // and two stepper rows side by side crowd a phone.
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="block text-[13px] font-medium text-text-secondary">
+                        Total Stock Available
+                      </label>
+                      <QuantityInput
+                        value={numOr(p.quantity, 1)}
+                        onChange={(n) => p.setQuantity(String(n))}
+                        min={1}
+                        max={10_000_000}
+                        suffix={suffix}
+                        ariaLabel="Total stock available"
+                      />
+                    </div>
+
+                    {/* Floor = the per-game admin minimum; ceiling = stock,
+                        since a minimum above stock can never sell. */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[13px] font-medium text-text-secondary">
+                        Minimum Offer Quantity
+                      </label>
+                      <QuantityInput
+                        value={numOr(p.minQuantity, adminMin)}
+                        onChange={(n) => p.setMinQuantity(String(n))}
+                        min={adminMin}
+                        max={Math.max(adminMin, stockNow)}
+                        suffix={suffix}
+                        ariaLabel="Minimum offer quantity"
+                      />
+                      {/* No tip: the label explains itself. Only the
+                          warning remains, because it reports a problem the
+                          seller can't otherwise see (it is fixed on save). */}
+                      {minAboveStock && (
+                        <FieldHint className="mt-2 text-warning">
+                          {`Above your stock. It will be lowered to ${stockNow.toLocaleString()} ${suffix ?? ''} when saved.`.replace('  ', ' ')}
+                        </FieldHint>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Stock alone (items, accounts, bundles): small counts,
+                  // where stepping by one is exactly what a seller does.
+                  <StockStepper
+                    value={numOr(p.quantity, 1)}
+                    onChange={(n) => p.setQuantity(String(n))}
+                    suffix={suffix}
+                    hint={isBundleMode ? 'Each unit is one bundle you can deliver.' : null}
+                  />
+                )}
+              </SubCard>
+
+              <SubCard title="Price">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Price <span className="text-error">*</span>
+                  <label className="block text-[13px] font-medium text-text-secondary">
+                    {isBundleMode
+                      ? 'Price Per Bundle'
+                      : isCurrency && suffix
+                        ? `Price Per ${suffix}`
+                        : 'Price'}{' '}
+                    <span className="text-error">*</span>
                   </label>
-                  {/* V19/P24/P7.c — NumberField-style trailing
-                      $ USD suffix, matching the Stock card look.
-                      Field on the left, suffix in a divided
-                      right slot. */}
                   <div
                     className={cn(
-                      'flex h-10 w-full overflow-hidden rounded-md border border-border-default bg-transparent transition-colors focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg',
-                      priceInvalid && 'border-error focus-within:ring-error-bg',
+                      'flex h-11 w-full items-center rounded-md border border-border-default bg-transparent transition-colors hover:border-border-strong focus-within:border-text-secondary sm:h-10',
+                      priceInvalid && 'border-error hover:border-error focus-within:border-error',
                     )}
                   >
+                    <span aria-hidden className="flex shrink-0 items-center pl-3 pr-1 text-sm text-text-tertiary">$</span>
+                    {/* text + inputMode="decimal", not type="number": no
+                        spinner arrows, no value changing under a scroll
+                        wheel, and a decimal keypad on phones. Input is
+                        filtered to digits and one point, capped at the
+                        precision the price is stored at. */}
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
                       value={p.price}
-                      onChange={(e) => p.setPrice(e.target.value)}
+                      onChange={(e) => {
+                        const places = isCurrency && !isBundleMode ? 4 : 2
+                        const v = e.target.value.replace(',', '.')
+                        if (new RegExp(`^\\d*(\\.\\d{0,${places}})?$`).test(v)) p.setPrice(v)
+                      }}
                       onBlur={() => mark('price')}
                       onFocus={(e) => e.currentTarget.select()}
-                      placeholder="Price"
-                      step={isCurrency && !isBundleMode ? '0.0001' : '0.01'}
-                      min="0"
+                      placeholder="0.00"
+                      aria-label="Price in US dollars"
                       aria-invalid={priceInvalid || undefined}
                       aria-required
-                      className="flex-1 bg-transparent px-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                      className="h-full min-w-0 flex-1 bg-transparent pr-2 text-base tabular-nums text-text-primary placeholder:text-text-tertiary focus:outline-none sm:text-sm"
                     />
-                    <span className="flex items-center gap-1 border-l border-border-default bg-bg-inset px-3 text-sm font-semibold text-text-secondary">
-                      <DollarSign className="h-3.5 w-3.5" /> USD
-                    </span>
+                    {/* Currency as quiet text inside the field, the same way
+                        Stock shows its unit. The old separate near-black
+                        slab with its own divider read as a second control
+                        bolted onto the input. */}
+                    <span className="shrink-0 pr-3 text-sm font-medium text-text-tertiary">USD</span>
                   </div>
-                  {priceInvalid && (
-                    <FieldError>This field is required.</FieldError>
-                  )}
+                  {priceInvalid && <FieldError>This field is required.</FieldError>}
                   {/* Fee spec §1 — the seller sees their exact commission
                       and estimated net proceeds before publishing. The rate
                       is the resolver's answer for THIS seller on THIS pair
@@ -2542,7 +2667,7 @@ function Step4Publish(p: Step4Props) {
                       <p className="text-[12px] text-text-tertiary">
                         You receive{' '}
                         <span className="font-semibold text-lime-text">${net.toFixed(2)}</span>
-                        {isCurrency ? ` per ${suffix}` : ''} ({feePreview.pct}% fee
+                        {isBundleMode ? ' per bundle' : isCurrency ? ` per ${suffix}` : ''} ({feePreview.pct}% fee
                         {feePreview.foundingApplied ? ', founding rate' : feePreview.rankPts > 0 ? `, ${feePreview.rank} rank` : ''}).
                       </p>
                     )
@@ -2551,81 +2676,104 @@ function Step4Publish(p: Step4Props) {
                     <p className="text-[12px] text-text-tertiary">{feePreview.error}.</p>
                   )}
                 </div>
-                {/* Stock */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    <Package className="mr-1 inline h-3.5 w-3.5" /> Stock
-                  </label>
-                  <NumberField
-                    value={Number.isFinite(parseInt(p.quantity, 10)) ? parseInt(p.quantity, 10) : 1}
-                    onChange={(v) => p.setQuantity(String(v))}
-                    minValue={1}
-                    maxValue={10_000_000}
-                    ariaLabel="Stock"
-                    suffix={suffix}
-                  />
-                </div>
-              </div>
 
-              {/* Top-up original price stays — discount badge depends
-                  on it. Renders as a single-column row below. */}
-              {p.categorySlug === 'top-up' && (
-                <div className="mt-4 space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Original price{' '}
-                    <span className="font-normal normal-case tracking-normal text-text-disabled">
-                      (optional)
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                    <input
-                      type="number"
-                      value={p.originalPrice}
-                      onChange={(e) => p.setOriginalPrice(e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className={cn(inputCls, 'pl-9')}
-                    />
+                {/* Top-up original price — the discount badge depends on it. */}
+                {p.categorySlug === 'top-up' && (
+                  <div className="mt-4 space-y-1.5">
+                    <label className="block text-[13px] font-medium text-text-secondary">
+                      Original Price{' '}
+                      <span className="font-normal normal-case tracking-normal text-text-disabled">
+                        (optional)
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-tertiary">$</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={p.originalPrice}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(',', '.')
+                          if (/^\d*(\.\d{0,2})?$/.test(v)) p.setOriginalPrice(v)
+                        }}
+                        placeholder="0.00"
+                        className={cn(inputCls, 'pl-7')}
+                      />
+                    </div>
+                    {discount > 0 && (
+                      <FieldHint className="text-success">
+                        {discount}% discount badge will show
+                      </FieldHint>
+                    )}
                   </div>
-                  {discount > 0 && (
-                    <FieldHint className="text-success">
-                      {discount}% discount badge will show
-                    </FieldHint>
-                  )}
-                </div>
-              )}
+                )}
 
-              <PriceGuidanceCard
-                guidance={p.priceGuidance}
-                currentPrice={parseFloat(p.price)}
-              />
+                <PriceGuidanceCard
+                  guidance={p.priceGuidance}
+                  currentPrice={parseFloat(p.price)}
+                />
 
-              <FieldHint className="mt-3">
-                {isBundleMode
-                  ? 'Stock counts each individual bundle you can fulfill.'
-                  : isCurrency
-                    ? 'Stock is how many units you can fulfill. Competitive prices rank higher.'
-                    : 'Competitive prices improve your offer’s ranking in the offer list.'}
-              </FieldHint>
+                {!isCurrency && (
+                  <TipBox>Competitive prices rank higher in the offer list.</TipBox>
+                )}
+              </SubCard>
             </>
+          )
+      })()}
+
+      {/* Delivery time first, then how it is delivered — the seller
+          picks the promise before the mechanism. Two cards, per the
+          same one-decision-per-panel rule as Price and Quantity. */}
+      {/* Instant delivery has no window to choose, so the card itself
+          is hidden rather than rendering an empty titled panel. */}
+      {p.deliveryMethod === 'manual' && (
+      <SubCard title="Delivery Time">
+        {(() => {
+          // One dropdown instead of a wall of pills. The list is shared
+          // with the listings-table bulk editor (SELLER_DELIVERY_WINDOWS),
+          // so both surfaces offer exactly the same promises.
+          //
+          // An existing listing can hold a value we no longer offer
+          // (instant, 5min, 20min, an old custom "45min"). Remapping it
+          // silently would change a live promise the seller made to
+          // buyers, so it is shown as its own "current" option until
+          // they choose a new window.
+          const offered = SELLER_DELIVERY_WINDOWS.some((w) => w.value === p.deliveryTime)
+          return (
+            <div className="space-y-2">
+              <Select value={p.deliveryTime} onValueChange={(v) => p.setDeliveryTime(v)}>
+                <SelectTrigger
+                  aria-label="Guaranteed delivery time"
+                  className="h-11 text-base sm:h-10 sm:text-sm focus:border-text-secondary focus:ring-0 data-[state=open]:border-text-secondary data-[state=open]:ring-0"
+                >
+                  <SelectValue placeholder="Choose a delivery time" />
+                </SelectTrigger>
+                {/* ~5.5 rows visible: the half row at the bottom is the
+                    cue that the list scrolls. Rows stay 36px on touch
+                    screens and tighten to 32px with a mouse. */}
+                <SelectContent className="max-h-[200px]">
+                  {!offered && p.deliveryTime && (
+                    <SelectItem value={p.deliveryTime} className="sm:py-1.5">
+                      {formatDeliveryLabel(p.deliveryTime)} (current)
+                    </SelectItem>
+                  )}
+                  {SELLER_DELIVERY_WINDOWS.map((w) => (
+                    <SelectItem key={w.value} value={w.value} className="sm:py-1.5">
+                      {w.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <TipBox>The longest you will take. Faster windows rank higher.</TipBox>
+            </div>
           )
         })()}
       </SubCard>
+      )}
 
-      {/* Delivery */}
-      <SubCard title="Delivery">
-        {/* V19/P19 — Radio-card group built on Radix RadioGroup. Each
-            card is a real <RadioGroupItem> wrapped in a label, so the
-            picker gets keyboard arrow navigation, proper ARIA roles
-            (role="radiogroup" / role="radio"), and disabled handling
-            for free. The visual treatment (icon + title + subtitle in
-            a lime-tinted card on select) is preserved. */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-            Delivery method
-          </label>
+      <SubCard title="Delivery Method">
+        <div>
           <RadioGroup
             value={p.deliveryMethod}
             onValueChange={(v) => p.setDeliveryMethod(v as 'manual' | 'instant')}
@@ -2639,7 +2787,7 @@ function Step4Publish(p: Step4Props) {
                 <label
                   key={m}
                   className={cn(
-                    'relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors sm:p-4',
+                    'relative flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-colors',
                     !allowed && 'cursor-not-allowed opacity-40',
                     on && allowed
                       ? 'border-lime bg-lime-tint-bg'
@@ -2651,12 +2799,12 @@ function Step4Publish(p: Step4Props) {
                     disabled={!allowed}
                     className="sr-only"
                   />
-                  <Icon className={cn('h-5 w-5 shrink-0 sm:h-6 sm:w-6', on ? 'text-lime-text' : 'text-text-tertiary')} />
+                  <Icon className={cn('h-4 w-4 shrink-0', on ? 'text-lime-text' : 'text-text-tertiary')} />
                   <div>
-                    <div className="text-[15px] font-semibold text-text-primary sm:text-base">
+                    <div className="text-[13.5px] font-semibold text-text-primary">
                       {m === 'manual' ? 'Manual Delivery' : 'Instant Delivery'}
                     </div>
-                    <div className="mt-0.5 text-[13px] leading-snug text-text-secondary">
+                    <div className="mt-0.5 text-[12px] leading-snug text-text-tertiary">
                       {m === 'manual' ? 'You deliver within your chosen time window.' : 'Codes and credentials sent automatically.'}
                     </div>
                   </div>
@@ -2666,148 +2814,8 @@ function Step4Publish(p: Step4Props) {
           </RadioGroup>
         </div>
 
-        {p.deliveryMethod === 'manual' && (() => {
-          // V19/P19 — Delivery-window picker built on Radix RadioGroup.
-          // Each preset is a real <RadioGroupItem> (keyboard arrow nav,
-          // proper ARIA roles). The "Custom" preset is split out as a
-          // separate <Button> because it triggers a prompt() rather
-          // than acting as a normal radio selection — semantically a
-          // different action, so it stays outside the radio group.
-          const presets = (isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
-            .filter((t) => t.value !== 'custom')
-          const hasCustomOption = (isCurrency ? DELIVERY_TIMES_CURRENCY : DELIVERY_TIMES)
-            .some((t) => t.value === 'custom')
-          const customActive = hasCustomOption && !presets.some((t) => t.value === p.deliveryTime)
-          return (
-            <div className="mt-5 space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                Delivery window
-              </label>
-              <RadioGroup
-                value={customActive ? '' : p.deliveryTime}
-                onValueChange={(v) => p.setDeliveryTime(v)}
-                className="grid grid-cols-3 gap-2 sm:grid-cols-6"
-              >
-                {presets.map((t) => {
-                  const on = p.deliveryTime === t.value
-                  return (
-                    <label
-                      key={t.value}
-                      className={cn(
-                        'flex h-10 cursor-pointer items-center justify-center rounded-xl border px-1 text-[13px] font-medium transition-colors sm:text-sm',
-                        on
-                          ? 'border-lime bg-lime-tint-bg text-lime-text'
-                          : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
-                      )}
-                    >
-                      <RadioGroupItem value={t.value} className="sr-only" />
-                      {/* Compact label on phones; full label at sm+. */}
-                      <span className="sm:hidden">{t.short}</span>
-                      <span className="hidden sm:inline">{t.label}</span>
-                    </label>
-                  )
-                })}
-                {hasCustomOption && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      // V19/P24/P7.b — Open shadcn Dialog instead of
-                      // window.prompt() (browser-default styling, no
-                      // dark-mode support, jumped to top-left). Pre-fill
-                      // with current custom value if present.
-                      const cur = customActive
-                        ? p.deliveryTime.replace(/min$/, '')
-                        : '10'
-                      setCustomDraft(cur)
-                      setCustomOpen(true)
-                    }}
-                    className={cn(
-                      'h-10 rounded-xl border text-sm font-medium transition-colors',
-                      customActive
-                        ? 'border-lime bg-lime-tint-bg text-lime-text hover:bg-lime-tint-bg hover:text-lime-text'
-                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
-                    )}
-                  >
-                    {customActive ? p.deliveryTime.replace('min', ' min') : 'Custom'}
-                  </Button>
-                )}
-              </RadioGroup>
-              <FieldHint>
-                Faster windows rank higher in search and convert better.
-              </FieldHint>
-            </div>
-          )
-        })()}
       </SubCard>
 
-      {/* V19/P24/P7.b — Custom delivery dialog. Replaces window.prompt().
-          Submits `<n>min` into deliveryTime (matches preset format). */}
-      <Dialog open={customOpen} onOpenChange={setCustomOpen}>
-        <DialogContent
-          className="sm:max-w-sm"
-          // Below sm the dialog is a bottom sheet — auto-focusing the input
-          // would pop the soft keyboard and shove/scroll-jump the sheet, so
-          // only let Radix run its default autofocus at sm+.
-          onOpenAutoFocus={(e) => {
-            if (!window.matchMedia('(min-width: 640px)').matches) e.preventDefault()
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Custom delivery window</DialogTitle>
-            <DialogDescription>
-              How long until you can deliver, in minutes.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Minutes
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={1440}
-              step={1}
-              value={customDraft}
-              onChange={(e) => setCustomDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const m = parseInt(customDraft, 10)
-                  if (Number.isFinite(m) && m > 0) {
-                    p.setDeliveryTime(`${m}min`)
-                    setCustomOpen(false)
-                  }
-                }
-              }}
-              className={cn(inputCls)}
-              placeholder="10"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCustomOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                const m = parseInt(customDraft, 10)
-                if (Number.isFinite(m) && m > 0) {
-                  p.setDeliveryTime(`${m}min`)
-                  setCustomOpen(false)
-                }
-              }}
-              className="bg-lime text-text-inverse hover:bg-lime-hover"
-            >
-              Set
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -2832,11 +2840,246 @@ function FieldRow({ children, className }: { children: React.ReactNode; classNam
  * no longer "float". Reverses the R7 "no surface" call after seller feedback
  * that bare grey text read as out-of-place.
  */
+/**
+ * QuantityInput — a plain numeric box for Stock and Minimum order.
+ *
+ * No +/- steppers: quantities here run from 1 to hundreds of thousands,
+ * where stepping by one is useless and the buttons only ate width on a
+ * phone. Instead the whole number is selected on focus, so the seller
+ * types straight over it ("1K" -> click -> "1" is selected).
+ *
+ * Selecting in onFocus alone is not enough: Safari/iOS fire a mouseup
+ * after focus that collapses the selection back to a caret. The first
+ * mouseup after a focus is swallowed so the selection survives.
+ *
+ * The value is shown with thousands separators while idle and as raw
+ * digits while editing; it is clamped to [min, max] on blur. Every
+ * keystroke is also reported (unclamped) so a Save pressed mid-edit
+ * sees what the seller typed.
+ */
+function QuantityInput({
+  value,
+  onChange,
+  min,
+  max,
+  suffix,
+  ariaLabel,
+}: {
+  value: number
+  onChange: (n: number) => void
+  min: number
+  max: number
+  suffix?: string | null
+  ariaLabel: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const swallowMouseUp = useRef(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const display = draft ?? value.toLocaleString('en-US')
+
+  return (
+    // Number + unit centred together ("1,000 K"), not number-left and
+    // unit-right. The input is sized to its digits so the pair centres as
+    // one; clicking the empty space either side still focuses the field
+    // (and selects the number, via onFocus).
+    <div
+      onMouseDown={(e) => {
+        if (e.target === inputRef.current) return
+        e.preventDefault()
+        inputRef.current?.focus()
+        // Focus came from code, not a click on the input, so there is no
+        // input mouseup to swallow.
+        swallowMouseUp.current = false
+      }}
+      className="flex h-11 w-full cursor-text items-center justify-center gap-1.5 rounded-md border border-border-default bg-transparent px-3 transition-colors hover:border-border-strong focus-within:border-text-secondary sm:h-10"
+    >
+      <input
+        ref={inputRef}
+        style={{ width: `${Math.max(display.length, 1) + 0.5}ch` }}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        aria-label={ariaLabel}
+        value={display}
+        onFocus={(e) => {
+          const el = e.currentTarget
+          swallowMouseUp.current = true
+          setDraft(String(value))
+          // After React swaps in the raw digits, select them.
+          requestAnimationFrame(() => el.select())
+        }}
+        onMouseUp={(e) => {
+          if (swallowMouseUp.current) {
+            e.preventDefault()
+            swallowMouseUp.current = false
+          }
+        }}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, '').slice(0, 9)
+          setDraft(digits)
+          const n = parseInt(digits, 10)
+          if (Number.isFinite(n)) onChange(n)
+        }}
+        onBlur={() => {
+          const n = parseInt(draft ?? '', 10)
+          onChange(Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : Math.max(min, value))
+          setDraft(null)
+          swallowMouseUp.current = false
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+        className="h-full min-w-0 max-w-full bg-transparent text-center text-base tabular-nums text-text-primary placeholder:text-text-tertiary focus:outline-none sm:text-sm"
+      />
+      {suffix && (
+        <span className="shrink-0 text-sm text-text-tertiary">{suffix}</span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * AutoGrowTextarea — starts at three lines and grows with the text.
+ *
+ * The old box was a fixed 176px on desktop even when empty, which made a
+ * one-line field look like the main event of the page. Now the resting
+ * height matches a short answer, a long one gets the room it needs, and
+ * past MAX_HEIGHT it scrolls instead of pushing the form off-screen.
+ */
+const AUTOGROW_MAX_HEIGHT = 320
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+  ariaLabel,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  maxLength?: number
+  ariaLabel: string
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Collapse, then size to content. +2 for the 1px borders, because
+    // scrollHeight excludes them and the box is border-box.
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight + 2, AUTOGROW_MAX_HEIGHT)}px`
+  }, [value])
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      aria-label={ariaLabel}
+      rows={3}
+      className={cn(inputCls, 'h-auto min-h-[88px] resize-none overflow-y-auto py-2.5 leading-relaxed sm:h-auto')}
+    />
+  )
+}
+
+/**
+ * StockStepper — the stock field when it stands alone.
+ *
+ * The − and + are separate square buttons on either side of the box, not
+ * fused into it, so each reads as its own control and each gets a full
+ * 44px touch target on a phone. The centre box is a QuantityInput, so a
+ * seller with 250 units can still click and type instead of pressing +.
+ */
+const STOCK_MAX = 10_000_000
+
+function StockStepper({
+  value,
+  onChange,
+  suffix,
+  hint,
+}: {
+  value: number
+  onChange: (n: number) => void
+  suffix?: string | null
+  hint?: string | null
+}) {
+  const step = (d: number) => onChange(Math.min(STOCK_MAX, Math.max(1, value + d)))
+  const btn =
+    'flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border-default text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35 sm:h-10 sm:w-10'
+  return (
+    <div className="flex flex-col items-center">
+      <label className="mb-2 block text-[13px] font-medium text-text-secondary">
+        Total Stock Available
+      </label>
+      <div className="flex w-full max-w-xs items-center gap-2">
+        <button
+          type="button"
+          onClick={() => step(-1)}
+          disabled={value <= 1}
+          aria-label="Decrease stock"
+          className={btn}
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <QuantityInput
+            value={value}
+            onChange={onChange}
+            min={1}
+            max={STOCK_MAX}
+            suffix={suffix}
+            ariaLabel="Total stock available"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => step(1)}
+          disabled={value >= STOCK_MAX}
+          aria-label="Increase stock"
+          className={btn}
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+      {hint && <TipBox className="w-full">{hint}</TipBox>}
+    </div>
+  )
+}
+
+/**
+ * TipBox — guidance under a field: a small muted info icon and one line
+ * of text, left-aligned, directly under the input. No box and no colour —
+ * a tinted panel made every tip compete with the fields for attention.
+ * (Distinct from FieldHint, which stays for coloured status text such as
+ * the stock warning and the discount confirmation.)
+ */
+function TipBox({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    // !mt-1.5 (6px): FieldRow spaces children with space-y-2, a sibling
+    // selector that outranks a plain mt-*, so without `!` the gap stayed 8px.
+    <div className={cn('!mt-1.5 flex items-start gap-1.5 text-left', className)}>
+      <InfoOutlinedIcon
+        aria-hidden
+        sx={{ width: 13, height: 13, color: 'var(--color-text-tertiary)', mt: '2.5px', flexShrink: 0 }}
+      />
+      <p className="text-[12px] leading-[18px] text-text-tertiary">{children}</p>
+    </div>
+  )
+}
+
 function FieldHint({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <p
       className={cn(
-        'rounded-md border border-border-subtle bg-bg-inset px-2.5 py-1.5 text-xs leading-snug text-text-tertiary',
+        // Plain text, not a pill. With no card or section borders left,
+        // a bordered inset box around every helper line became the
+        // heaviest thing on the page — louder than the fields it was
+        // meant to support.
+        'mt-2 text-[12px] leading-snug text-text-tertiary',
         className,
       )}
     >
@@ -3242,13 +3485,15 @@ function TermsCard({
   )
 }
 
-// ─── SubCard — the grey panel each Step 3 section lives in ──────────────────
+// ─── SubCard — one labelled section of the Details step ────────────────────
 
 /**
  * SubCard wraps a labelled section of the Details step.
- * Spec: bg-bg-overlay rounded-2xl border-border-subtle p-5,
- * with a head row (h-9 mb-4) holding the title.
- * Per HANDOFF_SELL_WIZARD_RESTRUCTURE.md §3.
+ *
+ * Despite the name it is not a card: the focused-canvas layout dropped
+ * the wizard's outer panel, and a bordered section inside a borderless
+ * page just reintroduces the nesting. It renders a heading, a hairline,
+ * and the section's fields; spacing does the grouping.
  */
 function SubCard({
   title,
@@ -3260,16 +3505,21 @@ function SubCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-4 sm:p-5">
-      {/* Head row — bigger title (h5-ish: text-base font-bold) with a faint
-          horizontal divider beneath that separates the title from the body.
-          R9 polish. */}
-      <div className="mb-7 flex items-center justify-between border-b border-border-subtle pb-1.5 sm:mb-8 sm:pb-2">
-        <h2 className="text-base font-bold text-text-primary">{title}</h2>
+    // Each section is its own panel: a title bar, a hairline, then the
+    // fields. Rectangular (rounded-lg, not a pill) per the house card
+    // language. The divider is the only line inside the panel, so the
+    // title reads as a header rather than another field label.
+    <section className="scroll-mt-28 overflow-hidden rounded-lg border border-border-subtle bg-bg-overlay">
+      {/* Compact title bar: the divider sits just under the title so the
+          bar reads as a label for the panel, not a section of its own. */}
+      <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-border-subtle px-4 py-2 sm:px-5">
+        <h2 className="text-[14.5px] font-bold leading-tight tracking-tight text-text-primary">
+          {title}
+        </h2>
         {right}
       </div>
-      {children}
-    </div>
+      <div className="px-4 py-4 sm:px-5">{children}</div>
+    </section>
   )
 }
 
@@ -3301,19 +3551,19 @@ function PlatformTileRows({
   if (visible.length === 0) return null
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {visible.map((kind) => {
         const options = normalizePlatformOptions(fields?.[kind]?.options)
         const value = values[kind]
         return (
           <div key={kind} className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            <label className="block text-[13px] font-medium text-text-secondary">
               {TILE_KIND_LABELS[kind]} <span className="text-error">*</span>
             </label>
             <RadioGroup
               value={value || undefined}
               onValueChange={(v) => onChange(kind, v)}
-              className="flex flex-wrap gap-2 sm:gap-3"
+              className="flex flex-wrap gap-2"
             >
               {options.map((opt) => {
                 const on = value === opt.value
@@ -3321,10 +3571,14 @@ function PlatformTileRows({
                   <label
                     key={opt.value}
                     className={cn(
-                      'relative flex h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
+                      // Compact translucent chips that sit ON the card
+                      // rather than solid black boxes inside it. Rectangular
+                      // (rounded-md) like every other control on the form.
+                      'relative flex h-9 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] font-semibold transition-colors',
+                      'has-[:focus-visible]:border-text-secondary',
                       on
                         ? 'border-lime bg-lime-tint-bg text-lime-text'
-                        : 'border-border-default bg-bg-inset text-text-secondary hover:border-border-strong hover:text-text-primary',
+                        : 'border-white/[0.08] bg-white/[0.03] text-text-secondary hover:border-white/[0.16] hover:bg-white/[0.06] hover:text-text-primary',
                     )}
                   >
                     <RadioGroupItem value={opt.value} className="sr-only" />
@@ -3333,13 +3587,10 @@ function PlatformTileRows({
                       <img
                         src={opt.icon_url}
                         alt=""
-                        className="h-6 w-6 shrink-0 object-contain"
+                        className="h-4 w-4 shrink-0 object-contain"
                       />
                     ) : null}
                     <span className="uppercase tracking-wide">{opt.value}</span>
-                    {on && (
-                      <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
-                    )}
                   </label>
                 )
               })}
@@ -3355,8 +3606,21 @@ function PlatformTileRows({
 
 // R14 — reverted to rounded-md from R12's rounded-none after seller feedback
 // that the sharp corners felt severe. Still transparent over the sub-card
-// surface; border defines the field. Focused border turns lime.
+// surface; border defines the field. Focus lightens the border to near-white
+// (no lime glow ring) — lime is reserved for selection and the primary CTA,
+// and a lime ring on every field made the form read as all-accent.
 // Mobile uses text-base (16px) so iOS Safari doesn't auto-zoom the page on
 // focus (14px inputs trigger the zoom + horizontal panning); sm+ keeps text-sm.
+// Wizard buttons — one system for Back, Bulk upload, Continue, Create
+// Offer and the go-back dialog. Rectangular (rounded-md) like the inputs,
+// one height, no glow. `border` on every variant (transparent where not
+// visible) so primary and secondary are exactly the same box size.
+const BTN_BASE =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-md border px-4 text-sm font-semibold transition-colors disabled:pointer-events-none sm:h-10 sm:px-5'
+const BTN_PRIMARY = cn(BTN_BASE, 'border-transparent bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed')
+const BTN_SECONDARY = cn(BTN_BASE, 'border-border-default bg-bg-overlay text-text-secondary hover:border-border-strong hover:text-text-primary')
+const BTN_PRIMARY_DISABLED = cn(BTN_BASE, 'cursor-not-allowed border-border-subtle bg-bg-overlay text-text-disabled')
+const BTN_DANGER = cn(BTN_BASE, 'border-transparent bg-error text-white hover:opacity-90')
+
 const inputCls =
-  'h-10 w-full rounded-md border border-border-default bg-transparent px-3 text-base sm:text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-colors aria-[invalid=true]:border-error aria-[invalid=true]:focus:ring-error-bg'
+  'h-11 w-full rounded-md border border-border-default bg-transparent px-3 text-base sm:h-10 sm:text-sm text-text-primary placeholder:text-text-tertiary hover:border-border-strong focus:border-text-secondary focus:outline-none transition-colors aria-[invalid=true]:border-error aria-[invalid=true]:focus:border-error'

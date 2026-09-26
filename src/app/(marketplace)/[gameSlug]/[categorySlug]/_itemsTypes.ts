@@ -23,6 +23,8 @@ export interface ItemSeller {
   sales: number
   /** Number of reviews the rating is based on. Shown as "(1,381)". */
   reviewCount: number
+  /** Rank key from `profiles.seller_tier` ("bronze" … "legendary"). */
+  tier?: string | null
 }
 
 export interface ItemOffer {

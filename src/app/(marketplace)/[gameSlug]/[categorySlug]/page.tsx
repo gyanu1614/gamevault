@@ -5,6 +5,7 @@
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 
+import { quantityUnit } from '@/lib/currency/quantity-unit'
 import dynamic from 'next/dynamic'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
@@ -62,10 +63,13 @@ import { getCategoryStats, formatStatPrice, type CategoryStats } from '@/lib/seo
 function formatBundleDelivery(raw: string | null | undefined): string {
   if (!raw) return '10 Minutes'
   if (raw === 'instant') return 'Instant'
-  const m = raw.match(/^(\d+)\s*(min|hr)$/)
+  const m = raw.match(/^(\d+)\s*(min|hr|d)$/)
   if (!m) return raw
   const n = parseInt(m[1], 10)
   if (m[2] === 'hr') return `${n} ${n === 1 ? 'Hour' : 'Hours'}`
+  // Day windows ("2d".."7d") from the wizard; without this the bundle
+  // panel printed the raw code.
+  if (m[2] === 'd') return `${n} ${n === 1 ? 'Day' : 'Days'}`
   return `${n} ${n === 1 ? 'Minute' : 'Minutes'}`
 }
 // V15 — Items page dispatch + SEO slug resolver.
@@ -115,12 +119,14 @@ function buildIntroLine(
   stats: CategoryStats,
   gameName: string,
   categoryLabel: string,
+  /** Flexible currency: what the low price covers ("M", "Robux"). */
+  priceSuffix?: string,
 ): string {
   if (stats.count > 0 && stats.lowPrice != null) {
     const avg = stats.avgDeliveryLabel ? ` — average delivery ${stats.avgDeliveryLabel}` : ''
     return `${stats.count} live ${gameName} ${categoryLabel} ${
       stats.count === 1 ? 'listing' : 'listings'
-    } from $${formatStatPrice(stats.lowPrice)}${avg}. Every order covered by SafeDrop Buyer Protection.`
+    } from $${formatStatPrice(stats.lowPrice)}${priceSuffix ? `/${priceSuffix}` : ''}${avg}. Every order covered by SafeDrop Buyer Protection.`
   }
   return `Be the first to sell ${gameName} ${categoryLabel} on DropMarket — list in minutes with the lowest fees for buyers and sellers.`
 }
@@ -224,13 +230,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ((currencyCfg.faq?.length ?? 0) > 0 || (currencyCfg.steps?.length ?? 0) > 0)
 
   // Flexible (non-bundle) currency prices are per-unit, so the low
-  // price reads best with its unit ("$0.0045/Robux"). Bundle-mode
+  // price reads best with its unit ("$0.0045/Robux", or "$0.003/M" on a
+  // per-million game, where the price covers 1M, not one token). Bundle-mode
   // currency prices are per bundle — no unit suffix there.
   const usesUnitSuffix =
     isCurrency && !!currencyCfg?.unit_label && (currencyCfg.bundles?.length ?? 0) === 0
   const priceLabel =
     stats.lowPrice != null
-      ? `$${formatStatPrice(stats.lowPrice)}${usesUnitSuffix ? `/${currencyCfg!.unit_label}` : ''}`
+      ? `$${formatStatPrice(stats.lowPrice)}${usesUnitSuffix ? `/${quantityUnit(currencyCfg!.quantity_granularity, currencyCfg!.unit_label)}` : ''}`
       : null
 
   const hasListings = stats.count > 0 && priceLabel != null
@@ -464,6 +471,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           sellerName: sellerDisplayName(l.seller),
           sellerAvatarUrl: l.seller?.avatar_url ?? null,
           verified: !!l.seller?.is_verified,
+          sellerTier: l.seller?.seller_tier ?? null,
           // Positive-feedback % (0–100) from the 0–5 star average, or null for
           // a seller with no reviews (rendered as "New"). Never the old raw-star
           // -as-percent (5★ → "5%") or the fabricated 95 default.
@@ -622,11 +630,13 @@ async function CategoryBrowsePage({ params }: PageProps) {
         const { data: listings } = await currencyQuery as any
         realOffers = (listings ?? [])
           .map(listingToOffer)
-          // V19/P8 — Quantity floor only. Dropped the price < 1 belt-
-          // and-braces filter (same reason as above). Sanity check
-          // pricePerUnit > 0 to skip zero-priced rows that shouldn't
-          // have made it past the wizard but defensive in case they do.
-          .filter((o: { minQty: number; pricePerUnit: number }) => o.minQty >= 100 && o.pricePerUnit > 0)
+          // Only a price sanity check. The old `o.minQty >= 100` clause
+          // was a leftover from the per-unit Robux model: it silently
+          // dropped every listing in a game whose admin minimum is
+          // below 100, which is exactly what a `thousand`-granularity
+          // game wants (min 1 = 1K). The real floor is the per-game
+          // admin `min_quantity`, enforced in the wizard on save.
+          .filter((o: { minQty: number; pricePerUnit: number }) => o.pricePerUnit > 0)
       }
     }
 
@@ -658,7 +668,12 @@ async function CategoryBrowsePage({ params }: PageProps) {
 
     const gameName = game?.name ?? currencyShell.currency.game
     const categoryLabel = mergedData.currency.name
-    const introLine = buildIntroLine(stats, gameName, categoryLabel)
+    const introLine = buildIntroLine(
+      stats,
+      gameName,
+      categoryLabel,
+      quantityUnit(mergedData.currency.granularity, mergedData.currency.unitLabel),
+    )
 
     return (
       <>

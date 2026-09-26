@@ -24,7 +24,18 @@ export default async function SellLayout({ children }: { children: React.ReactNo
   return (
     <>
       <HeroBackdropPreload name="sell" />
-      <HeroBackdrop name="sell" className="text-text-primary">
+      {/* `hero-dim` pushes the sell hero back behind the form. With the
+          navbar gone the artwork sits directly behind the inputs, and
+          at full strength it competed with them for attention — the
+          backdrop should frame the task, not fight it. */}
+      {/* `overflow-hidden` clips the decorative backdrop, which is taller
+          than the viewport by design (fixed --hero-height). On a page
+          that is meant to fit exactly one screen it was the only thing
+          producing a scrollbar — the art can crop, the layout cannot. */}
+      <HeroBackdrop
+        name="sell"
+        className="hero-dim overflow-hidden text-text-primary"
+      >
         {children}
       </HeroBackdrop>
     </>

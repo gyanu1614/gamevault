@@ -64,6 +64,10 @@ export function BetaBanner() {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/dev/checkout-preview') ||
+    // The sell wizard is a focused task surface with no global chrome —
+    // its progress rail owns the top of the viewport.
+    /^\/sell\/(new|edit|bulk)(\/|$)/.test(pathname) ||
+    pathname.startsWith('/dev/sell-wizard-preview') ||
     (pathname.startsWith('/account') && !isOrderDetail) ||
     (pathname.startsWith('/seller') && !pathname.includes('/new') && !pathname.includes('/edit')) ||
     pathname.startsWith('/kyc/complete')
