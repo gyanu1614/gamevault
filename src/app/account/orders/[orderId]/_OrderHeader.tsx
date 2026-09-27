@@ -156,7 +156,7 @@ export function OrderHeader({
   return (
     <>
       {/* Top bar — quiet back link, slim presence chip on the right */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between max-sm:mb-7">
         <Link
           href="/account/orders"
           className="inline-flex items-center gap-2 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
@@ -168,14 +168,16 @@ export function OrderHeader({
       </div>
 
       {/* Header row — large framed item image + title block + status pills.
-          Below sm the row wraps: pills drop to their own full-width row and
-          the image shrinks so the truncated title keeps usable width. */}
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-3 sm:flex-nowrap sm:gap-5">
+          Below sm it is one compact unit (small image + title + chips,
+          vertically centred); the pills and the order id are hidden there,
+          the status card below the header and the Order Details card carry
+          them instead. */}
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3 max-sm:flex-nowrap max-sm:items-center max-sm:gap-x-3 sm:flex-nowrap sm:gap-5">
         {/* Item image — bigger, framed, with subtle inner border */}
         <div className="relative flex-shrink-0">
           {itemImageUrl ? (
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1.5 sm:h-[88px] sm:w-[88px]">
-              <div className="h-full w-full overflow-hidden rounded-[12px]">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1.5 max-sm:h-12 max-sm:w-12 max-sm:rounded-xl max-sm:p-1 sm:h-[88px] sm:w-[88px]">
+              <div className="h-full w-full overflow-hidden rounded-[12px] max-sm:rounded-[9px]">
                 <Image
                   src={itemImageUrl}
                   alt={itemTitle}
@@ -186,16 +188,16 @@ export function OrderHeader({
               </div>
             </div>
           ) : (
-            <div className="h-16 w-16 rounded-2xl border border-white/[0.08] card-frost sm:h-[88px] sm:w-[88px]" />
+            <div className="h-16 w-16 rounded-2xl border border-white/[0.08] card-frost max-sm:h-12 max-sm:w-12 max-sm:rounded-xl sm:h-[88px] sm:w-[88px]" />
           )}
         </div>
 
-        <div className="min-w-0 flex-1 pt-1">
-          <h1 className="truncate text-[22px] font-extrabold leading-[1.08] tracking-[-0.025em] text-text-primary sm:text-[28px]">
+        <div className="min-w-0 flex-1 pt-1 max-sm:pt-0">
+          <h1 className="truncate text-[22px] font-extrabold leading-[1.08] tracking-[-0.025em] text-text-primary max-sm:text-[18px] max-sm:leading-[1.15] sm:text-[28px]">
             {itemTitle}
           </h1>
           {/* Game + category chips + inline order ID — all on one row */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-semibold text-text-secondary">
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-semibold text-text-secondary max-sm:mt-1 max-sm:gap-x-3 max-sm:text-[12px]">
             {gameName && (
               <span className="inline-flex items-center gap-2">
                 {gameIconUrl ? (
@@ -204,10 +206,10 @@ export function OrderHeader({
                     alt=""
                     width={18}
                     height={18}
-                    className="h-[18px] w-[18px] rounded-[5px] object-cover"
+                    className="h-[18px] w-[18px] rounded-[5px] object-cover max-sm:h-4 max-sm:w-4 max-sm:rounded-[4px]"
                   />
                 ) : (
-                  <span className="h-[18px] w-[18px] rounded-[5px] card-frost" />
+                  <span className="h-[18px] w-[18px] rounded-[5px] card-frost max-sm:h-4 max-sm:w-4" />
                 )}
                 {gameName}
               </span>
@@ -216,7 +218,7 @@ export function OrderHeader({
               <span className="inline-flex items-center gap-2">
                 <span
                   aria-hidden
-                  className="h-[18px] w-[18px] bg-lime-text"
+                  className="h-[18px] w-[18px] bg-lime-text max-sm:h-4 max-sm:w-4"
                   style={{
                     WebkitMaskImage: `url(${categoryIcon})`,
                     maskImage: `url(${categoryIcon})`,
@@ -231,12 +233,14 @@ export function OrderHeader({
                 {categoryName}
               </span>
             )}
-            <span className="h-3 w-px bg-white/10" aria-hidden />
-            <OrderIdInline orderNumber={orderNumber} />
+            <span className="h-3 w-px bg-white/10 max-sm:hidden" aria-hidden />
+            <span className="max-sm:hidden">
+              <OrderIdInline orderNumber={orderNumber} />
+            </span>
           </div>
         </div>
 
-        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 sm:w-auto sm:flex-col sm:items-end sm:pt-1">
+        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 max-sm:hidden sm:w-auto sm:flex-col sm:items-end sm:pt-1">
           <StatusPill status={orderStatus} disputeResolved={disputeResolved} />
           <EscrowPill escrowStatus={escrowStatus} disputeResolved={disputeResolved} />
         </div>

@@ -178,17 +178,52 @@ describe('confirmOrderReceipt ledger transition', () => {
     expect(h.rpc).not.toHaveBeenCalled()
   })
 
-  it('disputed order: the RPC refuses and the action says so (nothing released)', async () => {
+  it('disputed order: routes to order_dispute_buyer_confirm; an admin-opened review is refused (nothing released)', async () => {
     const readBuilder = createBuilder({
       data: { ...baseOrder, status: 'disputed', escrow_status: 'frozen' },
       error: null,
     })
     h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
-    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'disputed' }, error: null })
+    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'admin_opened' }, error: null })
 
     const result = await confirmOrderReceipt(ORDER_ID)
 
-    expect(result).toEqual({ success: false, error: 'This order is under dispute review' })
+    expect(h.rpc).toHaveBeenCalledWith('order_dispute_buyer_confirm', { p_order_id: ORDER_ID, p_buyer_id: BUYER_ID })
+    expect(h.rpc).not.toHaveBeenCalledWith('order_confirm_receipt', expect.anything())
+    expect(result).toEqual({ success: false, error: 'This order is under review by our team — they will close it for you.' })
+    expect(h.awardCashback).not.toHaveBeenCalled()
+  })
+
+  it('disputed order the buyer opened: confirming closes it and runs the completion follow-ups once', async () => {
+    const readBuilder = createBuilder({
+      data: { ...baseOrder, status: 'disputed', escrow_status: 'frozen' },
+      error: null,
+    })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    h.rpc.mockResolvedValue({
+      data: { order_id: ORDER_ID, changed: true, resolved: true, post_completion: false, status: 'completed' },
+      error: null,
+    })
+
+    const result = await confirmOrderReceipt(ORDER_ID)
+
+    expect(result).toEqual({ success: true })
+    expect(h.rpc).toHaveBeenCalledWith('order_dispute_buyer_confirm', { p_order_id: ORDER_ID, p_buyer_id: BUYER_ID })
+    expect(h.awardCashback).toHaveBeenCalledTimes(1)
+    expect(h.recordReferralCommission).toHaveBeenCalledTimes(1)
+  })
+
+  it('disputed order already closed (replay / race): success, no follow-ups', async () => {
+    const readBuilder = createBuilder({
+      data: { ...baseOrder, status: 'disputed', escrow_status: 'frozen' },
+      error: null,
+    })
+    h.createClient.mockResolvedValue(createSupabaseMock([readBuilder]))
+    h.rpc.mockResolvedValue({ data: { order_id: ORDER_ID, changed: false, reason: 'already_resolved' }, error: null })
+
+    const result = await confirmOrderReceipt(ORDER_ID)
+
+    expect(result).toEqual({ success: true })
     expect(h.awardCashback).not.toHaveBeenCalled()
   })
 

@@ -1,27 +1,25 @@
 'use client'
 
 /**
- * TopSellingGamesRail — placeholder row for currency cards.
+ * TopSellingGamesRail — a scrolling row of game cards.
  *
- * Layout only. The cards are deliberately empty: currency listings have no
- * per-currency artwork anywhere in the repo or the database (they all fall
- * back to the game icon), so filling these with real data would just be
- * twelve game logos with prices under them. The shell is here so the row's
- * geometry can be judged and so the section has the height its grid backdrop
- * needs.
+ * There is no public sales metric yet, so the row shows the games with the
+ * most live stock (getPopularGames' own ranking), as the same card the
+ * Popular Games grid uses. Swap the source for real sales counts once
+ * those exist; the rail itself does not care.
  *
- * Matches the listing rail: same Embla setup, same wheel plugin, same card
- * geometry and the same recessed well treatment.
+ * Matches the listing rail: same Embla setup, same wheel plugin.
  */
 
 import { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
+import { PopularGameCard } from './PopularGameCard'
+import type { PopularGameCard as GameCardData } from '../lib/popular-games'
 
 const FADE = '56px'
-const PLACEHOLDER_COUNT = 10
 
-export function TopSellingGamesRail() {
+export function TopSellingGamesRail({ games }: { games: GameCardData[] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { align: 'start', containScroll: 'trimSnaps', dragFree: true },
     [WheelGesturesPlugin()],
@@ -52,26 +50,13 @@ export function TopSellingGamesRail() {
       style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
     >
       <div className="-ml-3 flex touch-pan-y sm:-ml-4">
-        {Array.from({ length: PLACEHOLDER_COUNT }).map((_, i) => (
+        {games.map((game) => (
           <div
-            key={i}
-            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-3 sm:basis-1/3 sm:pl-4 lg:basis-1/4 xl:basis-1/5"
+            key={game.slug}
+            // Phone: three-ish game cards in view, same size as the grid's.
+            className="min-w-0 shrink-0 grow-0 basis-[31%] pl-3 sm:basis-1/3 sm:pl-4 lg:basis-1/4 xl:basis-1/5"
           >
-            <div
-              aria-hidden
-              className="relative aspect-[1/1.1] overflow-hidden border border-border-subtle"
-              style={{
-                borderRadius: 'var(--radius-lg)',
-                // Same recess as the listing cards — see ListingCard.
-                backgroundColor: 'var(--color-bg-well, #181D25)',
-                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.30)',
-              }}
-            >
-              <div
-                className="absolute inset-x-0 bottom-0 h-px"
-                style={{ background: 'rgba(255,255,255,0.045)' }}
-              />
-            </div>
+            <PopularGameCard game={game} />
           </div>
         ))}
       </div>

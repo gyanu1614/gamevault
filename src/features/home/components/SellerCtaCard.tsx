@@ -755,7 +755,7 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
       // the figure wrapper. `inset: 0` sits inside the 1px border and makes
       // it 1134x363 — the same normalised path on two different box sizes
       // puts the drawn edge ~1px off the clipped edge.
-      className="pointer-events-none absolute -inset-px z-[-1] overflow-hidden"
+      className="seller-split pointer-events-none absolute -inset-px z-[-1] overflow-hidden"
       style={{ borderRadius: 'inherit' }}
     >
       {splitVariant === 'tonal' ? (

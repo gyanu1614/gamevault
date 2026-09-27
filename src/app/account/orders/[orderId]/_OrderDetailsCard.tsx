@@ -17,7 +17,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight, Star, BadgeCheck, Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { ChevronRight, Star, BadgeCheck, Copy, Check, ThumbsUp, ThumbsDown, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
@@ -347,12 +347,14 @@ function PayoutBody({
   fee,
   netPayout,
   orderStatus,
+  role,
 }: {
   subtotal: number
   feePercent: number
   fee: number
   netPayout: number
   orderStatus: string
+  role: 'buyer' | 'seller' | 'admin'
 }) {
   return (
     <>
@@ -363,7 +365,23 @@ function PayoutBody({
           {fmtUsd(netPayout)}
         </span>
       </Row>
-      <PayoutStatusRow orderStatus={orderStatus} />
+      {/* Completed → the money is in the seller's wallet; link there
+          instead of a status box. Admins view someone else's order, so
+          they keep the status row. */}
+      {orderStatus === 'completed' && role === 'seller' ? (
+        <Link
+          href="/account/wallet"
+          className="mt-3 flex items-center justify-between rounded-[9px] border border-border-subtle bg-white/[0.02] px-3 py-2.5 text-[12.5px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-lime-text" aria-hidden />
+            View In Wallet
+          </span>
+          <ChevronRight className="h-4 w-4 text-text-tertiary" aria-hidden />
+        </Link>
+      ) : (
+        <PayoutStatusRow orderStatus={orderStatus} />
+      )}
     </>
   )
 }
@@ -659,6 +677,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             fee={fee}
             netPayout={netPayout}
             orderStatus={orderStatus}
+            role={role}
           />
         </OrderCard>
       )}

@@ -907,8 +907,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               // Transparent over the homepage hero until the page moves, so
               // the art reads behind the chrome. A scrim below keeps the
               // logo and icons legible on bright art.
+              // max-sm:backdrop-blur-0 is invisible but load-bearing: any
+              // backdrop-filter makes this bar the containing block for its
+              // `fixed top-full` phone sheets (profile, notifications,
+              // activity), so they hang flush under the bar. Without it, at
+              // the top of the homepage `top-full` resolved against the
+              // viewport and the sheet opened below the bottom of the screen.
               transparentOverHero
-                ? 'border-b border-b-transparent bg-transparent shadow-none'
+                ? 'border-b border-b-transparent bg-transparent shadow-none max-sm:backdrop-blur-0'
                 : cn(
                     'border-b backdrop-blur-2xl backdrop-saturate-150',
                     // Pages with a sub-navbar drop the hairline so navbar +

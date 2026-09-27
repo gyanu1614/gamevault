@@ -43,6 +43,9 @@ interface MarkReceivedModalProps {
   /** 'confirm' = full Confirm Receipt + Review flow.
    *  'review'  = standalone Review form for an already-completed order. */
   mode?: 'confirm' | 'review'
+  /** The order is disputed: confirming also closes the buyer's dispute
+   *  (same action; only the copy changes). */
+  closesDispute?: boolean
 }
 
 const POSITIVE_CHIPS = [
@@ -70,6 +73,7 @@ export function MarkReceivedModal({
   amount,
   onConfirmed,
   mode = 'confirm',
+  closesDispute = false,
 }: MarkReceivedModalProps) {
   const [rating, setRating] = useState<'positive' | 'negative' | null>(null)
   const [comment, setComment] = useState('')
@@ -167,11 +171,13 @@ export function MarkReceivedModal({
       <DialogContent className="max-w-[640px] gap-5 border-border-default bg-bg-raised p-7 sm:p-8">
         <DialogHeader className="gap-2">
           <DialogTitle className="text-[26px] font-bold tracking-tight">
-            {mode === 'review' ? 'Leave A Review' : 'Confirm Delivery'}
+            {mode === 'review' ? 'Leave A Review' : closesDispute ? 'Mark As Received' : 'Confirm Delivery'}
           </DialogTitle>
           <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
             {mode === 'review'
               ? 'Share your experience to help other buyers.'
+              : closesDispute
+              ? 'Confirm you received your order. This closes your dispute and completes the order.'
               : 'Confirm and the order is complete.'}
           </DialogDescription>
         </DialogHeader>

@@ -104,7 +104,9 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
       href={href}
       // Colour change only on hover — no translate. The 2px slide read as a
       // pop and made a dense column feel jumpy.
-      className="inline-flex min-h-[28px] items-center text-[14.5px] text-text-secondary transition-colors duration-200 hover:text-white sm:min-h-0"
+      // Phone: three columns share one row, so the links run a size smaller
+      // and may wrap onto two lines.
+      className="inline-flex min-h-[28px] items-center text-[14.5px] leading-snug text-text-secondary transition-colors duration-200 hover:text-white max-sm:text-[12.5px] sm:min-h-0"
     >
       {children}
     </Link>
@@ -186,7 +188,8 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
 
           {/* Link columns + a support block. Every column shows at every
               width — the compliance pack lives in Policies/Support. */}
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-8 sm:grid-cols-3">
+          {/* Phone: all three columns on one row (was 2 + 1). */}
+          <nav aria-label="Footer" className="grid grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-8">
             {LINK_GROUPS.map((group) => (
               <motion.div
                 key={group.title}
@@ -197,8 +200,8 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
                 // phones put those routes out of reach for most visitors.
                 className={undefined}
               >
-                <h3 className={headingClass}>{group.title}</h3>
-                <ul className="mt-3.5 space-y-1.5">
+                <h3 className={`${headingClass} max-sm:text-[14px]`}>{group.title}</h3>
+                <ul className="mt-3.5 space-y-1.5 max-sm:mt-2.5 max-sm:space-y-1">
                   {group.links.map((link) => (
                     <li key={link.href}>
                       <FooterLink href={link.href}>{link.name}</FooterLink>

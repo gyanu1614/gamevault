@@ -29,7 +29,13 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   // flat black) so navigating into /account/* doesn't flash a black
   // screen before the backdrop fades in. Same backdrop the resolved
   // layout uses, so there's no visual swap when auth settles.
-  if (loading) {
+  // Only block while there is no user at all. useAuth puts the signed-in
+  // user (from the session + cached profile) in place BEFORE its fresh
+  // profile fetch finishes; waiting on `loading` alone held every account
+  // page behind this full-screen spinner for that whole fetch, even though
+  // the page itself (and its skeleton) could already render. Middleware
+  // has already verified the session for /account/*.
+  if (loading && !user) {
     // Context-aware loader copy. Coming back from checkout lands on an order
     // page — "Preparing your order" reads far better than a bare "Loading…".
     const loadingLabel = (() => {

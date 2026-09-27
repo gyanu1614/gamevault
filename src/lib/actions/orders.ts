@@ -281,9 +281,27 @@ export async function markOrderAsDelivered(
       }
     }
 
+    // Disputed before delivery: the seller can still record that they
+    // delivered. ONE RPC stamps delivered_at only (status stays disputed, no
+    // money moves, no auto-complete window) and tells the buyer they can
+    // confirm to close the dispute.
+    if (order.status === 'disputed') {
+      const { data: marked, error: markError } = await (createServiceRoleClient().rpc as any)(
+        'order_mark_delivered_in_dispute',
+        { p_order_id: orderId, p_seller_id: user.id },
+      )
+      if (markError) {
+        console.error('Database error marking disputed order delivered:', markError)
+        return { success: false, error: markError.message || 'Failed to update order' }
+      }
+      // already_delivered / race lost: nothing more to do.
+      if (marked?.changed === true) revalidatePath(`/account/orders/${orderId}`)
+      return { success: true }
+    }
+
     // Idempotent: re-marking a delivered/finished order must not restart the
     // protection window or re-send the buyer email.
-    if (['delivered', 'completed', 'refunded', 'cancelled', 'disputed'].includes(order.status)) {
+    if (['delivered', 'completed', 'refunded', 'cancelled'].includes(order.status)) {
       return { success: true }
     }
 
@@ -532,6 +550,111 @@ async function heldMinorFor(supabase: any, orderId: string): Promise<bigint> {
 }
 
 /**
+ * Everything that follows a buyer-confirmed release of an order's money,
+ * shared by the ordinary confirm and the confirm that closes the buyer's own
+ * dispute: listing-surface revalidation, buyer receipt + seller "sale final"
+ * emails (and in-app note), cashback and the referral commission. All
+ * fire-and-forget and idempotent per order.
+ */
+async function afterBuyerRelease(
+  order: any,
+  buyerId: string,
+  opts: { notifySellerInApp: boolean },
+): Promise<void> {
+  const orderId: string = order.id
+  // Completion decrements stock (trigger) — keep the public listing pages in
+  // step, exactly as transition() does for the auto-complete path.
+  await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
+
+  // Buyer completion receipt (fire-and-forget, non-blocking). When
+  // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
+  // Feedback Service, which then sends the buyer a verified-review
+  // invitation ~7 days later — this replaces the cron's fallback review
+  // email (sendTrustpilotInvitation skips itself in BCC mode).
+  await (async () => {
+    // Service client: RLS hides sold/paused listings from non-owners.
+    const service = createServiceRoleClient()
+    const [{ data: buyer }, { data: completedListing }] = await Promise.all([
+      service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', buyerId)
+        .single() as any,
+      service
+        .from('listings')
+        .select('title')
+        .eq('id', order.listing_id)
+        .single() as any,
+    ])
+    if (buyer?.email) {
+      const { sendOrderCompletionEmail } = await import('@/lib/email')
+      await sendOrderCompletionEmail({
+        to: buyer.email,
+        name: buyer.full_name || buyer.username || 'Gamer',
+        orderId,
+        orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
+        listingTitle: completedListing?.title || 'your item',
+        totalPaid: order.total_amount ?? 0,
+      })
+    }
+  })().catch((err) => console.error('[Orders] Completion email failed:', err))
+
+  // Tell the seller their sale is final (email + in-app, fire-and-forget).
+  await (async () => {
+    const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
+    // Service client: RLS hides the seller's profile from the buyer session.
+    const service = createServiceRoleClient()
+    const [{ data: seller }, { data: soldListing }] = await Promise.all([
+      service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', order.seller_id)
+        .single() as any,
+      service
+        .from('listings')
+        .select('title')
+        .eq('id', order.listing_id)
+        .single() as any,
+    ])
+    const { createNotification } = await import('@/lib/utils/notifications')
+    if (opts.notifySellerInApp) await createNotification({
+      userId: order.seller_id,
+      type: 'order_completed',
+      title: 'Order Completed',
+      message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
+      link: `/account/orders/${orderId}`,
+    })
+    if (seller?.email) {
+      const { sendOrderCompletedSellerEmail } = await import('@/lib/email')
+      await sendOrderCompletedSellerEmail({
+        to: seller.email,
+        name: seller.full_name || seller.username || 'Gamer',
+        orderId,
+        orderNumber: orderRef,
+        listingTitle: soldListing?.title || 'your item',
+        payout: order.seller_payout ?? 0,
+      })
+    }
+  })().catch((err) => console.error('[Orders] Seller completion comms failed:', err))
+
+  // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
+  // Guest orders don't get loyalty credits (no persistent account)
+  if (!order.is_guest_order) {
+    // Only the id crosses the seam — awardCashback re-fetches and verifies
+    // the order itself (it mints spendable credit; no trusted payload).
+    awardCashback({ orderId }).catch(() => {})
+  }
+
+  // DB-017 — the referrer's commission (10% of the platform fee, read from
+  // the order row) was never recorded: recordReferralCommission had no
+  // caller. Fire-and-forget like cashback; once per order (partial unique
+  // index referral_earnings_one_commission_per_order).
+  recordReferralCommission(orderId).catch((err) =>
+    console.error('[Orders] referral commission failed (retryable):', err)
+  )
+}
+
+/**
  * Confirm order receipt (buyer action)
  */
 export async function confirmOrderReceipt(orderId: string): Promise<{
@@ -573,6 +696,37 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
+    // The buyer confirms receipt on an order THEY disputed: ONE RPC closes
+    // the dispute in the seller's favour (resolved by the buyer) and applies
+    // the release — the ordinary buyer-confirm release when the dispute came
+    // before completion, the admin-release unfreeze when it came after.
+    if (order.status === 'disputed') {
+      const { data: closed, error: closeError } = await (createServiceRoleClient().rpc as any)(
+        'order_dispute_buyer_confirm',
+        { p_order_id: orderId, p_buyer_id: user.id },
+      )
+      if (closeError) {
+        console.error('Database error closing dispute on buyer confirm:', closeError)
+        return { success: false, error: closeError.message || 'Failed to complete order' }
+      }
+      if (!closed || closed.changed !== true) {
+        const reason = String(closed?.reason ?? '')
+        if (reason === 'admin_opened') {
+          return { success: false, error: 'This order is under review by our team — they will close it for you.' }
+        }
+        // already_resolved / not_disputed / race lost: the winner owns comms.
+        return { success: true }
+      }
+      if (closed.post_completion !== true) {
+        // First completion of this order: the same follow-ups as a normal
+        // confirm. The seller was already told in-app by the RPC.
+        await afterBuyerRelease(order, user.id, { notifySellerInApp: false })
+      }
+      revalidatePath(`/account/orders/${orderId}`)
+      revalidatePath('/account/orders')
+      return { success: true }
+    }
+
     // PR 7: ONE RPC — (SELLER_DELIVERED if the seller never marked it) +
     // BUYER_CONFIRMED release with the maturity hold, in one transaction. The
     // RPC refuses (changed=false + reason) unpaid, disputed and already-
@@ -599,96 +753,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
-    // Completion decrements stock (trigger) — keep the public listing pages in
-    // step, exactly as transition() does for the auto-complete path.
-    await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
-
-    // Buyer completion receipt (fire-and-forget, non-blocking). When
-    // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
-    // Feedback Service, which then sends the buyer a verified-review
-    // invitation ~7 days later — this replaces the cron's fallback review
-    // email (sendTrustpilotInvitation skips itself in BCC mode).
-    await (async () => {
-      // Service client: RLS hides sold/paused listings from non-owners.
-      const service = createServiceRoleClient()
-      const [{ data: buyer }, { data: completedListing }] = await Promise.all([
-        service
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', user.id)
-          .single() as any,
-        service
-          .from('listings')
-          .select('title')
-          .eq('id', order.listing_id)
-          .single() as any,
-      ])
-      if (buyer?.email) {
-        const { sendOrderCompletionEmail } = await import('@/lib/email')
-        await sendOrderCompletionEmail({
-          to: buyer.email,
-          name: buyer.full_name || buyer.username || 'Gamer',
-          orderId,
-          orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
-          listingTitle: completedListing?.title || 'your item',
-          totalPaid: order.total_amount ?? 0,
-        })
-      }
-    })().catch((err) => console.error('[Orders] Completion email failed:', err))
-
-    // Tell the seller their sale is final (email + in-app, fire-and-forget).
-    await (async () => {
-      const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
-      // Service client: RLS hides the seller's profile from the buyer session.
-      const service = createServiceRoleClient()
-      const [{ data: seller }, { data: soldListing }] = await Promise.all([
-        service
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', order.seller_id)
-          .single() as any,
-        service
-          .from('listings')
-          .select('title')
-          .eq('id', order.listing_id)
-          .single() as any,
-      ])
-      const { createNotification } = await import('@/lib/utils/notifications')
-      await createNotification({
-        userId: order.seller_id,
-        type: 'order_completed',
-        title: 'Order Completed',
-        message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
-        link: `/account/orders/${orderId}`,
-      })
-      if (seller?.email) {
-        const { sendOrderCompletedSellerEmail } = await import('@/lib/email')
-        await sendOrderCompletedSellerEmail({
-          to: seller.email,
-          name: seller.full_name || seller.username || 'Gamer',
-          orderId,
-          orderNumber: orderRef,
-          listingTitle: soldListing?.title || 'your item',
-          payout: order.seller_payout ?? 0,
-        })
-      }
-    })().catch((err) => console.error('[Orders] Seller completion comms failed:', err))
-
-    // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
-    // Guest orders don't get loyalty credits (no persistent account)
-    if (!order.is_guest_order) {
-      // Only the id crosses the seam — awardCashback re-fetches and verifies
-      // the order itself (it mints spendable credit; no trusted payload).
-      awardCashback({ orderId }).catch(() => {})
-    }
-
-    // DB-017 — the referrer's commission (10% of the platform fee, read from
-    // the order row) was never recorded: recordReferralCommission had no
-    // caller. Fire-and-forget like cashback; once per order (partial unique
-    // index referral_earnings_one_commission_per_order).
-    recordReferralCommission(orderId).catch((err) =>
-      console.error('[Orders] referral commission failed (retryable):', err)
-    )
+    await afterBuyerRelease(order, user.id, { notifySellerInApp: true })
 
     // Revalidate both seller and buyer paths for real-time updates
     revalidatePath(`/account/orders/${orderId}`)

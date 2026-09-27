@@ -69,7 +69,7 @@ export function OrderChat({
     // fit on screen — including when the soft keyboard shrinks the
     // viewport — and the internal MessageList scroll does the work.
     <OrderCard
-      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 lg:h-[580px]"
+      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100dvh_-_230px,640px)] lg:h-[580px]"
       padded={false}
     >
       <ChatInterface

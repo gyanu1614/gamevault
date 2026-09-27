@@ -27,6 +27,8 @@ import { AuditLog } from './_AuditLog'
 import { OrderChat } from './_OrderChat'
 import { DeliveryInstructions } from './_DeliveryInstructions'
 import { DeliveryEvidence } from './_DeliveryEvidence'
+import { OrderStatusCard } from './_OrderStatusCard'
+import { DeliveredInRow } from './_DeliveredInRow'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -58,6 +60,11 @@ interface OrderClientProps {
     recommendsSeller?: boolean | null
     createdAt: string
   } | null
+  /** Latest dispute on the order (open or closed), for the timeline. */
+  latestDispute?: { id: string; status: string; reason: string | null; title: string | null; created_at: string } | null
+  /** Buyer view: the open dispute is theirs, so marking the order received
+   *  closes it (order_dispute_buyer_confirm). */
+  buyerCanCloseDispute?: boolean
 }
 
 export function OrderClient(props: OrderClientProps) {
@@ -79,12 +86,21 @@ export function OrderClient(props: OrderClientProps) {
     conversationId,
     currentUserId,
     existingReview,
+    latestDispute = null,
+    buyerCanCloseDispute = false,
   } = props
 
+  // When the seller marked the order delivered (null until they do).
+  const deliveredAt: string | null =
+    order.delivered_at ?? order.seller_marked_delivered_at ?? null
+
   // Hide the progress bar once delivery is done — it morphs into the
-  // appropriate status strip in the right rail instead.
+  // appropriate status strip in the right rail instead. A dispute opened
+  // before delivery keeps the timer: the seller still owes the delivery.
   const showProgressBar =
-    order.status === 'paid' || order.status === 'delivering'
+    order.status === 'paid' ||
+    order.status === 'delivering' ||
+    (order.status === 'disputed' && !deliveredAt)
 
   // V21/P3.e — Server-rendered overdue flag for the status strip.
   // Recomputed live by the progress bar, but the strip only flips on
@@ -275,6 +291,16 @@ export function OrderClient(props: OrderClientProps) {
           presence={presenceParty}
         />
 
+        {/* Phone: one status card replaces the header's two pills. */}
+        <OrderStatusCard
+          className="mt-7 sm:hidden"
+          role={userRole}
+          status={order.status}
+          disputeResolved={!!disputeResolution}
+          disputeResolvedAt={disputeResolution?.resolved_at ?? null}
+          order={order}
+        />
+
         {/* Main grid — left main + right rail (sticky on lg). Progress
             bar now lives at the top of the LEFT column, not above the
             grid — keeps the timer near the chat where the action is. */}
@@ -321,15 +347,18 @@ export function OrderClient(props: OrderClientProps) {
               disputeHref={`/account/orders/${order.id}#dispute`}
               disputeUntil={disputeUntil}
               onMarkDelivered={
-                userRole === 'seller' && order.status === 'delivering'
+                userRole === 'seller' &&
+                (order.status === 'delivering' || (order.status === 'disputed' && !deliveredAt))
                   ? () => setMarkDeliveredOpen(true)
                   : undefined
               }
               onMarkReceived={
-                userRole === 'buyer' && order.status === 'delivered'
+                userRole === 'buyer' &&
+                (order.status === 'delivered' || (order.status === 'disputed' && buyerCanCloseDispute))
                   ? () => setMarkReceivedOpen(true)
                   : undefined
               }
+              deliveredAt={deliveredAt}
               onLeaveReview={
                 userRole === 'buyer' && order.status === 'completed' && !existingReview
                   ? () => setLeaveReviewOpen(true)
@@ -338,6 +367,7 @@ export function OrderClient(props: OrderClientProps) {
               onOpenDispute={openDispute}
               existingReview={existingReview}
               promoted
+              hidePassiveOnMobile
             />
             )}
             {/* Mobile stacking: delivery instructions (small, actionable)
@@ -403,6 +433,16 @@ export function OrderClient(props: OrderClientProps) {
               />
               </div>
             )}
+            {/* Phone: once delivered, the timer becomes a one-line
+                "Delivered In …" row under the chat. */}
+            {deliveredAt && order.status !== 'pending' && (
+              <div className="min-w-0 sm:hidden max-lg:order-2">
+                <DeliveredInRow
+                  startedAt={order.paid_at ?? order.created_at}
+                  deliveredAt={deliveredAt}
+                />
+              </div>
+            )}
             <div className="min-w-0 empty:hidden max-lg:order-1">
               <DeliveryInstructions
                 role={userRole}
@@ -445,7 +485,7 @@ export function OrderClient(props: OrderClientProps) {
         </div>
 
         <div className="mt-[22px]">
-          <AuditLog order={order as any} disputeResolution={disputeResolution} />
+          <AuditLog order={order as any} disputeResolution={disputeResolution} latestDispute={latestDispute} />
         </div>
       </div>
 
@@ -465,6 +505,7 @@ export function OrderClient(props: OrderClientProps) {
             onOpenChange={setMarkReceivedOpen}
             orderId={order.id}
             amount={escrowAmount}
+            closesDispute={order.status === 'disputed'}
             onConfirmed={() => router.refresh()}
           />
           <MarkReceivedModal
