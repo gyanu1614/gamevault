@@ -44,6 +44,7 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
+import { WalletSkeleton } from './_WalletSkeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -464,21 +465,15 @@ export default function WalletClient({ userId, isSeller }: Props) {
   {
     if (isSeller) {
       // Seller: Must have both wallet and earnings loaded
+      // Same skeleton as the route fallback (loading.tsx), so the page
+      // doesn't swap skeleton → spinner → content.
       if (!walletData || earningsLoading) {
-        return (
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-          </div>
-        )
+        return <WalletSkeleton isSeller />
       }
     } else {
       // Buyer: Only needs wallet data
       if (!walletData) {
-        return (
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-          </div>
-        )
+        return <WalletSkeleton isSeller={false} />
       }
     }
   }

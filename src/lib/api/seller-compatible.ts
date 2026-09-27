@@ -1026,7 +1026,7 @@ export interface Conversation {
       id: string
       title: string
       images: string[]
-      game?: { name: string; slug: string; image_url?: string | null }
+      game?: { id?: string; name: string; slug: string; image_url?: string | null }
       category?: { name: string; slug: string; type?: string | null }
     }
   }
@@ -1037,7 +1037,10 @@ export const messagesApi = {
    * Get all conversations for current seller
    */
   async getConversations(): Promise<Conversation[]> {
-    const { data: { user } } = await supabase.auth.getUser()
+    // Local session read, not a network getUser(): the id only builds the
+    // filter below, and RLS on conversations/messages is the real gate.
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) throw new Error('Not authenticated')
 
     const { data, error } = await supabase
@@ -1056,7 +1059,7 @@ export const messagesApi = {
             id,
             title,
             images,
-            game:game_id(name, slug, image_url),
+            game:game_id(id, name, slug, image_url),
             category:game_categories!listings_game_category_id_fkey(name, slug, type)
           )
         )
@@ -1066,33 +1069,43 @@ export const messagesApi = {
 
     if (error) throw error
 
-    // Get unread count and last message for each conversation
-    const conversationsWithDetails = await Promise.all(
-      (data || []).map(async (conv: any) => {
-        // Get last message
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, sender_id')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single() as any
+    const convs = (data || []) as any[]
+    const ids = convs.map((c) => c.id)
 
-        // Get unread count
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact' })
-          .eq('conversation_id', conv.id)
-          .eq('is_read', false)
-          .neq('sender_id', user.id).limit(1)
+    // Last message per conversation (one small query each, in parallel) and
+    // ALL unread counts in ONE query — was two queries per conversation.
+    const [lastMsgs, unreadRes] = await Promise.all([
+      Promise.all(
+        ids.map((id) =>
+          supabase
+            .from('messages')
+            .select('content, sender_id')
+            .eq('conversation_id', id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle() as any,
+        ),
+      ),
+      ids.length > 0
+        ? (supabase
+            .from('messages')
+            .select('conversation_id')
+            .in('conversation_id', ids)
+            .eq('is_read', false)
+            .neq('sender_id', user.id)
+            .limit(5000) as any)
+        : Promise.resolve({ data: [] }),
+    ])
+    const unread = new Map<string, number>()
+    for (const row of ((unreadRes as any)?.data ?? []) as Array<{ conversation_id: string }>) {
+      unread.set(row.conversation_id, (unread.get(row.conversation_id) ?? 0) + 1)
+    }
 
-        return {
-          ...conv,
-          last_message: lastMsg,
-          unread_count: count || 0
-        }
-      })
-    )
+    const conversationsWithDetails = convs.map((conv, i) => ({
+      ...conv,
+      last_message: (lastMsgs[i] as any)?.data ?? undefined,
+      unread_count: unread.get(conv.id) ?? 0,
+    }))
 
     return conversationsWithDetails
   },
