@@ -8,6 +8,8 @@ import OrderMessageCard from './OrderMessageCard'
 import DisputeSystemCard from './DisputeSystemCard'
 import DisputeResolvedCard from './DisputeResolvedCard'
 import { createClient } from '@/lib/supabase/client'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { useStickToBottom } from 'use-stick-to-bottom'
 
 interface Message {
   id: string
@@ -68,9 +70,13 @@ export default function MessageList({
   isLoading = false,
   autoScroll = true,
 }: MessageListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const prevMessageCountRef = useRef(messages.length)
+  // Chat scroll: opens at the newest message, follows new messages while
+  // the reader is at the bottom, and leaves them alone once they scroll up
+  // to read history (use-stick-to-bottom, spring-animated, resize-aware).
+  const { scrollRef, contentRef, scrollToBottom } = useStickToBottom({
+    initial: 'instant',
+    resize: 'smooth',
+  })
   const [adminUsers, setAdminUsers] = useState<Record<string, { username: string; avatar_url?: string }>>({})
   const supabase = createClient()
 
@@ -125,22 +131,19 @@ export default function MessageList({
     }
   }, [messages, supabase])
 
-  // Auto-scroll to bottom on new messages (not on initial load)
+  // Sending your own message always brings you back down to it, even if
+  // you had scrolled up. Other people's messages only follow when you're
+  // already at the bottom (the hook handles that on its own).
+  const lastMessage = messages[messages.length - 1]
+  const lastId = lastMessage?.id
+  const lastIsOwn = lastMessage?.sender_id === currentUserId
+  const prevLastIdRef = useRef(lastId)
   useEffect(() => {
-    if (!autoScroll) return
-
-    // Only scroll if messages were ADDED (not on initial load from 0 to N)
-    const isNewMessage = messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0
-    prevMessageCountRef.current = messages.length
-
-    if (isNewMessage && containerRef.current) {
-      // Scroll the container to bottom (not the entire page)
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth'
-      })
+    if (autoScroll && lastId && lastId !== prevLastIdRef.current && lastIsOwn) {
+      void scrollToBottom('smooth')
     }
-  }, [messages, autoScroll])
+    prevLastIdRef.current = lastId
+  }, [lastId, lastIsOwn, autoScroll, scrollToBottom])
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
@@ -184,9 +187,10 @@ export default function MessageList({
 
   return (
     <div
-      ref={containerRef}
-      className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
+      ref={scrollRef}
+      className="min-h-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
     >
+    <div ref={contentRef} className="space-y-4 px-4 py-6">
       {/* V21/P5.c — Welcome banner shown only on empty state (no user
           messages yet). Once a real message lands, the banner is gone
           for good. Order context (id / item) lives in the chat header
@@ -308,7 +312,12 @@ export default function MessageList({
                   message={message}
                   isOwn={isOwn}
                   showAvatar={showAvatar}
-                  senderAvatar={senderInfo?.avatar_url}
+                  senderAvatar={
+                    // Uploaded photo, else the DiceBear character seeded by
+                    // username (same fallback as the order page header).
+                    senderInfo?.avatar_url ||
+                    (senderInfo?.username ? getAvatarUrl(null, senderInfo.username) : undefined)
+                  }
                   senderName={senderInfo?.username}
                   isAdminMessage={isAdminMessage}
                   adminInfo={isAdminMessage ? adminUsers[message.sender_id] : undefined}
@@ -322,8 +331,7 @@ export default function MessageList({
         </div>
       ))}
 
-      {/* Scroll anchor */}
-      <div ref={messagesEndRef} />
+    </div>
     </div>
   )
 }

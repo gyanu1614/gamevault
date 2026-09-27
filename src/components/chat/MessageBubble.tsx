@@ -3,7 +3,27 @@
 import { motion } from 'framer-motion'
 import { Check, CheckCheck, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
+import { linkifySegments } from '@/lib/chat/linkify'
+import ChatAttachment from './ChatAttachment'
+
+/** Plain text with http(s) URLs rendered as tappable links (new tab). */
+function renderLinks(text: string, keyPrefix: string) {
+  return linkifySegments(text).map((seg, i) =>
+    seg.type === 'link' ? (
+      <a
+        key={`${keyPrefix}-${i}`}
+        href={seg.href}
+        target="_blank"
+        rel="noopener noreferrer nofollow ugc"
+        className="break-all font-medium text-lime-text underline underline-offset-2 hover:opacity-90"
+      >
+        {seg.value}
+      </a>
+    ) : (
+      <span key={`${keyPrefix}-${i}`}>{seg.value}</span>
+    ),
+  )
+}
 
 // Simple markdown renderer for bold text
 function renderMarkdown(text: string) {
@@ -13,9 +33,9 @@ function renderMarkdown(text: string) {
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       const content = part.slice(2, -2)
-      return <strong key={index} className="font-semibold">{content}</strong>
+      return <strong key={index} className="font-semibold">{renderLinks(content, `b${index}`)}</strong>
     }
-    return <span key={index}>{part}</span>
+    return <span key={index}>{renderLinks(part, `t${index}`)}</span>
   })
 }
 
@@ -168,7 +188,7 @@ export default function MessageBubble({
             <img
               src={senderAvatar}
               alt={senderName || 'User'}
-              className="h-8 w-8 rounded-full ring-1 ring-white/10"
+              className="h-8 w-8 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
           ) : (
             <div className="w-8" />
@@ -197,21 +217,12 @@ export default function MessageBubble({
           )}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
-          {/* Image attachments */}
+          {/* Attachments — chat files (private, signed on render) and
+              any legacy image URLs. */}
           {message.attachments && message.attachments.length > 0 && (
             <div className={cn('mt-2 grid gap-1.5', message.attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-              {message.attachments.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                  <div className="relative rounded-lg overflow-hidden aspect-video bg-black/20">
-                    <Image
-                      src={url}
-                      alt={`Delivery proof ${i + 1}`}
-                      fill
-                      className="object-cover hover:scale-105 transition-transform duration-200"
-                      unoptimized
-                    />
-                  </div>
-                </a>
+              {message.attachments.map((value, i) => (
+                <ChatAttachment key={`${value}-${i}`} value={value} />
               ))}
             </div>
           )}
@@ -241,7 +252,7 @@ export default function MessageBubble({
             <img
               src={senderAvatar}
               alt={senderName || 'You'}
-              className="h-8 w-8 rounded-full ring-1 ring-white/10"
+              className="h-8 w-8 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
           </div>
         ) : (

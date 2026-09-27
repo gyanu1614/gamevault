@@ -9,6 +9,8 @@ import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import DeliveryEvidenceUpload from '@/components/orders/DeliveryEvidenceUpload'
 import { displayOrderRef } from '@/lib/orders/order-number'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
 import { Loader2, AlertCircle, Upload, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Message {
@@ -16,6 +18,7 @@ interface Message {
   conversation_id: string
   sender_id: string
   content: string
+  attachments?: string[] | null
   is_read: boolean
   read_at: string | null
   created_at: string
@@ -267,14 +270,36 @@ export default function ChatInterface({
     markAsRead()
   }, [messages.length, conversationId, currentUserId, supabase, queryClient])
 
-  // Send message
-  const handleSend = async (content: string) => {
+  // Only the order's buyer and seller can attach files: the storage
+  // policy on the order folder accepts uploads from those two only.
+  const canAttach =
+    !!order?.id &&
+    (order.buyer?.id === currentUserId || order.seller?.id === currentUserId) &&
+    !isChatExpired
+
+  // Send message (optionally with one file)
+  const handleSend = async (text: string, file?: File | null) => {
+    // Upload first: the message row only ever points at a file that exists.
+    let attachmentPath: string | null = null
+    if (file) {
+      try {
+        if (!canAttach) throw new Error('Files can only be sent in an active order chat.')
+        attachmentPath = await uploadChatAttachment(supabase.storage as any, order!.id, file)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not upload the file. Please try again.')
+        throw e
+      }
+    }
+    // messages.content can't be empty; a file-only message gets a label.
+    const content = text || (file ? attachmentOnlyLabel(file.type) : text)
+
     // Optimistic update - add message immediately
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       conversation_id: conversationId,
       sender_id: currentUserId,
       content,
+      attachments: attachmentPath ? [attachmentPath] : [],
       is_read: false,
       read_at: null,
       created_at: new Date().toISOString(),
@@ -288,6 +313,7 @@ export default function ChatInterface({
         sender_id: currentUserId,
         content,
         is_read: false,
+        ...(attachmentPath ? { attachments: [attachmentPath] } : {}),
       })
 
       if (sendError) throw sendError
@@ -413,17 +439,13 @@ export default function ChatInterface({
       {otherUser && (
         <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
           <div className="relative flex-shrink-0">
-            {otherUser.avatar_url ? (
-              <img
-                src={otherUser.avatar_url}
-                alt=""
-                className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
-              />
-            ) : (
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-bg-overlay text-[12px] font-bold text-text-secondary ring-1 ring-white/10">
-                {otherUser.username?.charAt(0).toUpperCase()}
-              </span>
-            )}
+            {/* Same avatar source as the rest of the page: uploaded photo,
+                else the DiceBear character seeded by username. */}
+            <img
+              src={getAvatarUrl(otherUser.avatar_url, otherUser.username ?? 'user')}
+              alt=""
+              className="h-9 w-9 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
+            />
             <span
               aria-hidden
               className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-bg-raised"
@@ -501,6 +523,7 @@ export default function ChatInterface({
             : 'Send a message...'
         }
         disabled={isLoading || (isChatExpired && !isAdmin)}
+        allowAttachments={canAttach}
       />
     </div>
   )
