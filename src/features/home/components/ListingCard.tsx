@@ -33,7 +33,7 @@ function compactAmount(n: number) {
  * flat two decimals renders them as "$0.00". Sub-cent prices get the extra
  * precision they need; everything else stays at two places.
  */
-function formatPrice(price: number) {
+export function formatPrice(price: number) {
   if (price >= 0.01) return `$${price.toFixed(2)}`
   return `$${price.toFixed(4).replace(/0+$/, '')}`
 }
