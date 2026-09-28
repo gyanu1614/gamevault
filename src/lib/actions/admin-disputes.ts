@@ -8,6 +8,7 @@ import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { sendDisputeResolvedEmail, sendOrderRefundedEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { sendDisputeOpenedEmail } from '@/lib/email'
+import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
 
 // ============================================
 // TYPES
@@ -380,42 +381,20 @@ export async function resolveDispute(
     return { success: false, error: 'This dispute could not be resolved.' }
   }
 
-  // Send resolution message to order conversation
-  try {
-    const { data: conversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('order_id', dispute.transaction_id)
-      .single() as any
-
-    if (conversation) {
-      // Map status to simple resolution type
-      const resolutionMap: Record<string, 'buyer_favor' | 'seller_favor' | 'partial'> = {
-        'resolved_buyer_favor': 'buyer_favor',
-        'resolved_seller_favor': 'seller_favor',
-        'resolved_partial': 'partial'
-      }
-
-      // Create JSON system message for notification card
-      const systemMessage = {
-        type: 'dispute_resolved',
-        resolution: resolutionMap[resolution.status] || 'seller_favor',
-        notes: resolution.notes,
-        refundAmount: resolution.resolvedAmount
-      }
-
-      await (supabase.from('messages').insert as any)({
-        conversation_id: conversation.id,
-        sender_id: '00000000-0000-0000-0000-000000000000', // System user ID
-        content: JSON.stringify(systemMessage),
-        is_read: false,
-      })
-
-      console.log('[Dispute] Resolution message sent to conversation')
+  // Resolution card in the order chat (service role, system sender).
+  {
+    const resolutionMap: Record<string, 'buyer_favor' | 'seller_favor' | 'partial'> = {
+      resolved_buyer_favor: 'buyer_favor',
+      resolved_seller_favor: 'seller_favor',
+      resolved_partial: 'partial',
     }
-  } catch (convError) {
-    console.error('[Dispute] Failed to send resolution message to conversation:', convError)
-    // Non-fatal - dispute is already resolved
+    await postOrderSystemNotice(dispute.transaction_id, {
+      type: 'dispute_resolved',
+      resolution: resolutionMap[resolution.status] || 'seller_favor',
+      notes: resolution.notes,
+      refundAmount: resolution.resolvedAmount,
+      resolvedBy: 'admin',
+    })
   }
 
   const orderRef = order.order_number || dispute.transaction_id.slice(0, 8).toUpperCase()

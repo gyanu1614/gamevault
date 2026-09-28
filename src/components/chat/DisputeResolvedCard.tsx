@@ -4,9 +4,11 @@ interface DisputeResolvedCardProps {
   resolution: 'buyer_favor' | 'seller_favor' | 'partial'
   notes: string
   refundAmount?: number
+  /** 'buyer' when the buyer closed it by confirming receipt. */
+  resolvedBy?: 'buyer' | 'admin'
 }
 
-export default function DisputeResolvedCard({ resolution, notes, refundAmount }: DisputeResolvedCardProps) {
+export default function DisputeResolvedCard({ resolution, notes, refundAmount, resolvedBy }: DisputeResolvedCardProps) {
   const resolutionLabels = {
     buyer_favor: 'Buyer Favor',
     seller_favor: 'Seller Favor',
@@ -24,7 +26,9 @@ export default function DisputeResolvedCard({ resolution, notes, refundAmount }:
           </div>
           <div className="flex-1">
             <h3 className="text-base font-semibold text-success mb-2">
-              ✅ Dispute Resolved - {resolutionLabels[resolution]}
+              {resolvedBy === 'buyer'
+                ? 'Dispute Closed By The Buyer'
+                : `Dispute Resolved: ${resolutionLabels[resolution]}`}
             </h3>
             <div className="space-y-2 text-sm">
               <div>

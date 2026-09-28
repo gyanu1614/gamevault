@@ -9,12 +9,14 @@ import DisputeSystemCard from './DisputeSystemCard'
 import DisputeResolvedCard from './DisputeResolvedCard'
 import { createClient } from '@/lib/supabase/client'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { isSystemMessage, parseSystemNotice } from '@/lib/chat/system-notice'
 import { useStickToBottom } from 'use-stick-to-bottom'
 
 interface Message {
   id: string
   content: string
-  sender_id: string
+  /** NULL = a DropMarket system notice (see lib/chat/system-notice). */
+  sender_id: string | null
   is_read: boolean
   created_at: string
 }
@@ -95,7 +97,7 @@ export default function MessageList({
   useEffect(() => {
     const fetchAdminUsers = async () => {
       // Get unique sender IDs from messages
-      const senderIds = Array.from(new Set(messages.map(m => m.sender_id)))
+      const senderIds = Array.from(new Set(messages.map(m => m.sender_id).filter((id): id is string => !!id)))
 
       // Check which senders are admins
       const { data: admins } = await supabase
@@ -196,7 +198,7 @@ export default function MessageList({
           for good. Order context (id / item) lives in the chat header
           above + the right rail; no need to repeat the heavy order card
           inside the message stream. */}
-      {order && messages.filter(m => m.sender_id !== '00000000-0000-0000-0000-000000000000').length === 0 && (
+      {order && messages.filter(m => !isSystemMessage(m.sender_id)).length === 0 && (
         <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
           <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-lime/[0.12] text-lime-text">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
@@ -231,40 +233,34 @@ export default function MessageList({
           {/* Messages for this date */}
           <AnimatePresence mode="popLayout">
             {dateMessages.map((message, index) => {
-              // Check if this is a system message
-              const isSystemMessage = message.sender_id === '00000000-0000-0000-0000-000000000000'
-
-              if (isSystemMessage) {
-                // Parse system message content
-                try {
-                  const systemData = JSON.parse(message.content)
-                  if (systemData.type === 'dispute_opened') {
-                    return (
-                      <DisputeSystemCard
-                        key={message.id}
-                        category={systemData.category}
-                        reason={systemData.reason}
-                      />
-                    )
-                  }
-                  if (systemData.type === 'dispute_resolved') {
-                    return (
-                      <DisputeResolvedCard
-                        key={message.id}
-                        resolution={systemData.resolution}
-                        notes={systemData.notes}
-                        refundAmount={systemData.refundAmount}
-                      />
-                    )
-                  }
-                } catch (e) {
-                  // If parsing fails, skip this message
-                  return null
+              // DropMarket notices (no sender): dispute cards. Anything
+              // unrecognised from the system sender is not shown.
+              if (isSystemMessage(message.sender_id)) {
+                const notice = parseSystemNotice(message.content)
+                if (notice?.type === 'dispute_opened') {
+                  return (
+                    <DisputeSystemCard key={message.id} category={notice.category ?? ''} reason={notice.reason ?? ''} />
+                  )
                 }
+                if (notice?.type === 'dispute_resolved') {
+                  return (
+                    <DisputeResolvedCard
+                      key={message.id}
+                      resolution={notice.resolution}
+                      notes={notice.notes ?? ''}
+                      refundAmount={notice.refundAmount}
+                      resolvedBy={notice.resolvedBy}
+                    />
+                  )
+                }
+                return null
               }
+              // Past the notice branch every message has a real author.
+              const senderId = message.sender_id as string
+              const userMessage = { ...message, sender_id: senderId }
 
-              const isOwn = message.sender_id === currentUserId
-              const isAdminMessage = adminUsers[message.sender_id] !== undefined
+              const isOwn = senderId === currentUserId
+              const isAdminMessage = adminUsers[senderId] !== undefined
 
               // V21/P5.e — Resolve sender info for BOTH sides. The "own"
               // user isn't in otherUser; we fall through to:
@@ -280,10 +276,10 @@ export default function MessageList({
               let isSellerMessage = false
 
               if (order?.buyer && order?.seller) {
-                if (message.sender_id === order.buyer.id) {
+                if (senderId === order.buyer.id) {
                   senderInfo = order.buyer
                   isBuyerMessage = true
-                } else if (message.sender_id === order.seller.id) {
+                } else if (senderId === order.seller.id) {
                   senderInfo = order.seller
                   isSellerMessage = true
                 }
@@ -304,12 +300,12 @@ export default function MessageList({
               // pattern (iMessage, WhatsApp, Discord).
               const showAvatar =
                 !isAdminMessage &&
-                (index === 0 || dateMessages[index - 1]?.sender_id !== message.sender_id)
+                (index === 0 || dateMessages[index - 1]?.sender_id !== senderId)
 
               return (
                 <MessageBubble
                   key={message.id}
-                  message={message}
+                  message={userMessage}
                   isOwn={isOwn}
                   showAvatar={showAvatar}
                   senderAvatar={
@@ -320,7 +316,7 @@ export default function MessageList({
                   }
                   senderName={senderInfo?.username}
                   isAdminMessage={isAdminMessage}
-                  adminInfo={isAdminMessage ? adminUsers[message.sender_id] : undefined}
+                  adminInfo={isAdminMessage ? adminUsers[senderId] : undefined}
                   isBuyerMessage={isBuyerMessage}
                   isSellerMessage={isSellerMessage}
                   isAdminView={isAdminView}
