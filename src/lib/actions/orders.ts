@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { disputeReasonFor } from '@/lib/orders/dispute-reason'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
@@ -37,6 +39,9 @@ export async function getOrder(orderId: string): Promise<{
       }
     }
 
+    // No emails: this payload is rendered into the OTHER party's page (and
+    // getOrder is a callable server action). Admin pages load contact
+    // details separately. Seller trust fields feed the store card.
     const { data: order, error } = await supabase
       .from('orders')
       .select(`
@@ -44,16 +49,18 @@ export async function getOrder(orderId: string): Promise<{
         buyer:buyer_id (
           id,
           username,
-          email,
           avatar_url
         ),
         seller:seller_id (
           id,
           username,
-          email,
           avatar_url,
           seller_tier,
-          shop_name
+          shop_name,
+          shop_slug,
+          is_verified,
+          seller_rating,
+          total_reviews
         ),
         listing:listing_id (
           id,
@@ -245,9 +252,74 @@ export async function notifySellerActivity(orderId: string): Promise<void> {
 /**
  * Mark order as delivered (seller action)
  */
+/**
+ * After a successful "mark delivered": keep what the seller submitted with
+ * it. Both used to be dropped on the floor.
+ *  - Proof photo: its storage path is appended to orders.delivery_evidence_urls
+ *    (service role; the caller already proved the seller owns the order).
+ *    Only a file directly in this order's own folder is accepted, never a
+ *    chat file or another order's.
+ *  - Note: posted to the order chat as the seller (session client, so the
+ *    ordinary participant RLS applies), where the buyer reads it.
+ * Best-effort: a failure here never undoes the delivery.
+ */
+async function recordDeliveryProof(
+  session: any,
+  orderId: string,
+  evidencePath: string | undefined,
+  note: string | undefined,
+): Promise<void> {
+  const path = evidencePath?.trim()
+  if (path && path.startsWith(`${orderId}/`) && !path.slice(orderId.length + 1).includes('/')) {
+    try {
+      const service = createServiceRoleClient()
+      const { data: row } = await service
+        .from('orders')
+        .select('delivery_evidence_urls')
+        .eq('id', orderId)
+        .single() as any
+      const existing: string[] = row?.delivery_evidence_urls ?? []
+      if (!existing.includes(path)) {
+        const { error } = await (service.from('orders').update as any)({
+          delivery_evidence_urls: [...existing, path],
+        }).eq('id', orderId)
+        if (error) console.error('[Delivered] Saving proof photo failed:', error)
+      }
+    } catch (err) {
+      console.error('[Delivered] Saving proof photo failed:', err)
+    }
+  }
+
+  const text = note?.trim()
+  if (text) {
+    try {
+      const { data: convo } = await session
+        .from('conversations')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle()
+      const { data: { user } } = await session.auth.getUser()
+      if (convo?.id && user?.id) {
+        const { error } = await (session.from('messages').insert as any)({
+          conversation_id: convo.id,
+          sender_id: user.id,
+          content: `Delivery note: ${text}`.slice(0, 2000),
+          is_read: false,
+        })
+        if (error) console.error('[Delivered] Posting delivery note failed:', error)
+      }
+    } catch (err) {
+      console.error('[Delivered] Posting delivery note failed:', err)
+    }
+  }
+}
+
 export async function markOrderAsDelivered(
   orderId: string,
-  deliveryNotes?: string
+  deliveryNotes?: string,
+  /** Storage path of the proof photo MarkDeliveredModal uploaded
+   *  (delivery-evidence bucket, `{orderId}/{file}`). */
+  evidencePath?: string,
 ): Promise<{
   success: boolean
   error?: string
@@ -295,7 +367,10 @@ export async function markOrderAsDelivered(
         return { success: false, error: markError.message || 'Failed to update order' }
       }
       // already_delivered / race lost: nothing more to do.
-      if (marked?.changed === true) revalidatePath(`/account/orders/${orderId}`)
+      if (marked?.changed === true) {
+        await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+        revalidatePath(`/account/orders/${orderId}`)
+      }
       return { success: true }
     }
 
@@ -325,6 +400,8 @@ export async function markOrderAsDelivered(
     if (!delivered || delivered.changed !== true) {
       return { success: true }
     }
+    await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+
     const windowHours = Number(delivered.window_hours ?? 72)
     const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())
 
@@ -717,6 +794,12 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
         // already_resolved / not_disputed / race lost: the winner owns comms.
         return { success: true }
       }
+      await postOrderSystemNotice(orderId, {
+        type: 'dispute_resolved',
+        resolution: 'seller_favor',
+        resolvedBy: 'buyer',
+        notes: 'The buyer confirmed they received the order and closed the dispute.',
+      })
       if (closed.post_completion !== true) {
         // First completion of this order: the same follow-ups as a normal
         // confirm. The seller was already told in-app by the RPC.
@@ -797,14 +880,7 @@ export async function openDispute(
     }
 
     // Map UI-friendly category to database enum value
-    const categoryMap: Record<string, string> = {
-      'Item not as described': 'not_as_described',
-      'Did not receive order': 'item_not_received',
-      'Wrong item received': 'wrong_item',
-      'Account credentials invalid': 'account_issue',
-      'Other': 'other',
-    }
-    const dbCategory = categoryMap[category] || 'other'
+    const dbCategory = disputeReasonFor(category)
 
     // Get order
     const { data: order, error: orderError } = await supabase
@@ -847,35 +923,8 @@ export async function openDispute(
     }
     const disputeError = null
 
-    // Send dispute notification message to order conversation
-    try {
-      // Get conversation for this order
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('order_id', orderId)
-        .single() as any
-
-      if (conversation) {
-        // Send system notification about dispute
-        // Using special UUID for system messages: all zeros
-        await (supabase.from('messages').insert as any)({
-          conversation_id: conversation.id,
-          sender_id: '00000000-0000-0000-0000-000000000000', // System sender ID
-          content: JSON.stringify({
-            type: 'dispute_opened',
-            category,
-            reason,
-          }),
-          is_read: false,
-        })
-
-        console.log('[Dispute] System notification sent to conversation')
-      }
-    } catch (error) {
-      console.error('[Dispute] Failed to send conversation message:', error)
-      // Non-fatal - dispute is already created
-    }
+    // Dispute card in the order chat (service role, system sender).
+    await postOrderSystemNotice(orderId, { type: 'dispute_opened', category, reason })
 
     // In-app notifications for both parties were written by the RPC (notify_once).
 

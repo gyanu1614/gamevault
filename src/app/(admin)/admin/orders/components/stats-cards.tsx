@@ -40,7 +40,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       tone: 'success',
     },
     {
-      label: 'Pending',
+      label: 'In Progress',
       value: stats.pendingOrders.toLocaleString(),
       icon: Clock,
       tone: 'warning',

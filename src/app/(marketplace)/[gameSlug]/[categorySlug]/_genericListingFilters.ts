@@ -1,4 +1,5 @@
 import { expandSearchWithSynonyms } from '@/lib/utils/gaming-synonyms'
+import { isSellerOnline } from '@/lib/presence/online'
 
 /**
  * Filter / sort / paginate the generic category grid on the CLIENT.
@@ -16,7 +17,10 @@ import { expandSearchWithSynonyms } from '@/lib/utils/gaming-synonyms'
  *   delivery           delivery_time in (a,b,…)
  *   sort               price asc/desc · view_count desc · created_at desc,
  *                      with Postgres null placement (asc → last, desc → first)
- *   tiers/online       JS post-filters on the embedded seller (unchanged)
+ *   tiers              JS post-filter on the embedded seller (unchanged)
+ *   online             sellers online NOW (live presence from the grid, else
+ *                      the embedded row within the 5-minute window — the
+ *                      old is_online-only check kept a seller "online" all day)
  *   page               cumulative slice(0, page*12) — the load-more model
  */
 export const LISTINGS_PER_PAGE = 12
@@ -31,7 +35,7 @@ export interface GenericListing {
   delivery_time?: string | null
   seller?: {
     seller_tier?: string | null
-    presence?: { is_online?: boolean | null } | null
+    presence?: { is_online?: boolean | null; last_seen_at?: string | null } | null
   } | null
   [key: string]: unknown
 }
@@ -64,6 +68,9 @@ function includesCi(haystack: string | null | undefined, needle: string) {
 export function applyCategoryListingParams<T extends GenericListing>(
   all: readonly T[],
   get: Getter,
+  /** Live check (the grid passes the browser-fetched presence); defaults to
+   *  the embedded presence judged by the 5-minute window. */
+  isOnline: (listing: T) => boolean = (l) => isSellerOnline(l.seller?.presence),
 ): GenericListingView<T> {
   const minPrice = get('minPrice')
   const maxPrice = get('maxPrice')
@@ -131,7 +138,7 @@ export function applyCategoryListingParams<T extends GenericListing>(
     rows = rows.filter((l) => wanted.includes(l.seller?.seller_tier ?? ''))
   }
   if (online === 'true') {
-    rows = rows.filter((l) => l.seller?.presence?.is_online === true)
+    rows = rows.filter(isOnline)
   }
 
   const totalListings = rows.length

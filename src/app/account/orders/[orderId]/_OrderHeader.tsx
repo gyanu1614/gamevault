@@ -13,10 +13,13 @@ import Image from 'next/image'
 import { ArrowLeft, Copy, Shield, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useSellerOnline } from '@/hooks/use-seller-presence'
 
 interface PartyPresence {
   name: string
-  isOnline: boolean
+  /** The other party is the SELLER: their id drives a live online dot.
+   *  Buyers have no presence, so no dot is drawn for them. */
+  sellerId?: string | null
   avatarUrl: string | null
   /** "Buyer" or "Seller" — shown above the name */
   roleLabel: string
@@ -255,6 +258,7 @@ export function OrderHeader({
  * button (with rating + chevron) lives inside the Order Details card.
  */
 function PresenceChip({ presence }: { presence: PartyPresence }) {
+  const online = useSellerOnline(presence.sellerId ?? null)
   const initial = presence.name.charAt(0).toUpperCase()
   const hasAvatar = !!presence.avatarUrl && presence.avatarUrl.trim().length > 0
   return (
@@ -274,13 +278,15 @@ function PresenceChip({ presence }: { presence: PartyPresence }) {
             {initial}
           </span>
         )}
-        <span
-          aria-hidden
-          className={cn(
-            'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-bg-base',
-            presence.isOnline ? 'bg-green-400' : 'bg-text-tertiary',
-          )}
-        />
+        {online !== null && (
+          <span
+            aria-label={online ? 'Online' : 'Offline'}
+            className={cn(
+              'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-bg-base',
+              online ? 'bg-green-400' : 'bg-text-tertiary',
+            )}
+          />
+        )}
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-[11px] font-bold uppercase tracking-wider text-text-tertiary">

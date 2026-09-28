@@ -163,13 +163,13 @@ export function OrderClient(props: OrderClientProps) {
     userRole === 'buyer'
       ? {
           name: sellerDisplayName(order.seller),
-          isOnline: !!order.seller?.presence?.is_online,
+          sellerId: order.seller?.id ?? null,
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           roleLabel: 'Seller',
         }
       : {
           name: order.buyer?.username ?? 'Buyer',
-          isOnline: !!order.buyer?.presence?.is_online,
+          sellerId: null,
           avatarUrl: getAvatarUrl(order.buyer?.avatar_url, order.buyer?.username ?? 'buyer'),
           roleLabel: 'Buyer',
         }
@@ -221,6 +221,18 @@ export function OrderClient(props: OrderClientProps) {
     ? Number(order.seller_commission_pct)
     : subtotal > 0 ? Math.round((fee / subtotal) * 100) : 0
   const sellerFeeAmount = hasSnapshot ? Math.max(0, Math.round((subtotal - netPayout) * 100) / 100) : fee
+  // A partial refund leaves the order completed but pays the seller less:
+  // dispute_resolutions.seller_payout_amount is what they actually kept.
+  const isPartialRefund = disputeResolution?.resolution_type === 'partial_refund'
+  // Only the part that came out of the seller's payout (the platform covers
+  // any refund beyond it), so Item Price − Fee − this = what they received.
+  const refundedToBuyer = isPartialRefund
+    ? Math.min(Number(disputeResolution?.refund_amount ?? 0), netPayout)
+    : 0
+  const actualPayout =
+    isPartialRefund && disputeResolution?.seller_payout_amount != null
+      ? Number(disputeResolution.seller_payout_amount)
+      : netPayout
   const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
   const placedAtFull = new Date(order.created_at).toLocaleString('en-US', {
     month: 'short',
@@ -298,6 +310,7 @@ export function OrderClient(props: OrderClientProps) {
           status={order.status}
           disputeResolved={!!disputeResolution}
           disputeResolvedAt={disputeResolution?.resolved_at ?? null}
+          escrowStatus={order.escrow_status}
           order={order}
         />
 
@@ -342,7 +355,7 @@ export function OrderClient(props: OrderClientProps) {
             <StatusStrip
               role={userRole}
               status={order.status}
-              amount={userRole === 'seller' && order.status === 'completed' ? netPayout : undefined}
+              amount={userRole === 'seller' && order.status === 'completed' ? actualPayout : undefined}
               overdue={isOverdueOnLoad}
               disputeHref={`/account/orders/${order.id}#dispute`}
               disputeUntil={disputeUntil}
@@ -359,6 +372,7 @@ export function OrderClient(props: OrderClientProps) {
                   : undefined
               }
               deliveredAt={deliveredAt}
+              escrowStatus={order.escrow_status}
               onLeaveReview={
                 userRole === 'buyer' && order.status === 'completed' && !existingReview
                   ? () => setLeaveReviewOpen(true)
@@ -409,8 +423,11 @@ export function OrderClient(props: OrderClientProps) {
                   seller: order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : undefined,
                 }}
@@ -418,8 +435,11 @@ export function OrderClient(props: OrderClientProps) {
                   userRole === 'buyer' && order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : userRole === 'seller' && order.buyer
                     ? {
@@ -430,6 +450,7 @@ export function OrderClient(props: OrderClientProps) {
                     : undefined
                 }
                 disputeResolution={disputeResolution}
+                presenceSellerId={userRole === 'buyer' ? order.seller?.id ?? null : null}
               />
               </div>
             )}
@@ -446,8 +467,9 @@ export function OrderClient(props: OrderClientProps) {
             <div className="min-w-0 empty:hidden max-lg:order-1">
               <DeliveryInstructions
                 role={userRole}
-                instructions={order.listing?.delivery_instructions ?? null}
+                instructions={order.listing?.description ?? null}
                 listingId={order.listing?.id ?? null}
+                active={['paid', 'delivering', 'disputed'].includes(order.status) && !deliveredAt}
               />
             </div>
             <div className="min-w-0 empty:hidden max-lg:order-3">
@@ -469,7 +491,8 @@ export function OrderClient(props: OrderClientProps) {
               role={userRole}
               escrowAmount={escrowAmount}
               feePercent={feePercent}
-              netPayout={netPayout}
+              netPayout={actualPayout}
+              refundedToBuyer={refundedToBuyer}
               orderStatus={order.status}
               escrowStatus={order.escrow_status}
               otherParty={otherPartyButton}
@@ -477,7 +500,9 @@ export function OrderClient(props: OrderClientProps) {
               gameName={gameName}
               gameIconUrl={gameIconUrl}
               itemName={itemTitle}
-              deliveryInfo={(order as any).delivery_info ?? null}
+              // orders.delivery_details (jsonb). There is no delivery_info
+              // column; reading it showed "Username: Not Provided" everywhere.
+              deliveryInfo={(order as any).delivery_details ?? null}
               onOpenDispute={openDispute}
               disputeUntil={disputeUntil}
             />

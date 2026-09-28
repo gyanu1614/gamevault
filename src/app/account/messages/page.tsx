@@ -30,6 +30,7 @@ import { MessagesSkeleton } from './_MessagesSkeleton'
 import { cn } from '@/lib/utils'
 import { normalizeOrderNumber } from '@/lib/orders/order-number'
 import { inboxOrderLabel } from '@/lib/chat/inbox-row'
+import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 import { useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'top-up' | 'dm'
@@ -303,7 +304,9 @@ export default function MessagesPage() {
                               {conversation.last_message.sender_id === user?.id && (
                                 <span className="max-sm:hidden">You: </span>
                               )}
-                              {conversation.last_message.content}
+                              {isSystemMessage(conversation.last_message.sender_id)
+                                ? systemNoticePreview(conversation.last_message.content)
+                                : conversation.last_message.content}
                             </p>
                           )}
                         </div>

@@ -175,7 +175,7 @@ export default function ReviewCard({
           {/* Right: View Order Button */}
           {canViewOrder && review.order_id && (
             <Link
-              href={`/orders/${review.order_id}`}
+              href={`/account/orders/${review.order_id}`}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-secondary hover:bg-bg-overlay rounded-lg transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />

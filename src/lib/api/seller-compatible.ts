@@ -10,6 +10,7 @@ import { updateListing as updateListingAction, bulkUpdateListings as bulkUpdateL
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 const supabase = createClient()
 
@@ -314,6 +315,17 @@ export const listingsApi = {
 // ORDERS API
 // =====================================================
 
+// Order columns each party's browser may receive — the same split as
+// redactOrderFor (src/lib/orders/redact.ts). Never '*': that shipped the
+// buyer's checkout link / wallet use / payment ids to the seller and the
+// seller's payout / fee snapshot to the buyer. (RLS still returns the whole
+// row to either party on a direct query; this keeps our own pages from
+// carrying it.)
+const ORDER_SHARED_COLUMNS =
+  'id, order_number, buyer_id, seller_id, listing_id, quantity, unit_price, subtotal, total_amount, status, escrow_status, currency, created_at, updated_at, paid_at, delivering_at, delivered_at, completed_at, cancelled_at, disputed_at'
+const SELLER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, seller_payout, delivery_details`
+const BUYER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, delivery_details`
+
 export const ordersApi = {
   /**
    * Get all orders for the current seller
@@ -326,57 +338,61 @@ export const ordersApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    let query = supabase
-      .from('orders')
-      .select(`
-        *,
-        listing:listing_id (
-          id,
-          title,
-          game_id,
-          category_id,
-          game_category_id,
-          images,
-          game:games!listings_game_id_fkey (
+    // Paged: one PostgREST response stops at 1000 rows, silently.
+    const build = () => {
+      let query = supabase
+        .from('orders')
+        .select(`
+          ${SELLER_ORDER_COLUMNS},
+          listing:listing_id (
             id,
-            name,
-            slug,
-            image_url
+            title,
+            game_id,
+            game_category_id,
+            images,
+            game:games!listings_game_id_fkey (
+              id,
+              name,
+              slug,
+              image_url
+            ),
+            category:game_categories!listings_game_category_id_fkey (
+              id,
+              name,
+              slug,
+              type
+            )
           ),
-          category:game_categories!listings_game_category_id_fkey (
+          buyer:buyer_id (
             id,
-            name,
-            slug,
-            type
+            username,
+            avatar_url,
+            shop_name,
+            shop_slug
           )
-        ),
-        buyer:buyer_id (
-          id,
-          username,
-          avatar_url,
-          shop_name,
-          shop_slug
-        )
-      `)
-      .eq('seller_id', user.id)  // CRITICAL: Only show current seller's orders
-      // Workstream E — hide unpaid 'pending' orders from the seller's Sold
-      // Orders. An order the seller can't act on (payment not confirmed) must
-      // not appear in their list; it becomes visible the moment the webhook
-      // flips it to 'paid'. 'cancelled' is likewise hidden: it only ever means
-      // an order that was NEVER paid (timed out / abandoned — paid orders that
-      // come back are 'refunded'), so the seller was never involved.
-      .neq('status', 'pending')
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
+        `)
+        .eq('seller_id', user.id)  // CRITICAL: Only show current seller's orders
+        // Workstream E — hide unpaid 'pending' orders from the seller's Sold
+        // Orders. An order the seller can't act on (payment not confirmed) must
+        // not appear in their list; it becomes visible the moment the webhook
+        // flips it to 'paid'. 'cancelled' is likewise hidden: it only ever means
+        // an order that was NEVER paid (timed out / abandoned — paid orders that
+        // come back are 'refunded'), so the seller was never involved.
+        .neq('status', 'pending')
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.search && filters.search.trim()) {
+        query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
+      }
+      return query
     }
-    if (filters?.search && filters.search.trim()) {
-      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
-    }
-
-    const { data, error } = await query
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      build().order('id', { ascending: false }).range(from, to),
+    )
 
     if (error) throw error
     return data || []
@@ -393,12 +409,11 @@ export const ordersApi = {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        *,
+        ${SELLER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           images
         ),
         buyer:buyer_id (
@@ -415,48 +430,10 @@ export const ordersApi = {
     return data
   },
 
-  /**
-   * Update order status
-   */
-  async updateStatus(id: string, status: OrderStatus): Promise<Order> {
-    const updates: any = { status }
-
-    if (status === 'completed') {
-      updates.completed_at = new Date().toISOString()
-      updates.delivered_at = new Date().toISOString()
-    }
-
-    const { data, error } = await (supabase
-      .from('orders')
-      .update as any)(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  /**
-   * Deliver order
-   */
-  async deliver(id: string, deliveryDetails: any): Promise<Order> {
-    const { data, error } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'completed',
-        delivery_details: deliveryDetails,
-        delivered_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    revalidateMine()
-    return data
-  },
+  // Order status changes only through the server actions / RPCs
+  // (order_mark_delivered, order_confirm_receipt, …). The browser-side
+  // updateStatus / deliver writes that lived here were blocked by the
+  // orders guard trigger and had no callers.
 }
 
 // =====================================================
@@ -475,56 +452,60 @@ export const buyerOrdersApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    let query = supabase
-      .from('orders')
-      .select(`
-        *,
-        listing:listing_id (
-          id,
-          title,
-          game_id,
-          category_id,
-          game_category_id,
-          images,
-          delivery_method,
-          delivery_time,
-          game:games!listings_game_id_fkey (
+    // Paged: one PostgREST response stops at 1000 rows, silently.
+    const build = () => {
+      let query = supabase
+        .from('orders')
+        .select(`
+          ${BUYER_ORDER_COLUMNS},
+          listing:listing_id (
             id,
-            name,
-            slug,
-            image_url
+            title,
+            game_id,
+            game_category_id,
+            images,
+            delivery_method,
+            delivery_time,
+            game:games!listings_game_id_fkey (
+              id,
+              name,
+              slug,
+              image_url
+            ),
+            category:game_categories!listings_game_category_id_fkey (
+              id,
+              name,
+              slug,
+              type
+            )
           ),
-          category:game_categories!listings_game_category_id_fkey (
+          seller:seller_id (
             id,
-            name,
-            slug,
-            type
+            username,
+            avatar_url,
+            seller_tier,
+            shop_name,
+            shop_slug
           )
-        ),
-        seller:seller_id (
-          id,
-          username,
-          avatar_url,
-          seller_tier,
-          shop_name,
-          shop_slug
-        )
-      `)
-      .eq('buyer_id', user.id)  // Filter by buyer_id instead of seller_id
-      // 'cancelled' only ever means never-paid (abandoned checkout timed out or
-      // the buyer cancelled before paying) — dead weight in the list, so it's
-      // hidden. Genuinely refunded orders carry status 'refunded' and stay.
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
+        `)
+        .eq('buyer_id', user.id)  // Filter by buyer_id instead of seller_id
+        // 'cancelled' only ever means never-paid (abandoned checkout timed out or
+        // the buyer cancelled before paying) — dead weight in the list, so it's
+        // hidden. Genuinely refunded orders carry status 'refunded' and stay.
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.search && filters.search.trim()) {
+        query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
+      }
+      return query
     }
-    if (filters?.search && filters.search.trim()) {
-      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
-    }
-
-    const { data, error } = await query
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      build().order('id', { ascending: false }).range(from, to),
+    )
 
     if (error) throw error
     return data || []
@@ -540,12 +521,11 @@ export const buyerOrdersApi = {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        *,
+        ${BUYER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           game_category_id,
           images,
           delivery_method,
@@ -781,7 +761,8 @@ export const analyticsApi = {
       .from('orders')
       .select('created_at, total_amount, status')
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'processing'])
+      // Realised sales only ('processing' is not an order status).
+      .eq('status', 'completed')
 
     if (since) {
       query = query.gte('created_at', since.toISOString())
@@ -1518,7 +1499,7 @@ export const earningsApi = {
         listing:listings!listing_id(title)
       `)
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'processing', 'paid'])
+      .in('status', ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded'])
       .order('created_at', { ascending: false }) as any
 
     if (error) throw error

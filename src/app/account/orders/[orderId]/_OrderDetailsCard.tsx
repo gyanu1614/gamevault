@@ -48,8 +48,10 @@ interface OrderDetailsCardProps {
   escrowAmount: number
   /** For seller — the fee percentage shown next to the deduction. */
   feePercent?: number
-  /** For seller — net payout = subtotal - fee. */
+  /** For seller — net payout = subtotal - fee (less any partial refund). */
   netPayout?: number
+  /** For seller — part of the sale refunded to the buyer by a dispute. */
+  refundedToBuyer?: number
   /** Drives the payout status row (held / queued / released). */
   orderStatus: string
   /** orders.escrow_status — distinguishes a refunded cancel from an
@@ -348,6 +350,7 @@ function PayoutBody({
   netPayout,
   orderStatus,
   role,
+  refundedToBuyer = 0,
 }: {
   subtotal: number
   feePercent: number
@@ -355,11 +358,13 @@ function PayoutBody({
   netPayout: number
   orderStatus: string
   role: 'buyer' | 'seller' | 'admin'
+  refundedToBuyer?: number
 }) {
   return (
     <>
       <Row label="Item Price">{fmtUsd(subtotal)}</Row>
       <Row label={`DropMarket Fee · ${feePercent}%`}>−{fmtUsd(fee)}</Row>
+      {refundedToBuyer > 0 && <Row label="Refunded To Buyer">−{fmtUsd(refundedToBuyer)}</Row>}
       <Row label="You Receive" emphasized>
         <span className="text-[18px] font-extrabold tabular-nums text-lime-text">
           {fmtUsd(netPayout)}
@@ -558,6 +563,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     escrowAmount,
     feePercent = 0,
     netPayout = 0,
+    refundedToBuyer = 0,
     orderStatus,
     otherParty,
     buyerReview,
@@ -570,11 +576,10 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
   // V21/P5.r — Stable, label-cased list of delivery-info entries to
   // render. Skip empty strings + nulls. Username comes first if
-  // present; rest follow in insertion order. When nothing was
-  // collected, surface a single placeholder row so the seller knows
-  // the buyer hasn't filled it in yet (or the listing didn't ask).
+  // present; rest follow in insertion order. Nothing collected → no rows.
+  // delivery_details is free-form jsonb: only a plain object is read.
   const deliveryEntries: Array<[string, string]> = (() => {
-    if (!deliveryInfo) return []
+    if (!deliveryInfo || typeof deliveryInfo !== 'object' || Array.isArray(deliveryInfo)) return []
     const out: Array<[string, string]> = []
     const ordered = ['username', 'email', 'password', 'region', 'platform']
     const seen = new Set<string>()
@@ -625,19 +630,13 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
         {/* Delivery info — usually buyer-collected at checkout (username,
             email, region, etc.). One row per filled field, or a single
             "Not Provided" stub when nothing was collected. */}
-        {deliveryEntries.length > 0 ? (
-          deliveryEntries.map(([k, v]) => (
-            <Row key={k} label={k}>
-              <CopyableValue value={v} />
-            </Row>
-          ))
-        ) : (
-          <Row label="Username">
-            <span className="text-[12.5px] font-semibold italic text-text-tertiary">
-              Not Provided
-            </span>
+        {/* Only what the buyer actually gave; nothing when checkout
+            collected nothing (no "Not Provided" placeholder). */}
+        {deliveryEntries.map(([k, v]) => (
+          <Row key={k} label={k}>
+            <CopyableValue value={v} />
           </Row>
-        )}
+        ))}
         <Row label="Order ID">
           <CopyableId value={orderNumber} />
         </Row>
@@ -678,6 +677,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             netPayout={netPayout}
             orderStatus={orderStatus}
             role={role}
+            refundedToBuyer={refundedToBuyer}
           />
         </OrderCard>
       )}

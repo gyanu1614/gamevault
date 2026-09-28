@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
 import { Footer } from '@/components/footer'
+import { SellerPresenceHeartbeat } from '@/components/presence/SellerPresenceHeartbeat'
 
 export function LayoutWrapper({
   children,
@@ -86,6 +87,8 @@ export function LayoutWrapper({
       {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && (
         <Navbar forceScrolled={hasSidebar} />
       )}
+      {/* Approved sellers only: stamps their presence while the site is open. */}
+      <SellerPresenceHeartbeat />
       <main className="flex-1">{children}</main>
       {/* Sidebar'd account/seller pages have no marketing footer — it
           scrolled awkwardly over the sidebar and adds nothing there. */}

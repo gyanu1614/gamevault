@@ -15,6 +15,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isPaidOrder, pendingPayoutOf } from '@/lib/wallet/wallet-rows'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 export interface DashboardKpis {
   netEarnings: number        // completed payouts in window
@@ -91,11 +93,17 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
 
   // Pull everything in parallel.
   const [ordersRes, listingsRes, reviewsRes, convosRes, profileRes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
-      .eq('seller_id', user.id)
-      .order('created_at', { ascending: false }),
+    // Paged: pending payout / revenue are sums — a 1000-row cap would
+    // under-count them.
+    fetchAllRows<any>((from, to) =>
+      supabase
+        .from('orders')
+        .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, paid_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    ),
     supabase
       .from('listings')
       .select('id, title, price, views, view_count, sales, status, delivery_time')
@@ -135,13 +143,14 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
     })
     .reduce((s, o) => s + Number(o.seller_payout ?? 0), 0)
 
-  // Pending = still in escrow (held / not released, not refunded/frozen-lost).
-  const pendingPayout = orders
-    .filter((o) => o.escrow_status === 'held' || (o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'refunded'))
-    .reduce((s, o) => s + Number(o.seller_payout ?? 0), 0)
+  // Pending = paid sales not yet released. Unpaid checkouts ('pending')
+  // were counted here before, inflating the figure.
+  const pendingPayout = pendingPayoutOf(orders)
 
-  const ordersCount = orders.filter((o) => inWindow(o.created_at, winStart)).length
-  const ordersPrev = orders.filter((o) => o.created_at >= prevStart && o.created_at < winStart).length
+  // Orders = real (paid) orders only, not abandoned checkouts.
+  const paidOrders = orders.filter(isPaidOrder)
+  const ordersCount = paidOrders.filter((o) => inWindow(o.created_at, winStart)).length
+  const ordersPrev = paidOrders.filter((o) => o.created_at >= prevStart && o.created_at < winStart).length
 
   const totalViews = listings.reduce((s, l) => s + Number(l.view_count ?? l.views ?? 0), 0)
   const totalSales = listings.reduce((s, l) => s + Number(l.sales ?? 0), 0)
@@ -152,7 +161,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
 
   // Undelivered: paid but not yet marked delivered.
   for (const o of orders) {
-    if (o.status === 'paid' && !o.seller_marked_delivered_at) {
+    if ((o.status === 'paid' || o.status === 'delivering') && !o.seller_marked_delivered_at && !o.delivered_at) {
       const overdue = o.auto_release_at ? o.auto_release_at < new Date().toISOString() : false
       attention.push({
         kind: 'undelivered',

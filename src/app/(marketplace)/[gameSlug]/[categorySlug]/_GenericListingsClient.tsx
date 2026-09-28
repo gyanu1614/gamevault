@@ -25,6 +25,8 @@ import CategoryPills from '@/components/marketplace/CategoryPills'
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { tierByKey } from '@/lib/seller/tiers'
+import { isSellerOnline } from '@/lib/presence/online'
+import { useSellersPresence, type PresenceSnapshot } from '@/hooks/use-seller-presence'
 import { applyCategoryListingParams, type GenericListing } from './_genericListingFilters'
 
 export interface GenericGridListing extends GenericListing {
@@ -58,9 +60,24 @@ export default function GenericListingsClient({
   const [params, setParams] = useState(() => new URLSearchParams())
   const onParams = useCallback((next: URLSearchParams) => setParams(next), [])
 
+  // Presence in the ISR HTML can be a day old: dots and the Online filter
+  // use the browser-fetched presence once it lands.
+  const sellerIds = useMemo(
+    () => listings.map((l) => l.seller?.id).filter((id): id is string => !!id),
+    [listings],
+  )
+  const livePresence = useSellersPresence(sellerIds)
+
   const view = useMemo(
-    () => applyCategoryListingParams(listings, (k) => params.get(k)),
-    [listings, params],
+    () =>
+      applyCategoryListingParams(
+        listings,
+        (k) => params.get(k),
+        livePresence
+          ? (l) => !!l.seller?.id && isSellerOnline(livePresence[l.seller.id])
+          : undefined,
+      ),
+    [listings, params, livePresence],
   )
 
   return (
@@ -94,6 +111,11 @@ export default function GenericListingsClient({
                   gameSlug={gameSlug}
                   categorySlug={categorySlug}
                   listing={listing}
+                  presence={
+                    livePresence && listing.seller?.id
+                      ? livePresence[listing.seller.id] ?? { is_online: false, last_seen_at: null }
+                      : null
+                  }
                 />
               ))}
             </div>
@@ -151,10 +173,13 @@ function ListingCard({
   gameSlug,
   categorySlug,
   listing,
+  presence,
 }: {
   gameSlug: string
   categorySlug: string
   listing: GenericGridListing
+  /** Live presence; null until the browser read lands (no dot yet). */
+  presence: PresenceSnapshot | null
 }) {
   const imageUrl = listing.images?.[0] || null
   const tierColor = tierByKey(listing.seller?.seller_tier).colors.text
@@ -221,10 +246,10 @@ function ListingCard({
             <span className={cn('truncate text-xs font-medium', tierColor)}>
               @{listing.seller?.username}
             </span>
-            {listing.seller?.presence && (
+            {presence && (
               <PresenceIndicator
-                isOnline={!!listing.seller.presence.is_online}
-                lastSeenAt={listing.seller.presence.last_seen_at ?? undefined}
+                isOnline={isSellerOnline(presence)}
+                lastSeenAt={presence.last_seen_at ?? undefined}
                 showLabel={false}
                 size="sm"
               />

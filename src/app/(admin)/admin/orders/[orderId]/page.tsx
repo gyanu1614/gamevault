@@ -79,6 +79,29 @@ function EscrowPill({ escrowStatus }: { escrowStatus: string }) {
   )
 }
 
+const usd = (n: number) => `$${n.toFixed(2)}`
+
+/** " (8%)" for a percent snapshot; empty when the order has none. */
+function pctLabel(rate: unknown): string {
+  if (rate == null || rate === '') return ''
+  const n = Number(rate)
+  return Number.isFinite(n) ? ` (${Number(n.toFixed(2))}%)` : ''
+}
+
+function adminOrderMoney(order: any) {
+  const subtotal = Number(order.subtotal ?? 0)
+  const sellerPayout = Number(order.seller_payout ?? 0)
+  return {
+    subtotal,
+    buyerFee: Number(order.platform_fee ?? 0),
+    processingFee: Number(order.payment_processing_fee ?? 0),
+    promoDiscount: Number(order.promo_discount ?? 0),
+    total: Number(order.total_amount ?? 0),
+    sellerFee: Math.max(0, Math.round((subtotal - sellerPayout) * 100) / 100),
+    sellerPayout,
+  }
+}
+
 export default async function AdminOrderDetailPage({ params }: PageProps) {
   const { orderId } = await params
   const supabase = await createClient()
@@ -126,6 +149,8 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       .maybeSingle() as any,
   ])
 
+  const money = adminOrderMoney(order)
+
   const game = (gameRes as any).data as
     | { id: string; name: string; slug: string; image_url: string | null; emoji: string }
     | null
@@ -160,14 +185,6 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                 <h1 className="text-2xl font-extrabold tracking-tight text-text-primary mb-1">{order.order_number}</h1>
                 <p className="text-sm text-text-tertiary">Order ID: {order.id}</p>
               </div>
-              <Link
-                href={`/account/orders/${order.id}`}
-                target="_blank"
-                className="flex items-center gap-1.5 text-xs text-lime-text hover:text-lime transition-colors"
-              >
-                View as User
-                <ExternalLink className="h-3 w-3" />
-              </Link>
             </div>
 
             {/* Listing Details */}
@@ -209,17 +226,40 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-text-primary">Financial Details</h3>
               <div className="space-y-2">
+                {/* platform_fee is the BUYER's marketplace fee (on top of the
+                    price); the seller's fee is subtotal − seller_payout at
+                    the snapshotted seller_commission_pct. Rates are percents. */}
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Total Amount</span>
-                  <span className="font-semibold tabular-nums text-text-primary">${order.total_amount.toFixed(2)}</span>
+                  <span className="text-text-secondary">Item Price</span>
+                  <span className="tabular-nums text-text-primary">{usd(money.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Platform Fee ({(order.platform_fee_percentage * 100).toFixed(1)}%)</span>
-                  <span className="tabular-nums text-amber-400">-${order.platform_fee.toFixed(2)}</span>
+                  <span className="text-text-secondary">Buyer Fee{pctLabel(order.platform_fee_rate)}</span>
+                  <span className="tabular-nums text-text-primary">+{usd(money.buyerFee)}</span>
+                </div>
+                {money.processingFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Processing Fee{pctLabel(order.payment_processing_fee_rate)}</span>
+                    <span className="tabular-nums text-text-primary">+{usd(money.processingFee)}</span>
+                  </div>
+                )}
+                {money.promoDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Promo Discount</span>
+                    <span className="tabular-nums text-text-primary">-{usd(money.promoDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm pt-2 border-t border-border-subtle">
+                  <span className="text-text-secondary">Buyer Paid</span>
+                  <span className="font-semibold tabular-nums text-text-primary">{usd(money.total)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">Seller Fee{pctLabel(order.seller_commission_pct)}</span>
+                  <span className="tabular-nums text-amber-400">-{usd(money.sellerFee)}</span>
                 </div>
                 <div className="flex justify-between text-sm pt-2 border-t border-border-subtle">
                   <span className="text-text-secondary">Seller Payout</span>
-                  <span className="font-bold tabular-nums text-green-400">${order.seller_payout.toFixed(2)}</span>
+                  <span className="font-bold tabular-nums text-green-400">{usd(money.sellerPayout)}</span>
                 </div>
               </div>
             </div>
@@ -310,11 +350,12 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
                   <p className="text-xs text-text-tertiary">{buyer.email}</p>
                 </div>
               </div>
+              {/* No admin user page exists; the orders search matches usernames. */}
               <Link
-                href={`/admin/users/${buyer.id}`}
+                href={`/admin/orders?search=${encodeURIComponent(buyer.username ?? '')}`}
                 className="text-xs text-lime-text hover:text-lime transition-colors flex items-center gap-1"
               >
-                View Profile
+                View Buyer&apos;s Orders
                 <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
@@ -357,27 +398,21 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             openDisputeId={(openDispute as any)?.id ?? null}
           />
 
-          {/* Quick Actions */}
-          <div className="rounded-xl border border-border-default bg-bg-raised p-5">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
-            <div className="space-y-2">
-              {((openDispute as any)?.id || order.dispute_id) && (
+          {/* Quick Actions (orders has no dispute_id column: the open
+              dispute is read above by transaction_id). */}
+          {(openDispute as any)?.id && (
+            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
+              <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
+              <div className="space-y-2">
                 <Link
-                  href={`/admin/disputes/${(openDispute as any)?.id ?? order.dispute_id}`}
+                  href={`/admin/disputes/${(openDispute as any).id}`}
                   className="block w-full px-3 py-2 text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors text-center"
                 >
                   View Dispute
                 </Link>
-              )}
-              <Link
-                href={`/account/orders/${order.id}`}
-                target="_blank"
-                className="block w-full px-3 py-2 text-sm font-bold bg-lime-pressed hover:bg-lime text-text-inverse rounded-lg transition-colors text-center"
-              >
-                Open Order Page
-              </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

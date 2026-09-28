@@ -1,10 +1,27 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { ilikeContains } from '@/lib/db/ilike'
 
-export type OrderStatus = 'pending' | 'processing' | 'paid' | 'completed' | 'cancelled' | 'refunded'
-export type EscrowStatus = 'pending' | 'held' | 'released' | 'refunded'
+// The orders_status_check / orders_escrow_status_check values.
+export type OrderStatus =
+  | 'pending'
+  | 'paid'
+  | 'delivering'
+  | 'delivered'
+  | 'disputed'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded'
+export type EscrowStatus = 'pending' | 'held' | 'released' | 'refunded' | 'frozen'
+
+/** Buyer paid and the money was not returned: what Revenue and Fees sum. */
+const COLLECTED_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered', 'disputed', 'completed']
+/** Paid, not yet finished, not in dispute. */
+const IN_PROGRESS_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered']
+
 
 export interface OrderFilters {
   status?: OrderStatus[]
@@ -53,6 +70,9 @@ export interface AdminOrder {
 }
 
 export async function getOrders(filters: OrderFilters = {}) {
+  // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
+  // non-admin, and the catch below must not swallow that.
+  await requireAdmin()
   try {
     const supabase = await createClient()
 
@@ -113,11 +133,41 @@ export async function getOrders(filters: OrderFilters = {}) {
       query = query.in('escrow_status', escrowStatus)
     }
 
-    if (search && search.trim()) {
-      // Normalised lookup: the typed query is upper-cased and stripped of
-      // dashes/spaces and matched against orders.order_number_search, which
-      // the DB generates the same way — GV- and DM- orders alike.
-      query = query.ilike('order_number_search', orderNumberSearchPattern(search))
+    const term = search.trim()
+    if (term) {
+      // Order number: normalised lookup against orders.order_number_search
+      // (upper-cased, dashes/spaces stripped — GV- and DM- orders alike).
+      // Buyer / seller (username or shop name) and listing title: resolve
+      // the matching ids first, then OR them in. Ids are uuids and the
+      // order-number key is alphanumeric, so nothing typed reaches the
+      // PostgREST filter string itself.
+      const like = ilikeContains(term)
+      const [byUsername, byShop, byTitle] = await Promise.all([
+        supabase.from('profiles').select('id').ilike('username', like).limit(50),
+        supabase.from('profiles').select('id').ilike('shop_name', like).limit(50),
+        supabase.from('listings').select('id').ilike('title', like).limit(50),
+      ])
+      const profileIds = Array.from(
+        new Set([...(byUsername.data ?? []), ...(byShop.data ?? [])].map((r: any) => r.id as string)),
+      )
+      const listingIds = (byTitle.data ?? []).map((r: any) => r.id as string)
+
+      const clauses: string[] = []
+      if (normalizeOrderNumber(term)) {
+        clauses.push(`order_number_search.ilike.${orderNumberSearchPattern(term)}`)
+      }
+      if (profileIds.length > 0) {
+        clauses.push(`buyer_id.in.(${profileIds.join(',')})`)
+        clauses.push(`seller_id.in.(${profileIds.join(',')})`)
+      }
+      if (listingIds.length > 0) {
+        clauses.push(`listing_id.in.(${listingIds.join(',')})`)
+      }
+      // Nothing searchable matched: a pattern no key can match (never
+      // "list everything").
+      query = clauses.length > 0
+        ? query.or(clauses.join(','))
+        : query.ilike('order_number_search', orderNumberSearchPattern('-'))
     }
 
     if (dateFrom) {
@@ -160,47 +210,46 @@ export async function getOrders(filters: OrderFilters = {}) {
 }
 
 export async function getOrderStats() {
+  await requireAdmin()
   try {
     const supabase = await createClient()
 
-    // Get total orders
-    const { count: totalOrders } = await supabase
-      .from('orders')
-      .select('*', { count: 'exact' }).limit(1)
+    // Bounded GET counts (never head:true — see never-head-count-hot-path).
+    const countWhere = async (statuses?: OrderStatus[]) => {
+      let q = supabase.from('orders').select('id', { count: 'exact' }).limit(1)
+      if (statuses) q = q.in('status', statuses)
+      const { count, error } = await q
+      if (error) throw error
+      return count || 0
+    }
 
-    // Get completed orders
-    const { count: completedOrders } = await supabase
-      .from('orders')
-      .select('*', { count: 'exact' })
-      .eq('status', 'completed').limit(1)
+    const [totalOrders, completedOrders, pendingOrders, disputedOrders] = await Promise.all([
+      countWhere(),
+      countWhere(['completed']),
+      countWhere(IN_PROGRESS_STATUSES),
+      countWhere(['disputed']),
+    ])
 
-    // Get pending orders
-    const { count: pendingOrders } = await supabase
-      .from('orders')
-      .select('*', { count: 'exact' })
-      .in('status', ['pending', 'processing', 'paid']).limit(1)
-
-    // Get disputed orders
-    const { count: disputedOrders } = await supabase
-      .from('disputes')
-      .select('*', { count: 'exact' })
-      .in('status', ['open', 'under_review']).limit(1)
-
-    // Get total revenue
-    const { data: revenueData } = await supabase
-      .from('orders')
-      .select('total_amount')
-      .in('status', ['completed', 'paid']) as any
-
-    const totalRevenue = revenueData?.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0) || 0
-
-    // Get total platform fees
-    const { data: feesData } = await supabase
-      .from('orders')
-      .select('platform_fee')
-      .in('status', ['completed', 'paid']) as any
-
-    const totalFees = feesData?.reduce((sum: number, order: any) => sum + (order.platform_fee || 0), 0) || 0
+    // Revenue + fees over every collected order. PostgREST caps a response
+    // at max_rows (1000), so page through by id rather than summing the
+    // first page only.
+    let totalRevenue = 0
+    let totalFees = 0
+    const PAGE = 1000
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await (supabase
+        .from('orders')
+        .select('id, total_amount, platform_fee')
+        .in('status', COLLECTED_STATUSES)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1) as any)
+      if (error) throw error
+      for (const o of data ?? []) {
+        totalRevenue += Number(o.total_amount) || 0
+        totalFees += Number(o.platform_fee) || 0
+      }
+      if (!data || data.length < PAGE) break
+    }
 
     return {
       success: true,
