@@ -109,9 +109,12 @@ export function buildOrderTimeline(o: TimelineInput): TimelineStep[] {
   if (o.delivered_at) {
     done.push({ key: 'delivered', icon: 'delivered', title: 'Marked As Delivered', detail: 'The seller marked the order delivered', at: o.delivered_at, state: 'done', tone: 'lime' })
   }
+  // An OPEN dispute is where the order is now (current); a resolved one is
+  // history (done).
+  const disputeOpen = status === 'disputed' && !d?.resolvedAt
   if (o.disputed_at) {
     const reason = d?.reason ? REASON_LABEL[d.reason] ?? null : null
-    done.push({ key: 'disputed', icon: 'disputed', title: 'Order Disputed', detail: reason ? `Reason: ${reason}` : 'Payout paused while it is sorted out', at: o.disputed_at, state: 'done', tone: 'red' })
+    done.push({ key: 'disputed', icon: 'disputed', title: 'Order Disputed', detail: reason ? `Reason: ${reason}` : 'Payout paused while it is sorted out', at: o.disputed_at, state: disputeOpen ? 'current' : 'done', tone: 'red' })
   }
   if (d?.resolvedAt) {
     done.push({ key: 'resolved', icon: 'resolved', title: 'Dispute Resolved', detail: resolvedDetail(d), at: d.resolvedAt, state: 'done', tone: 'blue' })
@@ -139,11 +142,12 @@ export function buildOrderTimeline(o: TimelineInput): TimelineStep[] {
   if (status === 'paid' || status === 'delivering' || status === 'delivered') {
     next.push({ key: 'completed', icon: 'completed', title: 'Order Completed', detail: 'When the buyer confirms, or when the protection window closes', at: null, state: 'upcoming', tone: 'lime' })
   }
-  if (status === 'disputed' && !d?.resolvedAt) {
+  if (disputeOpen) {
     if (!o.delivered_at) {
       next.push({ key: 'delivered', icon: 'delivered', title: 'Marked As Delivered', detail: 'The seller can still deliver the order', at: null, state: 'upcoming', tone: 'lime' })
     }
-    next.push({ key: 'resolved', icon: 'resolved', title: 'Dispute Resolved', detail: 'When the buyer confirms receipt, or DropMarket decides', at: null, state: 'current', tone: 'amber' })
+    // Still to come: grey until the buyer confirms receipt or DropMarket decides.
+    next.push({ key: 'resolved', icon: 'resolved', title: 'Dispute Resolved', detail: 'When the buyer confirms receipt, or DropMarket decides', at: null, state: 'upcoming', tone: 'blue' })
   }
 
   return [...done, ...next]

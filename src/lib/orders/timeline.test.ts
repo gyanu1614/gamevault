@@ -41,14 +41,22 @@ describe('buildOrderTimeline', () => {
     expect(steps.find((s) => s.key === 'resolved')?.detail).toBe('Closed by the buyer: order received')
   })
 
-  it('an open dispute still owes the delivery and the resolution', () => {
+  it('an open dispute is the current step; delivery and resolution stay grey (upcoming)', () => {
     expect(titles(buildOrderTimeline({ status: 'disputed', created_at: T(1), paid_at: T(1), disputed_at: T(2) }))).toEqual([
       'Order Placed:done',
       'Waiting For Seller:done',
-      'Order Disputed:done',
+      'Order Disputed:current',
       'Marked As Delivered:upcoming',
-      'Dispute Resolved:current',
+      'Dispute Resolved:upcoming',
     ])
+  })
+
+  it('once resolved, the dispute is history (done), never current', () => {
+    const steps = buildOrderTimeline({
+      status: 'completed', created_at: T(1), paid_at: T(1), disputed_at: T(2), delivered_at: T(3), completed_at: T(4),
+      dispute: { resolvedAt: T(4), resolvedBy: 'buyer', favoredParty: 'seller' },
+    })
+    expect(steps.filter((s) => s.state !== 'done')).toEqual([])
   })
 
   it('the happy path uses real timestamps, in order', () => {
@@ -66,7 +74,7 @@ describe('buildOrderTimeline', () => {
       status: 'disputed', created_at: T(1), paid_at: T(1), delivering_at: T(2), delivered_at: T(3), completed_at: T(4), disputed_at: T(8),
     })
     expect(titles(steps).slice(0, 5)).toEqual([
-      'Order Placed:done', 'Delivery Started:done', 'Marked As Delivered:done', 'Order Disputed:done', 'Dispute Resolved:current',
+      'Order Placed:done', 'Delivery Started:done', 'Marked As Delivered:done', 'Order Disputed:current', 'Dispute Resolved:upcoming',
     ])
   })
 
