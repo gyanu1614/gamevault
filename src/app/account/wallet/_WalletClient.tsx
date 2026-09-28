@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
@@ -39,11 +38,13 @@ import {
   Gift,
   Sparkles,
   ArrowDownToLine,
+  AlertTriangle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
+import { lifetimeSpentOf, matchesPurchaseFilter, saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { WalletSkeleton } from './_WalletSkeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -78,8 +79,6 @@ async function fetchPurchases(userId: string) {
       id,
       order_number,
       total_amount,
-      platform_fee,
-      seller_payout,
       status,
       created_at,
       listing:listing_id (
@@ -97,8 +96,6 @@ async function fetchPurchases(userId: string) {
     throw error
   }
 
-  console.log('[Wallet] Fetched purchases:', rawOrders?.length || 0)
-
   const orders = (rawOrders || []) as any[]
 
   const transactions: PurchaseTransaction[] = orders.map(order => {
@@ -106,14 +103,11 @@ async function fetchPurchases(userId: string) {
     return {
       id: order.id,
       amount: order.total_amount || 0,
-      platformFee: order.platform_fee || 0,
-      netAmount: order.seller_payout || 0,
-      status: (order.status === 'completed' ? 'completed'
-            : order.status === 'cancelled' ? 'cancelled'
-            : order.status === 'refunded' ? 'refunded'
-            : order.status === 'pending' ? 'pending'
-            : order.status === 'paid' ? 'processing'
-            : 'processing') as any,
+      // The buyer's row shows what THEY paid. platform_fee / seller_payout are
+      // the seller's commission and payout, not the buyer's business.
+      platformFee: 0,
+      netAmount: 0,
+      status: order.status as any,
       title: listing?.title || 'Game Item',
       orderId: order.id,
       orderNumber: order.order_number,
@@ -126,9 +120,7 @@ async function fetchPurchases(userId: string) {
     }
   }) as any
 
-  const lifetimeSpent = orders
-    .filter((o: any) => o.status !== 'cancelled' && o.status !== 'refunded')
-    .reduce((sum: number, o: any) => sum + (o.total_amount || 0), 0)
+  const lifetimeSpent = lifetimeSpentOf(orders)
 
   return { transactions, lifetimeSpent }
 }
@@ -156,15 +148,13 @@ interface SaleTransaction {
 async function fetchSales(userId: string): Promise<SaleTransaction[]> {
   const supabase = createClient()
 
-  console.log('[fetchSales] Fetching sales for user:', userId)
-
   const { data, error } = await supabase
     .from('orders')
     .select(`
       id,
       order_number,
+      subtotal,
       total_amount,
-      platform_fee,
       seller_payout,
       status,
       created_at,
@@ -177,24 +167,48 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
       )
     `)
     .eq('seller_id', userId)
-    .in('status', ['completed', 'processing', 'paid', 'delivered', 'confirmed'])
+    // Every PAID sale, whatever happened next. (Was: 'processing' and
+    // 'confirmed', which are not order statuses, and delivering / disputed /
+    // refunded sales silently vanished.)
+    .in('status', ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded'])
     .order('created_at', { ascending: false })
-
-  console.log('[fetchSales] Query result:', { data, error, count: data?.length })
 
   if (error) {
     console.error('[fetchSales] Error:', error)
     throw error
   }
 
-  return ((data || []) as any[]).map(order => ({
+  const rows = (data || []) as any[]
+
+  // A partial refund completes the order but pays the seller less: what they
+  // kept is dispute_resolutions.seller_payout_amount (latest resolved dispute).
+  const kept = new Map<string, number>()
+  const completedIds = rows.filter((o) => o.status === 'completed').map((o) => o.id)
+  if (completedIds.length > 0) {
+    const { data: partial } = await supabase
+      .from('disputes')
+      .select('transaction_id, resolved_at, resolution:dispute_resolutions(seller_payout_amount, resolution_type)')
+      .in('transaction_id', completedIds)
+      .eq('status', 'resolved_partial')
+      .order('resolved_at', { ascending: true }) as any
+    for (const d of (partial ?? []) as any[]) {
+      const r = Array.isArray(d.resolution) ? d.resolution[0] : d.resolution
+      if (r?.resolution_type === 'partial_refund' && r.seller_payout_amount != null) {
+        kept.set(d.transaction_id, Number(r.seller_payout_amount))
+      }
+    }
+  }
+
+  return rows.map(order => {
+    const { amount, platformFee, netAmount } = saleRowAmounts(order, kept.get(order.id))
+    return {
     id: order.id,
     orderId: order.id,
     orderNumber: order.order_number || `#${order.id.slice(0, 8)}`,
     buyerUsername: order.buyer?.username || 'Unknown',
-    amount: order.total_amount || 0,
-    platformFee: order.platform_fee || 0,
-    netAmount: order.seller_payout || 0,
+    amount,
+    platformFee,
+    netAmount,
     status: order.status,
     createdAt: order.created_at,
     listingTitle: order.listing?.title || 'N/A',
@@ -203,7 +217,8 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
     gameImageUrl: order.listing?.game?.image_url,
     listingImageUrl: order.listing?.images?.[0],
     categoryName: order.listing?.category?.name,
-  }))
+    }
+  })
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -253,10 +268,14 @@ const STATUS_CONFIG: Record<string, {
   dot: string
   pulse: boolean
 }> = {
-  completed:  { label: 'Delivered',   icon: CircleCheck,  pill: 'bg-green-500/12 text-success border-green-500/25',  dot: 'bg-green-400',  pulse: false },
-  processing: { label: 'Processing',  icon: CircleDot,    pill: 'bg-amber-500/12 text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
-  paid:       { label: 'Paid',        icon: CircleCheck,  pill: 'bg-green-500/12 text-success border-green-500/25',  dot: 'bg-green-400',  pulse: false },
-  pending:    { label: 'Pending',     icon: CircleDashed, pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: true  },
+  // One entry per REAL order status (pending|paid|delivering|delivered|
+  // disputed|completed|cancelled|refunded).
+  completed:  { label: 'Completed',        icon: CircleCheck,  pill: 'bg-green-500/12 text-success border-green-500/25',  dot: 'bg-green-400',  pulse: false },
+  paid:       { label: 'Waiting For Seller', icon: CircleDot,  pill: 'bg-amber-500/12 text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
+  delivering: { label: 'Delivering',       icon: CircleDot,    pill: 'bg-amber-500/12 text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
+  delivered:  { label: 'Delivered',        icon: CircleCheck,  pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: false },
+  disputed:   { label: 'Disputed',         icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: true  },
+  pending:    { label: 'Awaiting Payment', icon: CircleDashed, pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: true  },
   failed:     { label: 'Cancelled',   icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: false },
   cancelled:  { label: 'Cancelled',   icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: false },
   refunded:   { label: 'Refunded',    icon: CircleX,      pill: 'bg-orange-500/12 text-orange-400 border-orange-500/25', dot: 'bg-orange-400', pulse: false },
@@ -283,6 +302,24 @@ function StatusBadge({ status }: { status: string }) {
       </span>
       {cfg.label}
     </span>
+  )
+}
+
+// ── Load error (instead of an empty list or an endless skeleton) ─────────────
+
+function LoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center justify-center px-4 py-16 text-center">
+      <AlertTriangle className="mb-3 h-8 w-8 text-amber-400" aria-hidden />
+      <p className="text-sm font-medium text-text-secondary">We couldn&apos;t load {what}.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 inline-flex min-h-[40px] items-center rounded-lg border border-border-default px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.04]"
+      >
+        Try Again
+      </button>
+    </div>
   )
 }
 
@@ -322,7 +359,6 @@ interface Props {
 }
 
 export default function WalletClient({ userId, isSeller }: Props) {
-  const { user } = useAuth()
   // STATE-008 — the opening tab is known on the server, so it is the initial
   // state rather than something a useEffect corrects after hydration (which
   // showed buyers the wrong tab for a frame).
@@ -331,20 +367,17 @@ export default function WalletClient({ userId, isSeller }: Props) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [isTopUpLoading, setIsTopUpLoading] = useState(false)
 
-  const { data: purchaseData, isLoading: purchasesLoading, error: purchasesError } = useQuery({
+  const { data: purchaseData, isLoading: purchasesLoading, error: purchasesError, refetch: refetchPurchases } = useQuery({
     queryKey: ['wallet-purchases', userId],
-    queryFn: () => fetchPurchases(user!.id),
+    queryFn: () => fetchPurchases(userId),
     refetchOnWindowFocus: false,
     retry: 1,
   })
 
-  const { data: salesData, isLoading: salesLoading, error: salesError } = useQuery({
+  const { data: salesData, isLoading: salesLoading, error: salesError, refetch: refetchSales } = useQuery({
     queryKey: ['wallet-sales', userId],
     queryFn: async () => {
-      console.log('[Wallet] Fetching sales for user:', user!.id)
-      const result = await fetchSales(user!.id)
-      console.log('[Wallet] Sales data:', result)
-      return result
+      return fetchSales(userId)
     },
     enabled: isSeller,
     refetchOnWindowFocus: false,
@@ -352,7 +385,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
   })
 
   // Fetch wallet balance (ledger-derived — the source refund credits post to)
-  const { data: walletData, isLoading: walletLoading, error: walletError } = useQuery({
+  const { data: walletData, isLoading: walletLoading, error: walletError, refetch: refetchWallet } = useQuery({
     queryKey: ['wallet-balance', userId],
     queryFn: async () => {
       const result = await getMyWalletBalance()
@@ -427,7 +460,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
   const filteredPurchases = useMemo(() => {
     return purchases.filter(t => {
-      const matchStatus = filterStatus === 'all' || t.status === filterStatus
+      const matchStatus = matchesPurchaseFilter(t.status, filterStatus)
       const matchSearch = !searchQuery ||
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (t.orderNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -467,11 +500,17 @@ export default function WalletClient({ userId, isSeller }: Props) {
       // Seller: Must have both wallet and earnings loaded
       // Same skeleton as the route fallback (loading.tsx), so the page
       // doesn't swap skeleton → spinner → content.
+      if (walletError && !walletData) {
+        return <LoadError what="your wallet" onRetry={() => void refetchWallet()} />
+      }
       if (!walletData || earningsLoading) {
         return <WalletSkeleton isSeller />
       }
     } else {
       // Buyer: Only needs wallet data
+      if (walletError && !walletData) {
+        return <LoadError what="your wallet" onRetry={() => void refetchWallet()} />
+      }
       if (!walletData) {
         return <WalletSkeleton isSeller={false} />
       }
@@ -710,9 +749,9 @@ export default function WalletClient({ userId, isSeller }: Props) {
             className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-lime focus:outline-none transition-all"
           >
             <option value="all">All Status</option>
+            <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
-            <option value="processing">Processing</option>
-            <option value="pending">Pending</option>
+            <option value="pending">Awaiting Payment</option>
             <option value="cancelled">Cancelled</option>
             <option value="refunded">Refunded</option>
           </select>
@@ -722,7 +761,9 @@ export default function WalletClient({ userId, isSeller }: Props) {
       {/* ════════════════ TAB: PURCHASES ════════════════ */}
       {activeTab === 'purchases' && (
         <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
-          {filteredPurchases.length === 0 ? (
+          {purchasesError && !purchaseData ? (
+            <LoadError what="your purchases" onRetry={() => void refetchPurchases()} />
+          ) : filteredPurchases.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <ShoppingCart className="h-10 w-10 text-text-tertiary mb-3" />
               <p className="text-sm font-medium text-text-secondary">
@@ -806,6 +847,8 @@ export default function WalletClient({ userId, isSeller }: Props) {
               <Loader2 className="h-8 w-8 animate-spin text-lime-text mb-3" />
               <p className="text-sm text-text-tertiary">Loading sales...</p>
             </div>
+          ) : salesError && !salesData ? (
+            <LoadError what="your sales" onRetry={() => void refetchSales()} />
           ) : filteredSales.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <Package className="h-10 w-10 text-text-tertiary mb-3" />
