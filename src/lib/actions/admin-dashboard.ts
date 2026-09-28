@@ -87,8 +87,8 @@ export async function getDashboardStats(): Promise<{
       // Orders
       supabase.from('orders').select('total_amount', { count: 'exact' }).limit(1),
       supabase.from('orders').select('total_amount', { count: 'exact', head: false }).gte('created_at', todayStart),
-      supabase.from('orders').select('*', { count: 'exact' }).gte('created_at', weekStart).limit(1),
-      supabase.from('orders').select('*', { count: 'exact' }).in('status', ['pending', 'paid', 'processing', 'delivering']).limit(1),
+      supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', weekStart).limit(1),
+      supabase.from('orders').select('id', { count: 'exact' }).in('status', ['pending', 'paid', 'processing', 'delivering']).limit(1),
 
       // Users
       supabase.from('profiles').select('*', { count: 'exact' }).limit(1),

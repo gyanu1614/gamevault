@@ -15,6 +15,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { isPaidOrder, pendingPayoutOf } from '@/lib/wallet/wallet-rows'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 
@@ -98,7 +99,7 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
     fetchAllRows<any>((from, to) =>
       supabase
         .from('orders')
-        .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, paid_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
+        .select('id, order_number, status, escrow_status, total_amount, created_at, paid_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -124,7 +125,8 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
       .single(),
   ])
 
-  const orders = (ordersRes.data ?? []) as any[]
+  // seller_payout is the seller's private column: merged in, not selected.
+  const orders = (await withOwnOrderFields(supabase, 'seller', (ordersRes.data ?? []) as any[])) as any[]
   const listings = (listingsRes.data ?? []) as any[]
   const reviews = (reviewsRes.data ?? []) as any[]
   const profile = (profileRes.data ?? {}) as any

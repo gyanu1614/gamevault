@@ -11,6 +11,7 @@ import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { fetchAllRows } from '@/lib/db/fetch-all'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 
 const supabase = createClient()
 
@@ -315,15 +316,13 @@ export const listingsApi = {
 // ORDERS API
 // =====================================================
 
-// Order columns each party's browser may receive — the same split as
-// redactOrderFor (src/lib/orders/redact.ts). Never '*': that shipped the
-// buyer's checkout link / wallet use / payment ids to the seller and the
-// seller's payout / fee snapshot to the buyer. (RLS still returns the whole
-// row to either party on a direct query; this keeps our own pages from
-// carrying it.)
+// Order columns each party's browser receives. The database grants a session
+// client only the shared columns (src/lib/orders/columns.ts) — '*' or a
+// private column is refused — so the seller's own payout is merged in
+// through withOwnOrderFields, never selected.
 const ORDER_SHARED_COLUMNS =
   'id, order_number, buyer_id, seller_id, listing_id, quantity, unit_price, subtotal, total_amount, status, escrow_status, currency, created_at, updated_at, paid_at, delivering_at, delivered_at, completed_at, cancelled_at, disputed_at'
-const SELLER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, seller_payout, delivery_details`
+const SELLER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, delivery_details`
 const BUYER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, delivery_details`
 
 export const ordersApi = {
@@ -395,7 +394,7 @@ export const ordersApi = {
     )
 
     if (error) throw error
-    return data || []
+    return withOwnOrderFields(supabase, 'seller', data || []) as Promise<Order[]>
   },
 
   /**
@@ -427,7 +426,8 @@ export const ordersApi = {
       .single()
 
     if (error) throw error
-    return data
+    const [own] = await withOwnOrderFields(supabase, 'seller', [data as any])
+    return own as Order
   },
 
   // Order status changes only through the server actions / RPCs
@@ -1423,18 +1423,27 @@ export const earningsApi = {
     // "sum of completed orders" figure ignored withdrawals entirely.
     const { getMySellerAvailableBalance } = await import('@/lib/actions/wallet-ledger')
 
-    const [{ data: orders }, { data: activeOrders }, { data: withdrawals }, availableResult] =
+    const [{ data: completedRows }, { data: activeRows }, { data: withdrawals }, availableResult] =
       await Promise.all([
-        supabase
-          .from('orders')
-          .select('seller_payout, total_amount, platform_fee, created_at')
-          .eq('seller_id', user.id)
-          .eq('status', 'completed') as any,
-        supabase
-          .from('orders')
-          .select('seller_payout')
-          .eq('seller_id', user.id)
-          .in('status', ['paid', 'delivering', 'delivered', 'disputed']) as any,
+        // Paged: these are sums — a 1000-row cap would under-count them.
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from('orders')
+            .select('id, total_amount, created_at')
+            .eq('seller_id', user.id)
+            .eq('status', 'completed')
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from('orders')
+            .select('id')
+            .eq('seller_id', user.id)
+            .in('status', ['paid', 'delivering', 'delivered', 'disputed'])
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
         supabase
           .from('withdrawal_requests' as any)
           .select('amount, status')
@@ -1442,6 +1451,12 @@ export const earningsApi = {
           .in('status', ['pending', 'approved', 'processing', 'completed']) as any,
         getMySellerAvailableBalance(),
       ])
+
+    // The payout is the seller's private column: merged in, not selected.
+    const [orders, activeOrders] = await Promise.all([
+      withOwnOrderFields(supabase, 'seller', completedRows || []),
+      withOwnOrderFields(supabase, 'seller', activeRows || []),
+    ])
 
     const total_earnings = (orders || []).reduce(
       (sum: number, order: any) => sum + (order.seller_payout || 0),
@@ -1491,8 +1506,6 @@ export const earningsApi = {
         id,
         order_number,
         total_amount,
-        platform_fee,
-        seller_payout,
         status,
         created_at,
         buyer:profiles!buyer_id(username),
@@ -1504,7 +1517,9 @@ export const earningsApi = {
 
     if (error) throw error
 
-    return (data || []).map((order: any) => ({
+    // Fee + payout are the seller's private columns: merged in, not selected.
+    const rows = await withOwnOrderFields(supabase, 'seller', (data || []) as any[])
+    return rows.map((order: any) => ({
       id: order.id,
       order_id: order.id,
       order_number: order.order_number || `#${order.id.slice(0, 8)}`,

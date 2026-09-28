@@ -8,6 +8,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -80,6 +81,10 @@ export async function getAnalyticsData(): Promise<{
   try {
     await requireAdmin()
     const supabase = await createClient()
+    // Fees / promo are private order columns a session client cannot select
+    // (orders column grant): those reads use the service role, after
+    // requireAdmin above.
+    const service = createServiceRoleClient()
 
     const now        = new Date()
     const mtdStart   = startOf('month').toISOString()
@@ -88,7 +93,7 @@ export async function getAnalyticsData(): Promise<{
     const d30Ago     = daysAgo(30).toISOString()
 
     // ── Revenue ──────────────────────────────────────────────────────────────
-    const { data: allOrders } = await supabase
+    const { data: allOrders } = await service
       .from('orders')
       .select('platform_fee, vaultshield_tier_fee, payment_processing_fee, total_amount, subtotal, status, created_at, is_guest_order, promo_discount')
       .in('status', ['paid', 'delivering', 'completed', 'disputed'])
@@ -150,7 +155,7 @@ export async function getAnalyticsData(): Promise<{
     const { count: disputesResolved } = await supabase.from('disputes').select('id', { count: 'exact' }).eq('status', 'resolved').limit(1)
 
     // ── Daily revenue chart (last 30 days) ───────────────────────────────────
-    const { data: recentOrders } = await supabase
+    const { data: recentOrders } = await service
       .from('orders')
       .select('created_at, platform_fee, vaultshield_tier_fee, payment_processing_fee, total_amount')
       .in('status', ['paid', 'delivering', 'completed', 'disputed'])

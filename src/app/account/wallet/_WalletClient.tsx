@@ -6,6 +6,7 @@ import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAllRows, chunk } from '@/lib/db/fetch-all'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { createTopUpCheckout } from '@/lib/actions/wallet'
 import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
 // Ledger-backed balance (funds-flow cutover): refund credits post to the
@@ -162,7 +163,6 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
         order_number,
         subtotal,
         total_amount,
-        seller_payout,
         status,
         created_at,
         buyer:profiles!buyer_id(username),
@@ -188,7 +188,8 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
     throw error
   }
 
-  const rows = (data || []) as any[]
+  // seller_payout is the seller's private column: merged in, not selected.
+  const rows = (await withOwnOrderFields(supabase, 'seller', (data || []) as any[])) as any[]
 
   // A partial refund completes the order but pays the seller less: what they
   // kept is dispute_resolutions.seller_payout_amount (latest resolved dispute).
