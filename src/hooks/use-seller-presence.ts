@@ -7,8 +7,10 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { updatePresenceOnline, updatePresenceOffline } from '@/lib/actions/seller-presence'
+import { isSellerOnline } from '@/lib/presence/online'
 
 interface SellerPresence {
   seller_id: string
@@ -107,7 +109,7 @@ export function useSellerPresence(sellerId: string | null | undefined) {
         .from('seller_presence')
         .select('*')
         .eq('seller_id', sellerId)
-        .single()
+        .maybeSingle()
 
       if (mounted) {
         if (data) {
@@ -234,4 +236,32 @@ export function formatLastSeen(lastSeenAt: string): string {
 
   const diffDays = Math.floor(diffHours / 24)
   return `${diffDays}d ago`
+}
+
+/**
+ * "Is this seller online" for a dot: true / false, or null while loading or
+ * when there is no seller to ask about (then show no dot).
+ *
+ * Polled, not realtime: seller_presence is not in the supabase_realtime
+ * publication, so a postgres_changes subscription never fires. One shared
+ * React Query entry per seller, so the header and chat dots on the same page
+ * make one request a minute between them (the heartbeat writes every 2).
+ */
+export function useSellerOnline(sellerId: string | null | undefined): boolean | null {
+  const { data, isLoading } = useQuery({
+    queryKey: ['seller-online', sellerId],
+    enabled: !!sellerId,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data: row } = await createClient()
+        .from('seller_presence')
+        .select('is_online, last_seen_at')
+        .eq('seller_id', sellerId!)
+        .maybeSingle()
+      return row ?? null
+    },
+  })
+  if (!sellerId || isLoading) return null
+  return isSellerOnline(data, Date.now())
 }

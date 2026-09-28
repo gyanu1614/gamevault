@@ -10,13 +10,16 @@ import MessageInput from './MessageInput'
 import DeliveryEvidenceUpload from '@/components/orders/DeliveryEvidenceUpload'
 import { displayOrderRef } from '@/lib/orders/order-number'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import { useSellerOnline } from '@/hooks/use-seller-presence'
+import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
 import { Loader2, AlertCircle, Upload, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Message {
   id: string
   conversation_id: string
-  sender_id: string
+  /** NULL = DropMarket system notice. */
+  sender_id: string | null
   content: string
   attachments?: string[] | null
   is_read: boolean
@@ -63,6 +66,10 @@ interface ChatInterfaceProps {
   } | null
   onViewOrder?: () => void
   className?: string
+  /** When the other person is the SELLER, their id: the header dot shows
+   *  their live online state. Omit it (buyers have no presence) and no dot
+   *  is drawn. */
+  presenceSellerId?: string | null
   /** Pass to enable the "Upload Proof" panel inside chat (seller only, orders ≥ $100) */
   evidenceProps?: {
     orderId: string
@@ -81,7 +88,9 @@ export default function ChatInterface({
   onViewOrder,
   className = '',
   evidenceProps,
+  presenceSellerId = null,
 }: ChatInterfaceProps) {
+  const otherOnline = useSellerOnline(presenceSellerId)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -167,8 +176,14 @@ export default function ChatInterface({
             setMessages(data)
           }
 
-          // Show toast for messages from other user
-          if (newMessage.sender_id !== currentUserId) {
+          // A DropMarket notice (dispute card): a plain-words toast, and it
+          // is not the other person's message to mark read.
+          if (isSystemMessage(newMessage.sender_id)) {
+            toast.message('DropMarket update', {
+              description: systemNoticePreview(newMessage.content),
+              duration: 3000,
+            })
+          } else if (newMessage.sender_id !== currentUserId) {
             // Determine sender name
             let senderName = 'Someone'
             if (otherUser && newMessage.sender_id === otherUser.id) {
@@ -446,10 +461,14 @@ export default function ChatInterface({
               alt=""
               className="h-9 w-9 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
-            <span
-              aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-bg-raised"
-            />
+            {otherOnline !== null && (
+              <span
+                aria-label={otherOnline ? 'Online' : 'Offline'}
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-bg-raised ${
+                  otherOnline ? 'bg-green-400' : 'bg-text-tertiary'
+                }`}
+              />
+            )}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="flex items-center gap-1.5 text-[13.5px] font-bold text-text-primary">
