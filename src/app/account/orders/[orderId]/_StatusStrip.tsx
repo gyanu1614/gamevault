@@ -115,7 +115,7 @@ const STRIPS: Record<
     disputed: {
       Icon: AlertTriangle,
       title: 'Dispute Under Review',
-      caption: 'A DropMarket admin is reviewing. Support responds within 24h.',
+      caption: 'A DropMarket admin is reviewing. Support responds within 24 to 48 hours.',
       tone: 'amber',
     },
     refunded: {

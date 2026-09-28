@@ -464,8 +464,9 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
   const isLoading = purchasesLoading || walletLoading || (isSeller && (salesLoading || earningsLoading))
 
-  const purchases = purchaseData?.transactions || []
-  const sales = salesData || []
+  // Stable when the query data is: the list memos below depend on these.
+  const purchases = useMemo(() => purchaseData?.transactions ?? [], [purchaseData])
+  const sales = useMemo(() => salesData ?? [], [salesData])
   const lifetimeSpent = purchaseData?.lifetimeSpent || 0
   const walletBalance = walletData || {
     available_balance: 0,
