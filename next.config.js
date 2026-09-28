@@ -224,7 +224,14 @@ const nextConfig = {
       {
         // Blog slug rebrand: custody-free URL (outcome-language rule).
         source: '/blog/how-safedrop-escrow-works',
-        destination: '/blog/how-safedrop-buyer-protection-works',
+        destination: '/blog/how-safedrop-protection-works',
+        permanent: true,
+      },
+      {
+        // Product renamed "SafeDrop Buyer Protection" -> "SafeDrop Protection"
+        // (owner, 2026-09-28). One hop, no chain from the escrow URL above.
+        source: '/blog/how-safedrop-buyer-protection-works',
+        destination: '/blog/how-safedrop-protection-works',
         permanent: true,
       },
       {

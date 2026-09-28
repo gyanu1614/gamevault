@@ -51,7 +51,7 @@ const STAGES: Stage[] = [
       { type: 'plain',  text: 'Check out on ' },
       { type: 'strong', text: 'DropMarket' },
       { type: 'plain',  text: ' like any store — and your order is covered by ' },
-      { type: 'accent', text: 'SafeDrop Buyer Protection' },
+      { type: 'accent', text: 'SafeDrop Protection' },
       { type: 'plain',  text: ' from the first second.' },
     ],
   },
@@ -132,7 +132,7 @@ export function HowItWorks() {
           Safe drops, <span className="text-lime-text">every time</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-text-secondary">
-          Every order is covered by <span className="font-bold text-text-primary">SafeDrop™ Buyer Protection</span> — get what you ordered, or your money back.
+          Every order is covered by <span className="font-bold text-text-primary">SafeDrop Protection</span>. Get what you ordered, or your money back.
         </p>
       </div>
 

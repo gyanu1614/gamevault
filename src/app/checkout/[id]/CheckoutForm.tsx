@@ -1329,7 +1329,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           value={`+$${fee.marketplaceAmount.toFixed(2)}`}
           infoTitle="Marketplace Fee"
           infoBadge={`${fee.marketplacePct}%`}
-          info="Platform & buyer protection."
+          info="Platform & SafeDrop Protection."
         />
         <Row
           label={PROCESSING_FEE_LABEL}
