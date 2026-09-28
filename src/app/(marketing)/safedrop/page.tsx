@@ -113,12 +113,10 @@ export default function SafeDropPage() {
       />
       {/* Hero Section */}
       <section className="relative pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-lime/10 via-transparent to-transparent" />
-
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-3 mb-6">
-              <div className="p-4 rounded-2xl bg-lime/10 border border-lime/20">
+              <div className="p-4 rounded-2xl bg-lime-tint-bg border border-lime-tint-border">
                 <Shield className="w-12 h-12 text-lime-text" />
               </div>
             </div>
@@ -204,7 +202,7 @@ export default function SafeDropPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="inline-flex p-3 rounded-lg bg-lime/10 border border-lime/20">
+                <div className="inline-flex p-3 rounded-lg bg-lime-tint-bg border border-lime-tint-border">
                   <CheckCircle2 className="w-6 h-6 text-lime-text" />
                 </div>
                 <h3 className="text-xl font-bold text-white">Covered by SafeDrop</h3>
@@ -360,7 +358,7 @@ export default function SafeDropPage() {
           </div>
 
           <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-8 text-center">
-            <div className="inline-flex p-4 rounded-2xl bg-lime/10 border border-lime/20 mb-6">
+            <div className="inline-flex p-4 rounded-2xl bg-lime-tint-bg border border-lime-tint-border mb-6">
               <Wallet className="w-8 h-8 text-lime-text" />
             </div>
             <h3 className="text-xl font-bold text-white mb-4">
@@ -451,7 +449,7 @@ export default function SafeDropPage() {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-lime/10 to-lime/10 border border-lime/20 rounded-2xl p-6 sm:p-10 lg:p-12">
+          <div className="bg-lime-tint-bg border border-lime-tint-border rounded-2xl p-6 sm:p-10 lg:p-12">
             <Shield className="w-16 h-16 text-lime-text mx-auto mb-6" />
 
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -551,8 +549,7 @@ function HowItWorksStep({ number, icon: Icon, title, description }: HowItWorksSt
   return (
     <div className="text-center">
       <div className="relative inline-flex items-center justify-center mb-4">
-        <div className="absolute w-16 h-16 bg-lime/20 rounded-full animate-pulse" />
-        <div className="relative w-16 h-16 bg-lime/10 border border-lime/20 rounded-full flex items-center justify-center">
+        <div className="relative w-16 h-16 bg-lime-tint-bg border border-lime-tint-border rounded-full flex items-center justify-center">
           <Icon className="w-8 h-8 text-lime-text" />
         </div>
         <div className="absolute -top-1 -right-1 w-6 h-6 bg-lime text-text-inverse text-xs font-bold rounded-full flex items-center justify-center">

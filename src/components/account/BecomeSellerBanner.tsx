@@ -17,7 +17,7 @@ export default function BecomeSellerBanner() {
         {/* Main Card */}
         <div className="bg-white/[0.04] border border-lime-tint-border rounded-2xl p-12 text-center">
           {/* Icon */}
-          <div className="w-20 h-20 mx-auto mb-6 bg-lime/20 rounded-full flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-6 bg-[rgba(86,184,127,0.20)] rounded-full flex items-center justify-center">
             <Store className="w-10 h-10 text-lime-text" />
           </div>
 
@@ -60,7 +60,7 @@ export default function BecomeSellerBanner() {
               page instead of a fresh application. */}
           <Link
             href={ctaHref}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-lime hover:bg-lime/90 text-text-inverse font-semibold rounded-xl transition-colors duration-200"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-lime hover:bg-lime-hover text-text-inverse font-semibold rounded-xl transition-colors duration-200"
           >
             {isPending ? (
               <>

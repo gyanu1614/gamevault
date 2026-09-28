@@ -311,7 +311,7 @@ export function BlogEditor({
                 type="button"
                 onClick={() => coverInputRef.current?.click()}
                 disabled={uploading !== null}
-                className="shrink-0 rounded-lg border border-lime/50 px-3 py-2 text-xs font-semibold text-lime-text transition hover:bg-lime/10 disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-[rgba(86,184,127,0.50)] px-3 py-2 text-xs font-semibold text-lime-text transition hover:bg-lime-tint-bg disabled:opacity-50"
               >
                 {uploading === 'cover' ? 'Uploading…' : 'Upload'}
               </button>
@@ -389,7 +389,7 @@ export function BlogEditor({
 
       {/* Save confirmation toast — stays on the editor, no redirect. */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-lime/40 bg-[#0E1211] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-[rgba(86,184,127,0.40)] bg-[#0E1211] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
           <span aria-hidden className="h-2 w-2 rounded-full bg-lime" />
           {toast}
         </div>

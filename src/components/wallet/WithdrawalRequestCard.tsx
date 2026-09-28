@@ -63,7 +63,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           icon: <Loader2 className="w-4 h-4 animate-spin" />,
           label: 'Processing',
           color: 'text-lime-text',
-          bg: 'bg-lime/10',
+          bg: 'bg-lime-tint-bg',
           border: 'border-lime-tint-border'
         }
       case 'completed':
@@ -119,7 +119,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-lime/10 border border-lime-tint-border">
+          <div className="p-2 rounded-lg bg-lime-tint-bg border border-lime-tint-border">
             <DollarSign className="w-4 h-4 text-lime-text" />
           </div>
           <div>

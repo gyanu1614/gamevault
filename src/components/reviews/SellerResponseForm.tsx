@@ -103,7 +103,7 @@ export default function SellerResponseForm({
       </div>
 
       {/* Response Guidelines */}
-      <div className="p-3 bg-lime/10 border border-lime-tint-border rounded-lg">
+      <div className="p-3 bg-lime-tint-bg border border-lime-tint-border rounded-lg">
         <p className="text-xs text-text-secondary">
           <strong className="text-lime-text">Tip:</strong> Thank the customer, address concerns professionally, and offer solutions when appropriate.
         </p>
@@ -124,7 +124,7 @@ export default function SellerResponseForm({
         <button
           type="submit"
           disabled={isSubmitting || response.trim().length < 10}
-          className="px-4 py-2 text-sm rounded-lg bg-lime hover:bg-lime-hover-hover text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-4 py-2 text-sm rounded-lg bg-lime hover:bg-lime-hover text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isSubmitting ? (
             <>

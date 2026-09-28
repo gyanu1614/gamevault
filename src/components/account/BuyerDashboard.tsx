@@ -125,7 +125,7 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
                         </p>
                         <div className="mt-1.5">
                           {order.status === 'delivered' ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime/10 px-2 py-0.5 text-[11px] font-medium text-lime-text">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[11px] font-medium text-lime-text">
                               <CheckCircle2 className="h-3 w-3" /> Delivered
                             </span>
                           ) : order.status === 'disputed' ? (

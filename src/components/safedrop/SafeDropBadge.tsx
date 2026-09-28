@@ -34,7 +34,7 @@ const levelConfig = {
     icon: ShieldCheck,
     label: 'Enhanced Protection',
     color: 'text-lime-text',
-    bgColor: 'bg-lime/10',
+    bgColor: 'bg-lime-tint-bg',
     borderColor: 'border-lime-tint-border',
     description: 'Advanced protection for orders $100-$499',
     features: [

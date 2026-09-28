@@ -198,9 +198,8 @@ export default async function SEOLandingPage({
       <main className="min-h-screen">
         {/* ---- Hero ---- */}
         <section className="relative pt-16 pb-12 px-4 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-lime/[0.07] via-transparent to-transparent pointer-events-none" />
           <div className="mx-auto max-w-5xl text-center relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-tint-bg border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
               <Shield className="w-3.5 h-3.5" />
               SafeDrop Buyer Protection
             </div>
@@ -307,7 +306,7 @@ export default async function SEOLandingPage({
                         <td className="px-5 py-3.5 text-right">
                           <Link
                             href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime/10 hover:bg-lime/20 border border-lime-tint-border text-lime-text text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] border border-lime-tint-border text-lime-text text-xs font-semibold transition-colors"
                           >
                             Buy
                             <ArrowRight className="w-3 h-3" />
@@ -415,7 +414,7 @@ export default async function SEOLandingPage({
         {/* ---- CTA ---- */}
         <section className="py-14 px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="rounded-2xl bg-gradient-to-br from-lime/[0.12] to-cyan-500/[0.06] border border-lime-tint-border p-10">
+            <div className="rounded-2xl bg-gradient-to-br from-[rgba(86,184,127,0.12)] to-cyan-500/[0.06] border border-lime-tint-border p-10">
               <h2 className="text-2xl font-display font-bold text-foreground mb-3">
                 Ready to buy?
               </h2>

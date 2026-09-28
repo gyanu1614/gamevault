@@ -505,7 +505,7 @@ export default function WithdrawPage() {
                       <button
                         type="button"
                         onClick={() => setAmount((availableBalance ?? 0).toFixed(2))}
-                        className="absolute right-2 top-1/2 min-h-[36px] -translate-y-1/2 rounded-md border border-border-subtle px-2.5 py-1.5 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime/10"
+                        className="absolute right-2 top-1/2 min-h-[36px] -translate-y-1/2 rounded-md border border-border-subtle px-2.5 py-1.5 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg"
                       >
                         Max
                       </button>
