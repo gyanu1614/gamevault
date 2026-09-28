@@ -25,7 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
-import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
@@ -329,17 +329,24 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // The stored order_number IS the number (DM-XXXX-XXXX since migration
   // 20260921234649; older GV- rows stay as issued and render as stored).
   const orderNum       = displayOrderRef(order.order_number, order.id)
-  const listingImageUrl = order.listing?.images?.[0]
-  const gameImageUrl   = game?.image_url
+  // What was sold, by name and picture: "50 Diamonds" / "2,000 Robux" with
+  // the bundle or currency icon; items keep their own title and image. The
+  // game's name and logo are shown beside it, never instead of it.
   const listingTitle   = order.listing?.title
-    ? orderDisplayTitle({
-        title: order.listing.title,
+    ? orderItemTitle({
+        listingTitle: order.listing.title,
         quantity: (order as any).quantity,
-        isCurrency: category?.type === 'currency',
-        granularity: currencyCfg?.quantity_granularity ?? null,
-        hasBundles: (currencyCfg?.bundles?.length ?? 0) > 0,
+        categoryType: category?.type,
+        currencyConfig: currencyCfg as any,
+        bundleId: (order.listing as any)?.bundle_id ?? null,
       })
     : undefined
+  const itemImageUrl = orderItemImage({
+    categoryType: category?.type,
+    currencyConfig: currencyCfg as any,
+    bundleId: (order.listing as any)?.bundle_id ?? null,
+    listingImage: order.listing?.images?.[0] ?? null,
+  })
   const gameName       = game?.name
   const categoryName   = category?.name
 
@@ -461,14 +468,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
-        // Currency orders show the currency's own icon (the Robux coin, not
-        // the Roblox logo); items keep the item's image.
-        itemImageUrl={
-          (category?.type === 'currency' ? currencyCfg?.currency_icon_url : null) ??
-          listingImageUrl ??
-          gameImageUrl ??
-          null
-        }
+        itemImageUrl={itemImageUrl}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}

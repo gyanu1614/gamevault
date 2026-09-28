@@ -16,6 +16,7 @@ import { withOwnOrderFields } from '@/lib/orders/own-fields'
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 // Joined rows the order page renders (no emails — see getOrder).
 const ORDER_DETAIL_EMBEDS = `
@@ -46,7 +47,8 @@ const ORDER_DETAIL_EMBEDS = `
     platform,
     region,
     game_id,
-    game_category_id
+    game_category_id,
+    bundle_id
   )`
 
 /**
@@ -444,7 +446,7 @@ export async function markOrderAsDelivered(
           name: buyer.full_name || buyer.username || 'Gamer',
           orderId,
           orderNumber: (order as any).order_number || orderId.slice(0, 8).toUpperCase(),
-          listingTitle: (order as any).listing?.title || 'your item',
+          listingTitle: await orderItemTitleFor(orderId, (order as any).listing?.title || 'your item'),
           windowHours,
           confirmBy,
         })
@@ -607,7 +609,7 @@ export async function cancelOrder(orderId: string): Promise<{
           to: buyer.email,
           name: buyer.full_name || buyer.username || 'Gamer',
           orderNumber: orderRef,
-          listingTitle: cancelledListing?.title || 'your item',
+          listingTitle: await orderItemTitleFor(orderId, cancelledListing?.title || 'your item'),
           amount: refundAmount,
           destination: 'your DropMarket wallet',
           pending: false,
@@ -675,7 +677,7 @@ async function afterBuyerRelease(
         name: buyer.full_name || buyer.username || 'Gamer',
         orderId,
         orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
-        listingTitle: completedListing?.title || 'your item',
+        listingTitle: await orderItemTitleFor(orderId, completedListing?.title || 'your item'),
         totalPaid: order.total_amount ?? 0,
       })
     }
@@ -720,7 +722,7 @@ async function afterBuyerRelease(
         name: seller.full_name || seller.username || 'Gamer',
         orderId,
         orderNumber: orderRef,
-        listingTitle: soldListing?.title || 'your item',
+        listingTitle: await orderItemTitleFor(orderId, soldListing?.title || 'your item'),
         payout,
       })
     }
