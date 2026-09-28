@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { ilikeContains } from '@/lib/db/ilike'
+import { COLLECTED_ORDER_STATUSES, IN_PROGRESS_ORDER_STATUSES } from '@/lib/admin/status-sets'
 
 // The orders_status_check / orders_escrow_status_check values.
 export type OrderStatus =
@@ -16,11 +17,6 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded'
 export type EscrowStatus = 'pending' | 'held' | 'released' | 'refunded' | 'frozen'
-
-/** Buyer paid and the money was not returned: what Revenue and Fees sum. */
-const COLLECTED_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered', 'disputed', 'completed']
-/** Paid, not yet finished, not in dispute. */
-const IN_PROGRESS_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered']
 
 
 export interface OrderFilters {
@@ -215,7 +211,7 @@ export async function getOrderStats() {
     const supabase = await createClient()
 
     // Bounded GET counts (never head:true — see never-head-count-hot-path).
-    const countWhere = async (statuses?: OrderStatus[]) => {
+    const countWhere = async (statuses?: readonly OrderStatus[]) => {
       let q = supabase.from('orders').select('id', { count: 'exact' }).limit(1)
       if (statuses) q = q.in('status', statuses)
       const { count, error } = await q
@@ -226,7 +222,7 @@ export async function getOrderStats() {
     const [totalOrders, completedOrders, pendingOrders, disputedOrders] = await Promise.all([
       countWhere(),
       countWhere(['completed']),
-      countWhere(IN_PROGRESS_STATUSES),
+      countWhere(IN_PROGRESS_ORDER_STATUSES),
       countWhere(['disputed']),
     ])
 
@@ -240,7 +236,7 @@ export async function getOrderStats() {
       const { data, error } = await (supabase
         .from('orders')
         .select('id, total_amount, platform_fee')
-        .in('status', COLLECTED_STATUSES)
+        .in('status', COLLECTED_ORDER_STATUSES)
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1) as any)
       if (error) throw error
