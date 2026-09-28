@@ -48,6 +48,7 @@ import { exportMyData } from '@/lib/actions/gdpr'
 import { getOrders, getOrderStats } from '@/lib/actions/admin-orders'
 import { getAnalyticsData } from '@/lib/actions/admin-analytics'
 import { getDashboardStats } from '@/lib/actions/admin-dashboard'
+import { IN_PROGRESS_ORDER_STATUSES } from '@/lib/admin/status-sets'
 
 let fx: Fixture | null = null
 let orderId = ''
@@ -186,7 +187,11 @@ describe.skipIf(!hasEnv)('order reads under the orders column grant (integration
       const res = await getDashboardStats()
       expect(res.success, res.error).toBe(true)
       expect(res.stats!.ordersThisWeek).toBeGreaterThanOrEqual(2)
-      expect(res.stats!.activeOrders).toBeGreaterThanOrEqual(1)
+      // Active = paid, not yet finished (PR #106: unpaid 'pending' is not
+      // active). Same count as the DB over the shared status set.
+      const { count } = await fx!.svc.from('orders').select('id', { count: 'exact' })
+        .in('status', [...IN_PROGRESS_ORDER_STATUSES]).limit(1)
+      expect(res.stats!.activeOrders).toBe(count ?? 0)
     })
   })
 
