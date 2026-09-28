@@ -257,7 +257,7 @@ export function MarkDeliveredModal({
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="E.g. Sent the gift link — check Epic Games inbox."
-              className="w-full resize-none rounded-[10px] border border-border-default bg-bg-overlay/60 px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:border-lime/40 focus:outline-none"
+              className="w-full resize-none rounded-[10px] border border-border-default bg-bg-overlay/60 px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
             />
           </label>
         )}

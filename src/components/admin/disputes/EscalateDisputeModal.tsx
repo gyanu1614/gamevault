@@ -130,7 +130,7 @@ export default function EscalateDisputeModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Explain why this dispute requires senior moderator attention. Include any complexity, policy concerns, or special circumstances."
-              className="min-h-[120px] rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+              className="min-h-[120px] rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
               required
             />
             <p className="text-xs text-text-tertiary">

@@ -240,7 +240,7 @@ export default function GamesPageClient({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter games…"
-              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
             />
           </div>
           <AddGameDialog />

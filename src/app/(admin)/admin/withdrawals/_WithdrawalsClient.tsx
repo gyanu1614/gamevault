@@ -305,7 +305,7 @@ export default function WithdrawalsClient({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Internal notes (optional)"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
           />
           <DialogFooter>
             <Button variant="ghost" onClick={closeDialog} disabled={busy}>
@@ -350,7 +350,7 @@ export default function WithdrawalsClient({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason (shown to the seller)"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
           />
           <DialogFooter>
             <Button variant="ghost" onClick={closeDialog} disabled={busy}>
@@ -397,14 +397,14 @@ export default function WithdrawalsClient({
             value={txRef}
             onChange={(e) => setTxRef(e.target.value)}
             placeholder="Tx hash / Payoneer payment reference (required — sent to the seller)"
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 font-mono text-[12.5px] text-text-primary placeholder:font-sans placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 font-mono text-[12.5px] text-text-primary placeholder:font-sans placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
           />
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Internal notes (optional)"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
           />
           <DialogFooter>
             <Button variant="ghost" onClick={closeDialog} disabled={busy}>

@@ -119,7 +119,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
               'border border-white/[0.10]',
               'text-foreground placeholder:text-muted-foreground',
               // Focus
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-lime',
+              'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-focus-border',
               // Disabled
               'disabled:opacity-50 disabled:cursor-not-allowed',
               // Transition
@@ -189,7 +189,7 @@ export const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>
             'bg-bg-raised-hover backdrop-blur-sm',
             'border border-white/[0.10]',
             'text-foreground placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-lime',
+            'focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-focus-border',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-all duration-150',
             error && 'border-red-500/50 focus:ring-red-500/40',

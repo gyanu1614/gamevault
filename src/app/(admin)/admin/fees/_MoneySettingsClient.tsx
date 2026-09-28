@@ -20,7 +20,7 @@ const SETTING_LABELS: Record<MoneySettingKey, { label: string; unit: string; hel
   payout_details_freeze_hours: { label: 'Payout-details freeze', unit: 'hours', help: 'Withdrawals pause for this long after a seller changes their payout address or Payoneer email.' },
 }
 
-const inputCls = 'w-28 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-[13.5px] tabular-nums text-text-primary focus:outline-none focus:ring-1 focus:ring-lime-text'
+const inputCls = 'w-28 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-[13.5px] tabular-nums text-text-primary focus:outline-none focus:ring-1 focus:ring-focus-ring'
 
 export function MoneySettingsClient({ initial }: { initial: Data }) {
   const router = useRouter()

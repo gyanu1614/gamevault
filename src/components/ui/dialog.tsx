@@ -70,7 +70,7 @@ const DialogContent = React.forwardRef<
       {children}
       {/* p-2.5 at inset-2.5 keeps the icon in the same visual spot as the
           old p-1 at inset-4 while growing the touch target 24px → 36px. */}
-      <DialogPrimitive.Close className="absolute right-2.5 top-2.5 rounded-sm p-2.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-lime-tint-bg disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-2.5 top-2.5 rounded-sm p-2.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-focus-soft disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

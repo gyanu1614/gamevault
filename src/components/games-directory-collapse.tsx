@@ -1,7 +1,7 @@
 /**
  * GamesDirectoryCollapse — client shell for the game directory inside the
  * footer (see footer-game-links.tsx). Collapsed by default: the first rows
- * show, the rest sits under a fade with a centred "Show All" button. The
+ * show, the rest sits under a frosted fade with a centred bold "Show All". The
  * link grid arrives as server-rendered children, so every <a href> is in the
  * initial HTML regardless of this state — the collapse is height only and
  * never unmounts.
@@ -18,7 +18,7 @@
  *      frame instead of fading out with the expansion.
  *   3. The button was positioned `bottom-5` / `bottom-0`, so it teleported
  *      between two places mid-animation. It now sits in normal flow beneath
- *      the panel and never moves.
+ *      the panel, pulled up onto the fade by a margin that transitions.
  */
 
 'use client'
@@ -26,11 +26,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
-/** Collapsed height in px. One game block measures ~153px at GameBoost's
-    own type scale (28px logo + 14px gap + 4 categories at 19.5px line-height
-    with 11px between), so this shows the first row whole plus a hint of the
-    second under the fade. */
-const COLLAPSED = 200
+/** Collapsed height in px. One game block is ~98px (22px logo row + 4px +
+    4 categories at 18px), rows 20px apart, so this shows the first row whole
+    plus the top of the second under the fade. */
+const COLLAPSED = 158
 
 export function GamesDirectoryCollapse({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
@@ -85,29 +84,42 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
         <div ref={innerRef}>{children}</div>
 
         {/* Always mounted, opacity-animated — a conditionally rendered fade
-            disappeared on frame one and made the expansion look like a cut. */}
+            disappeared on frame one and made the expansion look like a cut.
+            A blur that strengthens toward the bottom plus a fade to the
+            ground, so the Show All text sits on frosted black. Explicit
+            rgba: a `/60` modifier on a token colour emits no CSS. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-bg-base via-bg-base/60 to-transparent transition-opacity duration-300"
-          style={{ opacity: open ? 0 : 1 }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-20 transition-opacity duration-300"
+          style={{
+            opacity: open ? 0 : 1,
+            background:
+              'linear-gradient(to top, var(--color-bg-base) 12%, rgba(23,27,33,0.72) 55%, rgba(23,27,33,0) 100%)',
+            backdropFilter: 'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+            maskImage: 'linear-gradient(to top, #000 40%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to top, #000 40%, transparent)',
+          }}
         />
       </div>
 
-      {/* In normal flow, not absolutely positioned: the button stays put
-          instead of jumping between two anchor points as the panel moves. */}
-      <div className="mt-5 flex justify-center">
+      {/* Plain bold text, no box. Collapsed it rides up onto the frosted
+          fade (negative margin); open it sits just under the grid. The
+          margin transitions, so it glides rather than jumping. */}
+      <div
+        className="relative flex justify-center transition-[margin] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ marginTop: open ? 12 : -30 }}
+      >
         <button
           type="button"
           aria-expanded={open}
           onClick={toggle}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-bg-overlay px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_6px_20px_-8px_rgba(0,0,0,0.7)] transition-colors duration-200 hover:bg-bg-overlay-2"
+          className="inline-flex h-8 items-center gap-1.5 px-2 text-[14px] font-bold text-white transition-opacity duration-200 [text-shadow:0_1px_10px_rgba(0,0,0,0.8)] hover:opacity-80"
         >
           {open ? 'Show Less' : 'Show All'}
           <ChevronDown
             aria-hidden
-            className={`h-4 w-4 text-text-tertiary transition-transform duration-300 ${
-              open ? 'rotate-180' : ''
-            }`}
+            className={`h-4 w-4 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
           />
         </button>
       </div>

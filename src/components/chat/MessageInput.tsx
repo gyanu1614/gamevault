@@ -87,7 +87,7 @@ export default function MessageInput({
           rows={1}
           className={cn(
             'min-h-[44px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary sm:min-h-[40px]',
-            'focus-visible:border-lime focus-visible:ring-2 focus-visible:ring-lime/30 focus-visible:ring-offset-0',
+            'focus-visible:border-focus-border focus-visible:ring-2 focus-visible:ring-focus-soft focus-visible:ring-offset-0',
           )}
         />
         <Button

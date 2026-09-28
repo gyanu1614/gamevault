@@ -79,7 +79,7 @@ export function OrderFilters() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by order number, buyer, seller, or listing..."
-            className="w-full rounded-lg border border-border-default bg-bg-base py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+            className="w-full rounded-lg border border-border-default bg-bg-base py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
           />
           {searchInput && (
             <button

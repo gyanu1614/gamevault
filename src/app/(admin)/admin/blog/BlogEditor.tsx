@@ -37,7 +37,7 @@ type GameOption = { slug: string; name: string }
 
 const label = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400'
 const field =
-  'w-full rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition focus:border-lime/60'
+  'w-full rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition focus:border-focus-border'
 
 export function BlogEditor({
   post,

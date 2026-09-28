@@ -96,29 +96,29 @@ export async function FooterGameLinks() {
   const collapsible = games.length > 6
 
   const grid = (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
           {games.map((g) => (
             <div key={g.slug} className="min-w-0">
-              <Link href={g.href} className="group flex items-center gap-2">
+              <Link href={g.href} className="group flex items-center gap-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={g.icon}
                   alt=""
-                  width={28}
-                  height={28}
+                  width={22}
+                  height={22}
                   loading="lazy"
-                  className="h-7 w-7 shrink-0 rounded-lg border border-white/10 object-cover"
+                  className="h-[22px] w-[22px] shrink-0 rounded-md border border-white/10 object-cover"
                 />
-                <span className="truncate text-[14px] font-semibold text-white transition-colors group-hover:text-lime-text">
+                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-lime-text">
                   {g.name}
                 </span>
               </Link>
-              <ul className="mt-[7px] space-y-0">
+              <ul className="mt-1 space-y-0">
                 {g.cats.map((c) => (
                   <li key={c.href}>
                     <Link
                       href={c.href}
-                      className="text-[12px] leading-[19.5px] text-text-secondary transition-colors hover:text-white"
+                      className="text-[12px] leading-[18px] text-text-secondary transition-colors hover:text-white"
                     >
                       {/* Visible, not sr-only: "Fortnite Accounts" is the
                           anchor text we want indexed AND the label a reader
@@ -139,7 +139,7 @@ export async function FooterGameLinks() {
     // No heading, no "Browse all" link and no border: this renders INSIDE
     // the footer now, so a title row and a rule would read as a second
     // section. GameBoost's directory opens straight into the game grid.
-    <nav aria-label="Game directory" className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+    <nav aria-label="Game directory" className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
       {collapsible ? <GamesDirectoryCollapse>{grid}</GamesDirectoryCollapse> : grid}
     </nav>
   )

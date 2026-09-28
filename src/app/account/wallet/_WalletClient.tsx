@@ -700,7 +700,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
             placeholder={activeTab === 'purchases' ? 'Search by item, game, order…' : 'Search by item, buyer, order…'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-1 focus:ring-lime/20 transition-all"
+            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-1 focus:ring-focus-soft transition-all"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors">
@@ -712,7 +712,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-lime focus:outline-none transition-all"
+            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-focus-border focus:outline-none transition-all"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>

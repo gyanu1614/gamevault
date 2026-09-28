@@ -403,7 +403,7 @@ export default function ListingDetailClient({
                 aria-label={`Images for ${listing.title}`}
                 tabIndex={0}
                 onKeyDown={onGalleryKey}
-                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-lime-tint-bg"
+                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-focus-soft"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {heroImg ? (

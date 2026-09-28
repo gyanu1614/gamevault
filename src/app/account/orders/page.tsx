@@ -679,7 +679,7 @@ function OrdersContent() {
               placeholder="Search listings…"
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
+              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-sm"
             />
             {filters.searchQuery && (
               <button

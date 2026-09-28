@@ -307,12 +307,12 @@ function FieldTree(props: FieldTreeProps) {
             onChange={(e) => props.setDraftName(e.target.value)}
             placeholder="e.g. Item Type"
             autoFocus
-            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           />
           <select
             value={props.draftType}
             onChange={(e) => props.setDraftType(e.target.value as AttrType)}
-            className="h-9 w-full rounded-lg border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-9 w-full rounded-lg border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           >
             {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
@@ -579,12 +579,12 @@ function AddSubFieldRow({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Rarity"
-            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AttrType)}
-            className="h-8 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-8 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           >
             {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
@@ -966,7 +966,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             onChange={(e) => setBulkText(e.target.value)}
             placeholder={'Garama and Madundung\nLa Vacca Saturno Saturnita\nTralalero Tralala\n…'}
             rows={8}
-            className="w-full resize-y rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="w-full resize-y rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           />
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10.5px] text-text-tertiary">
@@ -1020,7 +1020,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Add a choice (e.g. Pet, Egg, Cash)…"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           />
           <button
             type="button"
@@ -1158,13 +1158,13 @@ function OptionRow({
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
       />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="stored value"
-        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 font-mono text-xs text-text-secondary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 font-mono text-xs text-text-secondary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
       />
       <div className="flex justify-end gap-1">
         {dirty && (
@@ -1616,7 +1616,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
 // ─── Small field primitives ──────────────────────────────────────────────────
 
 const inputCls =
-  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg'
+  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft'
 
 function Field({
   label, required, hint, children, className,

@@ -53,7 +53,7 @@
   --color-accent-text:     #56B87F;
   /* green/tint   → active nav item bg                        */
   --color-accent-tint-bg:  rgba(86,184,127,0.12);
-  /* green/border → focus ring                                */
+  /* green/border → accent borders (NOT focus: focus is neutral) */
   --color-accent-tint-border: rgba(86,184,127,0.30);
 
   /* V2-specific green extras                                 */
@@ -81,7 +81,15 @@
   --color-state-hover:     rgba(255,255,255,0.04);
   --color-state-pressed:   rgba(255,255,255,0.07);
   --color-state-selected:  rgba(86,184,127,0.12);
-  --color-focus-ring:      rgba(86,184,127,0.55);
+  /* Focus — NEUTRAL, never the accent (owner rule 2026-09-26). A focused
+     control reads as "lit", not "green": a thin near-white ring, or the
+     field's own border brightening. Use these tokens (Tailwind: ring-focus-ring,
+     ring-focus-soft, border-focus-border, shadow-focus) — never lime/accent
+     classes on a focus/focus-visible/focus-within state. */
+  --color-focus-ring:      rgba(233,237,242,0.45);
+  --color-focus-ring-soft: rgba(233,237,242,0.12);
+  --color-focus-border:    rgba(233,237,242,0.36);
+  --shadow-focus:          0 0 0 1.5px var(--color-focus-ring);
 
   /* ── Layout ────────────────────────────────────────────── */
   --container-default: 1320px;
@@ -202,7 +210,7 @@
 /* Active tab underline — override the Tailwind arbitrary colour class */
 .theme-v2 .bg-\[#3f9d5a\] {
   background-color: var(--color-accent-text) !important; /* #56B87F — green/text */
-  box-shadow: 0 0 10px var(--color-focus-ring) !important;
+  box-shadow: 0 0 10px var(--color-accent-tint-border) !important; /* active tab glow, not focus */
 }
 
 /* Edge-highlight inner top — utility class used inside .theme-v2 */

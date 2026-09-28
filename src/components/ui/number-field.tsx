@@ -54,7 +54,7 @@ export const NumberField = React.forwardRef<HTMLDivElement, NumberFieldProps>(
           ref={ref}
           className={cn(
             'flex h-10 w-full items-stretch overflow-hidden rounded-md border border-border-default bg-transparent',
-            'transition-colors focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg',
+            'transition-colors focus-within:border-focus-border focus-within:ring-2 focus-within:ring-focus-soft',
             'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
             className,
           )}

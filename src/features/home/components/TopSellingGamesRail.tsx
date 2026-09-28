@@ -61,7 +61,7 @@ export function TopSellingGamesRail() {
               aria-hidden
               className="relative aspect-[1/1.1] overflow-hidden border border-border-subtle"
               style={{
-                borderRadius: 'var(--radius-lg)',
+                borderRadius: 'var(--radius-card)',
                 // Same recess as the listing cards — see ListingCard.
                 backgroundColor: 'var(--color-bg-well, #181D25)',
                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.30)',

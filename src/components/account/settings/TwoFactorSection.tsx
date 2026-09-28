@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { cn } from '@/lib/utils'
 
 const codeInputCls =
-  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-center text-lg font-semibold tracking-[0.4em] text-text-primary placeholder:tracking-normal placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg'
+  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-center text-lg font-semibold tracking-[0.4em] text-text-primary placeholder:tracking-normal placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft'
 
 export default function TwoFactorSection() {
   const [loading, setLoading] = useState(true)
