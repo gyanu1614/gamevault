@@ -39,6 +39,9 @@ export async function getOrder(orderId: string): Promise<{
       }
     }
 
+    // No emails: this payload is rendered into the OTHER party's page (and
+    // getOrder is a callable server action). Admin pages load contact
+    // details separately. Seller trust fields feed the store card.
     const { data: order, error } = await supabase
       .from('orders')
       .select(`
@@ -46,16 +49,18 @@ export async function getOrder(orderId: string): Promise<{
         buyer:buyer_id (
           id,
           username,
-          email,
           avatar_url
         ),
         seller:seller_id (
           id,
           username,
-          email,
           avatar_url,
           seller_tier,
-          shop_name
+          shop_name,
+          shop_slug,
+          is_verified,
+          seller_rating,
+          total_reviews
         ),
         listing:listing_id (
           id,
