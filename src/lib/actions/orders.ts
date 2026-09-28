@@ -547,11 +547,8 @@ export async function cancelOrder(orderId: string): Promise<{
       await drainCancelOutboxForOrder(orderId)
     }
 
-    // Best-effort timestamp for the audit trail (status already flipped).
-    await (supabase
-      .from('orders')
-      .update as any)({ cancelled_at: new Date().toISOString() })
-      .eq('id', orderId)
+    // cancelled_at was stamped by validate_order_status_transition inside the
+    // RPC's transaction; sessions hold no UPDATE on orders (20260928142017_orders_update_revoke).
 
     await logOrderAction('cancelled', orderId, user.id, {
       reason: 'buyer_cancelled',

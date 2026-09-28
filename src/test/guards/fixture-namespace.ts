@@ -111,14 +111,28 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * audit trail there is never rewritten by a test).
  */
 export function purgeAuditLogs(userIds: string[], failures: string[]): void {
-  const ids = userIds.filter((id) => UUID_RE.test(id))
+  deleteAuditLogs('user_id', userIds, failures)
+}
+
+/**
+ * Same, for rows keyed by the record they describe. Trigger-written rows
+ * (validate_order_status_transition's ORDER_STATUS_CHANGE) carry
+ * user_id = auth.uid(), which is NULL under the service-role RPCs that move
+ * order status — `purgeAuditLogs` cannot find those by user.
+ */
+export function purgeAuditLogsForRecords(recordIds: string[], failures: string[]): void {
+  deleteAuditLogs('record_id', recordIds, failures)
+}
+
+function deleteAuditLogs(column: 'user_id' | 'record_id', values: string[], failures: string[]): void {
+  const ids = values.filter((id) => UUID_RE.test(id))
   if (!ids.length || !targetIsLocal()) return
   try {
     execFileSync('psql', [testDbUrl(), '-X', '-v', 'ON_ERROR_STOP=1', '-q', '-c',
       `BEGIN; ALTER TABLE public.audit_logs DISABLE TRIGGER trg_prevent_audit_log_delete; ` +
-      `DELETE FROM public.audit_logs WHERE user_id IN ('${ids.join("','")}'); ` +
+      `DELETE FROM public.audit_logs WHERE ${column} IN ('${ids.join("','")}'); ` +
       `ALTER TABLE public.audit_logs ENABLE TRIGGER trg_prevent_audit_log_delete; COMMIT;`], { stdio: 'pipe' })
   } catch (e: any) {
-    failures.push(`audit_logs purge: ${e?.stderr?.toString() ?? e}`)
+    failures.push(`audit_logs purge (${column}): ${e?.stderr?.toString() ?? e}`)
   }
 }
