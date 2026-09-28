@@ -10,6 +10,7 @@ import { updateListing as updateListingAction, bulkUpdateListings as bulkUpdateL
 import { slugify } from '@/lib/utils'
 import { type SellerTier, DEFAULT_TIER } from '@/lib/seller/tiers'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 const supabase = createClient()
 
@@ -337,56 +338,61 @@ export const ordersApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    let query = supabase
-      .from('orders')
-      .select(`
-        ${SELLER_ORDER_COLUMNS},
-        listing:listing_id (
-          id,
-          title,
-          game_id,
-          game_category_id,
-          images,
-          game:games!listings_game_id_fkey (
+    // Paged: one PostgREST response stops at 1000 rows, silently.
+    const build = () => {
+      let query = supabase
+        .from('orders')
+        .select(`
+          ${SELLER_ORDER_COLUMNS},
+          listing:listing_id (
             id,
-            name,
-            slug,
-            image_url
+            title,
+            game_id,
+            game_category_id,
+            images,
+            game:games!listings_game_id_fkey (
+              id,
+              name,
+              slug,
+              image_url
+            ),
+            category:game_categories!listings_game_category_id_fkey (
+              id,
+              name,
+              slug,
+              type
+            )
           ),
-          category:game_categories!listings_game_category_id_fkey (
+          buyer:buyer_id (
             id,
-            name,
-            slug,
-            type
+            username,
+            avatar_url,
+            shop_name,
+            shop_slug
           )
-        ),
-        buyer:buyer_id (
-          id,
-          username,
-          avatar_url,
-          shop_name,
-          shop_slug
-        )
-      `)
-      .eq('seller_id', user.id)  // CRITICAL: Only show current seller's orders
-      // Workstream E — hide unpaid 'pending' orders from the seller's Sold
-      // Orders. An order the seller can't act on (payment not confirmed) must
-      // not appear in their list; it becomes visible the moment the webhook
-      // flips it to 'paid'. 'cancelled' is likewise hidden: it only ever means
-      // an order that was NEVER paid (timed out / abandoned — paid orders that
-      // come back are 'refunded'), so the seller was never involved.
-      .neq('status', 'pending')
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
+        `)
+        .eq('seller_id', user.id)  // CRITICAL: Only show current seller's orders
+        // Workstream E — hide unpaid 'pending' orders from the seller's Sold
+        // Orders. An order the seller can't act on (payment not confirmed) must
+        // not appear in their list; it becomes visible the moment the webhook
+        // flips it to 'paid'. 'cancelled' is likewise hidden: it only ever means
+        // an order that was NEVER paid (timed out / abandoned — paid orders that
+        // come back are 'refunded'), so the seller was never involved.
+        .neq('status', 'pending')
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.search && filters.search.trim()) {
+        query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
+      }
+      return query
     }
-    if (filters?.search && filters.search.trim()) {
-      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
-    }
-
-    const { data, error } = await query
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      build().order('id', { ascending: false }).range(from, to),
+    )
 
     if (error) throw error
     return data || []
@@ -446,55 +452,60 @@ export const buyerOrdersApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    let query = supabase
-      .from('orders')
-      .select(`
-        ${BUYER_ORDER_COLUMNS},
-        listing:listing_id (
-          id,
-          title,
-          game_id,
-          game_category_id,
-          images,
-          delivery_method,
-          delivery_time,
-          game:games!listings_game_id_fkey (
+    // Paged: one PostgREST response stops at 1000 rows, silently.
+    const build = () => {
+      let query = supabase
+        .from('orders')
+        .select(`
+          ${BUYER_ORDER_COLUMNS},
+          listing:listing_id (
             id,
-            name,
-            slug,
-            image_url
+            title,
+            game_id,
+            game_category_id,
+            images,
+            delivery_method,
+            delivery_time,
+            game:games!listings_game_id_fkey (
+              id,
+              name,
+              slug,
+              image_url
+            ),
+            category:game_categories!listings_game_category_id_fkey (
+              id,
+              name,
+              slug,
+              type
+            )
           ),
-          category:game_categories!listings_game_category_id_fkey (
+          seller:seller_id (
             id,
-            name,
-            slug,
-            type
+            username,
+            avatar_url,
+            seller_tier,
+            shop_name,
+            shop_slug
           )
-        ),
-        seller:seller_id (
-          id,
-          username,
-          avatar_url,
-          seller_tier,
-          shop_name,
-          shop_slug
-        )
-      `)
-      .eq('buyer_id', user.id)  // Filter by buyer_id instead of seller_id
-      // 'cancelled' only ever means never-paid (abandoned checkout timed out or
-      // the buyer cancelled before paying) — dead weight in the list, so it's
-      // hidden. Genuinely refunded orders carry status 'refunded' and stay.
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
+        `)
+        .eq('buyer_id', user.id)  // Filter by buyer_id instead of seller_id
+        // 'cancelled' only ever means never-paid (abandoned checkout timed out or
+        // the buyer cancelled before paying) — dead weight in the list, so it's
+        // hidden. Genuinely refunded orders carry status 'refunded' and stay.
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters?.search && filters.search.trim()) {
+        query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
+      }
+      return query
     }
-    if (filters?.search && filters.search.trim()) {
-      query = query.ilike('order_number_search', orderNumberSearchPattern(filters.search))
-    }
-
-    const { data, error } = await query
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      build().order('id', { ascending: false }).range(from, to),
+    )
 
     if (error) throw error
     return data || []

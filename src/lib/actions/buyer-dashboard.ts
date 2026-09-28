@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { lifetimeSpentOf } from '@/lib/wallet/wallet-rows'
 import { sellerDisplayName } from '@/lib/seller/identity'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 export interface BuyerActiveOrder {
   id: string
@@ -49,13 +50,18 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
   if (!user) return null
 
   const [ordersRes, wishlistRes, reviewsRes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select(
-        'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:profiles!seller_id(username, shop_name)',
-      )
-      .eq('buyer_id', user.id)
-      .order('created_at', { ascending: false }),
+    // Paged: Total Spent is a sum — a 1000-row cap would under-count it.
+    fetchAllRows<any>((from, to) =>
+      supabase
+        .from('orders')
+        .select(
+          'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:profiles!seller_id(username, shop_name)',
+        )
+        .eq('buyer_id', user.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    ),
     supabase
       .from('wishlists')
       .select('id', { count: 'exact' })

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
+import { fetchAllRows, chunk } from '@/lib/db/fetch-all'
 import { createTopUpCheckout } from '@/lib/actions/wallet'
 import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
 // Ledger-backed balance (funds-flow cutover): refund credits post to the
@@ -73,23 +74,28 @@ interface PurchaseTransaction {
 async function fetchPurchases(userId: string) {
   const supabase = createClient()
 
-  const { data: rawOrders, error } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      order_number,
-      total_amount,
-      status,
-      created_at,
-      listing:listing_id (
-        title,
-        images,
-        game:game_id (name, emoji, image_url),
-        category:game_categories!listings_game_category_id_fkey (name)
-      )
-    `)
-    .eq('buyer_id', userId)
-    .order('created_at', { ascending: false })
+  // Paged: one PostgREST response stops at 1000 rows, silently.
+  const { data: rawOrders, error } = await fetchAllRows<any>((from, to) =>
+    supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        total_amount,
+        status,
+        created_at,
+        listing:listing_id (
+          title,
+          images,
+          game:game_id (name, emoji, image_url),
+          category:game_categories!listings_game_category_id_fkey (name)
+        )
+      `)
+      .eq('buyer_id', userId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to),
+  )
 
   if (error) {
     console.error('[Wallet] Failed to fetch purchases:', error)
@@ -148,30 +154,34 @@ interface SaleTransaction {
 async function fetchSales(userId: string): Promise<SaleTransaction[]> {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      order_number,
-      subtotal,
-      total_amount,
-      seller_payout,
-      status,
-      created_at,
-      buyer:profiles!buyer_id(username),
-      listing:listing_id (
-        title,
-        images,
-        game:game_id (name, emoji, image_url),
-        category:game_categories!listings_game_category_id_fkey (name)
-      )
-    `)
-    .eq('seller_id', userId)
-    // Every PAID sale, whatever happened next. (Was: 'processing' and
-    // 'confirmed', which are not order statuses, and delivering / disputed /
-    // refunded sales silently vanished.)
-    .in('status', ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded'])
-    .order('created_at', { ascending: false })
+  const { data, error } = await fetchAllRows<any>((from, to) =>
+    supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        subtotal,
+        total_amount,
+        seller_payout,
+        status,
+        created_at,
+        buyer:profiles!buyer_id(username),
+        listing:listing_id (
+          title,
+          images,
+          game:game_id (name, emoji, image_url),
+          category:game_categories!listings_game_category_id_fkey (name)
+        )
+      `)
+      .eq('seller_id', userId)
+      // Every PAID sale, whatever happened next. (Was: 'processing' and
+      // 'confirmed', which are not order statuses, and delivering / disputed /
+      // refunded sales silently vanished.)
+      .in('status', ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded'])
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to),
+  )
 
   if (error) {
     console.error('[fetchSales] Error:', error)
@@ -184,18 +194,26 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
   // kept is dispute_resolutions.seller_payout_amount (latest resolved dispute).
   const kept = new Map<string, number>()
   const completedIds = rows.filter((o) => o.status === 'completed').map((o) => o.id)
-  if (completedIds.length > 0) {
-    const { data: partial } = await supabase
-      .from('disputes')
-      .select('transaction_id, resolved_at, resolution:dispute_resolutions(seller_payout_amount, resolution_type)')
-      .in('transaction_id', completedIds)
-      .eq('status', 'resolved_partial')
-      .order('resolved_at', { ascending: true }) as any
-    for (const d of (partial ?? []) as any[]) {
-      const r = Array.isArray(d.resolution) ? d.resolution[0] : d.resolution
-      if (r?.resolution_type === 'partial_refund' && r.seller_payout_amount != null) {
-        kept.set(d.transaction_id, Number(r.seller_payout_amount))
-      }
+  // 100 ids per request: a long .in() list overflows the URL.
+  const partialRows = (
+    await Promise.all(
+      chunk(completedIds).map(async (ids) => {
+        const { data: part } = await supabase
+          .from('disputes')
+          .select('transaction_id, resolved_at, resolution:dispute_resolutions(seller_payout_amount, resolution_type)')
+          .in('transaction_id', ids)
+          .eq('status', 'resolved_partial')
+          .order('resolved_at', { ascending: true }) as any
+        return (part ?? []) as any[]
+      }),
+    )
+  ).flat()
+  // Oldest first, so the latest resolution per order wins below.
+  partialRows.sort((a, b) => String(a.resolved_at ?? '').localeCompare(String(b.resolved_at ?? '')))
+  for (const d of partialRows) {
+    const r = Array.isArray(d.resolution) ? d.resolution[0] : d.resolution
+    if (r?.resolution_type === 'partial_refund' && r.seller_payout_amount != null) {
+      kept.set(d.transaction_id, Number(r.seller_payout_amount))
     }
   }
 

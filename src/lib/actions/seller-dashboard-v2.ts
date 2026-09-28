@@ -16,6 +16,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { isPaidOrder, pendingPayoutOf } from '@/lib/wallet/wallet-rows'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 export interface DashboardKpis {
   netEarnings: number        // completed payouts in window
@@ -92,11 +93,17 @@ export async function getSellerDashboard(windowDays = 7): Promise<DashboardData 
 
   // Pull everything in parallel.
   const [ordersRes, listingsRes, reviewsRes, convosRes, profileRes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, paid_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
-      .eq('seller_id', user.id)
-      .order('created_at', { ascending: false }),
+    // Paged: pending payout / revenue are sums — a 1000-row cap would
+    // under-count them.
+    fetchAllRows<any>((from, to) =>
+      supabase
+        .from('orders')
+        .select('id, order_number, status, escrow_status, seller_payout, total_amount, created_at, paid_at, completed_at, auto_release_at, seller_marked_delivered_at, delivered_at, listing:listings!orders_listing_id_fkey(title)')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    ),
     supabase
       .from('listings')
       .select('id, title, price, views, view_count, sales, status, delivery_time')
