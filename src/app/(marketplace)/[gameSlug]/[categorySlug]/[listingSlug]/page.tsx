@@ -164,7 +164,7 @@ async function getSellerStats(sellerId: string) {
     { count: totalSales },
     { count: activeListings }
   ] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact' })
+    supabase.from('orders').select('id', { count: 'exact' })
       .eq('seller_id', sellerId)
       .eq('status', 'completed').limit(1),
     supabase.from('listings').select('*', { count: 'exact' })

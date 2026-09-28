@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { ilikeContains } from '@/lib/db/ilike'
@@ -82,7 +83,10 @@ export async function getOrders(filters: OrderFilters = {}) {
       limit = 20,
     } = filters
 
-    let query = supabase
+    // Payout + fee are private order columns a session client cannot select
+    // (orders column grant) — read orders with the service role, only after
+    // requireAdmin above.
+    let query = createServiceRoleClient()
       .from('orders')
       .select(`
         id,
@@ -208,7 +212,9 @@ export async function getOrders(filters: OrderFilters = {}) {
 export async function getOrderStats() {
   await requireAdmin()
   try {
-    const supabase = await createClient()
+    // Fees are a private order column (orders column grant): service role,
+    // only after requireAdmin above.
+    const supabase = createServiceRoleClient()
 
     // Bounded GET counts (never head:true — see never-head-count-hot-path).
     const countWhere = async (statuses?: readonly OrderStatus[]) => {
