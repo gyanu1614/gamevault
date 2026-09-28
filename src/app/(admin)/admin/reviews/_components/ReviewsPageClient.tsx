@@ -496,7 +496,7 @@ export default function ReviewsPageClient({
 
                         {review.order_id && (
                           <Link
-                            href={`/orders/${review.order_id}`}
+                            href={`/admin/orders/${review.order_id}`}
                             className="px-3 py-1.5 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
                           >
                             <ExternalLink className="w-3 h-3" />
