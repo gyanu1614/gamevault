@@ -8,7 +8,22 @@
  * expect without parsing the pills. One-line title + one-line caption.
  */
 
-import { Clock, CheckCircle2, AlertTriangle, Wallet, RefreshCw, XCircle, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react'
+import {
+  CheckCircle2,
+  Wallet,
+  XCircle,
+  ThumbsUp,
+  ThumbsDown,
+  CreditCard,
+  Hourglass,
+  Truck,
+  PackageCheck,
+  BadgeCheck,
+  ShieldAlert,
+  MessagesSquare,
+  Undo2,
+  TimerOff,
+} from 'lucide-react'
 import Link from 'next/link'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
@@ -24,9 +39,6 @@ interface StatusStripProps {
   overdue?: boolean
   /** Where the dispute CTA links to. Optional — falls back to a noop hash. */
   disputeHref?: string
-  /** PR 7: end of the buyer's dispute window; a completed order still shows
-   *  "Open Dispute" while now < disputeUntil. */
-  disputeUntil?: string | null
   /** Seller only: opens the Mark As Delivered modal. */
   onMarkDelivered?: () => void
   /** Buyer only: opens the Confirm Receipt modal. */
@@ -80,25 +92,25 @@ const STRIPS: Record<
 > = {
   buyer: {
     pending: {
-      Icon: Clock,
+      Icon: CreditCard,
       title: 'Awaiting Payment',
       caption: 'Complete your crypto payment to start this order.',
       tone: 'amber',
     },
     paid: {
-      Icon: Clock,
+      Icon: Hourglass,
       title: 'Waiting On The Seller',
       caption: "You'll be notified the moment they start delivering.",
       tone: 'amber',
     },
     delivering: {
-      Icon: Clock,
+      Icon: Truck,
       title: 'Delivery In Progress',
-      caption: "Seller is preparing your order — they'll mark it delivered soon.",
+      caption: "The seller is preparing your order and will mark it delivered soon.",
       tone: 'amber',
     },
     delivered: {
-      Icon: CheckCircle2,
+      Icon: PackageCheck,
       title: 'Order Delivered',
       // V21/P5.d — caption dropped; the buyer-delivered state renders a
       // bespoke 2-row layout in the component body below (Confirm
@@ -107,13 +119,13 @@ const STRIPS: Record<
       tone: 'lime',
     },
     completed: {
-      Icon: CheckCircle2,
+      Icon: BadgeCheck,
       title: 'Order Complete',
       caption: 'The seller has been paid. Leave a review when you can.',
       tone: 'lime',
     },
     disputed: {
-      Icon: AlertTriangle,
+      Icon: ShieldAlert,
       title: 'Dispute Under Review',
       caption: 'A DropMarket admin is reviewing. Support responds within 24 to 48 hours.',
       tone: 'amber',
@@ -136,19 +148,19 @@ const STRIPS: Record<
   },
   seller: {
     paid: {
-      Icon: AlertTriangle,
+      Icon: MessagesSquare,
       title: 'Action Required',
       caption: 'Chat with the buyer to begin delivery.',
       tone: 'amber',
     },
     delivering: {
-      Icon: Clock,
+      Icon: Truck,
       title: 'Delivery In Progress',
       caption: 'Send the goods, then mark as delivered.',
       tone: 'amber',
     },
     delivered: {
-      Icon: CheckCircle2,
+      Icon: PackageCheck,
       title: 'Order Delivered',
       caption: 'Waiting on the buyer to confirm delivery.',
       tone: 'lime',
@@ -162,14 +174,14 @@ const STRIPS: Record<
       tone: 'lime',
     },
     disputed: {
-      Icon: AlertTriangle,
+      Icon: ShieldAlert,
       title: 'Dispute Opened',
       caption: 'Respond in chat. Payout paused pending dispute resolution.',
       tone: 'amber',
     },
     // V21/P7 — Terminal states so the seller strip never renders blank.
     refunded: {
-      Icon: RefreshCw,
+      Icon: Undo2,
       title: 'Order Refunded',
       caption: 'The buyer was refunded. No payout for this order.',
       tone: 'blue',
@@ -182,17 +194,20 @@ const STRIPS: Record<
     },
   },
   admin: {
-    paid: { Icon: Clock, title: 'Pre-Delivery', caption: 'Seller has not started yet.', tone: 'gray' },
-    delivering: { Icon: Clock, title: 'In Delivery', caption: 'Seller is working on the order.', tone: 'amber' },
-    delivered: { Icon: CheckCircle2, title: 'Awaiting Buyer Confirm', caption: 'Auto-completes when the protection window closes.', tone: 'lime' },
-    completed: { Icon: CheckCircle2, title: 'Complete', caption: 'Seller paid out.', tone: 'lime' },
-    disputed: { Icon: AlertTriangle, title: 'Dispute Open', caption: 'Awaiting your decision.', tone: 'amber' },
+    paid: { Icon: Hourglass, title: 'Pre-Delivery', caption: 'Seller has not started yet.', tone: 'gray' },
+    delivering: { Icon: Truck, title: 'In Delivery', caption: 'Seller is working on the order.', tone: 'amber' },
+    delivered: { Icon: PackageCheck, title: 'Awaiting Buyer Confirm', caption: 'Auto-completes when the protection window closes.', tone: 'lime' },
+    completed: { Icon: BadgeCheck, title: 'Complete', caption: 'Seller paid out.', tone: 'lime' },
+    disputed: { Icon: ShieldAlert, title: 'Dispute Open', caption: 'Awaiting your decision.', tone: 'amber' },
   },
 }
 
+// Tile tint + glyph colour per tone. Only classes that compile: `amber` has
+// no token here and `lime` is a CSS-variable colour (opacity modifiers on it
+// generate nothing), so the warning / accent tint tokens are used instead.
 const TONE_BG: Record<string, string> = {
-  amber:  'bg-amber/[0.12] text-amber',
-  lime:   'bg-lime/[0.14] text-lime-text',
+  amber:  'bg-warning-bg text-warning',
+  lime:   'bg-lime-tint-bg text-lime-text',
   blue:   'bg-blue-400/[0.12] text-blue-400',
   gray:   'bg-white/[0.06] text-text-secondary',
   orange: 'bg-orange-400/[0.12] text-orange-400',
@@ -204,7 +219,6 @@ export function StatusStrip({
   amount,
   overdue,
   disputeHref = '#',
-  disputeUntil = null,
   onMarkDelivered,
   onMarkReceived,
   onLeaveReview,
@@ -216,11 +230,11 @@ export function StatusStrip({
   escrowStatus = null,
 }: StatusStripProps) {
   // V21/P5.r — Shared style tokens that scale with promoted variant.
-  const sIcon = promoted ? 'h-11 w-11 rounded-[11px]' : 'h-9 w-9 rounded-[9px]'
-  const sIconGlyph = promoted ? 'h-5 w-5' : 'h-4 w-4'
-  const sTitle = promoted ? 'text-[16px]' : 'text-[14px]'
-  const sCaption = promoted ? 'text-[13.5px]' : 'text-[12.5px]'
-  const sPad = promoted ? 'px-5 py-4' : 'p-4'
+  const sIcon = promoted ? 'h-12 w-12 rounded-[12px]' : 'h-9 w-9 rounded-[9px]'
+  const sIconGlyph = promoted ? 'h-[22px] w-[22px]' : 'h-4 w-4'
+  const sTitle = promoted ? 'text-body-lg leading-snug' : 'text-[14px]'
+  const sCaption = promoted ? 'text-body-sm leading-snug' : 'text-[12.5px]'
+  const sPad = promoted ? 'px-5 py-[18px]' : 'p-4'
   const sCtaCls = cn(
     'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] font-bold transition-all',
     'bg-lime text-text-inverse hover:-translate-y-[1px] hover:bg-lime-hover',
@@ -238,24 +252,21 @@ export function StatusStrip({
   // accent tile + Open Dispute CTA at the right.
   if (overdue && role === 'buyer' && (status === 'paid' || status === 'delivering')) {
     return (
-      <OrderCard className="flex flex-wrap items-center gap-3 p-4 max-sm:gap-y-2.5" padded={false}>
-        <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[9px] bg-amber/[0.12] text-amber">
-          <AlertTriangle className="h-4 w-4" />
+      <OrderCard className={cn('flex flex-wrap items-center gap-3.5 max-sm:gap-y-2.5', sPad)} padded={false}>
+        <span className={cn('grid flex-shrink-0 place-items-center', sIcon, TONE_BG.amber)}>
+          <TimerOff className={sIconGlyph} />
         </span>
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="text-[14px] font-bold text-text-primary">
-            Order Is Overdue
-          </div>
-          <div className="mt-0.5 text-[12.5px] text-text-secondary">
-            No response? Open a dispute.
+          <div className={cn(sTitle, 'font-bold text-text-primary')}>Order Is Overdue</div>
+          <div className={cn('mt-0.5 text-text-secondary', sCaption)}>
+            The delivery time has passed. Seller not responding? Open a dispute.
           </div>
         </div>
         <DisputeCTA
           onOpenDispute={onOpenDispute}
           fallbackHref={disputeHref}
           tone="amber"
-          showChevron
-          className="max-sm:ml-0 max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center"
+          size={promoted ? 'lg' : 'sm'}
         />
       </OrderCard>
     )
@@ -326,10 +337,10 @@ export function StatusStrip({
   const showMarkReceivedCTA =
     role === 'buyer' && (status === 'delivered' || status === 'disputed') && !!onMarkReceived
   const showLeaveReviewCTA = role === 'buyer' && status === 'completed' && !!onLeaveReview
-  const disputeWindowOpen = !!disputeUntil && new Date(disputeUntil).getTime() > Date.now()
-  const showCaptionDisputeLink =
-    (role === 'buyer' && status === 'delivering') ||
-    (role === 'buyer' && status === 'completed' && disputeWindowOpen && !existingReview)
+  // Delivering (buyer): Open Dispute is a button at the card's right edge.
+  // A completed order keeps its dispute entry in the SafeDrop card only
+  // (the 7-day window lives there), not on this card.
+  const showDisputeButton = role === 'buyer' && status === 'delivering'
 
   // V21/P5.d — Buyer's delivered state: bespoke 2-row card.
   //   Row 1 (left): Order Delivered title       (right): Confirm Receipt CTA
@@ -339,8 +350,8 @@ export function StatusStrip({
       <OrderCard className={sPad} padded={false}>
         <div className="flex flex-wrap items-center justify-between gap-3 max-sm:gap-y-2.5">
           <div className="flex items-center gap-3.5 min-w-0">
-            <span className={cn('grid flex-shrink-0 place-items-center bg-lime/[0.12] text-lime-text', sIcon)}>
-              <CheckCircle2 className={sIconGlyph} />
+            <span className={cn('grid flex-shrink-0 place-items-center', TONE_BG.lime, sIcon)}>
+              <PackageCheck className={sIconGlyph} />
             </span>
             <div className="min-w-0 leading-tight">
               <div className={cn(sTitle, 'font-bold text-text-primary')}>Order Delivered</div>
@@ -364,10 +375,7 @@ export function StatusStrip({
             onOpenDispute={onOpenDispute}
             fallbackHref={disputeHref}
             tone="neutral"
-            className={cn(
-              promoted ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]',
-              'max-sm:ml-0 max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center',
-            )}
+            size={promoted ? 'md' : 'sm'}
           />
         </div>
       </OrderCard>
@@ -439,7 +447,7 @@ export function StatusStrip({
   // phone the status card above already says the same thing.
   const isPassive =
     !ctaLabel &&
-    !showCaptionDisputeLink &&
+    !showDisputeButton &&
     !(role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')))
 
   return (
@@ -456,28 +464,16 @@ export function StatusStrip({
       </span>
       <div className="min-w-0 flex-1 leading-tight">
         <div className={cn(sTitle, 'font-bold text-text-primary')}>{renderedTitle}</div>
-        <div className={cn('mt-0.5 text-text-secondary', sCaption)}>
-          {caption}
-          {showCaptionDisputeLink && (
-            <>
-              {' · '}
-              {onOpenDispute ? (
-                <button
-                  type="button"
-                  onClick={onOpenDispute}
-                  className="font-semibold text-lime-text hover:underline"
-                >
-                  Open Dispute
-                </button>
-              ) : (
-                <Link href={disputeHref} className="font-semibold text-lime-text hover:underline">
-                  Open Dispute
-                </Link>
-              )}
-            </>
-          )}
-        </div>
+        <div className={cn('mt-0.5 text-text-secondary', sCaption)}>{caption}</div>
       </div>
+      {showDisputeButton && (
+        <DisputeCTA
+          onOpenDispute={onOpenDispute}
+          fallbackHref={disputeHref}
+          tone="amber"
+          size={promoted ? 'lg' : 'sm'}
+        />
+      )}
       {ctaLabel && (
         <button type="button" onClick={ctaOnClick} className={cn('ml-1', sCtaCls)}>
           <CheckCircle2 className={sCtaGlyph} />
@@ -511,34 +507,37 @@ function DisputeCTA({
   onOpenDispute,
   fallbackHref,
   tone,
-  showChevron,
-  className,
+  size,
 }: {
   onOpenDispute?: () => void
   fallbackHref: string
+  /** amber = the light warning button (delivering / overdue);
+   *  neutral = outlined, turns warning on hover (delivered card). */
   tone: 'amber' | 'neutral'
-  showChevron?: boolean
-  className?: string
+  size: 'sm' | 'md' | 'lg'
 }) {
-  const base = cn(
-    'inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[8px] font-bold transition-colors',
+  const cls = cn(
+    'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border font-bold transition-all',
     tone === 'amber'
-      ? 'border border-amber/30 bg-amber/[0.08] px-3 py-1.5 text-[12px] text-amber hover:bg-amber/[0.14]'
-      : 'border border-border-default bg-white/[0.02] px-3 py-1.5 text-[12px] font-semibold text-text-primary hover:border-amber/40 hover:text-amber',
-    className,
+      ? 'border-[rgba(255,178,62,0.32)] bg-warning-bg text-warning hover:-translate-y-[1px] hover:bg-[rgba(255,178,62,0.2)]'
+      : 'border-border-default bg-white/[0.02] text-text-primary hover:border-[rgba(255,178,62,0.4)] hover:text-warning',
+    size === 'lg' ? 'px-5 py-2.5 text-[13.5px]' : size === 'md' ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]',
+    // Below sm the button takes its own full-width row, >=44px tall.
+    'max-sm:min-h-[44px] max-sm:basis-full max-sm:py-3',
   )
+  const glyph = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
   if (onOpenDispute) {
     return (
-      <button type="button" onClick={onOpenDispute} className={cn('ml-1', base)}>
+      <button type="button" onClick={onOpenDispute} className={cls}>
+        <ShieldAlert className={glyph} aria-hidden />
         Open Dispute
-        {showChevron && <ChevronRight className="h-3.5 w-3.5" />}
       </button>
     )
   }
   return (
-    <Link href={fallbackHref} className={cn('ml-1', base)}>
+    <Link href={fallbackHref} className={cls}>
+      <ShieldAlert className={glyph} aria-hidden />
       Open Dispute
-      {showChevron && <ChevronRight className="h-3.5 w-3.5" />}
     </Link>
   )
 }

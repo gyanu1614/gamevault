@@ -67,7 +67,7 @@ const ICONS: Record<TimelineIcon, LucideIcon> = {
 
 const TONE: Record<TimelineTone, string> = {
   lime: 'bg-lime text-text-inverse',
-  amber: 'bg-amber text-text-inverse',
+  amber: 'bg-warning text-text-inverse',
   blue: 'bg-blue-400 text-text-inverse',
   red: 'bg-red-400 text-text-inverse',
 }
@@ -94,7 +94,7 @@ function Node({ step, size = 'h-9 w-9' }: { step: TimelineStep; size?: string })
         'relative z-10 grid flex-shrink-0 place-items-center rounded-full',
         size,
         step.state === 'upcoming' ? 'bg-bg-overlay text-text-tertiary' : TONE[step.tone],
-        step.state === 'current' && 'ring-4 ring-amber/20',
+        step.state === 'current' && 'ring-4 ring-[rgba(255,178,62,0.2)]',
       )}
     >
       <Icon className="h-[18px] w-[18px]" aria-hidden />
