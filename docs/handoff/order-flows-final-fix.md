@@ -20,7 +20,8 @@ the final pass on order flows. Owner will review after.
 2. Main checkout `~/gamevault`: `git pull --ff-only`, then
    `npx --no-install supabase db push --dry-run` — expect ONLY this branch's migrations:
    `20260927184110_messages_system_notices_and_read_only_history`,
-   `20260927185652_order_dispute_resolve_seller_copy` (+ any added later).
+   `20260927185652_order_dispute_resolve_seller_copy`,
+   `20260927191606_listings_buyer_can_read_ordered`.
 3. Owner OK → `db push` → verify dry-run "up to date" + probe.
 4. `git push origin origin/main:release` (fast-forward check first).
 The pg-delta `pgdelta-target-ca.crt` error during db push is harmless.
@@ -88,9 +89,31 @@ The pg-delta `pgdelta-target-ca.crt` error during db push is harmless.
     disputed; #16 SLA from paid_at; #17 sellerDisplayName in chat (avatar
     resolved with username seed); conversation create race; mock
     DeliveryEvidenceUpload + src/lib/actions/delivery-evidence.ts deleted.
-NEXT: #18 lists filters, #20 list errors, #22-#24 admin, #25-#28 other.
-Also planned: redact the order payload per role in page.tsx (seller_fee_trace,
-seller_commission_pct for buyers; wallet_amount_used/checkout_url for sellers).
+18. (commit) Order payload redacted per role (`src/lib/orders/redact.ts`,
+    page.tsx) + #18/#19/#20 list status groups (`src/lib/orders/status-groups.ts`),
+    formatted titles, visible load errors.
+19. `20ca9014` #21 leftovers: no fake 'processing' filters in seller-compatible;
+    unused earnings transactions fetch removed (held up the wallet skeleton).
+20. `3e3a9384` #22 admin orders: requireAdmin, real statuses + frozen, search by
+    order no./username/shop/listing (ids resolved, metachars escaped), stats
+    (In Progress / Disputed / paged revenue+fees), detail fee breakdown, dead
+    links removed; guard `admin-orders` (6).
+21. `2a3970d9` #23 admin disputes: search (was raw .or() interpolation), order
+    number shown, https icons, Resolved (7d) by resolved_at, paged stats, no
+    /seller/orders revalidate; `src/lib/db/ilike.ts`; guard `admin-disputes-list` (5).
+22. `6ea8ad62` #24 review "View Order" → /admin/orders for admin; guard `admin-order-links`.
+23. `cc1c57a5` #25 Trustpilot cron as service role; sender moved to
+    `src/lib/trustpilot/send-invitation.ts` (not a public action); route test.
+24. `2a72351f` #26 live presence on listing grids (`useSellersPresence`) + storefront.
+25. `69468e8e` #27 per-role order columns in ordersApi/buyerOrdersApi; guard
+    `order-list-columns` (fails with select('*')).
+26. `b1e24ebe` #28 `fetchAllRows` pager (orders lists, wallet, dashboards);
+    guard `dashboards-paged`.
+27. `a6606936` dispute review time = "24 to 48 hours" everywhere (guard); wallet memo.
+
+Spawned (separate chats, NOT in this PR): admin dashboard/analytics stats
+(fake statuses, 1000 caps); DB-level column privacy for orders (RLS returns the
+whole row to both parties — app-side narrowing only).
 
 ## Remaining (numbered as reported to the owner)
 Money
