@@ -134,7 +134,9 @@ export function MarkDeliveredModal({
       if (orderStatus === 'paid') {
         await startDelivering(orderId).catch(() => {})
       }
-      const res = await markOrderAsDelivered(orderId, note.trim() || undefined)
+      // The proof photo's storage path is saved on the order; the note is
+      // posted to the order chat so the buyer sees it.
+      const res = await markOrderAsDelivered(orderId, note.trim() || undefined, uploadedPath ?? undefined)
       if (!res.success) {
         toast.error(res.error ?? 'Could not mark as delivered')
         setStage('uploaded')

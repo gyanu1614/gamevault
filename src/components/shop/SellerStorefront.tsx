@@ -24,6 +24,7 @@ import { listingUrl } from '@/lib/listings/url'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
+import { useSellerOnline } from '@/hooks/use-seller-presence'
 
 interface SellerStorefrontProps {
   seller: {
@@ -80,7 +81,9 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const filteredListings =
     selectedGame === 'all' ? seller.listings : listingsByGame[selectedGame] || []
 
-  const isOnline = false
+  // Live presence, read in the browser (the storefront HTML is cached):
+  // false until the first read, then polled every 60 s.
+  const isOnline = useSellerOnline(seller.profile.id) === true
   const sellerTier = (seller.profile.seller_tier || DEFAULT_TIER) as SellerTier
   const tier = tierByKey(sellerTier)
 

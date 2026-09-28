@@ -5,10 +5,13 @@ import { IconSearch, IconX } from '@tabler/icons-react'
 import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
+// Values are the orders_status_check / orders_escrow_status_check keys.
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'blue' },
-  { value: 'processing', label: 'Processing', color: 'amber' },
   { value: 'paid', label: 'Paid', color: 'green' },
+  { value: 'delivering', label: 'Delivering', color: 'amber' },
+  { value: 'delivered', label: 'Delivered', color: 'amber' },
+  { value: 'disputed', label: 'Disputed', color: 'red' },
   { value: 'completed', label: 'Completed', color: 'green' },
   { value: 'cancelled', label: 'Cancelled', color: 'red' },
   { value: 'refunded', label: 'Refunded', color: 'orange' },
@@ -17,6 +20,7 @@ const STATUS_OPTIONS = [
 const ESCROW_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'blue' },
   { value: 'held', label: 'Payout Pending', color: 'amber' },
+  { value: 'frozen', label: 'Frozen', color: 'red' },
   { value: 'released', label: 'Seller Paid Out', color: 'green' },
   { value: 'refunded', label: 'Refunded', color: 'red' },
 ]

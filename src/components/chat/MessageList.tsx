@@ -8,11 +8,15 @@ import OrderMessageCard from './OrderMessageCard'
 import DisputeSystemCard from './DisputeSystemCard'
 import DisputeResolvedCard from './DisputeResolvedCard'
 import { createClient } from '@/lib/supabase/client'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { isSystemMessage, parseSystemNotice } from '@/lib/chat/system-notice'
+import { useStickToBottom } from 'use-stick-to-bottom'
 
 interface Message {
   id: string
   content: string
-  sender_id: string
+  /** NULL = a DropMarket system notice (see lib/chat/system-notice). */
+  sender_id: string | null
   is_read: boolean
   created_at: string
 }
@@ -68,9 +72,13 @@ export default function MessageList({
   isLoading = false,
   autoScroll = true,
 }: MessageListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const prevMessageCountRef = useRef(messages.length)
+  // Chat scroll: opens at the newest message, follows new messages while
+  // the reader is at the bottom, and leaves them alone once they scroll up
+  // to read history (use-stick-to-bottom, spring-animated, resize-aware).
+  const { scrollRef, contentRef, scrollToBottom } = useStickToBottom({
+    initial: 'instant',
+    resize: 'smooth',
+  })
   const [adminUsers, setAdminUsers] = useState<Record<string, { username: string; avatar_url?: string }>>({})
   const supabase = createClient()
 
@@ -89,7 +97,7 @@ export default function MessageList({
   useEffect(() => {
     const fetchAdminUsers = async () => {
       // Get unique sender IDs from messages
-      const senderIds = Array.from(new Set(messages.map(m => m.sender_id)))
+      const senderIds = Array.from(new Set(messages.map(m => m.sender_id).filter((id): id is string => !!id)))
 
       // Check which senders are admins
       const { data: admins } = await supabase
@@ -125,22 +133,19 @@ export default function MessageList({
     }
   }, [messages, supabase])
 
-  // Auto-scroll to bottom on new messages (not on initial load)
+  // Sending your own message always brings you back down to it, even if
+  // you had scrolled up. Other people's messages only follow when you're
+  // already at the bottom (the hook handles that on its own).
+  const lastMessage = messages[messages.length - 1]
+  const lastId = lastMessage?.id
+  const lastIsOwn = lastMessage?.sender_id === currentUserId
+  const prevLastIdRef = useRef(lastId)
   useEffect(() => {
-    if (!autoScroll) return
-
-    // Only scroll if messages were ADDED (not on initial load from 0 to N)
-    const isNewMessage = messages.length > prevMessageCountRef.current && prevMessageCountRef.current > 0
-    prevMessageCountRef.current = messages.length
-
-    if (isNewMessage && containerRef.current) {
-      // Scroll the container to bottom (not the entire page)
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth'
-      })
+    if (autoScroll && lastId && lastId !== prevLastIdRef.current && lastIsOwn) {
+      void scrollToBottom('smooth')
     }
-  }, [messages, autoScroll])
+    prevLastIdRef.current = lastId
+  }, [lastId, lastIsOwn, autoScroll, scrollToBottom])
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
@@ -184,15 +189,16 @@ export default function MessageList({
 
   return (
     <div
-      ref={containerRef}
-      className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
+      ref={scrollRef}
+      className="min-h-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
     >
+    <div ref={contentRef} className="space-y-4 px-4 py-6">
       {/* V21/P5.c — Welcome banner shown only on empty state (no user
           messages yet). Once a real message lands, the banner is gone
           for good. Order context (id / item) lives in the chat header
           above + the right rail; no need to repeat the heavy order card
           inside the message stream. */}
-      {order && messages.filter(m => m.sender_id !== '00000000-0000-0000-0000-000000000000').length === 0 && (
+      {order && messages.filter(m => !isSystemMessage(m.sender_id)).length === 0 && (
         <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
           <span className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-lime/[0.12] text-lime-text">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
@@ -227,40 +233,34 @@ export default function MessageList({
           {/* Messages for this date */}
           <AnimatePresence mode="popLayout">
             {dateMessages.map((message, index) => {
-              // Check if this is a system message
-              const isSystemMessage = message.sender_id === '00000000-0000-0000-0000-000000000000'
-
-              if (isSystemMessage) {
-                // Parse system message content
-                try {
-                  const systemData = JSON.parse(message.content)
-                  if (systemData.type === 'dispute_opened') {
-                    return (
-                      <DisputeSystemCard
-                        key={message.id}
-                        category={systemData.category}
-                        reason={systemData.reason}
-                      />
-                    )
-                  }
-                  if (systemData.type === 'dispute_resolved') {
-                    return (
-                      <DisputeResolvedCard
-                        key={message.id}
-                        resolution={systemData.resolution}
-                        notes={systemData.notes}
-                        refundAmount={systemData.refundAmount}
-                      />
-                    )
-                  }
-                } catch (e) {
-                  // If parsing fails, skip this message
-                  return null
+              // DropMarket notices (no sender): dispute cards. Anything
+              // unrecognised from the system sender is not shown.
+              if (isSystemMessage(message.sender_id)) {
+                const notice = parseSystemNotice(message.content)
+                if (notice?.type === 'dispute_opened') {
+                  return (
+                    <DisputeSystemCard key={message.id} category={notice.category ?? ''} reason={notice.reason ?? ''} />
+                  )
                 }
+                if (notice?.type === 'dispute_resolved') {
+                  return (
+                    <DisputeResolvedCard
+                      key={message.id}
+                      resolution={notice.resolution}
+                      notes={notice.notes ?? ''}
+                      refundAmount={notice.refundAmount}
+                      resolvedBy={notice.resolvedBy}
+                    />
+                  )
+                }
+                return null
               }
+              // Past the notice branch every message has a real author.
+              const senderId = message.sender_id as string
+              const userMessage = { ...message, sender_id: senderId }
 
-              const isOwn = message.sender_id === currentUserId
-              const isAdminMessage = adminUsers[message.sender_id] !== undefined
+              const isOwn = senderId === currentUserId
+              const isAdminMessage = adminUsers[senderId] !== undefined
 
               // V21/P5.e — Resolve sender info for BOTH sides. The "own"
               // user isn't in otherUser; we fall through to:
@@ -276,10 +276,10 @@ export default function MessageList({
               let isSellerMessage = false
 
               if (order?.buyer && order?.seller) {
-                if (message.sender_id === order.buyer.id) {
+                if (senderId === order.buyer.id) {
                   senderInfo = order.buyer
                   isBuyerMessage = true
-                } else if (message.sender_id === order.seller.id) {
+                } else if (senderId === order.seller.id) {
                   senderInfo = order.seller
                   isSellerMessage = true
                 }
@@ -300,18 +300,23 @@ export default function MessageList({
               // pattern (iMessage, WhatsApp, Discord).
               const showAvatar =
                 !isAdminMessage &&
-                (index === 0 || dateMessages[index - 1]?.sender_id !== message.sender_id)
+                (index === 0 || dateMessages[index - 1]?.sender_id !== senderId)
 
               return (
                 <MessageBubble
                   key={message.id}
-                  message={message}
+                  message={userMessage}
                   isOwn={isOwn}
                   showAvatar={showAvatar}
-                  senderAvatar={senderInfo?.avatar_url}
+                  senderAvatar={
+                    // Uploaded photo, else the DiceBear character seeded by
+                    // username (same fallback as the order page header).
+                    senderInfo?.avatar_url ||
+                    (senderInfo?.username ? getAvatarUrl(null, senderInfo.username) : undefined)
+                  }
                   senderName={senderInfo?.username}
                   isAdminMessage={isAdminMessage}
-                  adminInfo={isAdminMessage ? adminUsers[message.sender_id] : undefined}
+                  adminInfo={isAdminMessage ? adminUsers[senderId] : undefined}
                   isBuyerMessage={isBuyerMessage}
                   isSellerMessage={isSellerMessage}
                   isAdminView={isAdminView}
@@ -322,8 +327,7 @@ export default function MessageList({
         </div>
       ))}
 
-      {/* Scroll anchor */}
-      <div ref={messagesEndRef} />
+    </div>
     </div>
   )
 }

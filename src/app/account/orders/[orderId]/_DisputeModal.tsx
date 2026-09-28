@@ -76,7 +76,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
           console.warn('[DisputeModal] chat notify failed', err)
         }
       }
-      toast.success('Dispute opened. Support reviews within 24 hours.')
+      toast.success('Dispute opened. Support reviews within 24 to 48 hours.')
       router.refresh()
       setTimeout(() => {
         onOpenChange(false)
@@ -108,7 +108,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
             Open A Dispute
           </DialogTitle>
           <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
-            A DropMarket admin reviews disputes within 24 hours. Your order stays open until the case resolves.
+            A DropMarket admin reviews disputes within 24 to 48 hours. Your order stays open until the case resolves.
           </DialogDescription>
         </DialogHeader>
 

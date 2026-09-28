@@ -1,21 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { notifyNewMessage } from '@/lib/actions/message-notify'
 import { toast } from 'sonner'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
-import DeliveryEvidenceUpload from '@/components/orders/DeliveryEvidenceUpload'
 import { displayOrderRef } from '@/lib/orders/order-number'
-import { Loader2, AlertCircle, Upload, ChevronDown, ChevronUp } from 'lucide-react'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { useSellerOnline } from '@/hooks/use-seller-presence'
+import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
+import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
+import { Loader2, AlertCircle } from 'lucide-react'
 
 interface Message {
   id: string
   conversation_id: string
-  sender_id: string
+  /** NULL = DropMarket system notice. */
+  sender_id: string | null
   content: string
+  attachments?: string[] | null
   is_read: boolean
   read_at: string | null
   created_at: string
@@ -60,12 +65,10 @@ interface ChatInterfaceProps {
   } | null
   onViewOrder?: () => void
   className?: string
-  /** Pass to enable the "Upload Proof" panel inside chat (seller only, orders ≥ $100) */
-  evidenceProps?: {
-    orderId: string
-    existingEvidence: string[]
-    disabled?: boolean
-  }
+  /** When the other person is the SELLER, their id: the header dot shows
+   *  their live online state. Omit it (buyers have no presence) and no dot
+   *  is drawn. */
+  presenceSellerId?: string | null
 }
 
 export default function ChatInterface({
@@ -77,20 +80,24 @@ export default function ChatInterface({
   disputeResolution,
   onViewOrder,
   className = '',
-  evidenceProps,
+  presenceSellerId = null,
 }: ChatInterfaceProps) {
+  const otherOnline = useSellerOnline(presenceSellerId)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [showEvidencePanel, setShowEvidencePanel] = useState(false)
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   // Check if chat is expired (7 days after order completion)
-  const isChatExpired = order?.chat_active_until
-    ? new Date(order.chat_active_until) < new Date()
-    : false
+  // …except while the order is disputed: chat_active_until is stamped once at
+  // completion, so a dispute opened later on an older order locked the chat
+  // the parties need to settle it.
+  const isChatExpired =
+    order?.status !== 'disputed' && order?.chat_active_until
+      ? new Date(order.chat_active_until) < new Date()
+      : false
 
   // Check if current user is admin
   useEffect(() => {
@@ -136,7 +143,19 @@ export default function ChatInterface({
     }
   }, [conversationId, supabase])
 
-  // Real-time subscription - exact pattern from working code
+  // Sender names for toasts, read through a ref so the realtime channel does
+  // not depend on the `order` / `otherUser` objects: the parent rebuilds
+  // them on every render (router.refresh, a modal opening), and tearing the
+  // channel down and re-joining the same topic could leave the chat deaf to
+  // new messages.
+  const namesRef = useRef<Record<string, string>>({})
+  namesRef.current = {
+    ...(order?.buyer ? { [order.buyer.id]: order.buyer.username } : {}),
+    ...(order?.seller ? { [order.seller.id]: order.seller.username } : {}),
+    ...(otherUser ? { [otherUser.id]: otherUser.username } : {}),
+  }
+
+  // Real-time subscription: one channel per conversation.
   useEffect(() => {
     if (!conversationId || !currentUserId) return
 
@@ -164,17 +183,15 @@ export default function ChatInterface({
             setMessages(data)
           }
 
-          // Show toast for messages from other user
-          if (newMessage.sender_id !== currentUserId) {
-            // Determine sender name
-            let senderName = 'Someone'
-            if (otherUser && newMessage.sender_id === otherUser.id) {
-              senderName = otherUser.username
-            } else if (order?.buyer && newMessage.sender_id === order.buyer.id) {
-              senderName = order.buyer.username
-            } else if (order?.seller && newMessage.sender_id === order.seller.id) {
-              senderName = order.seller.username
-            }
+          // A DropMarket notice (dispute card): a plain-words toast, and it
+          // is not the other person's message to mark read.
+          if (isSystemMessage(newMessage.sender_id)) {
+            toast.message('DropMarket update', {
+              description: systemNoticePreview(newMessage.content),
+              duration: 3000,
+            })
+          } else if (newMessage.sender_id !== currentUserId) {
+            const senderName = (newMessage.sender_id && namesRef.current[newMessage.sender_id]) || 'Someone'
 
             toast.message(`New message from ${senderName}`, {
               description: newMessage.content.slice(0, 100),
@@ -223,9 +240,11 @@ export default function ChatInterface({
       .subscribe()
 
     return () => {
-      channel.unsubscribe()
+      // removeChannel (not just unsubscribe) so a later mount of the same
+      // topic gets a fresh channel instead of the one still leaving.
+      void supabase.removeChannel(channel)
     }
-  }, [conversationId, currentUserId, otherUser?.username, otherUser?.id, order, supabase, queryClient])
+  }, [conversationId, currentUserId, supabase, queryClient])
 
   // Mark messages as read when viewing
   useEffect(() => {
@@ -267,14 +286,36 @@ export default function ChatInterface({
     markAsRead()
   }, [messages.length, conversationId, currentUserId, supabase, queryClient])
 
-  // Send message
-  const handleSend = async (content: string) => {
+  // Only the order's buyer and seller can attach files: the storage
+  // policy on the order folder accepts uploads from those two only.
+  const canAttach =
+    !!order?.id &&
+    (order.buyer?.id === currentUserId || order.seller?.id === currentUserId) &&
+    !isChatExpired
+
+  // Send message (optionally with one file)
+  const handleSend = async (text: string, file?: File | null) => {
+    // Upload first: the message row only ever points at a file that exists.
+    let attachmentPath: string | null = null
+    if (file) {
+      try {
+        if (!canAttach) throw new Error('Files can only be sent in an active order chat.')
+        attachmentPath = await uploadChatAttachment(supabase.storage as any, order!.id, file)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not upload the file. Please try again.')
+        throw e
+      }
+    }
+    // messages.content can't be empty; a file-only message gets a label.
+    const content = text || (file ? attachmentOnlyLabel(file.type) : text)
+
     // Optimistic update - add message immediately
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       conversation_id: conversationId,
       sender_id: currentUserId,
       content,
+      attachments: attachmentPath ? [attachmentPath] : [],
       is_read: false,
       read_at: null,
       created_at: new Date().toISOString(),
@@ -288,6 +329,7 @@ export default function ChatInterface({
         sender_id: currentUserId,
         content,
         is_read: false,
+        ...(attachmentPath ? { attachments: [attachmentPath] } : {}),
       })
 
       if (sendError) throw sendError
@@ -413,21 +455,21 @@ export default function ChatInterface({
       {otherUser && (
         <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
           <div className="relative flex-shrink-0">
-            {otherUser.avatar_url ? (
-              <img
-                src={otherUser.avatar_url}
-                alt=""
-                className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
-              />
-            ) : (
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-bg-overlay text-[12px] font-bold text-text-secondary ring-1 ring-white/10">
-                {otherUser.username?.charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span
-              aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-bg-raised"
+            {/* Same avatar source as the rest of the page: uploaded photo,
+                else the DiceBear character seeded by username. */}
+            <img
+              src={getAvatarUrl(otherUser.avatar_url, otherUser.username ?? 'user')}
+              alt=""
+              className="h-9 w-9 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
+            {otherOnline !== null && (
+              <span
+                aria-label={otherOnline ? 'Online' : 'Offline'}
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-bg-raised ${
+                  otherOnline ? 'bg-green-400' : 'bg-text-tertiary'
+                }`}
+              />
+            )}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="flex items-center gap-1.5 text-[13.5px] font-bold text-text-primary">
@@ -456,40 +498,6 @@ export default function ChatInterface({
         autoScroll={true}
       />
 
-      {/* Delivery Evidence Upload Panel (seller only, orders ≥ $100) */}
-      {evidenceProps && !isChatExpired && (
-        <div className="border-t border-border-subtle">
-          <button
-            onClick={() => setShowEvidencePanel(p => !p)}
-            className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-text-tertiary hover:text-text-secondary hover:bg-bg-overlay transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Upload className="h-3.5 w-3.5 text-lime-text" />
-              <span className="font-medium text-lime-text/80">Upload Delivery Proof</span>
-              {evidenceProps.existingEvidence.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-lime/20 text-lime-text text-[10px] font-semibold">
-                  {evidenceProps.existingEvidence.length}
-                </span>
-              )}
-            </div>
-            {showEvidencePanel ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronUp className="h-3.5 w-3.5" />
-            )}
-          </button>
-          {showEvidencePanel && (
-            <div className="px-4 pb-4 border-t border-border-subtle">
-              <DeliveryEvidenceUpload
-                orderId={evidenceProps.orderId}
-                existingEvidence={evidenceProps.existingEvidence}
-                disabled={evidenceProps.disabled}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Message Input */}
       <MessageInput
         onSend={handleSend}
@@ -501,6 +509,7 @@ export default function ChatInterface({
             : 'Send a message...'
         }
         disabled={isLoading || (isChatExpired && !isAdmin)}
+        allowAttachments={canAttach}
       />
     </div>
   )

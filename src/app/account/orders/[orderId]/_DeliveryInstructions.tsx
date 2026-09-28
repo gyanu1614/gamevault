@@ -22,8 +22,13 @@ import { cn } from '@/lib/utils'
 
 interface DeliveryInstructionsProps {
   role: 'buyer' | 'seller' | 'admin'
-  /** Raw text from listing.delivery_instructions. */
+  /** The seller's instructions: listing.description (the listing page shows
+   *  the same text under "Delivery Instructions"). There is no
+   *  delivery_instructions column — reading one hid this card on every order. */
   instructions: string | null
+  /** The order still needs delivering (paid / delivering): shows the
+   *  "Action Needed" badge. Finished orders keep the text as a reference. */
+  active?: boolean
   /** Used for the seller's "Edit" link target. */
   listingId?: string | null
 }
@@ -32,6 +37,7 @@ export function DeliveryInstructions({
   role,
   instructions,
   listingId,
+  active = false,
 }: DeliveryInstructionsProps) {
   const trimmed = instructions?.trim() ?? ''
 
@@ -76,9 +82,11 @@ export function DeliveryInstructions({
         <span className="text-[13.5px] font-bold tracking-tight text-text-primary">
           How To Receive Your Order
         </span>
-        <span className="ml-auto rounded-[7px] border border-lime/30 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-          Action Needed
-        </span>
+        {active && (
+          <span className="ml-auto rounded-[7px] border border-lime/30 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
+            Action Needed
+          </span>
+        )}
       </div>
       {steps ? (
         <StepsList steps={steps} />

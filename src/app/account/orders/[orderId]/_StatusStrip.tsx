@@ -51,6 +51,15 @@ interface StatusStripProps {
    *  of inside the right rail. Larger icon, beefier CTA, more
    *  padding so it reads as the page's primary action. */
   promoted?: boolean
+  /** When the seller marked the order delivered (also set during a
+   *  dispute, where the status stays `disputed`). */
+  deliveredAt?: string | null
+  /** orders.escrow_status — 'refunded' on a cancelled order means it WAS
+   *  paid and the money went back to the buyer's wallet. */
+  escrowStatus?: string | null
+  /** Phone only: hide the strip when it has no action and only repeats
+   *  what the phone status card (OrderStatusCard) already says. */
+  hidePassiveOnMobile?: boolean
 }
 
 function fmtUsd(n: number): string {
@@ -106,13 +115,13 @@ const STRIPS: Record<
     disputed: {
       Icon: AlertTriangle,
       title: 'Dispute Under Review',
-      caption: 'A DropMarket admin is reviewing. Support responds within 24h.',
+      caption: 'A DropMarket admin is reviewing. Support responds within 24 to 48 hours.',
       tone: 'amber',
     },
     refunded: {
       Icon: Wallet,
       title: 'Money In Your Wallet',
-      caption: 'Your refund landed in your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
+      caption: 'Your refund landed in your DropMarket wallet as store credit. Spend it instantly or withdraw it from your wallet.',
       tone: 'lime',
     },
     // 'cancelled' only ever means a NEVER-PAID order (checkout timed out or
@@ -149,7 +158,7 @@ const STRIPS: Record<
       // V21/P3.b — Interpolated with the actual amount in the component
       // body below; see the {AMOUNT} placeholder for the substitution.
       title: 'Added To Your Seller Balance · {AMOUNT}',
-      caption: 'Available to withdraw or use for purchases.',
+      caption: 'Added to your seller balance. New sales can be withdrawn once they are released.',
       tone: 'lime',
     },
     disputed: {
@@ -202,6 +211,9 @@ export function StatusStrip({
   onOpenDispute,
   existingReview,
   promoted = false,
+  hidePassiveOnMobile = false,
+  deliveredAt = null,
+  escrowStatus = null,
 }: StatusStripProps) {
   // V21/P5.r — Shared style tokens that scale with promoted variant.
   const sIcon = promoted ? 'h-11 w-11 rounded-[11px]' : 'h-9 w-9 rounded-[9px]'
@@ -260,24 +272,24 @@ export function StatusStrip({
       existingReview.recommendsSeller === true ||
       (existingReview.recommendsSeller == null && existingReview.rating >= 4)
     return (
-      <OrderCard className={sPad} padded={false}>
-        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+      <OrderCard className={cn(sPad, 'max-sm:px-5 max-sm:py-3')} padded={false}>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary max-sm:text-[10.5px]">
           Your Review
         </div>
-        <div className="mt-3.5 flex items-center gap-3">
+        <div className="mt-3.5 flex items-center gap-3 max-sm:mt-2 max-sm:gap-2.5">
           <span
             className={cn(
-              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px]',
+              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px] max-sm:h-7 max-sm:w-7 max-sm:rounded-[7px]',
               isPositive ? 'bg-green-400/[0.12] text-green-400' : 'bg-red-400/[0.12] text-red-400',
             )}
           >
             {isPositive ? (
-              <ThumbsUp className="h-[18px] w-[18px] fill-current" />
+              <ThumbsUp className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
             ) : (
-              <ThumbsDown className="h-[18px] w-[18px] fill-current" />
+              <ThumbsDown className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
             )}
           </span>
-          <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary">
+          <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary max-sm:text-[13.5px]">
             {existingReview.comment || (isPositive ? 'Recommended' : "Didn't Recommend")}
           </p>
         </div>
@@ -285,14 +297,34 @@ export function StatusStrip({
     )
   }
 
-  const cfg = STRIPS[role]?.[status]
-  if (!cfg) return null
+  const baseCfg = STRIPS[role]?.[status]
+  if (!baseCfg) return null
+  // Disputes the parties can settle themselves: the seller can still deliver
+  // (then waits on the buyer), and the buyer can mark it received, which
+  // closes their dispute.
+  const cfg =
+    status === 'disputed' && role === 'seller'
+      ? deliveredAt
+        ? { ...baseCfg, Icon: CheckCircle2, tone: 'lime' as const, title: 'Marked As Delivered', caption: 'Waiting for the buyer to confirm. Payout is paused until the dispute closes.' }
+        : { ...baseCfg, caption: 'Deliver the order and mark it delivered. Payout is paused until the dispute closes.' }
+      : status === 'disputed' && role === 'buyer' && onMarkReceived
+        ? deliveredAt
+          ? { ...baseCfg, Icon: CheckCircle2, tone: 'lime' as const, title: 'Seller Marked It Delivered', caption: 'Got your order? Mark it received to close your dispute.' }
+          : { ...baseCfg, caption: 'Already got your order? Mark it received to close your dispute.' }
+        : status === 'cancelled' && escrowStatus === 'refunded'
+          ? // Cancelled AFTER payment: the money was returned, not "never charged".
+            role === 'buyer'
+            ? { ...baseCfg, Icon: Wallet, tone: 'lime' as const, title: 'Order Cancelled, Refunded', caption: 'Your payment was returned to your DropMarket wallet as store credit.' }
+            : { ...baseCfg, title: 'Order Cancelled', caption: "The order was cancelled and the buyer's payment was returned to them." }
+          : baseCfg
   const { Icon, title, caption, tone } = cfg
   const renderedTitle =
     amount != null ? title.replace('{AMOUNT}', fmtUsd(amount)) : title.replace(' · {AMOUNT}', '')
 
-  const showMarkDeliveredCTA = role === 'seller' && status === 'delivering' && !!onMarkDelivered
-  const showMarkReceivedCTA = role === 'buyer' && status === 'delivered' && !!onMarkReceived
+  const showMarkDeliveredCTA =
+    role === 'seller' && (status === 'delivering' || status === 'disputed') && !!onMarkDelivered
+  const showMarkReceivedCTA =
+    role === 'buyer' && (status === 'delivered' || status === 'disputed') && !!onMarkReceived
   const showLeaveReviewCTA = role === 'buyer' && status === 'completed' && !!onLeaveReview
   const disputeWindowOpen = !!disputeUntil && new Date(disputeUntil).getTime() > Date.now()
   const showCaptionDisputeLink =
@@ -345,7 +377,9 @@ export function StatusStrip({
   const ctaLabel = showMarkDeliveredCTA
     ? 'Mark As Delivered'
     : showMarkReceivedCTA
-    ? 'Confirm Delivery'
+    ? status === 'disputed'
+      ? 'Mark As Received'
+      : 'Confirm Delivery'
     : showLeaveReviewCTA
     ? 'Leave Review'
     : null
@@ -374,26 +408,26 @@ export function StatusStrip({
   // a dedicated Buyer's Feedback panel.
   if (showSellerReview && existingReview) {
     return (
-      <OrderCard className={sPad} padded={false}>
-        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
+      <OrderCard className={cn(sPad, 'max-sm:px-5 max-sm:py-3')} padded={false}>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-text-secondary max-sm:text-[10.5px]">
           Buyer&rsquo;s Feedback
         </div>
-        <div className="mt-3.5 flex items-center gap-3">
+        <div className="mt-3.5 flex items-center gap-3 max-sm:mt-2 max-sm:gap-2.5">
           <span
             className={cn(
-              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px]',
+              'grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px] max-sm:h-7 max-sm:w-7 max-sm:rounded-[7px]',
               isPositive
                 ? 'bg-green-400/[0.12] text-green-400'
                 : 'bg-red-400/[0.12] text-red-400',
             )}
           >
             {isPositive ? (
-              <ThumbsUp className="h-[18px] w-[18px] fill-current" />
+              <ThumbsUp className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
             ) : (
-              <ThumbsDown className="h-[18px] w-[18px] fill-current" />
+              <ThumbsDown className="h-[18px] w-[18px] fill-current max-sm:h-3.5 max-sm:w-3.5" />
             )}
           </span>
-          <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary">
+          <p className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.4] text-text-primary max-sm:text-[13.5px]">
             {existingReview.comment || (isPositive ? 'Recommended' : "Didn't Recommend")}
           </p>
         </div>
@@ -401,8 +435,22 @@ export function StatusStrip({
     )
   }
 
+  // Nothing to click here (no CTA, no dispute link, no wallet link): on a
+  // phone the status card above already says the same thing.
+  const isPassive =
+    !ctaLabel &&
+    !showCaptionDisputeLink &&
+    !(role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')))
+
   return (
-    <OrderCard className={cn('flex flex-wrap items-center gap-3.5 max-sm:gap-y-2.5', sPad)} padded={false}>
+    <OrderCard
+      className={cn(
+        'flex flex-wrap items-center gap-3.5 max-sm:gap-y-2.5',
+        sPad,
+        hidePassiveOnMobile && isPassive && 'max-sm:hidden',
+      )}
+      padded={false}
+    >
       <span className={`grid flex-shrink-0 place-items-center ${sIcon} ${TONE_BG[tone]}`}>
         <Icon className={sIconGlyph} />
       </span>
@@ -440,7 +488,7 @@ export function StatusStrip({
           there so a refund never reads as "I lost my money". Not for
           'cancelled' — nothing was charged on a never-paid order, so a
           wallet CTA would imply money that isn't there. */}
-      {role === 'buyer' && status === 'refunded' && (
+      {role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')) && (
         <Link href="/account/wallet" className={cn('ml-1', sCtaCls)}>
           <Wallet className={sCtaGlyph} />
           Go To Wallet

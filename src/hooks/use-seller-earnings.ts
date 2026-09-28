@@ -1,10 +1,10 @@
 /**
  * Seller Earnings Hook
- * Manages earnings, transactions, and payouts for sellers
+ * Earnings stats and payout history for sellers
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { earningsApi, EarningsStats, Transaction, Payout } from '@/lib/api/seller-compatible'
+import { earningsApi, EarningsStats, Payout } from '@/lib/api/seller-compatible'
 
 export function useSellerEarnings() {
   // Fetch earnings statistics
@@ -17,15 +17,9 @@ export function useSellerEarnings() {
     queryFn: () => earningsApi.getStats(),
   })
 
-  // Fetch transaction history
-  const {
-    data: transactions,
-    isLoading: isLoadingTransactions,
-    error: transactionsError,
-  } = useQuery<Transaction[]>({
-    queryKey: ['seller', 'earnings', 'transactions'],
-    queryFn: () => earningsApi.getTransactions(),
-  })
+  // (No transaction-history query: nothing read it, and it held up the
+  // wallet's loading state on every visit. The wallet builds its own Sales
+  // list; earningsApi.getTransactions is still there if a page needs it.)
 
   // Fetch payout history
   const {
@@ -47,12 +41,9 @@ export function useSellerEarnings() {
     },
     isLoadingStats,
     statsError,
-    transactions: transactions || [],
-    isLoadingTransactions,
-    transactionsError,
     payouts: payouts || [],
     isLoadingPayouts,
     payoutsError,
-    isLoading: isLoadingStats || isLoadingTransactions || isLoadingPayouts,
+    isLoading: isLoadingStats || isLoadingPayouts,
   }
 }

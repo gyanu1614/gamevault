@@ -1470,9 +1470,26 @@
    full-width copy reads over it. The clip wrapper is neutralised here — the
    curve is a two-column device and has nothing to divide in a single stack. */
 @media (max-width: 767px) {
+  /* Phone: the card clips its own art on every side (the figure's inline
+     right offset and its width at 100% height ran past both edges), the
+     coins are gone (they stacked behind the figure as a second image), and
+     the two-column light layers (wave split, light field, colour spill)
+     are off, so the card is one plain surface with one image. The border
+     runs the full width again since nothing breaks out of it. */
+  .seller-card--breakout {
+    overflow: hidden;
+    border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+  .seller-card--breakout::after { display: none; }
+  .seller-card--breakout .seller-coins,
+  .seller-card--breakout .seller-split,
+  .seller-card--breakout .seller-light-clip,
+  .seller-card--breakout .seller-colour-spill {
+    display: none;
+  }
   .seller-card--breakout .seller-figure {
     opacity: 0.3;
-    right: 0;
+    right: 0 !important;
     height: 100%;
   }
   .seller-card--breakout [style*="card3-wave"],
@@ -2442,6 +2459,22 @@
   color: color-mix(in srgb, var(--foreground) 78%, transparent);
 }
 
+/* Phone (one column): the numeral and its card are one unit, centred on
+   the page. The unit is the card plus the numeral's exposed sliver; the
+   card sits flush right inside it and the numeral starts at its left edge,
+   so the pair centres together instead of the numeral hugging the screen
+   edge. */
+@media (max-width: 639px) {
+  .buyer-step {
+    width: 100%;
+    max-width: 256px;
+    margin-inline: auto;
+    padding-left: 61px;
+  }
+  .buyer-step__num { left: 0; }
+  .buyer-step__card { margin-inline: 0; }
+}
+
 @media (min-width: 640px) {
   .buyer-step__num { font-size: 199px; }
 }
@@ -2719,4 +2752,21 @@
 @media (prefers-reduced-motion: reduce) {
   .faq-glass::before { transition: opacity 260ms ease; }
   .faq-glass:hover::before { background-position: 50% 0; }
+}
+
+/* Popular Games, phone, collapsed: two rows and three quarters of row
+   three, with a fade the Show All text sits over.
+   Height = 2.75 card heights + two full name/gap bands. Card width is
+   (grid - 2 x 10px gap) / 3 and cards are 3:4, so card height is
+   (100cqw - 20px) x 4/9; each row adds 6px margin + 18px name line, and
+   rows are 20px apart: 2 x (24 + 20) = 88px. cqw resolves against
+   .popular-games-fold, the grid's own width. */
+@media (max-width: 639px) {
+  .popular-games-fold { container-type: inline-size; }
+  .popular-games--collapsed {
+    max-height: calc((100cqw - 20px) * 4 / 9 * 2.75 + 88px);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
+  }
 }

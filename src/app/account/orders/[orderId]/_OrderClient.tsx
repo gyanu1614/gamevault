@@ -27,6 +27,8 @@ import { AuditLog } from './_AuditLog'
 import { OrderChat } from './_OrderChat'
 import { DeliveryInstructions } from './_DeliveryInstructions'
 import { DeliveryEvidence } from './_DeliveryEvidence'
+import { OrderStatusCard } from './_OrderStatusCard'
+import { DeliveredInRow } from './_DeliveredInRow'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -58,6 +60,11 @@ interface OrderClientProps {
     recommendsSeller?: boolean | null
     createdAt: string
   } | null
+  /** Latest dispute on the order (open or closed), for the timeline. */
+  latestDispute?: { id: string; status: string; reason: string | null; title: string | null; created_at: string } | null
+  /** Buyer view: the open dispute is theirs, so marking the order received
+   *  closes it (order_dispute_buyer_confirm). */
+  buyerCanCloseDispute?: boolean
 }
 
 export function OrderClient(props: OrderClientProps) {
@@ -79,12 +86,21 @@ export function OrderClient(props: OrderClientProps) {
     conversationId,
     currentUserId,
     existingReview,
+    latestDispute = null,
+    buyerCanCloseDispute = false,
   } = props
 
+  // When the seller marked the order delivered (null until they do).
+  const deliveredAt: string | null =
+    order.delivered_at ?? order.seller_marked_delivered_at ?? null
+
   // Hide the progress bar once delivery is done — it morphs into the
-  // appropriate status strip in the right rail instead.
+  // appropriate status strip in the right rail instead. A dispute opened
+  // before delivery keeps the timer: the seller still owes the delivery.
   const showProgressBar =
-    order.status === 'paid' || order.status === 'delivering'
+    order.status === 'paid' ||
+    order.status === 'delivering' ||
+    (order.status === 'disputed' && !deliveredAt)
 
   // V21/P3.e — Server-rendered overdue flag for the status strip.
   // Recomputed live by the progress bar, but the strip only flips on
@@ -147,13 +163,13 @@ export function OrderClient(props: OrderClientProps) {
     userRole === 'buyer'
       ? {
           name: sellerDisplayName(order.seller),
-          isOnline: !!order.seller?.presence?.is_online,
+          sellerId: order.seller?.id ?? null,
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           roleLabel: 'Seller',
         }
       : {
           name: order.buyer?.username ?? 'Buyer',
-          isOnline: !!order.buyer?.presence?.is_online,
+          sellerId: null,
           avatarUrl: getAvatarUrl(order.buyer?.avatar_url, order.buyer?.username ?? 'buyer'),
           roleLabel: 'Buyer',
         }
@@ -205,6 +221,18 @@ export function OrderClient(props: OrderClientProps) {
     ? Number(order.seller_commission_pct)
     : subtotal > 0 ? Math.round((fee / subtotal) * 100) : 0
   const sellerFeeAmount = hasSnapshot ? Math.max(0, Math.round((subtotal - netPayout) * 100) / 100) : fee
+  // A partial refund leaves the order completed but pays the seller less:
+  // dispute_resolutions.seller_payout_amount is what they actually kept.
+  const isPartialRefund = disputeResolution?.resolution_type === 'partial_refund'
+  // Only the part that came out of the seller's payout (the platform covers
+  // any refund beyond it), so Item Price − Fee − this = what they received.
+  const refundedToBuyer = isPartialRefund
+    ? Math.min(Number(disputeResolution?.refund_amount ?? 0), netPayout)
+    : 0
+  const actualPayout =
+    isPartialRefund && disputeResolution?.seller_payout_amount != null
+      ? Number(disputeResolution.seller_payout_amount)
+      : netPayout
   const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
   const placedAtFull = new Date(order.created_at).toLocaleString('en-US', {
     month: 'short',
@@ -275,6 +303,17 @@ export function OrderClient(props: OrderClientProps) {
           presence={presenceParty}
         />
 
+        {/* Phone: one status card replaces the header's two pills. */}
+        <OrderStatusCard
+          className="mt-7 sm:hidden"
+          role={userRole}
+          status={order.status}
+          disputeResolved={!!disputeResolution}
+          disputeResolvedAt={disputeResolution?.resolved_at ?? null}
+          escrowStatus={order.escrow_status}
+          order={order}
+        />
+
         {/* Main grid — left main + right rail (sticky on lg). Progress
             bar now lives at the top of the LEFT column, not above the
             grid — keeps the timer near the chat where the action is. */}
@@ -316,20 +355,24 @@ export function OrderClient(props: OrderClientProps) {
             <StatusStrip
               role={userRole}
               status={order.status}
-              amount={userRole === 'seller' && order.status === 'completed' ? netPayout : undefined}
+              amount={userRole === 'seller' && order.status === 'completed' ? actualPayout : undefined}
               overdue={isOverdueOnLoad}
               disputeHref={`/account/orders/${order.id}#dispute`}
               disputeUntil={disputeUntil}
               onMarkDelivered={
-                userRole === 'seller' && order.status === 'delivering'
+                userRole === 'seller' &&
+                (order.status === 'delivering' || (order.status === 'disputed' && !deliveredAt))
                   ? () => setMarkDeliveredOpen(true)
                   : undefined
               }
               onMarkReceived={
-                userRole === 'buyer' && order.status === 'delivered'
+                userRole === 'buyer' &&
+                (order.status === 'delivered' || (order.status === 'disputed' && buyerCanCloseDispute))
                   ? () => setMarkReceivedOpen(true)
                   : undefined
               }
+              deliveredAt={deliveredAt}
+              escrowStatus={order.escrow_status}
               onLeaveReview={
                 userRole === 'buyer' && order.status === 'completed' && !existingReview
                   ? () => setLeaveReviewOpen(true)
@@ -338,6 +381,7 @@ export function OrderClient(props: OrderClientProps) {
               onOpenDispute={openDispute}
               existingReview={existingReview}
               promoted
+              hidePassiveOnMobile
             />
             )}
             {/* Mobile stacking: delivery instructions (small, actionable)
@@ -379,8 +423,11 @@ export function OrderClient(props: OrderClientProps) {
                   seller: order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : undefined,
                 }}
@@ -388,8 +435,11 @@ export function OrderClient(props: OrderClientProps) {
                   userRole === 'buyer' && order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : userRole === 'seller' && order.buyer
                     ? {
@@ -400,14 +450,26 @@ export function OrderClient(props: OrderClientProps) {
                     : undefined
                 }
                 disputeResolution={disputeResolution}
+                presenceSellerId={userRole === 'buyer' ? order.seller?.id ?? null : null}
               />
+              </div>
+            )}
+            {/* Phone: once delivered, the timer becomes a one-line
+                "Delivered In …" row under the chat. */}
+            {deliveredAt && order.status !== 'pending' && (
+              <div className="min-w-0 sm:hidden max-lg:order-2">
+                <DeliveredInRow
+                  startedAt={order.paid_at ?? order.created_at}
+                  deliveredAt={deliveredAt}
+                />
               </div>
             )}
             <div className="min-w-0 empty:hidden max-lg:order-1">
               <DeliveryInstructions
                 role={userRole}
-                instructions={order.listing?.delivery_instructions ?? null}
+                instructions={order.listing?.description ?? null}
                 listingId={order.listing?.id ?? null}
+                active={['paid', 'delivering', 'disputed'].includes(order.status) && !deliveredAt}
               />
             </div>
             <div className="min-w-0 empty:hidden max-lg:order-3">
@@ -429,7 +491,8 @@ export function OrderClient(props: OrderClientProps) {
               role={userRole}
               escrowAmount={escrowAmount}
               feePercent={feePercent}
-              netPayout={netPayout}
+              netPayout={actualPayout}
+              refundedToBuyer={refundedToBuyer}
               orderStatus={order.status}
               escrowStatus={order.escrow_status}
               otherParty={otherPartyButton}
@@ -437,7 +500,9 @@ export function OrderClient(props: OrderClientProps) {
               gameName={gameName}
               gameIconUrl={gameIconUrl}
               itemName={itemTitle}
-              deliveryInfo={(order as any).delivery_info ?? null}
+              // orders.delivery_details (jsonb). There is no delivery_info
+              // column; reading it showed "Username: Not Provided" everywhere.
+              deliveryInfo={(order as any).delivery_details ?? null}
               onOpenDispute={openDispute}
               disputeUntil={disputeUntil}
             />
@@ -445,7 +510,7 @@ export function OrderClient(props: OrderClientProps) {
         </div>
 
         <div className="mt-[22px]">
-          <AuditLog order={order as any} disputeResolution={disputeResolution} />
+          <AuditLog order={order as any} disputeResolution={disputeResolution} latestDispute={latestDispute} />
         </div>
       </div>
 
@@ -465,6 +530,7 @@ export function OrderClient(props: OrderClientProps) {
             onOpenChange={setMarkReceivedOpen}
             orderId={order.id}
             amount={escrowAmount}
+            closesDispute={order.status === 'disputed'}
             onConfirmed={() => router.refresh()}
           />
           <MarkReceivedModal

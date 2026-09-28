@@ -16,17 +16,22 @@
  *  - Inline keyboard hint moved to a faint helper below the input
  */
 
-import { useState, useRef, KeyboardEvent, ChangeEvent } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from 'react'
+import { Send, Loader2, Paperclip, X, FileText } from 'lucide-react'
+import { toast } from 'sonner'
+import { CHAT_ATTACHMENT_ACCEPT, validateChatAttachment } from '@/lib/chat/attachments'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface MessageInputProps {
-  onSend: (message: string) => Promise<void>
+  /** `file` is set when the user attached one (only if allowAttachments). */
+  onSend: (message: string, file?: File | null) => Promise<void>
   placeholder?: string
   disabled?: boolean
   maxLength?: number
+  /** Show the paperclip (order chats, for the buyer and seller only). */
+  allowAttachments?: boolean
 }
 
 export default function MessageInput({
@@ -34,19 +39,47 @@ export default function MessageInput({
   placeholder = 'Type a message…',
   disabled = false,
   maxLength = 2000,
+  allowAttachments = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const canSend = message.trim().length > 0 && !isSending && !disabled
+  // Local thumbnail for a picked image; freed when it changes or unmounts.
+  useEffect(() => {
+    if (!file || !file.type.startsWith('image/')) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const canSend = (message.trim().length > 0 || !!file) && !isSending && !disabled
+
+  const handlePick = (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0] ?? null
+    e.target.value = '' // picking the same file again still fires onChange
+    if (!picked) return
+    const problem = validateChatAttachment(picked)
+    if (problem) {
+      toast.error(problem)
+      return
+    }
+    setFile(picked)
+  }
 
   const handleSend = async () => {
     if (!canSend) return
     setIsSending(true)
     try {
-      await onSend(message.trim())
+      await onSend(message.trim(), file)
       setMessage('')
+      setFile(null)
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
     } catch (e) {
       console.error('Failed to send message:', e)
@@ -75,7 +108,52 @@ export default function MessageInput({
 
   return (
     <div className="border-t border-border-subtle bg-bg-raised px-4 py-3">
+      {/* Picked file, waiting to be sent with the next message. */}
+      {file && (
+        <div className="mb-2 flex items-center gap-2.5 rounded-lg border border-border-subtle bg-bg-overlay p-2">
+          {previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local object URL
+            <img src={previewUrl} alt="" className="h-10 w-10 flex-shrink-0 rounded-md object-cover" />
+          ) : (
+            <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md bg-white/[0.04] text-lime-text">
+              <FileText className="h-4 w-4" aria-hidden />
+            </span>
+          )}
+          <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-text-primary">{file.name}</span>
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            disabled={isSending}
+            className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary sm:h-8 sm:w-8"
+            aria-label="Remove attachment"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="flex items-end gap-2">
+        {allowAttachments && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={CHAT_ATTACHMENT_ACCEPT}
+              onChange={handlePick}
+              className="hidden"
+              tabIndex={-1}
+            />
+            <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isSending}
+              size="icon"
+              className="h-11 w-11 flex-shrink-0 rounded-lg bg-bg-overlay text-text-secondary hover:bg-bg-overlay hover:text-lime-text sm:h-10 sm:w-10"
+              aria-label="Attach a photo or PDF"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </>
+        )}
         <Textarea
           ref={textareaRef}
           value={message}
@@ -86,7 +164,9 @@ export default function MessageInput({
           maxLength={maxLength}
           rows={1}
           className={cn(
-            'min-h-[44px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary sm:min-h-[40px]',
+            // Touch screens get 16px: iOS zooms the page into any field under
+            // 16px on focus. Mouse/trackpad keeps the 13.5px design size.
+            'min-h-[44px] max-h-[120px] flex-1 resize-none rounded-lg border-border-default bg-bg-overlay px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-text-primary placeholder:text-text-tertiary sm:min-h-[40px] [@media(pointer:coarse)]:text-[16px]',
             'focus-visible:border-focus-border focus-visible:ring-2 focus-visible:ring-focus-soft focus-visible:ring-offset-0',
           )}
         />

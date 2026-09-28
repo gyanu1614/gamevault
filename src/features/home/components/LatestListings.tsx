@@ -9,6 +9,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getLatestListings } from '../lib/latest-listings'
+import { getPopularGames } from '../lib/popular-games'
 import { LatestListingsRail } from './LatestListingsRail'
 import { TopSellingGamesRail } from './TopSellingGamesRail'
 import { GridSpotlight } from './GridSpotlight'
@@ -17,7 +18,7 @@ import { GridSpotlight } from './GridSpotlight'
 const MIN_LISTINGS = 3
 
 export async function LatestListings() {
-  const listings = await getLatestListings(30)
+  const [listings, topGames] = await Promise.all([getLatestListings(30), getPopularGames(10)])
 
   if (listings.length < MIN_LISTINGS) return null
 
@@ -59,22 +60,7 @@ export async function LatestListings() {
 
       <LatestListingsRail listings={listings} />
 
-      {/* Below-rail fallback for narrow screens, where an absolutely
-          positioned link would sit on top of the title. */}
-      <div className="relative mt-6 flex justify-center sm:hidden">
-        <Link
-          href="/browse"
-          className="group inline-flex items-center gap-1.5 whitespace-nowrap text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary"
-        >
-          Browse Marketplace
-          <ArrowRight
-            aria-hidden
-            className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5"
-          />
-        </Link>
-      </div>
-
-      {/* Row 2 — Top Selling Games. Layout shell only for now. */}
+      {/* Row 2 — Top Selling Games: game cards, most live stock first. */}
       <div className="relative mt-20">
         <div className="relative">
           <h2 className="section-title">Top Selling Games</h2>
@@ -90,7 +76,7 @@ export async function LatestListings() {
           </Link>
         </div>
 
-        <TopSellingGamesRail />
+        {topGames.length > 0 && <TopSellingGamesRail games={topGames} />}
 
         <div className="mt-6 flex justify-center sm:hidden">
           <Link

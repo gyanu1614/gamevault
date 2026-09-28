@@ -11,13 +11,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
-// Ledger-backed money paths (funds-flow cutover): the order transition moves
-// held escrow to refunds atomically, then the wallet credit (refunds →
-// user_wallet) makes the buyer whole as store credit. The legacy
-// ./wallet refundToWallet wrote the RLS-locked wallet_balances float table
-// and silently stopped working after the ledger cutover.
-import { transition } from '@/lib/escrow/transition'
-import { refundToWallet } from '@/lib/wallet/wallet'
+// Money seams (CLAUDE.md): a cancellation's status move and the buyer's
+// wallet credit are ONE RPC each (order_cancel_return_wallet /
+// order_refund_to_wallet via lib/wallet/order-money), never composed here.
+import { cancelOrderReturnWallet, refundOrderToWallet } from '@/lib/wallet/order-money'
 
 export interface CancellationRequest {
   id: string
@@ -386,7 +383,45 @@ export async function processCancellationRequest(
       return { error: { message: 'This request has already been processed' } }
     }
 
-    // Update the request status
+    // Approve: move the money FIRST, as ONE atomic RPC (CLAUDE.md money
+    // seams), and only then mark the request approved. The old order
+    // (mark approved -> transition -> separate wallet credit) could leave an
+    // approved request with no refund and no way to retry, because a
+    // non-pending request is refused above.
+    //   paid                 -> order_cancel_return_wallet (CANCELLED + credit)
+    //   delivering/delivered -> order_refund_to_wallet     (REFUNDED + credit)
+    // A disputed order is settled through the dispute tools, not here.
+    if (action === 'approve') {
+      const order = request.order
+      const dedupe = `cancel_request:${requestId}`
+      try {
+        const result =
+          order.status === 'paid'
+            ? await cancelOrderReturnWallet(request.order_id, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
+            : order.status === 'delivering' || order.status === 'delivered'
+              ? await refundOrderToWallet(request.order_id, dedupe)
+              : null
+        if (!result) {
+          return {
+            error: {
+              message: `This order is ${order.status}; it can't be cancelled here${order.status === 'disputed' ? ' — resolve the dispute instead' : ''}.`,
+            },
+          }
+        }
+        if (result.refused) {
+          return { error: { message: 'The order could not be cancelled in its current state. Nothing was changed.' } }
+        }
+      } catch (moneyError: any) {
+        console.error('Error cancelling / refunding order:', moneyError)
+        return {
+          error: {
+            message: `Failed to cancel the order: ${moneyError?.message ?? 'unknown error'}. Nothing was changed — please try again.`,
+          },
+        }
+      }
+    }
+
+    // Record the decision (after the money, for an approval).
     const { data: updatedRequest, error: updateError } = await (supabase
       .from('order_cancellation_requests')
       .update as any)({
@@ -401,47 +436,11 @@ export async function processCancellationRequest(
 
     if (updateError) {
       console.error('Error updating request:', updateError)
-      return { error: { message: 'Failed to process request' } }
+      return { error: { message: action === 'approve' ? 'The refund went through but saving the decision failed — refresh and check the request.' : 'Failed to process request' } }
     }
 
-    // If approved, cancel the order through the atomic ledger transition,
-    // THEN credit the buyer's wallet. Order matters for the ledger chain:
-    // the transition moves escrow_held → refunds, and the wallet credit
-    // moves refunds → user_wallet, keeping every account balanced.
     if (action === 'approve') {
       const order = request.order
-
-      try {
-        // A delivered order cancels as a refund in the state machine
-        // (delivered → cancelled is not a legal move; delivered → refunded is).
-        const event = order.status === 'delivered' ? 'REFUNDED' : 'CANCELLED'
-        await transition(request.order_id, event)
-      } catch (transitionError: any) {
-        console.error('Error cancelling order:', transitionError)
-        return {
-          error: {
-            message: `Failed to cancel the order: ${transitionError?.message ?? 'unknown error'}. Please try again or contact support.`,
-          },
-        }
-      }
-
-      // Store-credit refund — 100% of what the buyer paid, instantly
-      // (Refund & Dispute Policy). Idempotent on 'wallet_refund:<orderId>'.
-      try {
-        await refundToWallet({
-          userId: order.buyer_id,
-          amountMinor: BigInt(Math.round(Number(order.total_amount ?? 0) * 100)),
-          currency: (order.currency || 'EUR').toUpperCase(),
-          orderId: request.order_id,
-        })
-      } catch (refundError: any) {
-        console.error('Error refunding to wallet:', refundError)
-        return {
-          error: {
-            message: `Order cancelled but the wallet refund failed: ${refundError?.message ?? 'unknown error'}. Re-approve to retry the credit (it is idempotent) or contact support.`,
-          },
-        }
-      }
 
       // Tell the buyer their money is in their wallet (in-app + email,
       // wrapped — a comms failure must never fail the approval).

@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { disputeReasonFor } from '@/lib/orders/dispute-reason'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
@@ -37,6 +39,9 @@ export async function getOrder(orderId: string): Promise<{
       }
     }
 
+    // No emails: this payload is rendered into the OTHER party's page (and
+    // getOrder is a callable server action). Admin pages load contact
+    // details separately. Seller trust fields feed the store card.
     const { data: order, error } = await supabase
       .from('orders')
       .select(`
@@ -44,16 +49,18 @@ export async function getOrder(orderId: string): Promise<{
         buyer:buyer_id (
           id,
           username,
-          email,
           avatar_url
         ),
         seller:seller_id (
           id,
           username,
-          email,
           avatar_url,
           seller_tier,
-          shop_name
+          shop_name,
+          shop_slug,
+          is_verified,
+          seller_rating,
+          total_reviews
         ),
         listing:listing_id (
           id,
@@ -245,9 +252,74 @@ export async function notifySellerActivity(orderId: string): Promise<void> {
 /**
  * Mark order as delivered (seller action)
  */
+/**
+ * After a successful "mark delivered": keep what the seller submitted with
+ * it. Both used to be dropped on the floor.
+ *  - Proof photo: its storage path is appended to orders.delivery_evidence_urls
+ *    (service role; the caller already proved the seller owns the order).
+ *    Only a file directly in this order's own folder is accepted, never a
+ *    chat file or another order's.
+ *  - Note: posted to the order chat as the seller (session client, so the
+ *    ordinary participant RLS applies), where the buyer reads it.
+ * Best-effort: a failure here never undoes the delivery.
+ */
+async function recordDeliveryProof(
+  session: any,
+  orderId: string,
+  evidencePath: string | undefined,
+  note: string | undefined,
+): Promise<void> {
+  const path = evidencePath?.trim()
+  if (path && path.startsWith(`${orderId}/`) && !path.slice(orderId.length + 1).includes('/')) {
+    try {
+      const service = createServiceRoleClient()
+      const { data: row } = await service
+        .from('orders')
+        .select('delivery_evidence_urls')
+        .eq('id', orderId)
+        .single() as any
+      const existing: string[] = row?.delivery_evidence_urls ?? []
+      if (!existing.includes(path)) {
+        const { error } = await (service.from('orders').update as any)({
+          delivery_evidence_urls: [...existing, path],
+        }).eq('id', orderId)
+        if (error) console.error('[Delivered] Saving proof photo failed:', error)
+      }
+    } catch (err) {
+      console.error('[Delivered] Saving proof photo failed:', err)
+    }
+  }
+
+  const text = note?.trim()
+  if (text) {
+    try {
+      const { data: convo } = await session
+        .from('conversations')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle()
+      const { data: { user } } = await session.auth.getUser()
+      if (convo?.id && user?.id) {
+        const { error } = await (session.from('messages').insert as any)({
+          conversation_id: convo.id,
+          sender_id: user.id,
+          content: `Delivery note: ${text}`.slice(0, 2000),
+          is_read: false,
+        })
+        if (error) console.error('[Delivered] Posting delivery note failed:', error)
+      }
+    } catch (err) {
+      console.error('[Delivered] Posting delivery note failed:', err)
+    }
+  }
+}
+
 export async function markOrderAsDelivered(
   orderId: string,
-  deliveryNotes?: string
+  deliveryNotes?: string,
+  /** Storage path of the proof photo MarkDeliveredModal uploaded
+   *  (delivery-evidence bucket, `{orderId}/{file}`). */
+  evidencePath?: string,
 ): Promise<{
   success: boolean
   error?: string
@@ -281,9 +353,30 @@ export async function markOrderAsDelivered(
       }
     }
 
+    // Disputed before delivery: the seller can still record that they
+    // delivered. ONE RPC stamps delivered_at only (status stays disputed, no
+    // money moves, no auto-complete window) and tells the buyer they can
+    // confirm to close the dispute.
+    if (order.status === 'disputed') {
+      const { data: marked, error: markError } = await (createServiceRoleClient().rpc as any)(
+        'order_mark_delivered_in_dispute',
+        { p_order_id: orderId, p_seller_id: user.id },
+      )
+      if (markError) {
+        console.error('Database error marking disputed order delivered:', markError)
+        return { success: false, error: markError.message || 'Failed to update order' }
+      }
+      // already_delivered / race lost: nothing more to do.
+      if (marked?.changed === true) {
+        await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+        revalidatePath(`/account/orders/${orderId}`)
+      }
+      return { success: true }
+    }
+
     // Idempotent: re-marking a delivered/finished order must not restart the
     // protection window or re-send the buyer email.
-    if (['delivered', 'completed', 'refunded', 'cancelled', 'disputed'].includes(order.status)) {
+    if (['delivered', 'completed', 'refunded', 'cancelled'].includes(order.status)) {
       return { success: true }
     }
 
@@ -307,6 +400,8 @@ export async function markOrderAsDelivered(
     if (!delivered || delivered.changed !== true) {
       return { success: true }
     }
+    await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+
     const windowHours = Number(delivered.window_hours ?? 72)
     const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())
 
@@ -532,6 +627,111 @@ async function heldMinorFor(supabase: any, orderId: string): Promise<bigint> {
 }
 
 /**
+ * Everything that follows a buyer-confirmed release of an order's money,
+ * shared by the ordinary confirm and the confirm that closes the buyer's own
+ * dispute: listing-surface revalidation, buyer receipt + seller "sale final"
+ * emails (and in-app note), cashback and the referral commission. All
+ * fire-and-forget and idempotent per order.
+ */
+async function afterBuyerRelease(
+  order: any,
+  buyerId: string,
+  opts: { notifySellerInApp: boolean },
+): Promise<void> {
+  const orderId: string = order.id
+  // Completion decrements stock (trigger) — keep the public listing pages in
+  // step, exactly as transition() does for the auto-complete path.
+  await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
+
+  // Buyer completion receipt (fire-and-forget, non-blocking). When
+  // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
+  // Feedback Service, which then sends the buyer a verified-review
+  // invitation ~7 days later — this replaces the cron's fallback review
+  // email (sendTrustpilotInvitation skips itself in BCC mode).
+  await (async () => {
+    // Service client: RLS hides sold/paused listings from non-owners.
+    const service = createServiceRoleClient()
+    const [{ data: buyer }, { data: completedListing }] = await Promise.all([
+      service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', buyerId)
+        .single() as any,
+      service
+        .from('listings')
+        .select('title')
+        .eq('id', order.listing_id)
+        .single() as any,
+    ])
+    if (buyer?.email) {
+      const { sendOrderCompletionEmail } = await import('@/lib/email')
+      await sendOrderCompletionEmail({
+        to: buyer.email,
+        name: buyer.full_name || buyer.username || 'Gamer',
+        orderId,
+        orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
+        listingTitle: completedListing?.title || 'your item',
+        totalPaid: order.total_amount ?? 0,
+      })
+    }
+  })().catch((err) => console.error('[Orders] Completion email failed:', err))
+
+  // Tell the seller their sale is final (email + in-app, fire-and-forget).
+  await (async () => {
+    const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
+    // Service client: RLS hides the seller's profile from the buyer session.
+    const service = createServiceRoleClient()
+    const [{ data: seller }, { data: soldListing }] = await Promise.all([
+      service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', order.seller_id)
+        .single() as any,
+      service
+        .from('listings')
+        .select('title')
+        .eq('id', order.listing_id)
+        .single() as any,
+    ])
+    const { createNotification } = await import('@/lib/utils/notifications')
+    if (opts.notifySellerInApp) await createNotification({
+      userId: order.seller_id,
+      type: 'order_completed',
+      title: 'Order Completed',
+      message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
+      link: `/account/orders/${orderId}`,
+    })
+    if (seller?.email) {
+      const { sendOrderCompletedSellerEmail } = await import('@/lib/email')
+      await sendOrderCompletedSellerEmail({
+        to: seller.email,
+        name: seller.full_name || seller.username || 'Gamer',
+        orderId,
+        orderNumber: orderRef,
+        listingTitle: soldListing?.title || 'your item',
+        payout: order.seller_payout ?? 0,
+      })
+    }
+  })().catch((err) => console.error('[Orders] Seller completion comms failed:', err))
+
+  // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
+  // Guest orders don't get loyalty credits (no persistent account)
+  if (!order.is_guest_order) {
+    // Only the id crosses the seam — awardCashback re-fetches and verifies
+    // the order itself (it mints spendable credit; no trusted payload).
+    awardCashback({ orderId }).catch(() => {})
+  }
+
+  // DB-017 — the referrer's commission (10% of the platform fee, read from
+  // the order row) was never recorded: recordReferralCommission had no
+  // caller. Fire-and-forget like cashback; once per order (partial unique
+  // index referral_earnings_one_commission_per_order).
+  recordReferralCommission(orderId).catch((err) =>
+    console.error('[Orders] referral commission failed (retryable):', err)
+  )
+}
+
+/**
  * Confirm order receipt (buyer action)
  */
 export async function confirmOrderReceipt(orderId: string): Promise<{
@@ -573,6 +773,43 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
+    // The buyer confirms receipt on an order THEY disputed: ONE RPC closes
+    // the dispute in the seller's favour (resolved by the buyer) and applies
+    // the release — the ordinary buyer-confirm release when the dispute came
+    // before completion, the admin-release unfreeze when it came after.
+    if (order.status === 'disputed') {
+      const { data: closed, error: closeError } = await (createServiceRoleClient().rpc as any)(
+        'order_dispute_buyer_confirm',
+        { p_order_id: orderId, p_buyer_id: user.id },
+      )
+      if (closeError) {
+        console.error('Database error closing dispute on buyer confirm:', closeError)
+        return { success: false, error: closeError.message || 'Failed to complete order' }
+      }
+      if (!closed || closed.changed !== true) {
+        const reason = String(closed?.reason ?? '')
+        if (reason === 'admin_opened') {
+          return { success: false, error: 'This order is under review by our team — they will close it for you.' }
+        }
+        // already_resolved / not_disputed / race lost: the winner owns comms.
+        return { success: true }
+      }
+      await postOrderSystemNotice(orderId, {
+        type: 'dispute_resolved',
+        resolution: 'seller_favor',
+        resolvedBy: 'buyer',
+        notes: 'The buyer confirmed they received the order and closed the dispute.',
+      })
+      if (closed.post_completion !== true) {
+        // First completion of this order: the same follow-ups as a normal
+        // confirm. The seller was already told in-app by the RPC.
+        await afterBuyerRelease(order, user.id, { notifySellerInApp: false })
+      }
+      revalidatePath(`/account/orders/${orderId}`)
+      revalidatePath('/account/orders')
+      return { success: true }
+    }
+
     // PR 7: ONE RPC — (SELLER_DELIVERED if the seller never marked it) +
     // BUYER_CONFIRMED release with the maturity hold, in one transaction. The
     // RPC refuses (changed=false + reason) unpaid, disputed and already-
@@ -599,96 +836,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
       return { success: true }
     }
 
-    // Completion decrements stock (trigger) — keep the public listing pages in
-    // step, exactly as transition() does for the auto-complete path.
-    await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
-
-    // Buyer completion receipt (fire-and-forget, non-blocking). When
-    // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
-    // Feedback Service, which then sends the buyer a verified-review
-    // invitation ~7 days later — this replaces the cron's fallback review
-    // email (sendTrustpilotInvitation skips itself in BCC mode).
-    await (async () => {
-      // Service client: RLS hides sold/paused listings from non-owners.
-      const service = createServiceRoleClient()
-      const [{ data: buyer }, { data: completedListing }] = await Promise.all([
-        service
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', user.id)
-          .single() as any,
-        service
-          .from('listings')
-          .select('title')
-          .eq('id', order.listing_id)
-          .single() as any,
-      ])
-      if (buyer?.email) {
-        const { sendOrderCompletionEmail } = await import('@/lib/email')
-        await sendOrderCompletionEmail({
-          to: buyer.email,
-          name: buyer.full_name || buyer.username || 'Gamer',
-          orderId,
-          orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
-          listingTitle: completedListing?.title || 'your item',
-          totalPaid: order.total_amount ?? 0,
-        })
-      }
-    })().catch((err) => console.error('[Orders] Completion email failed:', err))
-
-    // Tell the seller their sale is final (email + in-app, fire-and-forget).
-    await (async () => {
-      const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
-      // Service client: RLS hides the seller's profile from the buyer session.
-      const service = createServiceRoleClient()
-      const [{ data: seller }, { data: soldListing }] = await Promise.all([
-        service
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', order.seller_id)
-          .single() as any,
-        service
-          .from('listings')
-          .select('title')
-          .eq('id', order.listing_id)
-          .single() as any,
-      ])
-      const { createNotification } = await import('@/lib/utils/notifications')
-      await createNotification({
-        userId: order.seller_id,
-        type: 'order_completed',
-        title: 'Order Completed',
-        message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
-        link: `/account/orders/${orderId}`,
-      })
-      if (seller?.email) {
-        const { sendOrderCompletedSellerEmail } = await import('@/lib/email')
-        await sendOrderCompletedSellerEmail({
-          to: seller.email,
-          name: seller.full_name || seller.username || 'Gamer',
-          orderId,
-          orderNumber: orderRef,
-          listingTitle: soldListing?.title || 'your item',
-          payout: order.seller_payout ?? 0,
-        })
-      }
-    })().catch((err) => console.error('[Orders] Seller completion comms failed:', err))
-
-    // P5.2 — Award cashback to buyer (fire-and-forget, non-blocking)
-    // Guest orders don't get loyalty credits (no persistent account)
-    if (!order.is_guest_order) {
-      // Only the id crosses the seam — awardCashback re-fetches and verifies
-      // the order itself (it mints spendable credit; no trusted payload).
-      awardCashback({ orderId }).catch(() => {})
-    }
-
-    // DB-017 — the referrer's commission (10% of the platform fee, read from
-    // the order row) was never recorded: recordReferralCommission had no
-    // caller. Fire-and-forget like cashback; once per order (partial unique
-    // index referral_earnings_one_commission_per_order).
-    recordReferralCommission(orderId).catch((err) =>
-      console.error('[Orders] referral commission failed (retryable):', err)
-    )
+    await afterBuyerRelease(order, user.id, { notifySellerInApp: true })
 
     // Revalidate both seller and buyer paths for real-time updates
     revalidatePath(`/account/orders/${orderId}`)
@@ -732,14 +880,7 @@ export async function openDispute(
     }
 
     // Map UI-friendly category to database enum value
-    const categoryMap: Record<string, string> = {
-      'Item not as described': 'not_as_described',
-      'Did not receive order': 'item_not_received',
-      'Wrong item received': 'wrong_item',
-      'Account credentials invalid': 'account_issue',
-      'Other': 'other',
-    }
-    const dbCategory = categoryMap[category] || 'other'
+    const dbCategory = disputeReasonFor(category)
 
     // Get order
     const { data: order, error: orderError } = await supabase
@@ -782,35 +923,8 @@ export async function openDispute(
     }
     const disputeError = null
 
-    // Send dispute notification message to order conversation
-    try {
-      // Get conversation for this order
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('order_id', orderId)
-        .single() as any
-
-      if (conversation) {
-        // Send system notification about dispute
-        // Using special UUID for system messages: all zeros
-        await (supabase.from('messages').insert as any)({
-          conversation_id: conversation.id,
-          sender_id: '00000000-0000-0000-0000-000000000000', // System sender ID
-          content: JSON.stringify({
-            type: 'dispute_opened',
-            category,
-            reason,
-          }),
-          is_read: false,
-        })
-
-        console.log('[Dispute] System notification sent to conversation')
-      }
-    } catch (error) {
-      console.error('[Dispute] Failed to send conversation message:', error)
-      // Non-fatal - dispute is already created
-    }
+    // Dispute card in the order chat (service role, system sender).
+    await postOrderSystemNotice(orderId, { type: 'dispute_opened', category, reason })
 
     // In-app notifications for both parties were written by the RPC (notify_once).
 

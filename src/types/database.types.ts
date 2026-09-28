@@ -2167,7 +2167,7 @@ export type Database = {
           id: string
           is_read: boolean | null
           read_at: string | null
-          sender_id: string
+          sender_id: string | null
         }
         Insert: {
           attachments?: string[] | null
@@ -2177,7 +2177,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           read_at?: string | null
-          sender_id: string
+          sender_id?: string | null
         }
         Update: {
           attachments?: string[] | null
@@ -2187,7 +2187,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           read_at?: string | null
-          sender_id?: string
+          sender_id?: string | null
         }
         Relationships: [
           {

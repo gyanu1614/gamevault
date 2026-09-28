@@ -9,6 +9,7 @@ import { isUuid } from '@/lib/ids'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getOrder } from '@/lib/actions/orders'
 import {
   ArrowLeft,
@@ -24,6 +25,9 @@ import {
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
+import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { redactOrderFor } from '@/lib/orders/redact'
+import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
@@ -150,7 +154,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
     order.listing?.game_category_id
       ? (supabase
           .from('game_categories')
-          .select('id, name, slug')
+          .select('id, name, slug, type')
           .eq('id', order.listing.game_category_id)
           .single() as any)
       : Promise.resolve({ data: null }),
@@ -159,7 +163,39 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const game = (gameRes as any).data as
     | { id: string; name: string; slug: string; image_url: string | null }
     | null
-  const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
+  const category = (categoryRes as any).data as
+    | { id: string; name: string; slug: string; type: string | null }
+    | null
+
+  // Currency orders show the amount in the title ("2,000 Roblox Robux");
+  // the unit (per unit / K / M, or fixed bundles) comes from the game's
+  // currency config. Public read via the anon client.
+  const currencyCfg =
+    category?.type === 'currency' && game?.id
+      ? await fetchCategoryConfig(game.id, 'currency').catch(() => null)
+      : null
+
+  // Delivery proof lives in the PRIVATE delivery-evidence bucket, stored as
+  // object paths (or, from an older writer, public-style URLs that a private
+  // bucket never serves). Sign them for this viewer; the storage policy only
+  // signs for the order's buyer, seller or an admin.
+  const evidence = ((order as any).delivery_evidence_urls ?? []) as string[]
+  if (evidence.length > 0) {
+    const toPath = (v: string) => {
+      if (!/^https?:/i.test(v)) return v
+      const i = v.indexOf('/delivery-evidence/')
+      return i >= 0 ? decodeURIComponent(v.slice(i + '/delivery-evidence/'.length).split('?')[0]) : null
+    }
+    const paths = evidence.map(toPath)
+    const toSign = paths.filter((p): p is string => !!p)
+    const { data: signed } = toSign.length
+      ? await supabase.storage.from('delivery-evidence').createSignedUrls(toSign, 3600)
+      : { data: [] as Array<{ path: string | null; signedUrl: string }> }
+    const byPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]))
+    ;(order as any).delivery_evidence_urls = evidence
+      .map((v, i) => (paths[i] ? byPath.get(paths[i]) ?? null : v))
+      .filter(Boolean)
+  }
 
   // Attach game and category to order.listing for downstream components
   if (order.listing) {
@@ -179,15 +215,26 @@ export default async function OrderDetailPage({ params }: PageProps) {
     resolved_at: string
     buyer_username?: string
     seller_username?: string
+    /** Who closed it: the buyer (confirmed receipt), the seller, or an admin. */
+    resolved_by_role?: 'buyer' | 'seller' | 'admin'
   } | null = null
 
   if (order.disputed_at) {
-    const { data: disputeData } = await supabase
+    // The LATEST dispute only. An order can be disputed again after an
+    // earlier dispute closed (a post-completion dispute); picking "any
+    // resolved dispute" showed a fresh, open one as Resolved, and with two
+    // resolved rows .maybeSingle() errored and showed nothing.
+    const { data: latest } = await supabase
       .from('disputes')
-      .select('id, status')
+      .select('id, status, resolved_by')
       .eq('transaction_id', orderId)
-      .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle() as any
+    const disputeData =
+      latest && ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'].includes(latest.status)
+        ? latest
+        : null
 
     if (disputeData) {
       const { data: resolutionData } = await supabase
@@ -208,9 +255,50 @@ export default async function OrderDetailPage({ params }: PageProps) {
           resolved_at: resolutionData.created_at,
           buyer_username: order.buyer?.username,
           seller_username: order.seller?.username,
+          resolved_by_role:
+            disputeData.resolved_by && disputeData.resolved_by === order.buyer_id
+              ? 'buyer'
+              : disputeData.resolved_by && disputeData.resolved_by === order.seller_id
+                ? 'seller'
+                : 'admin',
         }
       }
     }
+  }
+
+  // The latest dispute on this order (open or closed): the timeline's
+  // "Order Disputed" step shows its reason.
+  let latestDispute: { id: string; status: string; reason: string | null; title: string | null; created_at: string } | null = null
+  if (order.disputed_at) {
+    const { data } = await supabase
+      .from('disputes')
+      .select('id, status, reason, title, created_at')
+      .eq('transaction_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle() as any
+    latestDispute = data ?? null
+  }
+
+  // The buyer may close a dispute THEY opened by marking the order received
+  // (order_dispute_buyer_confirm). A team-opened review is closed by the team
+  // only; order_dispute_events is service-role only, so this one existence
+  // read goes through the service client (access to the order is already
+  // checked above). The RPC re-checks all of it under its locks.
+  let buyerCanCloseDispute = false
+  if (
+    userRole === 'buyer' &&
+    order.status === 'disputed' &&
+    latestDispute &&
+    !['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial', 'closed'].includes(latestDispute.status)
+  ) {
+    const { data: adminOpened } = await (createServiceRoleClient() as any)
+      .from('order_dispute_events')
+      .select('id')
+      .eq('dispute_id', latestDispute.id)
+      .eq('action', 'admin_opened')
+      .limit(1) as any
+    buyerCanCloseDispute = !(adminOpened && adminOpened.length > 0)
   }
 
   // PR 7 — the buyer may open a dispute for dispute_window_days after
@@ -244,20 +332,28 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const listingImageUrl = order.listing?.images?.[0]
   const gameImageUrl   = game?.image_url
   const listingTitle   = order.listing?.title
+    ? orderDisplayTitle({
+        title: order.listing.title,
+        quantity: (order as any).quantity,
+        isCurrency: category?.type === 'currency',
+        granularity: currencyCfg?.quantity_granularity ?? null,
+        hasBundles: (currencyCfg?.bundles?.length ?? 0) > 0,
+      })
+    : undefined
   const gameName       = game?.name
   const categoryName   = category?.name
 
   // V21/P2 — derive SLA window from the listing's delivery_time LABEL
   // ("20min" / "1hr" / "1-24 hours" …) via parseDeliveryMinutes. (The old
   // Number(delivery_time) was NaN for every stored value → always fell back to
-  // 60 min, so a 20-min listing showed a 1-hour SLA.) Real start time is
-  // order.delivering_at if set; otherwise created_at acts as the clock.
+  // 60 min, so a 20-min listing showed a 1-hour SLA.)
   const slaMinutes = parseDeliveryMinutes(order.listing?.delivery_time)
   const slaSeconds = slaMinutes * 60
-  // SLA clock starts when the SELLER is on the hook: delivery start, else
-  // payment confirmation — never order creation (unpaid time doesn't count).
-  const slaStartedAt: string =
-    (order as any).delivering_at ?? (order as any).paid_at ?? order.created_at
+  // The delivery promise runs from PAYMENT (unpaid time doesn't count). It is
+  // not restarted by delivering_at: that is stamped by the seller's first chat
+  // message, and restarting there let a late seller reset "Overdue" (and the
+  // buyer's dispute prompt) to a full window by saying hello.
+  const slaStartedAt: string = (order as any).paid_at ?? order.created_at
 
   const placedAtDate = new Date(order.created_at)
   const placedAtLabel = placedAtDate.toLocaleTimeString('en-US', {
@@ -281,7 +377,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // conversation is created lazily on the first paid render instead.
   let conversationId: string | null = convo?.id ?? null
   if (!conversationId && order.status !== 'pending') {
-    const { data: created } = await (supabase.from('conversations').insert as any)({
+    const { data: created, error: createError } = await (supabase.from('conversations').insert as any)({
       order_id:  orderId,
       buyer_id:  order.buyer_id,
       seller_id: order.seller_id,
@@ -289,6 +385,18 @@ export default async function OrderDetailPage({ params }: PageProps) {
       .select('id')
       .single() as any
     conversationId = created?.id ?? null
+    // Both parties' first visits can race: order_id is unique, so the loser
+    // gets 23505 — the conversation exists now, read it instead of showing
+    // no chat on this load.
+    if (!conversationId && createError) {
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle() as any
+      conversationId = existing?.id ?? null
+      if (!conversationId) console.error('[order page] conversation create failed', createError)
+    }
   }
 
   // V21/P5.l — Pull the buyer's review for this order (if any).
@@ -347,11 +455,20 @@ export default async function OrderDetailPage({ params }: PageProps) {
         fetchpriority="high"
       />
       <OrderClient
-        order={order}
+        // Rendered into the viewer's browser: strip the other party's private
+        // money / payment fields (lib/orders/redact.ts).
+        order={redactOrderFor(order, userRole)}
         disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
-        itemImageUrl={listingImageUrl ?? gameImageUrl ?? null}
+        // Currency orders show the currency's own icon (the Robux coin, not
+        // the Roblox logo); items keep the item's image.
+        itemImageUrl={
+          (category?.type === 'currency' ? currencyCfg?.currency_icon_url : null) ??
+          listingImageUrl ??
+          gameImageUrl ??
+          null
+        }
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}
@@ -364,6 +481,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
         conversationId={conversationId}
         currentUserId={user.id}
         existingReview={existingReview}
+        latestDispute={latestDispute}
+        buyerCanCloseDispute={buyerCanCloseDispute}
       />
     </>
   )

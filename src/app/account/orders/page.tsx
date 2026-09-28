@@ -1,6 +1,7 @@
 'use client'
 
 import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
@@ -41,6 +42,10 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
+import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
+import { countByStatusGroup, inStatusGroup, type OrderStatusGroup } from '@/lib/orders/status-groups'
+import { useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -51,9 +56,18 @@ const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'pending', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'disputed', label: 'Disputed' },
-  // No 'cancelled' option: never-paid orders are hidden at the query level
-  // (see buyerOrdersApi/sellerOrdersApi), so the filter would always be empty.
+  { value: 'cancelled', label: 'Refunded / Cancelled' },
 ]
+
+// Filter key → status group (lib/orders/status-groups). Keys kept as they
+// were so saved filter state keeps working.
+const FILTER_GROUP: Record<FilterStatus, OrderStatusGroup | 'all'> = {
+  all: 'all',
+  pending: 'in_progress',
+  completed: 'completed',
+  disputed: 'disputed',
+  cancelled: 'closed',
+}
 
 // Advanced filter state
 interface AdvancedFilters {
@@ -174,16 +188,26 @@ function OrdersContent() {
   const {
     orders: buyerOrders,
     isLoading: buyerOrdersLoading,
+    error: buyerOrdersError,
   } = useBuyerOrders({})
 
   // Fetch seller orders (only if approved seller) (fetch ALL orders, filtering done client-side)
   const {
     orders: sellerOrders,
     isLoading: sellerOrdersLoading,
+    error: sellerOrdersError,
   } = useSellerOrders({})
+  const queryClient = useQueryClient()
 
   // Determine which orders to show based on active tab
   const dbOrders = activeTab === 'purchases' ? buyerOrders : sellerOrders || []
+  // K/M currency games count quantities in thousands/millions; the title
+  // formatter needs each game's currency config.
+  const currencyMeta = useCurrencyMeta(
+    ((dbOrders ?? []) as any[])
+      .filter((o) => o.listing?.category?.type === 'currency')
+      .map((o) => o.listing?.game_id ?? ''),
+  )
   const ordersLoading = activeTab === 'purchases' ? buyerOrdersLoading : sellerOrdersLoading
 
   // Fetch dispute resolutions for all orders with disputes
@@ -201,7 +225,7 @@ function OrdersContent() {
       // Fetch disputes for these orders
       const { data: disputes } = await supabase
         .from('disputes')
-        .select('id, transaction_id, status')
+        .select('id, transaction_id, status, resolved_by')
         .in('transaction_id', orderIds)
         .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial']) as any
 
@@ -213,7 +237,7 @@ function OrdersContent() {
         .from('dispute_resolutions')
         // STATE-012 — explicit columns: client query, so unused columns would
         // be shipped to the browser. Only favored_party is read (plus the join key).
-        .select('dispute_id, favored_party')
+        .select('dispute_id, favored_party, resolution_type, seller_payout_amount')
         .in('dispute_id', disputeIds) as any
 
       if (!resolutions) return
@@ -223,7 +247,7 @@ function OrdersContent() {
       disputes.forEach((dispute: any) => {
         const resolution = resolutions.find((r: any) => r.dispute_id === dispute.id)
         if (resolution) {
-          resolutionMap[dispute.transaction_id] = resolution
+          resolutionMap[dispute.transaction_id] = { ...resolution, resolved_by: dispute.resolved_by }
         }
       })
 
@@ -236,18 +260,10 @@ function OrdersContent() {
   const filteredOrders = useMemo(() => {
     let filtered = dbOrders || []
 
-    // Status filter: Merge 'Processing' into 'Pending'
-    if (filters.status === 'pending') {
-      // Pending includes: paid, delivering, processing
-      filtered = filtered.filter(o => ['paid', 'delivering', 'processing'].includes(o.status))
-    } else if (filters.status === 'completed') {
-      // Completed includes: completed, delivered
-      filtered = filtered.filter(o => ['completed', 'delivered'].includes(o.status))
-    } else if (filters.status === 'disputed') {
-      filtered = filtered.filter(o => o.status === 'disputed')
-    } else if (filters.status === 'cancelled') {
-      filtered = filtered.filter(o => o.status === 'cancelled')
-    }
+    // Status filter: real statuses only ('processing' doesn't exist;
+    // 'delivered' still awaits the buyer, so it is In Progress).
+    const group = FILTER_GROUP[filters.status as FilterStatus] ?? 'all'
+    filtered = filtered.filter(o => inStatusGroup(o.status, group))
 
     // Game filter
     if (filters.games.length > 0) {
@@ -302,17 +318,10 @@ function OrdersContent() {
   }, [dbOrders, filters])
 
   // Status counts (calculated from UNFILTERED dbOrders to show accurate stats)
-  const statusCounts = useMemo(() => ({
-    all: dbOrders?.length || 0,
-    // Pending: paid + delivering + processing
-    pending: dbOrders?.filter(o => ['paid', 'delivering', 'processing'].includes(o.status)).length || 0,
-    // Completed: completed + delivered
-    completed: dbOrders?.filter(o => ['completed', 'delivered'].includes(o.status)).length || 0,
-    // Disputed
-    disputed: dbOrders?.filter(o => o.status === 'disputed').length || 0,
-    // Cancelled
-    cancelled: dbOrders?.filter(o => o.status === 'cancelled').length || 0,
-  }), [dbOrders])
+  const statusCounts = useMemo(() => {
+    const c = countByStatusGroup((dbOrders || []).map(o => o.status))
+    return { all: c.all, pending: c.in_progress, completed: c.completed, disputed: c.disputed, cancelled: c.closed }
+  }, [dbOrders])
 
   // Extract unique games and categories for filter dropdowns
   const availableGames = useMemo(() => {
@@ -383,7 +392,8 @@ function OrdersContent() {
     return `${days}d ago`
   }
 
-  if (authLoading || ordersLoading) {
+  // A cached signed-in user renders at once (no wait on the profile refetch).
+  if ((authLoading && !user) || ordersLoading) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-4">
@@ -801,7 +811,22 @@ function OrdersContent() {
           <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
           </div>
-          {filteredOrders.length === 0 ? (
+          {(activeTab === 'purchases' ? buyerOrdersError : sellerOrdersError) && (dbOrders?.length ?? 0) === 0 ? (
+            // A failed load is not "no orders".
+            <div role="alert" className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+              <h3 className="mb-1.5 text-lg font-bold text-text-primary">We couldn&apos;t load your {activeTab === 'purchases' ? 'purchases' : 'sales'}</h3>
+              <p className="text-sm text-text-secondary">Check your connection and try again.</p>
+              <button
+                type="button"
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: activeTab === 'purchases' ? ['buyer', 'orders'] : ['seller', 'orders'] })
+                }
+                className="mt-4 inline-flex min-h-[40px] items-center rounded-md border border-border-default px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.04]"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
               <ShoppingCart className="mb-4 h-14 w-14 text-lime-text/40" />
               <h3 className="mb-1.5 text-lg font-bold text-text-primary">
@@ -824,7 +849,7 @@ function OrdersContent() {
                       <th className="min-w-[230px] px-4 py-3">Item</th>
                       <th className="px-3 py-2">ID</th>
                       <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Total</th>
+                      <th className="px-3 py-2">{activeTab === 'sales' ? 'Payout' : 'Total'}</th>
                       <th className="px-3 py-2">{activeTab === 'purchases' ? 'Seller' : 'Buyer'}</th>
                       <th className="px-3 py-2 whitespace-nowrap">Placed</th>
                     </tr>
@@ -837,13 +862,43 @@ function OrdersContent() {
                       const gameName = gameData?.name
                       const disputeResolution = disputeResolutions[order.id]
                       const hasDisputeResolution = order.status === 'completed' && disputeResolution
-                      const userWonDispute = hasDisputeResolution && (
+                      // Neither side "won" when the buyer closed their own dispute
+                      // (confirmed receipt) or it ended in a partial refund.
+                      const disputeNeutral =
+                        !!hasDisputeResolution &&
+                        (disputeResolution.favored_party === 'neutral' ||
+                          (!!disputeResolution.resolved_by && disputeResolution.resolved_by === (order as any).buyer_id))
+                      const disputeBadge = disputeNeutral
+                        ? disputeResolution.favored_party === 'neutral' ? 'Partial' : 'Closed'
+                        : null
+                      const userWonDispute = hasDisputeResolution && !disputeNeutral && (
                         (activeTab === 'purchases' && disputeResolution.favored_party === 'buyer') ||
                         (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
                       )
                       const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
                       const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
+                      const cat = (order as any).listing?.category
+                      const meta = order.listing?.game_id ? currencyMeta[order.listing.game_id] : undefined
+                      // "2,000 - Roblox Robux" / "3 × Dragon Pet", same rule as the order page.
+                      const rowTitle = order.listing?.title
+                        ? orderDisplayTitle({
+                            title: order.listing.title,
+                            quantity: qty,
+                            isCurrency: cat?.type === 'currency',
+                            granularity: meta?.granularity ?? null,
+                            hasBundles: meta?.hasBundles ?? false,
+                          })
+                        : gameName || 'Order'
+                      // Sold tab: what the SELLER gets — 0 if refunded, what they
+                      // kept after a partial refund, else seller_payout.
+                      // Same rule as the wallet's Sales list (wallet-rows.ts).
+                      const sellerGets = saleRowAmounts(
+                        order as any,
+                        disputeResolution?.resolution_type === 'partial_refund' && disputeResolution.seller_payout_amount != null
+                          ? Number(disputeResolution.seller_payout_amount)
+                          : undefined,
+                      ).netAmount
                       return (
                         <tr
                           key={order.id}
@@ -863,7 +918,7 @@ function OrdersContent() {
                               )}
                               <div className="min-w-0">
                                 <p className="max-w-[240px] truncate text-[13px] font-semibold text-text-primary">
-                                  {qty > 1 ? `x${qty} · ` : ''}{order.listing?.title || gameName || 'Order'}
+                                  {rowTitle}
                                 </p>
                                 {gameName && (
                                   <p className="max-w-[240px] truncate text-[12px] text-text-tertiary">{gameName}</p>
@@ -897,18 +952,20 @@ function OrdersContent() {
                               {hasDisputeResolution && (
                                 <span className={cn(
                                   'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
-                                  userWonDispute
+                                  disputeBadge
+                                    ? 'border border-border-default bg-white/[0.06] text-text-secondary'
+                                    : userWonDispute
                                     ? 'border border-success/30 bg-green-500/15 text-success'
                                     : 'border border-error/40 bg-red-500/15 text-error',
                                 )}>
-                                  {userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
-                                  {userWonDispute ? 'Won' : 'Lost'}
+                                  {disputeBadge ? null : userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
+                                  {disputeBadge ?? (userWonDispute ? 'Won' : 'Lost')}
                                 </span>
                               )}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">
-                            ${Number(order.total_amount ?? 0).toFixed(2)}
+                            ${(activeTab === 'sales' ? sellerGets : Number(order.total_amount ?? 0)).toFixed(2)}
                           </td>
                           <td className="px-3 py-2">
                             <span className="flex items-center gap-2">
@@ -919,7 +976,9 @@ function OrdersContent() {
                                 className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/10"
                               />
                               <span className="max-w-[140px] truncate text-[13px] text-text-secondary">
-                                {otherParty?.username || '—'}
+                                {activeTab === 'purchases'
+                                  ? sellerDisplayName(otherParty) || '—'
+                                  : otherParty?.username || '—'}
                               </span>
                             </span>
                           </td>

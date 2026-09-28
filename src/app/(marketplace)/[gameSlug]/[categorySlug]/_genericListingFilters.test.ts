@@ -98,12 +98,29 @@ describe('applyCategoryListingParams', () => {
   })
 
   it('tiers and online=true are post-filters on the seller', () => {
-    const gold = listing({ seller: { seller_tier: 'gold', presence: { is_online: true } } })
-    const silver = listing({ seller: { seller_tier: 'silver', presence: { is_online: false } } })
-    const bronzeOn = listing({ seller: { seller_tier: 'bronze', presence: { is_online: true } } })
+    const now = new Date().toISOString()
+    const gold = listing({ seller: { seller_tier: 'gold', presence: { is_online: true, last_seen_at: now } } })
+    const silver = listing({ seller: { seller_tier: 'silver', presence: { is_online: false, last_seen_at: now } } })
+    const bronzeOn = listing({ seller: { seller_tier: 'bronze', presence: { is_online: true, last_seen_at: now } } })
     expect(ids(applyCategoryListingParams([gold, silver, bronzeOn], params({ tiers: 'gold,silver' })))).toEqual([silver.id, gold.id])
     expect(ids(applyCategoryListingParams([gold, silver, bronzeOn], params({ online: 'true' })))).toEqual([bronzeOn.id, gold.id])
     expect(applyCategoryListingParams([gold, silver, bronzeOn], params({ online: 'false' })).totalListings).toBe(3)
+  })
+
+  it('online=true drops a seller whose is_online is stale (last seen > 5 min ago)', () => {
+    const stale = new Date(Date.now() - 6 * 60 * 1000).toISOString()
+    const fresh = new Date(Date.now() - 60 * 1000).toISOString()
+    const left = listing({ seller: { seller_tier: 'gold', presence: { is_online: true, last_seen_at: stale } } })
+    const here = listing({ seller: { seller_tier: 'gold', presence: { is_online: true, last_seen_at: fresh } } })
+    const never = listing({ seller: { seller_tier: 'gold', presence: { is_online: true } } })
+    expect(ids(applyCategoryListingParams([left, here, never], params({ online: 'true' })))).toEqual([here.id])
+  })
+
+  it('online=true uses the live check when the grid passes one', () => {
+    const a = listing({ seller: { seller_tier: 'gold', presence: { is_online: false } } })
+    const b = listing({ seller: { seller_tier: 'gold', presence: { is_online: true, last_seen_at: new Date().toISOString() } } })
+    const live = (l: { id: string }) => l.id === a.id
+    expect(ids(applyCategoryListingParams([a, b], params({ online: 'true' }), live))).toEqual([a.id])
   })
 
   it('maxPrice for the slider is the dearest listing ON THE PAGE, 1000 when empty', () => {
