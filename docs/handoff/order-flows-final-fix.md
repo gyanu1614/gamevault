@@ -60,10 +60,22 @@ The pg-delta `pgdelta-target-ca.crt` error during db push is harmless.
    seller page shows real payout (dispute_resolutions.seller_payout_amount) +
    Refunded To Buyer row; guard `dispute-resolve-action.guard.integration.test.ts`.
 
-## In progress
-- #4 Cancelled-after-payment copy (StatusStrip + OrderStatusCard take
-  `escrowStatus`; 'refunded' = was paid, money returned; buyer gets Go To Wallet).
-  Code edited, needs test + commit.
+7. (commit) #4 Cancelled-after-payment copy (escrowStatus 'refunded'); render test
+   `src/app/account/orders/[orderId]/cancelled-copy.test.ts` (vitest only picks
+   *.test.ts — use createElement, set globalThis.React).
+8. (commit) #5 Wallet: real statuses, buyer rows w/o seller fee, sales math
+   (sale=subtotal, fee=subtotal−payout, net=payout|0 refunded|kept partial),
+   statuses paid..refunded, userId prop, LoadError states; helpers
+   `src/lib/wallet/wallet-rows.ts` (+tests).
+9. (commit) #6 Sold tab = Payout (saleRowAmounts), titles via orderDisplayTitle
+   (+ useCurrencyMeta granularity/hasBundles), seller shop name.
+10. (commit) #7 Dashboards: pendingPayoutOf / isPaidOrder, delivering active,
+    buyer Total Spent = lifetimeSpentOf.
+11. (commit) #8 Rewards parity: auto-release + admin release award cashback +
+    referral (idempotent); partial excluded; guard `order-rewards`.
+12. (commit) Cancellation approval: money first via single RPC
+    (cancelOrderReturnWallet paid / refundOrderToWallet delivering|delivered),
+    disputed refused, request approved only after; guard `cancellation-approval`.
 
 ## Remaining (numbered as reported to the owner)
 Money
