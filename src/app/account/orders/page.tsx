@@ -1,6 +1,7 @@
 'use client'
 
 import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
@@ -43,6 +44,7 @@ import { createClient } from '@/lib/supabase/client'
 import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
 import { orderDisplayTitle } from '@/lib/orders/display-title'
 import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
+import { countByStatusGroup, inStatusGroup, type OrderStatusGroup } from '@/lib/orders/status-groups'
 import { useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
@@ -54,9 +56,18 @@ const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'pending', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'disputed', label: 'Disputed' },
-  // No 'cancelled' option: never-paid orders are hidden at the query level
-  // (see buyerOrdersApi/sellerOrdersApi), so the filter would always be empty.
+  { value: 'cancelled', label: 'Refunded / Cancelled' },
 ]
+
+// Filter key → status group (lib/orders/status-groups). Keys kept as they
+// were so saved filter state keeps working.
+const FILTER_GROUP: Record<FilterStatus, OrderStatusGroup | 'all'> = {
+  all: 'all',
+  pending: 'in_progress',
+  completed: 'completed',
+  disputed: 'disputed',
+  cancelled: 'closed',
+}
 
 // Advanced filter state
 interface AdvancedFilters {
@@ -177,13 +188,16 @@ function OrdersContent() {
   const {
     orders: buyerOrders,
     isLoading: buyerOrdersLoading,
+    error: buyerOrdersError,
   } = useBuyerOrders({})
 
   // Fetch seller orders (only if approved seller) (fetch ALL orders, filtering done client-side)
   const {
     orders: sellerOrders,
     isLoading: sellerOrdersLoading,
+    error: sellerOrdersError,
   } = useSellerOrders({})
+  const queryClient = useQueryClient()
 
   // Determine which orders to show based on active tab
   const dbOrders = activeTab === 'purchases' ? buyerOrders : sellerOrders || []
@@ -246,18 +260,10 @@ function OrdersContent() {
   const filteredOrders = useMemo(() => {
     let filtered = dbOrders || []
 
-    // Status filter: Merge 'Processing' into 'Pending'
-    if (filters.status === 'pending') {
-      // Pending includes: paid, delivering, processing
-      filtered = filtered.filter(o => ['paid', 'delivering', 'processing'].includes(o.status))
-    } else if (filters.status === 'completed') {
-      // Completed includes: completed, delivered
-      filtered = filtered.filter(o => ['completed', 'delivered'].includes(o.status))
-    } else if (filters.status === 'disputed') {
-      filtered = filtered.filter(o => o.status === 'disputed')
-    } else if (filters.status === 'cancelled') {
-      filtered = filtered.filter(o => o.status === 'cancelled')
-    }
+    // Status filter: real statuses only ('processing' doesn't exist;
+    // 'delivered' still awaits the buyer, so it is In Progress).
+    const group = FILTER_GROUP[filters.status as FilterStatus] ?? 'all'
+    filtered = filtered.filter(o => inStatusGroup(o.status, group))
 
     // Game filter
     if (filters.games.length > 0) {
@@ -312,17 +318,10 @@ function OrdersContent() {
   }, [dbOrders, filters])
 
   // Status counts (calculated from UNFILTERED dbOrders to show accurate stats)
-  const statusCounts = useMemo(() => ({
-    all: dbOrders?.length || 0,
-    // Pending: paid + delivering + processing
-    pending: dbOrders?.filter(o => ['paid', 'delivering', 'processing'].includes(o.status)).length || 0,
-    // Completed: completed + delivered
-    completed: dbOrders?.filter(o => ['completed', 'delivered'].includes(o.status)).length || 0,
-    // Disputed
-    disputed: dbOrders?.filter(o => o.status === 'disputed').length || 0,
-    // Cancelled
-    cancelled: dbOrders?.filter(o => o.status === 'cancelled').length || 0,
-  }), [dbOrders])
+  const statusCounts = useMemo(() => {
+    const c = countByStatusGroup((dbOrders || []).map(o => o.status))
+    return { all: c.all, pending: c.in_progress, completed: c.completed, disputed: c.disputed, cancelled: c.closed }
+  }, [dbOrders])
 
   // Extract unique games and categories for filter dropdowns
   const availableGames = useMemo(() => {
@@ -393,7 +392,8 @@ function OrdersContent() {
     return `${days}d ago`
   }
 
-  if (authLoading || ordersLoading) {
+  // A cached signed-in user renders at once (no wait on the profile refetch).
+  if ((authLoading && !user) || ordersLoading) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-4">
@@ -811,7 +811,22 @@ function OrdersContent() {
           <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
           </div>
-          {filteredOrders.length === 0 ? (
+          {(activeTab === 'purchases' ? buyerOrdersError : sellerOrdersError) && (dbOrders?.length ?? 0) === 0 ? (
+            // A failed load is not "no orders".
+            <div role="alert" className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+              <h3 className="mb-1.5 text-lg font-bold text-text-primary">We couldn&apos;t load your {activeTab === 'purchases' ? 'purchases' : 'sales'}</h3>
+              <p className="text-sm text-text-secondary">Check your connection and try again.</p>
+              <button
+                type="button"
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: activeTab === 'purchases' ? ['buyer', 'orders'] : ['seller', 'orders'] })
+                }
+                className="mt-4 inline-flex min-h-[40px] items-center rounded-md border border-border-default px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.04]"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
               <ShoppingCart className="mb-4 h-14 w-14 text-lime-text/40" />
               <h3 className="mb-1.5 text-lg font-bold text-text-primary">
