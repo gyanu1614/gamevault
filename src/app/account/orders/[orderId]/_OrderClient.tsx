@@ -310,6 +310,7 @@ export function OrderClient(props: OrderClientProps) {
           status={order.status}
           disputeResolved={!!disputeResolution}
           disputeResolvedAt={disputeResolution?.resolved_at ?? null}
+          escrowStatus={order.escrow_status}
           order={order}
         />
 
@@ -371,6 +372,7 @@ export function OrderClient(props: OrderClientProps) {
                   : undefined
               }
               deliveredAt={deliveredAt}
+              escrowStatus={order.escrow_status}
               onLeaveReview={
                 userRole === 'buyer' && order.status === 'completed' && !existingReview
                   ? () => setLeaveReviewOpen(true)

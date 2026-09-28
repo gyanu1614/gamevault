@@ -39,6 +39,9 @@ interface OrderStatusCardProps {
     cancelled_at?: string | null
     updated_at?: string | null
   }
+  /** orders.escrow_status: 'refunded' on a cancelled order = it was paid
+   *  and the payment went back to the buyer. */
+  escrowStatus?: string | null
   /** When the dispute was resolved (dispute_resolutions.created_at). */
   disputeResolvedAt?: string | null
   className?: string
@@ -182,6 +185,7 @@ export function OrderStatusCard({
   disputeResolved,
   order,
   disputeResolvedAt,
+  escrowStatus = null,
   className,
 }: OrderStatusCardProps) {
   // Same rule the header pill uses: a disputed order with a recorded
@@ -191,7 +195,12 @@ export function OrderStatusCard({
   if (!copy) return null
   const tone = TONE[copy.tone]
   const when = statusTime(effective, order, disputeResolvedAt)
-  const message = copy.message[role] ?? copy.message.all
+  const message =
+    effective === 'cancelled' && escrowStatus === 'refunded'
+      ? role === 'buyer'
+        ? 'The order was cancelled and your payment was returned to your DropMarket wallet.'
+        : "The order was cancelled and the buyer's payment was returned to them."
+      : copy.message[role] ?? copy.message.all
 
   return (
     <OrderCard className={cn('flex items-start gap-3 px-5 py-4', className)} padded={false}>

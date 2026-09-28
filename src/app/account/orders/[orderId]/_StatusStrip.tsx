@@ -54,6 +54,9 @@ interface StatusStripProps {
   /** When the seller marked the order delivered (also set during a
    *  dispute, where the status stays `disputed`). */
   deliveredAt?: string | null
+  /** orders.escrow_status — 'refunded' on a cancelled order means it WAS
+   *  paid and the money went back to the buyer's wallet. */
+  escrowStatus?: string | null
   /** Phone only: hide the strip when it has no action and only repeats
    *  what the phone status card (OrderStatusCard) already says. */
   hidePassiveOnMobile?: boolean
@@ -210,6 +213,7 @@ export function StatusStrip({
   promoted = false,
   hidePassiveOnMobile = false,
   deliveredAt = null,
+  escrowStatus = null,
 }: StatusStripProps) {
   // V21/P5.r — Shared style tokens that scale with promoted variant.
   const sIcon = promoted ? 'h-11 w-11 rounded-[11px]' : 'h-9 w-9 rounded-[9px]'
@@ -307,7 +311,12 @@ export function StatusStrip({
         ? deliveredAt
           ? { ...baseCfg, Icon: CheckCircle2, tone: 'lime' as const, title: 'Seller Marked It Delivered', caption: 'Got your order? Mark it received to close your dispute.' }
           : { ...baseCfg, caption: 'Already got your order? Mark it received to close your dispute.' }
-        : baseCfg
+        : status === 'cancelled' && escrowStatus === 'refunded'
+          ? // Cancelled AFTER payment: the money was returned, not "never charged".
+            role === 'buyer'
+            ? { ...baseCfg, Icon: Wallet, tone: 'lime' as const, title: 'Order Cancelled, Refunded', caption: 'Your payment was returned to your DropMarket wallet as store credit.' }
+            : { ...baseCfg, title: 'Order Cancelled', caption: "The order was cancelled and the buyer's payment was returned to them." }
+          : baseCfg
   const { Icon, title, caption, tone } = cfg
   const renderedTitle =
     amount != null ? title.replace('{AMOUNT}', fmtUsd(amount)) : title.replace(' · {AMOUNT}', '')
@@ -429,7 +438,9 @@ export function StatusStrip({
   // Nothing to click here (no CTA, no dispute link, no wallet link): on a
   // phone the status card above already says the same thing.
   const isPassive =
-    !ctaLabel && !showCaptionDisputeLink && !(role === 'buyer' && status === 'refunded')
+    !ctaLabel &&
+    !showCaptionDisputeLink &&
+    !(role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')))
 
   return (
     <OrderCard
@@ -477,7 +488,7 @@ export function StatusStrip({
           there so a refund never reads as "I lost my money". Not for
           'cancelled' — nothing was charged on a never-paid order, so a
           wallet CTA would imply money that isn't there. */}
-      {role === 'buyer' && status === 'refunded' && (
+      {role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')) && (
         <Link href="/account/wallet" className={cn('ml-1', sCtaCls)}>
           <Wallet className={sCtaGlyph} />
           Go To Wallet
