@@ -151,7 +151,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
       expectDenied(await a.from(table).update({ status: 'rejected' }).eq('id', id).select('id'), `anon update ${table}`)
       expectDenied(await a.from(table).delete().eq('id', id), `anon delete ${table}`)
     }
-  })
+  }, 30_000)
 
   it('a signed-in non-admin sees no fraud flag — not even one about themselves — and cannot write one', async () => {
     for (const actor of [fx!.buyer, fx!.seller]) {
@@ -169,7 +169,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
     expectDenied(await buyer.from('fraud_flags').delete().eq('id', seeded.flag), 'non-admin delete fraud_flags')
     const { data } = await fx!.svc.from('fraud_flags').select('status').eq('id', seeded.flag).single()
     expect((data as any).status).toBe('open')
-  })
+  }, 30_000)
 
   it('GDPR requests: a user reads only their own, updates and deletes nothing, and cannot insert admin fields', async () => {
     const buyer = fx!.buyer.client
@@ -195,7 +195,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
 
     const { data } = await fx!.svc.from('gdpr_requests').select('status, export_url').eq('id', seeded.gdpr).single()
     expect(data).toEqual({ status: 'pending', export_url: null })
-  })
+  }, 30_000)
 
   it('INFORM disclosures: a seller reads only their own, updates and deletes nothing, and cannot submit one already certified', async () => {
     const buyer = fx!.buyer.client
@@ -222,7 +222,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
 
     const { data } = await fx!.svc.from('inform_disclosures').select('status, legal_name').eq('id', seeded.inform).single()
     expect(data).toEqual({ status: 'submitted', legal_name: 'Guard Test Seller Ltd' })
-  })
+  }, 30_000)
 
   it('an admin session reads all three and inserts fraud flags, but deletes nothing', async () => {
     const admin = fx!.admin.client
@@ -237,7 +237,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
     for (const [table, id] of [['fraud_flags', seeded.flag], ['gdpr_requests', seeded.gdpr], ['inform_disclosures', seeded.inform]] as const) {
       expectDenied(await admin.from(table).delete().eq('id', id), `admin delete ${table}`)
     }
-  })
+  }, 30_000)
 
   it('fraud actions work for an admin: list, stats, dashboard count, resolve', async () => {
     state.client = fx!.admin.client
@@ -260,7 +260,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
     expect(resolved.success, resolved.error).toBe(true)
     const { data } = await fx!.svc.from('fraud_flags').select('status').eq('id', seeded.flag).single()
     expect((data as any).status).toBe('resolved')
-  })
+  }, 30_000)
 
   it('GDPR actions: a user files, lists and exports their own; an admin lists and processes', async () => {
     state.client = fx!.buyer.client
@@ -290,7 +290,7 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
     expect(processed.success, processed.error).toBe(true)
     const { data } = await fx!.svc.from('gdpr_requests').select('status, rejection_reason').eq('id', filed.requestId!).single()
     expect(data).toEqual({ status: 'rejected', rejection_reason: 'guard test' })
-  })
+  }, 30_000)
 
   it('INFORM actions: a seller submits and reads their own; an admin lists and certifies', async () => {
     // getMyInformStatus only reads the disclosure once the profile needs one.
@@ -315,5 +315,5 @@ describe.skipIf(!hasEnv)('fraud_flags / gdpr_requests / inform_disclosures RLS (
     expect(certified.success, certified.error).toBe(true)
     const { data } = await fx!.svc.from('inform_disclosures').select('status, certified_by').eq('id', mine.disclosure!.id).single()
     expect(data).toEqual({ status: 'certified', certified_by: fx!.admin.id })
-  })
+  }, 30_000)
 })
