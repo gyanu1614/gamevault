@@ -84,7 +84,7 @@ export function DisputeFilters() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title, buyer, or seller..."
+              placeholder="Search by order number, title, buyer, seller, or listing..."
               className="w-full pl-9 pr-3 py-2 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none transition-colors"
             />
           </div>

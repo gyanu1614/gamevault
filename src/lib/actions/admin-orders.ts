@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { ilikeContains } from '@/lib/db/ilike'
 
 // The orders_status_check / orders_escrow_status_check values.
 export type OrderStatus =
@@ -21,10 +22,6 @@ const COLLECTED_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered', 'd
 /** Paid, not yet finished, not in dispute. */
 const IN_PROGRESS_STATUSES: OrderStatus[] = ['paid', 'delivering', 'delivered']
 
-/** Escape ilike metacharacters so a typed "%" or "_" matches itself. */
-function ilikeContains(term: string): string {
-  return `%${term.replace(/[\\%_]/g, (m) => `\\${m}`)}%`
-}
 
 export interface OrderFilters {
   status?: OrderStatus[]

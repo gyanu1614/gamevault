@@ -9,6 +9,8 @@ import { sendDisputeResolvedEmail, sendOrderRefundedEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { sendDisputeOpenedEmail } from '@/lib/email'
 import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { ilikeContains } from '@/lib/db/ilike'
+import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 
 // ============================================
 // TYPES
@@ -82,9 +84,43 @@ export async function getDisputes(filters?: {
     query = query.eq('assigned_to', filters.assignedTo)
   }
 
-  if (filters?.search) {
-    const search = `%${filters.search}%`
-    query = query.or(`title.ilike.${search}`)
+  const term = filters?.search?.trim()
+  if (term) {
+    // Title, order number, buyer/seller (username or shop name) and listing
+    // title. Every match is resolved to ids first; only uuids reach the
+    // .or() string, so a typed comma or parenthesis can't add a filter.
+    const like = ilikeContains(term)
+    const orderKey = normalizeOrderNumber(term)
+    const [byTitle, byUsername, byShop, byOrderNo, byListing] = await Promise.all([
+      supabase.from('disputes').select('id').ilike('title', like).limit(100),
+      supabase.from('profiles').select('id').ilike('username', like).limit(50),
+      supabase.from('profiles').select('id').ilike('shop_name', like).limit(50),
+      orderKey
+        ? supabase.from('orders').select('id').ilike('order_number_search', orderNumberSearchPattern(term)).limit(50)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+      supabase.from('listings').select('id').ilike('title', like).limit(50),
+    ])
+    const idsOf = (rows: unknown) => ((rows as { id: string }[] | null) ?? []).map((r) => r.id)
+    const listingIds = idsOf(byListing.data)
+    const { data: listingOrders } = listingIds.length
+      ? await supabase.from('orders').select('id').in('listing_id', listingIds).limit(100)
+      : { data: [] as { id: string }[] }
+
+    const disputeIds = idsOf(byTitle.data)
+    const profileIds = Array.from(new Set([...idsOf(byUsername.data), ...idsOf(byShop.data)]))
+    const orderIds = Array.from(new Set([...idsOf(byOrderNo.data), ...idsOf(listingOrders)]))
+
+    const clauses: string[] = []
+    if (disputeIds.length) clauses.push(`id.in.(${disputeIds.join(',')})`)
+    if (profileIds.length) {
+      clauses.push(`buyer_id.in.(${profileIds.join(',')})`)
+      clauses.push(`seller_id.in.(${profileIds.join(',')})`)
+    }
+    if (orderIds.length) clauses.push(`transaction_id.in.(${orderIds.join(',')})`)
+    // Nothing matched: return nothing, never "everything".
+    query = clauses.length
+      ? query.or(clauses.join(','))
+      : query.eq('id', '00000000-0000-0000-0000-000000000000')
   }
 
   const { data, error, count } = await query
@@ -485,9 +521,7 @@ export async function resolveDispute(
   // Revalidate buyer and seller order pages so UI updates after resolution
   if (dispute.transaction_id) {
     revalidatePath(`/account/orders/${dispute.transaction_id}`)
-    revalidatePath(`/seller/orders/${dispute.transaction_id}`)
     revalidatePath(`/account/orders`) // List page
-    revalidatePath(`/seller/orders`) // List page
   }
 
   return { success: true }
@@ -551,7 +585,6 @@ export async function escalateDispute(disputeId: string, reason: string) {
 
   if (disputeData?.transaction_id) {
     revalidatePath(`/account/orders/${disputeData.transaction_id}`)
-    revalidatePath(`/seller/orders/${disputeData.transaction_id}`)
   }
 
   return { success: true }
@@ -565,30 +598,36 @@ export async function getDisputeStats() {
   await requirePermission('disputes.view')
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('disputes')
-    .select('status, priority, created_at') as any
-
-  if (error) {
-    return { success: false, error: error.message }
+  // Page through every dispute (PostgREST caps one response at 1000 rows).
+  const data: { status: string; priority: string; resolved_at: string | null }[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: rows, error } = await (supabase
+      .from('disputes')
+      .select('id, status, priority, resolved_at')
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1) as any)
+    if (error) return { success: false, error: error.message }
+    data.push(...(rows ?? []))
+    if (!rows || rows.length < PAGE) break
   }
 
-  const now = new Date()
+  // Finished = resolved_* or closed; everything else is still open work.
+  const isFinished = (status: string) => status.startsWith('resolved_') || status === 'closed'
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const stats = {
     total: data.length,
-    open: data.filter((d: any) => d.status === 'open').length,
-    underReview: data.filter((d: any) => d.status === 'under_review').length,
-    escalated: data.filter((d: any) => d.status === 'escalated').length,
-    awaitingResponse: data.filter((d: any) =>
+    open: data.filter((d) => d.status === 'open').length,
+    underReview: data.filter((d) => d.status === 'under_review').length,
+    escalated: data.filter((d) => d.status === 'escalated').length,
+    awaitingResponse: data.filter((d) =>
       d.status === 'awaiting_seller_response' || d.status === 'awaiting_buyer_response'
     ).length,
-    resolvedThisWeek: data.filter((d: any) => {
-      const resolved = d.status.startsWith('resolved_')
-      const createdAt = new Date(d.created_at)
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      return resolved && createdAt > weekAgo
-    }).length,
-    urgent: data.filter((d: any) => d.priority === 'urgent' && !d.status.startsWith('resolved_')).length,
+    // Resolved in the last 7 days, by when it was resolved (not opened).
+    resolvedThisWeek: data.filter((d) =>
+      isFinished(d.status) && d.resolved_at != null && new Date(d.resolved_at).getTime() > weekAgo
+    ).length,
+    urgent: data.filter((d) => d.priority === 'urgent' && !isFinished(d.status)).length,
   }
 
   return { success: true, stats }
