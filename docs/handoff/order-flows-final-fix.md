@@ -77,6 +77,21 @@ The pg-delta `pgdelta-target-ca.crt` error during db push is harmless.
     (cancelOrderReturnWallet paid / refundOrderToWallet delivering|delivered),
     disputed refused, request approved only after; guard `cancellation-approval`.
 
+13. (commit) #9 listings SELECT policy for buyers of the listing (migration
+    20260927191606) + guard `listings-buyer-read`.
+14. (commit) #10 disputeReasonFor (case-insensitive) + test reading the modal labels.
+15. (commit) #11 instructions = listing.description (+active badge), #12
+    delivery_details (hidden when empty), dead ordersApi.updateStatus/deliver
+    removed, #21 seller orders refetchOnMount.
+16. (commit) #13 getOrder seller trust fields; buyer/seller emails removed.
+17. (commit) #14 chat realtime deps via refs + removeChannel; #15 chat open while
+    disputed; #16 SLA from paid_at; #17 sellerDisplayName in chat (avatar
+    resolved with username seed); conversation create race; mock
+    DeliveryEvidenceUpload + src/lib/actions/delivery-evidence.ts deleted.
+NEXT: #18 lists filters, #20 list errors, #22-#24 admin, #25-#28 other.
+Also planned: redact the order payload per role in page.tsx (seller_fee_trace,
+seller_commission_pct for buyers; wallet_amount_used/checkout_url for sellers).
+
 ## Remaining (numbered as reported to the owner)
 Money
 5. Wallet (`src/app/account/wallet/_WalletClient.tsx`): buyer Purchases shows the

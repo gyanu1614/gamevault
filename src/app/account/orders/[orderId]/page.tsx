@@ -345,14 +345,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // V21/P2 — derive SLA window from the listing's delivery_time LABEL
   // ("20min" / "1hr" / "1-24 hours" …) via parseDeliveryMinutes. (The old
   // Number(delivery_time) was NaN for every stored value → always fell back to
-  // 60 min, so a 20-min listing showed a 1-hour SLA.) Real start time is
-  // order.delivering_at if set; otherwise created_at acts as the clock.
+  // 60 min, so a 20-min listing showed a 1-hour SLA.)
   const slaMinutes = parseDeliveryMinutes(order.listing?.delivery_time)
   const slaSeconds = slaMinutes * 60
-  // SLA clock starts when the SELLER is on the hook: delivery start, else
-  // payment confirmation — never order creation (unpaid time doesn't count).
-  const slaStartedAt: string =
-    (order as any).delivering_at ?? (order as any).paid_at ?? order.created_at
+  // The delivery promise runs from PAYMENT (unpaid time doesn't count). It is
+  // not restarted by delivering_at: that is stamped by the seller's first chat
+  // message, and restarting there let a late seller reset "Overdue" (and the
+  // buyer's dispute prompt) to a full window by saying hello.
+  const slaStartedAt: string = (order as any).paid_at ?? order.created_at
 
   const placedAtDate = new Date(order.created_at)
   const placedAtLabel = placedAtDate.toLocaleTimeString('en-US', {
@@ -376,7 +376,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // conversation is created lazily on the first paid render instead.
   let conversationId: string | null = convo?.id ?? null
   if (!conversationId && order.status !== 'pending') {
-    const { data: created } = await (supabase.from('conversations').insert as any)({
+    const { data: created, error: createError } = await (supabase.from('conversations').insert as any)({
       order_id:  orderId,
       buyer_id:  order.buyer_id,
       seller_id: order.seller_id,
@@ -384,6 +384,18 @@ export default async function OrderDetailPage({ params }: PageProps) {
       .select('id')
       .single() as any
     conversationId = created?.id ?? null
+    // Both parties' first visits can race: order_id is unique, so the loser
+    // gets 23505 — the conversation exists now, read it instead of showing
+    // no chat on this load.
+    if (!conversationId && createError) {
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle() as any
+      conversationId = existing?.id ?? null
+      if (!conversationId) console.error('[order page] conversation create failed', createError)
+    }
   }
 
   // V21/P5.l — Pull the buyer's review for this order (if any).

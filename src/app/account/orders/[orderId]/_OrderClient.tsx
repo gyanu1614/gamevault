@@ -423,8 +423,11 @@ export function OrderClient(props: OrderClientProps) {
                   seller: order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : undefined,
                 }}
@@ -432,8 +435,11 @@ export function OrderClient(props: OrderClientProps) {
                   userRole === 'buyer' && order.seller
                     ? {
                         id: order.seller.id,
-                        username: order.seller.username ?? order.seller.shop_name,
-                        avatar_url: order.seller.avatar_url,
+                        // Display name matches the page header; the avatar is
+                        // resolved here (DiceBear seeded by USERNAME, as in the
+                        // header) so it doesn't change with the shop name.
+                        username: sellerDisplayName(order.seller),
+                        avatar_url: getAvatarUrl(order.seller.avatar_url, order.seller.username ?? 'seller'),
                       }
                     : userRole === 'seller' && order.buyer
                     ? {
