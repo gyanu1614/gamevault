@@ -9,8 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { sendTrustpilotInvitation } from '@/lib/actions/trustpilot'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { sendTrustpilotInvitation } from '@/lib/trustpilot/send-invitation'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 // Must be set in environment variables. No fallback — fail closed if unset
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    // A Vercel cron request has no cookies: the session client ran as anon
+    // and RLS hid every invitation. Read as the service role.
+    const supabase = createServiceRoleClient()
 
     // Query invitations that are due (scheduled_for <= now), not yet sent, and not reviewed
     // The DB trigger auto-schedules invitations 7 days after order completion
