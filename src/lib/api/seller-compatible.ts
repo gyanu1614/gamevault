@@ -314,6 +314,17 @@ export const listingsApi = {
 // ORDERS API
 // =====================================================
 
+// Order columns each party's browser may receive — the same split as
+// redactOrderFor (src/lib/orders/redact.ts). Never '*': that shipped the
+// buyer's checkout link / wallet use / payment ids to the seller and the
+// seller's payout / fee snapshot to the buyer. (RLS still returns the whole
+// row to either party on a direct query; this keeps our own pages from
+// carrying it.)
+const ORDER_SHARED_COLUMNS =
+  'id, order_number, buyer_id, seller_id, listing_id, quantity, unit_price, subtotal, total_amount, status, escrow_status, currency, created_at, updated_at, paid_at, delivering_at, delivered_at, completed_at, cancelled_at, disputed_at'
+const SELLER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, seller_payout, delivery_details`
+const BUYER_ORDER_COLUMNS = `${ORDER_SHARED_COLUMNS}, delivery_details`
+
 export const ordersApi = {
   /**
    * Get all orders for the current seller
@@ -329,12 +340,11 @@ export const ordersApi = {
     let query = supabase
       .from('orders')
       .select(`
-        *,
+        ${SELLER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           game_category_id,
           images,
           game:games!listings_game_id_fkey (
@@ -393,12 +403,11 @@ export const ordersApi = {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        *,
+        ${SELLER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           images
         ),
         buyer:buyer_id (
@@ -440,12 +449,11 @@ export const buyerOrdersApi = {
     let query = supabase
       .from('orders')
       .select(`
-        *,
+        ${BUYER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           game_category_id,
           images,
           delivery_method,
@@ -502,12 +510,11 @@ export const buyerOrdersApi = {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        *,
+        ${BUYER_ORDER_COLUMNS},
         listing:listing_id (
           id,
           title,
           game_id,
-          category_id,
           game_category_id,
           images,
           delivery_method,
