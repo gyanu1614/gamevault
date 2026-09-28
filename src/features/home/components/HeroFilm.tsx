@@ -31,12 +31,13 @@
  *   - Reduced motion: no film. The stage renders once, static (globals.css).
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
   motion,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -193,6 +194,10 @@ function FlyingCard({
   const scale = useTransform(fly, (v) => 1 + local(v) ** 2 * 3 * card.d)
   const opacity = useTransform(fly, (v) => 1 - clamp01((local(v) - 0.55) / 0.4))
   const filter = useTransform(fly, (v) => `blur(${(local(v) * 9 * card.d).toFixed(2)}px)`)
+  // Once a card starts flying it stops taking the pointer. Scaled up and
+  // faded it still covers most of the stage, and without this an invisible
+  // card swallowed every click on the statement beat (landing on its game).
+  const pointerEvents = useTransform(fly, (v) => (local(v) > 0.08 ? 'none' : 'auto'))
 
   // Pointer parallax, in px, on its own layer so it composes with the
   // scroll transform above instead of fighting it.
@@ -222,6 +227,7 @@ function FlyingCard({
         scale,
         opacity,
         filter,
+        pointerEvents,
       }}
     >
       <motion.div style={{ x: parX, y: parY, rotateX: rotX, rotateY: rotY }}>
@@ -267,6 +273,16 @@ export function HeroFilm() {
   // the stage renders once at its resting state.
   const still = useMotionValue(0)
   const p = reduceMotion ? still : scrollYProgress
+
+  // Which beat is on screen. Only flips at the midpoint, so this re-renders
+  // twice per pass, not per frame. The hidden beat is made `inert`: faded
+  // elements are still in the DOM, and without it Tab walks into invisible
+  // category tiles (beat 1) or invisible cards and search (beat 2).
+  const [beat, setBeat] = useState<1 | 2>(1)
+  useMotionValueEvent(p, 'change', (v) => setBeat(v > 0.3 ? 2 : 1))
+  // React 18 has no boolean `inert`: `true` warns and is dropped, the empty
+  // string renders the attribute (same pattern as FaqCards).
+  const inert = (hidden: boolean) => (hidden ? { inert: '' as unknown as boolean } : {})
 
   // Pointer, normalised to -0.5..0.5 and smoothed.
   const rawX = useMotionValue(0)
@@ -356,7 +372,7 @@ export function HeroFilm() {
         <motion.div aria-hidden className="hero-film__scrim" style={{ opacity: scrimOpacity }} />
 
         {/* Cards live in the page measure so their spread tracks the copy. */}
-        <div className="hero-film__cards" style={{ perspective: 1200 }}>
+        <div className="hero-film__cards" style={{ perspective: 1200 }} {...inert(beat === 2)}>
           {CARDS.map((card, i) => (
             <FlyingCard key={card.slug} card={card} index={i} fly={fly} px={px} py={py} mobileRef={mobileRef} />
           ))}
@@ -366,6 +382,7 @@ export function HeroFilm() {
         <motion.div
           className="hero-film__copy"
           style={{ opacity: copyOpacity, y: copyY, filter: copyFilter }}
+          {...inert(beat === 2)}
         >
           <div className="page-measure">
             {/* Only the copy column takes the pointer, never the whole
@@ -411,6 +428,7 @@ export function HeroFilm() {
           aria-hidden={reduceMotion ? true : undefined}
           className="hero-film__statement"
           style={{ opacity: lineOpacity, scale: lineScale, filter: lineFilter }}
+          {...inert(beat === 1)}
         >
           {/* data-nav-fill-at: the homepage navbar fills just before this
               line scrolls under it (navbar-floating.tsx). */}
