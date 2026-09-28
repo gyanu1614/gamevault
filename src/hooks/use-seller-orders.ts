@@ -1,11 +1,12 @@
 /**
  * Seller Orders Hook
- * Fetches and manages seller orders with mutations
+ * Fetches seller orders. Order status only changes through the server
+ * actions / RPCs (the old browser-side updateStatus / deliver writes were
+ * blocked by the orders guard trigger and had no callers).
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { ordersApi, Order, OrderStatus } from '@/lib/api/seller-compatible'
-import { toast } from 'sonner'
 
 interface UseOrdersOptions {
   status?: OrderStatus
@@ -13,8 +14,6 @@ interface UseOrdersOptions {
 }
 
 export function useSellerOrders(options?: UseOrdersOptions) {
-  const queryClient = useQueryClient()
-
   // Fetch orders
   const {
     data: orders,
@@ -27,6 +26,9 @@ export function useSellerOrders(options?: UseOrdersOptions) {
       return result
     },
     retry: 1,
+    // Like the buyer hook: a seller coming back from an order page (after
+    // Mark As Delivered) sees the new status, not a cached list.
+    refetchOnMount: 'always',
   })
 
   // Surface errors to console for debugging
@@ -34,42 +36,10 @@ export function useSellerOrders(options?: UseOrdersOptions) {
     console.error('[useSellerOrders] Failed to fetch seller orders:', error)
   }
 
-  // Update order status mutation
-  const updateOrderStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: OrderStatus }) =>
-      ordersApi.updateStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller', 'orders'] })
-      queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
-      toast.success('Order status updated successfully!')
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update order status')
-    },
-  })
-
-  // Deliver order mutation
-  const deliverOrder = useMutation({
-    mutationFn: ({ id, deliveryDetails }: { id: string; deliveryDetails: any }) =>
-      ordersApi.deliver(id, deliveryDetails),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller', 'orders'] })
-      queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
-      toast.success('Order delivered successfully!')
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to deliver order')
-    },
-  })
-
   return {
     orders: orders || [],
     isLoading,
     error,
-    updateOrderStatus: updateOrderStatus.mutateAsync,
-    deliverOrder: deliverOrder.mutateAsync,
-    isUpdating: updateOrderStatus.isPending,
-    isDelivering: deliverOrder.isPending,
   }
 }
 

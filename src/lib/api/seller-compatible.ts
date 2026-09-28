@@ -415,48 +415,10 @@ export const ordersApi = {
     return data
   },
 
-  /**
-   * Update order status
-   */
-  async updateStatus(id: string, status: OrderStatus): Promise<Order> {
-    const updates: any = { status }
-
-    if (status === 'completed') {
-      updates.completed_at = new Date().toISOString()
-      updates.delivered_at = new Date().toISOString()
-    }
-
-    const { data, error } = await (supabase
-      .from('orders')
-      .update as any)(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  /**
-   * Deliver order
-   */
-  async deliver(id: string, deliveryDetails: any): Promise<Order> {
-    const { data, error } = await (supabase
-      .from('orders')
-      .update as any)({
-        status: 'completed',
-        delivery_details: deliveryDetails,
-        delivered_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    revalidateMine()
-    return data
-  },
+  // Order status changes only through the server actions / RPCs
+  // (order_mark_delivered, order_confirm_receipt, …). The browser-side
+  // updateStatus / deliver writes that lived here were blocked by the
+  // orders guard trigger and had no callers.
 }
 
 // =====================================================

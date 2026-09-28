@@ -461,8 +461,9 @@ export function OrderClient(props: OrderClientProps) {
             <div className="min-w-0 empty:hidden max-lg:order-1">
               <DeliveryInstructions
                 role={userRole}
-                instructions={order.listing?.delivery_instructions ?? null}
+                instructions={order.listing?.description ?? null}
                 listingId={order.listing?.id ?? null}
+                active={['paid', 'delivering', 'disputed'].includes(order.status) && !deliveredAt}
               />
             </div>
             <div className="min-w-0 empty:hidden max-lg:order-3">
@@ -493,7 +494,9 @@ export function OrderClient(props: OrderClientProps) {
               gameName={gameName}
               gameIconUrl={gameIconUrl}
               itemName={itemTitle}
-              deliveryInfo={(order as any).delivery_info ?? null}
+              // orders.delivery_details (jsonb). There is no delivery_info
+              // column; reading it showed "Username: Not Provided" everywhere.
+              deliveryInfo={(order as any).delivery_details ?? null}
               onOpenDispute={openDispute}
               disputeUntil={disputeUntil}
             />
