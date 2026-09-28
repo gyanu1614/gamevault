@@ -3,28 +3,32 @@
 /**
  * P6.2 — Admin Analytics Dashboard
  *
- * All queries run with the service-role client so RLS is bypassed.
- * Every exported function first calls requireAdmin() so only admins can invoke them.
+ * Queries run as the admin's session client (RLS is_admin()); every exported
+ * function first calls requireAdmin() so only admins can invoke them.
+ * Sums walk every row through fetchAllRows (PostgREST caps one response at
+ * 1000 rows); counts are bounded GETs. Day / month boundaries are UTC.
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { fetchAllRows } from '@/lib/db/fetch-all'
+import { utcPeriods } from '@/lib/admin/periods'
+import {
+  COLLECTED_ORDER_STATUSES,
+  FINISHED_DISPUTE_STATUSES,
+  OPEN_DISPUTE_STATUSES,
+} from '@/lib/admin/status-sets'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function startOf(unit: 'day' | 'month' | 'week'): Date {
-  const d = new Date()
-  if (unit === 'day')   { d.setHours(0, 0, 0, 0) }
-  if (unit === 'month') { d.setDate(1); d.setHours(0, 0, 0, 0) }
-  if (unit === 'week')  { d.setDate(d.getDate() - d.getDay()); d.setHours(0, 0, 0, 0) }
-  return d
-}
+const DAY_MS = 24 * 60 * 60 * 1000
 
-function daysAgo(n: number): Date {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  d.setHours(0, 0, 0, 0)
-  return d
+const num = (v: unknown) => Number(v) || 0
+
+async function countOf(q: PromiseLike<{ count: number | null; error: unknown }>): Promise<number> {
+  const { count, error } = await q
+  if (error) throw error
+  return count ?? 0
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -32,8 +36,8 @@ function daysAgo(n: number): Date {
 export interface DailyPoint { date: string; value: number }
 
 export interface AnalyticsData {
-  // Revenue
-  platformRevenueTotal: number      // all-time platform fee + tier fee
+  // Revenue — collected orders only (COLLECTED_ORDER_STATUSES)
+  platformRevenueTotal: number      // all-time buyer fees + seller fee
   platformRevenueMtd: number        // month-to-date
   platformRevenuePrevMonth: number  // for % change
   gmvTotal: number                  // gross merchandise value
@@ -61,11 +65,11 @@ export interface AnalyticsData {
   promoUsages: number
   promoTotalDiscount: number
   // Disputes
-  disputesOpen: number
-  disputesResolved: number
+  disputesOpen: number              // OPEN_DISPUTE_STATUSES
+  disputesResolved: number          // FINISHED_DISPUTE_STATUSES (resolved_* + closed)
   // Charts
   dailyRevenue: DailyPoint[]   // last 30 days platform revenue
-  dailyOrders: DailyPoint[]    // last 30 days order count
+  dailyOrders: DailyPoint[]    // last 30 days collected-order count
   // Top sellers
   topSellers: { username: string; totalSales: number; lifetimeEarnings: number }[]
 }
@@ -77,95 +81,108 @@ export async function getAnalyticsData(): Promise<{
   data?: AnalyticsData
   error?: string
 }> {
+  // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
+  // non-admin, and the catch below must not swallow that.
+  await requireAdmin()
   try {
-    await requireAdmin()
     const supabase = await createClient()
 
-    const now        = new Date()
-    const mtdStart   = startOf('month').toISOString()
-    const prevMStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
-    const prevMEnd   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
-    const d30Ago     = daysAgo(30).toISOString()
+    const { todayStart, monthStart, prevMonthStart } = utcPeriods()
+    const mtdStart   = monthStart.toISOString()
+    const prevMStart = prevMonthStart.toISOString()
+
+    // ── One round: both paged walks + every count, concurrently ─────────────
+    const orderCount = () => supabase.from('orders').select('id', { count: 'exact' }).limit(1)
+    const profileCount = () => supabase.from('profiles').select('id', { count: 'exact' }).limit(1)
+    const listingCount = () => supabase.from('listings').select('id', { count: 'exact' }).limit(1)
+    const disputeCount = () => supabase.from('disputes').select('id', { count: 'exact' }).limit(1)
+    const [
+      collectedWalk,
+      promoWalk,
+      [
+        ordersTotal, ordersMtd, ordersPrevMonth, ordersCompleted, ordersDisputed, ordersRefunded, ordersGuest,
+        usersTotal, usersNewMtd, usersNewPrevMonth, sellersActive, buyersTotal,
+        listingsTotal, listingsActive, listingsNewMtd,
+        promoUsages, disputesOpen, disputesResolved,
+      ],
+    ] = await Promise.all([
+      // Every collected order (revenue, GMV, charts).
+      fetchAllRows<any>((from, to) =>
+        supabase
+          .from('orders')
+          .select('id, status, created_at, total_amount, subtotal, seller_payout, platform_fee, payment_processing_fee, vaultshield_tier_fee')
+          .in('status', COLLECTED_ORDER_STATUSES)
+          .order('id', { ascending: true })
+          .range(from, to) as any,
+      ),
+      fetchAllRows<any>((from, to) =>
+        supabase
+          .from('promo_code_usages')
+          .select('id, discount_amount')
+          .order('id', { ascending: true })
+          .range(from, to) as any,
+      ),
+      // Counts: bounded GETs, never head:true.
+      Promise.all([
+        countOf(orderCount()),
+        countOf(orderCount().gte('created_at', mtdStart)),
+        countOf(orderCount().gte('created_at', prevMStart).lt('created_at', mtdStart)),
+        countOf(orderCount().eq('status', 'completed')),
+        countOf(orderCount().eq('status', 'disputed')),
+        countOf(orderCount().eq('status', 'refunded')),
+        countOf(orderCount().eq('is_guest_order', true)),
+        countOf(profileCount()),
+        countOf(profileCount().gte('created_at', mtdStart)),
+        countOf(profileCount().gte('created_at', prevMStart).lt('created_at', mtdStart)),
+        countOf(profileCount().eq('role', 'seller')),
+        countOf(profileCount().eq('role', 'buyer')),
+        countOf(listingCount()),
+        countOf(listingCount().eq('status', 'active')),
+        countOf(listingCount().gte('created_at', mtdStart)),
+        countOf(supabase.from('promo_code_usages').select('id', { count: 'exact' }).limit(1)),
+        countOf(disputeCount().in('status', OPEN_DISPUTE_STATUSES)),
+        countOf(disputeCount().in('status', FINISHED_DISPUTE_STATUSES)),
+      ]),
+    ])
+    if (collectedWalk.error) throw collectedWalk.error
+    if (promoWalk.error) throw promoWalk.error
+    const orders: any[] = collectedWalk.data ?? []
 
     // ── Revenue ──────────────────────────────────────────────────────────────
-    const { data: allOrders } = await supabase
-      .from('orders')
-      .select('platform_fee, vaultshield_tier_fee, payment_processing_fee, total_amount, subtotal, status, created_at, is_guest_order, promo_discount')
-      .in('status', ['paid', 'delivering', 'completed', 'disputed'])
-
-    const orders = (allOrders as any[] | null) ?? []
-
+    // What DropMarket charged on the order: the buyer's fees (platform_fee =
+    // marketplace fee, the method's processing fee, the legacy tier fee) plus
+    // the seller fee, which is not a column: subtotal − seller_payout.
     const platformFeeFor = (o: any) =>
-      (o.platform_fee ?? 0) + (o.vaultshield_tier_fee ?? 0) + (o.payment_processing_fee ?? 0)
+      num(o.platform_fee) + num(o.payment_processing_fee) + num(o.vaultshield_tier_fee)
+      + (num(o.subtotal) - num(o.seller_payout))
 
-    const isMtd    = (o: any) => new Date(o.created_at) >= new Date(mtdStart)
-    const isPrevM  = (o: any) => {
-      const d = new Date(o.created_at)
-      return d >= new Date(prevMStart) && d <= new Date(prevMEnd)
-    }
+    const at      = (o: any) => new Date(o.created_at).getTime()
+    const isMtd   = (o: any) => at(o) >= monthStart.getTime()
+    const isPrevM = (o: any) => at(o) >= prevMonthStart.getTime() && at(o) < monthStart.getTime()
 
     const platformRevenueTotal   = orders.reduce((s, o) => s + platformFeeFor(o), 0)
     const platformRevenueMtd     = orders.filter(isMtd).reduce((s, o) => s + platformFeeFor(o), 0)
     const platformRevenuePrevMonth = orders.filter(isPrevM).reduce((s, o) => s + platformFeeFor(o), 0)
-    const gmvTotal               = orders.reduce((s, o) => s + (o.total_amount ?? 0), 0)
-    const gmvMtd                 = orders.filter(isMtd).reduce((s, o) => s + (o.total_amount ?? 0), 0)
-
-    // ── Orders ───────────────────────────────────────────────────────────────
-    const { data: allOrdersFull } = await supabase
-      .from('orders')
-      .select('status, created_at, total_amount, is_guest_order')
-
-    const allO = (allOrdersFull as any[] | null) ?? []
-    const ordersTotal       = allO.length
-    const ordersMtd         = allO.filter(isMtd).length
-    const ordersPrevMonth   = allO.filter(isPrevM).length
-    const ordersCompleted   = allO.filter(o => o.status === 'completed').length
-    const ordersDisputed    = allO.filter(o => o.status === 'disputed').length
-    const ordersRefunded    = allO.filter(o => o.status === 'refunded').length
-    const ordersGuest       = allO.filter(o => o.is_guest_order).length
-    const completedAmounts  = allO.filter(o => o.status === 'completed').map(o => o.total_amount ?? 0)
-    const avgOrderValue     = completedAmounts.length
+    const gmvTotal               = orders.reduce((s, o) => s + num(o.total_amount), 0)
+    const gmvMtd                 = orders.filter(isMtd).reduce((s, o) => s + num(o.total_amount), 0)
+    const completedAmounts       = orders.filter(o => o.status === 'completed').map(o => num(o.total_amount))
+    const avgOrderValue          = completedAmounts.length
       ? completedAmounts.reduce((s, v) => s + v, 0) / completedAmounts.length
       : 0
 
-    // ── Users ────────────────────────────────────────────────────────────────
-    const { count: usersTotal }    = await supabase.from('profiles').select('id', { count: 'exact' }).limit(1)
-    const { count: usersNewMtd }   = await supabase.from('profiles').select('id', { count: 'exact' }).gte('created_at', mtdStart).limit(1)
-    const { count: usersNewPrevM } = await supabase.from('profiles').select('id', { count: 'exact' }).gte('created_at', prevMStart).lte('created_at', prevMEnd).limit(1)
-    const { count: sellersActive } = await supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'seller').limit(1)
-    const { count: buyersTotal }   = await supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'buyer').limit(1)
-
-    // ── Listings ─────────────────────────────────────────────────────────────
-    const { count: listingsTotal }   = await supabase.from('listings').select('id', { count: 'exact' }).limit(1)
-    const { count: listingsActive }  = await supabase.from('listings').select('id', { count: 'exact' }).eq('status', 'active').limit(1)
-    const { count: listingsNewMtd }  = await supabase.from('listings').select('id', { count: 'exact' }).gte('created_at', mtdStart).limit(1)
-
     // ── Promos ───────────────────────────────────────────────────────────────
-    const { count: promoUsages }    = await supabase.from('promo_code_usages').select('id', { count: 'exact' }).limit(1)
-    const { data: promoDiscounts }  = await supabase.from('promo_code_usages').select('discount_amount')
-    const promoTotalDiscount = (promoDiscounts as any[] | null)?.reduce((s, r) => s + (r.discount_amount ?? 0), 0) ?? 0
+    const promoTotalDiscount = (promoWalk.data ?? []).reduce((s: number, r: any) => s + num(r.discount_amount), 0)
 
-    // ── Disputes ─────────────────────────────────────────────────────────────
-    const { count: disputesOpen }     = await supabase.from('disputes').select('id', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1)
-    const { count: disputesResolved } = await supabase.from('disputes').select('id', { count: 'exact' }).eq('status', 'resolved').limit(1)
-
-    // ── Daily revenue chart (last 30 days) ───────────────────────────────────
-    const { data: recentOrders } = await supabase
-      .from('orders')
-      .select('created_at, platform_fee, vaultshield_tier_fee, payment_processing_fee, total_amount')
-      .in('status', ['paid', 'delivering', 'completed', 'disputed'])
-      .gte('created_at', d30Ago)
-
+    // ── Daily charts (last 30 UTC days, collected orders) ────────────────────
     const dailyRevMap: Record<string, number> = {}
     const dailyOrdMap: Record<string, number> = {}
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = new Date(todayStart.getTime() - i * DAY_MS).toISOString().slice(0, 10)
       dailyRevMap[key] = 0
       dailyOrdMap[key] = 0
     }
-    for (const o of (recentOrders as any[] | null) ?? []) {
-      const key = (o.created_at as string).slice(0, 10)
+    for (const o of orders) {
+      const key = new Date(o.created_at).toISOString().slice(0, 10)
       if (dailyRevMap[key] !== undefined) {
         dailyRevMap[key] += platformFeeFor(o)
         dailyOrdMap[key] += 1
@@ -204,18 +221,18 @@ export async function getAnalyticsData(): Promise<{
         ordersRefunded,
         ordersGuest,
         avgOrderValue,
-        usersTotal:          usersTotal    ?? 0,
-        usersNewMtd:         usersNewMtd   ?? 0,
-        usersNewPrevMonth:   usersNewPrevM ?? 0,
-        sellersActive:       sellersActive ?? 0,
-        buyersTotal:         buyersTotal   ?? 0,
-        listingsActive:      listingsActive ?? 0,
-        listingsTotal:       listingsTotal  ?? 0,
-        listingsNewMtd:      listingsNewMtd ?? 0,
-        promoUsages:         promoUsages   ?? 0,
+        usersTotal,
+        usersNewMtd,
+        usersNewPrevMonth,
+        sellersActive,
+        buyersTotal,
+        listingsActive,
+        listingsTotal,
+        listingsNewMtd,
+        promoUsages,
         promoTotalDiscount,
-        disputesOpen:        disputesOpen     ?? 0,
-        disputesResolved:    disputesResolved ?? 0,
+        disputesOpen,
+        disputesResolved,
         dailyRevenue,
         dailyOrders,
         topSellers,

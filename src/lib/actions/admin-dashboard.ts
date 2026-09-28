@@ -2,15 +2,24 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { fetchAllRows } from '@/lib/db/fetch-all'
+import { utcPeriods } from '@/lib/admin/periods'
+import {
+  COLLECTED_ORDER_STATUSES,
+  IN_PROGRESS_ORDER_STATUSES,
+  OPEN_DISPUTE_STATUSES,
+} from '@/lib/admin/status-sets'
 
 export interface DashboardStats {
   // Orders
   totalOrders: number
   ordersToday: number
   ordersThisWeek: number
+  /** Paid, not finished, not in dispute (IN_PROGRESS_ORDER_STATUSES). */
   activeOrders: number
 
-  // Revenue
+  // Revenue — total_amount over collected orders (COLLECTED_ORDER_STATUSES),
+  // the same figure as /admin/orders. Day / month boundaries are UTC.
   totalRevenue: number
   revenueToday: number
   revenueThisMonth: number
@@ -19,6 +28,7 @@ export interface DashboardStats {
   // Users
   totalUsers: number
   usersToday: number
+  /** Distinct buyers with at least one collected order. */
   totalBuyers: number
   activeSellers: number
 
@@ -28,7 +38,7 @@ export interface DashboardStats {
   totalApproved: number
   totalRejected: number
 
-  // Disputes
+  // Disputes — open = every OPEN_DISPUTE_STATUSES value
   openDisputes: number
   disputesToday: number
   highPriorityDisputes: number
@@ -51,16 +61,16 @@ export async function getDashboardStats(): Promise<{
   stats?: DashboardStats
   error?: string
 }> {
+  // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
+  // non-admin, and the catch below must not swallow that.
+  const admin = await requireAdmin()
   try {
-    const admin = await requireAdmin()
     const supabase = await createClient()
 
     const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    const periods = utcPeriods(now)
+    const todayStart = periods.todayStart.toISOString()
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
-    const lastMonthEnd = monthStart
 
     // Fetch all stats in parallel
     const [
@@ -70,7 +80,6 @@ export async function getDashboardStats(): Promise<{
       activeOrdersResult,
       usersResult,
       usersTodayResult,
-      buyersResult,
       sellersResult,
       applicationsResult,
       approvedTodayResult,
@@ -83,17 +92,17 @@ export async function getDashboardStats(): Promise<{
       fraudResult,
       highSeverityFraudResult,
       notificationsResult,
+      collectedWalk,
     ] = await Promise.all([
-      // Orders
-      supabase.from('orders').select('total_amount', { count: 'exact' }).limit(1),
-      supabase.from('orders').select('total_amount', { count: 'exact', head: false }).gte('created_at', todayStart),
-      supabase.from('orders').select('*', { count: 'exact' }).gte('created_at', weekStart).limit(1),
-      supabase.from('orders').select('*', { count: 'exact' }).in('status', ['pending', 'paid', 'processing', 'delivering']).limit(1),
+      // Orders (bounded GET counts — never head:true)
+      supabase.from('orders').select('id', { count: 'exact' }).limit(1),
+      supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', todayStart).limit(1),
+      supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', weekStart).limit(1),
+      supabase.from('orders').select('id', { count: 'exact' }).in('status', IN_PROGRESS_ORDER_STATUSES).limit(1),
 
       // Users
       supabase.from('profiles').select('*', { count: 'exact' }).limit(1),
       supabase.from('profiles').select('*', { count: 'exact' }).gte('created_at', todayStart).limit(1),
-      supabase.from('orders').select('buyer_id', { count: 'exact' }).not('buyer_id', 'is', null).limit(1),
       supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'seller').limit(1),
 
       // Seller applications
@@ -103,9 +112,9 @@ export async function getDashboardStats(): Promise<{
       supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'rejected').limit(1),
 
       // Disputes
-      supabase.from('disputes').select('*', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1),
+      supabase.from('disputes').select('*', { count: 'exact' }).in('status', OPEN_DISPUTE_STATUSES).limit(1),
       supabase.from('disputes').select('*', { count: 'exact' }).gte('created_at', todayStart).limit(1),
-      supabase.from('disputes').select('*', { count: 'exact' }).eq('priority', 'urgent').in('status', ['open', 'under_review']).limit(1),
+      supabase.from('disputes').select('*', { count: 'exact' }).eq('priority', 'urgent').in('status', OPEN_DISPUTE_STATUSES).limit(1),
 
       // Cancellations
       supabase.from('order_cancellation_requests').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
@@ -116,26 +125,44 @@ export async function getDashboardStats(): Promise<{
 
       // Notifications
       supabase.from('notifications').select('*', { count: 'exact' }).eq('user_id', admin.userId).eq('is_read', false).limit(1),
+
+      // Revenue: every collected order, paged by id — one response stops at
+      // PostgREST's max_rows (1000) without saying so. Unpaid, cancelled and
+      // refunded orders are not revenue.
+      fetchAllRows<{
+        total_amount: number | string | null
+        created_at: string
+        buyer_id: string | null
+      }>((from, to) =>
+        supabase
+          .from('orders')
+          .select('id, total_amount, created_at, buyer_id')
+          .in('status', COLLECTED_ORDER_STATUSES)
+          .order('id', { ascending: true })
+          .range(from, to) as any,
+      ),
     ])
 
-    // Calculate revenue
-    const revenueAllTime = ordersTodayResult.data?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
-    const revenueToday = ordersTodayResult.data?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
+    const { data: collected, error: collectedError } = collectedWalk
+    if (collectedError) throw collectedError
 
-    // Get monthly revenue
-    const { data: ordersThisMonth } = await supabase
-      .from('orders')
-      .select('total_amount')
-      .gte('created_at', monthStart) as any
-
-    const { data: ordersLastMonth } = await supabase
-      .from('orders')
-      .select('total_amount')
-      .gte('created_at', lastMonthStart)
-      .lt('created_at', lastMonthEnd) as any
-
-    const revenueThisMonth = ordersThisMonth?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
-    const revenueLastMonth = ordersLastMonth?.reduce((sum: number, order: any) => sum + (Number(order.total_amount) || 0), 0) || 0
+    const today = periods.todayStart.getTime()
+    const month = periods.monthStart.getTime()
+    const lastMonth = periods.prevMonthStart.getTime()
+    let revenueAllTime = 0
+    let revenueToday = 0
+    let revenueThisMonth = 0
+    let revenueLastMonth = 0
+    const buyers = new Set<string>()
+    for (const o of collected ?? []) {
+      const amount = Number(o.total_amount) || 0
+      const at = new Date(o.created_at).getTime()
+      revenueAllTime += amount
+      if (at >= today) revenueToday += amount
+      if (at >= month) revenueThisMonth += amount
+      else if (at >= lastMonth) revenueLastMonth += amount
+      if (o.buyer_id) buyers.add(o.buyer_id)
+    }
 
     // Determine system health
     let systemHealth: 'good' | 'warning' | 'critical' = 'good'
@@ -160,7 +187,7 @@ export async function getDashboardStats(): Promise<{
 
       totalUsers: usersResult.count || 0,
       usersToday: usersTodayResult.count || 0,
-      totalBuyers: buyersResult.count || 0,
+      totalBuyers: buyers.size,
       activeSellers: sellersResult.count || 0,
 
       pendingApplications: applicationsResult.count || 0,

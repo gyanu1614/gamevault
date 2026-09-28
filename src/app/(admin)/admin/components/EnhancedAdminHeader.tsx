@@ -48,6 +48,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 import type { AdminProfile } from './AdminChrome'
 
 interface EnhancedAdminHeaderProps {
@@ -179,7 +180,7 @@ export default function EnhancedAdminHeader({
       const supabase = createClient()
       const [pendingApps, openDisputes, highFraud] = await Promise.all([
         supabase.from('seller_applications').select('*', { count: 'exact' }).eq('status', 'pending').limit(1),
-        supabase.from('disputes').select('*', { count: 'exact' }).in('status', ['open', 'under_review']).limit(1),
+        supabase.from('disputes').select('*', { count: 'exact' }).in('status', OPEN_DISPUTE_STATUSES).limit(1),
         supabase.from('fraud_flags').select('*', { count: 'exact' }).eq('status', 'open').eq('severity', 'high').limit(1),
       ])
       return {
