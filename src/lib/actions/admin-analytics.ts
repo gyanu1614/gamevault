@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import { utcPeriods } from '@/lib/admin/periods'
@@ -86,6 +87,10 @@ export async function getAnalyticsData(): Promise<{
   await requireAdmin()
   try {
     const supabase = await createClient()
+    // Fees / promo are private order columns a session client cannot select
+    // (orders column grant): those reads use the service role, after
+    // requireAdmin above.
+    const service = createServiceRoleClient()
 
     const { todayStart, monthStart, prevMonthStart } = utcPeriods()
     const mtdStart   = monthStart.toISOString()
@@ -106,9 +111,11 @@ export async function getAnalyticsData(): Promise<{
         promoUsages, disputesOpen, disputesResolved,
       ],
     ] = await Promise.all([
-      // Every collected order (revenue, GMV, charts).
+      // Every collected order (revenue, GMV, charts). seller_payout /
+      // platform_fee / payment_processing_fee are private order columns the
+      // session client cannot select: service role, after requireAdmin.
       fetchAllRows<any>((from, to) =>
-        supabase
+        service
           .from('orders')
           .select('id, status, created_at, total_amount, subtotal, seller_payout, platform_fee, payment_processing_fee, vaultshield_tier_fee')
           .in('status', COLLECTED_ORDER_STATUSES)

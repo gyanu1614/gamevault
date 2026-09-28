@@ -41,9 +41,9 @@ export default async function AccountPage() {
   const isApprovedSeller = sellerApp?.status === 'approved'
 
   const [{ count: buyerOrdersCount }, sellerOrdersRes, { count: unreadCount }] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact' }).eq('buyer_id', user.id).limit(1),
+    supabase.from('orders').select('id', { count: 'exact' }).eq('buyer_id', user.id).limit(1),
     isApprovedSeller
-      ? supabase.from('orders').select('*', { count: 'exact' }).eq('seller_id', user.id).limit(1)
+      ? supabase.from('orders').select('id', { count: 'exact' }).eq('seller_id', user.id).limit(1)
       : Promise.resolve({ count: 0 } as any),
     supabase.from('messages').select('*', { count: 'exact' })
       .eq('receiver_id', user.id).eq('read', false).limit(1),

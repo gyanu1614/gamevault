@@ -249,7 +249,7 @@ export function DailyStatsToast() {
 
       const { count } = await supabase
         .from('orders')
-        .select('*', { count: 'exact' })
+        .select('id', { count: 'exact' })
         .eq('status', 'completed')
         .gte('created_at', today.toISOString()).limit(1)
 
