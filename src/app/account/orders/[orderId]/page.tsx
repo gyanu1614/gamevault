@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
 import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
@@ -454,7 +455,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
         fetchpriority="high"
       />
       <OrderClient
-        order={order}
+        // Rendered into the viewer's browser: strip the other party's private
+        // money / payment fields (lib/orders/redact.ts).
+        order={redactOrderFor(order, userRole)}
         disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
