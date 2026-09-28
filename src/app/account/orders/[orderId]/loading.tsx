@@ -21,7 +21,7 @@ export default function OrderDetailLoading() {
         {/* Back link + presence */}
         <div className="mb-6 flex items-center justify-between max-sm:mb-7">
           <Block className="h-4 w-32" />
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 sm:translate-y-1.5">
             <Block className="h-8 w-8 rounded-full" />
             <div className="space-y-1">
               <Block className="h-2.5 w-10" />
@@ -40,15 +40,14 @@ export default function OrderDetailLoading() {
               <Block className="h-4 w-20" />
             </div>
           </div>
-          <div className="hidden shrink-0 flex-col items-end gap-2 pt-1 sm:flex">
+          <div className="hidden shrink-0 flex-col items-end gap-2 pt-3 sm:flex">
             <Block className="h-8 w-32 rounded-[9px]" />
-            <Block className="h-8 w-40 rounded-[9px]" />
           </div>
         </div>
 
         {/* Phone status card */}
         <div className={`${CARD} mt-7 flex items-start gap-3 px-5 py-4 sm:hidden`}>
-          <Block className="h-10 w-10 shrink-0 rounded-[10px]" />
+          <Block className="h-11 w-11 shrink-0 rounded-[11px]" />
           <div className="flex-1 space-y-2">
             <Block className="h-4 w-32" />
             <Block className="h-3 w-40" />
@@ -60,8 +59,8 @@ export default function OrderDetailLoading() {
         <div className="mt-6 grid grid-cols-1 gap-[22px] lg:grid-cols-[1fr_412px]">
           <div className="flex flex-col gap-[18px]">
             {/* Status strip */}
-            <div className={`${CARD} flex items-center gap-3.5 px-5 py-4`}>
-              <Block className="h-11 w-11 shrink-0 rounded-[11px]" />
+            <div className={`${CARD} flex items-center gap-3.5 px-5 py-[18px]`}>
+              <Block className="h-12 w-12 shrink-0 rounded-[12px]" />
               <div className="flex-1 space-y-2">
                 <Block className="h-4 w-40" />
                 <Block className="h-3 w-56 max-w-full" />

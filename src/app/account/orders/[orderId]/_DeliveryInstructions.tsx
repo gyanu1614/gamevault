@@ -1,24 +1,30 @@
 'use client'
 
 /**
- * DeliveryInstructions — V21/P6
+ * DeliveryInstructions
  *
- * Buyer view: prominent lime-tinted panel with numbered steps. Renders
- * the seller's delivery instructions verbatim (plain text for now, can
- * upgrade to markdown later if sellers ask). Collapses to 5 lines with
- * a "View More" toggle when long.
+ * Buyer + admin: a compact row ("How To Receive Your Order", step count,
+ * Action Needed while the order is still being delivered). Clicking it opens
+ * a small popup with the seller's instructions in full, as numbered steps
+ * when the seller wrote one per line.
  *
- * Seller view: quiet single-row card so they don't dwell on it (they
- * already authored these steps in the wizard). Links to edit.
+ * Seller: quiet single row (they authored the steps in the wizard) with an
+ * Edit link.
  *
- * Empty: returns null so we don't render an empty card.
+ * Empty: returns null so no empty card renders.
  */
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { Info, Pencil } from 'lucide-react'
+import { ChevronRight, Info, ListChecks, Pencil } from 'lucide-react'
 import { OrderCard } from './_OrderCard'
-import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface DeliveryInstructionsProps {
   role: 'buyer' | 'seller' | 'admin'
@@ -73,85 +79,89 @@ export function DeliveryInstructions({
   }
 
   // Buyer + admin view
+  return <BuyerInstructionsRow steps={steps} text={trimmed} active={active} />
+}
+
+function BuyerInstructionsRow({
+  steps,
+  text,
+  active,
+}: {
+  steps: string[] | null
+  text: string
+  active: boolean
+}) {
+  const [open, setOpen] = useState(false)
   return (
-    <OrderCard variant="lime" className="px-5 py-4" padded={false}>
-      <div className="mb-3 flex items-center gap-2.5">
-        <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime/[0.16] text-lime-text">
-          <Info className="h-3.5 w-3.5" />
-        </span>
-        <span className="text-[13.5px] font-bold tracking-tight text-text-primary">
-          How To Receive Your Order
-        </span>
-        {active && (
-          <span className="ml-auto rounded-[7px] border border-lime/30 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-            Action Needed
+    <>
+      <OrderCard padded={false}>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          className="flex w-full items-center gap-3 rounded-lg px-5 py-4 text-left transition-colors hover:bg-white/[0.02] max-sm:rounded-none"
+        >
+          <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[9px] bg-lime-tint-bg text-lime-text">
+            <ListChecks className="h-[18px] w-[18px]" aria-hidden />
           </span>
-        )}
-      </div>
-      {steps ? (
-        <StepsList steps={steps} />
-      ) : (
-        <Paragraph text={trimmed} />
-      )}
-    </OrderCard>
-  )
-}
-
-function StepsList({ steps }: { steps: string[] }) {
-  const [expanded, setExpanded] = useState(false)
-  const showToggle = steps.length > 5
-  const visible = expanded || !showToggle ? steps : steps.slice(0, 5)
-  return (
-    <>
-      <ol className="flex flex-col gap-2.5">
-        {visible.map((step, i) => (
-          <li
-            key={i}
-            className="flex gap-2.5 text-[13px] leading-[1.5] text-text-secondary"
-          >
-            <span className="font-bold text-lime-text">{i + 1}.</span>
-            <span>{step}</span>
-          </li>
-        ))}
-      </ol>
-      {showToggle && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className={cn(
-            'mt-2.5 text-[12px] font-semibold text-lime-text transition-colors',
-            'hover:text-lime',
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block text-body-sm font-bold text-text-primary">How To Receive Your Order</span>
+            <span className="mt-0.5 block text-[12.5px] text-text-secondary">
+              {steps ? `${steps.length} steps from the seller` : 'Instructions from the seller'}
+            </span>
+          </span>
+          {active && (
+            <span className="flex-shrink-0 rounded-[7px] border border-lime-tint-border px-2 py-0.5 text-label font-bold text-lime-text">
+              Action Needed
+            </span>
           )}
-        >
-          {expanded ? 'View Less' : `View ${steps.length - 5} More`}
+          <ChevronRight className="h-4 w-4 flex-shrink-0 text-text-tertiary" aria-hidden />
         </button>
-      )}
+      </OrderCard>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[460px] gap-4 border-border-default bg-bg-raised p-6">
+          <DialogHeader className="gap-1.5 text-left">
+            <DialogTitle className="flex items-center gap-2.5 text-[19px] font-bold tracking-tight">
+              <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-[8px] bg-lime-tint-bg text-lime-text">
+                <ListChecks className="h-4 w-4" aria-hidden />
+              </span>
+              How To Receive Your Order
+            </DialogTitle>
+            <DialogDescription className="text-body-sm text-text-secondary">
+              Follow the seller&apos;s steps, then check your order arrived.
+            </DialogDescription>
+          </DialogHeader>
+          <InstructionsBody steps={steps} text={text} />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[10px] bg-lime px-5 text-[14px] font-bold text-text-inverse transition-all hover:-translate-y-[1px] hover:bg-lime-hover"
+          >
+            Got It
+          </button>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
-function Paragraph({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false)
-  const isLong = text.length > 220
+/** The popup body: the seller's steps in full (exported for tests; the
+ *  dialog itself only renders once opened). */
+export function InstructionsBody({ steps, text }: { steps: string[] | null; text: string }) {
   return (
-    <>
-      <p
-        className={cn(
-          'whitespace-pre-line text-[13px] leading-[1.55] text-text-secondary',
-          !expanded && isLong && 'line-clamp-5',
-        )}
-      >
-        {text}
-      </p>
-      {isLong && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-2.5 text-[12px] font-semibold text-lime-text transition-colors hover:text-lime"
-        >
-          {expanded ? 'View Less' : 'View More'}
-        </button>
+    <div className="max-h-[55vh] overflow-y-auto rounded-[10px] border border-border-subtle bg-white/[0.02] px-4 py-3.5">
+      {steps ? (
+        <ol className="flex flex-col gap-2.5">
+          {steps.map((step, i) => (
+            <li key={i} className="flex gap-2.5 text-body-sm leading-[1.5] text-text-secondary">
+              <span className="font-bold tabular-nums text-lime-text">{i + 1}.</span>
+              <span className="min-w-0 break-words">{step}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="whitespace-pre-line break-words text-body-sm leading-[1.55] text-text-secondary">{text}</p>
       )}
-    </>
+    </div>
   )
 }

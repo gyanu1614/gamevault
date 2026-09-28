@@ -93,7 +93,7 @@ export function buildOrderTimeline(o: TimelineInput): TimelineStep[] {
   }
 
   const placedAt = o.paid_at ?? o.created_at
-  done.push({ key: 'placed', icon: 'placed', title: 'Order Placed', detail: 'Paid and covered by SafeDrop Buyer Protection', at: placedAt, state: 'done', tone: 'lime' })
+  done.push({ key: 'placed', icon: 'placed', title: 'Order Placed', detail: 'Paid and covered by SafeDrop Protection', at: placedAt, state: 'done', tone: 'lime' })
 
   if (o.delivering_at) {
     done.push({ key: 'started', icon: 'started', title: 'Delivery Started', detail: 'The seller started working on the order', at: o.delivering_at, state: 'done', tone: 'lime' })

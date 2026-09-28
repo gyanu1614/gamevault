@@ -213,17 +213,16 @@ function SafeDropBody({
   const cancelledWithRefund = escrowStatus === 'refunded'
   // Row + caption depend on order state.
   let amountLabel = 'Amount Covered'
-  let caption: React.ReactNode =
-    "Your purchase is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back."
+  let caption: React.ReactNode = 'Not delivered or not as described? You get your money back.'
   let showDisputeCta = false
 
   if (orderStatus === 'completed') {
     amountLabel = 'Seller Paid'
     caption = disputeWindowOpen ? (
       <>
-        The seller has been paid for this order. If anything was off with
-        your order, you can still open a dispute until {disputeUntilLabel} —
-        SafeDrop Protection covers you for that window.
+        The seller has been paid for this order. If anything was off, you
+        can still open a dispute until {disputeUntilLabel}. SafeDrop
+        Protection covers you for that window.
       </>
     ) : (
       <>The seller has been paid for this order and the dispute window has closed. Need help? Contact Support.</>
@@ -237,7 +236,7 @@ function SafeDropBody({
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
     caption =
-      'Your refund was added to your DropMarket wallet as store credit instantly — spend it right away or withdraw it.'
+      'Your refund was added to your DropMarket wallet as store credit. Spend it right away or withdraw it.'
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
     caption =
@@ -246,10 +245,10 @@ function SafeDropBody({
     if (cancelledWithRefund) {
       amountLabel = 'Amount Refunded'
       caption =
-        'Order cancelled — your refund was added to your DropMarket wallet as store credit instantly.'
+        'Order cancelled. Your refund was added to your DropMarket wallet as store credit.'
     } else {
       amountLabel = 'Order Total'
-      caption = 'Order cancelled — you were not charged.'
+      caption = 'Order cancelled. You were not charged.'
     }
   }
 
@@ -288,21 +287,21 @@ function SafeDropBody({
             type="button"
             onClick={onOpenDispute}
             className={cn(
-              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber/30 bg-amber/[0.08] px-3 py-2.5 text-[13px] font-bold text-amber transition-colors',
-              'hover:border-amber/50 hover:bg-amber/[0.14]',
+              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,178,62,0.32)] bg-warning-bg px-3 py-2.5 text-[13px] font-bold text-warning transition-colors',
+              'hover:border-[rgba(255,178,62,0.5)] hover:bg-[rgba(255,178,62,0.2)]',
             )}
           >
-            Issues With Your Order? Open Dispute
+            Issue With Your Order? Open Dispute
           </button>
         ) : (
           <Link
             href={`/account/orders/${orderId}#dispute`}
             className={cn(
-              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber/30 bg-amber/[0.08] px-3 py-2.5 text-[13px] font-bold text-amber transition-colors',
-              'hover:border-amber/50 hover:bg-amber/[0.14]',
+              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,178,62,0.32)] bg-warning-bg px-3 py-2.5 text-[13px] font-bold text-warning transition-colors',
+              'hover:border-[rgba(255,178,62,0.5)] hover:bg-[rgba(255,178,62,0.2)]',
             )}
           >
-            Issues With Your Order? Open Dispute
+            Issue With Your Order? Open Dispute
           </Link>
         )
       )}
@@ -320,15 +319,15 @@ function SafeDropStatusRow({ orderStatus }: { orderStatus: string }) {
     orderStatus === 'completed'
       ? { dot: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-400/[0.10]' }
       : orderStatus === 'delivered'
-      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime/[0.12]' }
-      : { dot: 'bg-amber', text: 'text-amber', bg: 'bg-amber/[0.12]' }
+      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime-tint-bg' }
+      : { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg' }
 
   const label =
     orderStatus === 'completed'
       ? 'Seller Paid Out'
       : orderStatus === 'delivered'
       ? 'Confirm Delivery To Complete'
-      : 'Covered By SafeDrop'
+      : 'Covered By SafeDrop Protection'
 
   return (
     <div className={cn('mt-3 flex items-center gap-2 rounded-[9px] px-3 py-2', tone.bg)}>
@@ -400,8 +399,8 @@ function PayoutStatusRow({ orderStatus }: { orderStatus: string }) {
     orderStatus === 'completed'
       ? { dot: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-400/[0.10]' }
       : orderStatus === 'delivered'
-      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime/[0.12]' }
-      : { dot: 'bg-amber', text: 'text-amber', bg: 'bg-amber/[0.12]' }
+      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime-tint-bg' }
+      : { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg' }
 
   const label =
     orderStatus === 'completed'
@@ -494,7 +493,7 @@ function PartyButton({ party }: { party: PartyInfo }) {
         )}
         {party.sales > 0 && (
           <span className="inline-flex items-center gap-1 text-[11.5px] text-text-tertiary">
-            <Star className="h-3 w-3 fill-amber text-amber" />
+            <Star className="h-3 w-3 fill-warning text-warning" />
             <span className="tabular-nums">{party.rating.toFixed(2)}</span>
           </span>
         )}
@@ -527,7 +526,7 @@ function PartyButton({ party }: { party: PartyInfo }) {
 function CardHeader({ iconSrc, title }: { iconSrc: string; title: string }) {
   return (
     <div className="mb-3 flex items-center gap-2.5">
-      <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime/[0.12] text-lime-text">
+      <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime-tint-bg text-lime-text">
         <span
           aria-hidden
           className="h-[15px] w-[15px] bg-current"
@@ -653,7 +652,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
       {(role === 'buyer' || role === 'admin') && (
         <OrderCard className="px-5 pb-4 pt-5">
-          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop™ Buyer Protection" />
+          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop Protection" />
           <SafeDropBody
             amount={escrowAmount}
             orderStatus={orderStatus}

@@ -102,14 +102,29 @@ export function OrderClient(props: OrderClientProps) {
     order.status === 'delivering' ||
     (order.status === 'disputed' && !deliveredAt)
 
-  // V21/P3.e — Server-rendered overdue flag for the status strip.
-  // Recomputed live by the progress bar, but the strip only flips on
-  // overdue when the page first renders, which is fine — the user will
-  // see the morphed strip on their next page load after SLA elapses.
+  // Overdue flag for the status strip. Starts from the load-time value and
+  // flips live the moment the delivery window runs out, so the buyer sees
+  // "Order Is Overdue" + Open Dispute without refreshing.
   const slaStartMs = Date.parse(slaStartedAt)
   const slaEndMs = slaStartMs + slaSeconds * 1000
-  const isOverdueOnLoad =
-    showProgressBar && Number.isFinite(slaEndMs) && Date.now() > slaEndMs
+  const [overdue, setOverdue] = useState(
+    () => showProgressBar && Number.isFinite(slaEndMs) && Date.now() > slaEndMs,
+  )
+  useEffect(() => {
+    if (!showProgressBar || !Number.isFinite(slaEndMs)) {
+      setOverdue(false)
+      return
+    }
+    const msLeft = slaEndMs - Date.now()
+    if (msLeft <= 0) {
+      setOverdue(true)
+      return
+    }
+    setOverdue(false)
+    // setTimeout caps at ~24.8 days; a longer window re-arms on the next render.
+    const t = setTimeout(() => setOverdue(true), Math.min(msLeft + 250, 2_147_000_000))
+    return () => clearTimeout(t)
+  }, [showProgressBar, slaEndMs])
 
   // V21/P4.d — Seller's Mark As Delivered modal lives at the page
   // level so we can re-render the entire status strip + progress bar
@@ -234,6 +249,14 @@ export function OrderClient(props: OrderClientProps) {
       ? Number(disputeResolution.seller_payout_amount)
       : netPayout
   const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
+  // The seller's delivery instructions (listing.description).
+  const instructionsProps = {
+    role: userRole,
+    instructions: order.listing?.description ?? null,
+    listingId: order.listing?.id ?? null,
+    active: ['paid', 'delivering', 'disputed'].includes(order.status) && !deliveredAt,
+  }
+  const hasInstructions = !!order.listing?.description?.trim()
   const placedAtFull = new Date(order.created_at).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -298,7 +321,6 @@ export function OrderClient(props: OrderClientProps) {
           categorySlug={categorySlug}
           orderNumber={orderNumber}
           orderStatus={order.status}
-          escrowStatus={order.escrow_status}
           disputeResolved={!!disputeResolution}
           presence={presenceParty}
         />
@@ -356,9 +378,8 @@ export function OrderClient(props: OrderClientProps) {
               role={userRole}
               status={order.status}
               amount={userRole === 'seller' && order.status === 'completed' ? actualPayout : undefined}
-              overdue={isOverdueOnLoad}
+              overdue={overdue}
               disputeHref={`/account/orders/${order.id}#dispute`}
-              disputeUntil={disputeUntil}
               onMarkDelivered={
                 userRole === 'seller' &&
                 (order.status === 'delivering' || (order.status === 'disputed' && !deliveredAt))
@@ -406,7 +427,9 @@ export function OrderClient(props: OrderClientProps) {
                   order_number: order.order_number,
                   listing: {
                     title: itemTitle,
-                    images: order.listing?.images ?? [],
+                    // Same picture as the page header (bundle / currency icon
+                    // or the item's own image), never the game's.
+                    images: itemImageUrl ? [itemImageUrl] : order.listing?.images ?? [],
                     game_id: order.listing?.game_id,
                   },
                   total_amount: Number(order.total_amount ?? totalPaid),
@@ -464,14 +487,14 @@ export function OrderClient(props: OrderClientProps) {
                 />
               </div>
             )}
-            <div className="min-w-0 empty:hidden max-lg:order-1">
-              <DeliveryInstructions
-                role={userRole}
-                instructions={order.listing?.description ?? null}
-                listingId={order.listing?.id ?? null}
-                active={['paid', 'delivering', 'disputed'].includes(order.status) && !deliveredAt}
-              />
-            </div>
+            {/* Phone + tablet: How To Receive sits above the chat (the rail
+                drops below the main column there). Desktop shows it in the
+                rail under the SafeDrop / Payout card instead. */}
+            {hasInstructions && (
+              <div className="min-w-0 lg:hidden max-lg:order-1">
+                <DeliveryInstructions {...instructionsProps} />
+              </div>
+            )}
             <div className="min-w-0 empty:hidden max-lg:order-3">
               <DeliveryEvidence
                 role={userRole}
@@ -506,6 +529,11 @@ export function OrderClient(props: OrderClientProps) {
               onOpenDispute={openDispute}
               disputeUntil={disputeUntil}
             />
+            {hasInstructions && (
+              <div className="hidden lg:block">
+                <DeliveryInstructions {...instructionsProps} />
+              </div>
+            )}
           </aside>
         </div>
 
