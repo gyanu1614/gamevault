@@ -174,6 +174,28 @@ export default async function OrderDetailPage({ params }: PageProps) {
       ? await fetchCategoryConfig(game.id, 'currency').catch(() => null)
       : null
 
+  // Delivery proof lives in the PRIVATE delivery-evidence bucket, stored as
+  // object paths (or, from an older writer, public-style URLs that a private
+  // bucket never serves). Sign them for this viewer; the storage policy only
+  // signs for the order's buyer, seller or an admin.
+  const evidence = ((order as any).delivery_evidence_urls ?? []) as string[]
+  if (evidence.length > 0) {
+    const toPath = (v: string) => {
+      if (!/^https?:/i.test(v)) return v
+      const i = v.indexOf('/delivery-evidence/')
+      return i >= 0 ? decodeURIComponent(v.slice(i + '/delivery-evidence/'.length).split('?')[0]) : null
+    }
+    const paths = evidence.map(toPath)
+    const toSign = paths.filter((p): p is string => !!p)
+    const { data: signed } = toSign.length
+      ? await supabase.storage.from('delivery-evidence').createSignedUrls(toSign, 3600)
+      : { data: [] as Array<{ path: string | null; signedUrl: string }> }
+    const byPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]))
+    ;(order as any).delivery_evidence_urls = evidence
+      .map((v, i) => (paths[i] ? byPath.get(paths[i]) ?? null : v))
+      .filter(Boolean)
+  }
+
   // Attach game and category to order.listing for downstream components
   if (order.listing) {
     order.listing.game = game
@@ -197,12 +219,21 @@ export default async function OrderDetailPage({ params }: PageProps) {
   } | null = null
 
   if (order.disputed_at) {
-    const { data: disputeData } = await supabase
+    // The LATEST dispute only. An order can be disputed again after an
+    // earlier dispute closed (a post-completion dispute); picking "any
+    // resolved dispute" showed a fresh, open one as Resolved, and with two
+    // resolved rows .maybeSingle() errored and showed nothing.
+    const { data: latest } = await supabase
       .from('disputes')
       .select('id, status, resolved_by')
       .eq('transaction_id', orderId)
-      .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle() as any
+    const disputeData =
+      latest && ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial'].includes(latest.status)
+        ? latest
+        : null
 
     if (disputeData) {
       const { data: resolutionData } = await supabase

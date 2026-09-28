@@ -201,7 +201,7 @@ function OrdersContent() {
       // Fetch disputes for these orders
       const { data: disputes } = await supabase
         .from('disputes')
-        .select('id, transaction_id, status')
+        .select('id, transaction_id, status, resolved_by')
         .in('transaction_id', orderIds)
         .in('status', ['resolved_buyer_favor', 'resolved_seller_favor', 'resolved_partial']) as any
 
@@ -223,7 +223,7 @@ function OrdersContent() {
       disputes.forEach((dispute: any) => {
         const resolution = resolutions.find((r: any) => r.dispute_id === dispute.id)
         if (resolution) {
-          resolutionMap[dispute.transaction_id] = resolution
+          resolutionMap[dispute.transaction_id] = { ...resolution, resolved_by: dispute.resolved_by }
         }
       })
 
@@ -837,7 +837,16 @@ function OrdersContent() {
                       const gameName = gameData?.name
                       const disputeResolution = disputeResolutions[order.id]
                       const hasDisputeResolution = order.status === 'completed' && disputeResolution
-                      const userWonDispute = hasDisputeResolution && (
+                      // Neither side "won" when the buyer closed their own dispute
+                      // (confirmed receipt) or it ended in a partial refund.
+                      const disputeNeutral =
+                        !!hasDisputeResolution &&
+                        (disputeResolution.favored_party === 'neutral' ||
+                          (!!disputeResolution.resolved_by && disputeResolution.resolved_by === (order as any).buyer_id))
+                      const disputeBadge = disputeNeutral
+                        ? disputeResolution.favored_party === 'neutral' ? 'Partial' : 'Closed'
+                        : null
+                      const userWonDispute = hasDisputeResolution && !disputeNeutral && (
                         (activeTab === 'purchases' && disputeResolution.favored_party === 'buyer') ||
                         (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
                       )
@@ -897,12 +906,14 @@ function OrdersContent() {
                               {hasDisputeResolution && (
                                 <span className={cn(
                                   'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
-                                  userWonDispute
+                                  disputeBadge
+                                    ? 'border border-border-default bg-white/[0.06] text-text-secondary'
+                                    : userWonDispute
                                     ? 'border border-success/30 bg-green-500/15 text-success'
                                     : 'border border-error/40 bg-red-500/15 text-error',
                                 )}>
-                                  {userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
-                                  {userWonDispute ? 'Won' : 'Lost'}
+                                  {disputeBadge ? null : userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
+                                  {disputeBadge ?? (userWonDispute ? 'Won' : 'Lost')}
                                 </span>
                               )}
                             </span>

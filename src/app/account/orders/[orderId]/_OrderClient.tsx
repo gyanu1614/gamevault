@@ -163,13 +163,13 @@ export function OrderClient(props: OrderClientProps) {
     userRole === 'buyer'
       ? {
           name: sellerDisplayName(order.seller),
-          isOnline: !!order.seller?.presence?.is_online,
+          sellerId: order.seller?.id ?? null,
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           roleLabel: 'Seller',
         }
       : {
           name: order.buyer?.username ?? 'Buyer',
-          isOnline: !!order.buyer?.presence?.is_online,
+          sellerId: null,
           avatarUrl: getAvatarUrl(order.buyer?.avatar_url, order.buyer?.username ?? 'buyer'),
           roleLabel: 'Buyer',
         }
@@ -430,6 +430,7 @@ export function OrderClient(props: OrderClientProps) {
                     : undefined
                 }
                 disputeResolution={disputeResolution}
+                presenceSellerId={userRole === 'buyer' ? order.seller?.id ?? null : null}
               />
               </div>
             )}
