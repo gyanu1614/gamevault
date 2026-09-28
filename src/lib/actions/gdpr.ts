@@ -16,6 +16,8 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -103,13 +105,21 @@ export async function exportMyData(): Promise<{
       { data: promoUsages },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
-      supabase.from('orders').select('*').or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
+      supabase.from('orders').select(ORDER_PARTY_SELECT).or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
       supabase.from('listings').select('*').eq('seller_id', uid),
       supabase.from('messages').select('*').eq('sender_id', uid),
       supabase.from('reviews').select('*').or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
       supabase.from('loyalty_credits').select('*').eq('user_id', uid),
       supabase.from('referral_earnings').select('*').eq('referrer_id', uid),
       supabase.from('promo_code_usages').select('*').eq('user_id', uid),
+    ])
+
+    // The user's own private order fields (payout as seller; checkout /
+    // wallet / fees as buyer) — never the other party's.
+    const orderRows = (orders ?? []) as any[]
+    const [asBuyer, asSeller] = await Promise.all([
+      withOwnOrderFields(supabase, 'buyer', orderRows.filter((o) => o.buyer_id === uid)),
+      withOwnOrderFields(supabase, 'seller', orderRows.filter((o) => o.buyer_id !== uid)),
     ])
 
     const exportPayload = {
@@ -119,7 +129,7 @@ export async function exportMyData(): Promise<{
       user_id:            uid,
       email:              user.email,
       profile:            profile,
-      orders:             orders             ?? [],
+      orders:             [...asBuyer, ...asSeller],
       listings:           listings           ?? [],
       messages:           messages           ?? [],
       reviews:            reviews            ?? [],

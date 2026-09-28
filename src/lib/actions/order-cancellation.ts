@@ -371,7 +371,9 @@ export async function processCancellationRequest(
     // Get the request
     const { data: request, error: fetchError } = await supabase
       .from('order_cancellation_requests')
-      .select('*, order:orders(*)')
+      // Shared order columns only: '*' on orders is refused to a session
+      // client (orders column grant).
+      .select('*, order:orders(id, buyer_id, seller_id, order_number, status, total_amount, currency)')
       .eq('id', requestId)
       .single() as any
 
