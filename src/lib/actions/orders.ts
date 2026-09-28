@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { disputeReasonFor } from '@/lib/orders/dispute-reason'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
@@ -874,14 +875,7 @@ export async function openDispute(
     }
 
     // Map UI-friendly category to database enum value
-    const categoryMap: Record<string, string> = {
-      'Item not as described': 'not_as_described',
-      'Did not receive order': 'item_not_received',
-      'Wrong item received': 'wrong_item',
-      'Account credentials invalid': 'account_issue',
-      'Other': 'other',
-    }
-    const dbCategory = categoryMap[category] || 'other'
+    const dbCategory = disputeReasonFor(category)
 
     // Get order
     const { data: order, error: orderError } = await supabase
