@@ -743,7 +743,8 @@ export const analyticsApi = {
       .from('orders')
       .select('created_at, total_amount, status')
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'processing'])
+      // Realised sales only ('processing' is not an order status).
+      .eq('status', 'completed')
 
     if (since) {
       query = query.gte('created_at', since.toISOString())
@@ -1480,7 +1481,7 @@ export const earningsApi = {
         listing:listings!listing_id(title)
       `)
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'processing', 'paid'])
+      .in('status', ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded'])
       .order('created_at', { ascending: false }) as any
 
     if (error) throw error
