@@ -1,7 +1,7 @@
 /**
- * SafeDrop Buyer Protection Landing Page
+ * SafeDrop Protection Landing Page
  *
- * Marketing page explaining DropMarket's buyer-protection programme:
+ * Marketing page explaining DropMarket's SafeDrop Protection programme:
  * what's covered, protection windows by category, how disputes work,
  * seller payouts, and FAQs.
  */
@@ -28,13 +28,13 @@ import { SafeDropExplainer } from './_SafeDropExplainer'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
-  title: 'SafeDrop Buyer Protection',
+  title: 'SafeDrop Protection',
   description:
-    "SafeDrop is DropMarket's buyer-protection programme, included on every order. Not delivered or not as described? You get your money back.",
+    "SafeDrop Protection is included on every DropMarket order. Not delivered or not as described? You get your money back.",
   openGraph: {
-    title: 'SafeDrop Buyer Protection',
+    title: 'SafeDrop Protection',
     description:
-      'Buyer protection on every DropMarket order — get what you ordered, or your money back',
+      'SafeDrop Protection on every DropMarket order. Get what you ordered, or your money back',
     type: 'website'
   }
 }
@@ -50,7 +50,7 @@ export default function SafeDropPage() {
         "name": "What happens if the seller doesn't deliver?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Every order is covered by SafeDrop Buyer Protection. If your order isn't delivered or isn't as described, you get a full refund."
+          "text": "Every order is covered by SafeDrop Protection. If your order isn't delivered or isn't as described, you get a full refund."
         }
       },
       {
@@ -124,13 +124,12 @@ export default function SafeDropPage() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6">
-              SafeDrop Buyer Protection
+              SafeDrop Protection
             </h1>
 
             <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-8">
               Not delivered or not as described? You get your money back.
-              SafeDrop is DropMarket&apos;s buyer-protection programme, included
-              on every order.
+              SafeDrop Protection is included on every DropMarket order.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -154,7 +153,7 @@ export default function SafeDropPage() {
             <StatCard
               icon={ShieldCheck}
               value="Every Order"
-              label="Covered by SafeDrop Buyer Protection"
+              label="Covered by SafeDrop Protection"
               color="text-lime-text"
             />
             <StatCard
@@ -393,7 +392,7 @@ export default function SafeDropPage() {
           <div className="space-y-6">
             <FAQItem
               question="What happens if the seller doesn't deliver?"
-              answer="Every order is covered by SafeDrop Buyer Protection. If your order isn't delivered or isn't as described, you get a full refund."
+              answer="Every order is covered by SafeDrop Protection. If your order isn't delivered or isn't as described, you get a full refund."
             />
 
             <FAQItem
@@ -459,8 +458,8 @@ export default function SafeDropPage() {
             </h2>
 
             <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-              Every order is covered by SafeDrop Buyer Protection — get what
-              you ordered, or your money back.
+              Every order is covered by SafeDrop Protection. Get what you
+              ordered, or your money back.
             </p>
 
             <Link

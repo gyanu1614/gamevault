@@ -10,7 +10,7 @@
  * crawlable with real copy and FAQ, no manual SEO work. Pages call the
  * resolvers below instead of hand-writing metadata inline.
  *
- * Copy follows the commercial-agent wording rule (SafeDrop Buyer Protection,
+ * Copy follows the commercial-agent wording rule (SafeDrop Protection,
  * "Item Guaranteed or Full Refund" — never "escrow / we hold funds", and
  * never WHEN money moves between buyer, platform and seller).
  */
@@ -95,7 +95,7 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
         : `Buy & Sell ${name} Items & Currency`
 
   const descTemplate = clamp(
-    `Buy and sell ${name} digital goods on DropMarket. Compare verified seller offers for ${primary}, delivery times, prices and SafeDrop Buyer Protection.`,
+    `Buy and sell ${name} digital goods on DropMarket. Compare verified seller offers for ${primary}, delivery times, prices and SafeDrop Protection.`,
     160,
   )
 
@@ -103,8 +103,8 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
 
   const introTemplate =
     `Browse ${name} ${primary} from verified sellers on DropMarket. ` +
-    `Compare prices, stock and delivery times, then buy with confidence — ` +
-    `every order is covered by SafeDrop Buyer Protection, so you get ` +
+    `Compare prices, stock and delivery times, then buy with confidence. ` +
+    `Every order is covered by SafeDrop Protection, so you get ` +
     `exactly what was described. ` +
     `If something is wrong or never arrives, you get your money back. Every ` +
     `${name} seller is verified before they can list.`
@@ -130,7 +130,7 @@ function gameFaq(name: string): SeoFaqItem[] {
   return [
     {
       q: `Is it safe to buy ${name} items and currency on DropMarket?`,
-      a: `Yes. Every ${name} order is covered by SafeDrop Buyer Protection — Item Guaranteed or Full Refund. If it's not delivered or not as described, you get your money back.`,
+      a: `Yes. Every ${name} order is covered by SafeDrop Protection: Item Guaranteed or Full Refund. If it's not delivered or not as described, you get your money back.`,
     },
     {
       q: `How fast is ${name} delivery?`,
@@ -195,7 +195,7 @@ export function resolveCategorySeo(input: CategorySeoInput): ResolvedSeo {
       : ''
 
   const descTemplate = clamp(
-    `Compare ${gameName} ${lc(categoryLabel)} offers from verified sellers on DropMarket. ${stat}Check prices, stock and delivery times, all covered by SafeDrop Buyer Protection.`,
+    `Compare ${gameName} ${lc(categoryLabel)} offers from verified sellers on DropMarket. ${stat}Check prices, stock and delivery times, all covered by SafeDrop Protection.`,
     160,
   )
 
@@ -203,7 +203,7 @@ export function resolveCategorySeo(input: CategorySeoInput): ResolvedSeo {
 
   const introTemplate =
     `Compare ${gameName} ${lc(categoryLabel)} from verified sellers on DropMarket. ` +
-    `${stat}Every order is covered by SafeDrop Buyer Protection, so you get exactly ` +
+    `${stat}Every order is covered by SafeDrop Protection, so you get exactly ` +
     `what you ordered or your money back. Sort by price, delivery speed or seller rating to find the ` +
     `right offer.`
 
@@ -226,7 +226,7 @@ function categoryFaq(game: string, label: string, type: string): SeoFaqItem[] {
   const base: SeoFaqItem[] = [
     {
       q: `Is buying ${game} ${lc(label)} on DropMarket safe?`,
-      a: `Yes — every ${game} ${lc(label)} order is covered by SafeDrop Buyer Protection: you get exactly what was described, or your money back. Confirm and the order is complete.`,
+      a: `Yes. Every ${game} ${lc(label)} order is covered by SafeDrop Protection: you get exactly what was described, or your money back. Confirm and the order is complete.`,
     },
     {
       q: `How much does ${game} ${lc(label)} cost?`,

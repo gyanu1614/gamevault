@@ -9,7 +9,7 @@ import { ImageResponse } from 'next/og'
 import { OgCard, OG_SIZE, ogRestFetch, slugToTitle } from '@/lib/seo/og-template'
 import { getActiveGameSlugs } from '@/lib/seo/indexable-games'
 
-export const alt = 'Game marketplace on DropMarket — covered by SafeDrop Buyer Protection'
+export const alt = 'Game marketplace on DropMarket, covered by SafeDrop Protection'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 // Step 7a — a cold OG render is a full Satori pass (0.4–1.1 s) and social
