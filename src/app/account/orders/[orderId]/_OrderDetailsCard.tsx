@@ -39,7 +39,16 @@ interface OrderDetailsCardProps {
   /** Raw UUID — used for dispute / sub-path links inside cards. */
   orderId: string
   placedAtLabel: string
-  paymentMethod: string
+  /** Buyer / admin: the payment breakdown (null for the seller, or before
+   *  payment). */
+  paymentSummary?: {
+    itemPrice: number
+    marketplaceFee: number
+    paymentFee: number
+    promoDiscount: number
+    total: number
+    paidWith: string | null
+  } | null
   subtotal: number
   fee: number
   totalPaid: number
@@ -554,7 +563,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     orderNumber,
     orderId,
     placedAtLabel,
-    paymentMethod,
+    paymentSummary = null,
     subtotal,
     fee,
     totalPaid,
@@ -639,9 +648,28 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
         <Row label="Order ID">
           <CopyableId value={orderNumber} />
         </Row>
-        <Row label="Total Paid" emphasized>
-          {fmtUsd(totalPaid)}
-        </Row>
+        {paymentSummary ? (
+          <>
+            <Row label="Item Price">{fmtUsd(paymentSummary.itemPrice)}</Row>
+            {paymentSummary.marketplaceFee > 0 && (
+              <Row label="Marketplace Fee">{fmtUsd(paymentSummary.marketplaceFee)}</Row>
+            )}
+            {paymentSummary.paymentFee > 0 && (
+              <Row label="Payment Fee">{fmtUsd(paymentSummary.paymentFee)}</Row>
+            )}
+            {paymentSummary.promoDiscount > 0 && (
+              <Row label="Promo Discount">−{fmtUsd(paymentSummary.promoDiscount)}</Row>
+            )}
+            <Row label="Total Paid" emphasized>
+              {fmtUsd(paymentSummary.total)}
+            </Row>
+            {paymentSummary.paidWith && <Row label="Paid With">{paymentSummary.paidWith}</Row>}
+          </>
+        ) : (
+          <Row label="Total Paid" emphasized>
+            {fmtUsd(totalPaid)}
+          </Row>
+        )}
         <Row label="Date Placed">{placedAtLabel}</Row>
         <Row label={otherPartyLabel}>
           <span className="-my-1 flex justify-end">

@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
+import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
@@ -341,6 +342,28 @@ export default async function OrderDetailPage({ params }: PageProps) {
         bundleId: (order.listing as any)?.bundle_id ?? null,
       })
     : undefined
+  // Buyer (and admin): what they paid, line by line, and with what. Built
+  // from the buyer's own fields; the marketplace fee is the remainder
+  // (platform_fee is not in the buyer's column grant).
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const PAID_STATUSES = ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded']
+  const paymentSummary =
+    userRole !== 'seller' && PAID_STATUSES.includes(order.status)
+      ? await (async () => {
+          const itemPrice = Number((order as any).subtotal ?? 0)
+          const paymentFee = Number((order as any).payment_processing_fee ?? 0)
+          const promoDiscount = Number((order as any).promo_discount ?? 0)
+          const total = Number((order as any).total_amount ?? 0)
+          return {
+            itemPrice,
+            marketplaceFee: Math.max(0, round2(total - itemPrice - paymentFee + promoDiscount)),
+            paymentFee,
+            promoDiscount,
+            total,
+            paidWith: await orderPaymentMethodLabel(order as any),
+          }
+        })()
+      : null
   const itemImageUrl = orderItemImage({
     categoryType: category?.type,
     currencyConfig: currencyCfg as any,
@@ -469,6 +492,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         userRole={userRole}
         disputeResolution={disputeResolution}
         itemImageUrl={itemImageUrl}
+        paymentSummary={paymentSummary}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}

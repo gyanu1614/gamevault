@@ -41,6 +41,15 @@ interface OrderClientProps {
   /** PR 7: end of the buyer's dispute window (delivered_at + N days), or null. */
   disputeUntil?: string | null
   itemImageUrl: string | null
+  /** Buyer / admin: what was paid, line by line, and with what. */
+  paymentSummary?: {
+    itemPrice: number
+    marketplaceFee: number
+    paymentFee: number
+    promoDiscount: number
+    total: number
+    paidWith: string | null
+  } | null
   itemTitle: string
   gameName: string | null
   gameIconUrl: string | null
@@ -74,6 +83,7 @@ export function OrderClient(props: OrderClientProps) {
     disputeResolution,
     disputeUntil = null,
     itemImageUrl,
+    paymentSummary = null,
     itemTitle,
     gameName,
     gameIconUrl,
@@ -248,7 +258,6 @@ export function OrderClient(props: OrderClientProps) {
     isPartialRefund && disputeResolution?.seller_payout_amount != null
       ? Number(disputeResolution.seller_payout_amount)
       : netPayout
-  const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
   // The seller's delivery instructions (listing.description).
   const instructionsProps = {
     role: userRole,
@@ -507,7 +516,7 @@ export function OrderClient(props: OrderClientProps) {
               orderNumber={orderNumber}
               orderId={order.id}
               placedAtLabel={placedAtFull}
-              paymentMethod={paymentMethod}
+              paymentSummary={paymentSummary}
               subtotal={subtotal}
               fee={sellerFeeAmount}
               totalPaid={totalPaid}
