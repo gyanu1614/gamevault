@@ -420,7 +420,19 @@ export async function resolveDispute(
   // so); otherwise the buyer gets the plain dispute-resolved email. The
   // seller always gets the dispute-resolved email.
   await Promise.all([
-    isRefund && refundAmount > 0
+    // A PARTIAL refund leaves the order complete (the buyer keeps the item),
+    // so it must not get the "cancelled and refunded" email.
+    isPartial && refundAmount > 0
+      ? sendDisputeResolvedEmail({
+          to: dispute.buyer_email,
+          name: dispute.buyer_name || dispute.buyer_username,
+          disputeId,
+          orderId: (dispute as any).transaction_id,
+          resolution: 'resolved_partial',
+          amount: refundAmount,
+          note: 'The refund was added to your DropMarket wallet as store credit. The rest of the order stands.',
+        })
+      : isRefund && refundAmount > 0
       ? sendOrderRefundedEmail({
           to: dispute.buyer_email,
           name: dispute.buyer_name || dispute.buyer_username,

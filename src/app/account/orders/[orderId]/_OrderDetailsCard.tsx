@@ -48,8 +48,10 @@ interface OrderDetailsCardProps {
   escrowAmount: number
   /** For seller — the fee percentage shown next to the deduction. */
   feePercent?: number
-  /** For seller — net payout = subtotal - fee. */
+  /** For seller — net payout = subtotal - fee (less any partial refund). */
   netPayout?: number
+  /** For seller — part of the sale refunded to the buyer by a dispute. */
+  refundedToBuyer?: number
   /** Drives the payout status row (held / queued / released). */
   orderStatus: string
   /** orders.escrow_status — distinguishes a refunded cancel from an
@@ -348,6 +350,7 @@ function PayoutBody({
   netPayout,
   orderStatus,
   role,
+  refundedToBuyer = 0,
 }: {
   subtotal: number
   feePercent: number
@@ -355,11 +358,13 @@ function PayoutBody({
   netPayout: number
   orderStatus: string
   role: 'buyer' | 'seller' | 'admin'
+  refundedToBuyer?: number
 }) {
   return (
     <>
       <Row label="Item Price">{fmtUsd(subtotal)}</Row>
       <Row label={`DropMarket Fee · ${feePercent}%`}>−{fmtUsd(fee)}</Row>
+      {refundedToBuyer > 0 && <Row label="Refunded To Buyer">−{fmtUsd(refundedToBuyer)}</Row>}
       <Row label="You Receive" emphasized>
         <span className="text-[18px] font-extrabold tabular-nums text-lime-text">
           {fmtUsd(netPayout)}
@@ -558,6 +563,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     escrowAmount,
     feePercent = 0,
     netPayout = 0,
+    refundedToBuyer = 0,
     orderStatus,
     otherParty,
     buyerReview,
@@ -678,6 +684,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             netPayout={netPayout}
             orderStatus={orderStatus}
             role={role}
+            refundedToBuyer={refundedToBuyer}
           />
         </OrderCard>
       )}

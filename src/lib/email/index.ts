@@ -405,6 +405,7 @@ export async function sendDisputeResolvedEmail({
   orderId,
   resolution,
   amount,
+  note,
 }: {
   to: string
   name: string
@@ -413,6 +414,8 @@ export async function sendDisputeResolvedEmail({
   orderId?: string
   resolution: string
   amount?: number
+  /** One extra line under the greeting (e.g. where a partial refund went). */
+  note?: string
 }) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
@@ -425,6 +428,7 @@ export async function sendDisputeResolvedEmail({
       heading: 'Dispute resolved',
       body:
         emailText(`Hi ${escapeHtml(name)} — your dispute (${escapeHtml(disputeId.slice(0, 8))}) has been resolved.`) +
+        (note ? emailText(escapeHtml(note)) : '') +
         emailOrderSummary(
           amount
             ? [

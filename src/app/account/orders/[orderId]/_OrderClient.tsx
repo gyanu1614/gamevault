@@ -221,6 +221,18 @@ export function OrderClient(props: OrderClientProps) {
     ? Number(order.seller_commission_pct)
     : subtotal > 0 ? Math.round((fee / subtotal) * 100) : 0
   const sellerFeeAmount = hasSnapshot ? Math.max(0, Math.round((subtotal - netPayout) * 100) / 100) : fee
+  // A partial refund leaves the order completed but pays the seller less:
+  // dispute_resolutions.seller_payout_amount is what they actually kept.
+  const isPartialRefund = disputeResolution?.resolution_type === 'partial_refund'
+  // Only the part that came out of the seller's payout (the platform covers
+  // any refund beyond it), so Item Price − Fee − this = what they received.
+  const refundedToBuyer = isPartialRefund
+    ? Math.min(Number(disputeResolution?.refund_amount ?? 0), netPayout)
+    : 0
+  const actualPayout =
+    isPartialRefund && disputeResolution?.seller_payout_amount != null
+      ? Number(disputeResolution.seller_payout_amount)
+      : netPayout
   const paymentMethod = order.payment_method ?? 'Wallet · DropPay'
   const placedAtFull = new Date(order.created_at).toLocaleString('en-US', {
     month: 'short',
@@ -342,7 +354,7 @@ export function OrderClient(props: OrderClientProps) {
             <StatusStrip
               role={userRole}
               status={order.status}
-              amount={userRole === 'seller' && order.status === 'completed' ? netPayout : undefined}
+              amount={userRole === 'seller' && order.status === 'completed' ? actualPayout : undefined}
               overdue={isOverdueOnLoad}
               disputeHref={`/account/orders/${order.id}#dispute`}
               disputeUntil={disputeUntil}
@@ -470,7 +482,8 @@ export function OrderClient(props: OrderClientProps) {
               role={userRole}
               escrowAmount={escrowAmount}
               feePercent={feePercent}
-              netPayout={netPayout}
+              netPayout={actualPayout}
+              refundedToBuyer={refundedToBuyer}
               orderStatus={order.status}
               escrowStatus={order.escrow_status}
               otherParty={otherPartyButton}
