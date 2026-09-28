@@ -19,6 +19,7 @@ import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 import { slugify } from '@/lib/utils'
 import { assessIdentityForApproval, type IdentityAssessment } from '@/lib/utils/seller-verification'
 import { submitApplicantDrafts } from '@/lib/listings/submit-applicant-drafts'
+import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 
 // Create service role client that bypasses RLS
 function getServiceClient() {
@@ -118,7 +119,7 @@ export async function getApplicationStats(): Promise<ApplicationStats> {
     const { count: disputesCount } = await supabase
       .from('disputes')
       .select('*', { count: 'exact' })
-      .in('status', ['open', 'under_review']).limit(1)
+      .in('status', OPEN_DISPUTE_STATUSES).limit(1)
 
     stats.openDisputes = disputesCount || 0
 
