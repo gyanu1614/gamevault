@@ -34,3 +34,29 @@ describe('wallet rows', () => {
     expect(saleRowAmounts({ status: 'completed', subtotal: 10, seller_payout: 9.2 }, 6.2).netAmount).toBe(6.2)
   })
 })
+
+import { isPaidOrder, pendingPayoutOf } from './wallet-rows'
+
+describe('seller KPIs', () => {
+  it('pending payout = paid, unreleased sales only', () => {
+    expect(
+      pendingPayoutOf([
+        { status: 'paid', seller_payout: 1.1 },
+        { status: 'delivering', seller_payout: 2 },
+        { status: 'delivered', seller_payout: 3 },
+        { status: 'disputed', seller_payout: 4 },
+        { status: 'disputed', seller_payout: 50, completed_at: '2026-09-01T00:00:00Z' },
+        { status: 'pending', seller_payout: 99 },
+        { status: 'completed', seller_payout: 7 },
+        { status: 'cancelled', seller_payout: 8 },
+      ]),
+    ).toBe(10.1)
+  })
+
+  it('paid orders exclude unpaid checkouts and cancel-before-payment', () => {
+    expect(isPaidOrder({ status: 'pending' })).toBe(false)
+    expect(isPaidOrder({ status: 'cancelled', paid_at: null })).toBe(false)
+    expect(isPaidOrder({ status: 'cancelled', paid_at: '2026-09-01T00:00:00Z' })).toBe(true)
+    expect(isPaidOrder({ status: 'paid' })).toBe(true)
+  })
+})

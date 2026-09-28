@@ -39,3 +39,27 @@ export function saleRowAmounts(
     netAmount: net,
   }
 }
+
+/** Paid, not yet released to the seller (a pre-completion dispute included). */
+export const AWAITING_RELEASE = ['paid', 'delivering', 'delivered', 'disputed'] as const
+
+/**
+ * Seller "pending payout": sales that were paid but not yet released.
+ * Excludes unpaid checkouts ('pending'), finished orders, and a dispute
+ * opened AFTER completion (that amount was already paid, then frozen).
+ */
+export function pendingPayoutOf(
+  orders: Array<{ status: string; seller_payout?: number | null; completed_at?: string | null }>,
+): number {
+  const cents = orders
+    .filter((o) => (AWAITING_RELEASE as readonly string[]).includes(o.status) && !o.completed_at)
+    .reduce((sum, o) => sum + Math.round(Number(o.seller_payout ?? 0) * 100), 0)
+  return cents / 100
+}
+
+/** A real (paid) order: not an unpaid checkout, not a cancel-before-payment. */
+export function isPaidOrder(o: { status: string; paid_at?: string | null }): boolean {
+  if (o.status === 'pending') return false
+  if (o.status === 'cancelled' && !o.paid_at) return false
+  return true
+}

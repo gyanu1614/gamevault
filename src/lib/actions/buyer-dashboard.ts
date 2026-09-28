@@ -11,6 +11,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { lifetimeSpentOf } from '@/lib/wallet/wallet-rows'
+import { sellerDisplayName } from '@/lib/seller/identity'
 
 export interface BuyerActiveOrder {
   id: string
@@ -36,7 +38,8 @@ export interface BuyerDashboardData {
   favoriteGames: BuyerFavoriteGame[]
 }
 
-const ACTIVE_STATUSES = ['paid', 'delivered', 'disputed']
+// Every paid, unfinished order (was missing 'delivering').
+const ACTIVE_STATUSES = ['paid', 'delivering', 'delivered', 'disputed']
 
 export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
   const supabase = await createClient()
@@ -49,7 +52,7 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
     supabase
       .from('orders')
       .select(
-        'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:profiles!seller_id(username)',
+        'id, status, total_amount, created_at, completed_at, listing:listings!orders_listing_id_fkey(title, game:game_id(name)), seller:profiles!seller_id(username, shop_name)',
       )
       .eq('buyer_id', user.id)
       .order('created_at', { ascending: false }),
@@ -66,14 +69,16 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
   const orders = (ordersRes.data ?? []) as any[]
 
   const completed = orders.filter((o) => o.status === 'completed')
-  const totalSpent = completed.reduce((s, o) => s + Number(o.total_amount ?? 0), 0)
+  // Same rule as the wallet's Total Spent: every paid order not cancelled or
+  // refunded (the two pages used to disagree).
+  const totalSpent = lifetimeSpentOf(orders)
 
   const activeList = orders.filter((o) => ACTIVE_STATUSES.includes(o.status ?? ''))
   const active: BuyerActiveOrder[] = activeList.slice(0, 5).map((o) => ({
     id: o.id,
     title: o.listing?.title ?? 'Order',
-    seller: o.seller?.username ?? 'Seller',
-    status: o.status ?? 'processing',
+    seller: sellerDisplayName(o.seller),
+    status: o.status,
     createdAt: o.created_at,
     amount: Number(o.total_amount ?? 0),
   }))
