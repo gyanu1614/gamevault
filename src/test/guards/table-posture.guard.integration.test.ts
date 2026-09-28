@@ -76,6 +76,11 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
  */
 const AUTHENTICATED_READ_ALLOWLIST: Record<string, string> = {
   platform_fee_settings: 'public list already; listed for clarity',
+  // 20260928154731 (private-tables-rls.guard): admin screens read these as
+  // the admin's session; RLS gives anyone else only their own rows, or none.
+  fraud_flags: 'admins only (is_admin()): /admin/fraud, dashboard counts, admin header badge',
+  gdpr_requests: 'users read their own request; admins read all (is_admin())',
+  inform_disclosures: 'sellers read their own disclosure; admins read all (is_admin())',
 }
 
 /** Tables that may be written by anon/authenticated (RLS scopes the rows). */
@@ -97,7 +102,9 @@ const WRITE_ALLOWLIST: Record<string, string> = {
   dispute_messages: 'dispute participants reply',
   withdrawal_methods: 'sellers manage their own payout methods',
   withdrawal_requests: 'sellers request their own withdrawals',
-  gdpr_requests: 'users file their own GDPR request',
+  gdpr_requests: 'users file their own GDPR request (no admin-only fields); admins process it (is_admin())',
+  inform_disclosures: 'sellers submit their own disclosure (never pre-certified); admins certify (is_admin())',
+  fraud_flags: 'admins insert (runFraudScan) and resolve flags (is_admin()); nobody else, no deletes',
 
   // Catalogue tables that ALSO carry the baseline's blanket write grant.
   // Writes are blocked by RLS (admin-only policies), so the grant is inert --
@@ -138,8 +145,11 @@ const LEGACY_BASELINE: ReadonlySet<string> = new Set([
   'audit_logs', 'banner_presets', 'blog_posts', 'buyer_waitlist',
   'catalogue_items', 'category_configs', 'conversations',
   'dispute_messages', 'dispute_resolutions', 'disputes', 'early_seller_signups',
-  'fee_config_audit', 'founding_notices', 'fraud_flags',
-  'gdpr_requests', 'inform_disclosures', 'instant_delivery_inventory', 'ledger_accounts',
+  'fee_config_audit', 'founding_notices',
+  // fraud_flags, gdpr_requests, inform_disclosures left on 2026-09-28: their
+  // "Service role full access" policies applied to PUBLIC with `true`, so
+  // they were NOT RLS-scoped as assumed above (private-tables-rls.guard).
+  'instant_delivery_inventory', 'ledger_accounts',
   'ledger_entries', 'ledger_transactions', 'listing_price_history', 'listing_templates',
   'loyalty_credits', 'messages', 'notifications', 'order_cancellation_requests',
   'orders', 'payouts', 'processed_operations', 'promo_code_usages',
