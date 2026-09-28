@@ -41,6 +41,9 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
+import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
+import { useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -184,6 +187,13 @@ function OrdersContent() {
 
   // Determine which orders to show based on active tab
   const dbOrders = activeTab === 'purchases' ? buyerOrders : sellerOrders || []
+  // K/M currency games count quantities in thousands/millions; the title
+  // formatter needs each game's currency config.
+  const currencyMeta = useCurrencyMeta(
+    ((dbOrders ?? []) as any[])
+      .filter((o) => o.listing?.category?.type === 'currency')
+      .map((o) => o.listing?.game_id ?? ''),
+  )
   const ordersLoading = activeTab === 'purchases' ? buyerOrdersLoading : sellerOrdersLoading
 
   // Fetch dispute resolutions for all orders with disputes
@@ -213,7 +223,7 @@ function OrdersContent() {
         .from('dispute_resolutions')
         // STATE-012 — explicit columns: client query, so unused columns would
         // be shipped to the browser. Only favored_party is read (plus the join key).
-        .select('dispute_id, favored_party')
+        .select('dispute_id, favored_party, resolution_type, seller_payout_amount')
         .in('dispute_id', disputeIds) as any
 
       if (!resolutions) return
@@ -824,7 +834,7 @@ function OrdersContent() {
                       <th className="min-w-[230px] px-4 py-3">Item</th>
                       <th className="px-3 py-2">ID</th>
                       <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Total</th>
+                      <th className="px-3 py-2">{activeTab === 'sales' ? 'Payout' : 'Total'}</th>
                       <th className="px-3 py-2">{activeTab === 'purchases' ? 'Seller' : 'Buyer'}</th>
                       <th className="px-3 py-2 whitespace-nowrap">Placed</th>
                     </tr>
@@ -853,6 +863,27 @@ function OrdersContent() {
                       const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
                       const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
+                      const cat = (order as any).listing?.category
+                      const meta = order.listing?.game_id ? currencyMeta[order.listing.game_id] : undefined
+                      // "2,000 - Roblox Robux" / "3 × Dragon Pet", same rule as the order page.
+                      const rowTitle = order.listing?.title
+                        ? orderDisplayTitle({
+                            title: order.listing.title,
+                            quantity: qty,
+                            isCurrency: cat?.type === 'currency',
+                            granularity: meta?.granularity ?? null,
+                            hasBundles: meta?.hasBundles ?? false,
+                          })
+                        : gameName || 'Order'
+                      // Sold tab: what the SELLER gets — 0 if refunded, what they
+                      // kept after a partial refund, else seller_payout.
+                      // Same rule as the wallet's Sales list (wallet-rows.ts).
+                      const sellerGets = saleRowAmounts(
+                        order as any,
+                        disputeResolution?.resolution_type === 'partial_refund' && disputeResolution.seller_payout_amount != null
+                          ? Number(disputeResolution.seller_payout_amount)
+                          : undefined,
+                      ).netAmount
                       return (
                         <tr
                           key={order.id}
@@ -872,7 +903,7 @@ function OrdersContent() {
                               )}
                               <div className="min-w-0">
                                 <p className="max-w-[240px] truncate text-[13px] font-semibold text-text-primary">
-                                  {qty > 1 ? `x${qty} · ` : ''}{order.listing?.title || gameName || 'Order'}
+                                  {rowTitle}
                                 </p>
                                 {gameName && (
                                   <p className="max-w-[240px] truncate text-[12px] text-text-tertiary">{gameName}</p>
@@ -919,7 +950,7 @@ function OrdersContent() {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">
-                            ${Number(order.total_amount ?? 0).toFixed(2)}
+                            ${(activeTab === 'sales' ? sellerGets : Number(order.total_amount ?? 0)).toFixed(2)}
                           </td>
                           <td className="px-3 py-2">
                             <span className="flex items-center gap-2">
@@ -930,7 +961,9 @@ function OrdersContent() {
                                 className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/10"
                               />
                               <span className="max-w-[140px] truncate text-[13px] text-text-secondary">
-                                {otherParty?.username || '—'}
+                                {activeTab === 'purchases'
+                                  ? sellerDisplayName(otherParty) || '—'
+                                  : otherParty?.username || '—'}
                               </span>
                             </span>
                           </td>
