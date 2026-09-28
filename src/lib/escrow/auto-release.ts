@@ -13,6 +13,8 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { transition } from '@/lib/escrow/transition'
+import { awardCashback } from '@/lib/loyalty/award'
+import { recordReferralCommission } from '@/lib/referral/commission'
 
 export interface AutoReleaseResult {
   orderId: string
@@ -40,7 +42,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     const { data: full } = await service
       .from('orders')
       .select(
-        'id, status, escrow_status, order_number, buyer_id, seller_id, total_amount, seller_payout, listing:listings!orders_listing_id_fkey(title)'
+        'id, status, escrow_status, order_number, buyer_id, seller_id, total_amount, seller_payout, is_guest_order, listing:listings!orders_listing_id_fkey(title)'
       )
       .eq('id', orderId)
       .single() as any
@@ -128,6 +130,18 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     } catch (commsError) {
       console.error(`[AutoRelease] Comms failed for order ${orderId} (non-fatal):`, commsError)
     }
+
+    // Same rewards as a buyer confirm (orders.ts afterBuyerRelease): a buyer
+    // who never pressed Confirm still earned their cashback, and their
+    // referrer the commission. Both are idempotent per order.
+    if (!full.is_guest_order) {
+      await awardCashback({ orderId }).catch((err) =>
+        console.error(`[AutoRelease] cashback failed for ${orderId} (retryable):`, err),
+      )
+    }
+    await recordReferralCommission(orderId).catch((err) =>
+      console.error(`[AutoRelease] referral commission failed for ${orderId} (retryable):`, err),
+    )
 
     return {
       orderId,

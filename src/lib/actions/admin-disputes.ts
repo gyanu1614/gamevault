@@ -397,6 +397,22 @@ export async function resolveDispute(
     })
   }
 
+  // A release completes the order as a normal sale: the buyer's cashback and
+  // the referrer's commission follow, exactly as on a buyer confirm or an
+  // auto-complete (both idempotent per order; a post-completion release was
+  // already rewarded at first completion, so these no-op). Partial refunds
+  // are excluded: the platform's fee is not intact.
+  if (outcome === 'release') {
+    const { awardCashback } = await import('@/lib/loyalty/award')
+    const { recordReferralCommission } = await import('@/lib/referral/commission')
+    await awardCashback({ orderId: dispute.transaction_id }).catch((err) =>
+      console.error('[Dispute] cashback failed (retryable):', err),
+    )
+    await recordReferralCommission(dispute.transaction_id).catch((err) =>
+      console.error('[Dispute] referral commission failed (retryable):', err),
+    )
+  }
+
   const orderRef = order.order_number || dispute.transaction_id.slice(0, 8).toUpperCase()
   // In-app notifications for both parties were written by the RPC (notify_once).
 
