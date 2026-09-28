@@ -744,10 +744,13 @@ export async function sendOrderCompletedSellerEmail({
         emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
         emailBox({
           accent: true,
-          html: `<div style="text-align:center;"><div class="dm-accent" style="font-size:22px;font-weight:800;color:${EMAIL_TOKENS.FOREST_2};">+$${payout.toFixed(2)}</div><div class="dm-body" style="font-size:12.5px;color:${EMAIL_TOKENS.INK_2};margin-top:4px;">added to your seller balance — withdraw any time</div></div>`,
+          html: `<div style="text-align:center;"><div class="dm-accent" style="font-size:22px;font-weight:800;color:${EMAIL_TOKENS.FOREST_2};">+$${payout.toFixed(2)}</div><div class="dm-body" style="font-size:12.5px;color:${EMAIL_TOKENS.INK_2};margin-top:4px;">added to your seller balance</div></div>`,
         }) +
         emailButton('View Order →', `${APP_URL}/account/orders/${orderId}`) +
-        emailFooterNote(`Withdraw any time from your <a href="${APP_URL}/account/wallet" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">wallet</a> once you hit the payout minimum.`),
+        // Not "any time": a buyer-confirmed sale shows as Pending release
+        // until it matures, and withdrawals also need the payout minimum
+        // and account age. The wallet shows exactly when.
+        emailFooterNote(`New sales can be withdrawn once they are released. The Withdraw page in your <a href="${APP_URL}/account/wallet" style="color:${EMAIL_TOKENS.FOREST_2};font-weight:600;text-decoration:underline;">wallet</a> shows when.`),
     }),
   })
 

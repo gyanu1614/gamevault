@@ -118,7 +118,7 @@ const STRIPS: Record<
     refunded: {
       Icon: Wallet,
       title: 'Money In Your Wallet',
-      caption: 'Your refund landed in your DropMarket wallet as store credit — spend it instantly or withdraw it anytime.',
+      caption: 'Your refund landed in your DropMarket wallet as store credit. Spend it instantly or withdraw it from your wallet.',
       tone: 'lime',
     },
     // 'cancelled' only ever means a NEVER-PAID order (checkout timed out or
@@ -155,7 +155,7 @@ const STRIPS: Record<
       // V21/P3.b — Interpolated with the actual amount in the component
       // body below; see the {AMOUNT} placeholder for the substitution.
       title: 'Added To Your Seller Balance · {AMOUNT}',
-      caption: 'Available to withdraw or use for purchases.',
+      caption: 'Added to your seller balance. New sales can be withdrawn once they are released.',
       tone: 'lime',
     },
     disputed: {

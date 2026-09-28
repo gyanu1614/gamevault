@@ -120,7 +120,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
           user_id: full.seller_id,
           type: 'order_completed',
           title: 'Order Auto-Completed',
-          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} is now in your seller balance. Withdraw any time from your wallet.`,
+          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} is now in your seller balance. See your wallet to withdraw.`,
           link: `/account/orders/${full.id}`,
           is_read: false,
         }),
