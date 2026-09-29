@@ -165,7 +165,7 @@ export function BlogBodyEditor({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="border border-lime/50 px-2.5 py-1 text-[12px] font-semibold text-lime-text transition hover:bg-lime/10 disabled:opacity-50"
+          className="border border-[rgba(86,184,127,0.50)] px-2.5 py-1 text-[12px] font-semibold text-lime-text transition hover:bg-lime-tint-bg disabled:opacity-50"
         >
           {uploading ? 'Uploading…' : '+ Image'}
         </button>

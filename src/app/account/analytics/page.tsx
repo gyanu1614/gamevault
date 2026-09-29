@@ -62,25 +62,25 @@ export default function AnalyticsPage() {
       label: 'Total Revenue',
       value: `$${getEarningsForRange().toFixed(2)}`,
       icon: DollarSign,
-      gradient: 'bg-lime/10 text-lime-text',
+      gradient: 'bg-lime-tint-bg text-lime-text',
     },
     {
       label: 'Total Orders',
       value: stats.orders.completed.toString(),
       icon: ShoppingCart,
-      gradient: 'bg-lime/10 text-lime-text',
+      gradient: 'bg-lime-tint-bg text-lime-text',
     },
     {
       label: 'Avg Order Value',
       value: `$${(stats.orders.completed > 0 ? getEarningsForRange() / stats.orders.completed : 0).toFixed(2)}`,
       icon: Target,
-      gradient: 'bg-lime/10 text-lime-text',
+      gradient: 'bg-lime-tint-bg text-lime-text',
     },
     {
       label: 'Conversion Rate',
       value: `${stats.performance.conversionRate.toFixed(1)}%`,
       icon: TrendingUp,
-      gradient: 'bg-lime/10 text-lime-text',
+      gradient: 'bg-lime-tint-bg text-lime-text',
     },
   ]
 
@@ -271,7 +271,7 @@ export default function AnalyticsPage() {
             {/* Total Views */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-lime/10 p-2">
+                <div className="rounded-lg bg-lime-tint-bg p-2">
                   <Eye className="h-4 w-4 text-lime-text" />
                 </div>
                 <div>
@@ -325,7 +325,7 @@ export default function AnalyticsPage() {
             {/* Active Listings */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-lime/10 p-2">
+                <div className="rounded-lg bg-lime-tint-bg p-2">
                   <Package className="h-4 w-4 text-lime-text" />
                 </div>
                 <div>
@@ -347,7 +347,7 @@ export default function AnalyticsPage() {
         className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md p-4 sm:p-6"
       >
         <div className="mb-4 flex items-center gap-2">
-          <div className="rounded-lg bg-lime/10 p-2">
+          <div className="rounded-lg bg-lime-tint-bg p-2">
             <Activity className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -364,7 +364,7 @@ export default function AnalyticsPage() {
                 'rounded-lg border p-3 text-sm',
                 ins.tone === 'success' && 'border-success/30 bg-success-bg text-success',
                 ins.tone === 'warning' && 'border-warning/40 bg-warning-bg text-warning',
-                ins.tone === 'lime' && 'border-lime-tint-border bg-lime/10 text-text-secondary',
+                ins.tone === 'lime' && 'border-lime-tint-border bg-lime-tint-bg text-text-secondary',
               )}
             >
               {ins.text}

@@ -143,7 +143,7 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             {listing.category?.icon && (
               <span className="text-xs">{listing.category.icon}</span>
             )}
-            <span className="text-[11px] font-medium text-lime-text/80 uppercase tracking-wide">
+            <span className="text-[11px] font-medium text-[rgba(86,184,127,0.80)] uppercase tracking-wide">
               {listing.category?.name}
             </span>
           </div>

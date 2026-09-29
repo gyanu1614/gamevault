@@ -85,7 +85,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
           // Animated glow border
           glowBorder && [
             'relative before:absolute before:inset-0 before:rounded-[inherit]',
-            'before:p-px before:bg-gradient-to-br before:from-lime/30 before:via-transparent before:to-cyan-500/20',
+            'before:p-px before:bg-gradient-to-br before:from-[rgba(86,184,127,0.30)] before:via-transparent before:to-cyan-500/20',
             'before:-z-10',
           ],
           // Gradient overlay
@@ -97,7 +97,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
         {gradient && (
           <div
             aria-hidden
-            className="absolute inset-0 bg-gradient-to-b from-lime/5 via-transparent to-transparent pointer-events-none rounded-[inherit]"
+            className="absolute inset-0 bg-gradient-to-b from-[rgba(86,184,127,0.05)] via-transparent to-transparent pointer-events-none rounded-[inherit]"
           />
         )}
         {children}

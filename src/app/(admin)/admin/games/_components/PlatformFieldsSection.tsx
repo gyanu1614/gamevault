@@ -201,7 +201,7 @@ function PlatformKindCard({
       className={
         'rounded-xl border p-3 transition-colors ' +
         (field.enabled
-          ? 'border-lime-tint-border bg-lime-tint-bg/30'
+          ? 'border-lime-tint-border bg-[rgba(86,184,127,0.04)]'
           : 'border-border-default bg-bg-overlay/40')
       }
     >

@@ -89,7 +89,7 @@ export function BlogListClient({
         <button
           type="button"
           onClick={() => setSelected(g.slug)}
-          className="group flex items-center gap-3 border border-white/10 bg-white/[0.02] p-3 text-left transition hover:border-lime/50 hover:bg-white/[0.04]"
+          className="group flex items-center gap-3 border border-white/10 bg-white/[0.02] p-3 text-left transition hover:border-[rgba(86,184,127,0.50)] hover:bg-white/[0.04]"
         >
           <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-sm font-bold text-gray-500">
             {g.imageUrl ? (
@@ -118,7 +118,7 @@ export function BlogListClient({
           <button
             type="button"
             onClick={() => setSelected('all')}
-            className="flex flex-col items-start gap-1 rounded-lg border-2 border-lime/40 bg-lime/[0.06] p-4 text-left transition hover:border-lime/70"
+            className="flex flex-col items-start gap-1 rounded-lg border-2 border-[rgba(86,184,127,0.40)] bg-[rgba(86,184,127,0.06)] p-4 text-left transition hover:border-[rgba(86,184,127,0.70)]"
           >
             <span className="text-sm font-bold text-white">All posts</span>
             <span className="text-xs text-gray-400">{posts.length} total</span>
@@ -126,7 +126,7 @@ export function BlogListClient({
           <button
             type="button"
             onClick={() => setSelected('general')}
-            className="flex flex-col items-start gap-1 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-lime/50"
+            className="flex flex-col items-start gap-1 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-[rgba(86,184,127,0.50)]"
           >
             <span className="text-sm font-semibold text-white">General</span>
             <span className="text-xs text-gray-500">{countBySlug.general ?? 0} posts · no game</span>
@@ -164,7 +164,7 @@ export function BlogListClient({
                     key={g.slug}
                     type="button"
                     onClick={() => setSelected(g.slug)}
-                    className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition hover:border-lime/50"
+                    className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition hover:border-[rgba(86,184,127,0.50)]"
                   >
                     {g.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -209,7 +209,7 @@ export function BlogListClient({
         {selected !== 'all' && selected !== 'general' && (
           <Link
             href={`/admin/blog/new?game=${selected}`}
-            className="inline-flex rounded-md border border-lime/50 px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime/10"
+            className="inline-flex rounded-md border border-[rgba(86,184,127,0.50)] px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime-tint-bg"
           >
             + New {selectedGame?.name ?? selected} post
           </Link>

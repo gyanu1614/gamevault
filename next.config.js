@@ -56,6 +56,12 @@ const nextConfig = {
   ignoreDuringBuilds: true,
 },
   images: {
+    // 2026-09-28: Vercel's optimizer answered 402
+    // OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED (plan quota used up), so every
+    // uncached <Image> on the site rendered broken. Serve the source files
+    // directly instead: no /_next/image requests, no quota. The size ladders
+    // below are kept for when optimization is turned back on.
+    unoptimized: true,
     // Transformation budget (build audit 2026-09-22, §6). Vercel bills per
     // unique (source, width, quality, format). `formats` and `quality` are left
     // at their defaults (webp / 75), so WIDTH is the only axis that multiplies
@@ -218,7 +224,14 @@ const nextConfig = {
       {
         // Blog slug rebrand: custody-free URL (outcome-language rule).
         source: '/blog/how-safedrop-escrow-works',
-        destination: '/blog/how-safedrop-buyer-protection-works',
+        destination: '/blog/how-safedrop-protection-works',
+        permanent: true,
+      },
+      {
+        // Product renamed "SafeDrop Buyer Protection" -> "SafeDrop Protection"
+        // (owner, 2026-09-28). One hop, no chain from the escrow URL above.
+        source: '/blog/how-safedrop-buyer-protection-works',
+        destination: '/blog/how-safedrop-protection-works',
         permanent: true,
       },
       {

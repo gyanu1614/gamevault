@@ -85,7 +85,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // Root template appends " | DropMarket"; game/category stay in the
     // description. Long seller titles are truncated to keep ≤60 chars.
     title: listing.title.length > 48 ? `${listing.title.slice(0, 48).trimEnd()}…` : listing.title,
-    description: listing.description || `Buy ${listing.title} on DropMarket. Covered by SafeDrop Buyer Protection. Price: $${listing.price}`,
+    description: listing.description || `Buy ${listing.title} on DropMarket. Covered by SafeDrop Protection. Price: $${listing.price}`,
     keywords: [
       listing.game.name.toLowerCase(),
       listing.category.name.toLowerCase(),
@@ -164,7 +164,7 @@ async function getSellerStats(sellerId: string) {
     { count: totalSales },
     { count: activeListings }
   ] = await Promise.all([
-    supabase.from('orders').select('*', { count: 'exact' })
+    supabase.from('orders').select('id', { count: 'exact' })
       .eq('seller_id', sellerId)
       .eq('status', 'completed').limit(1),
     supabase.from('listings').select('*', { count: 'exact' })
@@ -353,7 +353,7 @@ async function ListingDetailPage({ params }: PageProps) {
     name: listing.title,
     description:
       listing.description ||
-      `Buy ${listing.title} on DropMarket — get what you ordered, or your money back with SafeDrop Buyer Protection.`,
+      `Buy ${listing.title} on DropMarket. Get what you ordered, or your money back with SafeDrop Protection.`,
     image: listing.images || [],
     offers: {
       '@type': 'Offer',

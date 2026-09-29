@@ -12,11 +12,17 @@
  *   loyalty_credits, referral_earnings, promo_code_usages.
  *
  * Deletion: marks request as pending → admin processes → hard delete via
- *   Supabase Auth admin API (cascades to all profile data via FK ON DELETE CASCADE).
+ *   Supabase Auth admin API with the service role (cascades to all profile
+ *   data via FK ON DELETE CASCADE — see completeDeletion).
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
+import { logAdminActivity } from '@/lib/admin/activity-log'
+import { ADMIN_ACTIONS } from '@/lib/admin/permissions-constants'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -103,13 +109,21 @@ export async function exportMyData(): Promise<{
       { data: promoUsages },
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
-      supabase.from('orders').select('*').or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
+      supabase.from('orders').select(ORDER_PARTY_SELECT).or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
       supabase.from('listings').select('*').eq('seller_id', uid),
       supabase.from('messages').select('*').eq('sender_id', uid),
       supabase.from('reviews').select('*').or(`buyer_id.eq.${uid},seller_id.eq.${uid}`),
       supabase.from('loyalty_credits').select('*').eq('user_id', uid),
       supabase.from('referral_earnings').select('*').eq('referrer_id', uid),
       supabase.from('promo_code_usages').select('*').eq('user_id', uid),
+    ])
+
+    // The user's own private order fields (payout as seller; checkout /
+    // wallet / fees as buyer) — never the other party's.
+    const orderRows = (orders ?? []) as any[]
+    const [asBuyer, asSeller] = await Promise.all([
+      withOwnOrderFields(supabase, 'buyer', orderRows.filter((o) => o.buyer_id === uid)),
+      withOwnOrderFields(supabase, 'seller', orderRows.filter((o) => o.buyer_id !== uid)),
     ])
 
     const exportPayload = {
@@ -119,7 +133,7 @@ export async function exportMyData(): Promise<{
       user_id:            uid,
       email:              user.email,
       profile:            profile,
-      orders:             orders             ?? [],
+      orders:             [...asBuyer, ...asSeller],
       listings:           listings           ?? [],
       messages:           messages           ?? [],
       reviews:            reviews            ?? [],
@@ -225,8 +239,10 @@ export async function processGdprRequest(
   action:     'completed' | 'rejected',
   opts?:      { rejectionReason?: string; notes?: string }
 ): Promise<{ success: boolean; error?: string }> {
+  // Outside the try: requireAdmin redirects (throws NEXT_REDIRECT) for a
+  // non-admin, and the catch below must not swallow that.
+  await requireAdmin()
   try {
-    await requireAdmin()
     const supabase = await createClient()
 
     const { data: req } = await supabase
@@ -236,6 +252,10 @@ export async function processGdprRequest(
       .single()
 
     if (!req) throw new Error('Request not found')
+
+    if (action === 'completed' && (req as any).type === 'deletion') {
+      return await completeDeletion(supabase, requestId, (req as any).user_id)
+    }
 
     const payload: Record<string, any> = {
       status:       action,
@@ -250,32 +270,54 @@ export async function processGdprRequest(
 
     if (error) throw new Error(error.message)
 
-    // For deletion requests that are completed, the actual account deletion
-    // must be performed by a super-admin via Supabase Auth admin API (service role).
-    // We flag it here; the hard delete is a separate manual or automated step.
-    if (action === 'completed' && (req as any).type === 'deletion') {
-      // Hard-delete the auth user (cascades to profiles and all FK data)
-      // This requires the service-role key — the createClient() above uses it.
-      // QUAL-006: no eslint-disable for @typescript-eslint/no-explicit-any here.
-      // That rule is not enabled in this config, so the disable comment was
-      // itself reported as an error ("Definition for rule ... was not found"),
-      // and it guarded nothing — the (req as any) casts either side of it are
-      // unannotated regardless.
-      const { error: authErr } = await (supabase.auth as any).admin.deleteUser(
-        (req as any).user_id
-      )
-      if (authErr) {
-        console.error('[gdpr] deleteUser error:', authErr.message)
-        // Log the failure but don't re-throw — the status was already updated.
-        await (supabase.from('gdpr_requests') as any)
-          .update({ notes: `Auth deletion failed: ${authErr.message}` })
-          .eq('id', requestId)
-      }
-    }
-
     return { success: true }
   } catch (err: any) {
     console.error('[gdpr] processGdprRequest error:', err)
     return { success: false, error: err.message }
   }
+}
+
+/**
+ * Art. 17 erasure of a deletion request's user. Only after requireAdmin().
+ *
+ * Deleting the auth user needs the service-role key (the session client
+ * cannot call auth.admin) and cascades to the profile and everything the user
+ * owns — this request row included. So:
+ *   1. mark the request 'processing', so a failure below stays visible;
+ *   2. delete the auth user with the service role — one statement, so it
+ *      removes everything or nothing;
+ *   3. on failure keep the request open with the reason and report it —
+ *      never 'completed'. The DB refuses while the user still has records
+ *      that must be kept (e.g. a dispute), and the admin resolves those first;
+ *   4. on success record the erasure in admin_activity_log: the request row
+ *      went with the user.
+ */
+async function completeDeletion(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  requestId: string,
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { error: markErr } = await (supabase.from('gdpr_requests') as any)
+    .update({ status: 'processing' })
+    .eq('id', requestId)
+  if (markErr) throw new Error(markErr.message)
+
+  const { error: deleteErr } = await createServiceRoleClient().auth.admin.deleteUser(userId)
+  if (deleteErr) {
+    const message = `Account deletion failed: ${deleteErr.message}. Nothing was deleted — resolve the user's open records (e.g. disputes) and try again.`
+    console.error('[gdpr] deleteUser error:', deleteErr.message)
+    await (supabase.from('gdpr_requests') as any)
+      .update({ notes: message })
+      .eq('id', requestId)
+    return { success: false, error: message }
+  }
+
+  await logAdminActivity({
+    action: ADMIN_ACTIONS.USER_DELETED,
+    actionCategory: 'user',
+    resourceType: 'user',
+    resourceId: userId,
+    notes: `GDPR Art. 17 erasure (request ${requestId})`,
+  })
+  return { success: true }
 }

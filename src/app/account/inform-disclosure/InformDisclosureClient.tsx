@@ -304,7 +304,7 @@ export default function InformDisclosureClient({
             onClick={() => setConsented(v => !v)}
             className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
               consented
-                ? 'bg-lime/10 border-lime-tint-border'
+                ? 'bg-lime-tint-bg border-lime-tint-border'
                 : 'bg-bg-overlay border-border-subtle hover:border-white/[0.1]'
             }`}
           >

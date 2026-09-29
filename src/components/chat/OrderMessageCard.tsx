@@ -51,7 +51,7 @@ export default function OrderMessageCard({ order, onViewOrder, disputeResolution
       animate={{ opacity: 1, y: 0 }}
       className="mx-auto my-4 max-w-md"
     >
-      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-lime/10 via-purple-500/5 to-transparent p-4 backdrop-blur-sm">
+      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[rgba(86,184,127,0.10)] via-purple-500/5 to-transparent p-4 backdrop-blur-sm">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-text-secondary">
@@ -97,7 +97,7 @@ export default function OrderMessageCard({ order, onViewOrder, disputeResolution
         {onViewOrder && (
           <button
             onClick={onViewOrder}
-            className="mt-3 w-full rounded-lg border border-lime-tint-border bg-lime/10 py-2 text-xs font-semibold text-lime-text transition-all hover:border-lime hover:bg-lime/20"
+            className="mt-3 w-full rounded-lg border border-lime-tint-border bg-lime-tint-bg py-2 text-xs font-semibold text-lime-text transition-all hover:border-lime hover:bg-[rgba(86,184,127,0.20)]"
           >
             View Full Order Details
           </button>

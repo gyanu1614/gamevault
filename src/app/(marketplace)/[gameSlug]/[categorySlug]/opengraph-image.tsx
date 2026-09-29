@@ -13,7 +13,7 @@ import { getIndexableCategoryPairs } from '@/lib/seo/category-pairs'
 import { buildCategoryOgData } from './_ogData'
 import { ogCategoryFallbackBytes } from './_ogFallback'
 
-export const alt = 'Buy and sell on DropMarket — covered by SafeDrop Buyer Protection'
+export const alt = 'Buy and sell on DropMarket, covered by SafeDrop Protection'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 // Step 7a — see ../opengraph-image.tsx: prerender the sitemap's pairs, keep

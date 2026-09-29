@@ -109,11 +109,6 @@ function RouteLoader({ label = 'Loading' }: { label?: string }) {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-bg-base/70 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div className="relative flex flex-col items-center gap-4">
-        {/* Outer glow */}
-        <div
-          aria-hidden
-          className="absolute inset-0 -m-8 rounded-full bg-lime/10 blur-2xl animate-pulse"
-        />
         {/* Spinner */}
         <div className="relative flex h-14 w-14 items-center justify-center">
           <div
@@ -483,7 +478,7 @@ export default function CurrencyPageClient({
       <HowItWorksBand
         steps={[
           { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
+          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
           { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
           { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}
@@ -846,7 +841,7 @@ function HeroCard({
               'flex h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 text-left transition-colors',
               outOfStock
                 ? 'cursor-not-allowed border-border-default bg-bg-overlay text-text-tertiary'
-                : 'border-border-strong bg-bg-overlay text-text-primary hover:border-lime hover:bg-lime-tint-bg/40',
+                : 'border-border-strong bg-bg-overlay text-text-primary hover:border-lime hover:bg-[rgba(86,184,127,0.05)]',
             )}
           >
             <div>
@@ -1226,7 +1221,7 @@ function SellerRow({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border-strong bg-transparent px-4 text-[13px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-lime-tint-bg/40"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border-strong bg-transparent px-4 text-[13px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
                 >
                   Select
                 </button>
@@ -1303,7 +1298,7 @@ function SellerRow({
               </div>
             </div>
 
-            {/* Action bar — CTA left, buyer-protection assurance right */}
+            {/* Action bar — CTA left, SafeDrop Protection assurance right */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               {isOwn ? (
                 <a
@@ -1317,7 +1312,7 @@ function SellerRow({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-9 items-center gap-1 rounded-md border border-border-strong bg-transparent px-3 text-[12.5px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-lime-tint-bg/40"
+                  className="inline-flex h-9 items-center gap-1 rounded-md border border-border-strong bg-transparent px-3 text-[12.5px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
                 >
                   View full offer
                   <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
@@ -1325,7 +1320,7 @@ function SellerRow({
               )}
               <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
                 <ShieldCheck className="h-3.5 w-3.5 text-lime-text" aria-hidden />
-                SafeDrop Buyer Protection — Item Guaranteed or Full Refund
+                SafeDrop Protection: Item Guaranteed or Full Refund
               </span>
             </div>
           </div>
@@ -1387,7 +1382,7 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
             How delivery and safety work here
           </h3>
           <p className="mt-2">
-            Every order is covered by SafeDrop Buyer Protection: your {currency.name} arrives
+            Every order is covered by SafeDrop Protection: your {currency.name} arrives
             as described, or you get your money back. No password
             sharing is ever required — delivery is through in-game gifting or group payouts.
             Not delivered or not as described? You get a full refund.

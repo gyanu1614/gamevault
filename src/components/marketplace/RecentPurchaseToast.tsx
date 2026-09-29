@@ -99,10 +99,10 @@ export default function RecentPurchaseToast() {
 
     toast.custom(
       (t) => (
-        <div className="bg-gradient-to-r from-lime/10 to-blue-500/10 backdrop-blur-xl border border-lime-tint-border rounded-xl p-4 shadow-2xl min-w-[320px] max-w-md">
+        <div className="bg-gradient-to-r from-[rgba(86,184,127,0.10)] to-blue-500/10 backdrop-blur-xl border border-lime-tint-border rounded-xl p-4 shadow-2xl min-w-[320px] max-w-md">
           <div className="flex items-start gap-3">
             {/* Icon */}
-            <div className="flex-shrink-0 p-2 bg-lime/20 rounded-lg">
+            <div className="flex-shrink-0 p-2 bg-[rgba(86,184,127,0.20)] rounded-lg">
               <ShoppingCart className="w-5 h-5 text-lime-text" />
             </div>
 
@@ -249,7 +249,7 @@ export function DailyStatsToast() {
 
       const { count } = await supabase
         .from('orders')
-        .select('*', { count: 'exact' })
+        .select('id', { count: 'exact' })
         .eq('status', 'completed')
         .gte('created_at', today.toISOString()).limit(1)
 

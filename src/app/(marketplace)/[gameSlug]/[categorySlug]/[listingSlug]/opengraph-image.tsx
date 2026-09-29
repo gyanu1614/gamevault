@@ -15,7 +15,7 @@ import {
   formatUsd,
 } from '@/lib/seo/og-template'
 
-export const alt = 'Listing on DropMarket — covered by SafeDrop Buyer Protection'
+export const alt = 'Listing on DropMarket, covered by SafeDrop Protection'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 // Step 7a — listings are an open set (no static params); force-static makes

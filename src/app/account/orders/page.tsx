@@ -828,7 +828,7 @@ function OrdersContent() {
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
-              <ShoppingCart className="mb-4 h-14 w-14 text-lime-text/40" />
+              <ShoppingCart className="mb-4 h-14 w-14 text-[rgba(86,184,127,0.40)]" />
               <h3 className="mb-1.5 text-lg font-bold text-text-primary">
                 {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
               </h3>

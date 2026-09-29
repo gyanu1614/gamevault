@@ -31,10 +31,10 @@ function StatCard({
   color?: 'violet' | 'green' | 'amber' | 'blue'
 }) {
   const colors = {
-    violet: 'text-lime-text bg-lime/10 border-lime-tint-border',
+    violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
     amber:  "text-warning bg-warning-bg border-warning/20",
-    blue:   "text-lime-text bg-lime/10 border-lime-tint-border",
+    blue:   "text-lime-text bg-lime-tint-bg border-lime-tint-border",
   }
   return (
     <div className="rounded-lg border border-border-subtle card-frost p-5">
@@ -56,7 +56,7 @@ function EarningRow({ earning }: { earning: ReferralEarning }) {
   return (
     <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-0">
       <div className="flex items-center gap-3">
-        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isBonus ? 'bg-warning-bg text-warning' : 'bg-lime/10 text-lime-text'}`}>
+        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isBonus ? 'bg-warning-bg text-warning' : 'bg-lime-tint-bg text-lime-text'}`}>
           {isBonus ? <Gift className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
         </div>
         <div>
@@ -139,7 +139,7 @@ export default function ReferralClient({ stats }: ReferralClientProps) {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-lime/10 to-transparent p-6 mb-6"
+          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-transparent p-6 mb-6"
         >
           <div className="flex items-center gap-2 mb-4">
             <Gift className="h-4 w-4 text-lime-text" />
@@ -177,7 +177,7 @@ export default function ReferralClient({ stats }: ReferralClientProps) {
           {/* Share button */}
           <button
             onClick={shareLink}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-lime-tint-border bg-lime/10 hover:bg-lime/20 transition-colors py-3 text-sm font-medium text-lime-text"
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] transition-colors py-3 text-sm font-medium text-lime-text"
           >
             <Share2 className="h-4 w-4" />
             Share Your Link
@@ -227,7 +227,7 @@ export default function ReferralClient({ stats }: ReferralClientProps) {
               { step: '4', text: 'Commissions are credited once orders complete' },
             ].map(({ step, text }) => (
               <div key={step} className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full bg-lime/20 border border-lime-tint-border flex items-center justify-center text-[11px] font-bold text-lime-text shrink-0">
+                <div className="h-6 w-6 rounded-full bg-[rgba(86,184,127,0.20)] border border-lime-tint-border flex items-center justify-center text-[11px] font-bold text-lime-text shrink-0">
                   {step}
                 </div>
                 <p className="text-sm text-text-secondary">{text}</p>

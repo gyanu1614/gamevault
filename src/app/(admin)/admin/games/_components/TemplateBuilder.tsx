@@ -567,7 +567,7 @@ function AddSubFieldRow({
   return (
     <li>
       <div
-        className="rounded-lg border border-lime-tint-border bg-lime/[0.06] p-2"
+        className="rounded-lg border border-lime-tint-border bg-[rgba(86,184,127,0.06)] p-2"
         style={{ marginLeft: 12 + indentPx + 14, marginRight: 8 }}
       >
         <div className="mb-1.5 text-[10px] uppercase tracking-wider text-lime-text">

@@ -10,10 +10,44 @@ import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // transition; buyer refunds land in their wallet as store credit.
 import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
+import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
 
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
+
+// Joined rows the order page renders (no emails — see getOrder).
+const ORDER_DETAIL_EMBEDS = `
+  buyer:buyer_id (
+    id,
+    username,
+    avatar_url
+  ),
+  seller:seller_id (
+    id,
+    username,
+    avatar_url,
+    seller_tier,
+    shop_name,
+    shop_slug,
+    is_verified,
+    seller_rating,
+    total_reviews
+  ),
+  listing:listing_id (
+    id,
+    title,
+    description,
+    images,
+    delivery_method,
+    delivery_time,
+    price,
+    platform,
+    region,
+    game_id,
+    game_category_id
+  )`
 
 /**
  * Get order details
@@ -42,40 +76,12 @@ export async function getOrder(orderId: string): Promise<{
     // No emails: this payload is rendered into the OTHER party's page (and
     // getOrder is a callable server action). Admin pages load contact
     // details separately. Seller trust fields feed the store card.
+    // The session client may select only the shared order columns (orders
+    // column grant, src/lib/orders/columns.ts); RLS still decides WHICH
+    // orders: the caller's own, or any for an admin.
     const { data: order, error } = await supabase
       .from('orders')
-      .select(`
-        *,
-        buyer:buyer_id (
-          id,
-          username,
-          avatar_url
-        ),
-        seller:seller_id (
-          id,
-          username,
-          avatar_url,
-          seller_tier,
-          shop_name,
-          shop_slug,
-          is_verified,
-          seller_rating,
-          total_reviews
-        ),
-        listing:listing_id (
-          id,
-          title,
-          description,
-          images,
-          delivery_method,
-          delivery_time,
-          price,
-          platform,
-          region,
-          game_id,
-          game_category_id
-        )
-      `)
+      .select(`${ORDER_PARTY_SELECT}, ${ORDER_DETAIL_EMBEDS}`)
       .eq('id', orderId)
       .single() as any
 
@@ -86,14 +92,9 @@ export async function getOrder(orderId: string): Promise<{
       }
     }
 
-    // ✅ SECURITY: Check if user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as any
-
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+    // ✅ SECURITY: Check if user is admin — the same check the admin RLS
+    // policy (and requireAdmin) uses.
+    const { data: isAdmin } = await (supabase.rpc as any)('is_admin')
 
     // ✅ SECURITY: Verify user is buyer OR seller OR admin
     if (order.buyer_id !== user.id && order.seller_id !== user.id && !isAdmin) {
@@ -105,21 +106,25 @@ export async function getOrder(orderId: string): Promise<{
       }
     }
 
-    // ✅ SECURITY: Strip sensitive fields based on role
-    if (!isAdmin) {
-      // Remove ALL emails for privacy (both buyer and seller)
-      if (order.buyer) {
-        delete order.buyer.email
+    // Admins see the whole row: service role, only after is_admin().
+    if (isAdmin) {
+      const { data: full, error: fullError } = await createServiceRoleClient()
+        .from('orders')
+        .select(`*, ${ORDER_DETAIL_EMBEDS}`)
+        .eq('id', orderId)
+        .single() as any
+      if (fullError || !full) {
+        return { success: false, error: 'Order not found' }
       }
-      if (order.seller) {
-        delete order.seller.email
-      }
+      return { success: true, order: full }
     }
-    // Admins can see all fields (no deletion)
 
+    // Each party gets its own private fields (payout / checkout link),
+    // never the other side's.
+    const [ownOrder] = await withOwnOrderFields(supabase, order.buyer_id === user.id ? 'buyer' : 'seller', [order])
     return {
       success: true,
-      order,
+      order: ownOrder,
     }
   } catch (error: any) {
     console.error('Error fetching order:', error)
@@ -157,7 +162,7 @@ export async function startDelivering(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*')
+      .select(ORDER_PARTY_SELECT)
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
       .single() as any
@@ -341,7 +346,7 @@ export async function markOrderAsDelivered(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:game_categories!listings_game_category_id_fkey ( slug, type ) )')
+      .select(`${ORDER_PARTY_SELECT}, listing:listings!orders_listing_id_fkey( title, game:game_id ( slug ), category:game_categories!listings_game_category_id_fkey ( slug, type ) )`)
       .eq('id', orderId)
       .eq('seller_id', user.id) // Ensure seller owns this order
       .single() as any
@@ -547,11 +552,8 @@ export async function cancelOrder(orderId: string): Promise<{
       await drainCancelOutboxForOrder(orderId)
     }
 
-    // Best-effort timestamp for the audit trail (status already flipped).
-    await (supabase
-      .from('orders')
-      .update as any)({ cancelled_at: new Date().toISOString() })
-      .eq('id', orderId)
+    // cancelled_at was stamped by validate_order_status_transition inside the
+    // RPC's transaction; sessions hold no UPDATE on orders (20260928171523_orders_update_revoke).
 
     await logOrderAction('cancelled', orderId, user.id, {
       reason: 'buyer_cancelled',
@@ -679,9 +681,10 @@ async function afterBuyerRelease(
   // Tell the seller their sale is final (email + in-app, fire-and-forget).
   await (async () => {
     const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
-    // Service client: RLS hides the seller's profile from the buyer session.
+    // Service client: RLS hides the seller's profile from the buyer session,
+    // and the payout is a seller-private column the buyer's row never has.
     const service = createServiceRoleClient()
-    const [{ data: seller }, { data: soldListing }] = await Promise.all([
+    const [{ data: seller }, { data: soldListing }, { data: payoutRow }] = await Promise.all([
       service
         .from('profiles')
         .select('email, username, full_name')
@@ -692,13 +695,19 @@ async function afterBuyerRelease(
         .select('title')
         .eq('id', order.listing_id)
         .single() as any,
+      service
+        .from('orders')
+        .select('seller_payout')
+        .eq('id', orderId)
+        .single() as any,
     ])
+    const payout = Number(payoutRow?.seller_payout ?? 0)
     const { createNotification } = await import('@/lib/utils/notifications')
     if (opts.notifySellerInApp) await createNotification({
       userId: order.seller_id,
       type: 'order_completed',
       title: 'Order Completed',
-      message: `$${(order.seller_payout ?? 0).toFixed(2)} added to your balance · #${orderRef}`,
+      message: `$${payout.toFixed(2)} added to your balance · #${orderRef}`,
       link: `/account/orders/${orderId}`,
     })
     if (seller?.email) {
@@ -709,7 +718,7 @@ async function afterBuyerRelease(
         orderId,
         orderNumber: orderRef,
         listingTitle: soldListing?.title || 'your item',
-        payout: order.seller_payout ?? 0,
+        payout,
       })
     }
   })().catch((err) => console.error('[Orders] Seller completion comms failed:', err))
@@ -755,7 +764,7 @@ export async function confirmOrderReceipt(orderId: string): Promise<{
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*')
+      .select(ORDER_PARTY_SELECT)
       .eq('id', orderId)
       .eq('buyer_id', user.id) // Ensure buyer owns this order
       .single() as any
@@ -885,7 +894,7 @@ export async function openDispute(
     // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*')
+      .select(ORDER_PARTY_SELECT)
       .eq('id', orderId)
       .eq('buyer_id', user.id) // Ensure buyer owns this order
       .single() as any

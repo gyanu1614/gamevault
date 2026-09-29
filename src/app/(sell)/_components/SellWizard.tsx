@@ -1087,11 +1087,6 @@ export default function SellWizard({
           aria-live="polite"
           aria-busy="true"
         >
-          {/* Soft lime glow behind the spinner */}
-          <div
-            aria-hidden
-            className="absolute inset-0 -m-8 rounded-3xl bg-lime/5 blur-3xl"
-          />
           <div className="relative flex h-14 w-14 items-center justify-center">
             <div
               aria-hidden
@@ -1578,7 +1573,7 @@ const CATEGORY_THEME: Record<
   },
   boosting: {
     icon: 'boosting',
-    iconBg: 'bg-gradient-to-br from-lime/25 via-lime/15 to-emerald-500/15',
+    iconBg: 'bg-gradient-to-br from-[rgba(86,184,127,0.25)] via-[rgba(86,184,127,0.15)] to-emerald-500/15',
     ring: 'group-hover:border-lime-tint-border',
     example: 'Rank Pushes, Win Boosts',
   },
@@ -2394,7 +2389,7 @@ function Step4Publish(p: Step4Props) {
               </p>
               <Link
                 href={`/sell/edit/${p.existingBundleListingId}`}
-                className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg/80 sm:min-h-0"
+                className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-[rgba(86,184,127,0.10)] sm:min-h-0"
               >
                 Update it
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -3296,7 +3291,7 @@ function BuyerCardPreview({
 
           {/* Body */}
           <div className="flex flex-1 flex-col gap-2 p-4">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-lime-text/80">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-[rgba(86,184,127,0.80)]">
               {category.name}
             </div>
             <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
@@ -3375,7 +3370,7 @@ function PriceGuidanceCard({
       {/* Band */}
       <div className="relative h-2 w-full rounded-full bg-bg-raised-hover">
         <div
-          className="absolute inset-y-0 rounded-full bg-lime/40"
+          className="absolute inset-y-0 rounded-full bg-[rgba(86,184,127,0.40)]"
           style={{ left: `${p25Pct}%`, width: `${Math.max(0, p75Pct - p25Pct)}%` }}
         />
         <div

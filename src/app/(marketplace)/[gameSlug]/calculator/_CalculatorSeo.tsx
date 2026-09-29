@@ -33,7 +33,7 @@ export const CALCULATOR_FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Where can I buy or sell Steal a Brainrot Brainrots safely?',
-    a: `You can buy any Brainrot from verified sellers on DropMarket, where every purchase is covered by buyer protection — you only pay after delivery is confirmed. Use the calculator to check the fair price first, then click through to live listings.`,
+    a: `You can buy any Brainrot from verified sellers on DropMarket, where every purchase is covered by SafeDrop Protection: Item Guaranteed or Full Refund. Use the calculator to check the fair price first, then click through to live listings.`,
   },
   {
     q: 'What makes a Brainrot high value in Steal a Brainrot?',
@@ -274,7 +274,7 @@ export function CalculatorSeo({
             <strong className="text-[#EDF3E9]">Trade / WFL</strong> mode, add the Brainrots you&apos;d
             give to your side and the ones you&apos;d receive to theirs — the calculator totals both
             sides and returns a Win, Fair, or Loss verdict. When you&apos;re ready, click through to
-            buy any Brainrot from verified DropMarket sellers, with buyer protection on every order.
+            buy any Brainrot from verified DropMarket sellers, with SafeDrop Protection on every order.
           </p>
         </div>
       </section>
