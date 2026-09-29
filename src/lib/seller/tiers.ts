@@ -196,9 +196,12 @@ export const TIERS: TierDef[] = [
     description: 'The ultimate rank — best of the best',
     colors: {
       text: 'text-lime-text',
-      bg: 'bg-lime/10',
+      // Tint tokens, not `bg-lime/10` / `ring-lime/30`: `lime` is a bare
+      // `var(...)`, so Tailwind cannot apply a slash opacity and never
+      // generates those classes.
+      bg: 'bg-lime-tint-bg',
       border: 'border-lime-tint-border',
-      ring: 'ring-lime/30',
+      ring: 'ring-lime-tint-border',
       glow: 'shadow-[0_0_26px_-8px_rgba(198,255,61,0.6)]',
       badgeColor: 'lime',
       icon: '◈',
