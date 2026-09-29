@@ -167,7 +167,7 @@ function LightSelect({
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className={cn('flex w-full items-center justify-between gap-2 rounded-md border px-3 font-medium outline-none transition-colors focus-visible:border-[#56B87F]', size === 'sm' ? 'h-9 text-[13px]' : 'h-[42px] text-[14px]')}
+        className={cn('flex w-full items-center justify-between gap-2 rounded-md border px-3 font-medium outline-none transition-colors focus-visible:border-focus-border', size === 'sm' ? 'h-9 text-[13px]' : 'h-[42px] text-[14px]')}
         style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
       >
         <span className="flex min-w-0 items-center gap-2">
@@ -945,7 +945,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </span>
   )
 
-  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56B87F]/50'
+  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
@@ -1127,7 +1127,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   if (e.key === 'Enter') void handleApplyPromo()
                 }}
                 placeholder="Discount Code"
-                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#56B87F]"
+                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-focus-border"
                 style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
               />
               <button
