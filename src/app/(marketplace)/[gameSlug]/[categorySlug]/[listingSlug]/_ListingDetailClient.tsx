@@ -485,7 +485,7 @@ export default function ListingDetailClient({
             {/* Description — its own card. Heading-weight label + a themed,
                 swappable icon; body preserves the seller's exact input
                 (line breaks + blank lines) via a single pre-wrap block. */}
-            <Card className="border-border-subtle bg-[#1A1B1F] rounded-lg">
+            <Card className="border-border-subtle bg-[#1D1E23] rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime/10 text-lime-text ring-1 ring-lime/20">
@@ -516,7 +516,7 @@ export default function ListingDetailClient({
               the page at the end like any sticky. */}
           <div ref={purchaseRef} className="lg:sticky lg:self-start" style={{ top: railTop }}>
 
-              <Card className="relative flex flex-col overflow-hidden border-border-subtle bg-[#1A1B1F] p-5 shadow-elevated backdrop-blur-md rounded-lg">
+              <Card className="relative flex flex-col overflow-hidden border-border-subtle bg-[#1D1E23] p-5 shadow-elevated backdrop-blur-md rounded-lg">
                 {/* V31 — SafeDrop emblem watermark peeking from the
                     corner, clipped by the card edge. backdrop-blur creates
                     a stacking context so -z-10 paints above the card bg
@@ -684,7 +684,7 @@ export default function ListingDetailClient({
                   their own card directly below, inside the same sticky
                   rail (same width — alignment with the buy panel is
                   automatic). */}
-              <Card className="relative mt-3 flex flex-col overflow-hidden border-border-subtle bg-[#1A1B1F] p-4 shadow-elevated backdrop-blur-md rounded-lg">
+              <Card className="relative mt-3 flex flex-col overflow-hidden border-border-subtle bg-[#1D1E23] p-4 shadow-elevated backdrop-blur-md rounded-lg">
                 <TrustBand />
               </Card>
 
@@ -1055,7 +1055,7 @@ function OtherSellerRow({
   })()
 
   return (
-    <Card className="overflow-hidden border-border-subtle bg-[#1A1B1F] rounded-lg transition-colors hover:border-border-default">
+    <Card className="overflow-hidden border-border-subtle bg-[#1D1E23] rounded-lg transition-colors hover:border-border-default">
       <Collapsible open={open} onOpenChange={onOpenChange}>
         {/* Header row — the trigger fills everything except the right-hand
             action slot (price ⇄ Open button), which must stay OUTSIDE the
