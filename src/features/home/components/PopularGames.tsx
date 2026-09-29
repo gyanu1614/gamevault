@@ -18,7 +18,9 @@ export async function PopularGames() {
   if (games.length === 0) return null
 
   return (
-    <section className="page-measure">
+    // data-nav-fill-at: fallback trigger for the homepage navbar fill, used
+    // when the hero statement's own marker isn't rendered (navbar-floating.tsx).
+    <section className="page-measure" data-nav-fill-at>
       {/* `.section-title` (globals.css) owns the size, weight and centring
           for every page-level section title, so the homepage reads as one
           set. Do not re-declare the scale here. */}

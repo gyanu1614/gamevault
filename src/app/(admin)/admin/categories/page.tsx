@@ -183,7 +183,7 @@ function EditRow({
         <Input
           value={form.icon_emoji || ''}
           onChange={(e) => set('icon_emoji', e.target.value)}
-          className="h-8 w-14 border-border-default bg-bg-base text-center text-lg text-text-primary focus:border-lime focus:outline-none"
+          className="h-8 w-14 border-border-default bg-bg-base text-center text-lg text-text-primary focus:border-focus-border focus:outline-none"
           placeholder="📦"
         />
       </td>
@@ -198,7 +198,7 @@ function EditRow({
             set('name', e.target.value)
             if (!category.id) set('slug', toSlug(e.target.value))
           }}
-          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
+          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-focus-border focus:outline-none"
           placeholder="Category name"
         />
       </td>
@@ -206,7 +206,7 @@ function EditRow({
         <Input
           value={form.slug}
           onChange={(e) => set('slug', toSlug(e.target.value))}
-          className="h-8 border-border-default bg-bg-base font-mono text-sm text-text-primary focus:border-lime focus:outline-none"
+          className="h-8 border-border-default bg-bg-base font-mono text-sm text-text-primary focus:border-focus-border focus:outline-none"
           placeholder="category-slug"
         />
       </td>
@@ -214,7 +214,7 @@ function EditRow({
         <Input
           value={form.description || ''}
           onChange={(e) => set('description', e.target.value)}
-          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
+          className="h-8 border-border-default bg-bg-base text-text-primary focus:border-focus-border focus:outline-none"
           placeholder="Description"
         />
       </td>
@@ -223,7 +223,7 @@ function EditRow({
           type="number"
           value={form.sort_order}
           onChange={(e) => set('sort_order', parseInt(e.target.value) || 99)}
-          className="h-8 w-16 border-border-default bg-bg-base text-text-primary focus:border-lime focus:outline-none"
+          className="h-8 w-16 border-border-default bg-bg-base text-text-primary focus:border-focus-border focus:outline-none"
         />
       </td>
       {/* colspan for Listings + Status */}
@@ -363,7 +363,7 @@ export default function AdminCategoriesPage() {
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               placeholder="Filter categories..."
-              className="h-9 w-48 border-border-default bg-bg-base text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+              className="h-9 w-48 border-border-default bg-bg-base text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
             />
             <Button
               asChild

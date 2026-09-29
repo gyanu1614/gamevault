@@ -23,29 +23,7 @@ const BANNED = /buyer[\s -]*protection/i
  * Exact literals, by file, owned by another open branch. Delete an entry when
  * that branch lands (it stops matching anything once the string is gone).
  */
-const PENDING: Record<string, { texts: string[]; reason: string }> = {
-  'src/app/account/orders/[orderId]/_OrderDetailsCard.tsx': {
-    texts: [
-      'Your purchase is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back.',
-      'SafeDrop™ Buyer Protection',
-    ],
-    reason: 'renamed on fix/order-page-polish',
-  },
-  'src/lib/orders/timeline.ts': {
-    texts: ['Paid and covered by SafeDrop Buyer Protection'],
-    reason: 'renamed on fix/order-page-polish',
-  },
-  'src/app/checkout/pay/[orderId]/_PayClient.tsx': {
-    texts: ['SafeDrop Buyer Protection'],
-    reason: 'renamed on fix/order-page-polish',
-  },
-  'src/lib/email/index.ts': {
-    texts: [
-      "You're covered by SafeDrop Buyer Protection — Item Guaranteed or Full Refund. If it never arrives, you get a full refund.",
-    ],
-    reason: 'renamed on fix/order-page-polish',
-  },
-}
+const PENDING: Record<string, { texts: string[]; reason: string }> = {}
 
 function walk(p: string): string[] {
   const abs = path.join(ROOT, p)

@@ -84,7 +84,7 @@ function SectionCard({ children, className }: { children: React.ReactNode; class
 // project's lime-tinted ring so focus matches the rest of the site.
 // Mobile-audit — text-base (16px) below sm so iOS Safari doesn't auto-zoom
 // + pan on input focus (worst inside the email-change bottom sheet).
-const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
+const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all'
 
 const usd = (n: number) =>
   (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
@@ -818,7 +818,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             'flex h-8 w-8 items-center justify-center rounded-lg border transition-all',
-                            enabled ? 'bg-lime/15 border-lime-tint-border text-lime-text' : 'bg-bg-overlay border-border-subtle text-text-disabled'
+                            enabled ? 'bg-lime-tint-bg border-lime-tint-border text-lime-text' : 'bg-bg-overlay border-border-subtle text-text-disabled'
                           )}>
                             <Icon className="h-4 w-4" />
                           </div>
@@ -942,7 +942,7 @@ export default function SettingsPage() {
           ) : (
             <>
               <div className="mb-5 flex items-start gap-4 pr-8">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime/15 border border-lime-tint-border">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg border border-lime-tint-border">
                   <Mail className="h-5 w-5 text-lime-text" />
                 </div>
                 <div className="min-w-0">

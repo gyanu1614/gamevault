@@ -31,7 +31,7 @@ export function ListingCardCompact({ listing }: { listing: LatestListing }) {
         transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.7 }}
         className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden border border-border-subtle p-3"
         style={{
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-card)',
           isolation: 'isolate',
           backgroundColor: WELL,
           boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.30)',

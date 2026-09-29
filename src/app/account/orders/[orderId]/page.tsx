@@ -12,11 +12,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getOrder } from '@/lib/actions/orders'
 import {
-  ArrowLeft,
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Shield,
   Package,
   XCircle,
   RefreshCw,
@@ -92,25 +90,6 @@ function StatusPill({ status, disputeResolved }: { status: string; disputeResolv
       </span>
       <Icon className="h-3.5 w-3.5" />
       {cfg.label}
-    </div>
-  )
-}
-
-function EscrowPill({ escrowStatus, disputeResolved }: { escrowStatus: string; disputeResolved?: boolean }) {
-  const cfg: Record<string, { label: string; pill: string }> = {
-    held:     { label: 'Covered by SafeDrop',        pill: 'bg-lime/10 text-lime-text/80 border-lime-tint-border' },
-    released: { label: 'Seller Paid Out',            pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    refunded: { label: 'Refund Issued',              pill: 'bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15' },
-    frozen:   { label: 'Under Review',               pill: 'bg-error-bg text-error/80 border-red-500/15' },
-    resolved: { label: 'Resolved',                   pill: 'bg-success-bg text-success/80 border-green-500/15' },
-  }
-  // Show "Resolved" instead of "Under Review" if dispute is resolved
-  const effectiveStatus = (escrowStatus === 'frozen' && disputeResolved) ? 'resolved' : escrowStatus
-  const c = cfg[effectiveStatus] ?? cfg.held
-  return (
-    <div className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium', c.pill)}>
-      <Shield className="h-3 w-3" />
-      {c.label}
     </div>
   )
 }

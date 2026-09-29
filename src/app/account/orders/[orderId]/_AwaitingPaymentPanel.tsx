@@ -174,7 +174,7 @@ export function AwaitingPaymentPanel({
                   <button
                     onClick={handlePay}
                     disabled={paying || cancelling}
-                    className="inline-flex items-center justify-center gap-2 rounded-md bg-lime px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-lime-soft disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-lime px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-lime-hover disabled:opacity-60"
                   >
                     {paying ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

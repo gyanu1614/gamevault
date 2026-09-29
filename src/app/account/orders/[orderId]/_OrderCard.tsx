@@ -42,7 +42,7 @@ export function OrderCard({
         variant === 'glow' &&
           'border-lime-tint-border bg-bg-raised shadow-[0_0_0_1px_rgba(198,255,61,0.10),0_8px_30px_rgba(198,255,61,0.05)]',
         variant === 'lime' &&
-          'border-lime-tint-border bg-gradient-to-b from-lime/[0.07] to-lime/[0.01]',
+          'border-lime-tint-border bg-gradient-to-b from-[rgba(86,184,127,0.07)] to-[rgba(86,184,127,0.01)]',
         padded && 'p-5',
         className,
       )}

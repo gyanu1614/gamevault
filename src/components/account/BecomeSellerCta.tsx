@@ -74,7 +74,7 @@ export default function BecomeSellerCta({
         <Link
           href="/founding"
           onClick={onNavigate}
-          className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90"
+          className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
         >
           Open Founding HQ
           <ArrowRight className="h-4 w-4" />
@@ -138,7 +138,7 @@ export default function BecomeSellerCta({
       <Link
         href={href}
         onClick={onNavigate}
-        className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime/90"
+        className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
       >
         {isPending ? 'View Status' : 'Get Started'}
         <ArrowRight className="h-4 w-4" />

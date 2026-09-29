@@ -305,7 +305,7 @@ function ShopListingCard({ listing }: { listing: any }) {
           </div>
         )}
         {/* Game chip */}
-        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg/80 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
+        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-[rgba(86,184,127,0.10)] px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
           {game}
         </div>
         {hasPriceDrop && (

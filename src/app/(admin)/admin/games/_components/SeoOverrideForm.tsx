@@ -112,7 +112,7 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
           <select
             value={form.ecosystem ?? ''}
             onChange={(e) => set('ecosystem', e.target.value)}
-            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-lime"
+            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-focus-border"
           >
             {ECOSYSTEMS.map((e) => (
               <option key={e} value={e}>{e === '' ? '— none —' : e}</option>
@@ -127,7 +127,7 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
           <select
             value={indexMode}
             onChange={(e) => setIndexMode(e.target.value as IndexMode)}
-            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-lime"
+            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-focus-border"
           >
             <option value="auto">Auto (by listings + content)</option>
             <option value="index">Force index</option>
@@ -185,7 +185,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime"
+          className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border"
         />
       ) : (
         <input
@@ -193,7 +193,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime"
+          className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border"
         />
       )}
       {hint && <p className="text-[11.5px] text-text-tertiary">{hint}</p>}

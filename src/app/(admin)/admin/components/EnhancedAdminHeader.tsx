@@ -396,7 +396,7 @@ export default function EnhancedAdminHeader({
                 'h-10 w-full rounded-lg border bg-white/[0.04] pl-9 pr-14 text-[13px] text-text-primary',
                 'placeholder:text-text-disabled transition-colors',
                 'border-white/[0.06] hover:border-white/[0.12]',
-                'focus:border-lime focus:outline-none',
+                'focus:border-focus-border focus:outline-none',
               )}
             />
             <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/[0.08] bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold text-text-tertiary">

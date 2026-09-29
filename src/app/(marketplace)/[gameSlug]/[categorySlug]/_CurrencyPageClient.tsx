@@ -109,11 +109,6 @@ function RouteLoader({ label = 'Loading' }: { label?: string }) {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-bg-base/70 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div className="relative flex flex-col items-center gap-4">
-        {/* Outer glow */}
-        <div
-          aria-hidden
-          className="absolute inset-0 -m-8 rounded-full bg-lime/10 blur-2xl animate-pulse"
-        />
         {/* Spinner */}
         <div className="relative flex h-14 w-14 items-center justify-center">
           <div
@@ -846,7 +841,7 @@ function HeroCard({
               'flex h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 text-left transition-colors',
               outOfStock
                 ? 'cursor-not-allowed border-border-default bg-bg-overlay text-text-tertiary'
-                : 'border-border-strong bg-bg-overlay text-text-primary hover:border-lime hover:bg-lime-tint-bg/40',
+                : 'border-border-strong bg-bg-overlay text-text-primary hover:border-lime hover:bg-[rgba(86,184,127,0.05)]',
             )}
           >
             <div>
@@ -924,7 +919,7 @@ function PurchasePanel({
       </div>
 
       <div className="mt-4 border-t border-border-subtle pt-4">
-        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg sm:h-[52px]">
+        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-focus-border focus-within:ring-2 focus-within:ring-focus-soft sm:h-[52px]">
           <button
             type="button"
             onClick={stepDown}
@@ -1149,7 +1144,7 @@ function SellerRow({
               type="button"
               aria-expanded={open}
               aria-label={open ? 'Collapse seller details' : 'Expand seller details'}
-              className="absolute inset-0 z-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg"
+              className="absolute inset-0 z-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-soft"
             />
           </Collapsible.Trigger>
 
@@ -1226,7 +1221,7 @@ function SellerRow({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border-strong bg-transparent px-4 text-[13px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-lime-tint-bg/40"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border-strong bg-transparent px-4 text-[13px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
                 >
                   Select
                 </button>
@@ -1317,7 +1312,7 @@ function SellerRow({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-9 items-center gap-1 rounded-md border border-border-strong bg-transparent px-3 text-[12.5px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-lime-tint-bg/40"
+                  className="inline-flex h-9 items-center gap-1 rounded-md border border-border-strong bg-transparent px-3 text-[12.5px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
                 >
                   View full offer
                   <ChevronDown className="h-3.5 w-3.5 -rotate-90" />

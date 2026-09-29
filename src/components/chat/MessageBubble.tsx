@@ -219,7 +219,7 @@ export default function MessageBubble({
           className={cn(
             'px-3.5 py-2 break-words border',
             alignRight
-              ? 'rounded-[14px] rounded-tr-[5px] bg-lime/[0.13] border-lime/[0.22] text-text-primary'
+              ? 'rounded-[14px] rounded-tr-[5px] bg-[rgba(86,184,127,0.13)] border-[rgba(86,184,127,0.22)] text-text-primary'
               : 'rounded-[14px] rounded-tl-[5px] bg-bg-overlay border-border-subtle text-text-primary'
           )}
         >

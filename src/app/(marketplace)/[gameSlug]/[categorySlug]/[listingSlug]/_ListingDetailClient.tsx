@@ -403,7 +403,7 @@ export default function ListingDetailClient({
                 aria-label={`Images for ${listing.title}`}
                 tabIndex={0}
                 onKeyDown={onGalleryKey}
-                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-lime-tint-bg"
+                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-focus-soft"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {heroImg ? (
@@ -470,7 +470,7 @@ export default function ListingDetailClient({
                       className={cn(
                         'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all sm:h-20 sm:w-20',
                         i === activeImg
-                          ? 'border-lime ring-2 ring-lime/30'
+                          ? 'border-lime ring-2 ring-lime-tint-border'
                           : 'border-border-subtle hover:border-border-default',
                       )}
                     >
@@ -488,7 +488,7 @@ export default function ListingDetailClient({
             <Card className="border-border-default bg-bg-overlay rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime/10 text-lime-text ring-1 ring-lime/20">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-lime-tint-border">
                     <DescriptionIcon className="h-[18px] w-[18px]" />
                   </span>
                   <h2 className="text-[17px] font-bold leading-none text-text-primary">

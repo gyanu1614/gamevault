@@ -193,7 +193,7 @@ function BrowseContent() {
             placeholder="Search listings…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+            className="h-11 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
           />
           {search && (
             <button

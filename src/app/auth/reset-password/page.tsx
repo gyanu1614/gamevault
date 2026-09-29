@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-lime focus:border-lime sm:text-sm"
+                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-focus-ring focus:border-focus-border sm:text-sm"
                     placeholder="Enter new password"
                   />
                   <button
@@ -190,7 +190,7 @@ export default function ResetPasswordPage() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-lime focus:border-lime sm:text-sm"
+                    className="appearance-none block w-full pl-10 pr-10 py-2 bg-bg-overlay border border-border-default rounded-md shadow-sm placeholder:text-text-disabled text-text-primary focus:outline-none focus:ring-focus-ring focus:border-focus-border sm:text-sm"
                     placeholder="Confirm new password"
                   />
                   <button
@@ -223,7 +223,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={loading || validSession === false}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md bg-lime text-text-inverse hover:bg-lime-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md bg-lime text-text-inverse hover:bg-lime-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-focus-ring disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {loading ? 'Resetting password...' : validSession === null ? 'Verifying link…' : 'Reset Password'}
               </button>

@@ -202,7 +202,7 @@ function ListingCard({
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-lime/10 via-lime/5 to-bg-base text-5xl">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[rgba(86,184,127,0.10)] via-[rgba(86,184,127,0.05)] to-bg-base text-5xl">
               🎮
             </div>
           )}

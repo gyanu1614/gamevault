@@ -1,12 +1,10 @@
 'use client'
 
 /**
- * HomePage — rebuild in progress.
+ * HomePage.
  *
  * Shape (see the section authoring contract in CLAUDE.md):
  *   .page-stage   owns background, overflow and stacking — once, here.
- *   HomeHeroArt   sits OUTSIDE the rhythm container as a -z-10 sibling, so
- *                 the art is never clipped by a section boundary.
  *   .page-rhythm  full-width flex column, owns vertical rhythm only.
  *   .page-measure a section opts INTO the content measure.
  *
@@ -15,8 +13,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { HomeHeroArt } from '../components/HomeHeroArt'
-import { HomeHero } from '../components/HomeHero'
+import { HeroFilm } from '../components/HeroFilm'
 import { SellerCta } from '../components/SellerCta'
 import { BuyerSteps } from '../components/BuyerSteps'
 import { HomeFaq } from '../components/HomeFaq'
@@ -25,8 +22,8 @@ import { TrustStrip } from '../components/TrustStrip'
 
 /**
  * Sections that fetch their own data are rendered on the server and passed
- * in as children. This page is a client component (the hero art needs
- * pointer parallax), and a client component cannot render an async server
+ * in as children. This page is a client component (the hero film needs
+ * scroll and pointer motion), and a client component cannot render an async server
  * child directly — but it can render one handed to it as a prop.
  */
 export function HomePage({
@@ -38,14 +35,12 @@ export function HomePage({
 }) {
   return (
     <div className="page-stage">
-      {/* Hero art — sibling of the rhythm container, not inside a section. */}
-      <HomeHeroArt backdropSrc="/hero/home.avif" />
-
       <div className="page-rhythm">
-        <HomeHero />
+        {/* Section 1 — a scroll film with its own sticky stage. Its art
+            lives inside the stage and fades to the ground before it
+            releases, so it needs no -z-10 sibling here. */}
+        <HeroFilm />
 
-        {/* Section 2 pulls up into the lower half of the hero art, which is
-            why the art runs past the hero section. */}
         {popularGames}
 
         {latestListings}

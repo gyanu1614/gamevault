@@ -201,7 +201,7 @@ function PlatformKindCard({
       className={
         'rounded-xl border p-3 transition-colors ' +
         (field.enabled
-          ? 'border-lime-tint-border bg-lime-tint-bg/30'
+          ? 'border-lime-tint-border bg-[rgba(86,184,127,0.04)]'
           : 'border-border-default bg-bg-overlay/40')
       }
     >
@@ -310,7 +310,7 @@ function PlatformKindCard({
                 }
               }}
               placeholder={placeholder}
-              className="flex-1 rounded-lg border border-border-default bg-bg-base px-3 py-1.5 text-[13px] text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
+              className="flex-1 rounded-lg border border-border-default bg-bg-base px-3 py-1.5 text-[13px] text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
             />
             <button
               type="button"

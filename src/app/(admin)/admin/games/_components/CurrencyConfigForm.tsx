@@ -216,7 +216,7 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
       <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
         <h3 className="text-[15px] font-semibold text-text-primary">Pricing rules</h3>
         {isBundleMode && (
-          <div className="rounded-xl border border-lime-tint-border bg-lime-tint-bg/40 px-3 py-2 text-[12.5px] text-text-secondary">
+          <div className="rounded-xl border border-lime-tint-border bg-[rgba(86,184,127,0.05)] px-3 py-2 text-[12.5px] text-text-secondary">
             <span className="font-semibold text-lime-text">Bundle mode.</span>{' '}
             Each bundle is its own quantity unit, so granularity, minimum quantity,
             and quantity step don’t apply. The price floor below still gates the

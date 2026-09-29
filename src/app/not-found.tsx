@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <main className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-20 text-center sm:px-6">
-      <div className="inline-flex rounded-2xl border border-lime/20 bg-lime/10 p-4">
+      <div className="inline-flex rounded-2xl border border-lime-tint-border bg-lime-tint-bg p-4">
         <Compass className="h-10 w-10 text-lime-text" />
       </div>
 
