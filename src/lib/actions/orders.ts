@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
-import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { cancelOrderReturnWallet, refundOrderToWallet } from '@/lib/wallet/order-money'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
@@ -19,6 +19,7 @@ import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
 
 // Joined rows the order page renders (no emails — see getOrder).
 const ORDER_DETAIL_EMBEDS = `
@@ -650,6 +651,112 @@ export async function cancelOrder(orderId: string): Promise<{
     return { success: true }
   } catch (error: any) {
     console.error('Error cancelling order:', error)
+    return { success: false, error: error.message || 'Failed to cancel order' }
+  }
+}
+
+/**
+ * The SELLER cancels a paid order they can't fulfil (out of stock, can't
+ * deliver in time, price error...). Allowed from payment until they mark it
+ * delivered; a delivered or disputed order goes through the buyer / dispute
+ * tools instead.
+ *
+ * Money: ONE RPC each, never composed here (CLAUDE.md money seams):
+ *   paid       -> order_cancel_return_wallet (CANCELLED + full wallet credit)
+ *   delivering -> order_refund_to_wallet     (REFUNDED  + full wallet credit)
+ * Idempotent per order (dedupe key), so a double click refunds once.
+ */
+export async function sellerCancelOrder(
+  orderId: string,
+  reason: string,
+  note?: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const problem = validateSellerCancel(reason, note)
+    if (problem) return { success: false, error: problem }
+
+    const { data: order, error: fetchError } = await (supabase
+      .from('orders')
+      .select('id, buyer_id, seller_id, listing_id, status, delivered_at, total_amount, order_number')
+      .eq('id', orderId)
+      .single() as any)
+    if (fetchError || !order) return { success: false, error: 'Order not found' }
+    if (order.seller_id !== user.id) {
+      await logUnauthorizedAccess('seller_cancel_order', 'orders', orderId)
+      return { success: false, error: 'Unauthorized' }
+    }
+    if (!['paid', 'delivering'].includes(order.status) || order.delivered_at) {
+      return { success: false, error: 'This order can no longer be cancelled by the seller.' }
+    }
+
+    const dedupe = `seller_cancel:${orderId}`
+    let result
+    try {
+      result =
+        order.status === 'paid'
+          ? await cancelOrderReturnWallet(orderId, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
+          : await refundOrderToWallet(orderId, dedupe)
+    } catch (moneyError: any) {
+      console.error('[SellerCancel] refund failed:', moneyError)
+      return { success: false, error: 'Cancelling failed. Nothing was changed, please try again.' }
+    }
+    if (result.refused) {
+      // Raced past the allowed states (delivered / disputed) under the lock.
+      return { success: false, error: 'This order can no longer be cancelled by the seller.' }
+    }
+    if (!result.changed) return { success: true } // replay: already cancelled
+
+    const reasonLabel = sellerCancelReasonLabel(reason) ?? 'Other'
+    const cleanNote = note?.trim() || undefined
+    await logOrderAction('cancelled', orderId, user.id, {
+      reason: 'seller_cancelled',
+      seller_reason: reason,
+      note: cleanNote ?? null,
+      refund_destination: 'wallet',
+    })
+    await postOrderSystemNotice(orderId, { type: 'order_cancelled', by: 'seller', reason: reasonLabel, note: cleanNote })
+
+    // Buyer comms: in-app + email. A comms failure never undoes the refund.
+    await (async () => {
+      const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
+      const amount = Number(order.total_amount ?? 0)
+      const service = createServiceRoleClient()
+      const { data: buyer } = await (service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', order.buyer_id)
+        .single() as any)
+      const { createNotification } = await import('@/lib/utils/notifications')
+      await createNotification({
+        userId: order.buyer_id,
+        type: 'order_refunded',
+        title: 'Order Cancelled By The Seller',
+        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your DropMarket wallet as store credit.`,
+        link: '/account/wallet',
+      })
+      if (buyer?.email) {
+        const { sendOrderRefundedEmail } = await import('@/lib/email')
+        await sendOrderRefundedEmail({
+          to: buyer.email,
+          name: buyer.full_name || buyer.username || 'Gamer',
+          orderNumber: orderRef,
+          listingTitle: await orderItemTitleFor(orderId),
+          amount,
+          destination: 'your DropMarket wallet',
+          pending: false,
+        })
+      }
+    })().catch((err) => console.error('[SellerCancel] comms failed:', err))
+
+    revalidatePath(`/account/orders/${orderId}`)
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in sellerCancelOrder:', error)
     return { success: false, error: error.message || 'Failed to cancel order' }
   }
 }

@@ -2,7 +2,7 @@
  * Server Actions for Order Cancellation Requests
  *
  * Handles buyer-initiated cancellation requests that require admin approval
- * Only available for orders with delivery time >= 6 hours, after 1 hour elapsed
+ * Only available for orders with delivery time >= 6 hours, an hour after payment
  */
 
 'use server'
@@ -10,7 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
-import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
+import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 // Money seams (CLAUDE.md): a cancellation's status move and the buyer's
 // wallet credit are ONE RPC each (order_cancel_return_wallet /
 // order_refund_to_wallet via lib/wallet/order-money), never composed here.
@@ -56,6 +56,8 @@ export async function createCancellationRequest(
         buyer_id,
         status,
         created_at,
+        paid_at,
+        delivered_at,
         listing:listings(
           id,
           delivery_time
@@ -73,41 +75,23 @@ export async function createCancellationRequest(
       return { error: { message: 'You can only request cancellation for your own orders' } }
     }
 
-    // Check order status is eligible
-    if (!['paid', 'processing', 'delivering', 'delivered'].includes(order.status)) {
-      return { error: { message: 'This order cannot be cancelled' } }
-    }
-
-    // Parse delivery time to hours
-    // Parsed by the shared util rather than substring matching. The old
-    // matcher knew a fixed list of strings and returned 0 for anything
-    // else — so the wizard's day windows ("2d".."7d") read as 0 hours
-    // and a 7-day listing failed the >= 6h check below. Every value the
-    // old matcher knew resolves to the same bucket here; unparseable
-    // values still fall back to 0 (ineligible), as before.
-    const getDeliveryHours = (deliveryTime?: string | null): number =>
-      parseDeliveryMinutes(deliveryTime, 0) / 60
-
-    // Check delivery time requirement (>= 6 hours)
-    const deliveryHours = getDeliveryHours(order.listing?.delivery_time)
-    if (deliveryHours < 6) {
-      return {
-        error: {
-          message: 'Cancellation requests are only available for orders with delivery time of 6 hours or more',
-        },
-      }
-    }
-
-    // Check time elapsed (>= 1 hour)
-    const hoursSinceOrder = Math.floor(
-      (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)
-    )
-    if (hoursSinceOrder < 1) {
-      return {
-        error: {
-          message: 'You must wait at least 1 hour after placing the order before requesting cancellation',
-        },
-      }
+    // Same rule the order page uses to show the button: paid/delivering and
+    // not delivered, a delivery time of 6 h+, an hour after payment.
+    const eligibility = cancelRequestEligibility({
+      status: order.status,
+      delivered_at: order.delivered_at,
+      paid_at: order.paid_at,
+      created_at: order.created_at,
+      deliveryTime: order.listing?.delivery_time,
+    })
+    if (!eligibility.eligible) {
+      const message =
+        eligibility.reason === 'short_delivery'
+          ? 'Cancellation requests are only available for orders with delivery time of 6 hours or more'
+          : eligibility.reason === 'too_soon'
+            ? 'You can request a cancellation one hour after paying'
+            : 'This order cannot be cancelled'
+      return { error: { message } }
     }
 
     // Check if a PENDING request already exists (allow new requests after undo/rejection)

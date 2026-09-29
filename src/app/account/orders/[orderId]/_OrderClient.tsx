@@ -23,6 +23,10 @@ import { AwaitingPaymentPanel } from './_AwaitingPaymentPanel'
 import { MarkDeliveredModal } from './_MarkDeliveredModal'
 import { MarkReceivedModal } from './_MarkReceivedModal'
 import { DisputeModal } from './_DisputeModal'
+import { CancelOrderModal } from './_CancelOrderModal'
+import { RequestCancelModal } from './_RequestCancelModal'
+import { cancelCancellationRequest } from '@/lib/actions/order-cancellation'
+import { toast } from 'sonner'
 import { AuditLog } from './_AuditLog'
 import { OrderChat } from './_OrderChat'
 import { DeliveryInstructions } from './_DeliveryInstructions'
@@ -50,6 +54,8 @@ interface OrderClientProps {
     paidWith: string | null
   } | null
   itemTitle: string
+  /** Buyer: Request Cancellation eligibility, and an already pending request. */
+  cancelRequest?: { eligible: boolean; pending: boolean } | null
   gameName: string | null
   gameIconUrl: string | null
   categoryName: string | null
@@ -83,6 +89,7 @@ export function OrderClient(props: OrderClientProps) {
     disputeUntil = null,
     itemImageUrl,
     paymentSummary = null,
+    cancelRequest = null,
     itemTitle,
     gameName,
     gameIconUrl,
@@ -141,6 +148,17 @@ export function OrderClient(props: OrderClientProps) {
   // component). The CTA injects through the StatusStrip prop.
   const [markDeliveredOpen, setMarkDeliveredOpen] = useState(false)
   const [markReceivedOpen, setMarkReceivedOpen] = useState(false)
+  const [cancelOrderOpen, setCancelOrderOpen] = useState(false)
+  const [requestCancelOpen, setRequestCancelOpen] = useState(false)
+  const withdrawCancelRequest = async () => {
+    const res = await cancelCancellationRequest(order.id)
+    if (res.error) {
+      toast.error(res.error.message)
+      return
+    }
+    toast.success('Cancellation request withdrawn')
+    router.refresh()
+  }
   // V21/P5.m — Review-only opens the same modal as Confirm Receipt
   // but with confirmation step suppressed. Cleaner than a separate
   // route + form duplicate.
@@ -394,6 +412,18 @@ export function OrderClient(props: OrderClientProps) {
                   ? () => setMarkDeliveredOpen(true)
                   : undefined
               }
+              onCancelOrder={
+                userRole === 'seller' && (order.status === 'paid' || order.status === 'delivering') && !deliveredAt
+                  ? () => setCancelOrderOpen(true)
+                  : undefined
+              }
+              cancelRequest={
+                userRole === 'buyer' && cancelRequest && (cancelRequest.pending || cancelRequest.eligible)
+                  ? cancelRequest.pending
+                    ? { state: 'pending', onWithdraw: withdrawCancelRequest }
+                    : { state: 'eligible', onRequest: () => setRequestCancelOpen(true) }
+                  : undefined
+              }
               onMarkReceived={
                 userRole === 'buyer' &&
                 (order.status === 'delivered' || (order.status === 'disputed' && buyerCanCloseDispute))
@@ -545,6 +575,14 @@ export function OrderClient(props: OrderClientProps) {
       </div>
 
       {userRole === 'seller' && (
+        <CancelOrderModal
+          open={cancelOrderOpen}
+          onOpenChange={setCancelOrderOpen}
+          orderId={order.id}
+          amount={Number(order.total_amount ?? 0)}
+        />
+      )}
+      {userRole === 'seller' && (
         <MarkDeliveredModal
           open={markDeliveredOpen}
           onOpenChange={setMarkDeliveredOpen}
@@ -555,6 +593,7 @@ export function OrderClient(props: OrderClientProps) {
       )}
       {userRole === 'buyer' && (
         <>
+          <RequestCancelModal open={requestCancelOpen} onOpenChange={setRequestCancelOpen} orderId={order.id} />
           <MarkReceivedModal
             open={markReceivedOpen}
             onOpenChange={setMarkReceivedOpen}

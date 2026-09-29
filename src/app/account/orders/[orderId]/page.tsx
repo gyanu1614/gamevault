@@ -27,6 +27,7 @@ import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
+import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
@@ -346,6 +347,26 @@ export default async function OrderDetailPage({ params }: PageProps) {
           }
         })()
       : null
+  // Buyer: may they ask DropMarket to cancel, and is a request already open?
+  let cancelRequest: { eligible: boolean; pending: boolean } | null = null
+  if (userRole === 'buyer') {
+    const { data: pendingRequest } = await (supabase
+      .from('order_cancellation_requests')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('status', 'pending')
+      .maybeSingle() as any)
+    cancelRequest = {
+      eligible: cancelRequestEligibility({
+        status: order.status,
+        delivered_at: (order as any).delivered_at,
+        paid_at: (order as any).paid_at,
+        created_at: order.created_at,
+        deliveryTime: order.listing?.delivery_time,
+      }).eligible,
+      pending: !!pendingRequest,
+    }
+  }
   const itemImageUrl = orderItemImage({
     categoryType: category?.type,
     currencyConfig: currencyCfg as any,
@@ -475,6 +496,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         disputeResolution={disputeResolution}
         itemImageUrl={itemImageUrl}
         paymentSummary={paymentSummary}
+        cancelRequest={cancelRequest}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}

@@ -26,6 +26,14 @@ export type SystemNotice =
       /** The seller's display name. */
       seller?: string
     }
+  | {
+      /** The seller cancelled a paid order; the buyer was refunded. */
+      type: 'order_cancelled'
+      by: 'seller'
+      /** Reason label ("Out Of Stock"). */
+      reason?: string
+      note?: string
+    }
 
 /** Content of the seller's proof-photo message (attachments carry the photo). */
 export const DELIVERY_EVIDENCE_LABEL = 'Delivery Evidence'
@@ -39,7 +47,10 @@ export function parseSystemNotice(content: string): SystemNotice | null {
     const v = JSON.parse(content)
     return v &&
       typeof v === 'object' &&
-      (v.type === 'dispute_opened' || v.type === 'dispute_resolved' || v.type === 'order_delivered')
+      (v.type === 'dispute_opened' ||
+        v.type === 'dispute_resolved' ||
+        v.type === 'order_delivered' ||
+        v.type === 'order_cancelled')
       ? v
       : null
   } catch {
@@ -53,6 +64,7 @@ export function systemNoticePreview(content: string): string {
   if (!n) return 'DropMarket update'
   if (n.type === 'dispute_opened') return 'Dispute opened'
   if (n.type === 'order_delivered') return 'Order delivered'
+  if (n.type === 'order_cancelled') return 'Order cancelled by the seller'
   if (n.resolvedBy === 'buyer') return 'Dispute closed by the buyer'
   return 'Dispute resolved'
 }

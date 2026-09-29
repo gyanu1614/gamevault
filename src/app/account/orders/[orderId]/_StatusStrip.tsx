@@ -23,6 +23,7 @@ import {
   MessagesSquare,
   Undo2,
   TimerOff,
+  Ban,
 } from 'lucide-react'
 import Link from 'next/link'
 import { OrderCard } from './_OrderCard'
@@ -41,6 +42,13 @@ interface StatusStripProps {
   disputeHref?: string
   /** Seller only: opens the Mark As Delivered modal. */
   onMarkDelivered?: () => void
+  /** Seller only (paid / delivering, not yet delivered): opens Cancel Order. */
+  onCancelOrder?: () => void
+  /** Buyer only: Request Cancellation (eligible) or an open request to
+   *  withdraw (pending). */
+  cancelRequest?:
+    | { state: 'eligible'; onRequest: () => void }
+    | { state: 'pending'; onWithdraw: () => void }
   /** Buyer only: opens the Confirm Receipt modal. */
   onMarkReceived?: () => void
   /** Buyer only: opens the review form (status=completed). */
@@ -220,6 +228,8 @@ export function StatusStrip({
   overdue,
   disputeHref = '#',
   onMarkDelivered,
+  onCancelOrder,
+  cancelRequest,
   onMarkReceived,
   onLeaveReview,
   onOpenDispute,
@@ -445,9 +455,13 @@ export function StatusStrip({
 
   // Nothing to click here (no CTA, no dispute link, no wallet link): on a
   // phone the status card above already says the same thing.
+  const showCancelOrder = role === 'seller' && (status === 'paid' || status === 'delivering') && !!onCancelOrder
+  const buyerCancel = role === 'buyer' && (status === 'paid' || status === 'delivering') ? cancelRequest : undefined
   const isPassive =
     !ctaLabel &&
     !showDisputeButton &&
+    !showCancelOrder &&
+    !buyerCancel &&
     !(role === 'buyer' && (status === 'refunded' || (status === 'cancelled' && escrowStatus === 'refunded')))
 
   return (
@@ -464,8 +478,25 @@ export function StatusStrip({
       </span>
       <div className="min-w-0 flex-1 leading-tight">
         <div className={cn(sTitle, 'font-bold text-text-primary')}>{renderedTitle}</div>
-        <div className={cn('mt-0.5 text-text-secondary', sCaption)}>{caption}</div>
+        <div className={cn('mt-0.5 text-text-secondary', sCaption)}>
+          {buyerCancel?.state === 'pending' ? 'Cancellation requested. DropMarket is reviewing it.' : caption}
+        </div>
       </div>
+      {buyerCancel && (
+        <button
+          type="button"
+          onClick={buyerCancel.state === 'pending' ? buyerCancel.onWithdraw : buyerCancel.onRequest}
+          className={cn(
+            'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border-default bg-white/[0.02] font-semibold text-text-secondary transition-colors',
+            'hover:border-white/25 hover:text-text-primary',
+            promoted ? 'px-4 py-2.5 text-[13.5px]' : 'px-3 py-1.5 text-[12px]',
+            'max-sm:min-h-[44px] max-sm:basis-full max-sm:py-3',
+          )}
+        >
+          <Ban className={sCtaGlyph} aria-hidden />
+          {buyerCancel.state === 'pending' ? 'Withdraw Request' : 'Request Cancellation'}
+        </button>
+      )}
       {showDisputeButton && (
         <DisputeCTA
           onOpenDispute={onOpenDispute}
@@ -473,6 +504,21 @@ export function StatusStrip({
           tone="amber"
           size={promoted ? 'lg' : 'sm'}
         />
+      )}
+      {showCancelOrder && (
+        <button
+          type="button"
+          onClick={onCancelOrder}
+          className={cn(
+            'inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border-default bg-white/[0.02] font-semibold text-text-secondary transition-colors',
+            'hover:border-red-400/40 hover:text-red-400',
+            promoted ? 'px-4 py-2.5 text-[13.5px]' : 'px-3 py-1.5 text-[12px]',
+            'max-sm:min-h-[44px] max-sm:basis-full max-sm:py-3',
+          )}
+        >
+          <XCircle className={sCtaGlyph} aria-hidden />
+          Cancel Order
+        </button>
       )}
       {ctaLabel && (
         <button type="button" onClick={ctaOnClick} className={cn('ml-1', sCtaCls)}>
