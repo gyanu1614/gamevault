@@ -3,20 +3,20 @@
 **Date:** 2026-09-26 · **Branch:** `feat/checkout-regions` (worktree `../gamevault-checkout-regions`, own stack) · **PR:** https://github.com/gyanu1614/gamevault/pull/102 · No migration, no RPC change, no server change: the page still renders from `eligibleMethods()` and `createCheckout` still refuses anything the page would not show.
 
 ## What changed (approved 2026-09-26)
-- **Tabs gone.** The Crypto | E-Wallet | Card (soon) bar and the country dropdown are replaced by ONE flat list of rectangular rows (radio · label · one-line note · quoted fee · brand mark tile), in the screenshot's layout on our light ivory/forest theme.
+- **Tabs gone.** The Crypto | E-Wallet | Card (soon) bar and the country dropdown are replaced by ONE flat list of thin rectangular rows in the reference layout (brand mark tile on the left · name · tick on the right), on our light ivory/forest theme. Rows carry NO fee line and NO country note (owner call 2026-09-28): the processing fee shows only in the order summary. Gray hover, ivory fill + forest tick on the pick.
 - **Region, not country.** `src/lib/payments/regions.ts` (pure, client-safe, unit-tested): Europe (EU/EEA/UK/CH + the rest of geographic Europe), Latin America, Southeast Asia, Rest of World. The buyer's region comes from the geo country (`?country=XX` still overrides for testing); a "Paying From" chip row switches region and shows only regions that have a rail (Rest of World only while current).
 - **Order:** rails local to the buyer's own country → the rest of the region's rails (note = flag + country) → **Cryptocurrency last**. No rails → Cryptocurrency is the first and only row. Rest of World never spills (a US buyer sees crypto only; an Australian sees paysafecard). Romania: Trustly, paysafecard, then BLIK / P24 / EPS / MB Way / BANCOMAT Pay / PayU, then Cryptocurrency.
-- **Cryptocurrency row** shows the coin marks on the right and expands inline (coin tiles → network → send warning, unchanged logic) when picked; the note shows the chosen coin · network.
+- **Crypto row** (orange Bitcoin tile, label "Crypto") is always last and expands inline (coin tiles → network → send warning, unchanged logic) when picked.
 - **Default pick** = the first row (a local rail when there is one, else crypto); switching region re-picks the new first row unless the current pick is still listed.
 - **Logos** for the 8 EU rails in `public/payments/` (sources + terms in `public/payments/ATTRIBUTION.md`: datatrans payment-logos, Wikimedia Commons, Mollie icon set). `loading.tsx` skeleton matches the rows.
-- Phones: the fee moves under the label and the note hides so no label clips; no horizontal overflow at 375 px.
+- Phones: tile + name + tick only, nothing to clip; no horizontal overflow at 375 px.
 
 ## Copy (new / changed customer-facing strings)
 | Surface | Old | New |
 |---|---|---|
 | Selector | tabs "Crypto" / "E-Wallet" / "Card · Soon"; "Choose Your Country" / "Paying From Another Country?"; empty states "Local Methods Are Country-Specific…", "No Local Methods for … Yet" | chip row label **"Paying From"** + region names "Europe", "Latin America", "Southeast Asia", "Rest of World" |
-| Crypto row | tab "Crypto" + panel "Choose Coin" | row **"Cryptocurrency"**, note **"USDT or Bitcoin, from any wallet"** (→ "Tether USDT · TRON · TRC20" once picked); "Choose Coin" kept inside |
-| Regional rail note | country chip only when it differed from the pin | **"🇵🇱 Poland"** (flag + coverage) on every rail outside the buyer's country |
+| Crypto row | tab "Crypto" + panel "Choose Coin" | row **"Crypto"**; "Choose Coin" kept inside the expanded picker |
+| Rail rows | label + region chip + "+ $x.xx · n%" fee line | label only (fee and country note removed; the fee lives in the order summary) |
 | Empty | — | "No Payment Methods Available" / "This order can’t be paid right now — please try again shortly." (only when neither crypto nor a rail is payable) |
 
 ## Tests

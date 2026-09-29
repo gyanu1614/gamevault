@@ -559,11 +559,6 @@ function toRow(m: ClientMethod): LocalMethodRow {
 }
 
 /** "+ $1.20 · 5%" — the tile / badge fee line (checkout B3). */
-function fmtFeeLine(q: ClientMethod['quote'] | null | undefined): string {
-  if (!q) return ''
-  const pct = q.pctEffective == null ? '' : ` · ${Number(q.pctEffective).toFixed(2).replace(/\.?0+$/, '')}%`
-  return `+ $${(q.feeMinor / 100).toFixed(2)}${pct}`
-}
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
 
@@ -891,129 +886,73 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  const radioDot = (checked: boolean) => (
+  /** Right-hand pick mark: an empty ring, or a filled forest disc with a tick. */
+  const pickMark = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
-      style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.disLine}` }}
+      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full transition-colors"
+      style={checked ? { background: T.forest } : { boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
     >
-      {checked && <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />}
+      {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
     </span>
   )
 
-  /** Row surface: hairline edge, a soft top highlight and a faint lift —
-   *  the forest ring marks the pick. */
-  const rowSurface = (checked: boolean) =>
-    checked
-      ? `inset 0 0 0 1.5px ${T.forest}, inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 2px rgba(20,29,25,0.05)`
-      : `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(20,29,25,0.04)`
+  /** Row surface: hairline edge, soft top highlight; the pick fills ivory. */
   const rowClass = (checked: boolean) =>
-    cn('rounded-lg transition-[box-shadow,background-color] duration-150', checked ? 'bg-[#FAFAF7]' : 'bg-white hover:bg-[#FCFCFA]')
+    cn(
+      'rounded-lg transition-[background-color,box-shadow] duration-150',
+      checked ? 'bg-[#F3F3ED]' : 'bg-white hover:bg-[#F6F6F1]'
+    )
+  const rowSurface = () => `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(20,29,25,0.04)`
 
-  /** The brand mark in a small white tile (the row's icon, tinted, when a
-   *  method has no logo yet). */
-  const markTile = (m: LocalMethodRow) => (
+  /** The brand mark in a square white tile on the left (the row's icon,
+   *  tinted, when a method has no logo yet). */
+  const markTile = (logo: string | undefined, Icon: typeof Smartphone) => (
     <span
-      className="grid h-9 w-14 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
+      className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
       style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
     >
-      {m.logo ? (
+      {logo ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={m.logo} alt="" className="h-full w-full object-contain p-1" />
+        <img src={logo} alt="" className="h-full w-full object-contain p-1" />
       ) : (
-        <m.Icon className="h-[18px] w-[18px]" style={{ color: T.forest }} />
+        <Icon className="h-[18px] w-[18px]" style={{ color: T.forest }} />
       )}
     </span>
   )
 
-  const renderMethodRow = (m: LocalMethodRow, scope: 'local' | 'regional') => {
+  const rowButton = 'flex w-full items-center gap-3.5 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40'
+
+  const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
-    // An own-country row already says its first point in the subtitle.
-    const detailPoints = scope === 'local' ? m.points.slice(1) : m.points
     return (
-      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={checked}
-          onClick={() => setPayMethod(m.id)}
-          className="flex w-full items-center gap-3 rounded-lg p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40"
-        >
-          {radioDot(checked)}
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold" style={{ color: T.ink }}>
-              {m.label}
-            </span>
-            {/* Own-country rails say how they pay; regional rails say where they
-                are local. On phones the fee takes this line so the label never clips. */}
-            <span className="mt-0.5 hidden truncate text-[12.5px] sm:block" style={{ color: T.ink2 }}>
-              {scope === 'local' ? m.points[0] : `${m.flag} ${m.region}`}
-            </span>
-            <span className="mt-0.5 block text-[12px] font-semibold tabular-nums sm:hidden" style={{ color: T.ink2 }}>
-              {fmtFeeLine(m.quote)}
-            </span>
+      <div className={rowClass(checked)} style={{ boxShadow: rowSurface() }}>
+        <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
+          {markTile(m.logo, m.Icon)}
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+            {m.label}
           </span>
-          {/* Fee line (checkout B3): the database's quote for THIS order. */}
-          <span className="hidden whitespace-nowrap text-[12px] font-semibold tabular-nums sm:inline" style={{ color: T.ink2 }}>
-            {fmtFeeLine(m.quote)}
-          </span>
-          {markTile(m)}
+          {pickMark(checked)}
         </button>
-        {checked && detailPoints.length > 0 && (
-          <div className="border-t px-4 pb-3.5 pt-3" style={{ borderColor: T.line }}>
-            <ul className="flex flex-col gap-1.5">
-              {detailPoints.map((pt) => (
-                <li key={pt} className="flex items-center gap-2 text-[12.5px]" style={{ color: T.ink2 }}>
-                  <Check className="h-3.5 w-3.5 shrink-0" style={{ color: T.forest }} />
-                  {pt}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     )
   }
 
-  // Cryptocurrency: always the last row; opens the coin picker when picked.
+  // Crypto: always the last row; opens the coin picker when picked.
   const cryptoChecked = payMethod === 'crypto'
   const cryptoRow = cryptoMethod && (
-    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
-      <button
-        type="button"
-        role="radio"
-        aria-checked={cryptoChecked}
-        onClick={() => setPayMethod('crypto')}
-        className="flex w-full items-center gap-3 rounded-lg p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40"
-      >
-        {radioDot(cryptoChecked)}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold" style={{ color: T.ink }}>
-            Cryptocurrency
-          </span>
-          <span className="mt-0.5 hidden truncate text-[12.5px] sm:block" style={{ color: T.ink2 }}>
-            {coin
-              ? `${COINS.find((c) => c.value === coin)?.label ?? ''}${coin === 'usdt' ? ` · ${selectedNet.label}` : ''}`
-              : 'USDT or Bitcoin, from any wallet'}
-          </span>
-          <span className="mt-0.5 block text-[12px] font-semibold tabular-nums sm:hidden" style={{ color: T.ink2 }}>
-            {fmtFeeLine(cryptoMethod.quote)}
-          </span>
+    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface() }}>
+      <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
+          style={{ background: '#F7931A' }}
+        >
+          <Image src="/crypto/btc.svg" alt="" width={24} height={24} unoptimized />
         </span>
-        <span className="hidden whitespace-nowrap text-[12px] font-semibold tabular-nums sm:inline" style={{ color: T.ink2 }}>
-          {fmtFeeLine(cryptoMethod.quote)}
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+          Crypto
         </span>
-        <span className="flex shrink-0 gap-1.5">
-          {COINS.map((c) => (
-            <span
-              key={c.value}
-              className="grid h-9 w-9 place-items-center rounded-md bg-white"
-              style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
-            >
-              <Image src={c.icon} alt="" width={20} height={20} unoptimized />
-            </span>
-          ))}
-        </span>
+        {pickMark(cryptoChecked)}
       </button>
       {cryptoChecked && (
         <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
@@ -1072,12 +1011,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <AnimatePresence initial={false} mode="popLayout">
             {localRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
-                {renderMethodRow(m, 'local')}
+                {renderMethodRow(m)}
               </motion.div>
             ))}
             {regionalRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
-                {renderMethodRow(m, 'regional')}
+                {renderMethodRow(m)}
               </motion.div>
             ))}
             {cryptoRow && (

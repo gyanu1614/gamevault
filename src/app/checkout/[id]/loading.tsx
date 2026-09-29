@@ -58,16 +58,12 @@ export default function CheckoutLoading() {
               <Block className="h-8 w-28 rounded-md" />
             </div>
 
-            {/* Method rows: radio + label/sub + fee + mark tile */}
+            {/* Method rows: mark tile + label + pick mark */}
             {[0, 1, 2].map((i) => (
-              <Card key={i} className="mt-3 flex items-center gap-3 p-4">
-                <Block className="h-[18px] w-[18px] rounded-full" />
-                <div className="min-w-0 flex-1">
-                  <Block className="h-4 w-28" />
-                  <Block className="mt-1.5 h-3 w-40" />
-                </div>
-                <Block className="h-3 w-16" />
-                <Block className="h-9 w-14 rounded-md" />
+              <Card key={i} className="mt-3 flex items-center gap-3.5 px-4 py-3">
+                <Block className="h-10 w-10 rounded-md" />
+                <Block className="h-4 w-28 flex-1" />
+                <Block className="h-[22px] w-[22px] rounded-full" />
               </Card>
             ))}
 
