@@ -47,6 +47,7 @@ export default async function AdminDashboardPage() {
       admin={admin}
       stats={stats}
       activities={activities}
+      activityFailed={!activityResult.success}
     />
   )
 }

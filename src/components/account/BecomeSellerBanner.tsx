@@ -51,7 +51,7 @@ export default function BecomeSellerBanner() {
               <Users className="w-8 h-8 text-blue-400 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-white mb-2">SafeDrop Protection</h3>
               <p className="text-sm text-text-secondary">
-                Secure transactions with built-in buyer protection
+                Secure transactions with built-in order protection
               </p>
             </div>
           </div>
