@@ -73,7 +73,15 @@
   --color-state-hover:     rgba(255,255,255,0.04);
   --color-state-pressed:   rgba(255,255,255,0.07);
   --color-state-selected:  rgba(86,184,127,0.12);
-  --color-focus-ring:      rgba(86,184,127,0.55);
+  /* Focus — NEUTRAL, never the accent (owner rule 2026-09-26). A focused
+     control reads as "lit", not "green": a thin near-white ring, or the
+     field's own border brightening. Use these tokens (Tailwind: ring-focus-ring,
+     ring-focus-soft, border-focus-border, shadow-focus) — never lime/accent
+     classes on a focus/focus-visible/focus-within state. */
+  --color-focus-ring:      rgba(233,237,242,0.45);
+  --color-focus-ring-soft: rgba(233,237,242,0.12);
+  --color-focus-border:    rgba(233,237,242,0.36);
+  --shadow-focus:          0 0 0 1.5px var(--color-focus-ring);
 
   /* ── Typography — Families (vars injected by next/font/local in layout.tsx) ── */
   /* --font-display = Inter 800/900 (headings), --font-body = Inter 400/500/600 (body/UI), --font-mono = JetBrains Mono */

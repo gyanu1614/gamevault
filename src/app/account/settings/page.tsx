@@ -84,7 +84,7 @@ function SectionCard({ children, className }: { children: React.ReactNode; class
 // project's lime-tinted ring so focus matches the rest of the site.
 // Mobile-audit — text-base (16px) below sm so iOS Safari doesn't auto-zoom
 // + pan on input focus (worst inside the email-change bottom sheet).
-const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
+const inputCls = 'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all'
 
 const usd = (n: number) =>
   (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })

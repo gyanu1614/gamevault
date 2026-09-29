@@ -403,7 +403,7 @@ function SellerCard({
           value={s.status}
           disabled={busy}
           onChange={(e) => onChangeStatus(s.id, e.target.value as EarlySellerStatus)}
-          className="flex-1 rounded-lg border border-border-default bg-bg-overlay px-2.5 py-2 text-[12.5px] font-medium text-text-primary focus:border-lime focus:outline-none disabled:opacity-40"
+          className="flex-1 rounded-lg border border-border-default bg-bg-overlay px-2.5 py-2 text-[12.5px] font-medium text-text-primary focus:border-focus-border focus:outline-none disabled:opacity-40"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>{STATUS_LABEL[opt]}</option>

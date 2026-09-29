@@ -15,6 +15,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { transition } from '@/lib/escrow/transition'
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 export interface AutoReleaseResult {
   orderId: string
@@ -84,7 +85,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     // the release as failed.
     try {
       const orderRef = full.order_number || full.id.slice(0, 8).toUpperCase()
-      const listingTitle = full.listing?.title || 'your item'
+      const listingTitle = await orderItemTitleFor(full.id, full.listing?.title || 'your item')
       const { data: parties } = await service
         .from('profiles')
         .select('id, email, username, full_name')

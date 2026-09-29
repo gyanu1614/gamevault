@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
+import { Loader2, PackageCheck, XCircle } from 'lucide-react'
 import MessageBubble from './MessageBubble'
 import OrderMessageCard from './OrderMessageCard'
 import DisputeSystemCard from './DisputeSystemCard'
 import DisputeResolvedCard from './DisputeResolvedCard'
+import ChatNotice from './ChatNotice'
 import { createClient } from '@/lib/supabase/client'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { isSystemMessage, parseSystemNotice } from '@/lib/chat/system-notice'
@@ -240,6 +241,23 @@ export default function MessageList({
                 if (notice?.type === 'dispute_opened') {
                   return (
                     <DisputeSystemCard key={message.id} category={notice.category ?? ''} reason={notice.reason ?? ''} />
+                  )
+                }
+                if (notice?.type === 'order_delivered') {
+                  return (
+                    <ChatNotice key={message.id} icon={PackageCheck} tone="lime" title="Order Delivered">
+                      {notice.seller ? `${notice.seller} marked the order delivered.` : 'The seller marked the order delivered.'}{' '}
+                      Buyer, please check you received your items, then confirm delivery.
+                    </ChatNotice>
+                  )
+                }
+                if (notice?.type === 'order_cancelled') {
+                  return (
+                    <ChatNotice key={message.id} icon={XCircle} tone="neutral" title="Order Cancelled By The Seller">
+                      {notice.reason && <p>Reason: {notice.reason}</p>}
+                      {notice.note && <p className="line-clamp-2 text-text-tertiary">{notice.note}</p>}
+                      <p>The buyer was refunded in full to their DropMarket wallet.</p>
+                    </ChatNotice>
                   )
                 }
                 if (notice?.type === 'dispute_resolved') {

@@ -143,7 +143,7 @@ export default function ItemCard({
       <Link
         href={href}
         aria-label={offer.name}
-        className="absolute inset-0 z-0 pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg"
+        className="absolute inset-0 z-0 pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-soft"
       />
       {/* Top sheen — faint light falling from above (bundle-tile look).
           Sits after the stretched link in the DOM so it paints above the

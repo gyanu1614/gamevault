@@ -42,10 +42,10 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number'
-import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { countByStatusGroup, inStatusGroup, type OrderStatusGroup } from '@/lib/orders/status-groups'
-import { useCurrencyMeta } from '@/hooks/use-currency-meta'
+import { currencyMetaConfig, useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
 type ViewTab = 'purchases' | 'sales'
@@ -200,7 +200,10 @@ function OrdersContent() {
   const queryClient = useQueryClient()
 
   // Determine which orders to show based on active tab
-  const dbOrders = activeTab === 'purchases' ? buyerOrders : sellerOrders || []
+  const dbOrders = useMemo(
+    () => (activeTab === 'purchases' ? buyerOrders : sellerOrders) ?? [],
+    [activeTab, buyerOrders, sellerOrders],
+  )
   // K/M currency games count quantities in thousands/millions; the title
   // formatter needs each game's currency config.
   const currencyMeta = useCurrencyMeta(
@@ -689,7 +692,7 @@ function OrdersContent() {
               placeholder="Search listings…"
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-lime-tint-border focus:outline-none focus:ring-2 focus:ring-lime/20 sm:text-sm"
+              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-sm"
             />
             {filters.searchQuery && (
               <button
@@ -858,7 +861,6 @@ function OrdersContent() {
                     {filteredOrders.map((order) => {
                       const otherParty = activeTab === 'purchases' ? (order as any).seller : (order as any).buyer
                       const gameData = order.listing?.game || (order as any).game
-                      const displayImage = order.listing?.images?.[0] || gameData?.image_url
                       const gameName = gameData?.name
                       const disputeResolution = disputeResolutions[order.id]
                       const hasDisputeResolution = order.status === 'completed' && disputeResolution
@@ -880,16 +882,29 @@ function OrdersContent() {
                       const qty = (order as any).quantity ?? 1
                       const cat = (order as any).listing?.category
                       const meta = order.listing?.game_id ? currencyMeta[order.listing.game_id] : undefined
-                      // "2,000 - Roblox Robux" / "3 × Dragon Pet", same rule as the order page.
+                      const currencyCfg = currencyMetaConfig(meta)
+                      const bundleId = (order as any).listing?.bundle_id ?? null
+                      // "50 Diamonds" / "2,000 Robux" / "3 × Dragon Pet": the item
+                      // only, same rule as the order page (game name sits below).
                       const rowTitle = order.listing?.title
-                        ? orderDisplayTitle({
-                            title: order.listing.title,
+                        ? orderItemTitle({
+                            listingTitle: order.listing.title,
                             quantity: qty,
-                            isCurrency: cat?.type === 'currency',
-                            granularity: meta?.granularity ?? null,
-                            hasBundles: meta?.hasBundles ?? false,
+                            categoryType: cat?.type,
+                            currencyConfig: currencyCfg,
+                            bundleId,
                           })
                         : gameName || 'Order'
+                      // The item's picture (bundle / currency icon or listing
+                      // image), falling back to the game art only when the
+                      // item has none, so the row is never blank.
+                      const displayImage =
+                        orderItemImage({
+                          categoryType: cat?.type,
+                          currencyConfig: currencyCfg,
+                          bundleId,
+                          listingImage: order.listing?.images?.[0] ?? null,
+                        }) || gameData?.image_url
                       // Sold tab: what the SELLER gets — 0 if refunded, what they
                       // kept after a partial refund, else seller_payout.
                       // Same rule as the wallet's Sales list (wallet-rows.ts).

@@ -66,7 +66,7 @@ export function ListingCard({ listing }: { listing: LatestListing }) {
         // `isolation` keeps the glow's stacking inside the card rather than
         // letting it fall behind the section's grid backdrop.
         style={{
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-card)',
           isolation: 'isolate',
           // An opaque fill is load-bearing, not decoration: the section has a
           // grid backdrop, and a transparent card lets it show through the

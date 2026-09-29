@@ -209,7 +209,7 @@ export default function FoundingNoticesClient({ initialNotices }: Props) {
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value.slice(0, TITLE_MAX) })}
             placeholder="You get paid even if the buyer bails"
-            className="mb-1 w-full rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] text-text-primary outline-none focus:border-lime"
+            className="mb-1 w-full rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] text-text-primary outline-none focus:border-focus-border"
           />
           <div className="mb-4 text-right text-[11px] text-text-tertiary">{draft.title.length}/{TITLE_MAX}</div>
 
@@ -219,7 +219,7 @@ export default function FoundingNoticesClient({ initialNotices }: Props) {
             onChange={(e) => setDraft({ ...draft, body: e.target.value.slice(0, BODY_MAX) })}
             placeholder="SafeDrop holds their money until you've delivered. No going first, no getting burned."
             rows={4}
-            className="mb-1 w-full resize-y rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] leading-relaxed text-text-primary outline-none focus:border-lime"
+            className="mb-1 w-full resize-y rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] leading-relaxed text-text-primary outline-none focus:border-focus-border"
           />
           <div className="mb-4 text-right text-[11px] text-text-tertiary">{draft.body.length}/{BODY_MAX}</div>
 

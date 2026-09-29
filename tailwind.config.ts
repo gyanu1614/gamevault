@@ -151,6 +151,13 @@ const config: Config = {
           selected: 'var(--color-state-selected)',
         },
         'focus-ring':         'var(--color-focus-ring)',
+        // Focus states are neutral, never lime: ring-focus-ring (solid),
+        // ring-focus-soft (halo), border-focus-border (field border).
+        focus: {
+          ring:   'var(--color-focus-ring)',
+          soft:   'var(--color-focus-ring-soft)',
+          border: 'var(--color-focus-border)',
+        },
 
         // Extended violet palette
         violet: {
@@ -227,6 +234,7 @@ const config: Config = {
         elevated:     'var(--shadow-elevated)',
         glow:         'var(--shadow-glow)',
         'focus-ring': '0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-focus-ring)',
+        focus: 'var(--shadow-focus)',
         // Legacy — kept for existing components
         'glow-violet':'0 0 20px rgba(139, 92, 246, 0.35)',
         'glow-lg':    '0 0 40px rgba(139, 92, 246, 0.25)',

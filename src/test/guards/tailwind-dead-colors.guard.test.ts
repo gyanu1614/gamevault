@@ -30,23 +30,10 @@ import tailwindConfig from '../../../tailwind.config'
 const ROOT = path.resolve(__dirname, '../../..')
 const SRC = path.join(ROOT, 'src')
 
-const HERO = 'feat/hero-scroll-film rewrites this focus line to the neutral focus tokens'
-
 /** Dead tokens on lines another branch owns (a folder, or one token in a file).
  *  Each entry must still fire — delete it once that branch lands (the stale
  *  check below fails until you do). */
-const PENDING: { path: string; token?: string; owner: string }[] = [
-  { path: 'src/app/account/orders/[orderId]/', owner: 'fix/order-page-polish rewrites this folder and its status components' },
-  { path: 'src/components/navbar-floating.tsx', token: 'hover:bg-lime/90', owner: 'feat/hero-scroll-film edits navbar-floating.tsx' },
-  { path: 'src/components/chat/MessageInput.tsx', token: 'focus-visible:ring-lime/30', owner: HERO },
-  { path: 'src/app/(admin)/admin/blog/BlogBodyEditor.tsx', token: 'focus:border-lime/60', owner: HERO },
-  { path: 'src/app/(admin)/admin/blog/BlogEditor.tsx', token: 'focus:border-lime/60', owner: HERO },
-  { path: 'src/app/account/become-seller/components/shared/PhoneInput.tsx', token: 'focus:ring-lime/30', owner: HERO },
-  { path: 'src/app/account/orders/page.tsx', token: 'focus:ring-lime/20', owner: HERO },
-  { path: 'src/app/account/wallet/_WalletClient.tsx', token: 'focus:ring-lime/20', owner: HERO },
-  { path: 'src/app/account/wallet/withdraw/page.tsx', token: 'focus:ring-lime/20', owner: HERO },
-  { path: 'src/app/dev/hero-preview/page.tsx', token: 'focus-within:border-lime/50', owner: HERO },
-]
+const PENDING: { path: string; token?: string; owner: string }[] = []
 
 const UTILITY =
   '(?:bg|text|border(?:-[xytrblse])?|ring(?:-offset)?|from|to|via|fill|stroke|divide|outline|shadow|decoration|caret|accent|placeholder)'

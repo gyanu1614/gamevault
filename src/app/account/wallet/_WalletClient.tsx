@@ -6,6 +6,7 @@ import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAllRows, chunk } from '@/lib/db/fetch-all'
+import { orderItemImage, orderItemTitle, type CurrencyTitleConfig } from '@/lib/orders/display-title'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { createTopUpCheckout } from '@/lib/actions/wallet'
 import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
@@ -85,11 +86,14 @@ async function fetchPurchases(userId: string) {
         total_amount,
         status,
         created_at,
+        quantity,
         listing:listing_id (
           title,
           images,
+          game_id,
+          bundle_id,
           game:game_id (name, emoji, image_url),
-          category:game_categories!listings_game_category_id_fkey (name)
+          category:game_categories!listings_game_category_id_fkey (name, type)
         )
       `)
       .eq('buyer_id', userId)
@@ -104,9 +108,11 @@ async function fetchPurchases(userId: string) {
   }
 
   const orders = (rawOrders || []) as any[]
+  const currencyCfgs = await currencyConfigsFor(supabase, orders)
 
   const transactions: PurchaseTransaction[] = orders.map(order => {
     const listing = order.listing as any
+    const item = itemOf(order, currencyCfgs)
     return {
       id: order.id,
       amount: order.total_amount || 0,
@@ -115,14 +121,14 @@ async function fetchPurchases(userId: string) {
       platformFee: 0,
       netAmount: 0,
       status: order.status as any,
-      title: listing?.title || 'Game Item',
+      title: item.title,
       orderId: order.id,
       orderNumber: order.order_number,
       createdAt: order.created_at,
       gameName: listing?.game?.name,
       gameEmoji: listing?.game?.emoji,
       gameImageUrl: listing?.game?.image_url,
-      listingImageUrl: Array.isArray(listing?.images) ? listing.images[0] : null,
+      listingImageUrl: item.image,
       categoryName: listing?.category?.name,
     }
   }) as any
@@ -165,12 +171,15 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
         total_amount,
         status,
         created_at,
+        quantity,
         buyer:profiles!buyer_id(username),
         listing:listing_id (
           title,
           images,
+          game_id,
+          bundle_id,
           game:game_id (name, emoji, image_url),
-          category:game_categories!listings_game_category_id_fkey (name)
+          category:game_categories!listings_game_category_id_fkey (name, type)
         )
       `)
       .eq('seller_id', userId)
@@ -218,6 +227,7 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
     }
   }
 
+  const currencyCfgs = await currencyConfigsFor(supabase, rows)
   return rows.map(order => {
     const { amount, platformFee, netAmount } = saleRowAmounts(order, kept.get(order.id))
     return {
@@ -230,17 +240,64 @@ async function fetchSales(userId: string): Promise<SaleTransaction[]> {
     netAmount,
     status: order.status,
     createdAt: order.created_at,
-    listingTitle: order.listing?.title || 'N/A',
+    listingTitle: itemOf(order, currencyCfgs).title,
     gameName: order.listing?.game?.name,
     gameEmoji: order.listing?.game?.emoji,
     gameImageUrl: order.listing?.game?.image_url,
-    listingImageUrl: order.listing?.images?.[0],
+    listingImageUrl: itemOf(order, currencyCfgs).image,
     categoryName: order.listing?.category?.name,
     }
   })
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+/** Currency configs (name, icon, bundles) for the currency games in `orders`,
+ *  so each row names what was sold ("50 Diamonds") like the order page. */
+async function currencyConfigsFor(
+  supabase: ReturnType<typeof createClient>,
+  orders: any[],
+): Promise<Record<string, CurrencyTitleConfig>> {
+  const ids = Array.from(
+    new Set(
+      orders
+        .filter((o) => o.listing?.category?.type === 'currency' && o.listing?.game_id)
+        .map((o) => o.listing.game_id as string),
+    ),
+  )
+  if (ids.length === 0) return {}
+  const out: Record<string, CurrencyTitleConfig> = {}
+  for (const part of chunk(ids)) {
+    const { data } = await supabase
+      .from('category_configs')
+      .select('game_id, unit_label:config->>unit_label, quantity_granularity:config->>quantity_granularity, currency_icon_url:config->>currency_icon_url, bundles:config->bundles')
+      .eq('category_type', 'currency')
+      .in('game_id', part)
+    for (const r of (data ?? []) as any[]) out[r.game_id] = r
+  }
+  return out
+}
+
+function itemOf(order: any, cfgs: Record<string, CurrencyTitleConfig>) {
+  const listing = order.listing ?? {}
+  const cfg = listing.game_id ? cfgs[listing.game_id] ?? null : null
+  const categoryType = listing.category?.type ?? null
+  return {
+    title: orderItemTitle({
+      listingTitle: listing.title ?? 'Game Item',
+      quantity: order.quantity ?? 1,
+      categoryType,
+      currencyConfig: cfg,
+      bundleId: listing.bundle_id ?? null,
+    }),
+    image: orderItemImage({
+      categoryType,
+      currencyConfig: cfg,
+      bundleId: listing.bundle_id ?? null,
+      listingImage: Array.isArray(listing.images) ? listing.images[0] ?? null : null,
+    }),
+  }
+}
 
 function timeAgo(date: string) {
   const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -754,7 +811,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
             placeholder={activeTab === 'purchases' ? 'Search by item, game, order…' : 'Search by item, buyer, order…'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-1 focus:ring-lime/20 transition-all"
+            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-1 focus:ring-focus-soft transition-all"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors">
@@ -766,7 +823,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-lime focus:outline-none transition-all"
+            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-focus-border focus:outline-none transition-all"
           >
             <option value="all">All Status</option>
             <option value="in_progress">In Progress</option>

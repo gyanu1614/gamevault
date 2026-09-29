@@ -84,7 +84,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-lime focus:outline-none"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-focus-border focus:outline-none"
               />
             </div>
             <div>
@@ -93,7 +93,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                 value={iconEmoji}
                 onChange={(e) => setIconEmoji(e.target.value)}
                 maxLength={4}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-center text-lg text-text-primary focus:border-lime focus:outline-none"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-center text-lg text-text-primary focus:border-focus-border focus:outline-none"
               />
             </div>
             <div>
@@ -102,7 +102,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(parseInt(e.target.value || '0', 10))}
-                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-lime focus:outline-none"
+                className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary focus:border-focus-border focus:outline-none"
               />
             </div>
             <div>
@@ -121,7 +121,7 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none"
+              className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-focus-border focus:outline-none"
             />
           </div>
 
@@ -141,14 +141,14 @@ function CategoryCard({ row, onSaved }: { row: GlobalCategoryAdminRow; onSaved: 
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
                   placeholder="SEO title"
-                  className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
+                  className="h-9 w-full rounded-lg border border-border-default bg-bg-base px-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
                 />
                 <textarea
                   value={seoDescription}
                   onChange={(e) => setSeoDescription(e.target.value)}
                   rows={2}
                   placeholder="SEO meta description"
-                  className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-lime focus:outline-none"
+                  className="w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-focus-border focus:outline-none"
                 />
               </div>
             )}

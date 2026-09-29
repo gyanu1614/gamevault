@@ -98,7 +98,7 @@ export default function BuyingOpensSoon({
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
                 placeholder="you@example.com"
-                className="h-[46px] min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/30 focus:border-lime-400/60"
+                className="h-[46px] min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/30 focus:border-focus-border"
               />
               <button
                 type="button"

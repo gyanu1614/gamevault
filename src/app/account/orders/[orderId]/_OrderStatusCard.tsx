@@ -9,12 +9,14 @@
  */
 
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
+  BadgeCheck,
+  CreditCard,
+  Hourglass,
   PackageCheck,
-  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
   Truck,
+  Undo2,
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
@@ -57,13 +59,13 @@ interface StatusCopy {
 
 const COPY: Record<string, StatusCopy> = {
   pending: {
-    Icon: Clock,
+    Icon: CreditCard,
     tone: 'amber',
     title: 'Awaiting Payment',
     message: { all: 'Complete your payment to start this order.' },
   },
   paid: {
-    Icon: Clock,
+    Icon: Hourglass,
     tone: 'amber',
     title: 'Waiting For Seller',
     message: {
@@ -93,7 +95,7 @@ const COPY: Record<string, StatusCopy> = {
     },
   },
   completed: {
-    Icon: CheckCircle2,
+    Icon: BadgeCheck,
     tone: 'green',
     title: 'Order Completed',
     message: {
@@ -103,7 +105,7 @@ const COPY: Record<string, StatusCopy> = {
     },
   },
   disputed: {
-    Icon: AlertTriangle,
+    Icon: ShieldAlert,
     tone: 'red',
     title: 'Order Disputed',
     message: {
@@ -113,13 +115,13 @@ const COPY: Record<string, StatusCopy> = {
     },
   },
   resolved: {
-    Icon: CheckCircle2,
+    Icon: ShieldCheck,
     tone: 'green',
     title: 'Dispute Resolved',
     message: { all: 'This dispute has been resolved.' },
   },
   refunded: {
-    Icon: RefreshCw,
+    Icon: Undo2,
     tone: 'blue',
     title: 'Order Refunded',
     message: {
@@ -142,8 +144,10 @@ const COPY: Record<string, StatusCopy> = {
 
 const TONE: Record<Tone, { tile: string; title: string }> = {
   green:  { tile: 'bg-green-400/[0.12] text-green-400',   title: 'text-green-400' },
-  lime:   { tile: 'bg-lime/[0.14] text-lime-text',        title: 'text-lime-text' },
-  amber:  { tile: 'bg-amber/[0.12] text-amber',           title: 'text-amber' },
+  // amber has no token and lime opacity modifiers don't compile: use the
+  // warning / accent tint tokens.
+  lime:   { tile: 'bg-lime-tint-bg text-lime-text',       title: 'text-lime-text' },
+  amber:  { tile: 'bg-warning-bg text-warning',           title: 'text-warning' },
   red:    { tile: 'bg-red-400/[0.12] text-red-400',       title: 'text-red-400' },
   blue:   { tile: 'bg-blue-400/[0.12] text-blue-400',     title: 'text-blue-400' },
   orange: { tile: 'bg-orange-400/[0.12] text-orange-400', title: 'text-orange-400' },
@@ -204,18 +208,18 @@ export function OrderStatusCard({
 
   return (
     <OrderCard className={cn('flex items-start gap-3 px-5 py-4', className)} padded={false}>
-      <span className={cn('grid h-10 w-10 flex-shrink-0 place-items-center rounded-[10px]', tone.tile)}>
-        <copy.Icon className="h-5 w-5" aria-hidden />
+      <span className={cn('grid h-11 w-11 flex-shrink-0 place-items-center rounded-[11px]', tone.tile)}>
+        <copy.Icon className="h-[22px] w-[22px]" aria-hidden />
       </span>
       <div className="min-w-0 flex-1 leading-tight">
-        <div className={cn('text-[15px] font-bold', tone.title)}>{copy.title}</div>
+        <div className={cn('text-body font-bold leading-snug', tone.title)}>{copy.title}</div>
         {when && (
           <div className="mt-1 text-[12px] font-medium tabular-nums text-text-tertiary">
             {fmtWhen(when)}
           </div>
         )}
         {message && (
-          <p className="mt-1.5 text-[13px] leading-snug text-text-secondary">{message}</p>
+          <p className="mt-1.5 text-body-sm leading-snug text-text-secondary">{message}</p>
         )}
       </div>
     </OrderCard>

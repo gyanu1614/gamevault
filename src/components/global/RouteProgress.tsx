@@ -30,6 +30,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { startUnlessCancelled } from '@/lib/navigation/start-unless-cancelled'
 
 // V14u — Bumped from 120ms → 350ms. Cached App Router navs commonly land
 // in 100-300ms; flashing the bar for those felt glitchy. Now only the
@@ -172,7 +173,13 @@ export default function RouteProgress() {
       // Removing the source scroll here is the root fix for the
       // "click → page jumps to top → progress bar → new page" UX bug
       // reported across cards, dropdowns, and seller chips.
-      start()
+      //
+      // This listener runs in the CAPTURE phase, before the target's own
+      // handlers. A control inside a link (a notification's dismiss X, a
+      // card's menu button) cancels the navigation with preventDefault in
+      // its own onClick, after we ran. So decide once the event has finished
+      // dispatching: start only if nothing cancelled it.
+      startUnlessCancelled(e, start)
     }
 
     document.addEventListener('click', onClick, { capture: true })

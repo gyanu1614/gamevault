@@ -1,4 +1,5 @@
-import { CheckCircle } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
+import ChatNotice from './ChatNotice'
 
 interface DisputeResolvedCardProps {
   resolution: 'buyer_favor' | 'seller_favor' | 'partial'
@@ -8,48 +9,25 @@ interface DisputeResolvedCardProps {
   resolvedBy?: 'buyer' | 'admin'
 }
 
-export default function DisputeResolvedCard({ resolution, notes, refundAmount, resolvedBy }: DisputeResolvedCardProps) {
-  const resolutionLabels = {
-    buyer_favor: 'Buyer Favor',
-    seller_favor: 'Seller Favor',
-    partial: 'Partial Refund'
-  }
+const RESOLUTION_LABEL = {
+  buyer_favor: 'Buyer Favor',
+  seller_favor: 'Seller Favor',
+  partial: 'Partial Refund',
+} as const
 
+/** "Dispute Resolved" / "Dispute Closed By The Buyer" notice in the order chat. */
+export default function DisputeResolvedCard({ resolution, notes, refundAmount, resolvedBy }: DisputeResolvedCardProps) {
+  const title =
+    resolvedBy === 'buyer' ? 'Dispute Closed By The Buyer' : `Dispute Resolved: ${RESOLUTION_LABEL[resolution]}`
   return (
-    <div className="my-4">
-      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-success/30 rounded-xl p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-success-bg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-success" />
-            </div>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-base font-semibold text-success mb-2">
-              {resolvedBy === 'buyer'
-                ? 'Dispute Closed By The Buyer'
-                : `Dispute Resolved: ${resolutionLabels[resolution]}`}
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium text-text-secondary">Resolution:</span>{' '}
-                <span className="text-text-secondary">{notes}</span>
-              </div>
-              {refundAmount !== undefined && refundAmount > 0 && (
-                <div>
-                  <span className="font-medium text-text-secondary">Refund Amount:</span>{' '}
-                  <span className="text-success font-semibold">${refundAmount.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-3 pt-3 border-t border-green-500/20">
-              <p className="text-xs text-text-secondary">
-                Thank you for your patience. This case is now closed.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ChatNotice icon={ShieldCheck} tone="lime" title={title}>
+      {notes && <p className="line-clamp-2">{notes}</p>}
+      {refundAmount !== undefined && refundAmount > 0 && (
+        <p>
+          Refunded to the buyer&apos;s wallet:{' '}
+          <span className="font-semibold tabular-nums text-text-primary">${refundAmount.toFixed(2)}</span>
+        </p>
+      )}
+    </ChatNotice>
   )
 }
