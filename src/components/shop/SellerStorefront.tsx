@@ -253,7 +253,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
                       title="Returns & refunds"
-                      body="Every order is covered by SafeDrop Buyer Protection. Not delivered or not as described within your protection window? Full refund."
+                      body="Every order is covered by SafeDrop Protection. Not delivered or not as described within your protection window? Full refund."
                     />
                     <PolicyBlock
                       title="Delivery"

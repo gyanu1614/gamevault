@@ -12,6 +12,7 @@ import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
 import { ilikeContains } from '@/lib/db/ilike'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { fetchDisputeOrderInfo, type DisputeOrderInfo } from '@/lib/admin/dispute-order-info'
 
 // ============================================
 // TYPES
@@ -132,35 +133,17 @@ export async function getDisputes(filters?: {
     return { success: false, error: error.message }
   }
 
-  // Get order IDs to fetch order/listing/game info
-  const orderIds = (data || []).map((d: any) => d.transaction_id).filter(Boolean)
-
-  let ordersMap: Record<string, any> = {}
-  if (orderIds.length > 0) {
-    const { data: orders } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        order_number,
-        listing:listing_id (
-          title,
-          game:game_id (
-            name,
-            image_url
-          )
-        )
-      `)
-      .in('id', orderIds)
-
-    ordersMap = (orders || []).reduce((acc: any, order: any) => {
-      acc[order.id] = order
-      return acc
-    }, {})
+  // Order number, listing and game (disputes has no FK to orders)
+  let orders: Map<string, DisputeOrderInfo>
+  try {
+    orders = await fetchDisputeOrderInfo(supabase, (data || []).map((d: any) => d.transaction_id))
+  } catch (e: any) {
+    return { success: false, error: e.message }
   }
 
   // Merge dispute + order data
   const disputes = (data || []).map((d: any) => {
-    const order = ordersMap[d.transaction_id]
+    const order = orders.get(d.transaction_id)
     return {
       ...d,
       buyer_username: d.buyer?.username,
@@ -173,10 +156,10 @@ export async function getDisputes(filters?: {
       seller_avatar: d.seller?.avatar_url,
       assigned_admin_username: d.assigned_admin?.username,
       assigned_admin_name: d.assigned_admin?.full_name,
-      order_number: order?.order_number,
-      listing_title: order?.listing?.title,
-      game_name: order?.listing?.game?.name,
-      game_icon: order?.listing?.game?.image_url,
+      order_number: order?.orderNumber,
+      listing_title: order?.listingTitle,
+      game_name: order?.gameName,
+      game_icon: order?.gameIcon,
     }
   })
 

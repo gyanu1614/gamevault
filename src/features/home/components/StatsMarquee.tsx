@@ -27,7 +27,7 @@ interface Stat {
 }
 
 const STATS: Stat[] = [
-  { Icon: ShieldCheck,  value: 'SafeDrop',   label: 'Buyer Protection on Every Order', tone: 'success' },
+  { Icon: ShieldCheck,  value: 'SafeDrop',   label: 'Protection on Every Order',       tone: 'success' },
   { Icon: Building2,    value: 'UK Ltd',     label: 'Registered Company',              tone: 'info'    },
   { Icon: BadgeCheck,   value: 'Verified',   label: 'KYC-Checked Sellers',             tone: 'lime'    },
   { Icon: Zap,          value: 'Fast',       label: 'Quick Seller Payouts',            tone: 'warning' },

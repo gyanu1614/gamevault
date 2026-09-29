@@ -8,7 +8,7 @@
  *
  * Design: 1200×630, dark slate (#0c0e14) with a lime (#C6FF3D) accent
  * bar + corner glyph, DropMarket wordmark (Drop white / Market lime),
- * big title, optional live-data sub-line, and a SafeDrop Buyer
+ * big title, optional live-data sub-line, and a SafeDrop
  * Protection badge chip (outcome language only).
  */
 
@@ -275,7 +275,7 @@ export function OgCard({ eyebrow, title, subtitle, price }: OgCardProps) {
                 color: WHITE,
               }}
             >
-              SafeDrop Buyer Protection
+              SafeDrop Protection
             </div>
           </div>
           {price ? (
