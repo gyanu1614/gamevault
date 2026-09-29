@@ -26,7 +26,6 @@ import { DisputeModal } from './_DisputeModal'
 import { AuditLog } from './_AuditLog'
 import { OrderChat } from './_OrderChat'
 import { DeliveryInstructions } from './_DeliveryInstructions'
-import { DeliveryEvidence } from './_DeliveryEvidence'
 import { OrderStatusCard } from './_OrderStatusCard'
 import { DeliveredInRow } from './_DeliveredInRow'
 import { getAvatarUrl } from '@/lib/utils/avatar'
@@ -504,12 +503,6 @@ export function OrderClient(props: OrderClientProps) {
                 <DeliveryInstructions {...instructionsProps} />
               </div>
             )}
-            <div className="min-w-0 empty:hidden max-lg:order-3">
-              <DeliveryEvidence
-                role={userRole}
-                urls={order.delivery_evidence_urls}
-              />
-            </div>
           </div>
           <aside className="flex flex-col gap-[18px] lg:sticky lg:top-[18px]">
             <OrderDetailsCard

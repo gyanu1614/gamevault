@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { DELIVERY_EVIDENCE_LABEL } from '@/lib/chat/system-notice'
+import { sellerDisplayName } from '@/lib/seller/identity'
 import { disputeReasonFor } from '@/lib/orders/dispute-reason'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
@@ -297,8 +299,12 @@ async function recordDeliveryProof(
     }
   }
 
+  // The proof photo (and any note) goes into the order chat as the seller's
+  // own message: "Delivery Evidence" with the photo attached. Chat files live
+  // in the same private bucket, so both parties see it like any attachment.
   const text = note?.trim()
-  if (text) {
+  const hasPhoto = !!path && path.startsWith(`${orderId}/`) && !path.slice(orderId.length + 1).includes('/')
+  if (hasPhoto || text) {
     try {
       const { data: convo } = await session
         .from('conversations')
@@ -310,14 +316,33 @@ async function recordDeliveryProof(
         const { error } = await (session.from('messages').insert as any)({
           conversation_id: convo.id,
           sender_id: user.id,
-          content: `Delivery note: ${text}`.slice(0, 2000),
+          content: (text ? `${DELIVERY_EVIDENCE_LABEL}: ${text}` : DELIVERY_EVIDENCE_LABEL).slice(0, 2000),
+          attachments: hasPhoto ? [path] : null,
           is_read: false,
         })
-        if (error) console.error('[Delivered] Posting delivery note failed:', error)
+        if (error) console.error('[Delivered] Posting delivery evidence failed:', error)
       }
     } catch (err) {
-      console.error('[Delivered] Posting delivery note failed:', err)
+      console.error('[Delivered] Posting delivery evidence failed:', err)
     }
+  }
+}
+
+/** Centered "Order Delivered" notice in the chat, after the seller's proof
+ *  photo. Best-effort: never fails the delivery. */
+async function postDeliveredNotice(orderId: string, sellerId: string): Promise<void> {
+  try {
+    const { data: seller } = await (createServiceRoleClient()
+      .from('profiles')
+      .select('username, shop_name')
+      .eq('id', sellerId)
+      .maybeSingle() as any)
+    await postOrderSystemNotice(orderId, {
+      type: 'order_delivered',
+      seller: sellerDisplayName(seller) || undefined,
+    })
+  } catch (err) {
+    console.error('[Delivered] Posting the delivered notice failed:', err)
   }
 }
 
@@ -376,6 +401,7 @@ export async function markOrderAsDelivered(
       // already_delivered / race lost: nothing more to do.
       if (marked?.changed === true) {
         await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+        await postDeliveredNotice(orderId, user.id)
         revalidatePath(`/account/orders/${orderId}`)
       }
       return { success: true }
@@ -408,6 +434,7 @@ export async function markOrderAsDelivered(
       return { success: true }
     }
     await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+    await postDeliveredNotice(orderId, user.id)
 
     const windowHours = Number(delivered.window_hours ?? 72)
     const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())

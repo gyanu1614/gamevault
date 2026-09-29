@@ -18,13 +18,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { ChevronRight, Info, ListChecks, Pencil } from 'lucide-react'
 import { OrderCard } from './_OrderCard'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { OrderModal, modalButton } from './_OrderModal'
 
 interface DeliveryInstructionsProps {
   role: 'buyer' | 'seller' | 'admin'
@@ -118,29 +112,22 @@ function BuyerInstructionsRow({
           <ChevronRight className="h-4 w-4 flex-shrink-0 text-text-tertiary" aria-hidden />
         </button>
       </OrderCard>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[460px] gap-4 border-border-default bg-bg-raised p-6">
-          <DialogHeader className="gap-1.5 text-left">
-            <DialogTitle className="flex items-center gap-2.5 text-[19px] font-bold tracking-tight">
-              <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-[8px] bg-lime-tint-bg text-lime-text">
-                <ListChecks className="h-4 w-4" aria-hidden />
-              </span>
-              How To Receive Your Order
-            </DialogTitle>
-            <DialogDescription className="text-body-sm text-text-secondary">
-              Follow the seller&apos;s steps, then check your order arrived.
-            </DialogDescription>
-          </DialogHeader>
-          <InstructionsBody steps={steps} text={text} />
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[10px] bg-lime px-5 text-[14px] font-bold text-text-inverse transition-all hover:-translate-y-[1px] hover:bg-lime-hover"
-          >
+      <OrderModal
+        open={open}
+        onOpenChange={setOpen}
+        icon={ListChecks}
+        title="How To Receive Your Order"
+        description="Follow the seller's steps, then check your order arrived."
+        footer={
+          <button type="button" onClick={() => setOpen(false)} className={modalButton('primary')}>
             Got It
           </button>
-        </DialogContent>
-      </Dialog>
+        }
+      >
+        <div className="mt-3.5">
+          <InstructionsBody steps={steps} text={text} />
+        </div>
+      </OrderModal>
     </>
   )
 }
