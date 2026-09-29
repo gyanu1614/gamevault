@@ -13,6 +13,7 @@ import { isInternalPath } from '@/lib/utils/safe-link'
 import type { OrderEvent } from '@/lib/escrow/state-machine'
 import type { CanonicalEvent } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 interface OrderComms {
   id: string
@@ -58,7 +59,7 @@ async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
     total_amount: order.total_amount,
     seller_payout: order.seller_payout,
     quantity: order.quantity ?? 1,
-    listingTitle: order.listing?.title || 'your item',
+    listingTitle: await orderItemTitleFor(order.id, order.listing?.title || 'your item'),
     gameSlug: order.listing?.game?.slug ?? null,
     buyer: profile(order.buyer_id),
     seller: profile(order.seller_id),

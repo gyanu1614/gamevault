@@ -348,6 +348,7 @@ export const ordersApi = {
             title,
             game_id,
             game_category_id,
+            bundle_id,
             images,
             game:games!listings_game_id_fkey (
               id,
@@ -463,6 +464,7 @@ export const buyerOrdersApi = {
             title,
             game_id,
             game_category_id,
+            bundle_id,
             images,
             delivery_method,
             delivery_time,

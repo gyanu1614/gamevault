@@ -33,9 +33,7 @@ const SRC = path.join(ROOT, 'src')
 /** Dead tokens on lines another branch owns (a folder, or one token in a file).
  *  Each entry must still fire — delete it once that branch lands (the stale
  *  check below fails until you do). */
-const PENDING: { path: string; token?: string; owner: string }[] = [
-  { path: 'src/app/account/orders/[orderId]/', owner: 'fix/order-page-polish rewrites this folder and its status components' },
-]
+const PENDING: { path: string; token?: string; owner: string }[] = []
 
 const UTILITY =
   '(?:bg|text|border(?:-[xytrblse])?|ring(?:-offset)?|from|to|via|fill|stroke|divide|outline|shadow|decoration|caret|accent|placeholder)'

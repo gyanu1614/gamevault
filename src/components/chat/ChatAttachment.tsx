@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, ImageOff, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   CHAT_ATTACHMENT_BUCKET,
   isImageAttachment,
@@ -58,25 +59,13 @@ export default function ChatAttachment({ value }: { value: string }) {
 
   if (!url) {
     return (
-      <span className="grid aspect-video w-full min-w-[180px] place-items-center rounded-lg bg-black/20">
+      <span className="grid h-36 w-[220px] max-w-full place-items-center rounded-lg bg-black/20">
         <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" aria-hidden />
       </span>
     )
   }
 
-  if (isImage) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-        {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL */}
-        <img
-          src={url}
-          alt="Attachment"
-          loading="lazy"
-          className="max-h-64 w-full min-w-[180px] rounded-lg bg-black/20 object-cover"
-        />
-      </a>
-    )
-  }
+  if (isImage) return <ImageThumb url={url} />
 
   return (
     <a
@@ -88,5 +77,31 @@ export default function ChatAttachment({ value }: { value: string }) {
       <FileText className="h-4 w-4 text-lime-text" aria-hidden />
       Open PDF
     </a>
+  )
+}
+
+/** A compact thumbnail; clicking it enlarges the photo in place (no new tab
+ *  to the storage URL). */
+function ImageThumb({ url }: { url: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="View photo"
+        className="block overflow-hidden rounded-lg bg-black/20 transition-opacity hover:opacity-90"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL */}
+        <img src={url} alt="Photo" loading="lazy" className="h-36 w-[220px] max-w-full object-cover" />
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[min(94vw,960px)] border-white/10 bg-[#0B0D10] p-2 sm:p-3">
+          <DialogTitle className="sr-only">Photo</DialogTitle>
+          {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL */}
+          <img src={url} alt="Photo" className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-md object-contain" />
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

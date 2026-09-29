@@ -101,7 +101,7 @@ export function DeliveryProgressBar({
     low: {
       fill: 'linear-gradient(90deg,#d6a800,#FFC24B)',
       knobBg: '#FFC24B',
-      labelClass: 'text-amber',
+      labelClass: 'text-warning',
       borderTint: '',
       label: `Soon — ${formatRemaining(remainingSec)} left`,
     },

@@ -155,11 +155,51 @@ export default function ChatInterface({
     ...(otherUser ? { [otherUser.id]: otherUser.username } : {}),
   }
 
+  // Safety net for the live channel: reload the thread whenever this tab
+  // comes back into view (the other party may have written while it was in
+  // the background) and every 20 s while it is visible. A silently deaf
+  // channel then costs seconds, not a manual refresh.
+  useEffect(() => {
+    if (!conversationId) return
+    let alive = true
+    const reload = async () => {
+      if (document.visibilityState !== 'visible') return
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+      if (alive && data) setMessages(data)
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void reload()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    const poll = setInterval(() => void reload(), 20_000)
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      clearInterval(poll)
+    }
+  }, [conversationId, supabase])
+
   // Real-time subscription: one channel per conversation.
   useEffect(() => {
     if (!conversationId || !currentUserId) return
+    let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    const channel = supabase
+    // Join only once the socket carries the signed-in session: a channel
+    // joined with the anonymous key is filtered by RLS and never receives
+    // the other party's messages (they only showed after a refresh).
+    const join = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+      if (session?.access_token) supabase.realtime.setAuth(session.access_token)
+
+    channel = supabase
       .channel(`order-chat:${conversationId}`)
       .on(
         'postgres_changes',
@@ -238,11 +278,14 @@ export default function ChatInterface({
         }
       )
       .subscribe()
+    }
+    void join()
 
     return () => {
+      cancelled = true
       // removeChannel (not just unsubscribe) so a later mount of the same
       // topic gets a fresh channel instead of the one still leaving.
-      void supabase.removeChannel(channel)
+      if (channel) void supabase.removeChannel(channel)
     }
   }, [conversationId, currentUserId, supabase, queryClient])
 

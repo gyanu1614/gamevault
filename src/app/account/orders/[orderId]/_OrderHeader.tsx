@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Copy, Shield, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
+import { ArrowLeft, Copy, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useSellerOnline } from '@/hooks/use-seller-presence'
@@ -37,7 +37,6 @@ interface OrderHeaderProps {
   categorySlug?: string | null
   orderNumber: string
   orderStatus: string
-  escrowStatus: string
   disputeResolved?: boolean
   /** The "other" party for the presence chip — seller for buyer, buyer for seller. */
   presence?: PartyPresence
@@ -49,23 +48,16 @@ const STATUS_CFG: Record<
 > = {
   // Unpaid orders must NOT read as "Processing" — buyers assumed payment
   // had gone through and waited on delivery that could never start.
-  pending:    { label: 'Awaiting Payment', color: 'text-amber', bg: 'bg-amber/[0.08]', border: 'border-amber/30',     pulse: true,  Icon: Clock },
-  paid:       { label: 'Payment Confirmed',  color: 'text-amber',    bg: 'bg-amber/[0.08]',   border: 'border-amber/30',     pulse: true,  Icon: Clock },
-  delivering: { label: 'Delivering',  color: 'text-amber',    bg: 'bg-amber/[0.08]',   border: 'border-amber/30',     pulse: true,  Icon: Truck },
+  // Warning tone as arbitrary rgba: there is no `amber` token.
+  pending:    { label: 'Awaiting Payment',  color: 'text-warning', bg: 'bg-[rgba(255,178,62,0.08)]', border: 'border-[rgba(255,178,62,0.30)]', pulse: true,  Icon: Clock },
+  paid:       { label: 'Payment Confirmed', color: 'text-warning', bg: 'bg-[rgba(255,178,62,0.08)]', border: 'border-[rgba(255,178,62,0.30)]', pulse: true,  Icon: Clock },
+  delivering: { label: 'Delivering',        color: 'text-warning', bg: 'bg-[rgba(255,178,62,0.08)]', border: 'border-[rgba(255,178,62,0.30)]', pulse: true,  Icon: Truck },
   delivered:  { label: 'Delivered',   color: 'text-green-400',bg: 'bg-green-400/[0.08]',border: 'border-green-400/30',pulse: false, Icon: Package },
   completed:  { label: 'Completed',   color: 'text-green-400',bg: 'bg-green-400/[0.08]',border: 'border-green-400/30',pulse: false, Icon: CheckCircle2 },
   disputed:   { label: 'Disputed',    color: 'text-red-400',  bg: 'bg-red-400/[0.08]', border: 'border-red-400/40',   pulse: true,  Icon: AlertTriangle },
   resolved:   { label: 'Resolved',    color: 'text-green-400',bg: 'bg-green-400/[0.08]',border: 'border-green-400/30',pulse: false, Icon: CheckCircle2 },
   refunded:   { label: 'Refunded',    color: 'text-text-secondary',bg: 'card-frost',border: 'border-white/15',  pulse: false, Icon: RefreshCw },
   cancelled:  { label: 'Cancelled',   color: 'text-orange-400',bg: 'bg-orange-400/[0.08]',border: 'border-orange-400/30',pulse:false,Icon: XCircle },
-}
-
-const ESCROW_CFG: Record<string, { label: string; color: string; border: string }> = {
-  held:     { label: 'Covered By SafeDrop™',        color: 'text-text-primary', border: 'border-white/10' },
-  released: { label: 'Seller Paid Out',             color: 'text-green-400',    border: 'border-green-400/25' },
-  refunded: { label: 'Refund Issued',               color: 'text-blue-400',     border: 'border-blue-400/25' },
-  frozen:   { label: 'Payout Paused — Under Review', color: 'text-violet-400',   border: 'border-violet-400/25' },
-  resolved: { label: 'Resolved',                    color: 'text-green-400',    border: 'border-green-400/25' },
 }
 
 function StatusPill({ status, disputeResolved }: { status: string; disputeResolved?: boolean }) {
@@ -88,23 +80,6 @@ function StatusPill({ status, disputeResolved }: { status: string; disputeResolv
         <span className={cn('relative inline-flex h-[7px] w-[7px] rounded-full', cfg.color.replace('text-', 'bg-'))} />
       </span>
       <Icon className="h-3.5 w-3.5" aria-hidden />
-      {cfg.label}
-    </span>
-  )
-}
-
-function EscrowPill({ escrowStatus, disputeResolved }: { escrowStatus: string; disputeResolved?: boolean }) {
-  const effective = escrowStatus === 'frozen' && disputeResolved ? 'resolved' : escrowStatus
-  const cfg = ESCROW_CFG[effective] ?? ESCROW_CFG.held
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-2 whitespace-nowrap rounded-[9px] border bg-white/[0.03] px-3 py-1.5 text-[12.5px] font-semibold',
-        cfg.color,
-        cfg.border,
-      )}
-    >
-      <Shield className="h-3.5 w-3.5 text-lime-text" aria-hidden />
       {cfg.label}
     </span>
   )
@@ -151,7 +126,6 @@ export function OrderHeader({
   categorySlug,
   orderNumber,
   orderStatus,
-  escrowStatus,
   disputeResolved,
   presence,
 }: OrderHeaderProps) {
@@ -167,7 +141,12 @@ export function OrderHeader({
           <ArrowLeft className="h-4 w-4" />
           Back To Orders
         </Link>
-        {presence && <PresenceChip presence={presence} />}
+        {/* sm+: nudged down to sit closer to the status pill below. */}
+        {presence && (
+          <div className="sm:translate-y-1.5">
+            <PresenceChip presence={presence} />
+          </div>
+        )}
       </div>
 
       {/* Header row — large framed item image + title block + status pills.
@@ -191,7 +170,24 @@ export function OrderHeader({
               </div>
             </div>
           ) : (
-            <div className="h-16 w-16 rounded-2xl border border-white/[0.08] card-frost max-sm:h-12 max-sm:w-12 max-sm:rounded-xl sm:h-[88px] sm:w-[88px]" />
+            // No item picture: a neutral tile with the category's icon (the
+            // game's logo already sits in the chip row below).
+            <div className="grid h-16 w-16 place-items-center rounded-2xl border border-white/[0.08] card-frost max-sm:h-12 max-sm:w-12 max-sm:rounded-xl sm:h-[88px] sm:w-[88px]">
+              <span
+                aria-hidden
+                className="h-8 w-8 bg-text-tertiary max-sm:h-6 max-sm:w-6"
+                style={{
+                  WebkitMaskImage: `url(${categoryIcon})`,
+                  maskImage: `url(${categoryIcon})`,
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                }}
+              />
+            </div>
           )}
         </div>
 
@@ -243,9 +239,10 @@ export function OrderHeader({
           </div>
         </div>
 
-        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 max-sm:hidden sm:w-auto sm:flex-col sm:items-end sm:pt-1">
+        {/* Order status only: payout / SafeDrop state lives in the SafeDrop
+            card, so no second pill here. */}
+        <div className="flex w-full flex-shrink-0 flex-row flex-wrap items-center gap-2 max-sm:hidden sm:w-auto sm:flex-col sm:items-end sm:pt-3">
           <StatusPill status={orderStatus} disputeResolved={disputeResolved} />
-          <EscrowPill escrowStatus={escrowStatus} disputeResolved={disputeResolved} />
         </div>
       </div>
     </>
@@ -274,7 +271,7 @@ function PresenceChip({ presence }: { presence: PartyPresence }) {
             unoptimized
           />
         ) : (
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-lime/30 to-lime/10 text-[12px] font-bold text-lime-text ring-1 ring-white/10">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-lime-tint-bg text-[12px] font-bold text-lime-text ring-1 ring-white/10">
             {initial}
           </span>
         )}

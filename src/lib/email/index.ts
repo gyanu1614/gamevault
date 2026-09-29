@@ -593,7 +593,7 @@ export async function sendOrderPaidEmail({
         emailText(`Thanks, ${escapeHtml(name)} — your payment is confirmed and the seller's been told to start delivery.`) +
         emailDetail('Total paid', `$${totalPaid.toFixed(2)}`) +
         emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
-        emailText(`You're covered by SafeDrop Buyer Protection — Item Guaranteed or Full Refund. If it never arrives, you get a full refund.`) +
+        emailText(`You're covered by SafeDrop Protection: Item Guaranteed or Full Refund. If it never arrives, you get a full refund.`) +
         emailButton('Track Your Order →', `${APP_URL}/account/orders/${orderId}`) +
         emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
     }),

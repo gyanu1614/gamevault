@@ -12,11 +12,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { getOrder } from '@/lib/actions/orders'
 import {
-  ArrowLeft,
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Shield,
   Package,
   XCircle,
   RefreshCw,
@@ -25,7 +23,9 @@ import {
 import { cn } from '@/lib/utils'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import { displayOrderRef } from '@/lib/orders/order-number'
-import { orderDisplayTitle } from '@/lib/orders/display-title'
+import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
+import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
+import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { OrderClient } from './_OrderClient'
@@ -94,25 +94,6 @@ function StatusPill({ status, disputeResolved }: { status: string; disputeResolv
   )
 }
 
-function EscrowPill({ escrowStatus, disputeResolved }: { escrowStatus: string; disputeResolved?: boolean }) {
-  const cfg: Record<string, { label: string; pill: string }> = {
-    held:     { label: 'Covered by SafeDrop',        pill: 'bg-lime/10 text-lime-text/80 border-lime-tint-border' },
-    released: { label: 'Seller Paid Out',            pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    refunded: { label: 'Refund Issued',              pill: 'bg-cyan-500/10 text-cyan-400/80 border-cyan-500/15' },
-    frozen:   { label: 'Under Review',               pill: 'bg-error-bg text-error/80 border-red-500/15' },
-    resolved: { label: 'Resolved',                   pill: 'bg-success-bg text-success/80 border-green-500/15' },
-  }
-  // Show "Resolved" instead of "Under Review" if dispute is resolved
-  const effectiveStatus = (escrowStatus === 'frozen' && disputeResolved) ? 'resolved' : escrowStatus
-  const c = cfg[effectiveStatus] ?? cfg.held
-  return (
-    <div className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium', c.pill)}>
-      <Shield className="h-3 w-3" />
-      {c.label}
-    </div>
-  )
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function OrderDetailPage({ params }: PageProps) {
@@ -175,27 +156,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
       ? await fetchCategoryConfig(game.id, 'currency').catch(() => null)
       : null
 
-  // Delivery proof lives in the PRIVATE delivery-evidence bucket, stored as
-  // object paths (or, from an older writer, public-style URLs that a private
-  // bucket never serves). Sign them for this viewer; the storage policy only
-  // signs for the order's buyer, seller or an admin.
-  const evidence = ((order as any).delivery_evidence_urls ?? []) as string[]
-  if (evidence.length > 0) {
-    const toPath = (v: string) => {
-      if (!/^https?:/i.test(v)) return v
-      const i = v.indexOf('/delivery-evidence/')
-      return i >= 0 ? decodeURIComponent(v.slice(i + '/delivery-evidence/'.length).split('?')[0]) : null
-    }
-    const paths = evidence.map(toPath)
-    const toSign = paths.filter((p): p is string => !!p)
-    const { data: signed } = toSign.length
-      ? await supabase.storage.from('delivery-evidence').createSignedUrls(toSign, 3600)
-      : { data: [] as Array<{ path: string | null; signedUrl: string }> }
-    const byPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]))
-    ;(order as any).delivery_evidence_urls = evidence
-      .map((v, i) => (paths[i] ? byPath.get(paths[i]) ?? null : v))
-      .filter(Boolean)
-  }
+  // Delivery proof: the seller's photo is posted into the order chat
+  // ("Delivery Evidence"), which signs it per viewer. The page itself no
+  // longer renders delivery_evidence_urls, so nothing is signed here.
 
   // Attach game and category to order.listing for downstream components
   if (order.listing) {
@@ -329,17 +292,66 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // The stored order_number IS the number (DM-XXXX-XXXX since migration
   // 20260921234649; older GV- rows stay as issued and render as stored).
   const orderNum       = displayOrderRef(order.order_number, order.id)
-  const listingImageUrl = order.listing?.images?.[0]
-  const gameImageUrl   = game?.image_url
+  // What was sold, by name and picture: "50 Diamonds" / "2,000 Robux" with
+  // the bundle or currency icon; items keep their own title and image. The
+  // game's name and logo are shown beside it, never instead of it.
   const listingTitle   = order.listing?.title
-    ? orderDisplayTitle({
-        title: order.listing.title,
+    ? orderItemTitle({
+        listingTitle: order.listing.title,
         quantity: (order as any).quantity,
-        isCurrency: category?.type === 'currency',
-        granularity: currencyCfg?.quantity_granularity ?? null,
-        hasBundles: (currencyCfg?.bundles?.length ?? 0) > 0,
+        categoryType: category?.type,
+        currencyConfig: currencyCfg as any,
+        bundleId: (order.listing as any)?.bundle_id ?? null,
       })
     : undefined
+  // Buyer (and admin): what they paid, line by line, and with what. Built
+  // from the buyer's own fields; the marketplace fee is the remainder
+  // (platform_fee is not in the buyer's column grant).
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const PAID_STATUSES = ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded']
+  const paymentSummary =
+    userRole !== 'seller' && PAID_STATUSES.includes(order.status)
+      ? await (async () => {
+          const itemPrice = Number((order as any).subtotal ?? 0)
+          const paymentFee = Number((order as any).payment_processing_fee ?? 0)
+          const promoDiscount = Number((order as any).promo_discount ?? 0)
+          const total = Number((order as any).total_amount ?? 0)
+          return {
+            itemPrice,
+            marketplaceFee: Math.max(0, round2(total - itemPrice - paymentFee + promoDiscount)),
+            paymentFee,
+            promoDiscount,
+            total,
+            paidWith: await orderPaymentMethodLabel(order as any),
+          }
+        })()
+      : null
+  // Buyer: may they ask DropMarket to cancel, and is a request already open?
+  let cancelRequest: { eligible: boolean; pending: boolean } | null = null
+  if (userRole === 'buyer') {
+    const { data: pendingRequest } = await (supabase
+      .from('order_cancellation_requests')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('status', 'pending')
+      .maybeSingle() as any)
+    cancelRequest = {
+      eligible: cancelRequestEligibility({
+        status: order.status,
+        delivered_at: (order as any).delivered_at,
+        paid_at: (order as any).paid_at,
+        created_at: order.created_at,
+        deliveryTime: order.listing?.delivery_time,
+      }).eligible,
+      pending: !!pendingRequest,
+    }
+  }
+  const itemImageUrl = orderItemImage({
+    categoryType: category?.type,
+    currencyConfig: currencyCfg as any,
+    bundleId: (order.listing as any)?.bundle_id ?? null,
+    listingImage: order.listing?.images?.[0] ?? null,
+  })
   const gameName       = game?.name
   const categoryName   = category?.name
 
@@ -461,14 +473,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
         disputeUntil={disputeUntil}
         userRole={userRole}
         disputeResolution={disputeResolution}
-        // Currency orders show the currency's own icon (the Robux coin, not
-        // the Roblox logo); items keep the item's image.
-        itemImageUrl={
-          (category?.type === 'currency' ? currencyCfg?.currency_icon_url : null) ??
-          listingImageUrl ??
-          gameImageUrl ??
-          null
-        }
+        itemImageUrl={itemImageUrl}
+        paymentSummary={paymentSummary}
+        cancelRequest={cancelRequest}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}

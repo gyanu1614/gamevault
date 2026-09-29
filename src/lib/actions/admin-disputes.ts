@@ -11,6 +11,7 @@ import { sendDisputeOpenedEmail } from '@/lib/email'
 import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
 import { ilikeContains } from '@/lib/db/ilike'
 import { normalizeOrderNumber, orderNumberSearchPattern } from '@/lib/orders/order-number'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 import { fetchDisputeOrderInfo, type DisputeOrderInfo } from '@/lib/admin/dispute-order-info'
 
 // ============================================
@@ -472,7 +473,7 @@ export async function resolveDispute(
           to: dispute.buyer_email,
           name: dispute.buyer_name || dispute.buyer_username,
           orderNumber: orderRef,
-          listingTitle: (order as any).listing?.title || 'your item',
+          listingTitle: await orderItemTitleFor((dispute as any).transaction_id, (order as any).listing?.title || 'your item'),
           amount: refundAmount,
           destination: 'your DropMarket wallet',
           pending: false,

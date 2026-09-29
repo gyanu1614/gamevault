@@ -3,12 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { postOrderSystemNotice } from '@/lib/chat/post-system-notice'
+import { DELIVERY_EVIDENCE_LABEL } from '@/lib/chat/system-notice'
+import { sellerDisplayName } from '@/lib/seller/identity'
 import { disputeReasonFor } from '@/lib/orders/dispute-reason'
 import { revalidatePath } from 'next/cache'
 import { logOrderAction, logUnauthorizedAccess } from '@/lib/audit'
 // Funds-flow cutover: order money moves go through the atomic ledger
 // transition; buyer refunds land in their wallet as store credit.
-import { cancelOrderReturnWallet } from '@/lib/wallet/order-money'
+import { cancelOrderReturnWallet, refundOrderToWallet } from '@/lib/wallet/order-money'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { ORDER_PARTY_SELECT } from '@/lib/orders/columns'
 import { withOwnOrderFields } from '@/lib/orders/own-fields'
@@ -16,6 +18,8 @@ import { withOwnOrderFields } from '@/lib/orders/own-fields'
 // P5.2 — Loyalty cashback
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
 
 // Joined rows the order page renders (no emails — see getOrder).
 const ORDER_DETAIL_EMBEDS = `
@@ -46,7 +50,8 @@ const ORDER_DETAIL_EMBEDS = `
     platform,
     region,
     game_id,
-    game_category_id
+    game_category_id,
+    bundle_id
   )`
 
 /**
@@ -295,8 +300,12 @@ async function recordDeliveryProof(
     }
   }
 
+  // The proof photo (and any note) goes into the order chat as the seller's
+  // own message: "Delivery Evidence" with the photo attached. Chat files live
+  // in the same private bucket, so both parties see it like any attachment.
   const text = note?.trim()
-  if (text) {
+  const hasPhoto = !!path && path.startsWith(`${orderId}/`) && !path.slice(orderId.length + 1).includes('/')
+  if (hasPhoto || text) {
     try {
       const { data: convo } = await session
         .from('conversations')
@@ -308,14 +317,33 @@ async function recordDeliveryProof(
         const { error } = await (session.from('messages').insert as any)({
           conversation_id: convo.id,
           sender_id: user.id,
-          content: `Delivery note: ${text}`.slice(0, 2000),
+          content: (text ? `${DELIVERY_EVIDENCE_LABEL}: ${text}` : DELIVERY_EVIDENCE_LABEL).slice(0, 2000),
+          attachments: hasPhoto ? [path] : null,
           is_read: false,
         })
-        if (error) console.error('[Delivered] Posting delivery note failed:', error)
+        if (error) console.error('[Delivered] Posting delivery evidence failed:', error)
       }
     } catch (err) {
-      console.error('[Delivered] Posting delivery note failed:', err)
+      console.error('[Delivered] Posting delivery evidence failed:', err)
     }
+  }
+}
+
+/** Centered "Order Delivered" notice in the chat, after the seller's proof
+ *  photo. Best-effort: never fails the delivery. */
+async function postDeliveredNotice(orderId: string, sellerId: string): Promise<void> {
+  try {
+    const { data: seller } = await (createServiceRoleClient()
+      .from('profiles')
+      .select('username, shop_name')
+      .eq('id', sellerId)
+      .maybeSingle() as any)
+    await postOrderSystemNotice(orderId, {
+      type: 'order_delivered',
+      seller: sellerDisplayName(seller) || undefined,
+    })
+  } catch (err) {
+    console.error('[Delivered] Posting the delivered notice failed:', err)
   }
 }
 
@@ -374,6 +402,7 @@ export async function markOrderAsDelivered(
       // already_delivered / race lost: nothing more to do.
       if (marked?.changed === true) {
         await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+        await postDeliveredNotice(orderId, user.id)
         revalidatePath(`/account/orders/${orderId}`)
       }
       return { success: true }
@@ -406,6 +435,7 @@ export async function markOrderAsDelivered(
       return { success: true }
     }
     await recordDeliveryProof(supabase, orderId, evidencePath, deliveryNotes)
+    await postDeliveredNotice(orderId, user.id)
 
     const windowHours = Number(delivered.window_hours ?? 72)
     const confirmBy = String(delivered.auto_release_at ?? new Date(Date.now() + windowHours * 3_600_000).toISOString())
@@ -444,7 +474,7 @@ export async function markOrderAsDelivered(
           name: buyer.full_name || buyer.username || 'Gamer',
           orderId,
           orderNumber: (order as any).order_number || orderId.slice(0, 8).toUpperCase(),
-          listingTitle: (order as any).listing?.title || 'your item',
+          listingTitle: await orderItemTitleFor(orderId, (order as any).listing?.title || 'your item'),
           windowHours,
           confirmBy,
         })
@@ -604,7 +634,7 @@ export async function cancelOrder(orderId: string): Promise<{
           to: buyer.email,
           name: buyer.full_name || buyer.username || 'Gamer',
           orderNumber: orderRef,
-          listingTitle: cancelledListing?.title || 'your item',
+          listingTitle: await orderItemTitleFor(orderId, cancelledListing?.title || 'your item'),
           amount: refundAmount,
           destination: 'your DropMarket wallet',
           pending: false,
@@ -618,6 +648,112 @@ export async function cancelOrder(orderId: string): Promise<{
     return { success: true }
   } catch (error: any) {
     console.error('Error cancelling order:', error)
+    return { success: false, error: error.message || 'Failed to cancel order' }
+  }
+}
+
+/**
+ * The SELLER cancels a paid order they can't fulfil (out of stock, can't
+ * deliver in time, price error...). Allowed from payment until they mark it
+ * delivered; a delivered or disputed order goes through the buyer / dispute
+ * tools instead.
+ *
+ * Money: ONE RPC each, never composed here (CLAUDE.md money seams):
+ *   paid       -> order_cancel_return_wallet (CANCELLED + full wallet credit)
+ *   delivering -> order_refund_to_wallet     (REFUNDED  + full wallet credit)
+ * Idempotent per order (dedupe key), so a double click refunds once.
+ */
+export async function sellerCancelOrder(
+  orderId: string,
+  reason: string,
+  note?: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const problem = validateSellerCancel(reason, note)
+    if (problem) return { success: false, error: problem }
+
+    const { data: order, error: fetchError } = await (supabase
+      .from('orders')
+      .select('id, buyer_id, seller_id, listing_id, status, delivered_at, total_amount, order_number')
+      .eq('id', orderId)
+      .single() as any)
+    if (fetchError || !order) return { success: false, error: 'Order not found' }
+    if (order.seller_id !== user.id) {
+      await logUnauthorizedAccess('seller_cancel_order', 'orders', orderId)
+      return { success: false, error: 'Unauthorized' }
+    }
+    if (!['paid', 'delivering'].includes(order.status) || order.delivered_at) {
+      return { success: false, error: 'This order can no longer be cancelled by the seller.' }
+    }
+
+    const dedupe = `seller_cancel:${orderId}`
+    let result
+    try {
+      result =
+        order.status === 'paid'
+          ? await cancelOrderReturnWallet(orderId, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
+          : await refundOrderToWallet(orderId, dedupe)
+    } catch (moneyError: any) {
+      console.error('[SellerCancel] refund failed:', moneyError)
+      return { success: false, error: 'Cancelling failed. Nothing was changed, please try again.' }
+    }
+    if (result.refused) {
+      // Raced past the allowed states (delivered / disputed) under the lock.
+      return { success: false, error: 'This order can no longer be cancelled by the seller.' }
+    }
+    if (!result.changed) return { success: true } // replay: already cancelled
+
+    const reasonLabel = sellerCancelReasonLabel(reason) ?? 'Other'
+    const cleanNote = note?.trim() || undefined
+    await logOrderAction('cancelled', orderId, user.id, {
+      reason: 'seller_cancelled',
+      seller_reason: reason,
+      note: cleanNote ?? null,
+      refund_destination: 'wallet',
+    })
+    await postOrderSystemNotice(orderId, { type: 'order_cancelled', by: 'seller', reason: reasonLabel, note: cleanNote })
+
+    // Buyer comms: in-app + email. A comms failure never undoes the refund.
+    await (async () => {
+      const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
+      const amount = Number(order.total_amount ?? 0)
+      const service = createServiceRoleClient()
+      const { data: buyer } = await (service
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', order.buyer_id)
+        .single() as any)
+      const { createNotification } = await import('@/lib/utils/notifications')
+      await createNotification({
+        userId: order.buyer_id,
+        type: 'order_refunded',
+        title: 'Order Cancelled By The Seller',
+        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your DropMarket wallet as store credit.`,
+        link: '/account/wallet',
+      })
+      if (buyer?.email) {
+        const { sendOrderRefundedEmail } = await import('@/lib/email')
+        await sendOrderRefundedEmail({
+          to: buyer.email,
+          name: buyer.full_name || buyer.username || 'Gamer',
+          orderNumber: orderRef,
+          listingTitle: await orderItemTitleFor(orderId),
+          amount,
+          destination: 'your DropMarket wallet',
+          pending: false,
+        })
+      }
+    })().catch((err) => console.error('[SellerCancel] comms failed:', err))
+
+    revalidatePath(`/account/orders/${orderId}`)
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in sellerCancelOrder:', error)
     return { success: false, error: error.message || 'Failed to cancel order' }
   }
 }
@@ -672,7 +808,7 @@ async function afterBuyerRelease(
         name: buyer.full_name || buyer.username || 'Gamer',
         orderId,
         orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
-        listingTitle: completedListing?.title || 'your item',
+        listingTitle: await orderItemTitleFor(orderId, completedListing?.title || 'your item'),
         totalPaid: order.total_amount ?? 0,
       })
     }
@@ -717,7 +853,7 @@ async function afterBuyerRelease(
         name: seller.full_name || seller.username || 'Gamer',
         orderId,
         orderNumber: orderRef,
-        listingTitle: soldListing?.title || 'your item',
+        listingTitle: await orderItemTitleFor(orderId, soldListing?.title || 'your item'),
         payout,
       })
     }

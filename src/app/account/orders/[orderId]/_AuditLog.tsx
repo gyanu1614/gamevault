@@ -67,7 +67,7 @@ const ICONS: Record<TimelineIcon, LucideIcon> = {
 
 const TONE: Record<TimelineTone, string> = {
   lime: 'bg-lime text-text-inverse',
-  amber: 'bg-amber text-text-inverse',
+  amber: 'bg-warning text-text-inverse',
   blue: 'bg-blue-400 text-text-inverse',
   red: 'bg-red-400 text-text-inverse',
 }
@@ -85,16 +85,35 @@ function fmtAbsolute(iso: string): string {
   })
 }
 
+/** A finished dispute / resolution that later steps follow: muted, so the
+ *  bright red / blue only marks a dispute that is still open. */
+const MUTED: Partial<Record<TimelineTone, string>> = {
+  red: 'bg-[rgba(248,113,113,0.16)] text-red-300',
+  blue: 'bg-[rgba(96,165,250,0.16)] text-blue-300',
+}
+
+/** The current step's halo, in its own tone. */
+const RING: Record<TimelineTone, string> = {
+  lime: 'ring-4 ring-[rgba(86,184,127,0.22)]',
+  amber: 'ring-4 ring-[rgba(255,178,62,0.2)]',
+  blue: 'ring-4 ring-[rgba(96,165,250,0.22)]',
+  red: 'ring-4 ring-[rgba(248,113,113,0.22)]',
+}
+
 /** Filled for done/current, hollow for what is still to come. */
-function Node({ step, size = 'h-9 w-9' }: { step: TimelineStep; size?: string }) {
+function Node({ step, size = 'h-9 w-9', muted = false }: { step: TimelineStep; size?: string; muted?: boolean }) {
   const Icon = ICONS[step.icon]
   return (
     <span
       className={cn(
         'relative z-10 grid flex-shrink-0 place-items-center rounded-full',
         size,
-        step.state === 'upcoming' ? 'bg-bg-overlay text-text-tertiary' : TONE[step.tone],
-        step.state === 'current' && 'ring-4 ring-amber/20',
+        step.state === 'upcoming'
+          ? 'bg-bg-overlay text-text-tertiary'
+          : muted && MUTED[step.tone]
+            ? MUTED[step.tone]
+            : TONE[step.tone],
+        step.state === 'current' && RING[step.tone],
       )}
     >
       <Icon className="h-[18px] w-[18px]" aria-hidden />
@@ -177,7 +196,7 @@ export function AuditLog({ order, disputeResolution, latestDispute }: AuditLogPr
                       )}
                     />
                   )}
-                  <Node step={s} />
+                  <Node step={s} muted={s.state === 'done' && i < steps.length - 1} />
                 </div>
                 <div className="mt-2.5 px-1">
                   <div
@@ -215,7 +234,7 @@ export function AuditLog({ order, disputeResolution, latestDispute }: AuditLogPr
                   )}
                 />
               )}
-              <Node step={s} />
+              <Node step={s} muted={s.state === 'done' && i < steps.length - 1} />
               <div className="min-w-0 flex-1 pt-0.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <span
