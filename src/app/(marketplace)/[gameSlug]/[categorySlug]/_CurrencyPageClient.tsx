@@ -23,6 +23,7 @@ import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -134,45 +135,6 @@ function RouteLoader({ label = 'Loading' }: { label?: string }) {
   )
 }
 
-// V14i — Verified seller badge styled after Twitter/X verified mark:
-// scalloped 12-point burst with a white checkmark. Tinted toward the GV
-// lime accent (a green-leaning blue) so it sits with the rest of the
-// theme instead of looking like a foreign element.
-function VerifiedBadge({ size = 14 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      role="img"
-      aria-label="Verified seller"
-      className="inline-block shrink-0"
-    >
-      <defs>
-        <linearGradient id="verifiedBadgeGradient" x1="0" y1="0" x2="0" y2="1">
-          {/* Green-tinted teal-blue: reads as "verified" while leaning
-              into the lime accent. */}
-          <stop offset="0%" stopColor="oklch(0.78 0.16 175)" />
-          <stop offset="100%" stopColor="oklch(0.62 0.18 195)" />
-        </linearGradient>
-      </defs>
-      {/* 12-point scalloped burst — same shape as the verified mark in
-          your screenshot. Path baked at 24×24 viewBox. */}
-      <path
-        fill="url(#verifiedBadgeGradient)"
-        d="M12 1.5l2.2 2.1 3-.5.9 2.9 2.9.9-.5 3 2.1 2.1-2.1 2.1.5 3-2.9.9-.9 2.9-3-.5L12 22.5l-2.2-2.1-3 .5-.9-2.9-2.9-.9.5-3L1.4 12l2.1-2.1-.5-3 2.9-.9.9-2.9 3 .5z"
-      />
-      <path
-        d="M7.5 12.2l3 3 6-6.4"
-        stroke="white"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
-  )
-}
 
 function Rating({ rating, reviews, showReviews = true }: { rating: number | null; reviews?: number; showReviews?: boolean }) {
   // No reviews → no rating: show "New" rather than a fabricated number.
@@ -566,13 +528,14 @@ function SectionHeader({
         )}
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-0.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+            <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
               {eyebrow}
             </p>
           )}
           <h2
             className={cn(
-              'leading-tight text-text-primary',
+              'text-text-primary',
+              eyebrow ? 'leading-none' : 'leading-tight',
               size === 'hero'
                 ? 'text-[20px] font-black tracking-tight sm:text-[26px] lg:text-[30px]'
                 : 'text-[20px] font-bold sm:text-[22px]',

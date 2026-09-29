@@ -274,10 +274,10 @@ export default function BundleCurrencyPageClient({
           <div className="min-w-0 flex-1">
             {/* Game on top, small; the title stays "Buy {Game} {Unit}" for
                 crawlers with the game name visually hidden. */}
-            <p className="mb-0.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+            <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
               {data.gameName}
             </p>
-            <h1 className="truncate text-[20px] font-black leading-tight tracking-tight text-text-primary sm:text-[26px] lg:text-[30px]">
+            <h1 className="truncate text-[20px] font-black leading-none tracking-tight text-text-primary sm:text-[26px] lg:text-[30px]">
               Buy <span className="sr-only">{data.gameName} </span>{data.unitLabel}
             </h1>
             {data.tagline && (
