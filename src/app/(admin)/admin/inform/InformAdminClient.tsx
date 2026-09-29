@@ -259,7 +259,7 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
                 placeholder="Explain why this disclosure is being rejected…"
                 rows={4}
                 className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
-                           text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
+                           text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
               />
               <div className="flex justify-end gap-2">
                 <button onClick={() => setRejectTarget(null)}

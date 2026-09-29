@@ -271,7 +271,7 @@ export function MarkReceivedModal({
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
                       placeholder="Share a quick note about your experience…"
-                      className="mt-3 w-full resize-none rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] leading-[1.5] text-text-primary placeholder:text-text-tertiary focus:border-lime/40 focus:outline-none focus:ring-2 focus:ring-lime/20"
+                      className="mt-3 w-full resize-none rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] leading-[1.5] text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
                     />
                     <div className="mt-1.5 text-[12px] text-text-tertiary">
                       {comment.trim().length < 10

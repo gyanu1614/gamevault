@@ -30,7 +30,7 @@ import { ACCOUNT_RISK_BAND_PCT, fmtUtcDate, type AccountRiskBandKey } from '@/li
 type PairRow = { id: string; slug: string; name: string; type: string; is_enabled: boolean }
 
 const INPUT =
-  'h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-lime'
+  'h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border'
 const LABEL = 'block text-[12px] font-semibold uppercase tracking-wider text-text-secondary'
 const BTN = 'inline-flex h-10 items-center justify-center rounded-lg bg-lime px-4 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50'
 const BTN_GHOST = 'inline-flex h-8 items-center gap-1 rounded-md border border-border-default px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-error hover:text-error disabled:opacity-50'

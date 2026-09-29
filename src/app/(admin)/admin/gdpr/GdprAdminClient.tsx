@@ -194,7 +194,7 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
                 placeholder="Reason for rejection (e.g., active orders pending, outstanding seller balance)…"
                 rows={4}
                 className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
-                           text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none"
+                           text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
               />
               <div className="flex justify-end gap-2">
                 <button onClick={() => setRejectTarget(null)} className="px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary">

@@ -29,7 +29,7 @@ interface Props {
 }
 
 const INPUT =
-  'w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none'
+  'w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none'
 const LABEL = 'block text-xs font-medium text-text-tertiary mb-1.5'
 
 // ── Create form ───────────────────────────────────────────────────────────────

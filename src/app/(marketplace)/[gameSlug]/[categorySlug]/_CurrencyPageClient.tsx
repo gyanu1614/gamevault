@@ -919,7 +919,7 @@ function PurchasePanel({
       </div>
 
       <div className="mt-4 border-t border-border-subtle pt-4">
-        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-lime focus-within:ring-2 focus-within:ring-lime-tint-bg sm:h-[52px]">
+        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-focus-border focus-within:ring-2 focus-within:ring-focus-soft sm:h-[52px]">
           <button
             type="button"
             onClick={stepDown}
@@ -1144,7 +1144,7 @@ function SellerRow({
               type="button"
               aria-expanded={open}
               aria-label={open ? 'Collapse seller details' : 'Expand seller details'}
-              className="absolute inset-0 z-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg"
+              className="absolute inset-0 z-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-soft"
             />
           </Collapsible.Trigger>
 

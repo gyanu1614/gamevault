@@ -174,7 +174,7 @@ export function BlogBodyEditor({
       {/* ── Editor (full width) — write markdown here. ── */}
       <textarea
         ref={bodyRef as RefObject<HTMLTextAreaElement>}
-        className="min-h-[380px] w-full resize-y rounded-lg border border-white/15 bg-white/[0.03] px-4 py-3 text-[14px] leading-7 text-white outline-none transition focus:border-lime/60"
+        className="min-h-[380px] w-full resize-y rounded-lg border border-white/15 bg-white/[0.03] px-4 py-3 text-[14px] leading-7 text-white outline-none transition focus:border-focus-border"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder={'Paste your blog markdown here.\n\n## A section\n\nA paragraph with **bold** and a [link](/values).\n\n1. A numbered step\n2. Another step'}
