@@ -76,7 +76,7 @@ export default function TierProgressBar({
 }: TierProgressBarProps) {
   if (!nextTier) {
     return (
-      <div className={cn('rounded-xl border border-lime-tint-border bg-lime/5 p-4 text-center', className)}>
+      <div className={cn('rounded-xl border border-lime-tint-border bg-[rgba(86,184,127,0.05)] p-4 text-center', className)}>
         <p className="text-sm font-semibold text-lime-text">Diamond Tier</p>
         <p className="mt-1 text-xs text-zinc-500">You have reached the highest tier</p>
       </div>

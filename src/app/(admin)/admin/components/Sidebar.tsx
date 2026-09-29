@@ -144,7 +144,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                       <span className="text-sm font-semibold text-white whitespace-nowrap">
                         DropMarket
                       </span>
-                      <span className="text-[11px] text-lime-text/80 font-medium">Admin</span>
+                      <span className="text-[11px] text-[rgba(86,184,127,0.80)] font-medium">Admin</span>
                     </div>
                   </Link>
                 </motion.div>
@@ -262,7 +262,7 @@ export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProp
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-white">DropMarket</span>
-                      <span className="text-[11px] text-lime-text/80 font-medium">Admin</span>
+                      <span className="text-[11px] text-[rgba(86,184,127,0.80)] font-medium">Admin</span>
                     </div>
                   </Link>
                 </div>

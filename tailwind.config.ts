@@ -8,6 +8,10 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/features/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    // Style maps a component reads classes from (seller tier badges, SAB
+    // theme). A class that lives only here is never generated if this is
+    // not scanned — src/test/guards/tailwind-content.guard.test.ts.
+    './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {

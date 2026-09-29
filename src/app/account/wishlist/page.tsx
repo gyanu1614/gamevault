@@ -269,7 +269,7 @@ export default function WishlistPage() {
                 </button>
 
                 {/* Image Placeholder */}
-                <div className="aspect-video bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
+                <div className="aspect-video bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.05)] flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}
@@ -350,7 +350,7 @@ export default function WishlistPage() {
                 onClick={() => router.push(`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug}`)}
               >
                 {/* Image */}
-                <div className="h-20 w-24 sm:h-24 sm:w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
+                <div className="h-20 w-24 sm:h-24 sm:w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.05)] flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}

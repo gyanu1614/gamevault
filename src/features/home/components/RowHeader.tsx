@@ -19,7 +19,7 @@ export function RowHeader({ title, viewAllHref, eyebrow, subtitle }: RowHeaderPr
       {/* V17i — Decorative left-edge lime bar. Tiny visual depth that
           marks the section as a "chapter" without adding background art
           weight. Matches the eyebrow's lime tint. */}
-      <div className="absolute -left-3 top-1 hidden h-8 w-0.5 rounded-full bg-gradient-to-b from-lime/80 via-lime/40 to-transparent sm:block" aria-hidden />
+      <div className="absolute -left-3 top-1 hidden h-8 w-0.5 rounded-full bg-gradient-to-b from-[rgba(86,184,127,0.80)] via-[rgba(86,184,127,0.40)] to-transparent sm:block" aria-hidden />
 
       <div className="relative flex-1 min-w-0">
         {eyebrow && (
@@ -27,7 +27,7 @@ export function RowHeader({ title, viewAllHref, eyebrow, subtitle }: RowHeaderPr
             <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
               {eyebrow}
             </span>
-            <span className="h-px w-8 bg-gradient-to-r from-lime/40 to-transparent" aria-hidden />
+            <span className="h-px w-8 bg-gradient-to-r from-[rgba(86,184,127,0.40)] to-transparent" aria-hidden />
           </div>
         )}
         {/* V17p — Standardized at text-display so every section title

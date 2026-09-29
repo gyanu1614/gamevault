@@ -67,7 +67,7 @@ export default function GameMultiSelect({
             className={cn(
               'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-transparent px-3 text-sm transition-colors',
               'border-border-default text-text-primary hover:border-border-strong',
-              open && 'border-lime-tint-border ring-1 ring-lime/30',
+              open && 'border-lime-tint-border',
               invalid && !open && 'border-error ring-2 ring-error-bg'
             )}
           >

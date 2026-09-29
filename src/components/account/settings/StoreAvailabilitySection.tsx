@@ -64,7 +64,7 @@ export default function StoreAvailabilitySection() {
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
               paused
                 ? 'border-warning/30 bg-warning-bg text-warning'
-                : 'border-lime-tint-border bg-lime/15 text-lime-text',
+                : 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
             )}
           >
             <Power className="h-4 w-4" />

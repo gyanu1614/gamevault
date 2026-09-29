@@ -226,7 +226,7 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
             </div>
           </Field>
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button size="sm" onClick={() => approve.mutate()} disabled={busy} className="bg-lime text-black hover:bg-lime/90">
+            <Button size="sm" onClick={() => approve.mutate()} disabled={busy} className="bg-lime text-black hover:bg-lime-hover">
               <Check className="mr-1.5 h-4 w-4" /> Approve &amp; Go Live
             </Button>
             {g.review_status !== 'rejected' && (

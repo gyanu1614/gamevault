@@ -29,10 +29,10 @@ function StatCard({
   color?: 'violet' | 'green' | 'amber' | 'blue'
 }) {
   const colors = {
-    violet: 'text-lime-text bg-lime/10 border-lime-tint-border',
+    violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
     amber:  "text-warning bg-warning-bg border-warning/20",
-    blue:   "text-lime-text bg-lime/10 border-lime-tint-border",
+    blue:   "text-lime-text bg-lime-tint-bg border-lime-tint-border",
   }
   return (
     <div className="rounded-lg border border-border-subtle card-frost p-5">
@@ -61,7 +61,7 @@ function CreditRow({ credit }: { credit: LoyaltyCredit }) {
   const iconBg = isEarned
     ? 'bg-success-bg text-success'
     : isRedeemed
-    ? 'bg-lime/10 text-lime-text'
+    ? 'bg-lime-tint-bg text-lime-text'
     : 'bg-gray-500/10 text-text-tertiary'
 
   const amountColor = isEarned
@@ -123,7 +123,7 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-lime/10 to-transparent p-6 mb-6"
+          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-transparent p-6 mb-6"
         >
           <div className="flex items-center gap-2 mb-2">
             <Star className="h-4 w-4 text-lime-text" />
@@ -190,7 +190,7 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
               { step: '4', text: 'Apply credits at checkout to save on future purchases' },
             ].map(({ step, text }) => (
               <div key={step} className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full bg-lime/20 border border-lime-tint-border flex items-center justify-center text-[11px] font-bold text-lime-text shrink-0">
+                <div className="h-6 w-6 rounded-full bg-[rgba(86,184,127,0.20)] border border-lime-tint-border flex items-center justify-center text-[11px] font-bold text-lime-text shrink-0">
                   {step}
                 </div>
                 <p className="text-sm text-text-secondary">{text}</p>

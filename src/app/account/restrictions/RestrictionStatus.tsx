@@ -117,7 +117,7 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
 
               {/* Contact Support */}
               {!isActive && (
-                <div className="flex items-start gap-2.5 bg-lime/10 border border-lime-tint-border rounded-lg p-2.5">
+                <div className="flex items-start gap-2.5 bg-lime-tint-bg border border-lime-tint-border rounded-lg p-2.5">
                   <AlertCircle className="h-4 w-4 text-lime-text flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-medium text-lime-text mb-0.5">Need Help?</p>
@@ -245,7 +245,7 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
               {restrictions.length > 2 && (
                 <button
                   onClick={() => setShowAllHistoryModal(true)}
-                  className="mt-3 w-full text-xs font-medium text-lime-text hover:text-lime-text transition-colors py-1.5 px-3 bg-lime/10 hover:bg-lime/20 border border-lime-tint-border rounded-lg"
+                  className="mt-3 w-full text-xs font-medium text-lime-text hover:text-lime-text transition-colors py-1.5 px-3 bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] border border-lime-tint-border rounded-lg"
                 >
                   View All ({restrictions.length})
                 </button>
