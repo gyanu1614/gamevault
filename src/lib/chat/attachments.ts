@@ -11,6 +11,8 @@
  * can never stand in for it.
  */
 
+import { compressImageForUpload } from '@/lib/images/compress-client'
+
 export const CHAT_ATTACHMENT_BUCKET = 'delivery-evidence'
 export const CHAT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
@@ -74,15 +76,20 @@ export async function uploadChatAttachment(
   orderId: string,
   file: File,
 ): Promise<string> {
-  const problem = validateChatAttachment(file)
+  // Photos are shrunk in the browser first (<=1600 px WebP/JPEG), so a
+  // phone photo uploads fast and is stored small; the 10 MB cap then
+  // applies to what is actually stored. PDFs / GIFs pass through.
+  const toSend = await compressImageForUpload(file)
+  const problem = validateChatAttachment(toSend)
   if (problem) throw new Error(problem)
-  const path = chatAttachmentPath(orderId, file.type, randomAttachmentId())
+  const path = chatAttachmentPath(orderId, toSend.type, randomAttachmentId())
   let failure: unknown = null
   try {
-    const res = await storage.from(CHAT_ATTACHMENT_BUCKET).upload(path, file, {
+    const res = await storage.from(CHAT_ATTACHMENT_BUCKET).upload(path, toSend, {
       upsert: false,
-      cacheControl: '3600',
-      contentType: file.type,
+      // Unique path per file: never changes, so browsers may keep it.
+      cacheControl: '31536000',
+      contentType: toSend.type,
     })
     failure = res.error
   } catch (e) {

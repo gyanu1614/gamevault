@@ -779,9 +779,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           window.location.href = result.checkoutUrl
           return
         }
-        // Carry the chosen network so the payment page preselects its tab.
+        // Carry the chosen coin (and, for USDT, its network) so the payment
+        // page preselects its tab. Bitcoin has no network choice: sending
+        // net=trc20 (a TRON name) with it only confused the link.
         const sep = result.checkoutUrl.includes('?') ? '&' : '?'
-        window.location.href = `${result.checkoutUrl}${sep}coin=${coin}&net=${network}`
+        const params = coin === 'btc' ? 'coin=btc' : `coin=${coin}&net=${network}`
+        window.location.href = `${result.checkoutUrl}${sep}${params}`
         return
       }
       payTab?.close()

@@ -19,6 +19,7 @@ import { validateListingPatch } from '@/lib/listings/validate'
 import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
 import { checkListingImage, listingImagePathFor, listingImagePathFromUrl, isOwnedListingImagePath, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
 export interface ListingUpdateInput {
@@ -68,10 +69,12 @@ export async function uploadListingImage(
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
 
-    const fileName = listingImagePathFor(user.id, checked.image.ext)
+    // Shrink once before storing (<=1600 px WebP); unique path, cached a year.
+    const stored = await toStoredImage(checked.bytes, checked.image.mime)
+    const fileName = listingImagePathFor(user.id, stored.ext as typeof checked.image.ext)
     const { data, error } = await supabase.storage
       .from(LISTING_IMAGE_BUCKET)
-      .upload(fileName, checked.bytes, { cacheControl: '3600', upsert: false, contentType: checked.image.mime })
+      .upload(fileName, stored.bytes, { cacheControl: '31536000', upsert: false, contentType: stored.mime })
     if (error) throw error
 
     const {

@@ -27,6 +27,7 @@ import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
+import { toStoredImage } from '@/lib/images/resize-server'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
  *  legacy categories row on the publish path. The user-bound client can't
@@ -1227,10 +1228,14 @@ export async function uploadSellImage(
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
 
-    const path = listingImagePathFor(user.id, checked.image.ext)
+    // Shrink once before storing (<=1600 px WebP): images are served
+    // unoptimized, so the stored file is what every buyer downloads. The
+    // path is unique per upload, so it can be cached for a year.
+    const stored = await toStoredImage(checked.bytes, checked.image.mime)
+    const path = listingImagePathFor(user.id, stored.ext as typeof checked.image.ext)
     const { data, error } = await supabase.storage
       .from(LISTING_IMAGE_BUCKET)
-      .upload(path, checked.bytes, { cacheControl: '3600', upsert: false, contentType: checked.image.mime })
+      .upload(path, stored.bytes, { cacheControl: '31536000', upsert: false, contentType: stored.mime })
     if (error) return { success: false, error: error.message }
     const { data: urlData } = supabase.storage.from(LISTING_IMAGE_BUCKET).getPublicUrl(data.path)
     return { success: true, data: { url: urlData.publicUrl } }

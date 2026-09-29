@@ -82,6 +82,9 @@ export function MarkDeliveredModal({
     setProgress(0)
     try {
       const supabase = createClient()
+      // Shrink the photo in the browser first (<=1600 px WebP/JPEG).
+      const { compressImageForUpload } = await import('@/lib/images/compress-client')
+      f = await compressImageForUpload(f)
       const path = `${orderId}/${Date.now()}-${f.name.replace(/[^a-z0-9.]/gi, '_')}`
       // Supabase JS doesn't expose granular upload progress in v2, so
       // we simulate it with a soft tick while the network call runs.
@@ -93,7 +96,7 @@ export function MarkDeliveredModal({
       }, 120)
       const { data, error } = await supabase.storage
         .from('delivery-evidence')
-        .upload(path, f, { upsert: false, cacheControl: '3600' })
+        .upload(path, f, { upsert: false, cacheControl: '31536000', contentType: f.type })
       clearInterval(interval)
       if (error) throw error
       setProgress(100)
