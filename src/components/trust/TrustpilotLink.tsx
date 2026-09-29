@@ -42,7 +42,7 @@ export function TrustpilotLink({ className }: { className?: string }) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'group inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-[#1B1F27] px-3.5 py-2 backdrop-blur-md transition-colors duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
+        'group inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-[#1D1E23] px-3.5 py-2 backdrop-blur-md transition-colors duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
         className,
       )}
     >

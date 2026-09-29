@@ -132,12 +132,12 @@ export default function ItemCard({
         // border brightens toward white, with a faint lit top edge. NO lift
         // and no drop shadow — the card must not move. Colour + border only,
         // so it transitions `colors` and `box-shadow`, never `transform`.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1B1F27]',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23]',
         'transition-[background-color,border-color,box-shadow] duration-200',
         // Hover stays in the black family: one step lighter than the resting
-        // #1B1F27, a slightly clearer hairline, and a lit top edge — never
+        // #1D1E23, a slightly clearer hairline, and a lit top edge — never
         // the grey bg-inset/overlay tokens.
-        'hover:border-white/[0.14] hover:bg-[#222732] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]',
+        'hover:border-white/[0.14] hover:bg-[#24252B]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -145,13 +145,6 @@ export default function ItemCard({
         href={href}
         aria-label={offer.name}
         className="absolute inset-0 z-0 pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-tint-bg"
-      />
-      {/* Top sheen — faint light falling from above (bundle-tile look).
-          Sits after the stretched link in the DOM so it paints above the
-          card surface; pointer-events-none keeps the link clickable. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
       />
 
       {/* MAIN BLOCK — pointer-events-none so the whole-card Link gets clicks;
@@ -223,7 +216,7 @@ export default function ItemCard({
           SAME vertical space. Without this the strip collapses on owned
           listings and the card ends up shorter than its neighbours, which
           broke row alignment in the detail-page carousel. */}
-      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-subtle" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
+      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-subtle bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 items-baseline gap-1.5">

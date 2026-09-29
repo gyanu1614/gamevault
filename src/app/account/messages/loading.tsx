@@ -23,7 +23,7 @@ export default function MessagesLoading() {
       </div>
 
       {/* Chat tabs bar */}
-      <div className="mb-4 flex w-fit items-center gap-1 rounded-md border border-white/[0.08] bg-[#1B1F27] p-1">
+      <div className="mb-4 flex w-fit items-center gap-1 rounded-md border border-white/[0.08] bg-[#1D1E23] p-1">
         {['w-10', 'w-16', 'w-[86px]', 'w-14', 'w-20', 'w-16', 'w-[128px]'].map((w, i) => (
           <Block key={i} className={`h-8 rounded-[5px] ${w}`} />
         ))}
@@ -31,7 +31,7 @@ export default function MessagesLoading() {
 
       <div className="grid h-[calc(100vh-252px)] grid-cols-1 gap-3 lg:grid-cols-[380px_1fr]">
         {/* Conversation list */}
-        <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1B1F27]">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23]">
           <div className="border-b border-white/[0.05] p-3">
             <Block className="h-10 w-full" />
           </div>
@@ -52,7 +52,7 @@ export default function MessagesLoading() {
         </div>
 
         {/* Thread */}
-        <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1B1F27]">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23]">
           <div className="flex items-center gap-3 border-b border-white/[0.05] p-4">
             <Block className="h-10 w-10 rounded-full" />
             <div className="space-y-1.5">
