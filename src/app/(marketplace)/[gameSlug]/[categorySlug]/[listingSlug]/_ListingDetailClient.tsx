@@ -25,10 +25,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ChevronLeft, ChevronRight, Clock, Package, Globe, Gamepad2,
-  CheckCircle2, ShoppingBag, Loader2, ArrowUpRight,
+  ChevronLeft, ChevronRight, Globe, Gamepad2,
+  Loader2, ArrowUpRight,
   Award, Sparkles, ChevronDown,
 } from 'lucide-react'
+import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
+import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
+import ShoppingBagRoundedIcon from '@mui/icons-material/ShoppingBagRounded'
+import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -39,7 +44,6 @@ import type { ItemOffer } from '../_itemsTypes'
 import { NumberField } from '@/components/ui/number-field'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
-import DescriptionIcon from '@/components/icons/DescriptionIcon'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
@@ -157,6 +161,16 @@ export default function ListingDetailClient({
   const { open: openAuth } = useAuthDialog()
   const [activeImg, setActiveImg] = useState(0)
   const [qty, setQty] = useState(1)
+  // Description collapses past ~12 lines (15px × 1.75 ≈ 315px) with a
+  // Show More toggle; measured once mounted so short text never gets a button.
+  const descRef = useRef<HTMLDivElement>(null)
+  const [descOpen, setDescOpen] = useState(false)
+  const [descOverflows, setDescOverflows] = useState(false)
+  useLayoutEffect(() => {
+    const el = descRef.current
+    if (!el) return
+    setDescOverflows(el.scrollHeight > 315 + 24)
+  }, [listing.description])
   const [navigating, startNav] = useTransition()
   const purchaseRef = useRef<HTMLDivElement | null>(null)
   const [showMobileBar, setShowMobileBar] = useState(false)
@@ -321,7 +335,7 @@ export default function ListingDetailClient({
       {previewStatus && (
         <div className="mx-auto w-full max-w-7xl px-3 pt-6 sm:px-6 lg:px-8">
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/35 bg-amber-500/10 px-4 py-3">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.5} />
+            <ScheduleRoundedIcon className="mt-0.5 shrink-0 text-amber-300" style={{ fontSize: 17 }} />
             <p className="min-w-0 flex-1 text-[13.5px] text-text-secondary">
               <span className="font-semibold text-amber-300">
                 Preview — {PREVIEW_STATUS_LABELS[previewStatus] ?? previewStatus.replace(/_/g, ' ')}.
@@ -485,20 +499,41 @@ export default function ListingDetailClient({
             {/* Description — its own card. Heading-weight label + a themed,
                 swappable icon; body preserves the seller's exact input
                 (line breaks + blank lines) via a single pre-wrap block. */}
-            <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg">
+            <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-lime-tint-border">
-                    <DescriptionIcon className="h-[18px] w-[18px]" />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-inset ring-lime-tint-border/60">
+                    <DescriptionRoundedIcon style={{ fontSize: 21 }} />
                   </span>
                   <h2 className="text-[17px] font-bold leading-none text-text-primary">
                     Description
                   </h2>
                 </div>
                 {listing.description?.trim() ? (
-                  <p className="whitespace-pre-wrap text-[15px] leading-[1.75] text-text-secondary [&_strong]:font-semibold [&_strong]:text-text-primary">
-                    {listing.description}
-                  </p>
+                  <div>
+                    <div
+                      ref={descRef}
+                      className={cn('relative overflow-hidden transition-[max-height] duration-300', !descOpen && descOverflows && 'max-h-[315px]')}
+                    >
+                      <p className="whitespace-pre-wrap text-[15px] leading-[1.75] text-text-secondary [&_strong]:font-semibold [&_strong]:text-text-primary">
+                        {listing.description}
+                      </p>
+                      {!descOpen && descOverflows && (
+                        <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(to_bottom,transparent,#1A1B1F)]" />
+                      )}
+                    </div>
+                    {descOverflows && (
+                      <button
+                        type="button"
+                        onClick={() => setDescOpen((v) => !v)}
+                        aria-expanded={descOpen}
+                        className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-lime-text transition-opacity hover:opacity-80"
+                      >
+                        {descOpen ? 'Show Less' : 'Show More'}
+                        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', descOpen && 'rotate-180')} />
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-[14px] italic text-text-tertiary">
                     The seller hasn&apos;t added a description for this listing yet.
@@ -516,7 +551,7 @@ export default function ListingDetailClient({
               the page at the end like any sticky. */}
           <div ref={purchaseRef} className="lg:sticky lg:self-start" style={{ top: railTop }}>
 
-              <Card className="relative flex flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 rounded-lg">
+              <Card className="relative flex flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 rounded-lg">
                 {/* V31 — SafeDrop emblem watermark peeking from the
                     corner, clipped by the card edge. backdrop-blur creates
                     a stacking context so -z-10 paints above the card bg
@@ -553,7 +588,7 @@ export default function ListingDetailClient({
                         {sellerName}
                       </span>
                       {listing.seller.verified && (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 fill-lime text-text-inverse" />
+                        <VerifiedBadge size={14} />
                       )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
@@ -671,7 +706,7 @@ export default function ListingDetailClient({
                       'Out of stock'
                     ) : (
                       <>
-                        <ShoppingBag className="h-[18px] w-[18px]" />
+                        <ShoppingBagRoundedIcon style={{ fontSize: 20 }} />
                         {BUY_CTA_LABEL}
                       </>
                     )}
@@ -684,7 +719,7 @@ export default function ListingDetailClient({
                   their own card directly below, inside the same sticky
                   rail (same width — alignment with the buy panel is
                   automatic). */}
-              <Card className="relative mt-3 flex flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4 rounded-lg">
+              <Card className="relative mt-3 flex flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4 rounded-lg">
                 <TrustBand />
               </Card>
 
@@ -794,7 +829,7 @@ export default function ListingDetailClient({
                 {navigating ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                   <>
                     {BUY_CTA_LABEL}
-                    <ShoppingBag className="h-4 w-4" />
+                    <ShoppingBagRoundedIcon style={{ fontSize: 18 }} />
                   </>
                 )}
               </Button>
@@ -811,10 +846,10 @@ export default function ListingDetailClient({
 function InfoLabelIcon({ label }: { label: string }) {
   const l = label.toLowerCase()
   const cls = 'h-3.5 w-3.5 text-text-tertiary'
-  if (l.includes('delivery')) return <Clock className={cls} />
+  if (l.includes('delivery')) return <ScheduleRoundedIcon className="text-text-tertiary" style={{ fontSize: 15 }} />
   if (l.includes('region')) return <Globe className={cls} />
   if (l.includes('platform')) return <Gamepad2 className={cls} />
-  if (l.includes('stock') || l.includes('quantity')) return <Package className={cls} />
+  if (l.includes('stock') || l.includes('quantity')) return <Inventory2RoundedIcon className="text-text-tertiary" style={{ fontSize: 15 }} />
   if (l.includes('rar')) return <Sparkles className={cls} />
   return <Award className={cls} />
 }
@@ -1055,7 +1090,7 @@ function OtherSellerRow({
   })()
 
   return (
-    <Card className="overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg transition-colors hover:border-white/[0.16]">
+    <Card className="overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg transition-colors hover:border-white/[0.16]">
       <Collapsible open={open} onOpenChange={onOpenChange}>
         {/* Header row — the trigger fills everything except the right-hand
             action slot (price ⇄ Open button), which must stay OUTSIDE the
@@ -1117,7 +1152,7 @@ function OtherSellerRow({
                     {sellerName}
                   </span>
                   {offer.seller.verified && (
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 fill-lime text-text-inverse" />
+                    <VerifiedBadge size={14} />
                   )}
                 </span>
                 <span className="block text-[11px] text-text-tertiary">
@@ -1131,7 +1166,7 @@ function OtherSellerRow({
 
             {/* Delivery — wider screens only */}
             <span className="hidden w-[100px] shrink-0 items-center gap-1.5 text-[12.5px] font-medium text-text-secondary md:inline-flex">
-              <Clock className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+              <ScheduleRoundedIcon className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} />
               {delivery}
             </span>
 
@@ -1201,11 +1236,11 @@ function OtherSellerRow({
                     {fmtPrice(offer.pricePerUnit)}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-[12.5px] text-text-secondary">
-                    <Clock className="h-3.5 w-3.5 text-text-tertiary" />
+                    <ScheduleRoundedIcon className="text-text-tertiary" style={{ fontSize: 15 }} />
                     {delivery}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-[12.5px] text-text-secondary">
-                    <Package className="h-3.5 w-3.5 text-text-tertiary" />
+                    <Inventory2RoundedIcon className="text-text-tertiary" style={{ fontSize: 15 }} />
                     {stockLabel} in stock
                   </span>
                 </div>
@@ -1267,7 +1302,7 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
         <div className="flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
           <span className="truncate">{sellerName}</span>
           {listing.seller.verified && (
-            <CheckCircle2 className="h-3 w-3 shrink-0 fill-lime text-text-inverse" />
+            <VerifiedBadge size={12} />
           )}
           <span aria-hidden>·</span>
           <span className="tabular-nums">{fmtCount(listing.seller.totalSales)} sold</span>

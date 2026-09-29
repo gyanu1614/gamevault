@@ -158,10 +158,10 @@ export default function ItemCard({
         // drop shadow for depth. Hover lifts the whole gradient one step and
         // clears the hairline — still black, never the grey tokens.
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-white/[0.10]',
-        'bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)]',
+        'bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]',
         'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]',
         'transition-[background-image,border-color,box-shadow] duration-200',
-        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#30313A_0%,#212228_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
+        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -243,7 +243,7 @@ export default function ItemCard({
           SAME vertical space. Without this the strip collapses on owned
           listings and the card ends up shorter than its neighbours, which
           broke row alignment in the detail-page carousel. */}
-      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#1A1B20] transition-colors group-hover:bg-[#1F2026]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
+      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 items-baseline gap-1.5">
