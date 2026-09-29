@@ -13,7 +13,7 @@ export interface SoldRowProps {
  */
 export function SoldRow({ item }: SoldRowProps) {
   return (
-    <div className="relative inline-flex items-center gap-3 overflow-hidden whitespace-nowrap rounded-full border border-border-subtle bg-[rgba(20,20,27,0.56)] px-5 py-3 backdrop-blur-md">
+    <div className="relative inline-flex items-center gap-3 overflow-hidden whitespace-nowrap rounded-full border border-border-subtle bg-[rgba(24,25,29,0.86)] px-5 py-3 backdrop-blur-md">
       {/* Top sheen */}
       <span
         aria-hidden

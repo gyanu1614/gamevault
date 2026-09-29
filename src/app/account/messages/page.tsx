@@ -164,7 +164,7 @@ export default function MessagesPage() {
       <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Chat</h1>
 
       {/* Tabs — one horizontally scrollable row on phones, never wrapping. */}
-      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(24,25,29,0.86)] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHAT_TABS.map((t) => (
           <button
             key={t.value}
@@ -185,7 +185,7 @@ export default function MessagesPage() {
             is opened (the chat pane replaces it, with a back button). ── */}
         <aside
           className={cn(
-            'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md',
+            'relative flex-col overflow-hidden rounded-lg border border-border-subtle bg-[rgba(24,25,29,0.86)] backdrop-blur-md',
             selectedConversationId ? 'hidden lg:flex' : 'flex',
           )}
         >
@@ -277,7 +277,7 @@ export default function MessagesPage() {
             conversation (native-chat feel, framer-motion). ── */}
         <section
           className={cn(
-            'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md',
+            'relative flex-col overflow-hidden rounded-lg border border-border-subtle bg-[rgba(24,25,29,0.86)] backdrop-blur-md',
             selectedConversationId ? 'flex' : 'hidden lg:flex',
           )}
         >

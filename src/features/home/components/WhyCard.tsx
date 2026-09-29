@@ -75,7 +75,7 @@ export function WhyCard({ icon: Icon, img, title, body, tone = 'lime', index = 0
       style={settled ? undefined : { transitionDelay: `${index * 90}ms` }}
       className={cn(
         'group relative overflow-hidden rounded-xl border border-border-default',
-        'bg-[rgba(20,20,27,0.56)] p-6 backdrop-blur-md',
+        'bg-[rgba(24,25,29,0.86)] p-6 backdrop-blur-md',
         'transition-all duration-500 ease-out',
         inView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
         'hover:-translate-y-1 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',

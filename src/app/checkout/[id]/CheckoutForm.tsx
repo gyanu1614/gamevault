@@ -83,7 +83,7 @@ const T = {
   ivory: '#1F242C',
   ivory2: '#181D25',
   row: '#252B34',
-  glass: 'rgba(20,20,27,0.56)',
+  glass: 'rgba(24,25,29,0.86)',
   ink: '#E9EDF2',
   ink2: '#9AA6B3',
   dis: '#6C7684',
@@ -1043,7 +1043,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // ── Phones: one compact strip — thumbnail, title, game · category · qty,
   //    the seller's name, the price. Everything else lives under the list.
   const orderStrip = (
-    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.line, background: T.glass }}>
+    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass }}>
       <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
         Your Order
       </p>
@@ -1196,7 +1196,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   const summaryCard = (compact = false) => (
-    <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.line, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
+    <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
       {/* Item */}
       <div className="flex items-center gap-3.5">
         <Image
@@ -1385,7 +1385,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             )}
             {/* Phones: discount code + the money rows sit under the list,
                 right above the sticky Pay Now bar. */}
-            <div className="mt-4 rounded-lg border px-4 pb-4 pt-1 backdrop-blur-md lg:hidden" style={{ borderColor: T.line, background: T.glass }}>
+            <div className="mt-4 rounded-lg border px-4 pb-4 pt-1 backdrop-blur-md lg:hidden" style={{ borderColor: T.lineSubtle, background: T.glass }}>
               {promoSection}
               {moneySummary}
             </div>

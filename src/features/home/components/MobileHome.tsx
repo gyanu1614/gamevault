@@ -717,7 +717,7 @@ export function MobileTrustRows() {
       {TRUST_CARDS.map(({ claim, proof, img, Ghost, glow }) => (
         <div
           key={claim}
-          className="relative overflow-hidden rounded-xl border border-border-default bg-[rgba(20,20,27,0.56)] p-3.5 backdrop-blur-md"
+          className="relative overflow-hidden rounded-xl border border-border-subtle bg-[rgba(24,25,29,0.86)] p-3.5 backdrop-blur-md"
         >
           {/* Top sheen */}
           <span

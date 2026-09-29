@@ -173,7 +173,7 @@ const FilterTrigger = React.forwardRef<
       'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md border-2 px-4 text-[13.5px] font-semibold backdrop-blur-md transition-all duration-200',
       active
         ? 'border-border-strong bg-[rgba(26,26,35,0.70)] text-text-primary'
-        : 'border-border-default bg-[rgba(20,20,27,0.56)] text-text-secondary',
+        : 'border-border-subtle bg-[rgba(24,25,29,0.86)] text-text-secondary',
       disabled
         ? 'cursor-not-allowed opacity-50'
         : 'hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:text-text-primary hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
@@ -336,7 +336,7 @@ function OffersTable({ title, rows }: { title: string; rows: MockOffer[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search offers…"
-            className="h-[42px] w-full rounded-md border-2 border-border-default bg-[rgba(20,20,27,0.56)] pl-9 pr-3 text-[13px] font-medium text-text-primary backdrop-blur-md transition-colors placeholder:text-text-tertiary focus:border-border-strong focus:outline-none focus-visible:shadow-none"
+            className="h-[42px] w-full rounded-md border-2 border-border-subtle bg-[rgba(24,25,29,0.86)] pl-9 pr-3 text-[13px] font-medium text-text-primary backdrop-blur-md transition-colors placeholder:text-text-tertiary focus:border-border-strong focus:outline-none focus-visible:shadow-none"
           />
         </div>
 
@@ -366,7 +366,7 @@ function OffersTable({ title, rows }: { title: string; rows: MockOffer[] }) {
       </div>
 
       {/* ── Results card ── */}
-      <div className="relative mt-4 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+      <div className="relative mt-4 overflow-hidden rounded-lg border border-border-subtle bg-[rgba(24,25,29,0.86)] shadow-elevated backdrop-blur-md">
         {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
 
