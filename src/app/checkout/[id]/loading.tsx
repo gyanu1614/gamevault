@@ -45,6 +45,20 @@ export default function CheckoutLoading() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
+          {/* Phones: compact order strip */}
+          <Card className="p-3.5 lg:hidden">
+            <Block className="h-4 w-20" />
+            <div className="mt-2.5 flex items-start gap-3">
+              <Block className="h-[52px] w-[52px] rounded-md" />
+              <div className="min-w-0 flex-1">
+                <Block className="h-4 w-44" />
+                <Block className="mt-1.5 h-3 w-40" />
+                <Block className="mt-1.5 h-3 w-28" />
+              </div>
+              <Block className="h-5 w-14" />
+            </div>
+          </Card>
+
           {/* Left — payment column */}
           <div>
             <Block className="h-5 w-24" />
@@ -67,10 +81,27 @@ export default function CheckoutLoading() {
               </Card>
             ))}
 
+            {/* Phones: discount + money rows under the list */}
+            <Card className="mt-4 px-4 pb-4 pt-3 lg:hidden">
+              <Block className="h-3.5 w-40" />
+              <div className="mt-3 space-y-2 border-t pt-3.5" style={{ borderColor: LINE }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex justify-between">
+                    <Block className="h-3.5 w-28" />
+                    <Block className="h-3.5 w-14" />
+                  </div>
+                ))}
+                <div className="flex justify-between border-t pt-3" style={{ borderColor: LINE }}>
+                  <Block className="h-5 w-12" />
+                  <Block className="h-6 w-20" />
+                </div>
+              </div>
+            </Card>
+
           </div>
 
-          {/* Right — summary card */}
-          <Card className="p-5">
+          {/* Desktop — summary card */}
+          <Card className="hidden p-5 lg:block">
             <div className="flex items-center gap-3.5">
               <Block className="h-14 w-14 rounded-lg" />
               <div className="min-w-0 flex-1">

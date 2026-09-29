@@ -1038,6 +1038,161 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
+  // ── Phones: one compact strip — thumbnail, title, game · category · qty,
+  //    the seller's name, the price. Everything else lives under the list.
+  const orderStrip = (
+    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.line, background: T.glass }}>
+      <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
+        Your Order
+      </p>
+      <div className="flex items-start gap-3">
+        <Image
+          src={imageSrc}
+          alt={title}
+          width={52}
+          height={52}
+          unoptimized
+          className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
+          style={{ background: T.ivory2 }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[14px] font-semibold leading-snug" style={{ color: T.ink }}>
+            {title}
+          </p>
+          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
+            {[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
+            {(listing.game?.name || listing.category?.name) && ' · '}Quantity: x{quantity.toLocaleString()}
+          </p>
+          <p className="mt-0.5 flex items-center gap-1 truncate text-[12px]" style={{ color: T.ink2 }}>
+            Seller <span className="font-semibold" style={{ color: T.ink }}>{sellerName}</span>
+            {isVerifiedSeller && <BadgeCheck aria-label="Verified Seller" className="h-[14px] w-[14px] shrink-0" style={{ fill: '#1D9BF0', color: '#FFFFFF' }} />}
+          </p>
+        </div>
+        <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: T.ink }}>
+          ${subtotal.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  )
+
+  // ── Shared with the phone layout: the discount toggle and the money rows
+  //    render inside the desktop card AND under the payment list on phones.
+  const promoSection = (
+        <div className="mt-4">
+          {!promoResult?.valid && (
+            <button
+              type="button"
+              onClick={() => setCodeOpen((v) => !v)}
+              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
+              style={{ color: T.forest2 }}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Have A Discount Code?
+              <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
+              />
+            </button>
+          )}
+          <AnimatePresence initial={false}>
+            {(codeOpen || promoResult?.valid) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
+                  {promoResult?.valid ? (
+            <div
+              className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
+              style={{ background: T.limeTint, borderColor: 'rgba(86,184,127,0.35)', color: T.accentText }}
+            >
+              <span className="truncate">Code Applied: {promoResult.code}</span>
+              <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleApplyPromo()
+                }}
+                placeholder="Discount Code"
+                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#56B87F]"
+                style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
+              />
+              <button
+                type="button"
+                onClick={() => void handleApplyPromo()}
+                disabled={promoValidating}
+                className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
+                style={{ borderColor: T.accentText, color: T.accentText }}
+              >
+                {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
+              </button>
+            </>
+          )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+  )
+
+  const moneySummary = (
+      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
+        <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+        <Row
+          label={MARKETPLACE_FEE_LABEL}
+          value={`+$${fee.marketplaceAmount.toFixed(2)}`}
+          infoTitle="Marketplace Fee"
+          infoBadge={`${fee.marketplacePct}%`}
+          info="Platform & buyer protection."
+        />
+        <Row
+          label={PROCESSING_FEE_LABEL}
+          value={`+$${processingFee.toFixed(2)}`}
+          infoTitle="Processing Fee"
+          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
+          info="Covers payment processing for the method you picked."
+        />
+        {promoDiscount > 0 && (
+          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.success} />
+        )}
+        {walletBalance > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2" style={{ color: T.ink2 }}>
+              Store Credit
+              <InfoDot text={`You have $${walletBalance.toFixed(2)} store credit available.`} />
+              <MiniSwitch
+                on={useWallet}
+                onToggle={() => setUseWallet((v) => !v)}
+                label="Apply Store Credit"
+              />
+            </span>
+            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.success : T.ink }}>
+              −${walletAmount.toFixed(2)}
+            </span>
+          </div>
+        )}
+        <div
+          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
+          style={{ borderColor: T.line }}
+        >
+          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+            Total
+          </span>
+          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
+            ${total.toFixed(2)}
+          </span>
+        </div>
+      </div>
+  )
+
   const summaryCard = (compact = false) => (
     <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.line, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
       {/* Item */}
@@ -1117,120 +1272,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       </div>
 
       {/* Discount code — collapsed behind a toggle */}
-      {!compact && (
-        <div className="mt-4">
-          {!promoResult?.valid && (
-            <button
-              type="button"
-              onClick={() => setCodeOpen((v) => !v)}
-              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
-              style={{ color: T.forest2 }}
-            >
-              <Tag className="h-3.5 w-3.5" />
-              Have A Discount Code?
-              <ChevronDown
-                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
-              />
-            </button>
-          )}
-          <AnimatePresence initial={false}>
-            {(codeOpen || promoResult?.valid) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="overflow-hidden"
-              >
-                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
-                  {promoResult?.valid ? (
-            <div
-              className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
-              style={{ background: T.limeTint, borderColor: 'rgba(86,184,127,0.35)', color: T.accentText }}
-            >
-              <span className="truncate">Code Applied: {promoResult.code}</span>
-              <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <>
-              <input
-                value={promoInput}
-                onChange={(e) => setPromoInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleApplyPromo()
-                }}
-                placeholder="Discount Code"
-                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#56B87F]"
-                style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
-              />
-              <button
-                type="button"
-                onClick={() => void handleApplyPromo()}
-                disabled={promoValidating}
-                className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
-                style={{ borderColor: T.accentText, color: T.accentText }}
-              >
-                {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
-              </button>
-            </>
-          )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
+      {!compact && promoSection}
 
       {/* Money summary */}
-      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
-        <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
-        <Row
-          label={MARKETPLACE_FEE_LABEL}
-          value={`+$${fee.marketplaceAmount.toFixed(2)}`}
-          infoTitle="Marketplace Fee"
-          infoBadge={`${fee.marketplacePct}%`}
-          info="Platform & buyer protection."
-        />
-        <Row
-          label={PROCESSING_FEE_LABEL}
-          value={`+$${processingFee.toFixed(2)}`}
-          infoTitle="Processing Fee"
-          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
-          info="Covers payment processing for the method you picked."
-        />
-        {promoDiscount > 0 && (
-          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.success} />
-        )}
-        {walletBalance > 0 && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2" style={{ color: T.ink2 }}>
-              Store Credit
-              <InfoDot text={`You have $${walletBalance.toFixed(2)} store credit available.`} />
-              <MiniSwitch
-                on={useWallet}
-                onToggle={() => setUseWallet((v) => !v)}
-                label="Apply Store Credit"
-              />
-            </span>
-            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.success : T.ink }}>
-              −${walletAmount.toFixed(2)}
-            </span>
-          </div>
-        )}
-        <div
-          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
-          style={{ borderColor: T.line }}
-        >
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-            Total
-          </span>
-          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
-            ${total.toFixed(2)}
-          </span>
-        </div>
-      </div>
+      {moneySummary}
 
       {/* Desktop: the commitment lives with the numbers. Phones keep the
           sticky pay bar at the bottom of the screen. */}
@@ -1301,8 +1346,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
         {/* Two columns (desktop) / stacked with summary first (mobile) */}
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
-          {/* Mobile: summary card first */}
-          <div className="lg:hidden">{summaryCard()}</div>
+          {/* Phones: the compact order strip first */}
+          <div className="lg:hidden">{orderStrip}</div>
 
           <div>
             <p className="text-[18px] font-semibold" style={{ color: T.ink }}>
@@ -1315,6 +1360,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {payError && (
               <p className="mt-3 text-[12.5px] font-medium text-red-600 lg:hidden">{payError}</p>
             )}
+            {/* Phones: discount code + the money rows sit under the list,
+                right above the sticky Pay Now bar. */}
+            <div className="mt-4 rounded-lg border px-4 pb-4 pt-1 backdrop-blur-md lg:hidden" style={{ borderColor: T.line, background: T.glass }}>
+              {promoSection}
+              {moneySummary}
+            </div>
             {/* Trust signals at the moment of commitment. */}
             <div className="mt-5 flex justify-center">
               <TrustChips />
