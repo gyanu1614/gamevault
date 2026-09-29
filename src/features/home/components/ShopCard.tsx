@@ -33,7 +33,7 @@ export function ShopCard({ href, name, game, iconSrc, fromPrice, chips = [] }: S
       href={href}
       className={cn(
         'group relative flex snap-start flex-col items-center overflow-hidden rounded-xl border-2 border-border-default',
-        'bg-[rgba(20,20,27,0.56)] p-5 pb-4 text-center backdrop-blur-md',
+        'bg-[#1D1E23] p-5 pb-4 text-center backdrop-blur-md',
         // App-shell: tighter card on phones (3-up grid)
         'max-lg:rounded-[10px] max-lg:border max-lg:p-3 max-lg:pb-3',
         'transition-all duration-200 ease-gv',
