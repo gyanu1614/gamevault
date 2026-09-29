@@ -3,7 +3,7 @@
 --
 -- Problem: anon + authenticated still held the Supabase default table grant
 -- on orders — INSERT, DELETE, TRUNCATE, TRIGGER, REFERENCES (UPDATE is
--- 20260928142017_orders_update_revoke; SELECT was made column-level by
+-- 20260928171523_orders_update_revoke; SELECT was made column-level by
 -- 20260927224019_orders_column_privacy). Row security was the only barrier,
 -- and not everywhere:
 --   · DELETE: "Admins can delete orders" let any admin SESSION hard-delete an
@@ -34,7 +34,7 @@
 --     FK referential actions run as the table owner, so cascades are
 --     unaffected.
 --
--- After this migration and 20260928142017, the session roles hold exactly
+-- After this migration and 20260928171523, the session roles hold exactly
 -- the column-level SELECT list of 20260927224019 on orders (untouched here).
 -- The service role keeps every privilege.
 --

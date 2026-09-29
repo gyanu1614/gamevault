@@ -1,5 +1,5 @@
 /**
- * orders: the session roles keep only what they use (20260928150059_orders_session_privileges.sql).
+ * orders: the session roles keep only what they use (20260928172716_orders_session_privileges.sql).
  *
  * Before: anon + authenticated held table-level INSERT, DELETE, TRUNCATE,
  * TRIGGER and REFERENCES on orders (the Supabase default grant), and the RLS
@@ -18,7 +18,7 @@
  * INSERT / DELETE / view writes are probed through PostgREST as real
  * buyer / seller / admin sessions and the bare anon key; TRUNCATE / TRIGGER /
  * REFERENCES cannot be issued through PostgREST, so they are read from the
- * catalog (local stack, psql). UPDATE on orders is 20260928142017 (PR #108).
+ * catalog (local stack, psql). UPDATE on orders is 20260928171523 (PR #108).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { execFileSync } from 'node:child_process'
