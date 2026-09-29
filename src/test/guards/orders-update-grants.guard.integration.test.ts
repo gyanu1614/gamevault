@@ -1,5 +1,5 @@
 /**
- * orders UPDATE is not a session privilege (20260928142017_orders_update_revoke.sql).
+ * orders UPDATE is not a session privilege (20260928171523_orders_update_revoke.sql).
  *
  * Before: anon + authenticated held table-level UPDATE on orders, and the RLS
  * policies "Buyers and sellers can update their orders" / "Buyers can confirm

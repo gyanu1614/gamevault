@@ -553,7 +553,7 @@ export async function cancelOrder(orderId: string): Promise<{
     }
 
     // cancelled_at was stamped by validate_order_status_transition inside the
-    // RPC's transaction; sessions hold no UPDATE on orders (20260928142017_orders_update_revoke).
+    // RPC's transaction; sessions hold no UPDATE on orders (20260928171523_orders_update_revoke).
 
     await logOrderAction('cancelled', orderId, user.id, {
       reason: 'buyer_cancelled',
