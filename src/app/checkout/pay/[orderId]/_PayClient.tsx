@@ -61,25 +61,30 @@ type ViewState = 'waiting' | 'seen' | 'confirming' | 'paid' | 'partial' | 'expir
 
 // ─── Ledger Receipt tokens (handoff README) ─────────────────────────
 const L = {
-  ivory: '#FAFAF7',
+  // Dark marketplace theme (src/styles/tokens.css) — same keys as the light
+  // era so every call site reads unchanged. ivory = page ground.
+  ivory: '#171B21',
+  raised: '#1F242C',
+  well: '#181D25',
   white: '#FFFFFF',
-  line: '#E4E5DE',
-  line2: '#F3F3ED',
-  dash: '#DDDBD1',
-  conn: '#D8D6CC',
-  ink: '#1A1D19',
-  muted: '#5B6157',
-  faint: '#8A8E84',
-  ghost: '#A9ACA1',
-  forest: '#14432A',
+  line: 'rgba(255,255,255,0.14)',
+  line2: 'rgba(255,255,255,0.08)',
+  dash: 'rgba(255,255,255,0.18)',
+  conn: 'rgba(255,255,255,0.22)',
+  ink: '#E9EDF2',
+  muted: '#9AA6B3',
+  faint: '#6C7684',
+  ghost: '#6C7684',
+  forest: '#56B87F',      // green as text / icon
+  forestBtn: '#2A7A50',   // green as button fill
   lime: '#A3E635',
-  limePale: '#EAF7D8',
-  warnBg: '#FDF6DB',
-  warnLn: '#EED9A0',
-  warnTx: '#7A5A11',
-  blue: '#1D6FD8',
-  blueLn: '#BFD7F4',
-  blueBg: '#EAF1FC',
+  limePale: 'rgba(86,184,127,0.14)',
+  warnBg: 'rgba(255,178,62,0.10)',
+  warnLn: 'rgba(255,178,62,0.35)',
+  warnTx: '#FFB23E',
+  blue: '#589BFF',
+  blueLn: 'rgba(88,155,255,0.35)',
+  blueBg: 'rgba(88,155,255,0.10)',
   tether: '#26A17B',
 }
 
@@ -163,7 +168,7 @@ function CopyChip({ value, label }: { value: string; label: string }) {
           setTimeout(() => setCopied(false), 1500)
         }
       }}
-      className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border bg-white px-2.5 text-[11.5px] font-semibold transition-colors hover:border-[#14432A66]"
+      className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border bg-[#1F242C] px-2.5 text-[11.5px] font-semibold transition-colors hover:border-[#56B87F66]"
       style={{ borderColor: L.line, color: L.ink }}
     >
       {copied ? (
@@ -258,7 +263,7 @@ function StepIndicator({ view }: { view: ViewState }) {
           ) : i === current ? (
             <span
               className="rounded-md px-3 py-[3px] font-semibold text-white"
-              style={{ background: L.forest }}
+              style={{ background: L.forestBtn }}
             >
               {label}
             </span>
@@ -278,7 +283,7 @@ function LedgerDone({ title, meta }: { title: string; meta: string }) {
     <div className="relative pl-[22px] pb-4">
       <span
         className="absolute left-0 top-[3px] h-2 w-2 rounded-full"
-        style={{ background: L.forest }}
+        style={{ background: L.forestBtn }}
       />
       <span
         className="absolute left-[3.5px] top-[14px] bottom-0 w-px"
@@ -300,7 +305,7 @@ function LedgerGhost({ title, last = false }: { title: string; last?: boolean })
   return (
     <div className="relative pl-[22px] pb-4" style={last ? { paddingBottom: 0 } : undefined}>
       <span
-        className="absolute left-0 top-[3px] h-2 w-2 rounded-full bg-white"
+        className="absolute left-0 top-[3px] h-2 w-2 rounded-full bg-[#1F242C]"
         style={{ boxShadow: `inset 0 0 0 1.5px ${L.conn}` }}
       />
       {!last && (
@@ -372,7 +377,7 @@ function LedgerLive({
             <div className="mt-1.5 h-[6px] w-full overflow-hidden rounded-full" style={{ background: L.line2 }}>
               <motion.div
                 className="h-full w-[40%] rounded-full"
-                style={{ background: L.forest }}
+                style={{ background: L.forestBtn }}
                 animate={{ x: ['-100%', '250%'] }}
                 transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
               />
@@ -398,7 +403,7 @@ function LedgerLive({
             <button
               type="button"
               onClick={onCopyRemaining}
-              className="mt-2 inline-flex h-[28px] items-center gap-1.5 rounded-md border bg-white px-2.5 text-[11.5px] font-semibold"
+              className="mt-2 inline-flex h-[28px] items-center gap-1.5 rounded-md border bg-[#1F242C] px-2.5 text-[11.5px] font-semibold"
               style={{ borderColor: L.warnLn, color: L.warnTx }}
             >
               <Copy className="h-3 w-3" /> Copy {dueDisplay} {short}
@@ -432,7 +437,7 @@ function HelpDrawer({ trigger }: { trigger: React.ReactNode }) {
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Drawer.Content
           className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-lg p-6 pb-9"
-          style={{ background: L.ivory, color: L.ink }}
+          style={{ background: L.raised, color: L.ink }}
         >
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full" style={{ background: L.line }} />
           <Drawer.Title className="text-[15px] font-extrabold">Payment Help</Drawer.Title>
@@ -452,7 +457,7 @@ function HelpDrawer({ trigger }: { trigger: React.ReactNode }) {
             <a
               href="mailto:support@dropmarket.gg"
               className="inline-flex h-[42px] items-center rounded-md px-4 text-[13px] font-bold text-white"
-              style={{ background: L.forest }}
+              style={{ background: L.forestBtn }}
             >
               Contact Support
             </a>
@@ -715,7 +720,7 @@ export default function PayClient({
             animate={{ scale: [0.5, 1.12, 1] }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="absolute left-[-4px] top-0 grid h-4 w-4 place-items-center rounded-full"
-            style={{ background: L.forest }}
+            style={{ background: L.forestBtn }}
           >
             <Check className="h-2.5 w-2.5" style={{ color: L.lime }} strokeWidth={4} />
           </motion.span>
@@ -775,7 +780,7 @@ export default function PayClient({
             </span>
           </span>
           <span
-            className="hidden items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:flex sm:text-[12.5px]"
+            className="hidden items-center gap-1.5 rounded-md border bg-[#1F242C] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:flex sm:text-[12.5px]"
             style={{ borderColor: L.line, color: L.ink }}
           >
             <ShieldCheck className="h-4 w-4" style={{ color: L.forest }} />
@@ -791,7 +796,7 @@ export default function PayClient({
           {/* ── Mobile: receipt first, ledger card second (order-*); lg grid
               resets to source order via lg:order-none. ── */}
           <div
-            className="order-2 rounded-lg border bg-white p-4 lg:hidden"
+            className="order-2 rounded-lg border bg-[#1F242C] p-4 lg:hidden"
             style={{
               borderColor:
                 view === 'seen' ? L.blueLn : view === 'partial' ? L.warnLn : view === 'paid' ? L.lime : L.line,
@@ -803,7 +808,7 @@ export default function PayClient({
           {/* ── Column 1: ledger rail (desktop) ── */}
           <div className="hidden lg:block">
             <div
-              className="rounded-lg border bg-white p-[18px]"
+              className="rounded-lg border bg-[#1F242C] p-[18px]"
               style={{
                 borderColor:
                   view === 'seen' ? L.blueLn : view === 'partial' ? L.warnLn : view === 'paid' ? L.lime : L.line,
@@ -811,7 +816,7 @@ export default function PayClient({
             >
               {ledgerRail}
             </div>
-            <div className="mt-3 rounded-lg border bg-white px-[18px] py-3.5" style={{ borderColor: L.line }}>
+            <div className="mt-3 rounded-lg border bg-[#1F242C] px-[18px] py-3.5" style={{ borderColor: L.line }}>
               <p className="text-[12px] leading-relaxed" style={{ color: L.muted }}>
                 <b style={{ color: L.forest }}>Safe To Close This Page.</b> We keep watching —
                 you’ll get an email the moment it confirms.
@@ -820,7 +825,7 @@ export default function PayClient({
           </div>
 
           {/* ── Column 2: receipt card ── */}
-          <div className="relative order-1 rounded-lg border bg-white px-5 py-5 sm:px-8 sm:py-7 lg:order-none" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
+          <div className="relative order-1 rounded-lg border bg-[#1F242C] px-5 py-5 sm:px-8 sm:py-7 lg:order-none" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
             {/* PAID stamp */}
             <AnimatePresence>
               {view === 'paid' && (
@@ -893,7 +898,7 @@ export default function PayClient({
                   onClick={() => void freshInvoice()}
                   disabled={retrying}
                   className="inline-flex h-[44px] items-center gap-2 rounded-md px-5 text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110 disabled:opacity-70"
-                  style={{ background: L.forest }}
+                  style={{ background: L.forestBtn }}
                 >
                   {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   {view === 'unreachable' ? 'Try Again' : 'Get A Fresh Invoice'}
@@ -946,7 +951,7 @@ export default function PayClient({
                         type="button"
                         onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
                         className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
-                        style={{ background: L.forest }}
+                        style={{ background: L.forestBtn }}
                       >
                         View Your Item
                       </button>
@@ -955,7 +960,7 @@ export default function PayClient({
                         type="button"
                         onClick={() => void openInWallet()}
                         className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
-                        style={{ background: L.forest }}
+                        style={{ background: L.forestBtn }}
                       >
                         Open In Wallet App
                       </button>
@@ -975,7 +980,7 @@ export default function PayClient({
                   </p>
                   <div
                     className="mt-2 flex items-center gap-1.5 rounded-md border py-1 pl-3 pr-1"
-                    style={{ borderColor: L.line, background: L.ivory }}
+                    style={{ borderColor: L.line, background: L.well }}
                   >
                     <code
                       className="min-w-0 flex-1 break-all py-1.5 font-mono text-[12.5px] leading-relaxed"
@@ -1031,8 +1036,8 @@ export default function PayClient({
                       type="button"
                       onClick={() => void handleCancelOrder()}
                       disabled={cancelling}
-                      className="inline-flex h-[30px] items-center gap-1.5 rounded-md border bg-white px-3 font-semibold disabled:opacity-60"
-                      style={{ borderColor: '#EFC7C2', color: '#B42318' }}
+                      className="inline-flex h-[30px] items-center gap-1.5 rounded-md border bg-[#1F242C] px-3 font-semibold disabled:opacity-60"
+                      style={{ borderColor: 'rgba(255,107,107,0.4)', color: '#FF6B6B' }}
                     >
                       {cancelling && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       Yes, Cancel It
@@ -1041,7 +1046,7 @@ export default function PayClient({
                       type="button"
                       onClick={() => setConfirmingCancel(false)}
                       disabled={cancelling}
-                      className="inline-flex h-[30px] items-center rounded-md border bg-white px-3 font-semibold disabled:opacity-60"
+                      className="inline-flex h-[30px] items-center rounded-md border bg-[#1F242C] px-3 font-semibold disabled:opacity-60"
                       style={{ borderColor: L.line, color: L.ink }}
                     >
                       Keep Waiting
@@ -1054,7 +1059,7 @@ export default function PayClient({
 
           {/* ── Column 3: assurance (desktop) ── */}
           <div className="hidden lg:block">
-            <div className="rounded-lg border bg-white p-[18px]" style={{ borderColor: L.line }}>
+            <div className="rounded-lg border bg-[#1F242C] p-[18px]" style={{ borderColor: L.line }}>
               <div className="flex items-center gap-2.5">
                 <span
                   className="grid h-5 w-5 place-items-center rounded-md"
@@ -1071,7 +1076,7 @@ export default function PayClient({
                 confirms.
               </p>
             </div>
-            <div className="mt-3 flex flex-col gap-2 rounded-lg border bg-white p-[18px]" style={{ borderColor: L.line }}>
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border bg-[#1F242C] p-[18px]" style={{ borderColor: L.line }}>
               <HelpDrawer
                 trigger={
                   <button type="button" className="text-left text-[12.5px] font-semibold hover:underline" style={{ color: L.forest }}>

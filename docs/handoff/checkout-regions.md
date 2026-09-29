@@ -11,6 +11,9 @@
 - **Logos** for the 8 EU rails in `public/payments/` (sources + terms in `public/payments/ATTRIBUTION.md`: datatrans payment-logos, Wikimedia Commons, Mollie icon set). `loading.tsx` skeleton matches the rows.
 - Phones: tile + name + tick only, nothing to clip; no horizontal overflow at 375 px.
 
+## Dark theme (2026-09-28)
+Checkout + pay pages moved from the ivory "Ledger" look to the marketplace's dark theme (`src/styles/tokens.css`): page `#171B21`, raised cards `#1F242C`, hover `#252B34`, borders as white alphas, text `#E9EDF2` / `#9AA6B3` / `#6C7684`, green `#2A7A50` for buttons and `#56B87F` for text/icons. The order summary is the listing page's glass card (`rgba(20,20,27,0.56)` + blur); select, tooltip, callouts, account menu, sticky bar, trust band, skeletons all follow. Logo tiles and the QR tile stay white on purpose (marks and QR codes need it).
+
 ## Copy (new / changed customer-facing strings)
 | Surface | Old | New |
 |---|---|---|

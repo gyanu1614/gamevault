@@ -1,20 +1,20 @@
 /**
  * Payment page skeleton — Ledger Receipt shaped: dark navbar, step row,
  * then the 300/520/270 three-column silhouette (ledger rail · receipt
- * card with QR square · assurance column). Ivory pulses, shape-stable.
+ * card with QR square · assurance column). Dark pulses, shape-stable.
  */
 
-const IVORY = '#FAFAF7'
-const NAV = '#1A1D19'
-const LINE = '#E7E5DF'
+const IVORY = '#171B21'
+const NAV = '#171B21'
+const LINE = 'rgba(255,255,255,0.14)'
 
 function Block({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-[#ECEBE3] ${className}`} />
+  return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border bg-white ${className}`} style={{ borderColor: LINE }}>
+    <div className={`rounded-lg border bg-[#1F242C] ${className}`} style={{ borderColor: LINE }}>
       {children}
     </div>
   )
