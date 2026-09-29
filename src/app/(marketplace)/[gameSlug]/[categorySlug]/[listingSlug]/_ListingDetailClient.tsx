@@ -502,7 +502,7 @@ export default function ListingDetailClient({
             <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-inset ring-lime-tint-border/60">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-inset ring-lime-tint-border">
                     <DescriptionRoundedIcon style={{ fontSize: 21 }} />
                   </span>
                   <h2 className="text-[17px] font-bold leading-none text-text-primary">
