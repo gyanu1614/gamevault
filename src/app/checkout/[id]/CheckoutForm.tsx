@@ -41,7 +41,6 @@ import {
   CreditCard,
   LogOut,
   Medal,
-  Package,
   Settings,
   Landmark,
   LifeBuoy,
@@ -57,6 +56,13 @@ import {
   X,
 } from 'lucide-react'
 
+import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
+import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
+import CurrencyExchangeRoundedIcon from '@mui/icons-material/CurrencyExchangeRounded'
+import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
+import HttpsRoundedIcon from '@mui/icons-material/HttpsRounded'
+import PublicRoundedIcon from '@mui/icons-material/PublicRounded'
 import { createCheckout } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
@@ -144,22 +150,28 @@ function LightSelect({
   options,
   ariaLabel,
   placeholder,
+  leading,
+  size = 'md',
 }: {
   value: string
   onChange: (v: string) => void
   options: Array<{ value: string; label: string; icon?: string; hint?: string; disabled?: boolean }>
   ariaLabel: string
   placeholder?: string
+  /** Rendered before the label in the trigger (e.g. a region icon). */
+  leading?: React.ReactNode
+  size?: 'md' | 'sm'
 }) {
   const selected = options.find((o) => o.value === value)
   return (
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium outline-none transition-colors focus-visible:border-[#56B87F]"
+        className={cn('flex w-full items-center justify-between gap-2 rounded-md border px-3 font-medium outline-none transition-colors focus-visible:border-[#56B87F]', size === 'sm' ? 'h-9 text-[13px]' : 'h-[42px] text-[14px]')}
         style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
       >
         <span className="flex min-w-0 items-center gap-2">
+          {leading}
           {selected?.icon && <Image src={selected.icon} alt="" width={18} height={18} unoptimized />}
           {selected ? (
             <span className="truncate">{selected.label}</span>
@@ -607,16 +619,16 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // — the same clamp the page quoted the buyer fee for.
   const [quantity] = useState(() => clampCheckoutQty(listing, initialQty, !!bundleSummary))
 
-  // Payment method: the first row of the ordered list (a local rail when
-  // the buyer has one, else Cryptocurrency).
-  const [payMethod, setPayMethod] = useState<PayMethodId>(orderedRows[0]?.id ?? 'crypto')
+  // Payment method: NOTHING is picked until the buyer taps a row (owner
+  // call 2026-09-28) — Pay Now stays disabled until then.
+  const [payMethod, setPayMethod] = useState<PayMethodId | null>(null)
   // Switching region re-orders the list; a pick that is no longer listed
-  // falls to the new region's first row (crypto is always listed).
+  // is cleared (crypto is always listed, so it survives).
   const selectRegion = (id: RegionId) => {
     setRegion(id)
     const next = orderMethodsForRegion(allLocalRows, id, geo)
     const rows = [...next.local, ...next.regional]
-    if (payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(rows[0]?.id ?? 'crypto')
+    if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
   // Coin + network selection (within the crypto card).
   // No coin preselected — the network chooser stays closed until a pick.
@@ -639,7 +651,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // the order is a 'wallet' order and that quote applies — exactly the
   // routing createCheckout performs, so page and snapshot agree to the cent.
   const methodQuote =
-    payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
+    payMethod == null ? null : payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
   const baseBeforeMethodFeeCents = Math.round(subtotal * 100) + Math.round(fee.marketplaceAmount * 100) - Math.round(promoDiscount * 100)
   const walletBalanceCents = Math.round(walletBalance * 100)
   const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= baseBeforeMethodFeeCents + walletQuote.feeMinor
@@ -696,8 +708,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   // Crypto needs a coin picked before Pay makes sense.
-  const payDisabled = paying || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
+  const payDisabled = paying || payMethod == null || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
   const handlePay = async () => {
+    if (!payMethod) return
     if (payMethod === 'crypto' && !coin) return
     setPaying(true)
     setPayError(null)
@@ -970,27 +983,17 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  // ── Region switcher: only when more than one region has a rail ──────
-  const regionSwitcher = regionChips.length > 1 && (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Region">
-      <span className="mr-1 text-[12px] font-semibold" style={{ color: T.ink2 }}>
-        Paying From
-      </span>
-      {regionChips.map((r) => {
-        const active = r.id === region
-        return (
-          <button
-            key={r.id}
-            type="button"
-            aria-pressed={active}
-            onClick={() => selectRegion(r.id)}
-            className="h-8 rounded-md px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56B87F]/50 active:scale-[0.98]"
-            style={active ? { background: T.forest, color: '#FFFFFF' } : { background: T.ivory, color: T.ink, boxShadow: `inset 0 0 0 1px ${T.line}` }}
-          >
-            {r.label}
-          </button>
-        )
-      })}
+  // ── Region: a compact dropdown at the right of the "Payment" heading ──
+  const regionPicker = regionChips.length > 1 && (
+    <div className="w-[172px] shrink-0">
+      <LightSelect
+        ariaLabel="Paying From"
+        size="sm"
+        value={region}
+        onChange={(v) => selectRegion(v as RegionId)}
+        options={regionChips.map((r) => ({ value: r.id, label: r.label }))}
+        leading={<PublicRoundedIcon style={{ fontSize: 16, color: T.accentText }} />}
+      />
     </div>
   )
 
@@ -1004,7 +1007,6 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   const paymentList = (
     <div className="flex flex-col gap-3">
-      {regionSwitcher}
       {orderedRows.length === 0 && !cryptoMethod ? (
         <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
           <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
@@ -1307,10 +1309,26 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    <div className="min-h-screen" style={{ background: T.page }}>
+    <div className="relative min-h-screen" style={{ background: T.page }}>
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
+      {/* Faint game art in the top-left corner, fading out by mid-page —
+          the listing page's ambience carried into checkout. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-16 h-[620px] overflow-hidden">
+        <Image
+          src={listing.game?.image_url || '/hero/home.avif'}
+          alt=""
+          fill
+          unoptimized
+          className="select-none object-cover object-left-top opacity-[0.16]"
+          style={{
+            maskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
+            WebkitMaskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
         {/* Header row */}
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-3">
@@ -1323,7 +1341,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.accentText }} />
+            <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: T.accentText }} />
             {/* Phone: smaller + nowrap so the title never breaks into two
                 lines beside the SSL chip. Desktop (sm:) unchanged. */}
             <span
@@ -1337,7 +1355,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1F242C] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
             style={{ borderColor: T.line, color: T.ink }}
           >
-            <ShieldCheck className="h-4 w-4" style={{ color: T.accentText }} />
+            <HttpsRoundedIcon style={{ fontSize: 16, color: T.accentText }} />
             {/* Phone: short label; desktop keeps the full one. */}
             <span className="sm:hidden">SSL Secure</span>
             <span className="hidden sm:inline">256-Bit SSL Secure</span>
@@ -1350,12 +1368,17 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <div className="lg:hidden">{orderStrip}</div>
 
           <div>
-            <p className="text-[18px] font-semibold" style={{ color: T.ink }}>
-              Payment
-            </p>
-            <p className="mb-4 mt-1.5 text-[14px]" style={{ color: T.ink2 }}>
-              All transactions are secure and encrypted.
-            </p>
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[21px] font-bold leading-tight" style={{ color: T.ink }}>
+                  Payment
+                </p>
+                <p className="mt-0.5 text-[13px]" style={{ color: T.ink2 }}>
+                  All transactions are secure and encrypted.
+                </p>
+              </div>
+              {regionPicker}
+            </div>
             {paymentList}
             {payError && (
               <p className="mt-3 text-[12.5px] font-medium text-red-600 lg:hidden">{payError}</p>
@@ -1415,38 +1438,38 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
               {[
                 {
-                  Icon: CreditCard,
+                  Icon: PaymentsRoundedIcon,
                   title: 'Choose Payment Method',
                   sub: 'Every payment is encryption-protected.',
                 },
                 {
-                  Icon: Package,
+                  Icon: LocalShippingRoundedIcon,
                   title: 'Wait for Delivery',
                   sub: 'Your seller preps the order. Chat live anytime.',
                 },
                 {
-                  Icon: BadgeCheck,
+                  Icon: VerifiedRoundedIcon,
                   title: 'Order Delivered',
                   sub: 'Check your items and confirm delivery.',
                 },
                 {
-                  Icon: Undo2,
+                  Icon: CurrencyExchangeRoundedIcon,
                   title: 'Item Not Received?',
                   sub: '100% refund, guaranteed.',
                 },
               ].map((step) => (
                 <li key={step.title} className="flex items-start gap-2.5">
                   <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
                     style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}
                   >
-                    <step.Icon className="h-4 w-4" style={{ color: T.accentText }} />
+                    <step.Icon style={{ fontSize: 21, color: T.accentText }} />
                   </span>
                   <div>
-                    <p className="text-[13px] font-semibold leading-snug" style={{ color: T.ink }}>
+                    <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
                       {step.title}
                     </p>
-                    <p className="mt-0.5 text-[11.5px] leading-snug" style={{ color: T.ink2 }}>
+                    <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
                       {step.sub}
                     </p>
                   </div>

@@ -61,15 +61,13 @@ export default function CheckoutLoading() {
 
           {/* Left — payment column */}
           <div>
-            <Block className="h-5 w-24" />
-            <Block className="mt-2 h-4 w-72" />
-
-            {/* Region chips */}
-            <div className="mt-4 flex items-center gap-2">
-              <Block className="h-3.5 w-16" />
-              <Block className="h-8 w-20 rounded-md" />
-              <Block className="h-8 w-28 rounded-md" />
-              <Block className="h-8 w-28 rounded-md" />
+            {/* Heading + region dropdown on the right */}
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <Block className="h-6 w-28" />
+                <Block className="mt-1.5 h-3.5 w-64" />
+              </div>
+              <Block className="h-9 w-[172px] rounded-md" />
             </div>
 
             {/* Method rows: mark tile + label + pick mark */}
