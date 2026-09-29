@@ -255,7 +255,7 @@ export default function CurrencySkeleton() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-border-subtle bg-bg-raised/60 p-4"
+                  className="rounded-xl border border-border-subtle bg-[rgba(31,36,44,0.60)] p-4"
                 >
                   <Block className="mb-3 h-8 w-8 rounded-full" />
                   <Block className="mb-1.5 h-4 w-24" />
@@ -273,7 +273,7 @@ export default function CurrencySkeleton() {
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-border-subtle bg-bg-raised/60 p-4"
+                  className="rounded-xl border border-border-subtle bg-[rgba(31,36,44,0.60)] p-4"
                 >
                   <Block className="h-4 w-3/4" />
                 </div>

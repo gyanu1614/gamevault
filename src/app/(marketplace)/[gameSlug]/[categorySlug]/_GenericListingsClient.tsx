@@ -206,7 +206,7 @@ function ListingCard({
               🎮
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-base/80 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(23,27,33,0.80)] via-transparent to-transparent" />
 
           {/* SafeDrop badge — top-left */}
           <div className="absolute left-2.5 top-2.5">
@@ -219,7 +219,7 @@ function ListingCard({
 
           {/* Discount — top-right */}
           {hasPriceDrop && (
-            <div className="absolute right-2.5 top-2.5 inline-flex items-center rounded-full border border-success/40 bg-success-bg/80 px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
+            <div className="absolute right-2.5 top-2.5 inline-flex items-center rounded-full border border-[rgba(63,217,134,0.40)] bg-[rgba(63,217,134,0.096)] px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
               -{discountPct}%
             </div>
           )}

@@ -285,7 +285,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
 
         {/* Tier gate */}
         {policy && !tierAllowsBulk && (
-          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-error/40 bg-error-bg px-4 py-3">
+          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[rgba(255,92,92,0.40)] bg-error-bg px-4 py-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
             <div className="text-sm">
               <div className="font-semibold text-error">Bulk upload not available on your tier</div>
@@ -418,7 +418,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
               </div>
 
               {parsed.errors.length > 0 && (
-                <div className="mt-3 rounded-md border border-error/40 bg-error-bg p-3 text-xs">
+                <div className="mt-3 rounded-md border border-[rgba(255,92,92,0.40)] bg-error-bg p-3 text-xs">
                   <div className="mb-1 font-semibold text-error">
                     Fix these before publishing
                   </div>
@@ -438,7 +438,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
               )}
 
               {wouldExceedCap && (
-                <div className="mt-3 rounded-md border border-warning/40 bg-warning-bg px-3 py-2 text-xs text-warning">
+                <div className="mt-3 rounded-md border border-[rgba(255,178,62,0.40)] bg-warning-bg px-3 py-2 text-xs text-warning">
                   CSV has {parsed.rows.length} rows but only {remainingDaily} are left in your daily cap.
                 </div>
               )}

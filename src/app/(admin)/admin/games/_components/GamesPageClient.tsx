@@ -547,7 +547,7 @@ export default function GamesPageClient({
               type="button"
               onClick={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
               disabled={deleteMutation.isPending}
-              className="rounded-lg bg-error px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-error/90 disabled:opacity-60"
+              className="rounded-lg bg-error px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[rgba(255,92,92,0.90)] disabled:opacity-60"
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete game'}
             </button>

@@ -280,7 +280,7 @@ export default function WithdrawPage() {
           </dl>
         )}
         {gateMessage && (
-          <p className="mt-3 flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">
+          <p className="mt-3 flex items-start gap-2 rounded-lg border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             {gateMessage}
           </p>
@@ -309,7 +309,7 @@ export default function WithdrawPage() {
                 </div>
               )}
               {quote && !quote.ok && amountNum > 0 && quote.message && (
-                <p className="rounded-lg border border-warning/25 bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">{quote.message}</p>
+                <p className="rounded-lg border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">{quote.message}</p>
               )}
               <div className="my-2 h-px bg-border-subtle" />
               <div className="flex items-center justify-between">
@@ -500,7 +500,7 @@ export default function WithdrawPage() {
                         min={selectedMethod.min_withdrawal}
                         max={Math.min(selectedMethod.max_withdrawal || Infinity, availableBalance ?? 0)}
                         step="0.01"
-                        className="w-full rounded-lg border border-border-default bg-bg-base/60 py-2.5 pl-7 pr-16 text-lg font-semibold text-text-primary placeholder:text-text-disabled transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+                        className="w-full rounded-lg border border-border-default bg-[rgba(23,27,33,0.60)] py-2.5 pl-7 pr-16 text-lg font-semibold text-text-primary placeholder:text-text-disabled transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
                       />
                       <button
                         type="button"
@@ -534,7 +534,7 @@ export default function WithdrawPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2.5">
+                      <div className="flex items-start gap-2 rounded-lg border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2.5">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                         <p className="text-[12px] leading-relaxed text-text-secondary">
                           No {selectedMethod.method_type === 'crypto' ? `${(selectedMethod.coin ?? '').toUpperCase()} address on ${CHAIN_LABELS[selectedMethod.chain as keyof typeof CHAIN_LABELS] ?? selectedMethod.chain}` : 'Payoneer email'} saved yet.{' '}
@@ -570,7 +570,7 @@ export default function WithdrawPage() {
             <div className="mt-4 space-y-4">
               {selectedMethod.method_type === 'crypto' && (
                 <>
-                  <div className="rounded-lg border border-warning/25 bg-warning-bg px-3 py-2.5">
+                  <div className="rounded-lg border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
                       <span className="text-[12px] font-semibold text-text-primary">
@@ -600,7 +600,7 @@ export default function WithdrawPage() {
                 </div>
               )}
 
-              <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-raised/50 p-3 text-sm">
+              <div className="space-y-2 rounded-lg border border-border-subtle bg-[rgba(31,36,44,0.50)] p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-text-secondary">Amount</span>
                   <span className="font-semibold text-text-primary">${amountNum.toFixed(2)}</span>

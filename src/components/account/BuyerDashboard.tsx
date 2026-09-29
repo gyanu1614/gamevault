@@ -129,11 +129,11 @@ export default function BuyerDashboard({ user }: BuyerDashboardProps) {
                               <CheckCircle2 className="h-3 w-3" /> Delivered
                             </span>
                           ) : order.status === 'disputed' ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-error/20 bg-error-bg px-2 py-0.5 text-[11px] font-medium text-error">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(255,92,92,0.20)] bg-error-bg px-2 py-0.5 text-[11px] font-medium text-error">
                               <Clock className="h-3 w-3" /> Disputed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-warning/20 bg-warning-bg px-2 py-0.5 text-[11px] font-medium text-warning">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(255,178,62,0.20)] bg-warning-bg px-2 py-0.5 text-[11px] font-medium text-warning">
                               <Clock className="h-3 w-3" /> Processing
                             </span>
                           )}

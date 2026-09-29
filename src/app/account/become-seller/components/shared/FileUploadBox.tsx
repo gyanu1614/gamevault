@@ -181,7 +181,7 @@ export default function FileUploadBox({
         <button
           type="button"
           onClick={openPicker}
-          className="flex w-full items-center gap-3 rounded-lg border border-error bg-error-bg p-3 text-left transition-colors hover:bg-error-bg/80"
+          className="flex w-full items-center gap-3 rounded-lg border border-error bg-error-bg p-3 text-left transition-colors hover:bg-[rgba(255,92,92,0.096)]"
         >
           <RotateCcw className="h-4 w-4 flex-shrink-0 text-error" />
           <div className="min-w-0 flex-1">

@@ -96,7 +96,7 @@ export default function PayoutDetailsSection() {
         Payoneer account. For your security, any change pauses withdrawals for 48 hours and we email you.
       </p>
       {frozen && (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-bg px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary">
+        <p className="flex items-start gap-2 rounded-lg border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
           Payout details changed {fmt(details?.detailsChangedAt)}. Withdrawals reopen {fmt(details?.freezeUntil)}.
         </p>
@@ -135,7 +135,7 @@ export default function PayoutDetailsSection() {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder={effectiveChain === 'tron' ? 'T…' : effectiveChain === 'bitcoin' ? 'bc1… or 1… / 3…' : '0x…'}
-            className={cn(inputCls, 'font-mono', addressCheck && !addressCheck.valid && 'border-error/50 focus:border-error')}
+            className={cn(inputCls, 'font-mono', addressCheck && !addressCheck.valid && 'border-[rgba(255,92,92,0.50)] focus:border-error')}
           />
           {addressCheck && !addressCheck.valid && <p className="text-xs text-error">{addressCheck.error}</p>}
           {addressCheck?.valid && <p className="text-xs text-lime-text">Address looks valid.</p>}

@@ -45,7 +45,7 @@ export function FeesTab({ rows, gameName }: { rows: PairRow[]; gameName: string 
   const pairs = rows.filter((r) => r.is_enabled)
   if (pairs.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-default bg-bg-raised/60 p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-border-default bg-[rgba(31,36,44,0.60)] p-8 text-center">
         <p className="text-[14px] font-semibold text-text-primary">No categories are enabled for {gameName}.</p>
         <p className="mt-1.5 text-[12.5px] text-text-secondary">Enable one in the Setup tab&apos;s Categories step, then set its fee here.</p>
       </div>
@@ -178,7 +178,7 @@ function Timeline({ state, onChanged }: { state: PairFeeState; onChanged: () => 
     return <p className="mt-4 text-[12px] text-text-tertiary">Nothing scheduled — the rate above stays until a new rule is added.</p>
   }
   return (
-    <ul className="mt-4 divide-y divide-border-subtle rounded-xl border border-border-subtle bg-bg-overlay/60">
+    <ul className="mt-4 divide-y divide-border-subtle rounded-xl border border-border-subtle bg-[rgba(37,43,52,0.60)]">
       {items.map(({ rule, label, action }) => (
         <li key={rule.id} className="flex items-center justify-between gap-3 px-3 py-2 text-[12.5px] text-text-secondary">
           <span className="inline-flex items-center gap-2">

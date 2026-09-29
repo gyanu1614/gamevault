@@ -128,7 +128,7 @@ function Stepper({
               onClick={clickable ? () => onJump!(s.id) : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-lg',
-                clickable && 'cursor-pointer transition-colors hover:bg-bg-raised/60 p-1 -m-1',
+                clickable && 'cursor-pointer transition-colors hover:bg-[rgba(31,36,44,0.60)] p-1 -m-1',
               )}
               aria-current={active ? 'step' : undefined}
             >
@@ -784,7 +784,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                       className={cn(
                         'rounded-xl border bg-bg-base transition-colors',
                         c.is_enabled
-                          ? 'border-success bg-success/[0.04]'
+                          ? 'border-success bg-[rgba(63,217,134,0.04)]'
                           : 'border-border-default',
                         disabledGlobally && 'opacity-70'
                       )}

@@ -151,7 +151,7 @@ export default function LeaveReviewButton({
         <button
           onClick={() => setShowReviewForm(true)}
           className={cn(
-            'w-full py-2 border border-yellow-500/20 bg-yellow-500/[0.06] hover:bg-yellow-500/[0.11] text-warning/90 hover:text-warning text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2',
+            'w-full py-2 border border-yellow-500/20 bg-yellow-500/[0.06] hover:bg-yellow-500/[0.11] text-[rgba(255,178,62,0.90)] hover:text-warning text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2',
             className
           )}
         >

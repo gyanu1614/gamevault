@@ -57,13 +57,13 @@ export default function StoreAvailabilitySection() {
     <div>
       <h2 className="mb-4 text-sm font-semibold text-text-primary">Store Availability</h2>
 
-      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-bg-raised/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[rgba(31,36,44,0.40)] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <div
             className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
               paused
-                ? 'border-warning/30 bg-warning-bg text-warning'
+                ? 'border-[rgba(255,178,62,0.30)] bg-warning-bg text-warning'
                 : 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
             )}
           >

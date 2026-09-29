@@ -388,7 +388,7 @@ export default function ListingDetailClient({
                   badge (when present) stays as a standalone commercial cue. */}
               {discountPct > 0 && (
                 <div className="mt-2.5">
-                  <Badge className="bg-success-bg text-success border-success/30">
+                  <Badge className="bg-success-bg text-success border-[rgba(63,217,134,0.30)]">
                     -{discountPct}% off
                   </Badge>
                 </div>
@@ -429,7 +429,7 @@ export default function ListingDetailClient({
                       type="button"
                       onClick={() => setActiveImg((i) => (i - 1 + listing.images.length) % listing.images.length)}
                       aria-label="Previous image"
-                      className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-bg-base/70 text-text-primary backdrop-blur-md transition-colors hover:bg-bg-base"
+                      className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-[rgba(23,27,33,0.70)] text-text-primary backdrop-blur-md transition-colors hover:bg-bg-base"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -437,11 +437,11 @@ export default function ListingDetailClient({
                       type="button"
                       onClick={() => setActiveImg((i) => (i + 1) % listing.images.length)}
                       aria-label="Next image"
-                      className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-bg-base/70 text-text-primary backdrop-blur-md transition-colors hover:bg-bg-base"
+                      className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border-default bg-[rgba(23,27,33,0.70)] text-text-primary backdrop-blur-md transition-colors hover:bg-bg-base"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
-                    <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-bg-base/70 px-2 py-1 backdrop-blur-md">
+                    <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[rgba(23,27,33,0.70)] px-2 py-1 backdrop-blur-md">
                       {listing.images.map((_, i) => (
                         <button
                           key={i}
@@ -1183,7 +1183,7 @@ function OtherSellerRow({
                       <Badge
                         key={i}
                         variant="outline"
-                        className="rounded-md border-border-subtle bg-bg-base/50 text-[11px] font-semibold text-text-secondary"
+                        className="rounded-md border-border-subtle bg-[rgba(23,27,33,0.50)] text-[11px] font-semibold text-text-secondary"
                       >
                         {c}
                       </Badge>

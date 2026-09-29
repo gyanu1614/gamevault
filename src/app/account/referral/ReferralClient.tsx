@@ -33,7 +33,7 @@ function StatCard({
   const colors = {
     violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
-    amber:  "text-warning bg-warning-bg border-warning/20",
+    amber:  "text-warning bg-warning-bg border-[rgba(255,178,62,0.20)]",
     blue:   "text-lime-text bg-lime-tint-bg border-lime-tint-border",
   }
   return (
@@ -80,8 +80,8 @@ function EarningRow({ earning }: { earning: ReferralEarning }) {
           isPaid
             ? 'bg-success-bg text-success border border-green-500/20'
             : earning.status === 'cancelled'
-            ? 'bg-error-bg text-error border border-error/40'
-            : 'bg-warning-bg text-warning border border-warning/20'
+            ? 'bg-error-bg text-error border border-[rgba(255,92,92,0.40)]'
+            : 'bg-warning-bg text-warning border border-[rgba(255,178,62,0.20)]'
         }`}>
           {isPaid ? 'Paid' : earning.status === 'cancelled' ? 'Cancelled' : 'Pending'}
         </span>

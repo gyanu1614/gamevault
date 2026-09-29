@@ -337,7 +337,7 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         onChange={(faq) => patch({ faq })}
       />
 
-      <div className="sticky bottom-4 z-10 flex justify-end gap-2 rounded-xl border border-border-default bg-bg-raised/95 p-3 backdrop-blur-md shadow-elevated">
+      <div className="sticky bottom-4 z-10 flex justify-end gap-2 rounded-xl border border-border-default bg-[rgba(31,36,44,0.95)] p-3 backdrop-blur-md shadow-elevated">
         <button
           type="submit"
           disabled={mutation.isPending}
@@ -430,7 +430,7 @@ function StepsEditor({
         {steps.map((s, i) => (
           <div
             key={i}
-            className="grid gap-2 rounded-xl border border-border-subtle bg-bg-overlay/40 p-3 sm:grid-cols-[64px_1fr_auto]"
+            className="grid gap-2 rounded-xl border border-border-subtle bg-[rgba(37,43,52,0.40)] p-3 sm:grid-cols-[64px_1fr_auto]"
           >
             <Input
               type="number"
@@ -498,7 +498,7 @@ function FaqEditor({
         {faq.map((f, i) => (
           <div
             key={i}
-            className="grid gap-2 rounded-xl border border-border-subtle bg-bg-overlay/40 p-3 sm:grid-cols-[1fr_auto]"
+            className="grid gap-2 rounded-xl border border-border-subtle bg-[rgba(37,43,52,0.40)] p-3 sm:grid-cols-[1fr_auto]"
           >
             <div className="space-y-2">
               <Input

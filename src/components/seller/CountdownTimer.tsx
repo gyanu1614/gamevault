@@ -56,7 +56,7 @@ export default function CountdownTimer({
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className={`rounded-lg border border-success/30 bg-success-bg p-4 text-center ${className}`}
+        className={`rounded-lg border border-[rgba(63,217,134,0.30)] bg-success-bg p-4 text-center ${className}`}
       >
         <div className="mb-2 flex items-center justify-center gap-2 text-success">
           <AlertCircle className="h-5 w-5" />

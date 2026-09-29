@@ -71,7 +71,7 @@ const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; 
   delivering: { label: 'Delivering',  pill: 'bg-lime-tint-bg text-lime-text border-lime-tint-border', dot: 'bg-lime', pulse: true,  icon: Truck },
   delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
   completed:  { label: 'Completed',   pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  disputed:   { label: 'Disputed',    pill: 'bg-error-bg text-error border-error/40',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
+  disputed:   { label: 'Disputed',    pill: 'bg-error-bg text-error border-[rgba(255,92,92,0.40)]',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
   resolved:   { label: 'Resolved',    pill: 'bg-success-bg text-success border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
   refunded:   { label: 'Refunded',    pill: 'bg-gray-500/10 text-text-secondary border-gray-500/20',       dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
   cancelled:  { label: 'Cancelled',   pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400', pulse: false, icon: XCircle },
