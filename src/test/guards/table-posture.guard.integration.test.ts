@@ -81,6 +81,10 @@ const AUTHENTICATED_READ_ALLOWLIST: Record<string, string> = {
   fraud_flags: 'admins only (is_admin()): /admin/fraud, dashboard counts, admin header badge',
   gdpr_requests: 'users read their own request; admins read all (is_admin())',
   inform_disclosures: 'sellers read their own disclosure; admins read all (is_admin())',
+  // 20260928162611 (log-tables-rls.guard): the open INSERT policies are gone;
+  // reads stay scoped by the existing policies.
+  seller_tier_history: 'sellers read their own tier history (auth.uid() = user_id)',
+  seller_verification_logs: 'applicants read their own application log; admins read all',
 }
 
 /** Tables that may be written by anon/authenticated (RLS scopes the rows). */
@@ -105,6 +109,7 @@ const WRITE_ALLOWLIST: Record<string, string> = {
   gdpr_requests: 'users file their own GDPR request (no admin-only fields); admins process it (is_admin())',
   inform_disclosures: 'sellers submit their own disclosure (never pre-certified); admins certify (is_admin())',
   fraud_flags: 'admins insert (runFraudScan) and resolve flags (is_admin()); nobody else, no deletes',
+  seller_verification_logs: 'admins append review entries (is_admin()); system entries come from owner-run triggers',
 
   // Catalogue tables that ALSO carry the baseline's blanket write grant.
   // Writes are blocked by RLS (admin-only policies), so the grant is inert --
@@ -139,7 +144,7 @@ const WRITE_ALLOWLIST: Record<string, string> = {
  * from now on is born with no grant and would fail the checks below.
  */
 const LEGACY_BASELINE: ReadonlySet<string> = new Set([
-  'admin_action_logs', 'admin_activity_log', 'admin_notifications', 'admin_roles',
+  'admin_activity_log', 'admin_notifications', 'admin_roles',
   'adopt_me_market_raw_listings', 'adopt_me_pet_values', 'adopt_me_pets', 'adopt_me_price_history',
   'attribute_conditional_rules', 'attribute_options', 'attribute_templates', 'attributes',
   'audit_logs', 'banner_presets', 'blog_posts', 'buyer_waitlist',
@@ -159,7 +164,9 @@ const LEGACY_BASELINE: ReadonlySet<string> = new Set([
   'sab_price_corrections', 'sab_price_history', 'sab_price_snapshots', 'sab_source_mappings',
   'seller_applications', 'seller_kyc_documents', 'seller_leads', 'seller_notifications',
   'seller_payouts', 'seller_restrictions', 'seller_stats', 'seller_tier_config',
-  'seller_tier_history', 'seller_verification_logs', 'shop_visits', 'trustpilot_invitations',
+  // seller_tier_history, seller_verification_logs, admin_action_logs left on
+  // 2026-09-28: open INSERT policies, WITH CHECK (true) (log-tables-rls.guard).
+  'shop_visits', 'trustpilot_invitations',
   'wallet_balances', 'wallet_transactions', 'webhook_events', 'wishlists',
   'withdrawal_methods', 'withdrawal_requests'
 ])
