@@ -10,27 +10,27 @@
 .theme-v2 {
   /* ── Surfaces — elevation ladder ──────────────────────── */
   /* L0: page ground                                          */
-  --color-bg-base:         #171B21;
+  --color-bg-base:         #16171B;
   /* L1: card body, hero, navbar/subnav pills                 */
-  --color-bg-raised:       #1F242C;
+  --color-bg-raised:       #1D1E23;
   /* L1 hover: card hovered (one step lighter than card rest) */
-  --color-bg-raised-hover: #252B34;
+  --color-bg-raised-hover: #24252B;
   /* L2: meta chips, inputs, filter pills (inset controls)    */
-  --color-bg-overlay:      #252B34;
-  --color-bg-overlay-2:    #252B34;
+  --color-bg-overlay:      #262730;
+  --color-bg-overlay-2:    #2A2B33;
   /* L3: avatar well, popover menus                           */
-  --color-bg-inset:        #2C333F;
+  --color-bg-inset:        #30313A;
 
   /* Seller strip: recessed vs card, above page               */
-  --v2-seller-strip-bg:    #1A1F26;
+  --v2-seller-strip-bg:    #1A1B20;
 
   /* ── Borders ───────────────────────────────────────────── */
   --color-border-subtle:   rgba(255,255,255,0.08);
   --color-border-strong:   rgba(255,255,255,0.14);
-  --color-border-default:  rgba(255,255,255,0.14);
+  --color-border-default:  rgba(255,255,255,0.12);
 
   /* V2-specific extras                                       */
-  --v2-border-solid:       #404A58;
+  --v2-border-solid:       #3A3B44;
   --v2-edge-highlight:     rgba(255,255,255,0.10);
 
   /* ── Text ──────────────────────────────────────────────── */
@@ -99,15 +99,15 @@
 /* ThemeV2Root stamps this when /dev/items-v2 mounts.
    Overrides body background, ambient glows, and navbar vars. */
 [data-theme="v2"] {
-  --navbar-bg:               rgba(31, 36, 44, 0.78);  /* #1F242C at 78% — frosted bar */
-  --navbar-mobile-bg:        #171B21;                  /* L0 ground for mobile full-width bar */
-  --navbar-dropdown-bg:      #1F242C;                  /* L1: dropdown panels = raised surface */
+  --navbar-bg:               rgba(29, 30, 35, 0.78);  /* #1D1E23 at 78% — frosted bar */
+  --navbar-mobile-bg:        #16171B;                  /* L0 ground for mobile full-width bar */
+  --navbar-dropdown-bg:      #1D1E23;                  /* L1: dropdown panels = raised surface */
 
   /* Page scrim — replace violet-dusk top with flat v2 base colour */
-  --color-bg-top:            #171B21;
-  --color-bg-bottom:         #12161C;
-  --color-glow-violet:       #171B21;
-  --color-glow-violet-soft:  #171B21;
+  --color-bg-top:            #16171B;
+  --color-bg-bottom:         #121316;
+  --color-glow-violet:       #16171B;
+  --color-glow-violet-soft:  #16171B;
 
   /* Corner glows — kill lime-green top-left + violet bottom-right */
   --glow-tl: transparent;
@@ -118,7 +118,7 @@
    Overriding the vars above makes the gradient flat and on-palette.
    Also kill the body::after corner glows entirely. */
 [data-theme="v2"] body {
-  background-color: #171B21;
+  background-color: #16171B;
   background-image: none;
 }
 
@@ -128,13 +128,13 @@
 
 /* Mobile full-width bar: override !bg-[#0b0f0c] for both navbar and subnav */
 [data-theme="v2"] .bg-\[#0b0f0c\] {
-  background-color: var(--color-bg-base) !important; /* #171B21 — L0 */
+  background-color: var(--color-bg-base) !important; /* #16171B — L0 */
 }
 
 /* Navbar dropdown panels: override bg-[#17171F] arbitrary class
    (notifications, messages, cart drawer panels) */
 [data-theme="v2"] .bg-\[#17171F\] {
-  background-color: var(--color-bg-raised) !important; /* #1F242C — L1 */
+  background-color: var(--color-bg-raised) !important; /* #1D1E23 — L1 */
 }
 
 /* Lime glow blob inside panels — kill it, replace with transparent */
@@ -185,7 +185,7 @@
 
 /* Footer vars — read by inline style on <footer> so they win over Tailwind utilities */
 [data-theme="v2"] {
-  --footer-bg:       #171B21;
+  --footer-bg:       #16171B;
   --footer-top-glow: radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.06), transparent 70%);
 }
 
@@ -203,8 +203,8 @@
 /* ── GameSubNav scoped overrides ───────────────────────────── */
 /* Pill background — drives the inline style var */
 .theme-v2 {
-  --subnav-pill-bg:    rgba(31, 36, 44, 0.55);   /* #1F242C at 55% — L1 surface frosted */
-  --subnav-mobile-bg: #171B21;                    /* L0 on mobile: full-width bar = page ground */
+  --subnav-pill-bg:    rgba(29, 30, 35, 0.72);   /* #1D1E23 at 72% — frosted black bar */
+  --subnav-mobile-bg: #16171B;                    /* L0 on mobile: full-width bar = page ground */
 }
 
 /* Active tab underline — override the Tailwind arbitrary colour class */

@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { formatPrice } from './ListingCard'
 import type { LatestListing } from '../lib/latest-listings'
 
-const WELL = 'var(--color-bg-well, #181D25)'
+const WELL = 'var(--color-bg-well, #191A1F)'
 
 export function ListingCardCompact({ listing }: { listing: LatestListing }) {
   const reduceMotion = useReducedMotion()

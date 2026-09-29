@@ -60,18 +60,18 @@
   --navbar-height: 60px;
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles */
-  --navbar-bg:               rgba(31, 36, 44, 0.78);
-  --navbar-mobile-bg:        #171B21;
-  --navbar-dropdown-bg:      #1F242C;
+  --navbar-bg:               rgba(29, 30, 35, 0.78);
+  --navbar-mobile-bg:        #16171B;
+  --navbar-dropdown-bg:      #1D1E23;
 
   /* Footer */
-  --footer-bg: #171B21;
+  --footer-bg: #16171B;
   --footer-top-glow: radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.06), transparent 70%);
 
-  --color-glow-violet:      #171B21;
-  --color-glow-violet-soft: #171B21;
-  --color-bg-top:           #171B21;
-  --color-bg-bottom:        #12161C;
+  --color-glow-violet:      #16171B;
+  --color-glow-violet-soft: #16171B;
+  --color-bg-top:           #16171B;
+  --color-bg-bottom:        #121316;
   --color-vignette:         rgba(0,0,0,0.55);
 
   --gradient-hero-glow:
