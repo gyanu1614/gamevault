@@ -89,12 +89,12 @@ function MetaPill({
   return (
     <span
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium',
+        'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium',
         'bg-white/[0.06] ring-1 ring-inset ring-white/[0.05]',
         tone === 'success' ? 'text-success' : 'text-text-primary',
       )}
     >
-      <Icon size={15} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
+      <Icon size={13} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
       {label}
     </span>
   )
