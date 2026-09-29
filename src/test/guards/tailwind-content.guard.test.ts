@@ -30,11 +30,7 @@ const CONTENT = tailwindConfig.content as string[]
 const SOURCE_EXT = '{js,ts,jsx,tsx,mdx}'
 const COMPILE_TIMEOUT = 60_000
 
-/**
- * A class selector's name with its escapes, e.g. `.x-1\/2` or `.x-\[1\2c 2\]`.
- * (No real utility in these examples: src/test is not scanned, so this file
- * would trip its own last check.)
- */
+/** A class selector's name with its escapes: `.ring-zinc-500\/30`, `.shadow-\[0_0_20px\2c …\]`. */
 const CLASS_SELECTOR = /\.((?:\\[0-9a-fA-F]{1,6} ?|\\[^0-9a-fA-F]|[\w-])+)/g
 
 function unescapeCss(name: string): string {
@@ -55,12 +51,18 @@ async function generatedClasses(content: string[]): Promise<Set<string>> {
   return classes
 }
 
-/** Globs for the top-level entries of src/ that no `content` glob reaches. */
+/**
+ * src/test and top-level `*.test.*` files: test code never hands a class to a
+ * component, and guard headers quote class names on purpose.
+ */
+const TEST_CODE = /^test$|\.test\.[jt]sx?$/
+
+/** Globs for the top-level entries of src/ that no `content` glob reaches, test code aside. */
 function unscannedSrcGlobs(content: string[]): string[] {
   if (content.some((glob) => glob.startsWith('./src/**'))) return []
   const scanned = new Set(content.map((glob) => /^\.\/src\/([^/*{]+)\//.exec(glob)?.[1]))
   return readdirSync(join(process.cwd(), 'src'), { withFileTypes: true })
-    .filter((entry) => !scanned.has(entry.name))
+    .filter((entry) => !scanned.has(entry.name) && !TEST_CODE.test(entry.name))
     .filter((entry) => entry.isDirectory() || /\.(js|ts|jsx|tsx|mdx)$/.test(entry.name))
     .map((entry) => (entry.isDirectory() ? `./src/${entry.name}/**/*.${SOURCE_EXT}` : `./src/${entry.name}`))
 }
