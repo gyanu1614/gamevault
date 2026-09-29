@@ -52,6 +52,7 @@ export const ADMIN_ACTIONS = {
   USER_SUSPENDED: 'user.suspended',
   USER_UNSUSPENDED: 'user.unsuspended',
   USER_BANNED: 'user.banned',
+  USER_DELETED: 'user.deleted',
   SELLER_VIEWED: 'seller.viewed',
   SELLER_TIER_CHANGED: 'seller.tier_changed',
   SELLER_SUSPENDED: 'seller.suspended',
