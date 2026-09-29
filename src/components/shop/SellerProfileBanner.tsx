@@ -231,7 +231,7 @@ export default function SellerProfileBanner({
             ) : (
               statLine.rating && (
                 <StatChip
-                  icon={<ThumbsUp className="h-3.5 w-3.5 fill-success/70 text-success" />}
+                  icon={<ThumbsUp className="h-3.5 w-3.5 fill-[color-mix(in_srgb,var(--color-success)_70%,transparent)] text-success" />}
                   value={`${statLine.rating.percent}%`}
                   label={`Positive · ${statLine.rating.reviews} ${statLine.rating.reviews === 1 ? 'Review' : 'Reviews'}`}
                 />

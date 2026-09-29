@@ -14,9 +14,9 @@ import * as Dropdown from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, Loader2, LogOut, Package, Settings, Wallet } from 'lucide-react'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 
-const LINE = '#E4E5DE'
-const INK = '#1A1D19'
-const INK2 = '#5B6157'
+const LINE = 'rgba(255,255,255,0.14)'
+const INK = '#E9EDF2'
+const INK2 = '#9AA6B3'
 
 export function AccountMenu({
   user,
@@ -45,7 +45,7 @@ export function AccountMenu({
     await createClient().auth.signOut()
   }
   const item =
-    'flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium outline-none data-[highlighted]:bg-[#F3F3ED]'
+    'flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium outline-none data-[highlighted]:bg-white/[0.08]'
   return (
     <Dropdown.Root>
       <Dropdown.Trigger asChild>
@@ -70,7 +70,7 @@ export function AccountMenu({
         <Dropdown.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-[220px] rounded-lg border bg-white p-1.5 shadow-[0_14px_40px_-14px_rgba(0,0,0,0.25)]"
+          className="z-50 w-[220px] rounded-lg border bg-[#24252B] p-1.5 shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
           style={{ borderColor: LINE, color: INK }}
         >
           <div className="px-2.5 pb-2 pt-1.5">

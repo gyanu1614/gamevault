@@ -332,27 +332,36 @@ export default function ItemsPageClient({
               <img
                 src={gameImageUrl}
                 alt=""
-                className="h-12 w-12 shrink-0 rounded-xl border border-border-default object-cover shadow-elevated sm:h-16 sm:w-16 sm:rounded-2xl"
+                className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]"
               />
             ) : (
               <span
                 aria-hidden
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border-default bg-bg-overlay text-lime-text shadow-elevated sm:h-16 sm:w-16 sm:rounded-2xl"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-bg-overlay text-lime-text sm:h-[72px] sm:w-[72px]"
               >
                 <Gamepad2 className="h-6 w-6" />
               </span>
             )}
             <div className="min-w-0 flex-1">
+              {/* Game on top, small; the category is the big line — like
+                  the homepage's "Every Gamer's Marketplace" split. The H1
+                  still reads "{Game} {Category}" to crawlers: the game name
+                  is inside it, visually hidden. */}
+              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+                {gameName}
+              </p>
               <h1
-                className="font-black leading-tight tracking-tight text-text-primary"
+                className="mt-0.5 font-black leading-tight tracking-tight text-text-primary"
                 style={{ fontSize: 'var(--fs-page-title)', lineHeight: 'var(--lh-page-title)', fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
               >
-                {gameName} {categoryLabel}
+                <span className="sr-only">{gameName} </span>
+                {categoryLabel}
               </h1>
 
-              {/* Stats — keyword-rich for the crawler, not shown (owner:
-                  keep for SEO, not visible). The full introLine is sr-only too. */}
-              <div className="sr-only">
+              {/* Stats — kept in the HTML for crawlers (listing count, from
+                  price, delivery, SafeDrop) but visually hidden: the owner
+                  wants the header to be logo + game + category only. */}
+              <div className="sr-only" style={{ fontSize: 'var(--fs-meta)' }}>
                 <span>
                   <span className="font-bold tabular-nums text-text-primary">
                     {sorted.length.toLocaleString('en-US')}

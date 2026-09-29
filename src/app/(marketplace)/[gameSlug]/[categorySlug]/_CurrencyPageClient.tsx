@@ -13,11 +13,14 @@ import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
 import {
-  ShieldCheck, Zap, Store, Star, Minus, Plus, ArrowRight,
-  SlidersHorizontal, ChevronDown, Package, Clock,
+  ShieldCheck, Zap, Store, Minus, Plus, ArrowRight,
+  ChevronDown,
   Loader2,
-  type LucideIcon,
 } from 'lucide-react'
+import StarRoundedIcon from '@mui/icons-material/StarRounded'
+import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
+import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
@@ -168,7 +171,7 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
 function MetricCol({
   icon: Icon, label, value, width = 110,
 }: {
-  icon: LucideIcon
+  icon: typeof StarRoundedIcon
   label: string
   value: string
   /** Fixed column width in pixels. Set wide enough to fit the longest
@@ -181,7 +184,7 @@ function MetricCol({
       style={{ width }}
     >
       <div className="flex items-center gap-1.5 text-[14px] font-bold tabular-nums text-text-primary sm:text-[15px]">
-        <Icon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+        <Icon className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} />
         <span className="truncate">{value}</span>
       </div>
       <div className="mt-0.5 text-[11px] uppercase tracking-wider text-text-tertiary">
@@ -193,10 +196,10 @@ function MetricCol({
 
 // V13 — Seller-row metric chip (mobile second row). Inline with caption to
 // the right of the value, keeps the row scannable on small screens.
-function MetricChipMobile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function MetricChipMobile({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; label: string; value: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
-      <Icon className="h-3 w-3 text-text-tertiary" />
+      <Icon className="text-text-tertiary" style={{ fontSize: 13 }} />
       <span className="font-semibold tabular-nums text-text-primary">{value}</span>
       <span className="text-text-tertiary">{label}</span>
     </span>
@@ -332,18 +335,16 @@ export default function CurrencyPageClient({
 
         {/* Hero — title + product logo sit OUTSIDE the card */}
         <SectionHeader
+          eyebrow={data.currency.game}
           title={`Buy ${data.currency.name}`}
-          subtitle={`Recommended seller for ${data.currency.game}`}
           iconUrl={data.currency.iconUrl ?? null}
           iconFallback={data.currency.name.slice(0, 2).toUpperCase()}
           size="hero"
         />
         {/* SEO intro — live stats, same source as metadata + JSON-LD. */}
-        {introLine && (
-          <p className="mt-2 px-1 text-[13px] text-text-tertiary sm:text-[13.5px]">
-            {introLine}
-          </p>
-        )}
+        {/* SEO intro stays in the HTML for crawlers; visually hidden (owner
+            call 2026-09-29: header = logo + game + title only). */}
+        {introLine && <p className="sr-only">{introLine}</p>}
         <div ref={heroRef} className="mt-3">
           <HeroCard
             offer={activeOffer}
@@ -471,10 +472,12 @@ export default function CurrencyPageClient({
 // subtitle on the left, optional trailing element (e.g. filter chips)
 // on the right. Gives the page a strong rhythm without the box-in-box look.
 function SectionHeader({
-  title, subtitle, trailing, iconUrl, iconFallback, size = 'default',
+  title, subtitle, eyebrow, trailing, iconUrl, iconFallback, size = 'default',
 }: {
   title: string
   subtitle?: string
+  /** Small uppercase line above the title (the game name on the hero). */
+  eyebrow?: string
   trailing?: ReactNode
   /** V21/P7.i — Optional product logo rendered before the title.
    *  Used on the currency hero header to show the admin-uploaded icon. */
@@ -501,12 +504,17 @@ function SectionHeader({
               className="h-14 w-14 flex-shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
             />
           ) : (
-            <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-lg border border-border-default bg-bg-overlay text-[15px] font-extrabold tracking-tight text-lime-text">
+            <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-lg bg-bg-overlay text-[15px] font-extrabold tracking-tight text-lime-text">
               {iconFallback}
             </span>
           )
         )}
         <div className="min-w-0">
+          {eyebrow && (
+            <p className="mb-0.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+              {eyebrow}
+            </p>
+          )}
           <h2
             className={cn(
               'leading-tight text-text-primary',
@@ -643,7 +651,7 @@ function HeroCard({
         {/* LEFT CARD — Product identity + seller + delivery + stock + instructions.
             Canonical OrderCard shape: rounded-lg, border-border-default,
             bg-bg-raised, no glass/blur. */}
-        <Card className="border-border-default bg-bg-overlay p-5 sm:p-6">
+        <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 sm:p-6">
           {/* `offer.seller` is a DISPLAY name ("BloxMarket"), not a slug —
               linking to it produced /shop/BloxMarket. Use the canonical
               sellerSlug, and degrade to a non-link when there is none. */}
@@ -742,7 +750,7 @@ function HeroCard({
             trust tiles in their OWN card below (item-page rail format;
             same width so alignment is automatic). */}
         <div className="hidden lg:block">
-          <Card className="relative isolate overflow-hidden border-border-default bg-bg-overlay p-5 sm:p-6">
+          <Card className="relative isolate overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 sm:p-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/safedrop-emblem.avif"
@@ -757,13 +765,13 @@ function HeroCard({
                   distinction mark, distinct from lime (which is reserved for
                   the Buy CTA). Warm gold pairs cleanly with the black + lime. */}
               <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                <Star className="h-3 w-3 fill-amber-300" />
+                <StarRoundedIcon style={{ fontSize: 14 }} />
                 Recommended
               </span>
             </div>
             {purchasePanel}
           </Card>
-          <Card className="relative mt-3 overflow-hidden border-border-default bg-bg-overlay p-4">
+          <Card className="relative mt-3 overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4">
             <TrustBand />
           </Card>
         </div>
@@ -1039,11 +1047,11 @@ function sellerFactText(offer: Offer): string {
   ].filter(Boolean).join(' · ') || line.tierLabel
 }
 
-function Fact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function Fact({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <span className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border-subtle bg-bg-overlay">
-        <Icon className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
+        <Icon className="text-text-tertiary" style={{ fontSize: 16 }} aria-hidden />
       </span>
       <div className="min-w-0">
         <div className="text-[11px] uppercase tracking-wider text-text-tertiary">{label}</div>
@@ -1137,19 +1145,19 @@ function SellerRow({
                 column is wider to fit the unit caption. */}
             <div className="pointer-events-none hidden items-center gap-5 sm:flex">
               <MetricCol
-                icon={Package}
+                icon={Inventory2RoundedIcon}
                 label="Stock"
                 value={offer.stock.toLocaleString('en-US')}
                 width={120}
               />
               <MetricCol
-                icon={SlidersHorizontal}
+                icon={TuneRoundedIcon}
                 label="Minimum"
                 value={offer.minQty.toLocaleString('en-US')}
                 width={100}
               />
               <MetricCol
-                icon={Clock}
+                icon={ScheduleRoundedIcon}
                 label="Delivery"
                 value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`}
                 width={110}
@@ -1201,8 +1209,8 @@ function SellerRow({
               <span className="font-bold tabular-nums text-text-primary">{unitPrice(offer.pricePerUnit)}</span>
               <span className="text-text-tertiary">per {perLabel}</span>
             </span>
-            <MetricChipMobile icon={Package} label="Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
-            <MetricChipMobile icon={Clock} label="Delivery" value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`} />
+            <MetricChipMobile icon={Inventory2RoundedIcon} label="Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
+            <MetricChipMobile icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`} />
           </div>
         </div>
 
@@ -1248,11 +1256,11 @@ function SellerRow({
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Fact icon={Star} label="Seller" value={sellerFactText(offer)} />
-                  <Fact icon={Package} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
-                  <Fact icon={Clock} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
+                  <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
+                  <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
+                  <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
                   <Fact
-                    icon={SlidersHorizontal}
+                    icon={TuneRoundedIcon}
                     label="Minimum Quantity"
                     value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
                   />

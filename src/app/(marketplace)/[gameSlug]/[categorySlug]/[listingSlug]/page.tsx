@@ -157,25 +157,22 @@ const getListing = cache(async function getListing(listingSlug: string) {
   return { listing, isPreview }
 })
 
+/**
+ * Seller stats for the rail. `total_sales` comes from public_profiles (the
+ * counter every listing card shows) — this is a public page, so its client
+ * cannot read `orders`, and a count there silently returned 0 for every
+ * seller (2026-09-28: a seller with a completed sale showed "0 sold" here
+ * and "1" on the card). Only the active-listings count is queried.
+ */
 async function getSellerStats(sellerId: string) {
   const supabase = await createClient()
-
-  const [
-    { count: totalSales },
-    { count: activeListings }
-  ] = await Promise.all([
-    supabase.from('orders').select('id', { count: 'exact' })
-      .eq('seller_id', sellerId)
-      .eq('status', 'completed').limit(1),
-    supabase.from('listings').select('*', { count: 'exact' })
-      .eq('seller_id', sellerId)
-      .eq('status', 'active').limit(1)
-  ])
-
-  return {
-    totalSales: totalSales || 0,
-    activeListings: activeListings || 0
-  }
+  const { count: activeListings } = await supabase
+    .from('listings')
+    .select('id', { count: 'exact' })
+    .eq('seller_id', sellerId)
+    .eq('status', 'active')
+    .limit(1)
+  return { activeListings: activeListings || 0 }
 }
 
 /**
@@ -427,7 +424,7 @@ async function ListingDetailPage({ params }: PageProps) {
       // Null when the seller has no reviews — the UI shows no rating
       // rather than a fabricated 95%. Same rule checkout already used.
       ratingPercent: sellerRatingPercent(listing.seller),
-      totalSales: sellerStats.totalSales,
+      totalSales: Number(listing.seller.total_sales ?? 0),
       activeListings: sellerStats.activeListings,
       createdAt: listing.seller.created_at ?? null,
       reviewCount: Number(listing.seller.total_reviews ?? 0),

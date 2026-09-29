@@ -17,7 +17,7 @@ export interface ItemSeller {
   avatarUrl?: string | null
   verified: boolean
   /** Positive-feedback percentage (0-100), or null when the seller has no
-   *  reviews yet. Null means "show New Seller", never a made-up number. */
+   *  reviews yet (no rating is shown), never a made-up number. */
   ratingPercent: number | null
   /** Lifetime completed sales across all the seller's listings. */
   sales: number

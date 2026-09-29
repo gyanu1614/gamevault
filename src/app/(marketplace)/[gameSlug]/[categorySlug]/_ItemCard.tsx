@@ -28,8 +28,8 @@
 import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { Archive, Bolt, Clock } from 'lucide-react'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
+import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { SellerStats } from '@/components/seller/SellerStats'
@@ -40,13 +40,6 @@ const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
   if (Math.abs(n) < 0.01) return `$${n.toFixed(4)}`
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-const fmtCount = (n: number) => {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (n >= 10_000) return `${Math.round(n / 1_000)}K`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
-  return n.toLocaleString('en-US')
 }
 
 /** Plain seller avatar (image or initial fallback). */
@@ -76,32 +69,49 @@ function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size
 
 type ChipTone = 'default' | 'success'
 
-/** One meta chip (delivery time, stock): a small filled rectangle with its
- *  icon, like the marketplaces buyers know (owner, 2026-09-28). */
+/** One meta chip: a small dark pill with an icon; hovering names what the
+ *  number is ("Delivery Time", "Available Stock") in a tooltip above it. */
 function MetaPill({
   icon: Icon,
   label,
+  tip,
   tone = 'default',
   ariaLabel,
 }: {
-  icon: React.ComponentType<{ className?: string }>
+  icon: typeof IconClock
   label: string
+  tip: string
   tone?: ChipTone
   ariaLabel?: string
 }) {
   return (
-    <span
-      style={{ fontSize: 'var(--fs-micro)' }}
-      aria-label={ariaLabel}
-      className={cn(
-        'inline-flex h-7 items-center gap-1.5 rounded-md px-2 font-semibold',
-        tone === 'success' ? 'bg-success-bg text-success' : 'bg-white/[0.07] text-text-secondary',
-      )}
-    >
-      <Icon className={cn('h-3.5 w-3.5 shrink-0', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
-      {label}
+    <span className="group/pill pointer-events-auto relative inline-flex">
+      <span
+        aria-label={`${tip}: ${label}`}
+        className={cn(
+          'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium',
+          'bg-white/[0.06] ring-1 ring-inset ring-white/[0.05]',
+          tone === 'success' ? 'text-success' : 'text-text-primary',
+        )}
+      >
+        <Icon size={13} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
+        {label}
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#111214] px-3 py-1.5 text-[12.5px] font-semibold text-text-primary opacity-0 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.7)] transition-opacity duration-150 group-hover/pill:opacity-100"
+      >
+        {tip}
+      </span>
     </span>
   )
+}
+
+/** 14 · 1.2K · 999.9K — stock in the fewest characters. */
+function fmtStock(n: number): string {
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K`
+  return `${(n / 1_000_000).toFixed(1)}M`
 }
 
 export default function ItemCard({
@@ -138,11 +148,15 @@ export default function ItemCard({
         // border brightens toward white, with a faint lit top edge. NO lift
         // and no drop shadow — the card must not move. Colour + border only,
         // so it transitions `colors` and `box-shadow`, never `transform`.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
-        'transition-[background-color,border-color,box-shadow] duration-200',
-        // bg-inset, NOT bg-overlay-2: overlay-2 is the same hex as the resting
-        // bg-overlay (#252B34), so hovering to it changed nothing.
-        'hover:border-white/25 hover:bg-bg-inset hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+        // Premium black: a quiet top-to-bottom gradient (#24252B → #1D1E23),
+        // a 10% hairline, a 1px inner highlight on the top edge and a soft
+        // drop shadow for depth. Hover lifts the whole gradient one step and
+        // clears the hairline — still black, never the grey tokens.
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-white/[0.10]',
+        'bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]',
+        'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]',
+        'transition-[background-image,border-color,box-shadow] duration-200',
+        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -150,13 +164,6 @@ export default function ItemCard({
         href={href}
         aria-label={offer.name}
         className="absolute inset-0 z-0 pointer-events-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-soft"
-      />
-      {/* Top sheen — faint light falling from above (bundle-tile look).
-          Sits after the stretched link in the DOM so it paints above the
-          card surface; pointer-events-none keeps the link clickable. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
       />
 
       {/* MAIN BLOCK — pointer-events-none so the whole-card Link gets clicks;
@@ -180,23 +187,21 @@ export default function ItemCard({
           {/* Title reserves a fixed 2-line height (min-h) even for 1-line
               names, so the delivery chip below always lands at the same
               vertical spot across cards — no drift, uniform card heights. */}
-          <h3 className="min-h-[2.75rem] line-clamp-2 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 'var(--fw-heading)', lineHeight: 'var(--lh-card-title)' }}>
+          <h3 className="min-h-[2.75rem] line-clamp-2 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 'var(--lh-card-title)' }}>
             {offer.name}
           </h3>
 
-          {/* Meta row — delivery time + stock chips (owner, 2026-09-28).
-              Attribute chips live on the listing detail page, not the card. */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Meta row — delivery time + stock as pills (owner call 2026-09-28). */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             <MetaPill
-              icon={isInstant ? Bolt : Clock}
+              icon={isInstant ? IconBolt : IconClock}
               label={deliveryText}
+              tip="Delivery Time"
               tone={isInstant ? 'success' : 'default'}
             />
-            {offer.isUnlimited ? (
-              <MetaPill icon={Archive} label="Unlimited" ariaLabel="Unlimited stock" />
-            ) : offer.stock != null && offer.stock > 0 ? (
-              <MetaPill icon={Archive} label={fmtCount(offer.stock)} ariaLabel={`${offer.stock.toLocaleString('en-US')} in stock`} />
-            ) : null}
+            {!offer.isUnlimited && offer.stock != null && offer.stock > 0 && (
+              <MetaPill icon={IconPackage} label={fmtStock(offer.stock)} tip="Available Stock" />
+            )}
           </div>
         </div>
 
@@ -233,7 +238,7 @@ export default function ItemCard({
           SAME vertical space. Without this the strip collapses on owned
           listings and the card ends up shorter than its neighbours, which
           broke row alignment in the detail-page carousel. */}
-      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-subtle" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
+      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 items-baseline gap-1.5">
@@ -259,7 +264,7 @@ export default function ItemCard({
                 aria-label="Lowest price"
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-bg text-success"
               >
-                <LocalOfferRoundedIcon sx={{ width: 14, height: 14 }} aria-hidden />
+                <LocalOfferRoundedIcon aria-hidden style={{ fontSize: 14 }} />
               </span>
               <span
                 role="tooltip"
@@ -300,7 +305,7 @@ export default function ItemCard({
                 balanced against the 32px circle. */}
             <div className="flex min-w-0 flex-col items-end gap-[3px] leading-none">
               <div className="flex min-w-0 items-center gap-1">
-                <span className="max-w-[112px] truncate text-[12.5px] font-semibold text-text-primary">
+                <span className="max-w-[112px] truncate text-[12.5px] font-medium text-text-primary">
                   {sellerName}
                 </span>
                 {offer.seller.verified && <VerifiedBadge size={13} />}

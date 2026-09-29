@@ -3,7 +3,7 @@
 /**
  * Checkout — "Ivory Ledger" rebuild (design_handoff_checkout Option 1a).
  *
- * Trust-first checkout: dark 64px navbar strip, then an ivory (#FAFAF7)
+ * Trust-first checkout: 64px navbar strip, then the marketplace's dark
  * surface with a two-column grid — Payment method list (crypto expanded
  * with Coin + Network dropdowns, amber network warning, Pay Now) on the
  * left, the compact white order-summary card (item, seller chips,
@@ -39,7 +39,6 @@ import {
   Lock,
   CreditCard,
   LogOut,
-  Package,
   Settings,
   Landmark,
   LifeBuoy,
@@ -52,12 +51,19 @@ import {
   Tag,
   TriangleAlert,
   Undo2,
-  Wallet,
   X,
 } from 'lucide-react'
 
+import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
+import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
+import CurrencyExchangeRoundedIcon from '@mui/icons-material/CurrencyExchangeRounded'
+import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
+import HttpsRoundedIcon from '@mui/icons-material/HttpsRounded'
+import PublicRoundedIcon from '@mui/icons-material/PublicRounded'
 import { createCheckout } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
+import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
 import { clampCheckoutQty } from './qty'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
@@ -71,24 +77,30 @@ import { sellerStatText } from '@/lib/seller/stat-line'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
-  ivory: '#FAFAF7',
-  ivory2: '#F3F3ED',
-  row: '#FCFCFA',
-  ink: '#1A1D19',
-  ink2: '#5B6157',
-  dis: '#9AA096',
-  forest: '#14432A',
-  forest2: '#1B5E3A',
+  // Dark surfaces — the marketplace theme (src/styles/tokens.css): page
+  // ground, raised card, input well, hover; glass = the listing page's card.
+  page: '#16171B',
+  ivory: '#1D1E23',
+  ivory2: '#191A1F',
+  row: '#24252B',
+  glass: '#1D1E23',
+  ink: '#E9EDF2',
+  ink2: '#9AA6B3',
+  dis: '#6C7684',
+  forest: '#2A7A50',
+  forest2: '#33935F',
+  accentText: '#56B87F',
   lime: '#A3E635',
-  limeTint: '#EDFBD3',
-  success: '#3F7D22',
-  line: '#E4E5DE',
-  disLine: '#D5D7CE',
-  amberTx: '#8A4308',
-  amberIc: '#B45309',
-  amberBg: '#FBF3E6',
-  amberLn: '#EBD9BC',
-  nav: '#141714',
+  limeTint: 'rgba(86,184,127,0.14)',
+  success: '#3FD986',
+  line: 'rgba(255,255,255,0.14)',
+  lineSubtle: 'rgba(255,255,255,0.08)',
+  disLine: 'rgba(255,255,255,0.22)',
+  amberTx: '#FFB23E',
+  amberIc: '#FFB23E',
+  amberBg: 'rgba(255,178,62,0.12)',
+  amberLn: 'rgba(255,178,62,0.35)',
+  nav: '#16171B',
 }
 
 function fmtUnitPrice(n: number): string {
@@ -131,29 +143,35 @@ const NETWORKS: Array<{ value: Net; label: string; fee: string; soon?: boolean }
 
 // ─── Small pieces ───────────────────────────────────────────────────────────
 
-/** Light dropdown per the handoff: 1px #E4E5DE border, radius 6, ivory bg. */
+/** Dropdown on the dark surface: hairline border, radius 6, well bg. */
 function LightSelect({
   value,
   onChange,
   options,
   ariaLabel,
   placeholder,
+  leading,
+  size = 'md',
 }: {
   value: string
   onChange: (v: string) => void
   options: Array<{ value: string; label: string; icon?: string; hint?: string; disabled?: boolean }>
   ariaLabel: string
   placeholder?: string
+  /** Rendered before the label in the trigger (e.g. a region icon). */
+  leading?: React.ReactNode
+  size?: 'md' | 'sm'
 }) {
   const selected = options.find((o) => o.value === value)
   return (
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium outline-none transition-colors focus-visible:border-[#14432A]"
+        className={cn('flex w-full items-center justify-between gap-2 rounded-md border px-3 font-medium outline-none transition-colors focus-visible:border-focus-border', size === 'sm' ? 'h-9 text-[13px]' : 'h-[42px] text-[14px]')}
         style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
       >
         <span className="flex min-w-0 items-center gap-2">
+          {leading}
           {selected?.icon && <Image src={selected.icon} alt="" width={18} height={18} unoptimized />}
           {selected ? (
             <span className="truncate">{selected.label}</span>
@@ -176,7 +194,7 @@ function LightSelect({
         <Select.Content
           position="popper"
           sideOffset={4}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.18)]"
+          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-[#24252B] shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
           style={{ borderColor: T.line }}
         >
           <Select.Viewport className="p-1">
@@ -185,7 +203,7 @@ function LightSelect({
                 key={o.value}
                 value={o.value}
                 disabled={o.disabled}
-                className="flex cursor-pointer items-center justify-between gap-3 rounded px-2.5 py-2 text-[13.5px] font-medium outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[highlighted]:bg-[#F3F3ED]"
+                className="flex cursor-pointer items-center justify-between gap-3 rounded px-2.5 py-2 text-[13.5px] font-medium outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[highlighted]:bg-white/[0.08]"
                 style={{ color: T.ink }}
               >
                 <span className="flex items-center gap-2">
@@ -199,7 +217,7 @@ function LightSelect({
                     </span>
                   )}
                   <Select.ItemIndicator>
-                    <Check className="h-3.5 w-3.5" style={{ color: T.forest }} />
+                    <Check className="h-3.5 w-3.5" style={{ color: T.accentText }} />
                   </Select.ItemIndicator>
                 </span>
               </Select.Item>
@@ -232,14 +250,13 @@ function InfoDot({
         >
           <Info
             aria-hidden
-            className="h-[14px] w-[14px] text-[#5B6157] transition-colors group-hover:text-[#1A1D19]"
+            className="h-[14px] w-[14px] text-[#9AA6B3] transition-colors group-hover:text-[#E9EDF2]"
           />
         </button>
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="rounded-md border bg-white p-0 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.2)]"
-        style={{ borderColor: T.line }}
+        className="p-0"
       >
         {title ? (
           <div className="px-3 py-2.5">
@@ -302,8 +319,8 @@ function Callout({
   // px-5 py-4. Corners tightened to our 8px rectangular direction.
   const c =
     variant === 'warning'
-      ? { bg: '#FEFCE8', border: '#FEF08A', text: '#854D0E' }
-      : { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' }
+      ? { bg: 'rgba(255,178,62,0.10)', border: 'rgba(255,178,62,0.35)', text: '#FFB23E' }
+      : { bg: 'rgba(63,217,134,0.10)', border: 'rgba(63,217,134,0.35)', text: '#3FD986' }
   return (
     <div
       className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5"
@@ -325,7 +342,7 @@ function Callout({
  *  band's header row). */
 function TrustChips() {
   const item = 'inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-semibold'
-  const ic = { color: T.forest } as const
+  const ic = { color: T.accentText } as const
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
       <span className={item} style={{ color: T.ink }}>
@@ -349,13 +366,13 @@ function TrustChips() {
  *  security line, support + legal links. Edge-to-edge with a top hairline;
  *  content aligns to the checkout container. */
 function CompanyStrip() {
-  const link = 'transition-colors hover:text-[#14432A]'
+  const link = 'transition-colors hover:text-[#56B87F]'
   return (
-    <footer className="border-t bg-white" style={{ borderColor: T.line }}>
+    <footer className="border-t" style={{ borderColor: T.lineSubtle, background: T.page }}>
       <div className="mx-auto flex w-full max-w-[1120px] flex-col items-center justify-between gap-2.5 px-4 py-4 sm:px-10 lg:flex-row lg:py-3.5">
         <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-6">
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
+            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
             <span>
               <b className="font-semibold" style={{ color: T.ink }}>DropMarket Ltd</b>
               <span className="hidden sm:inline"> · Registered In The United Kingdom · Company No. 17309867</span>
@@ -363,7 +380,7 @@ function CompanyStrip() {
             </span>
           </span>
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Lock className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
+            <Lock className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
             <span>
               Secured By <b className="font-semibold" style={{ color: T.ink }}>DropMarket Payments</b>
             </span>
@@ -371,7 +388,7 @@ function CompanyStrip() {
         </div>
         <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
           <Link href="/support" className={`${link} flex items-center gap-1.5`}>
-            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.forest }} />
+            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.accentText }} />
             Support
           </Link>
           <span aria-hidden className="h-3 w-px" style={{ background: T.line }} />
@@ -443,34 +460,42 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
   },
   // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
   trustly: {
+    logo: '/payments/trustly.svg',
     Icon: Landmark,
     points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
   },
   blik_pl: {
+    logo: '/payments/blik_pl.svg',
     Icon: Smartphone,
     points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
   },
   p24_pl: {
+    logo: '/payments/p24_pl.svg',
     Icon: Landmark,
     points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
   },
   eps_at: {
+    logo: '/payments/eps_at.svg',
     Icon: Landmark,
     points: ['Approve in your bank portal', 'Payment confirms instantly'],
   },
   mbway_pt: {
+    logo: '/payments/mbway_pt.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
   },
   bancomatpay_it: {
+    logo: '/payments/bancomatpay_it.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
   },
   payu_cz: {
+    logo: '/payments/payu_cz.svg',
     Icon: Landmark,
     points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
   },
   paysafecard: {
+    logo: '/payments/paysafecard.svg',
     Icon: CreditCard,
     points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your DropMarket wallet'],
   },
@@ -503,19 +528,6 @@ function ccFlag(cc: string): string {
   )
 }
 
-/** ISO code → English country name (Intl built-in; falls back to the code). */
-const regionNames =
-  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-    ? new Intl.DisplayNames(['en'], { type: 'region' })
-    : null
-function countryName(cc: string): string {
-  try {
-    return regionNames?.of(cc.toUpperCase()) ?? cc.toUpperCase()
-  } catch {
-    return cc.toUpperCase()
-  }
-}
-
 function toRow(m: ClientMethod): LocalMethodRow {
   const ui = METHOD_UI[m.method] ?? FALLBACK_UI
   return {
@@ -532,11 +544,6 @@ function toRow(m: ClientMethod): LocalMethodRow {
 }
 
 /** "+ $1.20 · 5%" — the tile / badge fee line (checkout B3). */
-function fmtFeeLine(q: ClientMethod['quote'] | null | undefined): string {
-  if (!q) return ''
-  const pct = q.pctEffective == null ? '' : ` · ${Number(q.pctEffective).toFixed(2).replace(/\.?0+$/, '')}%`
-  return `+ $${(q.feeMinor / 100).toFixed(2)}${pct}`
-}
 
 // ─── CheckoutForm ───────────────────────────────────────────────────────────
 
@@ -558,60 +565,38 @@ interface CheckoutFormProps {
 export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods }: CheckoutFormProps) {
   const router = useRouter()
 
-  // Tabbed selector: Crypto | E-Wallet | Card (soon). Local methods live in
-  // the E-Wallet tab, filtered by a country pin that defaults to the buyer's
-  // geo country (G2A pattern). Rows and countries derive from the provider
-  // registry, so new methods surface automatically.
+  // Flat selector (checkout regions, 2026-09-26): rails local to the
+  // buyer's own country first, then the rest of their region, then
+  // Cryptocurrency last (first and only when the region has nothing). The
+  // region comes from the geo country; a chip row lets the buyer switch.
+  // Rows derive from the provider registry, so new methods surface
+  // automatically.
   const allLocalRows = methods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
-  // payable for this order (no fee row / hidden) and its tab is disabled.
+  // payable for this order (no fee row / hidden) and its row is not shown.
   const cryptoMethod = methods.find((m) => m.kind === 'crypto') ?? null
   const walletQuote = methods.find((m) => m.kind === 'wallet')?.quote ?? null
   const geoCc = (buyerCountry ?? '').trim().toUpperCase()
-  const geoValid = /^[A-Z]{2}$/.test(geoCc)
-  // Country options: every country with a method (registry order) + the
-  // buyer's own geo country even at 0 methods (honest empty state beats a
-  // silently wrong pin).
-  const localCountries: Array<{ cc: string; count: number }> = []
-  for (const row of allLocalRows) {
-    for (const cc of row.countries) {
-      const hit = localCountries.find((c) => c.cc === cc)
-      if (hit) hit.count += 1
-      else localCountries.push({ cc, count: 1 })
-    }
-  }
-  if (geoValid && !localCountries.some((c) => c.cc === geoCc)) {
-    localCountries.unshift({ cc: geoCc, count: 0 })
-  }
-  const [payCategory, setPayCategory] = useState<'crypto' | 'ewallet'>(cryptoMethod ? 'crypto' : 'ewallet')
-  // '' = no country chosen yet (unknown geo) — the tab shows a chooser
-  // prompt instead of dumping every method.
-  const [walletCountry, setWalletCountry] = useState<string>(geoValid ? geoCc : '')
+  const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
+  const [region, setRegion] = useState<RegionId>(() => regionForCountry(geo))
+  const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, region, geo)
+  const orderedRows = [...localRows, ...regionalRows]
+  const regionChips = regionsWithMethods(allLocalRows, region)
 
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page)
   // — the same clamp the page quoted the buyer fee for.
   const [quantity] = useState(() => clampCheckoutQty(listing, initialQty, !!bundleSummary))
 
-  // Payment method: crypto (expanded card) or a Payssion local method.
-  const [payMethod, setPayMethod] = useState<PayMethodId>(cryptoMethod ? 'crypto' : (allLocalRows[0]?.id ?? 'crypto'))
-  const walletRows =
-    walletCountry === ''
-      ? []
-      : allLocalRows.filter(
-          // The selected method never disappears when the country filter
-          // changes — the buyer's active choice must stay visible.
-          (r) => r.countries.includes(walletCountry) || r.id === payMethod
-        )
-
-  // Switching tabs keeps payMethod coherent: Crypto tab pays with crypto;
-  // the E-Wallet tab auto-selects its first visible method.
-  const selectCategory = (cat: 'crypto' | 'ewallet') => {
-    setPayCategory(cat)
-    if (cat === 'crypto') {
-      setPayMethod('crypto')
-    } else if (payMethod === 'crypto' && walletRows.length > 0) {
-      setPayMethod(walletRows[0].id)
-    }
+  // Payment method: NOTHING is picked until the buyer taps a row (owner
+  // call 2026-09-28) — Pay Now stays disabled until then.
+  const [payMethod, setPayMethod] = useState<PayMethodId | null>(null)
+  // Switching region re-orders the list; a pick that is no longer listed
+  // is cleared (crypto is always listed, so it survives).
+  const selectRegion = (id: RegionId) => {
+    setRegion(id)
+    const next = orderMethodsForRegion(allLocalRows, id, geo)
+    const rows = [...next.local, ...next.regional]
+    if (payMethod && payMethod !== 'crypto' && !rows.some((r) => r.id === payMethod)) setPayMethod(null)
   }
   // Coin + network selection (within the crypto card).
   // No coin preselected — the network chooser stays closed until a pick.
@@ -634,7 +619,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // the order is a 'wallet' order and that quote applies — exactly the
   // routing createCheckout performs, so page and snapshot agree to the cent.
   const methodQuote =
-    payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
+    payMethod == null ? null : payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
   const baseBeforeMethodFeeCents = Math.round(subtotal * 100) + Math.round(fee.marketplaceAmount * 100) - Math.round(promoDiscount * 100)
   const walletBalanceCents = Math.round(walletBalance * 100)
   const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= baseBeforeMethodFeeCents + walletQuote.feeMinor
@@ -691,8 +676,9 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   // Crypto needs a coin picked before Pay makes sense.
-  const payDisabled = paying || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
+  const payDisabled = paying || payMethod == null || (payMethod === 'crypto' && (!coin || !cryptoMethod)) || activeQuote == null
   const handlePay = async () => {
+    if (!payMethod) return
     if (payMethod === 'crypto' && !coin) return
     setPaying(true)
     setPayError(null)
@@ -705,7 +691,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       payTab = window.open('', '_blank')
       try {
         payTab?.document.write(
-          '<title>Secure Payment</title><p style="font-family:system-ui;padding:24px;color:#1A1D19">Opening your secure payment page…</p>'
+          '<title>Secure Payment</title><body style="margin:0;background:#16171B"><p style="font-family:system-ui;padding:24px;color:#E9EDF2">Opening your secure payment page…</p></body>'
         )
       } catch {}
     }
@@ -801,19 +787,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </button>
   )
 
-  const cryptoBody = (
-    <div className="rounded-lg bg-white p-4" style={{ boxShadow: `inset 0 0 0 1.5px ${T.line}` }}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <p className="text-[15px] font-bold" style={{ color: T.ink }}>
-          Choose Coin
-        </p>
-        <span
-          className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold tabular-nums"
-          style={{ background: T.limeTint, color: T.forest }}
-        >
-          {fmtFeeLine(cryptoMethod?.quote)}
-        </span>
-      </div>
+  // ── Crypto picker: coin tiles + network + warning, inside the crypto row ──
+  const cryptoPicker = (
+    <div>
+      <p className="mb-2.5 text-[13.5px] font-semibold" style={{ color: T.ink }}>
+        Choose Coin
+      </p>
       {/* Coin tiles — USDT opens a network chooser below; BTC is pick-and-pay. */}
       <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Coin">
         {COINS.map((c) => {
@@ -827,15 +806,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               onClick={() => setCoin(c.value)}
               className="flex items-center gap-2.5 rounded-md px-3.5 py-3 text-left transition-[box-shadow,transform] active:scale-[0.98]"
               style={{
-                boxShadow: `inset 0 0 0 1.5px ${selected ? T.forest : T.line}`,
-                background: selected ? T.ivory : '#FFFFFF',
+                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : T.line}`,
+                background: selected ? T.row : T.ivory2,
               }}
             >
               <Image src={c.icon} alt="" width={22} height={22} unoptimized />
               <span className="text-[14px] font-semibold" style={{ color: T.ink }}>
                 {c.label}
               </span>
-              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.forest }} />}
+              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.accentText }} />}
             </button>
           )
         })}
@@ -896,259 +875,299 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </div>
   )
 
-  const radioDot = (checked: boolean) => (
+  /** Right-hand pick mark: an empty ring, or a filled forest disc with a tick. */
+  const pickMark = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
-      style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.disLine}` }}
+      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
+      style={checked ? { background: T.forest } : { boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
     >
-      {checked && <span className="h-[9px] w-[9px] rounded-full" style={{ background: T.forest }} />}
+      {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
     </span>
   )
 
-  const renderLocalRow = (m: LocalMethodRow) => {
+  /** Row surface: hairline edge, soft top highlight; the pick fills ivory. */
+  const rowClass = (checked: boolean) =>
+    cn(
+      'rounded-lg transition-[background-color,box-shadow] duration-150',
+      checked ? 'bg-[#24252B]' : 'bg-[#1D1E23] hover:bg-[#24252B]'
+    )
+  const rowSurface = (checked: boolean) =>
+    checked
+      ? `inset 0 0 0 1.5px ${T.accentText}, inset 0 1px 0 rgba(255,255,255,0.06)`
+      : `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.05)`
+
+  /** The brand mark in a square white tile on the left (the row's icon,
+   *  tinted, when a method has no logo yet). */
+  const markTile = (logo: string | undefined, Icon: typeof Smartphone) => (
+    <span
+      className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
+      style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
+    >
+      {logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} alt="" className="h-full w-full object-contain p-1" />
+      ) : (
+        <Icon className="h-[18px] w-[18px]" style={{ color: T.accentText }} />
+      )}
+    </span>
+  )
+
+  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+
+  const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
-      <div
-        key={m.id}
-        className="rounded-lg bg-white"
-        style={{ boxShadow: `inset 0 0 0 1.5px ${checked ? T.forest : T.line}` }}
-      >
-        <button
-          type="button"
-          role="radio"
-          aria-checked={checked}
-          onClick={() => setPayMethod(m.id)}
-          className="flex w-full items-center gap-3 p-4 text-left"
-        >
-          {radioDot(checked)}
-          {m.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.logo} alt="" className="h-5 w-auto max-w-[84px] shrink-0 object-contain" />
-          ) : (
-            <m.Icon className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
-          )}
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
+        <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
+          {markTile(m.logo, m.Icon)}
+          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
             {m.label}
           </span>
-          {/* Fee line (checkout B3): the database's quote for THIS order. */}
-          <span className="ml-auto whitespace-nowrap text-[12px] font-semibold tabular-nums" style={{ color: T.ink2 }}>
-            {fmtFeeLine(m.quote)}
-          </span>
-          {/* Region chip only when it ADDS info — i.e. the row's country
-              differs from the selector (a kept selection after a country
-              switch). Same-country chips just repeat the pin. */}
-          {!m.countries.includes(walletCountry) && (
-            <span
-              className="rounded-md px-[7px] py-[3px] text-[11px] font-semibold"
-              style={{ background: '#EFEFEA', color: '#6B7166' }}
-            >
-              {m.flag} {m.region}
-            </span>
-          )}
+          {pickMark(checked)}
         </button>
-        {checked && (
-          <div className="border-t px-4 pb-3.5 pt-3" style={{ borderColor: T.line }}>
-            <ul className="flex flex-col gap-1.5">
-              {m.points.map((pt) => (
-                <li key={pt} className="flex items-center gap-2 text-[12.5px]" style={{ color: T.ink2 }}>
-                  <Check className="h-3.5 w-3.5 shrink-0" style={{ color: T.forest }} />
-                  {pt}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     )
   }
 
-  // ── Category tab bar: Crypto | E-Wallet | Card (soon) ─────────────
-  const categoryTab = (cat: 'crypto' | 'ewallet', icon: React.ReactNode, label: string) => {
-    const active = payCategory === cat
-    // Crypto with no fee row for the active provider is not payable — the tab
-    // greys out like Card (hidden methods disappear; checkout B3).
-    const disabled = cat === 'crypto' && !cryptoMethod
-    return (
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active}
-        disabled={disabled}
-        onClick={() => selectCategory(cat)}
-        className="flex h-11 items-center justify-center gap-2 rounded-md text-[13.5px] font-semibold transition-colors active:scale-[0.98]"
-        style={
-          active
-            ? { background: T.forest, color: '#FFFFFF' }
-            : disabled
-              ? { background: T.row, color: T.dis, boxShadow: `inset 0 0 0 1.5px ${T.disLine}`, cursor: 'not-allowed' }
-              : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1.5px ${T.line}` }
-        }
-      >
-        {icon}
-        {label}
-      </button>
-    )
-  }
-
-  /** Small tinted circle behind a stroke icon — lifts it off the pill. */
-  const tabIconChip = (Icon: typeof Wallet, active: boolean, disabled = false) => (
-    <span
-      className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
-      style={{
-        background: active ? 'rgba(255,255,255,0.16)' : disabled ? '#EFEFEA' : T.ivory2,
-      }}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </span>
-  )
-
-  const walletCountryMeta = localCountries.find((c) => c.cc === walletCountry)
-
-  const paymentList = (
-    <div className="flex flex-col gap-3">
-      <div role="tablist" aria-label="Payment Type" className="grid grid-cols-3 gap-2">
-        {categoryTab(
-          'crypto',
-          // Real coin marks, overlapped — instantly readable as crypto.
-          <span className="flex shrink-0 -space-x-1.5">
-            <Image
-              src="/crypto/btc.svg"
-              alt=""
-              width={18}
-              height={18}
-              unoptimized
-              className="rounded-full ring-2"
-              style={{ ['--tw-ring-color' as string]: payCategory === 'crypto' ? T.forest : '#FFFFFF' }}
-            />
-            <Image
-              src="/crypto/usdt.svg"
-              alt=""
-              width={18}
-              height={18}
-              unoptimized
-              className="rounded-full ring-2"
-              style={{ ['--tw-ring-color' as string]: payCategory === 'crypto' ? T.forest : '#FFFFFF' }}
-            />
-          </span>,
-          'Crypto'
-        )}
-        {categoryTab('ewallet', tabIconChip(Wallet, payCategory === 'ewallet'), 'E-Wallet')}
-        {/* Cards ship with the card acquirer — greyed, not clickable. */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          disabled
-          className="flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-md text-[13.5px] font-medium"
-          style={{ background: T.row, color: T.dis, boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
+  // Crypto: always the last row; opens the coin picker when picked.
+  const cryptoChecked = payMethod === 'crypto'
+  const cryptoRow = cryptoMethod && (
+    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
+      <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
+        <span
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+          style={{ background: '#F7931A' }}
         >
-          {tabIconChip(CreditCard, false, true)}
-          Card
-          <span
-            className="rounded-md px-[6px] py-[2px] text-[10.5px] font-semibold"
-            style={{ background: '#EFEFEA', color: '#8A9086' }}
-          >
-            Soon
-          </span>
-        </button>
-      </div>
-
-      {payCategory === 'crypto' && cryptoBody}
-
-      {payCategory === 'ewallet' && (
-        <div className="flex flex-col gap-3">
-          {/* Country pin — only the chosen country's methods ever render. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <span className="text-[12px] font-semibold" style={{ color: T.ink2 }}>
-              {walletCountry === '' ? 'Choose Your Country' : 'Paying From Another Country?'}
-            </span>
-            <div className="w-[210px] shrink-0 max-[420px]:w-full">
-              <LightSelect
-                ariaLabel="Country"
-                placeholder="🌍 Select Country"
-                value={walletCountry}
-                onChange={(v) => {
-                  setWalletCountry(v)
-                  // Picking a country on this tab means "pay locally" — line
-                  // up its first method unless the current pick still fits.
-                  const rows = allLocalRows.filter((r) => r.countries.includes(v))
-                  if (!rows.some((r) => r.id === payMethod)) {
-                    if (rows.length > 0) setPayMethod(rows[0].id)
-                    else setPayMethod('crypto')
-                  }
-                }}
-                options={localCountries.map((c) => ({
-                  value: c.cc,
-                  label: `${ccFlag(c.cc)} ${countryName(c.cc)}`,
-                  hint: `${c.count}`,
-                }))}
-              />
-            </div>
-          </div>
-
-          {walletCountry === '' ? (
-            /* No geo signal — ask, don't dump the whole catalog. */
-            <div
-              className="rounded-lg border px-5 py-6 text-center"
-              style={{ background: T.row, borderColor: T.line }}
-            >
-              <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
-                Local Methods Are Country-Specific
-              </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                Choose your country above to see the wallets and bank options available to you.
-              </p>
-            </div>
-          ) : walletRows.length > 0 ? (
-            <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
-              <AnimatePresence initial={false} mode="popLayout">
-                {walletRows.map((m) => (
-                  <motion.div
-                    key={m.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16, ease: 'easeOut' }}
-                  >
-                    {renderLocalRow(m)}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          ) : (
-            /* No local rails for this country yet — point at crypto. */
-            <div
-              className="rounded-lg border px-5 py-6 text-center"
-              style={{ background: T.row, borderColor: T.line }}
-            >
-              <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
-                No Local Methods for {walletCountryMeta ? ccFlag(walletCountryMeta.cc) : '🌍'}{' '}
-                {walletCountryMeta ? countryName(walletCountryMeta.cc) : 'Your Region'} Yet
-              </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
-                Crypto works everywhere. Or pick another country above.
-              </p>
-              <button
-                type="button"
-                onClick={() => selectCategory('crypto')}
-                className="mt-3 rounded-md px-4 py-2 text-[13px] font-semibold text-white transition-colors"
-                style={{ background: T.forest }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = T.forest2)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = T.forest)}
-              >
-                Pay With Crypto
-              </button>
-            </div>
-          )}
+          <Image src="/crypto/btc.svg" alt="" width={20} height={20} unoptimized />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
+          Crypto
+        </span>
+        {pickMark(cryptoChecked)}
+      </button>
+      {cryptoChecked && (
+        <div className="border-t px-4 pb-4 pt-3.5" style={{ borderColor: T.line }}>
+          {cryptoPicker}
         </div>
       )}
     </div>
   )
 
+  // ── Region: a compact dropdown at the right of the "Payment" heading ──
+  const regionPicker = regionChips.length > 1 && (
+    <div className="w-[172px] shrink-0">
+      <LightSelect
+        ariaLabel="Paying From"
+        size="sm"
+        value={region}
+        onChange={(v) => selectRegion(v as RegionId)}
+        options={regionChips.map((r) => ({ value: r.id, label: r.label }))}
+        leading={<PublicRoundedIcon style={{ fontSize: 16, color: T.accentText }} />}
+      />
+    </div>
+  )
+
+  const rowMotion = {
+    layout: true,
+    initial: { opacity: 0, y: 6 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -6 },
+    transition: { duration: 0.16, ease: 'easeOut' as const },
+  }
+
+  const paymentList = (
+    <div className="flex flex-col gap-3">
+      {orderedRows.length === 0 && !cryptoMethod ? (
+        <div className="rounded-lg px-5 py-6 text-center" style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}>
+          <p className="text-[14px] font-semibold" style={{ color: T.ink }}>
+            No Payment Methods Available
+          </p>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: T.ink2 }}>
+            This order can’t be paid right now — please try again shortly.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
+          <AnimatePresence initial={false} mode="popLayout">
+            {localRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m)}
+              </motion.div>
+            ))}
+            {regionalRows.map((m) => (
+              <motion.div key={m.id} {...rowMotion}>
+                {renderMethodRow(m)}
+              </motion.div>
+            ))}
+            {cryptoRow && (
+              <motion.div key="crypto" {...rowMotion}>
+                {cryptoRow}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  )
+
+  // ── Phones: one compact strip — thumbnail, title, game · category · qty,
+  //    the seller's name, the price. Everything else lives under the list.
+  const orderStrip = (
+    <div className="rounded-lg border p-3.5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass }}>
+      <p className="mb-2.5 text-[15px] font-semibold" style={{ color: T.ink }}>
+        Your Order
+      </p>
+      <div className="flex items-start gap-3">
+        <Image
+          src={imageSrc}
+          alt={title}
+          width={52}
+          height={52}
+          unoptimized
+          className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
+          style={{ background: T.ivory2 }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[14px] font-semibold leading-snug" style={{ color: T.ink }}>
+            {title}
+          </p>
+          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
+            {[listing.game?.name, listing.category?.name].filter(Boolean).join(' · ')}
+            {(listing.game?.name || listing.category?.name) && ' · '}Quantity: x{quantity.toLocaleString()}
+          </p>
+          <p className="mt-0.5 flex items-center gap-1 truncate text-[12px]" style={{ color: T.ink2 }}>
+            Seller <span className="font-semibold" style={{ color: T.ink }}>{sellerName}</span>
+            {isVerifiedSeller && <BadgeCheck aria-label="Verified Seller" className="h-[14px] w-[14px] shrink-0" style={{ fill: '#1D9BF0', color: '#FFFFFF' }} />}
+          </p>
+        </div>
+        <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: T.ink }}>
+          ${subtotal.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  )
+
+  // ── Shared with the phone layout: the discount toggle and the money rows
+  //    render inside the desktop card AND under the payment list on phones.
+  const promoSection = (
+        <div className="mt-4">
+          {!promoResult?.valid && (
+            <button
+              type="button"
+              onClick={() => setCodeOpen((v) => !v)}
+              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
+              style={{ color: T.forest2 }}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Have A Discount Code?
+              <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
+              />
+            </button>
+          )}
+          <AnimatePresence initial={false}>
+            {(codeOpen || promoResult?.valid) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
+                  {promoResult?.valid ? (
+            <div
+              className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
+              style={{ background: T.limeTint, borderColor: 'rgba(86,184,127,0.35)', color: T.accentText }}
+            >
+              <span className="truncate">Code Applied: {promoResult.code}</span>
+              <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleApplyPromo()
+                }}
+                placeholder="Discount Code"
+                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-focus-border"
+                style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
+              />
+              <button
+                type="button"
+                onClick={() => void handleApplyPromo()}
+                disabled={promoValidating}
+                className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
+                style={{ borderColor: T.accentText, color: T.accentText }}
+              >
+                {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
+              </button>
+            </>
+          )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+  )
+
+  const moneySummary = (
+      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
+        <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
+        <Row
+          label={MARKETPLACE_FEE_LABEL}
+          value={`+$${fee.marketplaceAmount.toFixed(2)}`}
+          infoTitle="Marketplace Fee"
+          infoBadge={`${fee.marketplacePct}%`}
+          info="Platform & SafeDrop Protection."
+        />
+        <Row
+          label={PROCESSING_FEE_LABEL}
+          value={`+$${processingFee.toFixed(2)}`}
+          infoTitle="Processing Fee"
+          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
+          info="Covers payment processing for the method you picked."
+        />
+        {promoDiscount > 0 && (
+          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.success} />
+        )}
+        {walletBalance > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2" style={{ color: T.ink2 }}>
+              Store Credit
+              <InfoDot text={`You have $${walletBalance.toFixed(2)} store credit available.`} />
+              <MiniSwitch
+                on={useWallet}
+                onToggle={() => setUseWallet((v) => !v)}
+                label="Apply Store Credit"
+              />
+            </span>
+            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.success : T.ink }}>
+              −${walletAmount.toFixed(2)}
+            </span>
+          </div>
+        )}
+        <div
+          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
+          style={{ borderColor: T.line }}
+        >
+          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
+            Total
+          </span>
+          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
+            ${total.toFixed(2)}
+          </span>
+        </div>
+      </div>
+  )
+
   const summaryCard = (compact = false) => (
-    <div className="rounded-lg border bg-white p-5" style={{ borderColor: T.line }}>
+    <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.lineSubtle, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
       {/* Item */}
       <div className="flex items-center gap-3.5">
         <Image
@@ -1176,13 +1195,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
       {/* Spec rows — full card width */}
       <div className="mt-3 divide-y text-[12.5px]">
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
           <span style={{ color: T.ink2 }}>Delivery Time</span>
           <span className="font-medium" style={{ color: T.ink }}>
             {fmtDelivery(deliveryTime)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
           <span style={{ color: T.ink2 }}>Quantity</span>
           <span className="font-medium" style={{ color: T.ink }}>
             {quantity.toLocaleString()}
@@ -1218,129 +1237,61 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       </div>
 
       {/* Discount code — collapsed behind a toggle */}
-      {!compact && (
-        <div className="mt-4">
-          {!promoResult?.valid && (
-            <button
-              type="button"
-              onClick={() => setCodeOpen((v) => !v)}
-              className="flex w-full items-center gap-2 text-[12.5px] font-semibold transition-opacity hover:opacity-75"
-              style={{ color: T.forest2 }}
-            >
-              <Tag className="h-3.5 w-3.5" />
-              Have A Discount Code?
-              <ChevronDown
-                className={cn('h-3.5 w-3.5 transition-transform', codeOpen && 'rotate-180')}
-              />
-            </button>
-          )}
-          <AnimatePresence initial={false}>
-            {(codeOpen || promoResult?.valid) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="overflow-hidden"
-              >
-                <div className={cn('flex gap-2', !promoResult?.valid && 'mt-2.5')}>
-                  {promoResult?.valid ? (
-            <div
-              className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
-              style={{ background: T.limeTint, borderColor: T.line, color: T.forest }}
-            >
-              <span className="truncate">Code Applied: {promoResult.code}</span>
-              <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <>
-              <input
-                value={promoInput}
-                onChange={(e) => setPromoInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleApplyPromo()
-                }}
-                placeholder="Discount Code"
-                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#14432A]"
-                style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
-              />
-              <button
-                type="button"
-                onClick={() => void handleApplyPromo()}
-                disabled={promoValidating}
-                className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
-                style={{ borderColor: T.forest, color: T.forest }}
-              >
-                {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
-              </button>
-            </>
-          )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
+      {!compact && promoSection}
 
       {/* Money summary */}
-      <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
-        <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
-        <Row
-          label={MARKETPLACE_FEE_LABEL}
-          value={`+$${fee.marketplaceAmount.toFixed(2)}`}
-          infoTitle="Marketplace Fee"
-          infoBadge={`${fee.marketplacePct}%`}
-          info="Platform & SafeDrop Protection."
-        />
-        <Row
-          label={PROCESSING_FEE_LABEL}
-          value={`+$${processingFee.toFixed(2)}`}
-          infoTitle="Processing Fee"
-          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
-          info="Covers payment processing for the method you picked."
-        />
-        {promoDiscount > 0 && (
-          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.forest2} />
-        )}
-        {walletBalance > 0 && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2" style={{ color: T.ink2 }}>
-              Store Credit
-              <InfoDot text={`You have $${walletBalance.toFixed(2)} store credit available.`} />
-              <MiniSwitch
-                on={useWallet}
-                onToggle={() => setUseWallet((v) => !v)}
-                label="Apply Store Credit"
-              />
-            </span>
-            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.forest2 : T.ink }}>
-              −${walletAmount.toFixed(2)}
-            </span>
-          </div>
-        )}
-        <div
-          className="mt-1 flex items-center justify-between gap-3 border-t pt-3"
-          style={{ borderColor: T.line }}
-        >
-          <span className="text-[15px] font-semibold" style={{ color: T.ink }}>
-            Total
-          </span>
-          <span className="text-[22px] font-bold tabular-nums tracking-tight" style={{ color: T.ink }}>
-            ${total.toFixed(2)}
-          </span>
-        </div>
-      </div>
+      {moneySummary}
 
+      {/* Desktop: the commitment lives with the numbers. Phones keep the
+          sticky pay bar at the bottom of the screen. */}
+      <div className="mt-4 hidden lg:block">
+        {payButton()}
+        {payError && (
+          <p className="mt-2.5 text-[12.5px] font-medium text-red-600">{payError}</p>
+        )}
+        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
+          By paying you agree to our{' '}
+          <Link
+            href="/terms"
+            className="underline underline-offset-2 transition-colors hover:text-[#56B87F]"
+            style={{ color: T.ink2 }}
+          >
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link
+            href="/refunds"
+            className="underline underline-offset-2 transition-colors hover:text-[#56B87F]"
+            style={{ color: T.ink2 }}
+          >
+            Refund Policy
+          </Link>
+        </p>
+      </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen" style={{ background: T.ivory }}>
+    <div className="relative min-h-screen" style={{ background: T.page }}>
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
+      {/* Faint game art in the top-left corner, fading out by mid-page —
+          the listing page's ambience carried into checkout. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-16 h-[620px] overflow-hidden">
+        <Image
+          src={listing.game?.image_url || '/hero/home.avif'}
+          alt=""
+          fill
+          unoptimized
+          className="select-none object-cover object-left-top opacity-[0.16]"
+          style={{
+            maskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
+            WebkitMaskImage: 'radial-gradient(75% 85% at 10% 0%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 74%)',
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
         {/* Header row */}
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-3">
@@ -1348,12 +1299,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               type="button"
               onClick={() => router.back()}
               aria-label="Go Back"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-[#1D1E23] transition-colors hover:bg-[#24252B]"
               style={{ borderColor: T.line, color: T.ink }}
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+            <GppGoodRoundedIcon className="shrink-0" style={{ fontSize: 24, color: T.accentText }} />
             {/* Phone: smaller + nowrap so the title never breaks into two
                 lines beside the SSL chip. Desktop (sm:) unchanged. */}
             <span
@@ -1364,10 +1315,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             </span>
           </span>
           <span
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1D1E23] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
             style={{ borderColor: T.line, color: T.ink }}
           >
-            <ShieldCheck className="h-4 w-4" style={{ color: T.forest }} />
+            <HttpsRoundedIcon style={{ fontSize: 16, color: T.accentText }} />
             {/* Phone: short label; desktop keeps the full one. */}
             <span className="sm:hidden">SSL Secure</span>
             <span className="hidden sm:inline">256-Bit SSL Secure</span>
@@ -1376,48 +1327,35 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
         {/* Two columns (desktop) / stacked with summary first (mobile) */}
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
-          {/* Mobile: summary card first */}
-          <div className="lg:hidden">{summaryCard()}</div>
+          {/* Phones: the compact order strip first */}
+          <div className="lg:hidden">{orderStrip}</div>
 
           <div>
-            <p className="text-[18px] font-semibold" style={{ color: T.ink }}>
-              Payment
-            </p>
-            <p className="mb-4 mt-1.5 text-[14px]" style={{ color: T.ink2 }}>
-              All transactions are secure and encrypted.
-            </p>
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[21px] font-bold leading-tight" style={{ color: T.ink }}>
+                  Payment
+                </p>
+                <p className="mt-0.5 text-[13px]" style={{ color: T.ink2 }}>
+                  All transactions are secure and encrypted.
+                </p>
+              </div>
+              {regionPicker}
+            </div>
             {paymentList}
             {payError && (
-              <p className="mt-3 text-[12.5px] font-medium text-red-600">{payError}</p>
+              <p className="mt-3 text-[12.5px] font-medium text-red-600 lg:hidden">{payError}</p>
             )}
-            <div className="mt-5 hidden lg:block">{payButton()}</div>
-            {/* Trust signals at the moment of commitment; the legal line
-                shrinks to quiet microcopy underneath. */}
+            {/* Phones: discount code + the money rows sit under the list,
+                right above the sticky Pay Now bar. */}
+            <div className="mt-4 rounded-lg border px-4 pb-4 pt-1 backdrop-blur-md lg:hidden" style={{ borderColor: T.lineSubtle, background: T.glass }}>
+              {promoSection}
+              {moneySummary}
+            </div>
+            {/* Trust signals at the moment of commitment. */}
             <div className="mt-5 flex justify-center">
               <TrustChips />
             </div>
-            <p
-              className="mt-3 hidden text-center text-[11px] leading-relaxed lg:block"
-              style={{ color: T.dis }}
-            >
-              By paying you agree to our{' '}
-              <Link
-                href="/terms"
-                className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
-                style={{ color: T.ink2 }}
-              >
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link
-                href="/refunds"
-                className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
-                style={{ color: T.ink2 }}
-              >
-                Refund Policy
-              </Link>
-            </p>
-
           </div>
 
           {/* Desktop: summary column */}
@@ -1432,7 +1370,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </p>
         <div
           className="relative overflow-hidden rounded-md px-5 py-5 sm:px-8 sm:py-6"
-          style={{ background: T.ivory2, boxShadow: `inset 0 0 0 1.5px ${T.line}` }}
+          style={{ background: T.ivory, boxShadow: `inset 0 0 0 1px ${T.line}` }}
         >
           {/* Full-bleed art (mirrored so the sky, not the cliff, sits
               behind the content) under one smooth left-to-right ivory wash:
@@ -1450,51 +1388,51 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             className="absolute inset-0 hidden sm:block"
             style={{
               background:
-                'linear-gradient(90deg, rgba(250,250,247,0.93) 0%, rgba(250,250,247,0.87) 50%, rgba(250,250,247,0.68) 82%, rgba(250,250,247,0.35) 100%)',
+                'linear-gradient(90deg, rgba(23,27,33,0.94) 0%, rgba(23,27,33,0.88) 50%, rgba(23,27,33,0.7) 82%, rgba(23,27,33,0.42) 100%)',
             }}
           />
           {/* Phones: rows span the full width, so the wash is uniform. */}
           <div
             aria-hidden
             className="absolute inset-0 sm:hidden"
-            style={{ background: 'rgba(250,250,247,0.9)' }}
+            style={{ background: 'rgba(23,27,33,0.9)' }}
           />
           <div className="relative">
             <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
               {[
                 {
-                  Icon: CreditCard,
+                  Icon: PaymentsRoundedIcon,
                   title: 'Choose Payment Method',
                   sub: 'Every payment is encryption-protected.',
                 },
                 {
-                  Icon: Package,
+                  Icon: LocalShippingRoundedIcon,
                   title: 'Wait for Delivery',
                   sub: 'Your seller preps the order. Chat live anytime.',
                 },
                 {
-                  Icon: BadgeCheck,
+                  Icon: VerifiedRoundedIcon,
                   title: 'Order Delivered',
                   sub: 'Check your items and confirm delivery.',
                 },
                 {
-                  Icon: Undo2,
+                  Icon: CurrencyExchangeRoundedIcon,
                   title: 'Item Not Received?',
                   sub: '100% refund, guaranteed.',
                 },
               ].map((step) => (
                 <li key={step.title} className="flex items-start gap-2.5">
                   <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white"
-                    style={{ boxShadow: `inset 0 0 0 1.5px ${T.line}` }}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
+                    style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}
                   >
-                    <step.Icon className="h-4 w-4" style={{ color: T.forest }} />
+                    <step.Icon style={{ fontSize: 21, color: T.accentText }} />
                   </span>
                   <div>
-                    <p className="text-[13px] font-semibold leading-snug" style={{ color: T.ink }}>
+                    <p className="text-[14px] font-bold leading-snug" style={{ color: T.ink }}>
                       {step.title}
                     </p>
-                    <p className="mt-0.5 text-[11.5px] leading-snug" style={{ color: T.ink2 }}>
+                    <p className="mt-1 text-[12.5px] leading-snug" style={{ color: '#B4BEC9' }}>
                       {step.sub}
                     </p>
                   </div>
@@ -1512,7 +1450,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           12px base, or the home-indicator inset when the browser bar sits
           on top (Chrome/top-bar Safari) and exposes the safe area. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-[#1D1E23]/95 px-4 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
         {payButton()}

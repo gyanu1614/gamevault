@@ -73,7 +73,7 @@ export function BlogCard({
     return (
       <Link
         href={url}
-        className="group flex min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] p-2.5 backdrop-blur-md transition-all duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]"
+        className="group flex min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] p-2.5 backdrop-blur-md transition-all duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]"
       >
         <div
           className={cn(
@@ -110,7 +110,7 @@ export function BlogCard({
     <Link
       href={url}
       className={cn(
-        'group flex h-full min-w-0 overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md transition-all duration-200',
+        'group flex h-full min-w-0 overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] backdrop-blur-md transition-all duration-200',
         'hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.65)]',
         featured ? 'flex-col md:flex-row' : 'flex-col',
       )}

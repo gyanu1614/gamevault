@@ -86,7 +86,7 @@ export function PreFooterCtaBand({
         style={{
           position: 'relative',
           overflow: 'hidden',
-          background: '#171B21',
+          background: '#16171B',
           /* Height: clamp between mobile-min and desktop-max, never full-viewport */
           minHeight: 'clamp(320px, 36vw, 520px)',
           maxHeight: 'clamp(320px, 36vw, 520px)',
@@ -155,7 +155,7 @@ export function PreFooterCtaBand({
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: '#171B21',
+            background: '#16171B',
             opacity: 0.25,
           }}
         />

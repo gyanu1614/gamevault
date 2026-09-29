@@ -1,22 +1,22 @@
 /**
- * Checkout skeleton — Ivory Ledger era. Shape-faithful to the live page:
- * dark navbar strip, ivory ground, Secure Checkout header row, then the
+ * Checkout skeleton — dark marketplace theme. Shape-faithful to the live page:
+ * navbar strip, dark ground, Secure Checkout header row, then the
  * 1fr/400px grid — crypto method card + disabled rows on the left, the
- * white order-summary card on the right. Pulses in ivory tones so the
+ * order-summary card on the right. Pulses in dark tones so the
  * transition into the real page is colour- and shape-stable.
  */
 
-const IVORY = '#FAFAF7'
-const NAV = '#141714'
-const LINE = '#E4E5DE'
+const GROUND = '#16171B'
+const NAV = '#16171B'
+const LINE = 'rgba(255,255,255,0.14)'
 
 function Block({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-[#ECEBE3] ${className}`} />
+  return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border bg-white ${className}`} style={{ borderColor: LINE }}>
+    <div className={`rounded-lg border bg-[#1D1E23] ${className}`} style={{ borderColor: LINE }}>
       {children}
     </div>
   )
@@ -24,7 +24,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 export default function CheckoutLoading() {
   return (
-    <div className="min-h-screen" style={{ background: IVORY }}>
+    <div className="min-h-screen" style={{ background: GROUND }}>
       {/* Navbar strip */}
       <div className="flex h-16 items-center justify-between px-4 sm:px-10" style={{ background: NAV }}>
         <div className="flex items-center gap-2">
@@ -45,33 +45,61 @@ export default function CheckoutLoading() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
+          {/* Phones: compact order strip */}
+          <Card className="p-3.5 lg:hidden">
+            <Block className="h-4 w-20" />
+            <div className="mt-2.5 flex items-start gap-3">
+              <Block className="h-[52px] w-[52px] rounded-md" />
+              <div className="min-w-0 flex-1">
+                <Block className="h-4 w-44" />
+                <Block className="mt-1.5 h-3 w-40" />
+                <Block className="mt-1.5 h-3 w-28" />
+              </div>
+              <Block className="h-5 w-14" />
+            </div>
+          </Card>
+
           {/* Left — payment column */}
           <div>
-            <Block className="h-5 w-24" />
-            <Block className="mt-2 h-4 w-72" />
-
-            {/* Category tabs: Crypto | E-Wallet | Card */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <Block className="h-11 w-full rounded-full" />
-              <Block className="h-11 w-full rounded-full" />
-              <Block className="h-11 w-full rounded-full" />
+            {/* Heading + region dropdown on the right */}
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <Block className="h-6 w-28" />
+                <Block className="mt-1.5 h-3.5 w-64" />
+              </div>
+              <Block className="h-9 w-[172px] rounded-md" />
             </div>
 
-            {/* Crypto panel: coin tiles + network + warning */}
-            <Card className="mt-3 p-4">
-              <Block className="h-3.5 w-24" />
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Block className="h-[46px] w-full" />
-                <Block className="h-[46px] w-full" />
+            {/* Method rows: mark tile + label + pick mark */}
+            {[0, 1, 2].map((i) => (
+              <Card key={i} className="mt-2 flex items-center gap-3 px-3.5 py-2">
+                <Block className="h-8 w-8 rounded-md" />
+                <Block className="h-4 w-28 flex-1" />
+                <Block className="h-5 w-5 rounded-full" />
+              </Card>
+            ))}
+
+            {/* Phones: discount + money rows under the list */}
+            <Card className="mt-4 px-4 pb-4 pt-3 lg:hidden">
+              <Block className="h-3.5 w-40" />
+              <div className="mt-3 space-y-2 border-t pt-3.5" style={{ borderColor: LINE }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex justify-between">
+                    <Block className="h-3.5 w-28" />
+                    <Block className="h-3.5 w-14" />
+                  </div>
+                ))}
+                <div className="flex justify-between border-t pt-3" style={{ borderColor: LINE }}>
+                  <Block className="h-5 w-12" />
+                  <Block className="h-6 w-20" />
+                </div>
               </div>
             </Card>
 
-            <Block className="mt-5 hidden h-12 w-full lg:block" />
-            <Block className="mx-auto mt-2.5 hidden h-3.5 w-80 lg:block" />
           </div>
 
-          {/* Right — summary card */}
-          <Card className="p-5">
+          {/* Desktop — summary card */}
+          <Card className="hidden p-5 lg:block">
             <div className="flex items-center gap-3.5">
               <Block className="h-14 w-14 rounded-lg" />
               <div className="min-w-0 flex-1">
@@ -102,6 +130,9 @@ export default function CheckoutLoading() {
                 <Block className="h-6 w-20" />
               </div>
             </div>
+            {/* Desktop pay button + legal line live in the card now */}
+            <Block className="mt-4 hidden h-12 w-full lg:block" />
+            <Block className="mx-auto mt-3 hidden h-3 w-56 lg:block" />
             <div className="mt-4 border-t pt-3.5" style={{ borderColor: LINE }}>
               <Block className="h-4 w-40" />
               <Block className="mt-1.5 h-3.5 w-full" />

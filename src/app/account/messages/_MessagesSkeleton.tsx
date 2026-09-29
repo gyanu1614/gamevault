@@ -11,7 +11,7 @@ function Block({ className = '' }: { className?: string }) {
 }
 
 const PANEL =
-  'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[rgba(20,20,27,0.56)] backdrop-blur-md'
+  'relative flex-col overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] backdrop-blur-md'
 
 export function MessagesSkeleton() {
   return (
@@ -24,7 +24,7 @@ export function MessagesSkeleton() {
         {/* Title + tabs: stacked on phones, one row on desktop. */}
         <div className="shrink-0 lg:flex lg:items-center lg:gap-5">
           <Block className="ml-1 h-7 w-20" />
-          <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 lg:mt-0">
+          <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[#1D1E23] p-1 lg:mt-0">
             {['w-10', 'w-16', 'w-[86px]', 'w-14', 'w-20', 'w-16'].map((w, i) => (
               <Block key={i} className={`h-8 rounded-[5px] ${w}`} />
             ))}

@@ -124,7 +124,7 @@ function Panel({
         sideOffset={6}
         collisionPadding={12}
         className={cn(
-          'z-50 w-[min(260px,calc(100vw-24px))] overflow-hidden rounded-lg border border-white/10 bg-[#1B2028] shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
+          'z-50 w-[min(260px,calc(100vw-24px))] overflow-hidden rounded-lg border border-white/10 bg-[#1D1E23] shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
           'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           className,
         )}

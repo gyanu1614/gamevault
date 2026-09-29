@@ -14,9 +14,9 @@
 
 /** Shared placeholder block — also used by the listing detail skeleton. */
 export function Block({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
-  // bg-bg-inset (#2C333F) — one step LIGHTER than the card surface. It used
+  // bg-bg-inset (#30313A) — one step LIGHTER than the card surface. It used
   // to be bg-overlay-2, which is the same hex as the card's bg-overlay
-  // (#252B34), so every block inside a skeleton card was invisible and the
+  // (#24252B), so every block inside a skeleton card was invisible and the
   // cards loaded as empty boxes.
   return (
     <div className={`animate-pulse rounded-md bg-bg-inset ${className}`} style={style} />
@@ -98,8 +98,8 @@ export default function ItemsSkeleton() {
           real page and made everything jump on swap. */}
       <div className="relative z-40 flex justify-center px-3 py-0.5 pointer-events-none sm:py-1 md:py-1.5 max-md:h-[52px] max-md:px-0 max-md:py-0">
         <div
-          className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#171B21]"
-          style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(28, 28, 37, 0.30))' }}
+          className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#16171B]"
+          style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
         >
           {/* One block per slot (game + each category). Slots are 38px
               tall, like the real tabs. */}
@@ -120,15 +120,17 @@ export default function ItemsSkeleton() {
           background), same wrapper padding. */}
       <section className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* Page header — logo left, one-line title right, every width
-              (48px logo, 64px from sm). The stats line is sr-only. */}
+          {/* Page header — logo left (64px, 72px from sm), then the small
+              uppercase game name over the big category title. */}
           <div className="mb-5 flex items-center gap-3.5 sm:mb-6 sm:gap-5">
-            <Block className="h-12 w-12 shrink-0 rounded-xl sm:h-16 sm:w-16 sm:rounded-2xl" />
-            {/* H1 — same clamp()ed size × line-height as the real title. */}
-            <Block
-              className="w-60 max-w-full"
-              style={{ height: 'calc(var(--fs-page-title) * var(--lh-page-title))' }}
-            />
+            <Block className="h-16 w-16 shrink-0 rounded-lg sm:h-[72px] sm:w-[72px]" />
+            <div className="min-w-0 flex-1">
+              <Block className="h-3.5 w-28 sm:h-4" />
+              <Block
+                className="mt-1.5 w-48 max-w-full"
+                style={{ height: 'calc(var(--fs-page-title) * var(--lh-page-title))' }}
+              />
+            </div>
           </div>
 
           {/* Filters row (slides on mobile, fills the row on sm+), then the

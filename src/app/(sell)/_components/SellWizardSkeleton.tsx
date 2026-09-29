@@ -3,7 +3,7 @@
  *
  * Owner, 2026-09-28: /sell/new flashed an old skeleton (one big rounded box
  * of empty tiles) and then a different page. The old blocks used
- * `bg-bg-overlay/80`, which compiles to nothing (a CSS-variable colour takes
+ * an 80%-alpha overlay fill, which compiles to nothing (a CSS-variable colour takes
  * no opacity modifier), so only their borders showed. This one mirrors the
  * wizard as it is now (SellWizard.tsx):
  *   · the fixed wizard bar (brand, back link, three step rails);

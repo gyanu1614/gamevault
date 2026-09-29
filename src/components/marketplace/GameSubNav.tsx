@@ -142,7 +142,7 @@ export default function GameSubNav({
           'px-2 py-1 sm:px-2.5 sm:py-2',
           'max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
         )}
-        style={{ backgroundColor: 'rgba(28, 28, 37, 0.30)' }}
+        style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
       >
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link

@@ -356,11 +356,11 @@ function OrdersContent() {
 
   // One plain status per row (lib/orders/list-status): colour + icon by key.
   const STATUS_STYLE: Record<ListStatusKey, { cls: string; Icon: typeof Clock }> = {
-    awaiting_payment: { cls: 'bg-warning-bg text-warning border-warning/40', Icon: Clock },
+    awaiting_payment: { cls: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]', Icon: Clock },
     delivering: { cls: 'bg-blue-500/10 text-blue-400 border-blue-500/30', Icon: Truck },
-    delivered: { cls: 'bg-success-bg text-success border-success/30', Icon: PackageCheck },
-    disputed: { cls: 'bg-error-bg text-error border-error/40', Icon: AlertCircle },
-    completed: { cls: 'bg-success-bg text-success border-success/30', Icon: CheckCircle2 },
+    delivered: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: PackageCheck },
+    disputed: { cls: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]', Icon: AlertCircle },
+    completed: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: CheckCircle2 },
     refunded: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: Undo2 },
     cancelled: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: XCircle },
   }
@@ -790,7 +790,7 @@ function OrdersContent() {
         {/* Orders — reference-style table card. Vertical list scroll +
             horizontal pan for the wide columns; never a diagonal free-scroll.
             Row click opens the order (review/dispute actions live there). */}
-        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-default bg-[rgba(20,20,27,0.56)] shadow-elevated backdrop-blur-md">
+        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-subtle bg-[#1D1E23] shadow-elevated backdrop-blur-md">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
           <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
