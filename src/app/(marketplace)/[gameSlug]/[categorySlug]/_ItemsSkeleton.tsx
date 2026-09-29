@@ -99,7 +99,7 @@ export default function ItemsSkeleton() {
       <div className="relative z-40 flex justify-center px-3 py-0.5 pointer-events-none sm:py-1 md:py-1.5 max-md:h-[52px] max-md:px-0 max-md:py-0">
         <div
           className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#16171B]"
-          style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(28, 28, 37, 0.30))' }}
+          style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
         >
           {/* One block per slot (game + each category). Slots are 38px
               tall, like the real tabs. */}

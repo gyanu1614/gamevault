@@ -195,7 +195,7 @@
 /* ── GameSubNav scoped overrides ───────────────────────────── */
 /* Pill background — drives the inline style var */
 .theme-v2 {
-  --subnav-pill-bg:    rgba(29, 30, 35, 0.55);   /* #1D1E23 at 55% — L1 surface frosted */
+  --subnav-pill-bg:    rgba(29, 30, 35, 0.72);   /* #1D1E23 at 72% — frosted black bar */
   --subnav-mobile-bg: #16171B;                    /* L0 on mobile: full-width bar = page ground */
 }
 
