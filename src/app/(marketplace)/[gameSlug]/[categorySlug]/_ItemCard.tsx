@@ -132,12 +132,12 @@ export default function ItemCard({
         // border brightens toward white, with a faint lit top edge. NO lift
         // and no drop shadow — the card must not move. Colour + border only,
         // so it transitions `colors` and `box-shadow`, never `transform`.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23]',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1B1F27]',
         'transition-[background-color,border-color,box-shadow] duration-200',
         // Hover stays in the black family: one step lighter than the resting
-        // #1D1E23, a slightly clearer hairline, and a lit top edge — never
+        // #1B1F27, a slightly clearer hairline, and a lit top edge — never
         // the grey bg-inset/overlay tokens.
-        'hover:border-white/[0.14] hover:bg-[#24252B] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]',
+        'hover:border-white/[0.14] hover:bg-[#222732] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}

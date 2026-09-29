@@ -104,7 +104,7 @@ export default async function BlogIndexPage() {
         </div>
 
         {posts.length === 0 ? (
-          <div className="mt-12 border border-border-subtle bg-[#1D1E23] px-6 py-14 text-center backdrop-blur-md">
+          <div className="mt-12 border border-border-subtle bg-[#1B1F27] px-6 py-14 text-center backdrop-blur-md">
             <p className="text-body font-semibold text-text-primary">No guides yet</p>
             <p className="mt-2 text-body-sm text-text-tertiary">
               New guides land here as we publish them.
