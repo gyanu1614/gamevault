@@ -157,7 +157,9 @@ const LEGACY_BASELINE: ReadonlySet<string> = new Set([
   'instant_delivery_inventory', 'ledger_accounts',
   'ledger_entries', 'ledger_transactions', 'listing_price_history', 'listing_templates',
   'loyalty_credits', 'messages', 'notifications', 'order_cancellation_requests',
-  'orders', 'payouts', 'processed_operations', 'promo_code_usages',
+  // orders left on 2026-09-28: SELECT is column-level (20260927224019), UPDATE
+  // (20260928171523) and every other privilege (20260928172716) revoked.
+  'payouts', 'processed_operations', 'promo_code_usages',
   'promo_codes', 'referral_codes', 'referral_earnings', 'reserve_holds',
   'review_edit_history', 'role_permissions', 'sab_brainrot_variants', 'sab_external_market_observations',
   'sab_import_runs', 'sab_market_evidence_display', 'sab_market_observations', 'sab_mutation_price_multipliers',
