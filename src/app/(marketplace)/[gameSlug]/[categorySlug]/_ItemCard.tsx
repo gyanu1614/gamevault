@@ -132,7 +132,7 @@ export default function ItemCard({
         // border brightens toward white, with a faint lit top edge. NO lift
         // and no drop shadow — the card must not move. Colour + border only,
         // so it transitions `colors` and `box-shadow`, never `transform`.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1A1B1F]',
         'transition-[background-color,border-color,box-shadow] duration-200',
         // bg-inset, NOT bg-overlay-2: overlay-2 is the same hex as the resting
         // bg-overlay (#252B34), so hovering to it changed nothing.

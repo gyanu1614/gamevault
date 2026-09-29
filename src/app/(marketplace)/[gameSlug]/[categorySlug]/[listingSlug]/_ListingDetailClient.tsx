@@ -485,7 +485,7 @@ export default function ListingDetailClient({
             {/* Description — its own card. Heading-weight label + a themed,
                 swappable icon; body preserves the seller's exact input
                 (line breaks + blank lines) via a single pre-wrap block. */}
-            <Card className="border-border-default bg-bg-overlay rounded-lg">
+            <Card className="border-border-subtle bg-[#1A1B1F] rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime/10 text-lime-text ring-1 ring-lime/20">
@@ -1055,7 +1055,7 @@ function OtherSellerRow({
   })()
 
   return (
-    <Card className="overflow-hidden border-border-default bg-bg-overlay rounded-lg transition-colors hover:border-border-strong">
+    <Card className="overflow-hidden border-border-subtle bg-[#1A1B1F] rounded-lg transition-colors hover:border-border-default">
       <Collapsible open={open} onOpenChange={onOpenChange}>
         {/* Header row — the trigger fills everything except the right-hand
             action slot (price ⇄ Open button), which must stay OUTSIDE the
