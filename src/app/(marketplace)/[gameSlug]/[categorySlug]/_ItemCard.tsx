@@ -76,26 +76,38 @@ function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size
 
 type ChipTone = 'default' | 'success'
 
-/** One meta chip: a small dark pill with an icon (delivery, stock). */
+/** One meta chip: a small dark pill with an icon; hovering names what the
+ *  number is ("Delivery Time", "Available Stock") in a tooltip above it. */
 function MetaPill({
   icon: Icon,
   label,
+  tip,
   tone = 'default',
 }: {
   icon: typeof IconClock
   label: string
+  tip: string
   tone?: ChipTone
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium',
-        'bg-white/[0.06] ring-1 ring-inset ring-white/[0.05]',
-        tone === 'success' ? 'text-success' : 'text-text-primary',
-      )}
-    >
-      <Icon size={13} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
-      {label}
+    <span className="group/pill pointer-events-auto relative inline-flex">
+      <span
+        aria-label={`${tip}: ${label}`}
+        className={cn(
+          'inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium',
+          'bg-white/[0.06] ring-1 ring-inset ring-white/[0.05]',
+          tone === 'success' ? 'text-success' : 'text-text-primary',
+        )}
+      >
+        <Icon size={13} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
+        {label}
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#111214] px-3 py-1.5 text-[12.5px] font-semibold text-text-primary opacity-0 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.7)] transition-opacity duration-150 group-hover/pill:opacity-100"
+      >
+        {tip}
+      </span>
     </span>
   )
 }
@@ -146,10 +158,10 @@ export default function ItemCard({
         // drop shadow for depth. Hover lifts the whole gradient one step and
         // clears the hairline — still black, never the grey tokens.
         'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-white/[0.10]',
-        'bg-[linear-gradient(180deg,#24252B_0%,#1D1E23_100%)]',
-        'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.06)]',
+        'bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)]',
+        'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]',
         'transition-[background-image,border-color,box-shadow] duration-200',
-        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#2A2B32_0%,#222329_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
+        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#30313A_0%,#212228_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -189,10 +201,11 @@ export default function ItemCard({
             <MetaPill
               icon={isInstant ? IconBolt : IconClock}
               label={deliveryText}
+              tip="Delivery Time"
               tone={isInstant ? 'success' : 'default'}
             />
             {!offer.isUnlimited && offer.stock != null && offer.stock > 0 && (
-              <MetaPill icon={IconPackage} label={fmtStock(offer.stock)} />
+              <MetaPill icon={IconPackage} label={fmtStock(offer.stock)} tip="Available Stock" />
             )}
           </div>
         </div>
