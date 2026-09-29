@@ -171,7 +171,7 @@ export default function ItemCard({
           {/* Title reserves a fixed 2-line height (min-h) even for 1-line
               names, so the delivery chip below always lands at the same
               vertical spot across cards — no drift, uniform card heights. */}
-          <h3 className="min-h-[2.75rem] line-clamp-2 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 'var(--fw-heading)', lineHeight: 'var(--lh-card-title)' }}>
+          <h3 className="min-h-[2.75rem] line-clamp-2 text-text-primary" style={{ fontSize: 'var(--fs-card-title)', fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 'var(--lh-card-title)' }}>
             {offer.name}
           </h3>
 
@@ -284,7 +284,7 @@ export default function ItemCard({
                 balanced against the 32px circle. */}
             <div className="flex min-w-0 flex-col items-end gap-[3px] leading-none">
               <div className="flex min-w-0 items-center gap-1">
-                <span className="max-w-[112px] truncate text-[12.5px] font-semibold text-text-primary">
+                <span className="max-w-[112px] truncate text-[12.5px] font-medium text-text-primary">
                   {sellerName}
                 </span>
                 {offer.seller.verified && <VerifiedBadge size={13} />}
