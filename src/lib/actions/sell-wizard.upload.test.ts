@@ -2,7 +2,8 @@
  * ACC-08 — uploadSellImage: sell-access gate, byte sniffing, size cap,
  * owner-prefixed path; deleteListingImage: own prefix only.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import sharp from 'sharp'
 
 const h = vi.hoisted(() => ({ kind: 'seller', uploads: [] as Array<{ path: string; opts: any }>, removes: [] as string[][] }))
 vi.mock('server-only', () => ({}))
@@ -28,9 +29,15 @@ vi.mock('@/lib/supabase/server', () => ({
 import { uploadSellImage } from '@/lib/actions/sell-wizard'
 import { deleteListingImage } from '@/lib/actions/listings'
 
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
+// A real (decodable) PNG: uploads are re-encoded before storing, so a header-only stub no longer passes.
+let PNG: Uint8Array<ArrayBuffer>
+// Right magic bytes, no image behind them.
+const PNG_HEADER_ONLY = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
 function form(file: File) { const fd = new FormData(); fd.set('file', file); return fd }
 
+beforeAll(async () => {
+  PNG = new Uint8Array(await sharp({ create: { width: 8, height: 8, channels: 3, background: '#808080' } }).png().toBuffer())
+})
 beforeEach(() => { h.kind = 'seller'; h.uploads = []; h.removes = [] })
 
 describe('uploadSellImage', () => {
@@ -47,12 +54,18 @@ describe('uploadSellImage', () => {
     expect(res.success).toBe(true)
   })
 
-  it('extension and content type come from the bytes; the object lives under the caller prefix', async () => {
+  it('the claimed name and type are ignored: stored re-encoded as WebP under the caller prefix', async () => {
     const res = await uploadSellImage(form(new File([PNG], 'payload.php', { type: 'image/jpeg' })))
     expect(res.success).toBe(true)
     expect(h.uploads).toHaveLength(1)
-    expect(h.uploads[0].path).toMatch(/^u-1\/\d+-[a-z0-9]+\.png$/)
-    expect(h.uploads[0].opts.contentType).toBe('image/png')
+    expect(h.uploads[0].path).toMatch(/^u-1\/\d+-[a-z0-9]+\.webp$/)
+    expect(h.uploads[0].opts.contentType).toBe('image/webp')
+  })
+
+  it('image magic bytes with no decodable image behind them are refused', async () => {
+    const res = await uploadSellImage(form(new File([PNG_HEADER_ONLY], 'a.png', { type: 'image/png' })))
+    expect(res.success).toBe(false)
+    expect(h.uploads).toEqual([])
   })
 
   it('a non-image with an image name / type is refused', async () => {
