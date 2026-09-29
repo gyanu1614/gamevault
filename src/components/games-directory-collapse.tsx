@@ -107,8 +107,10 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
           fade (negative margin); open it sits just under the grid. The
           margin transitions, so it glides rather than jumping. */}
       <div
-        className="relative flex justify-center transition-[margin] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{ marginTop: open ? 12 : -30 }}
+        className="relative flex justify-center"
+        // Inline, not arbitrary Tailwind: `ease-[cubic-bezier(...)]` is
+        // ambiguous to Tailwind and logs a warning on every build.
+        style={{ marginTop: open ? 12 : -30, transition: 'margin-top 420ms cubic-bezier(0.22, 1, 0.36, 1)' }}
       >
         <button
           type="button"

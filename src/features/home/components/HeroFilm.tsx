@@ -6,13 +6,14 @@
  * A tall section with a sticky, viewport-high stage. Scrolling through the
  * section scrubs the stage through two beats, reversibly:
  *
- *   1. Hero — headline, search and category shortcuts on the left; game
- *      art cards floating at three depths on the right.
- *   2. Statement — the copy lifts away, the cards fly past the camera
- *      (outward from a vanishing point, growing and blurring), the veil
- *      over the hero art lifts so the art shines, and the statement plus
- *      four category tiles come into focus and hold. The stage then
- *      releases and they scroll away with it, into Popular Games.
+ *   1. Hero — headline, subtext, search and category shortcuts, centred
+ *      over the dimmed hero art.
+ *   2. Statement — the copy lifts away, the veil over the hero art lifts
+ *      so the art shines, and the statement plus four category tiles come
+ *      into focus and hold. The stage then releases and they scroll away
+ *      with it, into Popular Games.
+ *
+ * (A 3D "Drop" crate for beat 1 is parked on branch wip/hero-drop-crate.)
  *
  * Full-bleed by design (the stage is the hero's art, which the section
  * contract allows to be full width); the copy inside opts into the page
@@ -25,7 +26,7 @@
  *
  * Motion discipline:
  *   - Scroll drives motion values only (useScroll/useTransform); nothing
- *     here re-renders per frame.
+ *     here re-renders per frame. The 3D scene reads the same values.
  *   - The entrance is CSS, not a mount animation, so the server HTML paints
  *     visible without waiting for hydration.
  *   - Reduced motion: no film. The stage renders once, static (globals.css).
@@ -42,40 +43,12 @@ import {
   useScroll,
   useSpring,
   useTransform,
-  type MotionStyle,
   type MotionValue,
 } from 'framer-motion'
+import { Crown } from 'lucide-react'
 import { SilverIcon } from '@/components/ui/silver-icon'
 import { GridSpotlight } from './GridSpotlight'
 import { HeroSearch } from './HeroSearch'
-
-/**
- * The floating cards. Positions are % of the card region (wide layout: the
- * right-hand part of the page measure, see .hero-film__cards) and of the
- * stage (compact layout, `m`; cards without `m` are wide-only); `d` is depth — nearer cards are bigger, move
- * more with the pointer and fly out harder. Art is the same file Popular
- * Games uses, so every game here has a card below too.
- */
-interface FilmCard {
-  slug: string
-  name: string
-  x: number
-  y: number
-  w: number
-  d: number
-  r: number
-  m?: { x: number; y: number; w: number }
-}
-
-const CARDS: FilmCard[] = [
-  { slug: 'fortnite', name: 'Fortnite', x: 60, y: 52, w: 228, d: 1.15, r: 4, m: { x: 50, y: 79, w: 132 } },
-  { slug: 'valorant', name: 'Valorant', x: 27, y: 47, w: 188, d: 0.9, r: -7, m: { x: 19, y: 81, w: 104 } },
-  { slug: 'gta-vi', name: 'GTA VI', x: 90, y: 43, w: 172, d: 0.8, r: 8, m: { x: 81, y: 80, w: 104 } },
-  { slug: 'roblox', name: 'Roblox', x: 41, y: 26, w: 126, d: 0.55, r: -10 },
-  { slug: 'cs2', name: 'CS2', x: 79, y: 82, w: 150, d: 0.7, r: 6 },
-  { slug: 'steal-a-brainrot', name: 'Steal a Brainrot', x: 76, y: 24, w: 116, d: 0.5, r: 11 },
-  { slug: 'apex-legends', name: 'Apex Legends', x: 34, y: 81, w: 128, d: 0.6, r: -5 },
-]
 
 /** Multi-game shortcuts. Every href was checked against production (200). */
 const SHORTCUTS = [
@@ -139,8 +112,9 @@ function HeroCategory({
 }) {
   // Staggered arrival just behind the statement.
   const start = 0.3 + index * 0.035
-  const opacity = useTransform(progress, [start, start + 0.12], [0, 1])
-  const y = useTransform(progress, [start, start + 0.12], [36, 0])
+  const end = start + 0.12
+  const opacity = useTransform(progress, [start, end], [0, 1])
+  const y = useTransform(progress, [start, end], [36, 0])
 
   return (
     <motion.li style={{ opacity, y }}>
@@ -159,114 +133,10 @@ function HeroCategory({
   )
 }
 
-/** Where the camera "pushes" toward, as % of the stage. */
-const VANISH = { x: 50, y: 45 }
-
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
-
-function FlyingCard({
-  card,
-  index,
-  fly,
-  px,
-  py,
-  mobileRef,
-}: {
-  card: FilmCard
-  index: number
-  fly: MotionValue<number>
-  px: MotionValue<number>
-  py: MotionValue<number>
-  mobileRef: React.MutableRefObject<boolean>
-}) {
-  // Nearer cards start moving a touch earlier, so the push reads as depth.
-  const local = (v: number) => clamp01(v * (0.8 + card.d * 0.3))
-  const pos = () => (mobileRef.current && card.m ? card.m : card)
-
-  const x = useTransform(fly, (v) => {
-    const push = Math.pow(local(v), 1.25)
-    return `${(pos().x - VANISH.x) * 0.9 * push * 2.1 * card.d}vw`
-  })
-  const y = useTransform(fly, (v) => {
-    const push = Math.pow(local(v), 1.25)
-    return `${(pos().y - VANISH.y) * push * 2.1 * card.d}vh`
-  })
-  const scale = useTransform(fly, (v) => 1 + local(v) ** 2 * 3 * card.d)
-  const opacity = useTransform(fly, (v) => 1 - clamp01((local(v) - 0.55) / 0.4))
-  const filter = useTransform(fly, (v) => `blur(${(local(v) * 9 * card.d).toFixed(2)}px)`)
-  // Once a card starts flying it stops taking the pointer. Scaled up and
-  // faded it still covers most of the stage, and without this an invisible
-  // card swallowed every click on the statement beat (landing on its game).
-  const pointerEvents = useTransform(fly, (v) => (local(v) > 0.08 ? 'none' : 'auto'))
-
-  // Pointer parallax, in px, on its own layer so it composes with the
-  // scroll transform above instead of fighting it.
-  const parX = useTransform(px, (v) => v * 28 * card.d)
-  const parY = useTransform(py, (v) => v * 18 * card.d)
-  const rotY = useTransform(px, (v) => v * 10)
-  const rotX = useTransform(py, (v) => v * -8)
-
-  return (
-    <motion.div
-      className="hero-film__card"
-      data-mobile={card.m ? '' : undefined}
-      style={{
-        // Layout comes in as CSS custom properties (globals.css places the
-        // card per breakpoint); motion owns transform, opacity and filter.
-        ...({
-          '--x': `${card.x}%`,
-          '--y': `${card.y}%`,
-          '--w': `${card.w}px`,
-          '--mx': card.m ? `${card.m.x}%` : undefined,
-          '--my': card.m ? `${card.m.y}%` : undefined,
-          '--mw': card.m ? `${card.m.w}px` : undefined,
-        } as MotionStyle),
-        zIndex: Math.round(card.d * 10),
-        x,
-        y,
-        scale,
-        opacity,
-        filter,
-        pointerEvents,
-      }}
-    >
-      <motion.div style={{ x: parX, y: parY, rotateX: rotX, rotateY: rotY }}>
-        <div
-          className="hero-film__float"
-          style={{ '--dur': `${6.5 + index * 0.8}s`, '--delay': `${-index * 1.1}s` } as React.CSSProperties}
-        >
-          <div className="hero-film__enter" style={{ '--enter-delay': `${0.25 + index * 0.08}s` } as React.CSSProperties}>
-            <Link
-              href={`/${card.slug}`}
-              className="hero-film__art group"
-              style={{ '--r': `${card.r}deg` } as React.CSSProperties}
-              aria-label={card.name}
-            >
-              <Image
-                src={`/games/art/${card.slug}.png`}
-                alt=""
-                fill
-                // The nearest card is the largest element in the first
-                // viewport, so it is the LCP candidate: load it first.
-                priority={index === 0}
-                sizes={`${card.w}px`}
-                className="object-cover object-top"
-              />
-              <span aria-hidden className="hero-film__rim" />
-              <span className="hero-film__name">{card.name}</span>
-            </Link>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  )
-}
-
 export function HeroFilm() {
   const filmRef = useRef<HTMLElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const reduceMotion = useReducedMotion()
-  const mobileRef = useRef(false)
 
   const { scrollYProgress } = useScroll({ target: filmRef, offset: ['start start', 'end end'] })
   // Reduced motion: every transform reads a progress that never moves, so
@@ -277,7 +147,7 @@ export function HeroFilm() {
   // Which beat is on screen. Only flips at the midpoint, so this re-renders
   // twice per pass, not per frame. The hidden beat is made `inert`: faded
   // elements are still in the DOM, and without it Tab walks into invisible
-  // category tiles (beat 1) or invisible cards and search (beat 2).
+  // category tiles (beat 1) or the invisible search (beat 2).
   const [beat, setBeat] = useState<1 | 2>(1)
   useMotionValueEvent(p, 'change', (v) => setBeat(v > 0.3 ? 2 : 1))
   // React 18 has no boolean `inert`: `true` warns and is dropped, the empty
@@ -291,30 +161,16 @@ export function HeroFilm() {
   const py = useSpring(rawY, { stiffness: 60, damping: 20, mass: 0.6 })
 
   useEffect(() => {
-    // Matches the compact layout breakpoint in globals.css.
-    const mq = window.matchMedia('(max-width: 1023px)')
-    const sync = () => (mobileRef.current = mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      return () => mq.removeEventListener('change', sync)
-    }
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     const onMove = (e: PointerEvent) => {
       rawX.set(e.clientX / window.innerWidth - 0.5)
       rawY.set(e.clientY / window.innerHeight - 0.5)
     }
     window.addEventListener('pointermove', onMove, { passive: true })
-    return () => {
-      mq.removeEventListener('change', sync)
-      window.removeEventListener('pointermove', onMove)
-    }
+    return () => window.removeEventListener('pointermove', onMove)
   }, [rawX, rawY])
 
-  // Beat 1 → 2: the push. Cards fly out over the first ~half of the film.
-  const fly = useTransform(p, [0.03, 0.5], [0, 1], { clamp: true })
-
-  // Beat 1 copy leaves first, so it's gone before the cards pass it.
+  // Beat 1 copy leaves first, so it's gone before the crate reaches centre.
   const copyOpacity = useTransform(p, [0.02, 0.24], [1, 0])
   const copyY = useTransform(p, [0.02, 0.24], [0, -70])
   const copyFilter = useTransform(p, [0.02, 0.24], ['blur(0px)', 'blur(8px)'])
@@ -371,13 +227,6 @@ export function HeroFilm() {
         {/* Keeps the statement legible once the art is lit behind it. */}
         <motion.div aria-hidden className="hero-film__scrim" style={{ opacity: scrimOpacity }} />
 
-        {/* Cards live in the page measure so their spread tracks the copy. */}
-        <div className="hero-film__cards" style={{ perspective: 1200 }} {...inert(beat === 2)}>
-          {CARDS.map((card, i) => (
-            <FlyingCard key={card.slug} card={card} index={i} fly={fly} px={px} py={py} mobileRef={mobileRef} />
-          ))}
-        </div>
-
         {/* Beat 1 copy. */}
         <motion.div
           className="hero-film__copy"
@@ -385,21 +234,34 @@ export function HeroFilm() {
           {...inert(beat === 2)}
         >
           <div className="page-measure">
-            {/* Only the copy column takes the pointer, never the whole
-                layer, so the cards beside it stay hoverable. */}
-            <motion.div className="max-w-[600px]" style={{ pointerEvents: copyEvents }}>
+            {/* Centred column. Only the column takes the pointer, never the
+                whole layer, so the grid spotlight still tracks around it. */}
+            <motion.div className="mx-auto max-w-[680px] text-center" style={{ pointerEvents: copyEvents }}>
               <h1 className="hero-film__title">
-                <span className="hero-film__line" style={{ '--enter-delay': '0.1s' } as React.CSSProperties}>
-                  <span>The Gamer&apos;s</span>
+                {/* The smaller lead-in line; the crown sits on "Gamer's".
+                    The line box is padded up so the reveal mask doesn't clip
+                    the crown, which pokes above the cap height. */}
+                <span
+                  className="hero-film__line hero-film__line--lead"
+                  style={{ '--enter-delay': '0.1s' } as React.CSSProperties}
+                >
+                  <span>
+                    The{' '}
+                    <span className="hero-film__crowned">
+                      Gamer&apos;s
+                      <Crown aria-hidden className="hero-film__crown" strokeWidth={2} />
+                    </span>
+                  </span>
                 </span>
                 <span className="hero-film__line hero-film__line--muted" style={{ '--enter-delay': '0.2s' } as React.CSSProperties}>
                   <span>Marketplace.</span>
                 </span>
               </h1>
 
-              <p className="hero-film__rise mt-5 max-w-[46ch] text-body-lg text-text-secondary" style={{ '--enter-delay': '0.35s' } as React.CSSProperties}>
-                Buy Skins, Accounts and In-Game Currency From Verified Sellers. Delivery Guaranteed in Minutes or Full
-                Refund.
+              {/* Two rows: what you can buy, then the promise. */}
+              <p className="hero-film__rise hero-film__sub" style={{ '--enter-delay': '0.35s' } as React.CSSProperties}>
+                <span>Buy Skins, Accounts and In-Game Currency From Verified Sellers.</span>
+                <span className="hero-film__sub-promise">Delivery Guaranteed in Minutes or Full Refund.</span>
               </p>
 
               {/* relative z-10: the results panel must paint over the

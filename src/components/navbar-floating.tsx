@@ -1890,25 +1890,26 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 // smooth in/out transition; URL stays at the current
                 // page so the user never loses their browsing context.
                 <div className="flex items-center gap-2">
-                  {/* App-shell — "Log in" is desktop-only; phones keep a
-                      single Sign up CTA next to the bell per the mobile
-                      bar spec (login reachable from the auth dialog). */}
+                  {/* Log In shows at every width (owner call 2026-09-28):
+                      returning buyers on phones shouldn't have to find it
+                      inside the Sign Up dialog. Tighter padding on phones
+                      so both fit beside the logo. */}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => authDialog.open('login')}
-                    className="hidden h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white lg:inline-flex"
+                    className="inline-flex h-9 rounded-lg px-2.5 text-gray-300 hover:bg-white/10 hover:text-white sm:px-3"
                   >
-                    Log in
+                    Log In
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     onClick={() => authDialog.open('signup')}
-                    className="h-9 rounded-lg bg-white text-black hover:bg-white/90 font-medium"
+                    className="h-9 rounded-lg bg-white px-3 text-black hover:bg-white/90 font-medium"
                   >
-                    Sign up
+                    Sign Up
                   </Button>
                 </div>
               )}
