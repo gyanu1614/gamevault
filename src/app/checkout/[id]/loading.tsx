@@ -67,8 +67,6 @@ export default function CheckoutLoading() {
               </Card>
             ))}
 
-            <Block className="mt-5 hidden h-12 w-full lg:block" />
-            <Block className="mx-auto mt-2.5 hidden h-3.5 w-80 lg:block" />
           </div>
 
           {/* Right — summary card */}
@@ -103,6 +101,9 @@ export default function CheckoutLoading() {
                 <Block className="h-6 w-20" />
               </div>
             </div>
+            {/* Desktop pay button + legal line live in the card now */}
+            <Block className="mt-4 hidden h-12 w-full lg:block" />
+            <Block className="mx-auto mt-3 hidden h-3 w-56 lg:block" />
             <div className="mt-4 border-t pt-3.5" style={{ borderColor: LINE }}>
               <Block className="h-4 w-40" />
               <Block className="mt-1.5 h-3.5 w-full" />

@@ -1224,6 +1224,32 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </div>
       </div>
 
+      {/* Desktop: the commitment lives with the numbers. Phones keep the
+          sticky pay bar at the bottom of the screen. */}
+      <div className="mt-4 hidden lg:block">
+        {payButton()}
+        {payError && (
+          <p className="mt-2.5 text-[12.5px] font-medium text-red-600">{payError}</p>
+        )}
+        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: T.dis }}>
+          By paying you agree to our{' '}
+          <Link
+            href="/terms"
+            className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
+            style={{ color: T.ink2 }}
+          >
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link
+            href="/refunds"
+            className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
+            style={{ color: T.ink2 }}
+          >
+            Refund Policy
+          </Link>
+        </p>
+      </div>
     </div>
   )
 
@@ -1279,36 +1305,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             </p>
             {paymentList}
             {payError && (
-              <p className="mt-3 text-[12.5px] font-medium text-red-600">{payError}</p>
+              <p className="mt-3 text-[12.5px] font-medium text-red-600 lg:hidden">{payError}</p>
             )}
-            <div className="mt-5 hidden lg:block">{payButton()}</div>
-            {/* Trust signals at the moment of commitment; the legal line
-                shrinks to quiet microcopy underneath. */}
+            {/* Trust signals at the moment of commitment. */}
             <div className="mt-5 flex justify-center">
               <TrustChips />
             </div>
-            <p
-              className="mt-3 hidden text-center text-[11px] leading-relaxed lg:block"
-              style={{ color: T.dis }}
-            >
-              By paying you agree to our{' '}
-              <Link
-                href="/terms"
-                className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
-                style={{ color: T.ink2 }}
-              >
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link
-                href="/refunds"
-                className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
-                style={{ color: T.ink2 }}
-              >
-                Refund Policy
-              </Link>
-            </p>
-
           </div>
 
           {/* Desktop: summary column */}
