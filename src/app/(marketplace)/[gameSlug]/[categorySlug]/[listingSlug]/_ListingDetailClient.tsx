@@ -516,7 +516,7 @@ export default function ListingDetailClient({
               the page at the end like any sticky. */}
           <div ref={purchaseRef} className="lg:sticky lg:self-start" style={{ top: railTop }}>
 
-              <Card className="relative flex flex-col overflow-hidden border-border-subtle bg-[rgba(24,25,29,0.86)] p-5 shadow-elevated backdrop-blur-md rounded-lg">
+              <Card className="relative flex flex-col overflow-hidden border-border-subtle bg-[#1A1B1F] p-5 shadow-elevated backdrop-blur-md rounded-lg">
                 {/* V31 — SafeDrop emblem watermark peeking from the
                     corner, clipped by the card edge. backdrop-blur creates
                     a stacking context so -z-10 paints above the card bg
@@ -684,7 +684,7 @@ export default function ListingDetailClient({
                   their own card directly below, inside the same sticky
                   rail (same width — alignment with the buy panel is
                   automatic). */}
-              <Card className="relative mt-3 flex flex-col overflow-hidden border-border-subtle bg-[rgba(24,25,29,0.86)] p-4 shadow-elevated backdrop-blur-md rounded-lg">
+              <Card className="relative mt-3 flex flex-col overflow-hidden border-border-subtle bg-[#1A1B1F] p-4 shadow-elevated backdrop-blur-md rounded-lg">
                 <TrustBand />
               </Card>
 

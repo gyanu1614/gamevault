@@ -796,7 +796,7 @@ function OrdersContent() {
         {/* Orders — reference-style table card. Vertical list scroll +
             horizontal pan for the wide columns; never a diagonal free-scroll.
             Row click opens the order (review/dispute actions live there). */}
-        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-subtle bg-[rgba(24,25,29,0.86)] shadow-elevated backdrop-blur-md">
+        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-subtle bg-[#1A1B1F] shadow-elevated backdrop-blur-md">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
           <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}

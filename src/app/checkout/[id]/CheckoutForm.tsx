@@ -83,7 +83,7 @@ const T = {
   ivory: '#1F242C',
   ivory2: '#181D25',
   row: '#252B34',
-  glass: 'rgba(24,25,29,0.86)',
+  glass: '#1A1B1F',
   ink: '#E9EDF2',
   ink2: '#9AA6B3',
   dis: '#6C7684',
