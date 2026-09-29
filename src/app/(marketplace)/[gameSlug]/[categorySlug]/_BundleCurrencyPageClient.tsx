@@ -603,7 +603,7 @@ export default function BundleCurrencyPageClient({
       <HowItWorksBand
         steps={[
           { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
+          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
           { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
           { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}

@@ -1285,7 +1285,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
     () => [
       {
         q: `Is it safe to buy ${gameName} ${cat} on DropMarket?`,
-        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Buyer Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
+        a: `Yes. Every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund, no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
       },
       {
         q: `How fast is ${gameName} ${cat} delivery?`,
@@ -1293,7 +1293,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `What if I don't receive my ${gameName} ${cat}?`,
-        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Buyer Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
+        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
       },
       {
         q: `Do I need to share my password to buy ${gameName} ${cat}?`,
@@ -1301,7 +1301,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `Why buy ${gameName} ${cat} from DropMarket instead of in-game?`,
-        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Buyer Protection — get what you ordered, or your money back — so you get the cheap price AND the safety net.`,
+        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Protection (get what you ordered, or your money back), so you get the cheap price AND the safety net.`,
       },
       {
         q: `What payment methods are accepted for ${gameName} ${cat}?`,

@@ -119,14 +119,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '“**Account**” — a registered user account on the Platform.',
             '“**Listing**” — an offer to sell an item or service published by a Seller.',
             '“**Order**” — a Buyer’s purchase of a Listing.',
-            '“**SafeDrop**” — DropMarket’s buyer-protection programme described in the SafeDrop Protection Terms: a refund guarantee for non-delivery or material misdescription, and the payout-timing rules applied to Sellers.',
+            '“**SafeDrop**” — DropMarket’s protection programme described in the SafeDrop Protection Terms: a refund guarantee for non-delivery or material misdescription, and the payout-timing rules applied to Sellers.',
             '“**Payment Processor**” / “**PSP**” — the licensed third-party providers through which DropMarket accepts card and crypto payments and executes payouts.',
             '“**Protection Window**” — the per-category period after delivery in which a Buyer must confirm delivery or open a dispute (see Refund & Dispute Policy).',
             '“**Seller Balance**” — the record in a Seller’s Account of amounts DropMarket owes the Seller as their commercial agent following completed sales, net of fees and deductions under the Policies.',
             '“**Platform Content**” — all content made available by DropMarket on the Platform (text, graphics, logos, software, data, and design).',
           ]),
           p(
-            '2.2. The following Policies are incorporated into this Agreement: Buyer Terms & Buyer Protection; Seller Agency Agreement; SafeDrop Protection Terms; Refund & Dispute Policy; Prohibited Items & Conduct Policy; Acceptable Use Policy; Privacy Policy; Cookie Policy; AML/KYC Policy; Risk Disclosure; Fees & Charges; Chargeback & Payment Policy; Complaints Handling / Dispute Resolution; IP / Copyright / Notice-and-Takedown Policy; Community Guidelines / Trust & Safety. If a Policy conflicts with these Terms, the more specific document prevails for its subject matter.',
+            '2.2. The following Policies are incorporated into this Agreement: Buyer Terms; Seller Agency Agreement; SafeDrop Protection Terms; Refund & Dispute Policy; Prohibited Items & Conduct Policy; Acceptable Use Policy; Privacy Policy; Cookie Policy; AML/KYC Policy; Risk Disclosure; Fees & Charges; Chargeback & Payment Policy; Complaints Handling / Dispute Resolution; IP / Copyright / Notice-and-Takedown Policy; Community Guidelines / Trust & Safety. If a Policy conflicts with these Terms, the more specific document prevails for its subject matter.',
           ),
         ],
       },
@@ -220,7 +220,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '7.3. **Transaction risks.** Buying and selling gaming virtual goods involves risks, including: misdescribed or defective items; delayed or failed delivery; account recovery by a prior owner; publisher enforcement (Section 8); fraud by counterparties acting under false pretences; and price volatility of crypto assets. **You use the Platform at your own risk and assume these transaction risks**, subject always to your statutory rights (Section 10) and the protections in the SafeDrop Protection Terms and Refund & Dispute Policy.',
           ),
           p(
-            '7.4. We use verification, SafeDrop buyer protection, ratings, and monitoring to reduce these risks, but we cannot eliminate them and do not underwrite them, except as expressly stated in the Refund & Dispute Policy.',
+            '7.4. We use verification, SafeDrop Protection, ratings, and monitoring to reduce these risks, but we cannot eliminate them and do not underwrite them, except as expressly stated in the Refund & Dispute Policy.',
           ),
         ],
       },
@@ -436,7 +436,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
 
   {
     slug: 'buyer-terms',
-    title: 'Buyer Terms & Buyer Protection',
+    title: 'Buyer Terms',
     description:
       'How SafeDrop protects buyers: what is covered, what is not, protection windows, and how your statutory rights sit alongside the platform protection.',
     sections: [
@@ -612,7 +612,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
   },
 
   /**
-   * SafeDrop Buyer Protection Terms — v1 Model C (12 Jul 2026).
+   * SafeDrop Protection Terms — v1 Model C (12 Jul 2026).
    * Wording discipline: buyer-facing text promises OUTCOMES (refund,
    * money back); seller-facing text describes PAYOUT TIMING. No custody
    * verbs — this preserves the commercial-agent exclusion. Pending
@@ -623,13 +623,13 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'safedrop',
     title: 'SafeDrop Protection Terms',
     description:
-      'How SafeDrop Buyer Protection works: what’s covered, category protection windows, how disputes are decided, and when sellers are paid out.',
+      'How SafeDrop Protection works: what’s covered, category protection windows, how disputes are decided, and when sellers are paid out.',
     sections: [
       {
         h: '1. What SafeDrop is',
         blocks: [
           p(
-            '1.1. **SafeDrop is DropMarket’s buyer-protection programme.** Every Order placed on DropMarket is automatically covered — there is nothing to opt into and no extra step at checkout (optional extended warranty upgrades are described on the Fees & Charges page).',
+            '1.1. **SafeDrop is DropMarket’s protection programme.** Every Order placed on DropMarket is automatically covered: there is nothing to opt into and no extra step at checkout (optional extended warranty upgrades are described on the Fees & Charges page).',
           ),
           p(
             '1.2. **The promise, in one sentence:** *if your Order is not delivered, or is not as described in the Listing, you get your money back.*',
@@ -745,7 +745,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '1.1. DropMarket is a **venue** connecting independent Buyers and Sellers of gaming digital goods and services. Each sale is a contract between the Buyer and the Seller; DropMarket is not the seller of any item.',
           ),
           p(
-            '1.2. Every Order is covered by **SafeDrop Buyer Protection**: if your Order is not delivered, or is not as described, you are entitled to a refund under this Policy. Sellers are paid out only after delivery is confirmed, the Protection Window expires, or a dispute is resolved in their favour.',
+            '1.2. Every Order is covered by **SafeDrop Protection**: if your Order is not delivered, or is not as described, you are entitled to a refund under this Policy. Sellers are paid out only after delivery is confirmed, the Protection Window expires, or a dispute is resolved in their favour.',
           ),
           p(
             '1.3. **The default rule:** all sales are final once delivery is confirmed by the Buyer, **except** where the item is not delivered, is materially not as described, or where the Buyer has non-excludable statutory rights (Consumer Rights Act 2015). This policy explains exactly when a refund applies, how to claim one, and how disputes are decided.',
@@ -1214,7 +1214,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Buyer fee',
         blocks: [
           p(
-            'Buyers pay two itemised fees at checkout: a **marketplace fee of 2%**, which keeps every order covered by SafeDrop Buyer Protection, and a **processing fee** that depends on the payment method you choose. The processing fee covers the payment provider’s charge on the full amount, currency conversion where the provider applies it, and a small buffer for rate movement; every method also has a minimum share of the item price. The exact fee for your order is quoted on every payment tile before you pay, and both fees are always included in the displayed total — the price you see at checkout is the price you pay.',
+            'Buyers pay two itemised fees at checkout: a **marketplace fee of 2%**, which keeps every order covered by SafeDrop Protection, and a **processing fee** that depends on the payment method you choose. The processing fee covers the payment provider’s charge on the full amount, currency conversion where the provider applies it, and a small buffer for rate movement; every method also has a minimum share of the item price. The exact fee for your order is quoted on every payment tile before you pay, and both fees are always included in the displayed total, so the price you see at checkout is the price you pay.',
           ),
           p(
             'The current terms per payment method are listed below, read live from the same table checkout quotes from. A method that is hidden or over its provider’s limit for your order is not offered.',

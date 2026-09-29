@@ -26,7 +26,7 @@ export const revalidate = 900
 export const metadata: Metadata = {
   title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
   description:
-    'Browse every game on DropMarket — buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Buyer Protection: Item Guaranteed or Full Refund.',
+    'Browse every game on DropMarket. Buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Protection: Item Guaranteed or Full Refund.',
   keywords: [
     'buy game accounts',
     'sell game accounts',
@@ -59,7 +59,7 @@ const CATEGORY_SHORTCUTS = [
 const FAQS = [
   {
     q: 'Is it safe to buy game accounts and items on DropMarket?',
-    a: 'Yes. Every order is covered by SafeDrop Buyer Protection — you get exactly what was described, or you get your money back. Confirm and the order is complete.',
+    a: 'Yes. Every order is covered by SafeDrop Protection: you get exactly what was described, or you get your money back. Confirm and the order is complete.',
   },
   {
     q: 'What can I buy on the marketplace?',
@@ -145,9 +145,9 @@ export default async function BrowsePage() {
           Buy and sell game <strong className="font-semibold text-text-primary">accounts</strong>,{' '}
           <strong className="font-semibold text-text-primary">currency</strong>,{' '}
           <strong className="font-semibold text-text-primary">items</strong>, top-ups and boosting
-          across every game — every order covered by{' '}
+          across every game, every order covered by{' '}
           <Link href="/safedrop" className="font-semibold text-lime-text hover:underline">
-            SafeDrop Buyer Protection
+            SafeDrop Protection
           </Link>
           . Item Guaranteed or Full Refund.
         </p>

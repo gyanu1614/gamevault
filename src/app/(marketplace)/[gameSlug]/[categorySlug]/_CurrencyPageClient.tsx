@@ -478,7 +478,7 @@ export default function CurrencyPageClient({
       <HowItWorksBand
         steps={[
           { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Buyer Protection.' },
+          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
           { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
           { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
         ]}
@@ -1298,7 +1298,7 @@ function SellerRow({
               </div>
             </div>
 
-            {/* Action bar — CTA left, buyer-protection assurance right */}
+            {/* Action bar — CTA left, SafeDrop Protection assurance right */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               {isOwn ? (
                 <a
@@ -1320,7 +1320,7 @@ function SellerRow({
               )}
               <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
                 <ShieldCheck className="h-3.5 w-3.5 text-lime-text" aria-hidden />
-                SafeDrop Buyer Protection — Item Guaranteed or Full Refund
+                SafeDrop Protection: Item Guaranteed or Full Refund
               </span>
             </div>
           </div>
@@ -1382,7 +1382,7 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
             How delivery and safety work here
           </h3>
           <p className="mt-2">
-            Every order is covered by SafeDrop Buyer Protection: your {currency.name} arrives
+            Every order is covered by SafeDrop Protection: your {currency.name} arrives
             as described, or you get your money back. No password
             sharing is ever required — delivery is through in-game gifting or group payouts.
             Not delivered or not as described? You get a full refund.

@@ -57,10 +57,12 @@ interface CompactDashboardProps {
       orderNumber?: string
     }
   }>
+  /** The feed query failed: say so instead of "No activities". */
+  activityFailed?: boolean
   admin: any
 }
 
-export default function CompactDashboard({ stats, activities, admin }: CompactDashboardProps) {
+export default function CompactDashboard({ stats, activities, activityFailed, admin }: CompactDashboardProps) {
   const [activityFilter, setActivityFilter] = useState<'active' | 'resolved'>('active')
 
   // Helper to format currency
@@ -362,6 +364,14 @@ export default function CompactDashboard({ stats, activities, admin }: CompactDa
 
           <AdminPanel pad={false} className="overflow-hidden">
             {(() => {
+              if (activityFailed) {
+                return (
+                  <div className="px-4 py-10 text-center" role="alert">
+                    <p className="text-[13px] text-error">Failed to load activity</p>
+                  </div>
+                )
+              }
+
               // Filter activities based on resolved status
               const filteredActivities = activities.filter(activity => {
                 const isResolved = activity.status?.toLowerCase().includes('resolved') ||
