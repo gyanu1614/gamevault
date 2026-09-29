@@ -730,7 +730,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                       <Gift className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div>
-                      <p className="text-[11px] text-success/70 font-medium uppercase tracking-wide">Cashback</p>
+                      <p className="text-[11px] text-[color-mix(in_srgb,var(--color-success)_70%,transparent)] font-medium uppercase tracking-wide">Cashback</p>
                       <p className="text-base font-bold text-success">${walletBalance.total_cashback.toFixed(2)}</p>
                     </div>
                   </div>
@@ -900,7 +900,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                         <div className="text-base font-bold text-white">${txn.amount.toFixed(2)}</div>
                         {txn.platformFee > 0 && (
                           <div className="text-xs text-text-disabled">
-                            fee <span className="text-error/70">-${txn.platformFee.toFixed(2)}</span>
+                            fee <span className="text-[color-mix(in_srgb,var(--color-error)_70%,transparent)]">-${txn.platformFee.toFixed(2)}</span>
                           </div>
                         )}
                       </div>
@@ -991,7 +991,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                         {txn.platformFee > 0 && (
                           <div className="text-xs text-text-disabled">
                             sale <span className="text-text-secondary">${txn.amount.toFixed(2)}</span>
-                            {' '}· fee <span className="text-error/70">-${txn.platformFee.toFixed(2)}</span>
+                            {' '}· fee <span className="text-[color-mix(in_srgb,var(--color-error)_70%,transparent)]">-${txn.platformFee.toFixed(2)}</span>
                           </div>
                         )}
                       </div>
@@ -1064,7 +1064,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                         'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold capitalize',
                         payout.status === 'completed' ? 'bg-success-bg text-success border-green-500/20'
                           : payout.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-error-bg text-error border-error/40'
+                          : 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
                       )}>
                         {payout.status}
                       </span>

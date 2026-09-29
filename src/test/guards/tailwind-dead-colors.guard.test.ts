@@ -9,16 +9,21 @@
  *     has only numbered shades, so `text-amber`, `bg-amber/[0.12]`,
  *     `border-amber/30` … generate no CSS. Use `text-warning`, `bg-warning`,
  *     `bg-warning-bg`, `border-[rgba(255,178,62,0.30)]`.
- *   - `lime` is a CSS-variable token (`var(--color-accent-default)`), so ANY
- *     opacity modifier on it generates nothing: `bg-lime/10`, `from-lime/30`,
- *     `text-lime-text/40`. Use `bg-lime-tint-bg`, `border-lime-tint-border` or
- *     `bg-[rgba(86,184,127,<a>)]`.
+ *   - Every colour in tailwind.config.ts whose value is a bare CSS variable
+ *     (`lime: var(--color-accent-default)`, `bg.raised: var(--color-bg-raised)`,
+ *     `text.*`, `border.*`, `ct.*`, `card`, `primary` …) has no `<alpha-value>`,
+ *     so ANY opacity modifier on it generates nothing: `bg-lime/10`,
+ *     `bg-bg-raised/95`, `text-text-primary/80`, `from-bg-base/0`. Use the
+ *     token's own tint (`bg-lime-tint-bg`), the solid token, or the token mixed
+ *     to that alpha: `bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)]`.
+ *     Not a hex copy — the surface palette moves (2026-09-29) and a copied
+ *     rgba silently keeps the old colour.
  *
- * This test pulls every `<utility>-(amber|lime)…` token out of src, compiles
- * them all with the repo's Tailwind config, and fails on any token whose exact
- * class name is not a selector in the output (exact, not substring:
- * `.text-amber` is a substring of `.text-amber-400`). Pure source analysis —
- * no DB, no Next runtime.
+ * This test derives those colour roots from the config, pulls every
+ * `<utility>-<root>…` token out of src, compiles them all with the repo's
+ * Tailwind config, and fails on any token whose exact class name is not a
+ * selector in the output (exact, not substring: `.text-amber` is a substring
+ * of `.text-amber-400`). Pure source analysis — no DB, no Next runtime.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -33,13 +38,32 @@ const SRC = path.join(ROOT, 'src')
 /** Dead tokens on lines another branch owns (a folder, or one token in a file).
  *  Each entry must still fire — delete it once that branch lands (the stale
  *  check below fails until you do). */
-const PENDING: { path: string; token?: string; owner: string }[] = []
+const PENDING: { path: string; token?: string; owner: string }[] = [
+  // Mobile Buy bar (made a solid strip), price-drop chip, /sell/new skeleton (rebuilt).
+  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/_ListingDetailClient.tsx', token: 'bg-bg-raised/95', owner: 'fix/order-final-tweaks' },
+  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard.tsx', token: 'bg-success/20', owner: 'fix/order-final-tweaks' },
+  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard.tsx', token: 'ring-success/30', owner: 'fix/order-final-tweaks' },
+  { path: 'src/app/(sell)/sell/new/loading.tsx', token: 'bg-bg-overlay/80', owner: 'fix/order-final-tweaks' },
+  { path: 'src/app/(sell)/sell/new/loading.tsx', token: 'bg-bg-overlay/60', owner: 'fix/order-final-tweaks' },
+]
+
+/** Top-level colour keys whose value (or any shade) is a CSS variable —
+ *  Tailwind can't put an opacity modifier on those. `amber` isn't in the config
+ *  at all (only Tailwind's numbered shades exist), so bare `text-amber` is dead. */
+export function cssVarColorRoots(colors: Record<string, unknown>): string[] {
+  const isVar = (v: unknown): boolean =>
+    typeof v === 'string' ? v.includes('var(') : typeof v === 'object' && v !== null && Object.values(v).some(isVar)
+  return Object.keys(colors).filter((k) => isVar(colors[k]))
+}
+const COLORS = (tailwindConfig.theme?.extend?.colors ?? {}) as Record<string, unknown>
+export const COLOR_ROOTS = ['amber', ...cssVarColorRoots(COLORS)]
 
 const UTILITY =
   '(?:bg|text|border(?:-[xytrblse])?|ring(?:-offset)?|from|to|via|fill|stroke|divide|outline|shadow|decoration|caret|accent|placeholder)'
-// variant chain (hover:, md:, group-hover:, [&>svg]:, data-[state=on]: …), optional `!`, utility, colour, rest
+const COLOR_ROOT = [...COLOR_ROOTS].sort((a, b) => b.length - a.length).join('|')
+// variant chain (hover:, md:, group-hover:, [&>svg]:, data-[state=on]: …), optional `!`, utility, colour root, rest
 const TOKEN_RE = new RegExp(
-  `(?<![\\w\\-/.\\[\\]])((?:[\\w\\-\\[\\]&>*@.=()#%,]+:)*!?${UTILITY}-(?:amber|lime)[\\w\\-/.\\[\\]()%,#]*)`,
+  `(?<![\\w\\-/.\\[\\]])((?:[\\w\\-\\[\\]&>*@.=()#%,]+:)*!?${UTILITY}-(?:${COLOR_ROOT})(?![\\w])[\\w\\-/.\\[\\]()%,#]*)`,
   'g',
 )
 
@@ -118,9 +142,26 @@ const hitClasses = () => (compiledHits ??= compiledClasses([...new Set(hits.map(
 const pendingFor = (h: Hit) => PENDING.find((p) => h.file.startsWith(p.path) && (!p.token || p.token === h.token))
 
 describe('tailwind dead colour classes guard', () => {
+  it('derives the CSS-variable colour roots from tailwind.config.ts', () => {
+    expect(COLOR_ROOTS).toEqual(
+      expect.arrayContaining(['amber', 'lime', 'bg', 'text', 'border', 'ct', 'surface', 'card', 'primary', 'focus']),
+    )
+    // hex palettes take opacity fine — not roots
+    expect(COLOR_ROOTS).not.toContain('violet')
+    expect(cssVarColorRoots({ a: '#fff', b: { c: 'var(--c)' }, d: { e: '#000' } })).toEqual(['b'])
+  })
+
   it('the checker keeps working classes and flags dead ones (exact match, not substring)', async () => {
-    const live = ['bg-lime', 'text-lime-text', 'bg-lime-tint-bg', 'hover:bg-lime-hover', 'text-amber-400', 'text-warning']
-    const dead = ['text-amber', 'bg-amber/[0.12]', 'bg-lime/10', 'hover:bg-lime/20', 'text-lime-text/40']
+    const live = [
+      'bg-lime', 'text-lime-text', 'bg-lime-tint-bg', 'hover:bg-lime-hover', 'text-amber-400', 'text-warning',
+      'bg-bg-raised', 'text-text-secondary', 'border-border-subtle', 'bg-ct-surface', 'bg-card', 'from-bg-base',
+      'bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)]',
+    ]
+    const dead = [
+      'text-amber', 'bg-amber/[0.12]', 'bg-lime/10', 'hover:bg-lime/20', 'text-lime-text/40',
+      'bg-bg-raised/95', 'text-text-primary/80', 'border-border-default/50', 'bg-ct-accent/10', 'from-bg-base/0',
+      'bg-card/60', 'bg-surface-1/[0.5]',
+    ]
     const classes = await compiledClasses([...live, ...dead])
     expect(live.filter((t) => !classes.has(t))).toEqual([])
     expect(dead.filter((t) => classes.has(t))).toEqual([])
@@ -132,20 +173,23 @@ describe('tailwind dead colour classes guard', () => {
       `// text-amber is dead, use text-warning`,
       `/* bg-lime/10 */ cls('border-lime-tint-border') {/* text-lime/40 */}`,
       `<input accept="image/*" className="bg-lime/5" /> // was bg-amber`,
+      `<nav className="bg-bg-raised/95 sm:text-gv-text-primary/60 text-base" style={{ color: 'var(--color-bg-raised)' }}>`,
     ].join('\n')
     expect(extractTokens(src)).toEqual([
       { line: 1, token: 'hover:bg-lime/20' },
       { line: 1, token: 'md:text-amber' },
       { line: 3, token: 'border-lime-tint-border' },
       { line: 4, token: 'bg-lime/5' },
+      { line: 5, token: 'bg-bg-raised/95' },
+      { line: 5, token: 'sm:text-gv-text-primary/60' },
     ])
   })
 
   it('scans the source tree (guards a vacuous pass)', () => {
-    expect(hits.length).toBeGreaterThan(100)
+    expect(hits.length).toBeGreaterThan(1000)
   })
 
-  it('no amber/lime colour class compiles to nothing', async () => {
+  it('no colour class on a CSS-variable token (or amber) compiles to nothing', async () => {
     const classes = await hitClasses()
     const dead = hits
       .filter((h) => !classes.has(h.token) && !pendingFor(h))

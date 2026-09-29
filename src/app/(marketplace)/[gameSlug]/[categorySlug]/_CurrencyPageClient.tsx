@@ -110,7 +110,7 @@ function RouteLoader({ label = 'Loading' }: { label?: string }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-bg-base/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[color-mix(in_srgb,var(--color-bg-base)_70%,transparent)] backdrop-blur-md animate-in fade-in duration-200"
     >
       <div className="relative flex flex-col items-center gap-4">
         {/* Spinner */}
@@ -577,8 +577,8 @@ function SectionCard({
       className={cn(
         'relative overflow-hidden rounded-xl border border-border-default p-5 sm:p-6 lg:p-8',
         tone === 'raised' && 'bg-bg-raised shadow-elevated',
-        tone === 'overlay' && 'bg-bg-overlay/60 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]',
-        tone === 'gradient' && 'bg-gradient-to-br from-bg-raised via-bg-raised to-bg-overlay/40 shadow-elevated',
+        tone === 'overlay' && 'bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]',
+        tone === 'gradient' && 'bg-gradient-to-br from-bg-raised via-bg-raised to-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] shadow-elevated',
         className,
       )}
     >
@@ -1327,7 +1327,7 @@ function EmptyState() {
 // Prose inside is still capped to a comfortable reading measure.
 function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
   return (
-    <section className="rounded-2xl border border-border-subtle bg-bg-raised/60 p-6 sm:p-8 lg:p-10">
+    <section className="rounded-2xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-6 sm:p-8 lg:p-10">
       <h2 className="text-[22px] font-bold text-text-primary sm:text-[26px]">
         About buying {currency.name}
       </h2>

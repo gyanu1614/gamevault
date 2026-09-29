@@ -30,9 +30,9 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
           animate={{ opacity: 1, y: 0 }}
           className={cn(
             "rounded-2xl border-2 p-8 mb-8",
-            isActive && "bg-success-bg border-success/30",
-            isRestricted && "bg-warning-bg border-warning/40",
-            isBanned && "bg-error-bg border-error/40"
+            isActive && "bg-success-bg border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]",
+            isRestricted && "bg-warning-bg border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]",
+            isBanned && "bg-error-bg border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]"
           )}
         >
           <div className="flex items-start gap-6">

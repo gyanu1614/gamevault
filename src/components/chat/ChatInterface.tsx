@@ -475,7 +475,7 @@ export default function ChatInterface({
 
       {/* Chat Expired Banner */}
       {isChatExpired && !isAdmin && (
-        <div className="bg-warning-bg border-b border-warning/40 px-4 py-3">
+        <div className="bg-warning-bg border-b border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] px-4 py-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
             <div className="flex-1">

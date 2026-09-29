@@ -108,14 +108,14 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
         </p>
         <div className="space-y-2">
           {draft.tiers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border-default bg-bg-overlay/40 p-6 text-center text-[12.5px] text-text-tertiary">
+            <div className="rounded-xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-6 text-center text-[12.5px] text-text-tertiary">
               No tiers yet. Add the lowest rank first, then work up to the highest.
             </div>
           ) : (
             draft.tiers.map((t, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[20px_1fr_auto_auto_auto] items-center gap-2 rounded-xl border border-border-subtle bg-bg-overlay/40 p-2.5"
+                className="grid grid-cols-[20px_1fr_auto_auto_auto] items-center gap-2 rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-2.5"
               >
                 <GripVertical className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
                 <Input
@@ -186,7 +186,7 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
         </div>
       </section>
 
-      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-bg-raised/95 p-3 backdrop-blur-md shadow-elevated">
+      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)] p-3 backdrop-blur-md shadow-elevated">
         <button
           type="submit"
           disabled={mutation.isPending}

@@ -472,7 +472,7 @@ function BuyerReviewBody({
         </div>
       </div>
       {review.comment && (
-        <p className="mt-3 rounded-[9px] border border-border-subtle bg-bg-overlay/60 px-3 py-2 text-[12.5px] leading-[1.5] italic text-text-secondary">
+        <p className="mt-3 rounded-[9px] border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-3 py-2 text-[12.5px] leading-[1.5] italic text-text-secondary">
           &ldquo;{review.comment}&rdquo;
         </p>
       )}

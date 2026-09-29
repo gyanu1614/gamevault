@@ -359,13 +359,13 @@ function OrdersContent() {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      pending: 'bg-warning-bg text-warning border-warning/40',
-      paid: 'bg-warning-bg text-warning border-warning/40',
+      pending: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
+      paid: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
       delivering: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-      delivered: 'bg-success-bg text-success border-success/30',
-      completed: 'bg-success-bg text-success border-success/30',
-      disputed: 'bg-error-bg text-error border-error/40',
-      resolved: 'bg-success-bg text-success border-success/30',
+      delivered: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
+      completed: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
+      disputed: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]',
+      resolved: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
       refunded: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
       cancelled: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
     }
@@ -797,7 +797,7 @@ function OrdersContent() {
                   customDateEnd: null,
                   searchQuery: ''
                 })}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-error/40 text-xs text-error hover:bg-error-bg transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] text-xs text-error hover:bg-error-bg transition-colors"
               >
                 <X className="h-3 w-3" />
                 Clear All ({filters.games.length + (filters.category ? 1 : 0) + (filters.dateRange !== 'all' ? 1 : 0) + (filters.searchQuery ? 1 : 0)})
@@ -970,8 +970,8 @@ function OrdersContent() {
                                   disputeBadge
                                     ? 'border border-border-default bg-white/[0.06] text-text-secondary'
                                     : userWonDispute
-                                    ? 'border border-success/30 bg-green-500/15 text-success'
-                                    : 'border border-error/40 bg-red-500/15 text-error',
+                                    ? 'border border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-green-500/15 text-success'
+                                    : 'border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-red-500/15 text-error',
                                 )}>
                                   {disputeBadge ? null : userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
                                   {disputeBadge ?? (userWonDispute ? 'Won' : 'Lost')}

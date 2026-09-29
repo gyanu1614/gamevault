@@ -121,7 +121,7 @@ export default function TwoFactorSection() {
     <div>
       <h2 className="mb-4 text-sm font-semibold text-text-primary">Two-Factor Authentication</h2>
 
-      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-bg-raised/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <div
             className={cn(
@@ -268,7 +268,7 @@ export default function TwoFactorSection() {
               <button
                 onClick={confirmDisable}
                 disabled={disabling || disableCode.length !== 6}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-error/40 bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-error-bg/80 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_80%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {disabling && <Loader2 className="h-4 w-4 animate-spin" />}
                 Turn Off

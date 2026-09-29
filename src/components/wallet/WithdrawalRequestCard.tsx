@@ -80,7 +80,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           label: 'Rejected',
           color: 'text-error',
           bg: 'bg-error-bg',
-          border: 'border-error/40'
+          border: 'border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
         }
       case 'cancelled':
         return {
@@ -96,7 +96,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           label: 'Failed',
           color: 'text-error',
           bg: 'bg-error-bg',
-          border: 'border-error/40'
+          border: 'border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
         }
       default:
         return {
@@ -204,7 +204,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           disabled={isCancelling}
           className={cn(
             "w-full py-2 rounded-lg text-sm font-medium transition-all",
-            "bg-error-bg hover:bg-error-bg text-error border border-error/40",
+            "bg-error-bg hover:bg-error-bg text-error border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "flex items-center justify-center gap-2"
           )}
