@@ -269,49 +269,14 @@ export function DailyStatsToast() {
     return () => clearTimeout(timeout)
   }, [isEnabled])
 
+  // One compact row in the house toast style (owner, 2026-09-28: the old
+  // two-line card inside the toast frame read as big and fake).
   const showStatsToast = (count: number) => {
-    toast.custom(
-      (t) => (
-        <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/20 rounded-xl p-4 shadow-2xl min-w-[280px]">
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 bg-success-bg rounded-lg">
-              <Zap className="w-5 h-5 text-success" />
-            </div>
-
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-text-primary mb-1">
-                {count} orders completed today
-              </p>
-              <p className="text-xs text-text-secondary">
-                Join thousands of satisfied buyers
-              </p>
-            </div>
-
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="flex-shrink-0 text-text-secondary hover:text-text-primary transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      ),
-      {
-        duration: 6000,
-        position: 'bottom-left',
-      }
-    )
+    toast(`${count.toLocaleString('en-US')} ${count === 1 ? 'Order' : 'Orders'} Completed Today`, {
+      icon: <Zap className="h-4 w-4 text-success" aria-hidden />,
+      duration: 6000,
+      position: 'bottom-left',
+    })
   }
 
   return null

@@ -48,7 +48,8 @@ export function OrderModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'max-w-[440px] gap-0 border-white/10 bg-[#1B2028] p-0 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
+          // No outline (owner, 2026-09-28): the fill and shadow are the edge.
+          'max-w-[440px] gap-0 border-0 bg-[#1B2028] p-0 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
           className,
         )}
       >

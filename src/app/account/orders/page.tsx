@@ -22,13 +22,14 @@ import {
   AlertCircle,
   X,
   Loader2,
-  TrendingUp,
+  Truck,
+  PackageCheck,
+  Undo2,
+  XCircle,
   Eye,
   Store,
   ShoppingCart,
   Star,
-  ShieldCheck,
-  ShieldX,
   Gamepad2,
   Folder,
   Calendar,
@@ -45,6 +46,8 @@ import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { countByStatusGroup, inStatusGroup, type OrderStatusGroup } from '@/lib/orders/status-groups'
+import { orderListStatus, type ListStatusKey } from '@/lib/orders/list-status'
+import { ScrollRow } from '@/components/ui/scroll-row'
 import { currencyMetaConfig, useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
@@ -351,37 +354,15 @@ function OrdersContent() {
     return Array.from(categoryMap.values())
   }, [dbOrders])
 
-  // Human labels for raw DB statuses (chips render these, not the enum).
-  const STATUS_TEXT: Record<string, string> = {
-    pending: 'Awaiting Payment',
-    paid: 'Payment Confirmed',
-  }
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
-      paid: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
-      delivering: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-      delivered: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
-      completed: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
-      disputed: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]',
-      resolved: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
-      refunded: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
-      cancelled: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
-    }
-    return colors[status as keyof typeof colors] || colors.paid
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid': return <Clock className="h-3.5 w-3.5" />
-      case 'delivering': return <TrendingUp className="h-3.5 w-3.5" />
-      case 'delivered': return <CheckCircle2 className="h-3.5 w-3.5" />
-      case 'completed': return <CheckCircle2 className="h-3.5 w-3.5" />
-      case 'disputed': return <AlertCircle className="h-3.5 w-3.5" />
-      case 'resolved': return <CheckCircle2 className="h-3.5 w-3.5" />
-      default: return <Clock className="h-3.5 w-3.5" />
-    }
+  // One plain status per row (lib/orders/list-status): colour + icon by key.
+  const STATUS_STYLE: Record<ListStatusKey, { cls: string; Icon: typeof Clock }> = {
+    awaiting_payment: { cls: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]', Icon: Clock },
+    delivering: { cls: 'bg-blue-500/10 text-blue-400 border-blue-500/30', Icon: Truck },
+    delivered: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: PackageCheck },
+    disputed: { cls: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]', Icon: AlertCircle },
+    completed: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: CheckCircle2 },
+    refunded: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: Undo2 },
+    cancelled: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: XCircle },
   }
 
   const getTimeAgo = (date: string) => {
@@ -447,7 +428,7 @@ function OrdersContent() {
 
         {/* Advanced Filter Bar */}
         <div ref={filterBarRef} className="mb-4 shrink-0 space-y-3">
-          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
+          <ScrollRow className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
             {/* Status Filter */}
             <div className="relative">
               <button
@@ -682,7 +663,7 @@ function OrdersContent() {
               )}
             </div>
 
-          </div>
+          </ScrollRow>
 
           {/* Search — its own full-width row under the filter chips. */}
           <div className="relative">
@@ -863,21 +844,8 @@ function OrdersContent() {
                       const gameData = order.listing?.game || (order as any).game
                       const gameName = gameData?.name
                       const disputeResolution = disputeResolutions[order.id]
-                      const hasDisputeResolution = order.status === 'completed' && disputeResolution
-                      // Neither side "won" when the buyer closed their own dispute
-                      // (confirmed receipt) or it ended in a partial refund.
-                      const disputeNeutral =
-                        !!hasDisputeResolution &&
-                        (disputeResolution.favored_party === 'neutral' ||
-                          (!!disputeResolution.resolved_by && disputeResolution.resolved_by === (order as any).buyer_id))
-                      const disputeBadge = disputeNeutral
-                        ? disputeResolution.favored_party === 'neutral' ? 'Partial' : 'Closed'
-                        : null
-                      const userWonDispute = hasDisputeResolution && !disputeNeutral && (
-                        (activeTab === 'purchases' && disputeResolution.favored_party === 'buyer') ||
-                        (activeTab === 'sales' && disputeResolution.favored_party === 'seller')
-                      )
-                      const displayStatus = (order.status === 'disputed' && disputeResolution) ? 'resolved' : order.status
+                      const listStatus = orderListStatus(order.status)
+                      const statusStyle = STATUS_STYLE[listStatus.key]
                       const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
                       const cat = (order as any).listing?.category
@@ -959,24 +927,9 @@ function OrdersContent() {
                             </button>
                           </td>
                           <td className="px-3 py-2">
-                            <span className="flex flex-wrap items-center gap-1.5">
-                              <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', getStatusColor(displayStatus))}>
-                                {getStatusIcon(displayStatus)}
-                                {STATUS_TEXT[displayStatus] ?? displayStatus}
-                              </span>
-                              {hasDisputeResolution && (
-                                <span className={cn(
-                                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase',
-                                  disputeBadge
-                                    ? 'border border-border-default bg-white/[0.06] text-text-secondary'
-                                    : userWonDispute
-                                    ? 'border border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-green-500/15 text-success'
-                                    : 'border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-red-500/15 text-error',
-                                )}>
-                                  {disputeBadge ? null : userWonDispute ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldX className="h-2.5 w-2.5" />}
-                                  {disputeBadge ?? (userWonDispute ? 'Won' : 'Lost')}
-                                </span>
-                              )}
+                            <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', statusStyle.cls)}>
+                              <statusStyle.Icon className="h-3.5 w-3.5" aria-hidden />
+                              {listStatus.label}
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">

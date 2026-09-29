@@ -38,6 +38,7 @@ import {
   sabCard,
   sabInteractive,
 } from '@/lib/sab/theme'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 /* -------------------------------------------------------------------------- */
 /* Shared types (unified across the cash + trade tabs)                        */
@@ -795,6 +796,8 @@ function TradeTab({
   brainrotMap: Map<string, CalcBrainrot>
   mutationMap: Map<string, CalcMutation>
 }) {
+  // Phones: don't pop the keyboard over the list (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const defaultMutationId =
     mutations.find((m) => m.slug === 'default')?.id ??
     mutations[0]?.id ??
@@ -1416,7 +1419,7 @@ function TradeTab({
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6D7A72]"
                       />
                       <input
-                        autoFocus
+                        autoFocus={!coarse}
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="Search Brainrots..."

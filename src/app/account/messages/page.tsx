@@ -14,7 +14,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Search, MessageSquare, BadgeCheck, Package,
+  Search, MessageSquare, Package,
   ExternalLink, ShoppingBag, ChevronDown, ChevronUp, ChevronLeft,
 } from 'lucide-react'
 
@@ -32,6 +32,7 @@ import { normalizeOrderNumber } from '@/lib/orders/order-number'
 import { inboxOrderLabel } from '@/lib/chat/inbox-row'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 import { useCurrencyMeta } from '@/hooks/use-currency-meta'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'top-up' | 'dm'
 
@@ -171,14 +172,17 @@ export default function MessagesPage() {
     // FIXED shell pinned to the navbar's own bottom edge (--navbar-bottom)
     // and the true viewport bottom — no guessed heights, so there is no gap
     // under the navbar and the last row always clears iOS Safari's bar.
-    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:px-10 lg:pb-4 xl:px-14">
+    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:px-10 lg:pb-4 lg:pt-4 xl:px-14">
       <div className="mx-auto flex h-full w-full max-w-[1400px] min-h-0 flex-col">
       {/* Compact chat chrome (reference: GameBoost). The PAGE never scrolls —
           only the conversation list and the message thread do. */}
+      {/* Desktop: title and tabs share one row so the chat gets the height
+          (owner, 2026-09-28: the thread was too short to read). */}
+      <div className="shrink-0 lg:flex lg:items-center lg:gap-5">
       <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Chat</h1>
 
       {/* Tabs — one horizontally scrollable row on phones, never wrapping. */}
-      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[#1D1E23] p-1 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[#1D1E23] p-1 lg:mt-0 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHAT_TABS.map((t) => (
           <button
             key={t.value}
@@ -193,8 +197,9 @@ export default function MessagesPage() {
           </button>
         ))}
       </div>
+      </div>
 
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[320px_1fr] xl:grid-cols-[380px_1fr]">
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[272px_1fr] xl:grid-cols-[300px_1fr]">
         {/* ── Conversations list — on phones this IS the page until a chat
             is opened (the chat pane replaces it, with a back button). ── */}
         <aside
@@ -229,13 +234,10 @@ export default function MessagesPage() {
                   const otherUser = conversation.buyer_id === user?.id ? conversation.seller : conversation.buyer
                   const isActive = conversation.id === selectedConversationId
                   const order = conversation.order
-                  const gameLogo = order?.listing?.game?.image_url
-                  const rowTitle = order
-                    ? `#${order.order_number || order.id.slice(0, 6)} · x${order.quantity ?? 1} · ${order.listing?.title ?? 'Order'}`
-                    : otherUser?.username || 'Direct message'
-                  // Phone row (marketplace-inbox pattern): who you're talking
-                  // to, then what the order is for ("Order For Robux"), then
-                  // the last message.
+                  // Every width (owner, 2026-09-28 — the phone pattern): who
+                  // you're talking to, then what the order is for ("Order For
+                  // Robux"), then the last message. No order number / qty /
+                  // listing title in the row.
                   const phoneName = otherUser?.username || 'Direct message'
                   const listing = order?.listing
                   const currency = listing?.game?.id ? currencyMeta[listing.game.id] : undefined
@@ -246,10 +248,9 @@ export default function MessagesPage() {
                         currencyName: currency?.name,
                       })
                     : null
-                  // Phone: the other person's photo (the "Order For …" line
-                  // says what the order is). sm+ keeps the game logo.
-                  const avatarFallback = getAvatarUrl(otherUser?.avatar_url, otherUser?.username || 'user')
-                  const phoneIcon = avatarFallback
+                  // The other person's photo (the "Order For …" line says
+                  // what the order is).
+                  const avatarUrl = getAvatarUrl(otherUser?.avatar_url, otherUser?.username || 'user')
                   return (
                     <li key={conversation.id}>
                       <button
@@ -261,17 +262,12 @@ export default function MessagesPage() {
                         )}
                       >
                         <div className="relative shrink-0">
-                          {/* Phone shows the other person's photo; sm+ keeps
-                              the game logo. */}
-                          <picture>
-                            <source media="(max-width: 639px)" srcSet={phoneIcon} />
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={gameLogo || avatarFallback}
-                              alt=""
-                              className="h-11 w-11 rounded-full object-cover ring-1 ring-white/10 max-sm:h-12 max-sm:w-12 max-sm:rounded-[10px] max-sm:bg-bg-overlay"
-                            />
-                          </picture>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={avatarUrl}
+                            alt=""
+                            className="h-11 w-11 rounded-[10px] bg-bg-overlay object-cover ring-1 ring-white/10 max-sm:h-12 max-sm:w-12"
+                          />
                           {(conversation.unread_count || 0) > 0 && (
                             <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-text-primary">
                               {conversation.unread_count}
@@ -281,14 +277,13 @@ export default function MessagesPage() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-[13.5px] font-bold text-text-primary max-sm:hidden">{rowTitle}</span>
-                            <span className="truncate text-[14px] font-bold text-text-primary sm:hidden">{phoneName}</span>
+                            <span className="truncate text-[14px] font-bold text-text-primary">{phoneName}</span>
                             <span className="shrink-0 text-[11.5px] text-text-tertiary">
                               {fmtShortRel(conversation.last_message_at)}
                             </span>
                           </div>
                           {phoneItem && (
-                            <p className="mt-0.5 truncate text-[12px] font-medium text-text-secondary sm:hidden">
+                            <p className="mt-0.5 truncate text-[12px] font-medium text-text-secondary">
                               {phoneItem}
                             </p>
                           )}
@@ -301,9 +296,7 @@ export default function MessagesPage() {
                                   : 'text-text-tertiary',
                               )}
                             >
-                              {conversation.last_message.sender_id === user?.id && (
-                                <span className="max-sm:hidden">You: </span>
-                              )}
+                              {conversation.last_message.sender_id === user?.id && <span>You: </span>}
                               {isSystemMessage(conversation.last_message.sender_id)
                                 ? systemNoticePreview(conversation.last_message.content)
                                 : conversation.last_message.content}
@@ -368,8 +361,8 @@ export default function MessagesPage() {
                           ? selectedConversation.seller?.username
                           : selectedConversation.buyer?.username}
                       </h3>
-                      {selectedConversation.buyer_id === user?.id && (
-                        <BadgeCheck className="h-3.5 w-3.5 text-lime-text" />
+                      {selectedConversation.buyer_id === user?.id && selectedConversation.seller?.is_verified && (
+                        <VerifiedBadge size={14} />
                       )}
                     </div>
                     <p className="text-[11px] text-text-tertiary">

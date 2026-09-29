@@ -39,7 +39,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { NumberField } from '@/components/ui/number-field'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
-import { SellerRatingLine } from '@/components/seller/SellerRatingLine'
+import { SellerStats } from '@/components/seller/SellerStats'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import { Button } from '@/components/ui/button'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
@@ -64,6 +64,8 @@ export interface BundleOffer {
   sellerTier: string | null
   rating: number | null
   reviews: number
+  /** Lifetime completed sales (profiles.total_sales). */
+  sales: number
   /** $ per bundle (the listing.price column). */
   pricePerBundle: number
   /** How many of this bundle the seller has in stock. */
@@ -965,7 +967,13 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
           </span>
           {offer.verified && <VerifiedBadge size={14} />}
         </div>
-        <SellerRatingLine rating={offer.rating} reviews={offer.reviews} />
+        <SellerStats
+          ratingPercent={offer.rating}
+          reviews={offer.reviews}
+          sales={offer.sales}
+          tier={offer.sellerTier}
+          className="mt-0.5 text-[11.5px]"
+        />
       </div>
     </div>
   )
@@ -1005,11 +1013,12 @@ function SellerRow({
         {/* Seller — leads the row, clickable chip → /shop/{slug} */}
         <div className="min-w-0 flex-1">
           <SellerChip offer={offer} />
-          <SellerRatingLine
-            rating={offer.rating}
+          <SellerStats
+            ratingPercent={offer.rating}
             reviews={offer.reviews}
-            size="md"
-            className="mt-1.5"
+            sales={offer.sales}
+            tier={offer.sellerTier}
+            className="mt-1.5 text-[12.5px]"
           />
         </div>
 

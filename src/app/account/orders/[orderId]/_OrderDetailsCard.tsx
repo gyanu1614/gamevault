@@ -17,10 +17,14 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight, Star, BadgeCheck, Copy, Check, ThumbsUp, ThumbsDown, Wallet } from 'lucide-react'
+import { ChevronRight, Copy, Check, ThumbsUp, ThumbsDown, Wallet, Info } from 'lucide-react'
 import { useState } from 'react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SellerStats } from '@/components/seller/SellerStats'
+import type { SellerStatInput } from '@/lib/seller/stat-line'
 
 interface PartyInfo {
   name: string
@@ -32,6 +36,8 @@ interface PartyInfo {
   href: string
   /** "View store →" or "View profile →" */
   ctaLabel: string
+  /** Seller parties only: the shared seller line (SellerStats). */
+  stats?: SellerStatInput | null
 }
 
 interface OrderDetailsCardProps {
@@ -175,6 +181,49 @@ function Row({
       >
         {children}
       </span>
+    </div>
+  )
+}
+
+/**
+ * One "Fees" row (marketplace + payment) instead of two, with the split in
+ * a tap-to-open popover (hover tooltips never fire on phones).
+ */
+function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; paymentFee: number }) {
+  const total = Math.round((marketplaceFee + paymentFee) * 100) / 100
+  return (
+    <div className="flex items-center justify-between border-t border-white/[0.07] py-3 text-[13px] first:border-t-0">
+      <span className="inline-flex items-center gap-1.5 text-text-secondary">
+        Fees
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Fee breakdown"
+              className="-m-2 inline-flex rounded-full p-2 text-text-tertiary transition-colors hover:text-text-primary focus-visible:text-text-primary focus-visible:outline-none"
+            >
+              <Info className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" className="w-56 p-0">
+            <div className="divide-y divide-white/[0.07] px-3 py-1 text-[12.5px]">
+              {marketplaceFee > 0 && (
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-text-secondary">Marketplace Fee</span>
+                  <span className="font-semibold tabular-nums text-text-primary">{fmtUsd(marketplaceFee)}</span>
+                </div>
+              )}
+              {paymentFee > 0 && (
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-text-secondary">Payment Fee</span>
+                  <span className="font-semibold tabular-nums text-text-primary">{fmtUsd(paymentFee)}</span>
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </span>
+      <span className="font-semibold tabular-nums text-text-primary">{fmtUsd(total)}</span>
     </div>
   )
 }
@@ -368,6 +417,21 @@ function PayoutBody({
   role: 'buyer' | 'seller' | 'admin'
   refundedToBuyer?: number
 }) {
+  // A fully refunded or cancelled order pays the seller nothing and charges
+  // no fee: the sale is reversed, so show that instead of a live payout.
+  const noPayout = orderStatus === 'refunded' || orderStatus === 'cancelled'
+  if (noPayout) {
+    return (
+      <>
+        <Row label="Item Price">{fmtUsd(subtotal)}</Row>
+        <Row label={orderStatus === 'refunded' ? 'Refunded To Buyer' : 'Order Cancelled'}>−{fmtUsd(subtotal)}</Row>
+        <Row label="You Receive" emphasized>
+          <span className="text-[18px] font-extrabold tabular-nums text-text-secondary">{fmtUsd(0)}</span>
+        </Row>
+        <PayoutStatusRow orderStatus={orderStatus} />
+      </>
+    )
+  }
   return (
     <>
       <Row label="Item Price">{fmtUsd(subtotal)}</Row>
@@ -404,11 +468,14 @@ function PayoutBody({
  * Color + label morph with order status.
  */
 function PayoutStatusRow({ orderStatus }: { orderStatus: string }) {
+  const noPayout = orderStatus === 'refunded' || orderStatus === 'cancelled'
   const tone =
     orderStatus === 'completed'
       ? { dot: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-400/[0.10]' }
       : orderStatus === 'delivered'
       ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime-tint-bg' }
+      : noPayout
+      ? { dot: 'bg-text-tertiary', text: 'text-text-secondary', bg: 'bg-white/[0.05]' }
       : { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg' }
 
   const label =
@@ -416,6 +483,10 @@ function PayoutStatusRow({ orderStatus }: { orderStatus: string }) {
       ? 'Added To Your Seller Balance'
       : orderStatus === 'delivered'
       ? 'Payout Pending — Protection Window Open'
+      : orderStatus === 'refunded'
+      ? 'Refunded To Buyer — No Payout'
+      : orderStatus === 'cancelled'
+      ? 'Order Cancelled — No Payout'
       : 'Payout After Delivery Is Confirmed'
 
   return (
@@ -495,17 +566,12 @@ function PartyButton({ party }: { party: PartyInfo }) {
         className="h-7 w-7 flex-shrink-0 rounded-full object-cover ring-1 ring-white/10"
         unoptimized
       />
-      <div className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate text-[13px] font-semibold text-text-primary">{party.name}</span>
-        {party.verified && (
-          <BadgeCheck className="h-3.5 w-3.5 flex-shrink-0 text-lime-text" aria-label="Verified" />
-        )}
-        {party.sales > 0 && (
-          <span className="inline-flex items-center gap-1 text-[11.5px] text-text-tertiary">
-            <Star className="h-3 w-3 fill-warning text-warning" />
-            <span className="tabular-nums">{party.rating.toFixed(2)}</span>
-          </span>
-        )}
+      <div className="flex min-w-0 flex-col items-end">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-[13px] font-semibold text-text-primary">{party.name}</span>
+          {party.verified && <VerifiedBadge size={14} />}
+        </span>
+        {party.stats && <SellerStats {...party.stats} className="text-[11px]" />}
       </div>
       {hasHref && (
         <ChevronRight className="ml-auto h-3.5 w-3.5 text-text-tertiary transition-all group-hover:translate-x-0.5 group-hover:text-lime-text" />
@@ -651,11 +717,8 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
         {paymentSummary ? (
           <>
             <Row label="Item Price">{fmtUsd(paymentSummary.itemPrice)}</Row>
-            {paymentSummary.marketplaceFee > 0 && (
-              <Row label="Marketplace Fee">{fmtUsd(paymentSummary.marketplaceFee)}</Row>
-            )}
-            {paymentSummary.paymentFee > 0 && (
-              <Row label="Payment Fee">{fmtUsd(paymentSummary.paymentFee)}</Row>
+            {(paymentSummary.marketplaceFee > 0 || paymentSummary.paymentFee > 0) && (
+              <FeesRow marketplaceFee={paymentSummary.marketplaceFee} paymentFee={paymentSummary.paymentFee} />
             )}
             {paymentSummary.promoDiscount > 0 && (
               <Row label="Promo Discount">−{fmtUsd(paymentSummary.promoDiscount)}</Row>

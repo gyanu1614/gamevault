@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronDown, Search, X, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WizardGame } from '../../types'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 interface GameMultiSelectProps {
   games: WizardGame[]
@@ -31,6 +32,8 @@ export default function GameMultiSelect({
   invalid,
 }: GameMultiSelectProps) {
   const [open, setOpen] = React.useState(false)
+  // Phones: open on the list, not the keyboard (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const [query, setQuery] = React.useState('')
 
   React.useEffect(() => {
@@ -97,6 +100,7 @@ export default function GameMultiSelect({
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
             )}
             onCloseAutoFocus={(e) => e.preventDefault()}
+            onOpenAutoFocus={(e) => { if (coarse) e.preventDefault() }}
           >
             <Command
               shouldFilter
@@ -114,7 +118,7 @@ export default function GameMultiSelect({
                   value={query}
                   onValueChange={setQuery}
                   placeholder="Search games…"
-                  autoFocus
+                  autoFocus={!coarse}
                   className="h-6 flex-1 border-0 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
                 />
               </div>

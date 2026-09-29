@@ -195,6 +195,8 @@ function shapeMini(row: any) {
       verified: !!seller.is_verified,
       ratingPercent: sellerRatingPercent(seller),
       totalSales: Number(seller.total_sales ?? 0),
+      reviewCount: Number(seller.total_reviews ?? 0),
+      tier: seller.seller_tier ?? null,
     },
     categorySlug: row.category?.slug ?? 'items',
   }
@@ -338,6 +340,15 @@ async function ListingDetailPage({ params }: PageProps) {
     }
   }
 
+  // Card offers for the two carousels (items-type categories only for the
+  // similar row).
+  const similarItems = isItemsCategory
+    ? similarOffers.map((row) => listingToItemOffer(row, itemsTaxonomy))
+    : null
+  const otherSellerItems = otherSellerRows.length > 0
+    ? otherSellerRows.map((r) => listingToItemOffer(r.listing as any, itemsTaxonomy))
+    : null
+
   // Canonical path from the DB slugs (URL params may be aliases).
   const canonicalPath = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
 
@@ -410,12 +421,13 @@ async function ListingDetailPage({ params }: PageProps) {
       avatarUrl: listing.seller.avatar_url ?? null,
       tier: listing.seller.seller_tier ?? null,
       verified: !!listing.seller.is_verified,
-      // Null when the seller has no reviews — the UI shows "New Seller"
+      // Null when the seller has no reviews — the UI shows no rating
       // rather than a fabricated 95%. Same rule checkout already used.
       ratingPercent: sellerRatingPercent(listing.seller),
       totalSales: Number(listing.seller.total_sales ?? 0),
       activeListings: sellerStats.activeListings,
       createdAt: listing.seller.created_at ?? null,
+      reviewCount: Number(listing.seller.total_reviews ?? 0),
     },
   }
 
@@ -445,19 +457,11 @@ async function ListingDetailPage({ params }: PageProps) {
         // Similar Offers carousel when the current listing belongs to an
         // items-type category. Same visual + interaction language as the
         // /items page, no drift between surfaces.
-        similarOffersAsItems={
-          isItemsCategory
-            ? similarOffers.map((row) => listingToItemOffer(row, itemsTaxonomy))
-            : null
-        }
+        similarOffersAsItems={similarItems}
         // V28 — Cross-seller offers of THIS item (replaces "From the same
         // seller"). Tier-sorted server-side: exact-variant matches first
         // (cheapest→dearest), then same-item-different-variant.
-        otherSellerOffers={
-          otherSellerRows.length > 0
-            ? otherSellerRows.map((r) => listingToItemOffer(r.listing as any, itemsTaxonomy))
-            : null
-        }
+        otherSellerOffers={otherSellerItems}
       />
     </>
   )

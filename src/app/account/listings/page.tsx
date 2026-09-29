@@ -240,16 +240,17 @@ const FilterTrigger = React.forwardRef<
     disabled={disabled}
     {...props}
     className={cn(
-      // Bundle platform-card surface: blackened plate + top sheen, hover
-      // lift + border-strong. Active (filter applied) holds the lifted
+      // Bundle platform-card surface: blackened plate + top sheen. Hover
+      // brightens in place (border-strong + lighter plate), no lift
+      // (owner, 2026-09-28). Active (filter applied) holds the bright
       // plate — no lime.
-      'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md border-2 px-4 text-[13.5px] font-semibold backdrop-blur-md transition-all duration-200',
+      'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md border-2 px-4 text-[13.5px] font-semibold backdrop-blur-md transition-colors duration-200',
       active
         ? 'border-border-strong bg-[rgba(26,26,35,0.70)] text-text-primary'
         : 'border-border-subtle bg-[#1D1E23] text-text-secondary',
       disabled
         ? 'cursor-not-allowed opacity-50'
-        : 'hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:text-text-primary hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
+        : 'hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:text-text-primary',
       className,
     )}
   >
@@ -376,15 +377,26 @@ function OffersContent() {
       bundleId: l.bundle_id,
       config: currencyConfigs?.[l.game_id],
     })
-  // Currency stock is shown in full with its unit ("1,000 K"): the compact
-  // form would print 1,000 K as "1K", which reads as one thousand units.
+  // A count in the offer's own unit, on ONE line (owner, 2026-09-28):
+  // magnitude suffixes sit on the number ("500K", "1,000M"), word units
+  // keep a space ("100 Robux"). Currency amounts stay in full ("1,000M"):
+  // compacting would print 1,000 K as "1K", which reads as one thousand.
+  const withUnit = (n: number, u: string) =>
+    /^[KMB]$/.test(u) ? `${n.toLocaleString('en-US')}${u}` : `${n.toLocaleString('en-US')} ${u}`
+  // Stock: bundles are just the count ("5"), plain units compact ("1.5K").
   const stockLabel = (l: Listing) => {
     if (l.is_unlimited) return '∞'
     const n = l.quantity ?? 0
     const u = unitsFor(l).quantity
     if (u === 'Unit') return fmtCompact(n)
+    if (u === 'Bundle') return n.toLocaleString('en-US')
+    return withUnit(n, u)
+  }
+  const minQtyLabel = (l: Listing) => {
+    const n = l.min_quantity ?? 1
+    const u = unitsFor(l).quantity
     if (u === 'Bundle') return `${n.toLocaleString('en-US')} ${n === 1 ? 'Bundle' : 'Bundles'}`
-    return `${n.toLocaleString('en-US')} ${u}`
+    return withUnit(n, u)
   }
 
   // Restriction + Offline Mode (carried over from the old page).
@@ -422,6 +434,15 @@ function OffersContent() {
   const setPerPage = (v: number) => setFilters({ perPage: v, page: 1 })
   const setPage = (v: number) => setFilter('page', v)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Row checkboxes appear only in selection mode (owner, 2026-09-28: the
+  // table opens on the offers, not on a column of ticks). Bulk Actions
+  // turns it on; "Stop Selecting" or finishing a bulk action turns it off.
+  const [selecting, setSelecting] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const endSelection = () => {
+    setSelected(new Set())
+    setSelecting(false)
+  }
 
   // Section rows + the games represented in them (for the Game filter).
   const typed = useMemo(
@@ -466,7 +487,7 @@ function OffersContent() {
   // here is gone: the filter setters above carry `page: 1` themselves, and
   // safePage already clamps a stale page to the available range, so there is
   // no longer a state pair to keep manually in sync (STATE-011).
-  useEffect(() => { setSelected(new Set()) }, [type])
+  useEffect(() => { setSelected(new Set()); setSelecting(false) }, [type])
 
   const allSelected = paged.length > 0 && paged.every((l) => selected.has(l.id))
   const toggleAll = () =>
@@ -544,13 +565,13 @@ function OffersContent() {
       return
     }
     await bulkUpdate({ ids: ids(), updates: { status } })
-    setSelected(new Set())
+    endSelection()
   }
   const bulkDelivery = async (value: string) => {
     setBusy(true)
     try {
       await bulkUpdate({ ids: ids(), updates: { delivery_time: value } })
-      setSelected(new Set())
+      endSelection()
       setBulkDeliveryOpen(false)
     } finally {
       setBusy(false)
@@ -560,7 +581,7 @@ function OffersContent() {
     setBusy(true)
     try {
       await bulkDelete(ids())
-      setSelected(new Set())
+      endSelection()
       setBulkDeleteOpen(false)
     } catch {
       // Hook already toasts (incl. the friendly order-history message).
@@ -723,15 +744,26 @@ function OffersContent() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu modal={false}>
+        <DropdownMenu
+          modal={false}
+          open={bulkOpen}
+          onOpenChange={(open) => {
+            // First press turns selection mode on (checkboxes appear); the
+            // menu opens once there is something to act on.
+            if (open && !selecting) {
+              setSelecting(true)
+              return
+            }
+            setBulkOpen(open)
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <FilterTrigger
-              disabled={selected.size === 0}
-              active={selected.size > 0}
+              active={selecting}
               className="min-w-0 px-3 sm:min-w-[132px] sm:px-4"
             >
-              <span className="sm:hidden">Bulk</span>
-              <span className="hidden sm:inline">Bulk Actions</span>
+              <span className="sm:hidden">{selecting ? 'Bulk' : 'Select'}</span>
+              <span className="hidden sm:inline">{selecting ? 'Bulk Actions' : 'Select Offers'}</span>
               {selected.size > 0 && (
                 <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-text-primary">
                   {selected.size}
@@ -741,21 +773,26 @@ function OffersContent() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className={cn('w-60', MENU_CLS)}>
             <DropdownMenuLabel className={LABEL_CLS}>{selected.size} Selected</DropdownMenuLabel>
-            <DropdownMenuItem className={ITEM_CLS} onClick={() => void bulkStatus('active')}>
+            <DropdownMenuItem className={ITEM_CLS} disabled={selected.size === 0} onClick={() => void bulkStatus('active')}>
               <Play className="h-4 w-4" /> Activate
             </DropdownMenuItem>
-            <DropdownMenuItem className={ITEM_CLS} onClick={() => void bulkStatus('paused')}>
+            <DropdownMenuItem className={ITEM_CLS} disabled={selected.size === 0} onClick={() => void bulkStatus('paused')}>
               <Pause className="h-4 w-4" /> Pause
             </DropdownMenuItem>
-            <DropdownMenuItem className={ITEM_CLS} onClick={() => setBulkDeliveryOpen(true)}>
+            <DropdownMenuItem className={ITEM_CLS} disabled={selected.size === 0} onClick={() => setBulkDeliveryOpen(true)}>
               <Clock className="h-4 w-4" /> Change Delivery Time
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className={cn(ITEM_CLS, 'text-red-400 focus:text-red-300')}
+              disabled={selected.size === 0}
               onClick={() => setBulkDeleteOpen(true)}
             >
               <Trash2 className="h-4 w-4" /> Delete
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className={ITEM_CLS} onClick={endSelection}>
+              <X className="h-4 w-4" /> Stop Selecting
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -818,9 +855,11 @@ function OffersContent() {
           <table className="w-full min-w-[1160px] border-collapse text-left">
             <thead>
               <tr className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#6d7488]">
-                <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
-                </th>
+                {selecting && (
+                  <th className="w-12 py-3 pl-5 pr-2 max-sm:hidden">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all offers" />
+                  </th>
+                )}
                 <th className="min-w-[220px] px-3 py-3 max-sm:pl-4">Offer</th>
                 <th className="px-3 py-3 whitespace-nowrap">Delivery Time</th>
                 <th className="px-3 py-3">Price</th>
@@ -837,7 +876,7 @@ function OffersContent() {
               {isLoading &&
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={`s${i}`} className="border-t border-white/[0.06]">
-                    <td colSpan={11} className="px-5 py-3">
+                    <td colSpan={selecting ? 11 : 10} className="px-5 py-3">
                       <div className="h-10 animate-pulse rounded-md bg-white/[0.04]" />
                     </td>
                   </tr>
@@ -845,7 +884,7 @@ function OffersContent() {
 
               {!isLoading && error != null && (
                 <tr className="border-t border-white/[0.06]">
-                  <td colSpan={11} className="px-5 py-10 text-center text-[13px] text-red-300">
+                  <td colSpan={selecting ? 11 : 10} className="px-5 py-10 text-center text-[13px] text-red-300">
                     Couldn’t load your offers. Refresh to try again.
                   </td>
                 </tr>
@@ -862,13 +901,15 @@ function OffersContent() {
                       selected.has(l.id) && 'bg-white/[0.03]',
                     )}
                   >
-                    <td className="py-2.5 pl-5 pr-2 max-sm:hidden">
-                      <Checkbox
-                        checked={selected.has(l.id)}
-                        onCheckedChange={() => toggleOne(l.id)}
-                        aria-label={`Select ${l.title}`}
-                      />
-                    </td>
+                    {selecting && (
+                      <td className="py-2.5 pl-5 pr-2 max-sm:hidden">
+                        <Checkbox
+                          checked={selected.has(l.id)}
+                          onCheckedChange={() => toggleOne(l.id)}
+                          aria-label={`Select ${l.title}`}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2.5">
                       <span className="flex items-center gap-3">
                         {logo ? (
@@ -917,11 +958,11 @@ function OffersContent() {
                       <PriceField value={l.price} unit={unitsFor(l).price} onSave={(next) => savePrice(l, next)} />
                     </td>
                     <td className="px-3 py-2.5"><StatusChip k={chip} /></td>
-                    <td className="px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
                       {stockLabel(l)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-[13px] tabular-nums text-text-secondary">
-                      {(l.min_quantity ?? 1).toLocaleString('en-US')} {unitsFor(l).quantity}
+                      {minQtyLabel(l)}
                     </td>
                     <td className="px-3 py-2.5">
                       <span className="whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-[3px] text-[12px] font-semibold text-text-secondary">
@@ -944,7 +985,7 @@ function OffersContent() {
 
               {!isLoading && !error && paged.length === 0 && (
                 <tr className="border-t border-white/[0.06]">
-                  <td colSpan={11} className="px-5 py-12 text-center">
+                  <td colSpan={selecting ? 11 : 10} className="px-5 py-12 text-center">
                     <p className="text-[13.5px] font-semibold text-text-secondary">
                       {typed.length === 0 ? `No ${OFFER_META[type].title.toLowerCase()} yet.` : 'No offers match these filters.'}
                     </p>
@@ -1063,7 +1104,7 @@ function OffersContent() {
                   <span className="whitespace-nowrap">
                     Min{' '}
                     <span className="tabular-nums text-text-secondary">
-                      {(l.min_quantity ?? 1).toLocaleString('en-US')} {unitsFor(l).quantity}
+                      {minQtyLabel(l)}
                     </span>
                   </span>
                   <span className="whitespace-nowrap">

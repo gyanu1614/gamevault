@@ -27,6 +27,8 @@ import {
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import FoundingSellerBadge from '@/components/seller/FoundingSellerBadge'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { sellerStatLine } from '@/lib/seller/stat-line'
 
 interface BannerConfig {
   type: 'custom' | 'preset'
@@ -70,6 +72,14 @@ export default function SellerProfileBanner({
   const tier = { ring: tierDef.colors.ring }
   const isOwnShop = currentUserId === sellerId
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
+  // Shared seller rule (src/lib/seller/stat-line.ts): no sales yet →
+  // "Verified Seller", never a "0% · 0 reviews · 0 sales" row.
+  const statLine = sellerStatLine({
+    ratingPercent: reviewsCount > 0 ? positivePercentage : null,
+    reviews: reviewsCount,
+    sales: totalSales,
+    tier: sellerTier,
+  })
 
   // Banner background — custom uploads always win
   const customBg: React.CSSProperties | null =
@@ -174,9 +184,7 @@ export default function SellerProfileBanner({
                     aria-label="Verified seller"
                     className="-m-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                   >
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime text-text-inverse shadow-elevated">
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    </span>
+                    <VerifiedBadge size={24} titled={false} />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent>Verified by DropMarket</PopoverContent>
@@ -213,21 +221,34 @@ export default function SellerProfileBanner({
 
           {/* Stat chips */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
-            <StatChip
-              icon={<ThumbsUp className="h-3.5 w-3.5 fill-[color-mix(in_srgb,var(--color-success)_70%,transparent)] text-success" />}
-              value={`${positivePercentage}%`}
-              label={`${reviewsCount} ${reviewsCount === 1 ? 'review' : 'reviews'}`}
-            />
+            {statLine.kind === 'verified' ? (
+              <StatChip
+                icon={<VerifiedBadge size={14} titled={false} />}
+                value="Verified Seller"
+                label=""
+                plain
+              />
+            ) : (
+              statLine.rating && (
+                <StatChip
+                  icon={<ThumbsUp className="h-3.5 w-3.5 fill-[color-mix(in_srgb,var(--color-success)_70%,transparent)] text-success" />}
+                  value={`${statLine.rating.percent}%`}
+                  label={`Positive · ${statLine.rating.reviews} ${statLine.rating.reviews === 1 ? 'Review' : 'Reviews'}`}
+                />
+              )
+            )}
             <StatChip
               icon={<Package className="h-3.5 w-3.5 text-text-secondary" />}
               value={String(listingsCount)}
-              label={listingsCount === 1 ? 'listing' : 'listings'}
+              label={listingsCount === 1 ? 'Listing' : 'Listings'}
             />
-            <StatChip
-              icon={<TrendingUp className="h-3.5 w-3.5 text-lime-text" />}
-              value={String(totalSales)}
-              label={totalSales === 1 ? 'sale' : 'sales'}
-            />
+            {statLine.kind === 'stats' && statLine.sales > 0 && (
+              <StatChip
+                icon={<TrendingUp className="h-3.5 w-3.5 text-lime-text" />}
+                value={String(totalSales)}
+                label="Sold"
+              />
+            )}
           </div>
         </div>
 
@@ -287,13 +308,13 @@ export default function SellerProfileBanner({
 }
 
 function StatChip({
-  icon, value, label,
-}: { icon: React.ReactNode; value: string; label: string }) {
+  icon, value, label, plain = false,
+}: { icon: React.ReactNode; value: string; label: string; plain?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-2.5 py-1 backdrop-blur-sm">
       {icon}
-      <span className="font-mono text-sm font-semibold tabular-nums text-text-primary">{value}</span>
-      <span className="text-[11px] text-text-tertiary">{label}</span>
+      <span className={cn('text-sm font-semibold tabular-nums text-text-primary', !plain && 'font-mono')}>{value}</span>
+      {label && <span className="text-[11px] text-text-tertiary">{label}</span>}
     </span>
   )
 }

@@ -38,14 +38,7 @@ const SRC = path.join(ROOT, 'src')
 /** Dead tokens on lines another branch owns (a folder, or one token in a file).
  *  Each entry must still fire — delete it once that branch lands (the stale
  *  check below fails until you do). */
-const PENDING: { path: string; token?: string; owner: string }[] = [
-  // Mobile Buy bar (made a solid strip), price-drop chip, /sell/new skeleton (rebuilt).
-  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/_ListingDetailClient.tsx', token: 'bg-bg-raised/95', owner: 'fix/order-final-tweaks' },
-  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard.tsx', token: 'bg-success/20', owner: 'fix/order-final-tweaks' },
-  { path: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard.tsx', token: 'ring-success/30', owner: 'fix/order-final-tweaks' },
-  { path: 'src/app/(sell)/sell/new/loading.tsx', token: 'bg-bg-overlay/80', owner: 'fix/order-final-tweaks' },
-  { path: 'src/app/(sell)/sell/new/loading.tsx', token: 'bg-bg-overlay/60', owner: 'fix/order-final-tweaks' },
-]
+const PENDING: { path: string; token?: string; owner: string }[] = []
 
 /** Top-level colour keys whose value (or any shade) is a CSS variable —
  *  Tailwind can't put an opacity modifier on those. `amber` isn't in the config

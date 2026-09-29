@@ -37,10 +37,8 @@ import {
   Info,
   Loader2,
   Lock,
-  Gem,
   CreditCard,
   LogOut,
-  Medal,
   Settings,
   Landmark,
   LifeBuoy,
@@ -74,6 +72,8 @@ import { cn } from '@/lib/utils'
 import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { sellerStatText } from '@/lib/seller/stat-line'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
@@ -335,38 +335,6 @@ function Callout({
         {children}
       </p>
     </div>
-  )
-}
-
-/** Seller tier badge — a colored medal icon next to the name (tooltip
- *  carries the tier name). Unverified tiers render nothing. */
-const TIER_STYLES: Record<string, { label: string; color: string; kind: 'medal' | 'gem' }> = {
-  bronze: { label: 'Bronze Seller', color: '#CD7F32', kind: 'medal' },
-  silver: { label: 'Silver Seller', color: '#9AA4AD', kind: 'medal' },
-  gold: { label: 'Gold Seller', color: '#D5A419', kind: 'medal' },
-  platinum: { label: 'Platinum Seller', color: '#6FA7B8', kind: 'medal' },
-  diamond: { label: 'Diamond Seller', color: '#7C8BE0', kind: 'gem' },
-}
-
-function TierBadge({ tier }: { tier?: string | null }) {
-  const t = tier ? TIER_STYLES[tier.toLowerCase()] : undefined
-  if (!t) return null
-  const Icon = t.kind === 'gem' ? Gem : Medal
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span aria-label={t.label} className="inline-flex">
-          <Icon
-            className="h-[16px] w-[16px] shrink-0"
-            style={{ color: t.color, fill: `${t.color}33` }}
-            strokeWidth={2.2}
-          />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="text-[11.5px] font-semibold">
-        {t.label}
-      </TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -1253,26 +1221,18 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         <div className="min-w-0">
           <span className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: T.ink }}>
             <span className="truncate">{sellerName}</span>
-            {isVerifiedSeller && (
-              <BadgeCheck
-                aria-label="Verified Seller"
-                className="h-[17px] w-[17px] shrink-0"
-                style={{ fill: '#1D9BF0', color: '#FFFFFF' }}
-              />
-            )}
-            <TierBadge tier={seller.seller_tier} />
+            {isVerifiedSeller && <VerifiedBadge size={17} />}
           </span>
-          {(reviewCount > 0 || Number(seller.total_sales ?? 0) > 0) && (
-            <p className="mt-0.5 flex items-center gap-2 text-[12px]" style={{ color: T.ink2 }}>
-              {positivePct !== null && <span>{positivePct.toFixed(0)}% Rating</span>}
-              {positivePct !== null && Number(seller.total_sales ?? 0) > 0 && (
-                <span className="opacity-40">|</span>
-              )}
-              {Number(seller.total_sales ?? 0) > 0 && (
-                <span>{Number(seller.total_sales).toLocaleString()} Sold</span>
-              )}
-            </p>
-          )}
+          {/* Shared seller rule: "100% Positive · 12 Reviews · 34 Sold · Gold",
+              or "Verified Seller" before the first sale. */}
+          <p className="mt-0.5 truncate text-[12px]" style={{ color: T.ink2 }}>
+            {sellerStatText({
+              ratingPercent: positivePct != null ? Math.round(positivePct) : null,
+              reviews: reviewCount,
+              sales: Number(seller.total_sales ?? 0),
+              tier: seller.seller_tier,
+            })}
+          </p>
         </div>
       </div>
 

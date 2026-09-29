@@ -17,6 +17,7 @@ import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
 import { Search, Gamepad2, ShieldCheck } from 'lucide-react'
 import ItemCard from './_ItemCard'
+import { ScrollRow } from '@/components/ui/scroll-row'
 import type {
   ItemOffer,
   ItemsTaxonomy,
@@ -322,9 +323,10 @@ export default function ItemsPageClient({
               single-line "{Game} Items" title beside it. Sits between
               the sub-nav and the filter row so the page has a proper
               entry point instead of dumping filters under the sub-nav. */}
-          {/* Header — centered on mobile/tablet, left-aligned from md up.
-              Roomier spacing so the logo, title and stats breathe. */}
-          <div className="mb-5 flex flex-col items-center gap-4 text-center sm:mb-6 md:flex-row md:items-center md:gap-6 md:text-left">
+          {/* Header — logo on the left, one-line "{Game} {Category}" title
+              beside it, on every width (owner, 2026-09-28). The stats line
+              stays in the HTML for search engines but is not shown. */}
+          <div className="mb-5 flex items-center gap-3.5 sm:mb-6 sm:gap-5">
             {gameImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -393,49 +395,22 @@ export default function ItemsPageClient({
             </div>
           </div>
 
-          {/* Filter bar: search | filter chips | sort | clear.
+          {/* Filter bar (owner, 2026-09-28): the filters on one full-width
+              row, the search on its own full-width row below.
 
-              sm+: WRAPS onto a second row rather than scrolling. The old
-              bar scrolled sideways with a hidden scrollbar, so a chip past
-              the edge (e.g. Price) was simply cut off with no sign there
-              was more.
-              Mobile: still a horizontal scroller (wrapping would stack four
-              rows of chips above the results), with the right edge faded
-              out so it reads as "slides".
+              Filters: sm+ they share the row (each grows to fill it, wrapping
+              when there are many); phones scroll them sideways, and
+              ScrollRow puts a blur + ‹ › button on whichever edge has more.
 
               Control height is raised HERE, not in tokens.css: the two
-              height vars are overridden on this row and cascade to every
+              height vars are overridden on this block and cascade to every
               control in it, so search, chips and sort stay one height and
               nothing else on the site changes. */}
-          <div
-            className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 [mask-image:linear-gradient(to_right,#000_82%,transparent)] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none] [&::-webkit-scrollbar]:hidden"
-            style={{ ['--h-input' as string]: '42px', ['--h-btn-secondary' as string]: '42px' }}
+          <div style={{ ['--h-input' as string]: '42px', ['--h-btn-secondary' as string]: '42px' }}>
+          <ScrollRow
+            wrapperClassName="-mx-4 sm:mx-0"
+            className="flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 sm:[&>*]:flex-1 [&::-webkit-scrollbar]:hidden"
           >
-            {/* Search — wider anchor on the left */}
-            <div className="relative shrink-0 min-w-[220px] sm:min-w-[300px]">
-              <Search
-                // z-10: the input's backdrop-blur gives it its own layer, which
-                // otherwise paints over this icon (it comes first in the DOM).
-                className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-secondary"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search for an Item"
-                aria-label="Search for an item"
-                // A recessed well, darker than the filter buttons beside it,
-                // so the search reads as the place you type rather than one
-                // more grey button. Interaction is an OUTLINE ONLY: hover
-                // turns the border white; focus changes nothing (the caret is
-                // the cue, and the site-wide green :focus-visible ring is
-                // switched off here).
-                className="w-full rounded border border-white/[0.13] bg-black/25 pl-10 pr-3 text-text-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] outline-none backdrop-blur-sm transition-colors placeholder:text-white/45 hover:border-white/40 focus-visible:shadow-none"
-                style={{ height: 'var(--h-input)', fontSize: 'var(--fs-body)' }}
-              />
-            </div>
-
             {/* Attribute filters (admin-defined per game), then Price and
                 Delivery Time. All multi-select except Price (a range). */}
             {visibleFilters.map((f) => (
@@ -462,10 +437,35 @@ export default function ItemsPageClient({
             )}
 
             {/* Sort */}
-            <div className="shrink-0">
+            <div className="shrink-0 sm:[&>button]:w-full">
               <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
             </div>
+          </ScrollRow>
 
+          {/* Search — its own full-width row under the filters. */}
+          <div className="relative mt-2.5 w-full">
+            <Search
+              // z-10: the input's backdrop-blur gives it its own layer, which
+              // otherwise paints over this icon (it comes first in the DOM).
+              className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-secondary"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search for an Item"
+              aria-label="Search for an item"
+              // A recessed well, darker than the filter buttons beside it,
+              // so the search reads as the place you type rather than one
+              // more grey button. Interaction is an OUTLINE ONLY: hover
+              // turns the border white; focus changes nothing (the caret is
+              // the cue, and the site-wide green :focus-visible ring is
+              // switched off here).
+              className="w-full rounded border border-white/[0.13] bg-black/25 pl-10 pr-3 text-text-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] outline-none backdrop-blur-sm transition-colors placeholder:text-white/45 hover:border-white/40 focus-visible:shadow-none"
+              style={{ height: 'var(--h-input)', fontSize: 'var(--fs-body)' }}
+            />
+          </div>
           </div>
         </div>
       </section>

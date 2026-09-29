@@ -20,10 +20,12 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Search } from 'lucide-react'
+import { ArrowLeft, Search } from 'lucide-react'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { navCategoriesQuery, type NavCategoryRow } from '@/lib/nav/nav-categories-query'
 import { GAME_ICONS } from '../lib/game-icons'
 
@@ -138,8 +140,26 @@ export function HeroSearch() {
   const showExample = !focused && value === ''
   const example = useTypedExample(showExample)
 
+  // Phones: the field opens a full-screen search layer pinned to the top of
+  // the screen instead of focusing in place (owner, 2026-09-28). Focusing a
+  // field inside the sticky hero film made iOS scroll the page to lift it
+  // above the keyboard, which carried the film into beat 2 and closed the
+  // results. The layer needs no page scroll, and closing it leaves the page
+  // exactly where it was.
+  const coarse = useCoarsePointer()
+  const [takeover, setTakeover] = useState(false)
+  useEffect(() => {
+    if (!takeover) return
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prev
+    }
+  }, [takeover])
+
   // Only fetched once the panel is wanted; the navbar usually has it cached.
-  const { data: rows } = useQuery({ ...navCategoriesQuery, enabled: open })
+  const { data: rows } = useQuery({ ...navCategoriesQuery, enabled: open || takeover })
   const index = useMemo(() => buildIndex(rows ?? []), [rows])
 
   const needle = value.trim().toLowerCase()
@@ -216,6 +236,66 @@ export function HeroSearch() {
     }
   }
 
+  // The results list, shared by the inline panel (desktop) and the phone
+  // search layer. `onPick` closes whichever is showing.
+  const renderResults = (onPick: () => void) => (
+    <>
+      {!rows ? (
+        <p className="px-4 py-5 text-[14px] text-text-tertiary">Loading games…</p>
+      ) : results.length === 0 ? (
+        <p className="px-4 py-5 text-[14px] text-text-tertiary">
+          No game matches “{value.trim()}”. Press Search to look through every listing.
+        </p>
+      ) : (
+        <>
+          {!needle && <p className="hero-search__heading">Popular</p>}
+          <ul>
+            {results.map((g, i) => (
+              <li
+                key={g.slug}
+                id={`hero-search-row-${i}`}
+                role="option"
+                aria-selected={active === i}
+                className="hero-search__row"
+                data-active={active === i ? '' : undefined}
+                onMouseEnter={() => setActive(i)}
+              >
+                <Link href={`/${g.slug}`} className="flex min-w-0 items-center gap-2.5" onClick={onPick}>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-white/[0.06]">
+                    {g.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- DB image URLs from several hosts; tiny thumbnails.
+                      <img src={g.icon} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <span className="text-[12px] font-semibold text-text-secondary">{g.name.charAt(0)}</span>
+                    )}
+                  </span>
+                  <span className="truncate text-[14px] font-semibold text-text-primary">{g.name}</span>
+                </Link>
+                <span className="flex flex-wrap gap-1 pl-[38px]">
+                  {g.tabs.slice(0, MAX_TABS).map((t) => (
+                    <Link
+                      key={t.slug}
+                      href={`/${g.slug}/${t.slug}`}
+                      className="hero-search__tab"
+                      onClick={onPick}
+                    >
+                      {t.label}
+                    </Link>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  )
+
+  const closeTakeover = () => {
+    setTakeover(false)
+    setFocused(false)
+  }
+
   return (
     <form
       ref={rootRef}
@@ -239,8 +319,20 @@ export function HeroSearch() {
         <Search aria-hidden className="pointer-events-none h-5 w-5 shrink-0 text-text-secondary" strokeWidth={2} />
 
         <div className="relative min-w-0 flex-1">
+          {coarse && (
+            // Covers the field on touch screens: opens the search layer
+            // without focusing the in-page input (no keyboard scroll).
+            <button
+              type="button"
+              aria-label="Search games, accounts and items"
+              onClick={() => setTakeover(true)}
+              className="absolute inset-0 z-10 cursor-text"
+            />
+          )}
           <input
             id="hero-search"
+            tabIndex={coarse ? -1 : undefined}
+            readOnly={coarse}
             name="search"
             type="search"
             autoComplete="off"
@@ -289,56 +381,52 @@ export function HeroSearch() {
           className="hero-search__panel"
           style={panelMax ? { maxHeight: panelMax } : undefined}
         >
-          {!rows ? (
-            <p className="px-4 py-5 text-[14px] text-text-tertiary">Loading games…</p>
-          ) : results.length === 0 ? (
-            <p className="px-4 py-5 text-[14px] text-text-tertiary">
-              No game matches “{value.trim()}”. Press Search to look through every listing.
-            </p>
-          ) : (
-            <>
-              {!needle && <p className="hero-search__heading">Popular</p>}
-              <ul>
-                {results.map((g, i) => (
-                  <li
-                    key={g.slug}
-                    id={`hero-search-row-${i}`}
-                    role="option"
-                    aria-selected={active === i}
-                    className="hero-search__row"
-                    data-active={active === i ? '' : undefined}
-                    onMouseEnter={() => setActive(i)}
-                  >
-                    <Link href={`/${g.slug}`} className="flex min-w-0 items-center gap-2.5" onClick={() => setOpen(false)}>
-                      <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-white/[0.06]">
-                        {g.icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- DB image URLs from several hosts; tiny thumbnails.
-                          <img src={g.icon} alt="" className="h-full w-full object-cover" loading="lazy" />
-                        ) : (
-                          <span className="text-[12px] font-semibold text-text-secondary">{g.name.charAt(0)}</span>
-                        )}
-                      </span>
-                      <span className="truncate text-[14px] font-semibold text-text-primary">{g.name}</span>
-                    </Link>
-                    <span className="flex flex-wrap gap-1 pl-[38px]">
-                      {g.tabs.slice(0, MAX_TABS).map((t) => (
-                        <Link
-                          key={t.slug}
-                          href={`/${g.slug}/${t.slug}`}
-                          className="hero-search__tab"
-                          onClick={() => setOpen(false)}
-                        >
-                          {t.label}
-                        </Link>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          {renderResults(() => setOpen(false))}
         </div>
       )}
+      {takeover &&
+        createPortal(
+          <div role="dialog" aria-modal="true" aria-label="Search" className="fixed inset-0 z-[80] flex flex-col bg-[#0b0d11]">
+            <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <button
+                type="button"
+                onClick={closeTakeover}
+                aria-label="Close Search"
+                className="grid h-11 w-10 shrink-0 place-items-center text-white/70 active:scale-95"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="relative flex h-11 flex-1 items-center rounded-md border border-white/[0.12] bg-white/[0.04] focus-within:border-white/[0.24]">
+                <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
+                <input
+                  type="search"
+                  // The user tapped search on purpose: the keyboard is wanted.
+                  autoFocus
+                  enterKeyHint="search"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return
+                    e.preventDefault()
+                    closeTakeover()
+                    router.push(
+                      active >= 0 && results[active]
+                        ? enterHref(results[active])
+                        : `/browse?search=${encodeURIComponent(value.trim())}`,
+                    )
+                  }}
+                  placeholder="Search games, accounts and items"
+                  aria-label="Search games, accounts and items"
+                  className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
+                />
+              </div>
+            </div>
+            <div className="hero-search__takeover min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+              {renderResults(closeTakeover)}
+            </div>
+          </div>,
+          document.body,
+        )}
     </form>
   )
 }

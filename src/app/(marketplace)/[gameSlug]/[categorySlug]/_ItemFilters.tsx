@@ -91,7 +91,9 @@ function Trigger({
         style={{ height: 'var(--h-btn-secondary)', fontSize: 'var(--fs-body)' }}
       >
         <Icon aria-hidden className="h-4 w-4 shrink-0 text-text-secondary" />
-        <span className="max-w-[180px] truncate">{label}</span>
+        {/* grow: when a row stretches the button (category filter bar),
+            the chevron sits at its far right. */}
+        <span className="max-w-[180px] grow truncate text-left sm:max-w-none">{label}</span>
         <ChevronDown
           aria-hidden
           className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')}

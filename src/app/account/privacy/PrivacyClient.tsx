@@ -42,9 +42,13 @@ function StatusIcon({ status }: { status: string }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-interface Props { requests: GdprRequest[] }
+interface Props {
+  requests: GdprRequest[]
+  /** Rendered as a Settings tab: no page header, no page container. */
+  embedded?: boolean
+}
 
-export default function PrivacyClient({ requests: initialRequests }: Props) {
+export default function PrivacyClient({ requests: initialRequests, embedded = false }: Props) {
   const [requests,        setRequests]        = useState<GdprRequest[]>(initialRequests)
   const [exporting,       setExporting]       = useState(false)
   const [requestingDel,   setRequestingDel]   = useState(false)
@@ -104,16 +108,23 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
   const hasPendingDeletion = requests.some(r => r.type === 'deletion' && ['pending', 'processing'].includes(r.status))
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className={embedded ? 'space-y-6' : 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10'}
+    >
 
-      {/* V21/P7.al — Standard account header. */}
-      <motion.div variants={item}>
-        <AccountPageHeader
-          icon="privacy"
-          title="Privacy & Data"
-          subtitle="Your rights under GDPR — export your data or request account deletion."
-        />
-      </motion.div>
+      {/* V21/P7.al — Standard account header (Settings shows its own). */}
+      {!embedded && (
+        <motion.div variants={item}>
+          <AccountPageHeader
+            icon="privacy"
+            title="Privacy & Data"
+            subtitle="Your rights under GDPR — export your data or request account deletion."
+          />
+        </motion.div>
+      )}
 
       {/* Data export card */}
       <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">

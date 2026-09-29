@@ -18,18 +18,20 @@ export function MessagesSkeleton() {
     <main
       aria-busy="true"
       aria-label="Loading messages"
-      className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:px-10 lg:pb-4 xl:px-14"
+      className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:px-10 lg:pb-4 lg:pt-4 xl:px-14"
     >
       <div className="mx-auto flex h-full w-full max-w-[1400px] min-h-0 flex-col">
-        <Block className="ml-1 h-7 w-20" />
-
-        <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[#1D1E23] p-1">
-          {['w-10', 'w-16', 'w-[86px]', 'w-14', 'w-20', 'w-16'].map((w, i) => (
-            <Block key={i} className={`h-8 rounded-[5px] ${w}`} />
-          ))}
+        {/* Title + tabs: stacked on phones, one row on desktop. */}
+        <div className="shrink-0 lg:flex lg:items-center lg:gap-5">
+          <Block className="ml-1 h-7 w-20" />
+          <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[#1D1E23] p-1 lg:mt-0">
+            {['w-10', 'w-16', 'w-[86px]', 'w-14', 'w-20', 'w-16'].map((w, i) => (
+              <Block key={i} className={`h-8 rounded-[5px] ${w}`} />
+            ))}
+          </div>
         </div>
 
-        <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[320px_1fr] xl:grid-cols-[380px_1fr]">
+        <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[272px_1fr] xl:grid-cols-[300px_1fr]">
           {/* Conversation list */}
           <div className={`${PANEL} flex`}>
             <div className="border-b border-border-subtle p-3">
@@ -38,13 +40,13 @@ export function MessagesSkeleton() {
             <div className="divide-y divide-white/[0.05]">
               {Array.from({ length: 7 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3.5">
-                  <Block className="h-12 w-12 shrink-0 rounded-[10px] sm:h-11 sm:w-11 sm:rounded-full" />
+                  <Block className="h-12 w-12 shrink-0 rounded-[10px] sm:h-11 sm:w-11" />
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <Block className="h-3.5 w-28" />
                       <Block className="h-3 w-8" />
                     </div>
-                    <Block className="h-3 w-24 sm:hidden" />
+                    <Block className="h-3 w-24" />
                     <Block className="h-3 w-3/4" />
                   </div>
                 </div>

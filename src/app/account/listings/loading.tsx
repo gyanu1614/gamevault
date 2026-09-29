@@ -41,7 +41,7 @@ export default function ListingsLoading() {
           <div className="divide-y divide-white/[0.05]">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                <Block className="h-4 w-4 rounded" />
+                {/* No checkbox: the table opens without the selection column. */}
                 <Block className="h-10 w-10 rounded-md" />
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Block className="h-4 w-44 max-w-full" />

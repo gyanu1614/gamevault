@@ -15,6 +15,7 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import type { CalcPet, Variant } from '../calculator/_adoptMeCalcTypes'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -183,6 +184,8 @@ function PetPicker({
   onPick: (slug: string) => void
   onClose: () => void
 }) {
+  // Phones: don't pop the keyboard over the list (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const [q, setQ] = useState('')
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -195,7 +198,7 @@ function PetPicker({
         <style>{`@keyframes amwfl-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } } .animate-verdict { animation: amwfl-in 240ms cubic-bezier(0.16,1,0.3,1); }`}</style>
         <div className="flex items-center gap-2 border-b border-[#1E2723] px-4 py-3">
           <Search className="h-4 w-4 text-[#6D7A72]" />
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a pet…" className="w-full bg-transparent text-[16px] text-[#F1F3F1] outline-none placeholder:text-[#6D7A72]" />
+          <input autoFocus={!coarse} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a pet…" className="w-full bg-transparent text-[16px] text-[#F1F3F1] outline-none placeholder:text-[#6D7A72]" />
           <button type="button" onClick={onClose} aria-label="Close" className="text-[#6D7A72] hover:text-[#F1F3F1]"><X className="h-5 w-5" /></button>
         </div>
         <div className="max-h-[50vh] overflow-y-auto">

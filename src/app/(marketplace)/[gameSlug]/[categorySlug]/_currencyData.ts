@@ -33,6 +33,10 @@ export interface Offer {
   /** Positive review percentage (0–100), or null for a seller with no reviews. */
   rating: number | null
   reviews: number
+  /** Lifetime completed sales (profiles.total_sales). */
+  sales: number
+  /** Rank key from profiles.seller_tier ("bronze" … "legendary"). */
+  tier: string | null
   pricePerUnit: number
   minQty: number
   stock: number
@@ -184,6 +188,8 @@ const BLANK_HERO: Offer = {
   verified: false,
   rating: 0,
   reviews: 0,
+  sales: 0,
+  tier: null,
   pricePerUnit: 0,
   minQty: 100,
   stock: 0,
@@ -244,6 +250,8 @@ export function listingToOffer(listing: any): Offer {
     verified,
     rating,
     reviews,
+    sales: Number(listing.seller?.total_sales ?? 0),
+    tier: listing.seller?.seller_tier ?? null,
     // Price is stored in the category's granularity unit: for a
     // `thousand` game the seller typed "$3.80 per 1K" and 3.8 is what
     // is stored. Nothing divides it down to a per-single-token figure

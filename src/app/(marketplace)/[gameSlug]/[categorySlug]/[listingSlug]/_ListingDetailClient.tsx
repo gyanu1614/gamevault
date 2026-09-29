@@ -19,7 +19,6 @@
  */
 
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
-import { tierByKey } from '@/lib/seller/tiers'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -52,6 +51,7 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import type { TemplateField } from '@/lib/templates/types'
+import { SellerStats } from '@/components/seller/SellerStats'
 
 const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
@@ -96,6 +96,8 @@ export interface ListingForDetail {
     verified: boolean
     ratingPercent: number | null
     totalSales: number
+    /** Reviews behind ratingPercent (shown as "12 Reviews"). */
+    reviewCount?: number
     activeListings: number
     createdAt: string | null
   }
@@ -115,6 +117,8 @@ export interface MiniListing {
     verified: boolean
     ratingPercent: number | null
     totalSales: number
+    reviewCount?: number
+    tier?: string | null
   }
   categorySlug: string
 }
@@ -258,9 +262,6 @@ export default function ListingDetailClient({
   // seller's available quantity. Instant-delivery listings are single-unit.
   const maxQty = listing.isUnlimited ? 99 : Math.max(1, listing.quantity ?? 1)
 
-  // Rank badge — driven by the central ladder. tierByKey tolerates
-  // unknown/legacy tier strings by falling back to the entry rank.
-  const tierDef = tierByKey(listing.seller.tier?.toLowerCase())
   const sellerName = sellerDisplayName(listing.seller)
   const sellerInitial = sellerName.charAt(0).toUpperCase()
 
@@ -587,27 +588,18 @@ export default function ListingDetailClient({
                       <span className="truncate text-[13.5px] font-semibold text-text-primary group-hover:text-lime-text">
                         {sellerName}
                       </span>
-                      {listing.seller.verified && (
-                        <VerifiedBadge size={14} />
-                      )}
+                      {listing.seller.verified && <VerifiedBadge size={14} />}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-                      {listing.seller.ratingPercent != null ? (
-                        <>
-                          <span className="font-semibold text-text-secondary">
-                            {listing.seller.ratingPercent.toFixed(0)}%
-                          </span>
-                          <span aria-hidden>·</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-semibold text-text-secondary">New Seller</span>
-                          <span aria-hidden>·</span>
-                        </>
-                      )}
-                      <span>{fmtCount(listing.seller.totalSales)} sold</span>
-                      <span aria-hidden>·</span>
-                      <span className={cn('font-semibold', tierDef.colors.text)}>{tierDef.label}</span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11.5px] text-text-tertiary">
+                      {/* "100% Positive · 12 Reviews · 34 Sold · Gold", or
+                          "Verified Seller" before the first sale (SellerStats). */}
+                      <SellerStats
+                        variant="full"
+                        ratingPercent={listing.seller.ratingPercent}
+                        reviews={listing.seller.reviewCount}
+                        sales={listing.seller.totalSales}
+                        tier={listing.seller.tier}
+                      />
                     </div>
                   </div>
                   <ArrowUpRight className="h-4 w-4 shrink-0 text-text-tertiary group-hover:text-lime-text" />
@@ -806,10 +798,12 @@ export default function ListingDetailClient({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            // Mobile action bar — sits on the viewport edge and owns its
-            // safe-area inset. The 12px vertical padding keeps the controls
-            // comfortably tappable without a second navigation bar.
-            className="fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-40 border-t border-border-default bg-bg-raised/95 px-3 py-3 backdrop-blur-md shadow-[0_-12px_30px_rgba(0,0,0,0.4)] sm:hidden"
+            // Mobile action bar — a SOLID strip pinned to the very bottom
+            // that pads itself over the safe area. It used to sit ABOVE the
+            // inset with a 95%-alpha raised fill, which compiles to nothing (a CSS-
+            // variable colour takes no opacity modifier): no background, and
+            // a gap under it, so the page showed through (owner, 2026-09-28).
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-border-default bg-bg-raised px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-12px_30px_rgba(0,0,0,0.4)] sm:hidden"
           >
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
@@ -1124,11 +1118,14 @@ function OtherSellerRow({
               {/* Mobile: seller folds under the listing name (the desktop
                   seller column below is sm+ only). */}
               <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary sm:hidden">
-                <span className="truncate">{sellerName}</span>
+                <span className="min-w-0 truncate">{sellerName}</span>
                 <span aria-hidden>·</span>
-                <span className="font-semibold text-text-secondary">
-                  {offer.seller.ratingPercent != null ? `${offer.seller.ratingPercent.toFixed(0)}%` : 'New'}
-                </span>
+                <SellerStats
+                  ratingPercent={offer.seller.ratingPercent}
+                  reviews={offer.seller.reviewCount}
+                  sales={offer.seller.sales}
+                  tier={offer.seller.tier}
+                />
               </div>
             </div>
 
@@ -1151,16 +1148,15 @@ function OtherSellerRow({
                   <span className="truncate text-[12.5px] font-semibold text-text-primary">
                     {sellerName}
                   </span>
-                  {offer.seller.verified && (
-                    <VerifiedBadge size={14} />
-                  )}
+                  {offer.seller.verified && <VerifiedBadge size={14} />}
                 </span>
-                <span className="block text-[11px] text-text-tertiary">
-                  <span className="font-semibold text-text-secondary">
-                    {offer.seller.ratingPercent != null ? `${offer.seller.ratingPercent.toFixed(0)}%` : 'New'}
-                  </span>{' '}
-                  · {fmtCount(offer.seller.sales)} sold
-                </span>
+                <SellerStats
+                  ratingPercent={offer.seller.ratingPercent}
+                  reviews={offer.seller.reviewCount}
+                  sales={offer.seller.sales}
+                  tier={offer.seller.tier}
+                  className="flex text-[11px]"
+                />
               </span>
             </span>
 
@@ -1300,12 +1296,15 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
-          <span className="truncate">{sellerName}</span>
-          {listing.seller.verified && (
-            <VerifiedBadge size={12} />
-          )}
+          <span className="min-w-0 truncate">{sellerName}</span>
+          {listing.seller.verified && <VerifiedBadge size={12} />}
           <span aria-hidden>·</span>
-          <span className="tabular-nums">{fmtCount(listing.seller.totalSales)} sold</span>
+          <SellerStats
+            ratingPercent={listing.seller.ratingPercent}
+            reviews={listing.seller.reviewCount}
+            sales={listing.seller.totalSales}
+            tier={listing.seller.tier}
+          />
         </div>
       </div>
     </Link>

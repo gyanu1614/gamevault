@@ -1,14 +1,16 @@
 'use client'
 
-import { sellerDisplayName, sellerInitial } from '@/lib/seller/identity'
+import { sellerDisplayName, sellerInitial, sellerRatingPercent } from '@/lib/seller/identity'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Star, Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'
+import { Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'
 import type { ListingWithRelations } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { listingUrl } from '@/lib/listings/url'
 import WishlistButton from '@/components/wishlist/WishlistButton'
+import { SellerStats } from '@/components/seller/SellerStats'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 interface ListingCardProps {
   listing: ListingWithRelations
@@ -170,19 +172,23 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
                   </div>
                 )}
               </div>
-              {/* Seller — shop name when they trade under one. */}
-              <span className="truncate text-xs text-muted-foreground">
-                {sellerDisplayName(listing.seller)}
-              </span>
-              {/* Rating */}
-              {(listing.seller?.seller_rating ?? 0) > 0 && (
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="text-[11px] font-medium text-amber-400">
-                    {(listing.seller.seller_rating ?? 0).toFixed(1)}
+              {/* Seller — shop name when they trade under one, the blue
+                  verified mark, and the shared seller line (SellerStats). */}
+              <span className="flex min-w-0 flex-col">
+                <span className="flex min-w-0 items-center gap-1">
+                  <span className="truncate text-xs text-muted-foreground">
+                    {sellerDisplayName(listing.seller)}
                   </span>
-                </div>
-              )}
+                  {(listing.seller as any)?.is_verified && <VerifiedBadge size={12} />}
+                </span>
+                <SellerStats
+                  ratingPercent={sellerRatingPercent(listing.seller as any)}
+                  reviews={Number((listing.seller as any)?.total_reviews ?? 0)}
+                  sales={Number((listing.seller as any)?.total_sales ?? 0)}
+                  tier={(listing.seller as any)?.seller_tier ?? null}
+                  className="text-[10.5px]"
+                />
+              </span>
             </div>
 
             {/* Micro stats */}

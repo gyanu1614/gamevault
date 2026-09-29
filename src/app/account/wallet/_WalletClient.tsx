@@ -20,14 +20,11 @@ import {
   Wallet,
   ShoppingCart,
   TrendingUp,
-  DollarSign,
-  CheckCircle2,
   Search,
   X,
   Loader2,
   Download,
   CreditCard,
-  Clock,
   Package,
   ExternalLink,
   ChevronRight,
@@ -38,8 +35,6 @@ import {
   CircleDashed,
   User,
   Plus,
-  Gift,
-  Sparkles,
   ArrowDownToLine,
   AlertTriangle,
 } from 'lucide-react'
@@ -401,26 +396,13 @@ function LoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
 
 // ── Compact stat card ──────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, sub, color = 'violet' }: {
-  icon: React.ElementType; label: string; value: string; sub?: string
-  color?: 'violet' | 'green' | 'amber' | 'blue'
-}) {
-  const colors = {
-    violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
-    green:  'text-success  bg-success-bg  border-green-500/20',
-    amber:  'text-amber-400  bg-amber-500/10  border-amber-500/20',
-    blue:   'text-blue-400   bg-blue-500/10   border-blue-500/20',
-  }
+/** One balance in the wallet's top panel: small label, big figure, one-line note. */
+function BalanceCell({ label, value, caption }: { label: string; value: number; caption: string }) {
   return (
-    <div className="rounded-lg border border-border-subtle card-frost px-3 py-2.5 flex items-center gap-2.5">
-      <div className={cn('flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg border', colors[color])}>
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <div className="min-w-0">
-        <div className="text-base font-bold text-white leading-tight">{value}</div>
-        <div className="text-[11px] text-text-tertiary truncate">{label}</div>
-        {sub && <div className="text-[11px] text-text-tertiary truncate">{sub}</div>}
-      </div>
+    <div className="min-w-0">
+      <p className="text-[11.5px] font-semibold uppercase tracking-wider text-text-tertiary">{label}</p>
+      <p className="mt-1 text-[28px] font-bold leading-tight tabular-nums text-text-primary">${(value ?? 0).toFixed(2)}</p>
+      <p className="mt-1 text-[12px] text-text-secondary">{caption}</p>
     </div>
   )
 }
@@ -606,181 +588,88 @@ export default function WalletClient({ userId, isSeller }: Props) {
             className="mb-4"
           />
 
-          {/* V22 — Seller balance: Available + Pending cards, then a
-              compact real-data stats strip. Replaces the full-width slab. */}
-          {isSeller && (
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {/* Available — value left, Withdraw CTA right (like the ref) */}
-                <div className="flex items-start justify-between gap-4 rounded-lg border border-border-subtle card-frost p-5">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 text-text-secondary">
-                      <DollarSign className="h-4 w-4 flex-shrink-0 text-success" />
-                      <span className="text-[12px] font-semibold uppercase tracking-wider">Available Balance</span>
-                    </div>
-                    <p className="mt-1.5 text-3xl font-bold leading-tight text-text-primary">
-                      ${earningsStats.available_balance.toFixed(2)}
-                    </p>
-                    <p className="mt-2 text-[12px] text-text-secondary">Ready to withdraw to your payout method.</p>
-                  </div>
+          {/* Balances — ONE panel, no outline (owner, 2026-09-28: the page
+              was five boxes of numbers). Sellers: Available (+ Withdraw),
+              Store Credit, Pending; buyers: their store-credit balance.
+              A thin line underneath carries the running totals. */}
+          <div className="overflow-hidden rounded-lg bg-bg-raised">
+            {isSeller ? (
+              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <div className="flex items-start justify-between gap-3 p-5">
+                  <BalanceCell label="Available Balance" value={earningsStats.available_balance} caption="Ready to withdraw." />
                   <Link
                     href="/account/wallet/withdraw"
                     className={cn(
-                      'inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
-                      earningsStats.available_balance <= 0 && 'pointer-events-none opacity-50',
+                      'inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-md bg-lime px-3.5 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
+                      // Withdrawals draw on sales AND store credit (withdrawal_quote:
+                      // matured + wallet), as the withdraw page shows.
+                      earningsStats.available_balance + walletBalance.available_balance <= 0 &&
+                        'pointer-events-none opacity-50',
                     )}
                   >
                     <ArrowDownToLine className="h-4 w-4" />
                     Withdraw
                   </Link>
                 </div>
-
-                {/* Pending — sales awaiting completion */}
-                <div className="rounded-lg border border-border-subtle card-frost p-5">
-                  <div className="flex items-center gap-2 text-text-secondary">
-                    <Clock className="h-4 w-4 text-amber-400" />
-                    <span className="text-[12px] font-semibold uppercase tracking-wider">Pending Sales</span>
-                  </div>
-                  <p className="mt-1.5 text-3xl font-bold leading-tight text-text-primary">
-                    ${earningsStats.pending_balance.toFixed(2)}
-                  </p>
-                  <p className="mt-2 text-[12px] text-text-secondary">
-                    Sale proceeds from active orders — credited to your Seller Balance once the
-                    buyer confirms delivery or the protection window closes.
-                  </p>
+                {/* Refunds and cashback land in the buyer wallet, not in sales
+                    earnings; withdrawals can draw on it too. */}
+                <div className="p-5">
+                  <BalanceCell label="Store Credit" value={walletBalance.available_balance} caption="Refunds. Spend it at checkout or withdraw it." />
+                </div>
+                <div className="p-5">
+                  <BalanceCell label="Pending Sales" value={earningsStats.pending_balance} caption="Credited once the buyer confirms delivery." />
                 </div>
               </div>
-
-              {/* Real-data stats strip */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'This Month', value: earningsStats.this_month_earnings, icon: TrendingUp },
-                  { label: 'Lifetime Earned', value: earningsStats.total_earnings, icon: DollarSign },
-                  { label: 'Withdrawn', value: earningsStats.total_payouts, icon: ArrowDownToLine },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-border-subtle card-frost px-3 py-3">
-                    <div className="flex min-w-0 items-center gap-2 text-text-tertiary">
-                      <s.icon className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wide">{s.label}</span>
-                    </div>
-                    <p className="mt-1 text-lg font-bold text-text-primary">${(s.value ?? 0).toFixed(2)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Wallet Balance Card (Buyers Only - No Withdrawals) ── */}
-          {!isSeller && (
-            <div className="rounded-lg border border-border-subtle bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-transparent p-1 shadow-xl">
-              <div className="rounded-lg bg-black/40 backdrop-blur-sm p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Wallet className="h-4 w-4 text-lime-text" />
-                      <p className="text-[11px] text-white/50 font-semibold uppercase tracking-wider">Balance</p>
-                    </div>
-                    <p className="text-4xl font-bold text-white tracking-tight">${walletBalance.available_balance.toFixed(2)}</p>
-                    {walletBalance.pending_balance > 0 && (
-                      <p className="text-[11px] text-white/40 mt-1">
-                        +${walletBalance.pending_balance.toFixed(2)} pending
-                      </p>
-                    )}
-                  </div>
-                  {/* Top-up stays gated behind its own flag even after
-                      purchases open (compliance — lib/config/purchases). */}
-                  {WALLET_TOPUP_ENABLED && (
+            ) : (
+              <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+                <BalanceCell label="Balance" value={walletBalance.available_balance} caption="Refunds and credit. Spend it at checkout." />
+                {/* Top-up stays gated behind its own flag even after
+                    purchases open (compliance — lib/config/purchases). */}
+                {WALLET_TOPUP_ENABLED && (
                   <div className="flex w-full gap-2 sm:w-auto">
-                    <button
-                      onClick={() => handleTopUp(25)}
-                      disabled={isTopUpLoading}
-                      className="group relative flex flex-1 sm:flex-none min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-lime text-text-inverse hover:bg-lime-hover px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed"
-                    >
-                      {isTopUpLoading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>$25</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleTopUp(50)}
-                      disabled={isTopUpLoading}
-                      className="group relative flex flex-1 sm:flex-none min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-border-default bg-bg-raised hover:bg-bg-raised-hover hover:border-lime-tint-border px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed"
-                    >
-                      {isTopUpLoading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>$50</span>
-                        </>
-                      )}
-                    </button>
+                    {[25, 50].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => handleTopUp(amt)}
+                        disabled={isTopUpLoading}
+                        className={cn(
+                          'flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed sm:flex-none',
+                          amt === 25
+                            ? 'bg-lime text-text-inverse hover:bg-lime-hover'
+                            : 'border border-border-default bg-white/[0.03] text-text-primary hover:border-border-strong',
+                        )}
+                      >
+                        {isTopUpLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5" />${amt}</>}
+                      </button>
+                    ))}
                   </div>
-                  )}
-                </div>
-
-                {/* Rewards Row */}
-                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-border-subtle">
-                  <div className="flex items-center gap-2.5 rounded-lg bg-success-bg border border-green-500/20 px-3 py-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg">
-                      <Gift className="h-3.5 w-3.5 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-[color-mix(in_srgb,var(--color-success)_70%,transparent)] font-medium uppercase tracking-wide">Cashback</p>
-                      <p className="text-base font-bold text-success">${walletBalance.total_cashback.toFixed(2)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-amber-400/70 font-medium uppercase tracking-wide">Referrals</p>
-                      <p className="text-base font-bold text-amber-400">${walletBalance.referral_earnings.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
+            )}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-white/[0.07] px-5 py-3 text-[12.5px]">
+              {(isSeller
+                ? [
+                    { label: 'This Month', value: `$${(earningsStats.this_month_earnings ?? 0).toFixed(2)}` },
+                    { label: 'Lifetime Earned', value: `$${(earningsStats.total_earnings ?? 0).toFixed(2)}` },
+                    { label: 'Withdrawn', value: `$${(earningsStats.total_payouts ?? 0).toFixed(2)}` },
+                  ]
+                : [
+                    { label: 'Total Spent', value: `$${lifetimeSpent.toFixed(2)}` },
+                    { label: 'Completed', value: purchases.filter((t) => t.status === 'completed').length.toString() },
+                    { label: 'Total Orders', value: purchases.length.toString() },
+                  ]
+              ).map((st) => (
+                <span key={st.label} className="whitespace-nowrap">
+                  <span className="text-text-tertiary">{st.label}</span>{' '}
+                  <span className="font-semibold tabular-nums text-text-primary">{st.value}</span>
+                </span>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* ── Compact Stats (Buyers Only) ── */}
-        {!isSeller && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-          <StatCard
-            icon={Gift} label="Total Cashback"
-            value={`$${walletBalance.total_cashback.toFixed(2)}`}
-            sub="Earned rewards"
-            color="green"
-          />
-          <StatCard
-            icon={ShoppingCart} label="Total Spent"
-            value={`$${lifetimeSpent.toFixed(2)}`}
-            sub="All purchases"
-            color="violet"
-          />
-          <StatCard
-            icon={CheckCircle2} label="Completed"
-            value={purchases.filter(t => t.status === 'completed').length.toString()}
-            sub="Delivered"
-            color="amber"
-          />
-          <StatCard
-            icon={Package} label="Total Orders"
-            value={purchases.length.toString()}
-            sub="All purchases"
-            color="blue"
-          />
-          </div>
-        )}
-
-      {/* ── Tabs ── */}
-      <div className="mb-4 flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-3 sm:overflow-visible sm:pb-0">
+      {/* ── Tabs — compact segmented control (same as Messages) ── */}
+      <div className="mb-3 flex w-fit max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -789,14 +678,12 @@ export default function WalletClient({ userId, isSeller }: Props) {
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setFilterStatus('all') }}
               className={cn(
-                'flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition-all sm:px-4 sm:py-3',
-                isActive
-                  ? 'font-semibold border-2 border-lime bg-gradient-to-br from-[rgba(86,184,127,0.20)] to-[rgba(86,184,127,0.05)] text-white shadow-elevated'
-                  : 'font-medium border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'
+                'flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[5px] px-3 text-[13px] font-semibold transition-colors',
+                isActive ? 'bg-white/[0.09] text-text-primary' : 'text-text-secondary hover:text-text-primary',
               )}
             >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{tab.label}</span>
+              <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+              {tab.label}
             </button>
           )
         })}
@@ -1078,21 +965,28 @@ export default function WalletClient({ userId, isSeller }: Props) {
         </div>
       )}
 
-      {/* ── Withdrawal Requests Section (Sellers Only) ── */}
+      {/* ── Withdrawal Requests (Sellers Only) — straight rows in one panel ── */}
       {isSeller && withdrawalRequestsData && withdrawalRequestsData.length > 0 && (
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            <ArrowDownToLine className="h-5 w-5 text-success" />
-            Withdrawal Requests
-          </h2>
-          <div className="grid gap-3">
-            {withdrawalRequestsData.map((request) => (
-              <WithdrawalRequestCard
-                key={request.id}
-                request={request}
-                onUpdate={refetchWithdrawals}
-              />
-            ))}
+          <h2 className="mb-2.5 text-[15px] font-bold text-text-primary">Withdrawal Requests</h2>
+          <div className="overflow-hidden rounded-lg bg-bg-raised">
+            <div className="hidden grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.8fr))_auto_auto] gap-x-4 border-b border-white/[0.07] px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-text-tertiary sm:grid">
+              <span>Method</span>
+              <span className="text-right">Amount</span>
+              <span className="text-right">Fee</span>
+              <span className="text-right">You Receive</span>
+              <span className="text-right">Status</span>
+              <span className="w-[62px]" aria-hidden />
+            </div>
+            <div className="divide-y divide-white/[0.06]">
+              {withdrawalRequestsData.map((request) => (
+                <WithdrawalRequestCard
+                  key={request.id}
+                  request={request}
+                  onUpdate={refetchWithdrawals}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}

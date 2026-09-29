@@ -993,6 +993,7 @@ export interface Conversation {
     id: string
     username: string
     avatar_url: string
+    is_verified?: boolean | null
   }
   last_message?: {
     content: string
@@ -1031,7 +1032,7 @@ export const messagesApi = {
       .select(`
         *,
         buyer:profiles!buyer_id(id, username, avatar_url),
-        seller:profiles!seller_id(id, username, avatar_url),
+        seller:profiles!seller_id(id, username, avatar_url, is_verified),
         order:orders!order_id(
           id,
           order_number,
@@ -1223,7 +1224,7 @@ export const messagesApi = {
       .select(`
         *,
         buyer:profiles!buyer_id(id, username, avatar_url),
-        seller:profiles!seller_id(id, username, avatar_url),
+        seller:profiles!seller_id(id, username, avatar_url, is_verified),
         order:orders!order_id(
           id,
           order_number,
@@ -1298,7 +1299,7 @@ export const messagesApi = {
       .select(`
         *,
         buyer:profiles!buyer_id(id, username, avatar_url),
-        seller:profiles!seller_id(id, username, avatar_url),
+        seller:profiles!seller_id(id, username, avatar_url, is_verified),
         order:orders!order_id(
           id,
           order_number,

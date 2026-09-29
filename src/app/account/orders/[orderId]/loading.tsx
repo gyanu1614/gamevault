@@ -12,7 +12,7 @@ function Block({ className = '' }: { className?: string }) {
 
 /** Same surface as OrderCard (full-bleed below sm). */
 const CARD =
-  'rounded-lg border border-border-default bg-bg-raised max-sm:-mx-5 max-sm:rounded-none max-sm:border-0'
+  'rounded-lg bg-bg-raised max-sm:-mx-5 max-sm:rounded-none'
 
 export default function OrderDetailLoading() {
   return (

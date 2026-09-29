@@ -23,7 +23,6 @@ import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
-import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
@@ -36,6 +35,9 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyPageData, Offer } from './_currencyData'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import { quantityUnit, priceUnit } from '@/lib/currency/quantity-unit'
+import { SellerStats } from '@/components/seller/SellerStats'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { sellerStatLine } from '@/lib/seller/stat-line'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,25 +134,6 @@ function RouteLoader({ label = 'Loading' }: { label?: string }) {
         </div>
       </div>
     </div>
-  )
-}
-
-
-function Rating({ rating, reviews, showReviews = true }: { rating: number | null; reviews?: number; showReviews?: boolean }) {
-  // No reviews → no rating: show "New" rather than a fabricated number.
-  if (rating == null) {
-    return <span className="text-[13px] font-semibold text-text-secondary">New</span>
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-text-secondary">
-      <StarRoundedIcon className="text-lime" style={{ fontSize: 14 }} />
-      <span className="text-[13px] font-semibold tabular-nums text-text-primary">
-        {rating.toFixed(1)}%
-      </span>
-      {showReviews && reviews != null && (
-        <span className="text-[12px] text-text-tertiary">({reviews.toLocaleString('en-US')})</span>
-      )}
-    </span>
   )
 }
 
@@ -685,9 +668,13 @@ function HeroCard({
                 </span>
                 {offer.verified && <VerifiedBadge size={14} />}
               </div>
-              <div className="mt-0.5">
-                <Rating rating={offer.rating} reviews={offer.reviews} />
-              </div>
+              <SellerStats
+                ratingPercent={offer.rating}
+                reviews={offer.reviews}
+                sales={offer.sales}
+                tier={offer.tier}
+                className="mt-0.5 text-[12.5px]"
+              />
             </div>
             <ArrowRight className="h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text" />
           </ShopLink>
@@ -1049,6 +1036,18 @@ function FilterChip({
 }
 
 /** V60 — Icon-chip stat row for the expanded seller panel. */
+/** Short seller value for the Offer details tile ("100% (12) · 34 Sold",
+ *  or "Verified Seller" before the first sale); the header above it carries
+ *  the full line with the tier. */
+function sellerFactText(offer: Offer): string {
+  const line = sellerStatLine({ ratingPercent: offer.rating, reviews: offer.reviews, sales: offer.sales, tier: offer.tier })
+  if (line.kind === 'verified') return 'Verified Seller'
+  return [
+    line.rating ? `${line.rating.percent}% (${line.rating.reviews.toLocaleString('en-US')})` : null,
+    line.sales > 0 ? `${line.sales.toLocaleString('en-US')} Sold` : null,
+  ].filter(Boolean).join(' · ') || line.tierLabel
+}
+
 function Fact({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2.5">
@@ -1132,12 +1131,13 @@ function SellerRow({
                   <span className="truncate text-[14px] font-bold text-text-primary sm:text-[15px]">{offer.seller}</span>
                   {offer.verified && <VerifiedBadge size={13} />}
                 </div>
-                <div className="mt-0.5 hidden sm:block">
-                  <Rating rating={offer.rating} reviews={offer.reviews} />
-                </div>
-                <div className="mt-0.5 sm:hidden">
-                  <Rating rating={offer.rating} showReviews={false} />
-                </div>
+                <SellerStats
+                  ratingPercent={offer.rating}
+                  reviews={offer.reviews}
+                  sales={offer.sales}
+                  tier={offer.tier}
+                  className="mt-0.5 text-[11.5px] sm:text-[12.5px]"
+                />
               </div>
             </div>
 
@@ -1257,7 +1257,7 @@ function SellerRow({
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Fact icon={StarRoundedIcon} label="Positive rating" value={offer.rating != null ? `${offer.rating.toFixed(1)}% (${offer.reviews})` : 'New seller'} />
+                  <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
                   <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
                   <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
                   <Fact

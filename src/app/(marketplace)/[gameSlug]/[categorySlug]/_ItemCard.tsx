@@ -28,11 +28,11 @@
 import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { ThumbsUp } from 'lucide-react'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SellerStats } from '@/components/seller/SellerStats'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
 
@@ -40,13 +40,6 @@ const fmtPrice = (n: number) => {
   if (n === 0) return '$0.00'
   if (Math.abs(n) < 0.01) return `$${n.toFixed(4)}`
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-const fmtCount = (n: number) => {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (n >= 10_000) return `${Math.round(n / 1_000)}K`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`
-  return n.toLocaleString('en-US')
 }
 
 /** Plain seller avatar (image or initial fallback). */
@@ -83,11 +76,13 @@ function MetaPill({
   label,
   tip,
   tone = 'default',
+  ariaLabel,
 }: {
   icon: typeof IconClock
   label: string
   tip: string
   tone?: ChipTone
+  ariaLabel?: string
 }) {
   return (
     <span className="group/pill pointer-events-auto relative inline-flex">
@@ -263,9 +258,11 @@ export default function ItemCard({
               the price. */}
           {isBestDeal && (
             <span className="group/tip pointer-events-auto relative inline-flex shrink-0 self-center">
+              {/* A price tag (Material LocalOffer), in the same filled
+                  rectangle as the card's chips. */}
               <span
                 aria-label="Lowest price"
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/20 text-success ring-1 ring-success/30"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-bg text-success"
               >
                 <LocalOfferRoundedIcon aria-hidden style={{ fontSize: 14 }} />
               </span>
@@ -314,31 +311,15 @@ export default function ItemCard({
                 {offer.seller.verified && <VerifiedBadge size={13} />}
               </div>
 
-              {/* Reputation. A rated seller gets the figure; an unrated
-                  one gets a quiet "New seller" — never inside the green
-                  thumbs-up, where it read as though it were a score. */}
-              {offer.seller.ratingPercent != null &&
-              offer.seller.reviewCount > 0 ? (
-                <span className="inline-flex items-center gap-1 text-[11px]">
-                  <ThumbsUp
-                    className="h-[11px] w-[11px] shrink-0 fill-success text-success"
-                    aria-hidden
-                  />
-                  <span className="font-semibold tabular-nums text-success">
-                    {Number.isInteger(offer.seller.ratingPercent)
-                      ? offer.seller.ratingPercent
-                      : offer.seller.ratingPercent.toFixed(1)}
-                    %
-                  </span>
-                  <span className="tabular-nums text-text-tertiary">
-                    ({fmtCount(offer.seller.reviewCount)})
-                  </span>
-                </span>
-              ) : (
-                <span className="text-[11px] text-text-tertiary">
-                  New seller
-                </span>
-              )}
+              {/* "👍 100% (12) · 34 Sold · Gold", or "Verified Seller" before
+                  the first sale (shared rule: SellerStats). */}
+              <SellerStats
+                ratingPercent={offer.seller.ratingPercent}
+                reviews={offer.seller.reviewCount}
+                sales={offer.seller.sales}
+                tier={offer.seller.tier}
+                className="text-[11px]"
+              />
             </div>
           </SmartLink>
         )}
