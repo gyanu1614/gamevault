@@ -434,7 +434,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
               <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/70">
                 {mode === 'login'
                   ? 'Everything’s right where you left it.'
-                  : 'Every order covered by SafeDrop Buyer Protection.'}
+                  : 'Every order covered by SafeDrop Protection.'}
               </p>
             </motion.div>
           </AnimatePresence>
@@ -444,7 +444,7 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
         <div className="flex items-center justify-center gap-2 self-center">
           <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: PALETTE.lime }} />
           <span className="text-[13px] text-white/90">
-            Covered by <span className="font-semibold text-white">SafeDrop</span> Buyer Protection
+            Covered by <span className="font-semibold text-white">SafeDrop</span> Protection
           </span>
         </div>
       </div>

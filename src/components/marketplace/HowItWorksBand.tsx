@@ -35,7 +35,7 @@ export interface HowItWorksStepCopy {
 
 const DEFAULT_STEPS: HowItWorksStepCopy[] = [
   { title: 'Choose Your Item', body: 'Compare offers, buy with confidence.' },
-  { title: 'Pay Securely', body: 'Every order is covered by SafeDrop Buyer Protection.' },
+  { title: 'Pay Securely', body: 'Every order is covered by SafeDrop Protection.' },
   { title: 'Get Your Delivery', body: 'Fast in-game delivery, tracked live.' },
   { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or full refund.' },
 ]

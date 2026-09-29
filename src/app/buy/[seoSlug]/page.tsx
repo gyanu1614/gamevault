@@ -202,7 +202,7 @@ export default async function SEOLandingPage({
           <div className="mx-auto max-w-5xl text-center relative">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime/10 border border-lime-tint-border text-sm font-medium text-lime-text mb-6">
               <Shield className="w-3.5 h-3.5" />
-              SafeDrop Buyer Protection
+              SafeDrop Protection
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold text-foreground mb-5 leading-tight">
@@ -361,7 +361,7 @@ export default async function SEOLandingPage({
               {[
                 {
                   icon: '🛡️',
-                  title: 'SafeDrop Buyer Protection',
+                  title: 'SafeDrop Protection',
                   desc: 'Get what you ordered, or your money back. Not delivered or not as described = full refund.',
                 },
                 {
@@ -420,7 +420,7 @@ export default async function SEOLandingPage({
                 Ready to buy?
               </h2>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-                Browse live listings, check out with SafeDrop Buyer Protection on every order, and receive your purchase fast.
+                Browse live listings, check out with SafeDrop Protection on every order, and receive your purchase fast.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {page.gameSlug ? (
