@@ -1496,7 +1496,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   <Link
                                     href="/sell/new"
                                     onClick={() => setUserMenuOpen(false)}
-                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime/90 whitespace-nowrap"
+                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover whitespace-nowrap"
                                   >
                                     <PlusCircle className="h-4 w-4" />
                                     Sell
