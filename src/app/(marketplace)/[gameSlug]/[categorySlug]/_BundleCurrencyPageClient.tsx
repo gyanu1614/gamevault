@@ -266,25 +266,26 @@ export default function BundleCurrencyPageClient({
           ) : (
             <div
               aria-hidden
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-border-default bg-bg-overlay sm:h-16 sm:w-16"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-bg-overlay sm:h-16 sm:w-16"
             >
               <Flame className="h-6 w-6 text-lime-text" />
             </div>
           )}
           <div className="min-w-0 flex-1">
+            {/* Game on top, small; the title stays "Buy {Game} {Unit}" for
+                crawlers with the game name visually hidden. */}
+            <p className="mb-0.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+              {data.gameName}
+            </p>
             <h1 className="truncate text-[20px] font-black leading-tight tracking-tight text-text-primary sm:text-[26px] lg:text-[30px]">
-              Buy {data.gameName} {data.unitLabel}
+              Buy <span className="sr-only">{data.gameName} </span>{data.unitLabel}
             </h1>
             {data.tagline && (
               <p className="mt-1 line-clamp-2 text-[13px] font-medium text-text-secondary sm:text-[14px]">
                 {data.tagline}
               </p>
             )}
-            {introLine && (
-              <p className="mt-1 text-[12px] text-text-tertiary sm:text-[12.5px]">
-                {introLine}
-              </p>
-            )}
+            {introLine && <p className="sr-only">{introLine}</p>}
           </div>
         </div>
       </header>
@@ -794,7 +795,7 @@ function OfferPanel({
 }) {
   if (!bestOffer) {
     return (
-      <Card className="relative overflow-hidden border-border-default bg-bg-overlay p-6">
+      <Card className="relative overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-6">
         <div className="text-[24px] font-black text-text-disabled">N/A</div>
         <p className="mt-3 text-[13px] text-text-tertiary">
           No sellers for this bundle in the selected region yet. Try another region
@@ -811,7 +812,7 @@ function OfferPanel({
     {/* V43 — SafeDrop emblem watermark peeks from the corner (matches
         the item + currency buy panels). `isolate` creates the stacking
         context so the -z-10 art paints above the card bg but below rows. */}
-    <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-border-default bg-bg-overlay p-5 shadow-elevated">
+    <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/icons/safedrop-emblem.avif"
@@ -911,7 +912,7 @@ function OfferPanel({
 
       {/* 7) Trust tiles — own card below the panel (item-page rail
           format; same width so alignment is automatic). */}
-      <Card className="relative mt-3 overflow-hidden border-border-default bg-bg-overlay p-4 shadow-elevated">
+      <Card className="relative mt-3 overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4">
         <TrustBand />
       </Card>
     </>
@@ -994,7 +995,7 @@ function SellerRow({
   onSelect: () => void
 }) {
   return (
-    <Card className="group relative overflow-hidden border-border-subtle bg-[#1D1E23] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
+    <Card className="group relative overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
       {/* Top sheen — bundle-tile light-from-above. */}
       <span
         aria-hidden

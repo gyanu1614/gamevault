@@ -208,9 +208,11 @@ export default function CurrencySkeleton() {
         <div className="flex flex-wrap items-end justify-between gap-3 px-1">
           <div className="flex min-w-0 items-center gap-3">
             <Block className="h-12 w-12 shrink-0 rounded-lg" />
+            {/* Eyebrow (game name) above the title; the intro line is
+                sr-only on the live page, so nothing below the title. */}
             <div className="min-w-0 space-y-1.5">
-              <Block className="h-[22px] w-48" />
-              <Block className="h-3.5 w-64 max-w-full" />
+              <Block className="h-3.5 w-20" />
+              <Block className="h-[22px] w-40" />
             </div>
           </div>
         </div>
