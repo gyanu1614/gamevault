@@ -49,7 +49,7 @@ const SelectTrigger = React.forwardRef<
       // States
       'transition-colors',
       'hover:border-border-strong',
-      'focus:outline-none focus:border-lime focus:ring-2 focus:ring-lime-tint-bg',
+      'focus:outline-none focus:border-focus-border focus:ring-2 focus:ring-focus-soft',
       'data-[state=open]:border-lime data-[state=open]:ring-2 data-[state=open]:ring-lime-tint-bg',
       // Rotate the chevron when the trigger is open (it lives inside SelectPrimitive.Icon below)
       '[&[data-state=open]_svg.gv-chevron]:rotate-180',

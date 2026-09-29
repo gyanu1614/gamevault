@@ -240,7 +240,7 @@ export default function GamesPageClient({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter games…"
-              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg"
+              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
             />
           </div>
           <AddGameDialog />
@@ -269,7 +269,7 @@ export default function GamesPageClient({
               {s.key !== 'all' && <Radar className="h-3.5 w-3.5" />}
               {s.label}
               {count !== null && (
-                <span className={cn('rounded-full px-1.5 text-[11px] font-semibold', active ? 'bg-lime/20' : 'bg-bg-base text-text-tertiary')}>
+                <span className={cn('rounded-full px-1.5 text-[11px] font-semibold', active ? 'bg-[rgba(86,184,127,0.20)]' : 'bg-bg-base text-text-tertiary')}>
                   {count}
                 </span>
               )}
@@ -313,7 +313,7 @@ export default function GamesPageClient({
                   className={cn(
                     'grid grid-cols-[60px_1.4fr_1.4fr_100px_110px_156px] items-center gap-3 border-b border-border-subtle px-5 py-4 text-sm transition-colors hover:bg-bg-base scroll-mt-24',
                     !game.is_active && !inReview && 'bg-red-500/[0.025]',
-                    game.review_status === 'pending' && 'bg-lime/[0.03]',
+                    game.review_status === 'pending' && 'bg-[rgba(86,184,127,0.03)]',
                     reviewOpen && 'border-b-0'
                   )}
                 >

@@ -127,7 +127,7 @@ export function AdminOrderActions({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Refund amount (USD)"
-              className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+              className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
             />
           )}
           <textarea
@@ -135,7 +135,7 @@ export function AdminOrderActions({
             onChange={(e) => setReason(e.target.value)}
             placeholder={mode === 'dispute' ? 'Reason (written to the audit trail, shown to both parties)' : 'Resolution notes (written to the audit trail)'}
             rows={3}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-lime-text"
+            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
           />
           <DialogFooter>
             <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>

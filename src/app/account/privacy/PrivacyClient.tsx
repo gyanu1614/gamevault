@@ -119,7 +119,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-lime-tint-border bg-lime/10">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-lime-tint-border bg-lime-tint-bg">
               <Download className="h-5 w-5 text-lime-text" />
             </div>
             <div>

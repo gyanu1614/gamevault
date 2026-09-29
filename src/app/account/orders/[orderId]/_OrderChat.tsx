@@ -52,6 +52,8 @@ interface OrderChatProps {
     avatar_url?: string
   }
   disputeResolution?: { favored_party: 'buyer' | 'seller' | 'neutral' } | null
+  /** Buyer view: the seller's id, for the live online dot in the header. */
+  presenceSellerId?: string | null
 }
 
 export function OrderChat({
@@ -61,6 +63,7 @@ export function OrderChat({
   order,
   otherUser,
   disputeResolution,
+  presenceSellerId = null,
 }: OrderChatProps) {
   return (
     // V21/P7.af — Fixed chat height; the message list scrolls inside so
@@ -69,7 +72,7 @@ export function OrderChat({
     // fit on screen — including when the soft keyboard shrinks the
     // viewport — and the internal MessageList scroll does the work.
     <OrderCard
-      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 lg:h-[580px]"
+      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100dvh_-_230px,640px)] lg:h-[580px]"
       padded={false}
     >
       <ChatInterface
@@ -79,6 +82,7 @@ export function OrderChat({
         otherUser={otherUser}
         order={order}
         disputeResolution={disputeResolution ?? null}
+        presenceSellerId={presenceSellerId}
         className="flex-1 min-h-0"
       />
     </OrderCard>

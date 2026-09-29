@@ -234,7 +234,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="Add notes about your decision..."
-                  className="w-full px-3 py-2 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:border-lime focus:outline-none"
+                  className="w-full px-3 py-2 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:border-focus-border focus:outline-none"
                   rows={3}
                   maxLength={500}
                   disabled={processingId === showReasonModal.id}

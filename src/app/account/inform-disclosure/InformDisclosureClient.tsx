@@ -50,7 +50,7 @@ function Field({
         placeholder={placeholder}
         required={required}
         className="w-full bg-bg-raised border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-white
-                   placeholder:text-text-disabled focus:outline-none focus:border-lime transition-colors"
+                   placeholder:text-text-disabled focus:outline-none focus:border-focus-border transition-colors"
       />
       {hint && <p className="text-xs text-text-tertiary mt-1">{hint}</p>}
     </div>
@@ -304,7 +304,7 @@ export default function InformDisclosureClient({
             onClick={() => setConsented(v => !v)}
             className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
               consented
-                ? 'bg-lime/10 border-lime-tint-border'
+                ? 'bg-lime-tint-bg border-lime-tint-border'
                 : 'bg-bg-overlay border-border-subtle hover:border-white/[0.1]'
             }`}
           >

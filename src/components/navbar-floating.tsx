@@ -25,8 +25,8 @@ import { isProtectedPath } from '@/lib/auth/protected-routes'
 import { beginLogout } from '@/lib/auth/logout-signal'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { getGameIcon } from '@/features/home/lib/game-icons'
+import { navCategoriesQuery } from '@/lib/nav/nav-categories-query'
 import { useSpotlightGames } from '@/features/home/hooks/useSpotlightGames'
-import { useScrollDirection } from '@/hooks/useScrollDirection'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search'
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
@@ -271,14 +271,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   }, [mobileMenuTab])
 
   // Homepage hero chips (and future surfaces) deep-open the menu at a
-  // category sub-screen via this event — app-like, no route hop.
+  // category sub-screen via this event — app-like, no route hop. From md up
+  // the category menus are the desktop dropdowns, so it opens that instead.
   useEffect(() => {
     const onOpenCategory = (e: Event) => {
       const tabId = (e as CustomEvent<string>).detail
-      if (NAV_TABS.some((t) => t.id === tabId)) {
-        setMobileMenuTab(tabId)
-        setMobileMenuOpen(true)
+      if (!NAV_TABS.some((t) => t.id === tabId)) return
+      if (window.matchMedia('(min-width: 768px)').matches) {
+        setActiveDropdown(tabId)
+        return
       }
+      setMobileMenuTab(tabId)
+      setMobileMenuOpen(true)
     }
     window.addEventListener('dm:open-category', onOpenCategory)
     return () => window.removeEventListener('dm:open-category', onOpenCategory)
@@ -348,31 +352,53 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     }
   }, [notificationsOpen, activityOpen, userMenuOpen])
 
-  // V18.b — Scroll-snap navbar. At rest the navbar floats as a pill
-  // centered in the page. Once the user scrolls past the reveal
-  // threshold the pill morphs into a solid full-width bar pinned at
-  // top-0. Hide-on-scroll: the whole bar slides up on scroll-down and
-  // back on scroll-up (good-mobile-site behaviour), via the shared
-  // useScrollDirection signal.
+  // The navbar is always the full-width bar, pinned at every width (the
+  // floating pill and hide-on-scroll are both retired). The only state is
+  // whether it paints a fill: everywhere except the homepage it is filled
+  // from the start (`overHero` is false).
   //
-  // `hideBelow: 1024` keeps the slide-away on the mobile bar only (below `lg`,
-  // where the pill collapses into the fixed 60px app-shell bar). On desktop the
-  // navbar is permanent — it still morphs to the full-width bar via `scrolled`,
-  // it just never leaves. The hide is a Framer inline transform, so this can't
-  // be expressed as a `max-lg:` utility; it has to be gated in JS.
-  // Hide-on-scroll is retired (owner call 2026-09-07): the navbar stays
-  // pinned at every width. Only the beta banner scrolls away — the bar
-  // rides up under it via --beta-banner-offset and sticks to the top.
-  // The navbar geometry is ALWAYS the full-width bar — the floating pill is
-  // retired. `scrolled` now drives one thing only: whether the bar paints a
-  // fill. Over the homepage hero it starts transparent so the art reads
-  // behind it, then fills once the page moves. Everywhere else it is filled
-  // from the start (`overHero` is false, so the transparent branch is skipped).
-  const { scrolled: scrolledNative } = useScrollDirection({ revealAt: 40 })
-  const scrolled = forceScrolled || scrolledNative
-  // The one case where the bar paints nothing: sitting over the homepage
-  // hero art, before the page has moved.
-  const transparentOverHero = overHero && !scrolled
+  // On the homepage the hero is a scroll film (two full-screen beats), so
+  // "the page moved" is the wrong trigger: the bar would fill over the
+  // hero's own art. It stays transparent until the first rendered
+  // `data-nav-fill-at` marker is about to slide under it — the statement's
+  // SafeDrop line, so the fill arrives before that text meets the bar
+  // (Popular Games carries a marker too, as the fallback when the statement
+  // isn't rendered, e.g. reduced motion). No marker → plain scroll threshold.
+  const [pastHero, setPastHero] = useState(false)
+  useEffect(() => {
+    if (!overHero) return
+    let frame = 0
+    const check = () => {
+      frame = 0
+      // First marker that is actually laid out (display:none has no boxes).
+      const marker = Array.from(document.querySelectorAll('[data-nav-fill-at]')).find(
+        (el) => el.getClientRects().length > 0,
+      )
+      if (!marker) {
+        setPastHero(window.scrollY > 40)
+        return
+      }
+      const barHeight =
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 60
+      // A little lead, so the fill is in place before the text reaches it.
+      setPastHero(marker.getBoundingClientRect().top <= barHeight + 24)
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(check)
+    }
+    check()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [overHero, pathname])
+
+  // The one case where the bar paints nothing: over the homepage hero,
+  // until Popular Games reaches it.
+  const transparentOverHero = overHero && !forceScrolled && !pastHero
 
   // V14u — Force-close every navbar dropdown on route change. Catches
   // cases where the user navigates via the browser back button, a
@@ -737,19 +763,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   }, [queryClient])
 
   // Fetch all active categories with their games for nav dropdowns
+  // Shared with the homepage hero search (same key, one cached fetch).
   const { data: navCatsData } = useQuery({
-    queryKey: ['nav-categories'],
-    queryFn: async () => {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('game_categories')
-        .select('slug, name, type, game_id, game:games!game_categories_game_id_fkey(name, slug, emoji, image_url, sort_order)')
-        .eq('is_enabled', true)
-        .order('sort_order')
-      return data || []
-    },
-    staleTime: 1000 * 60 * 5,
+    ...navCategoriesQuery,
     refetchOnMount: true,
   })
 
@@ -904,11 +920,17 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               'transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out',
               // App-shell mobile bar: fixed 60px, square, edge-to-edge.
               'max-lg:h-[60px] max-lg:py-0',
-              // Transparent over the homepage hero until the page moves, so
-              // the art reads behind the chrome. A scrim below keeps the
-              // logo and icons legible on bright art.
+              // Transparent over the homepage hero film until Popular Games
+              // reaches the bar, so the art reads behind the chrome. A scrim
+              // below keeps the logo and icons legible on bright art.
+              // max-sm:backdrop-blur-0 is invisible but load-bearing: any
+              // backdrop-filter makes this bar the containing block for its
+              // `fixed top-full` phone sheets (profile, notifications,
+              // activity), so they hang flush under the bar. Without it, at
+              // the top of the homepage `top-full` resolved against the
+              // viewport and the sheet opened below the bottom of the screen.
               transparentOverHero
-                ? 'border-b border-b-transparent bg-transparent shadow-none'
+                ? 'border-b border-b-transparent bg-transparent shadow-none max-sm:backdrop-blur-0'
                 : cn(
                     'border-b backdrop-blur-2xl backdrop-saturate-150',
                     // Pages with a sub-navbar drop the hairline so navbar +
@@ -1474,7 +1496,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   <Link
                                     href="/sell/new"
                                     onClick={() => setUserMenuOpen(false)}
-                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime/90 whitespace-nowrap"
+                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover whitespace-nowrap"
                                   >
                                     <PlusCircle className="h-4 w-4" />
                                     Sell
@@ -1868,25 +1890,26 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 // smooth in/out transition; URL stays at the current
                 // page so the user never loses their browsing context.
                 <div className="flex items-center gap-2">
-                  {/* App-shell — "Log in" is desktop-only; phones keep a
-                      single Sign up CTA next to the bell per the mobile
-                      bar spec (login reachable from the auth dialog). */}
+                  {/* Log In shows at every width (owner call 2026-09-28):
+                      returning buyers on phones shouldn't have to find it
+                      inside the Sign Up dialog. Tighter padding on phones
+                      so both fit beside the logo. */}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => authDialog.open('login')}
-                    className="hidden h-9 rounded-full text-gray-300 hover:bg-white/10 hover:text-white lg:inline-flex"
+                    className="inline-flex h-9 rounded-lg px-2.5 text-gray-300 hover:bg-white/10 hover:text-white sm:px-3"
                   >
-                    Log in
+                    Log In
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     onClick={() => authDialog.open('signup')}
-                    className="h-9 rounded-lg bg-white text-black hover:bg-white/90 font-medium"
+                    className="h-9 rounded-lg bg-white px-3 text-black hover:bg-white/90 font-medium"
                   >
-                    Sign up
+                    Sign Up
                   </Button>
                 </div>
               )}
@@ -2473,7 +2496,7 @@ function CategoryDropdown({
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
                       placeholder={`Search ${tab.label.toLowerCase()}…`}
-                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-[14px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-lime-tint-border focus:bg-white/[0.08]"
+                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-[14px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-focus-border focus:bg-white/[0.08]"
                     />
                   </div>
                   <div className="mb-2 flex items-center justify-between px-1">

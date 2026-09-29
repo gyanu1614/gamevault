@@ -259,7 +259,7 @@ export default function ReviewsPageClient({
                 placeholder="Search reviews..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+                className="w-full pl-12 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
               />
             </div>
 
@@ -496,7 +496,7 @@ export default function ReviewsPageClient({
 
                         {review.order_id && (
                           <Link
-                            href={`/orders/${review.order_id}`}
+                            href={`/admin/orders/${review.order_id}`}
                             className="px-3 py-1.5 border border-border-default bg-bg-overlay hover:bg-bg-overlay-2 text-text-secondary rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
                           >
                             <ExternalLink className="w-3 h-3" />
@@ -543,7 +543,7 @@ export default function ReviewsPageClient({
                 value={hideReason}
                 onChange={(e) => setHideReason(e.target.value)}
                 placeholder="Explain why this review is being hidden..."
-                className="w-full px-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none resize-none"
+                className="w-full px-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none resize-none"
                 rows={3}
               />
             </div>

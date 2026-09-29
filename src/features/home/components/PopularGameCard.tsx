@@ -81,7 +81,7 @@ export function PopularGameCard({ game }: Props) {
               alt=""
               aria-hidden
               fill
-              sizes="(min-width:1280px) 190px, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw"
+              sizes="(min-width:1280px) 190px, (min-width:1024px) 25vw, 33vw"
               // Subject-anchored: the figure is meant to crop at the frame,
               // weighted to the top so faces survive the crop.
               className="object-cover object-top"
@@ -101,7 +101,7 @@ export function PopularGameCard({ game }: Props) {
 
       {/* Name — tight to the frame so it binds to its own card rather than
           floating between rows. */}
-      <p className="mt-2.5 truncate text-center text-[14px] font-semibold tracking-[-0.01em] text-text-primary">
+      <p className="mt-2.5 truncate text-center text-[14px] font-semibold tracking-[-0.01em] text-text-primary max-sm:mt-1.5 max-sm:text-[12.5px] max-sm:leading-[18px]">
         {game.name}
       </p>
     </Link>
@@ -117,8 +117,11 @@ export function PopularGameCard({ game }: Props) {
           edge clips rather than wrapping, which would make this card taller
           than its neighbours. Further categories aren't shown; the card
           links to the game hub, which carries the full list. */}
+      {/* Hidden below sm: phones fit three cards per row (~110px each),
+          too narrow for chips. The card still links to the game hub, which
+          lists every category. */}
       {game.categories.length > 0 && (
-        <div className="-mx-1 mt-2.5 flex items-center justify-center gap-1 overflow-hidden">
+        <div className="-mx-1 mt-2.5 flex items-center justify-center gap-1 overflow-hidden max-sm:hidden">
           {game.categories.map((category, i) => (
             <Link
               key={category.href}

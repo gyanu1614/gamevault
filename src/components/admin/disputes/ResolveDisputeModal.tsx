@@ -228,7 +228,7 @@ export default function ResolveDisputeModal({
                         value={partialAmount}
                         onChange={(e) => setPartialAmount(e.target.value)}
                         placeholder="0.00"
-                        className="pl-6 h-8 text-sm rounded-lg bg-bg-base border-border-default text-text-primary focus:border-lime focus:outline-none"
+                        className="pl-6 h-8 text-sm rounded-lg bg-bg-base border-border-default text-text-primary focus:border-focus-border focus:outline-none"
                       />
                     </div>
                     {partialAmount && parseFloat(partialAmount) > 0 && (
@@ -274,7 +274,7 @@ export default function ResolveDisputeModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Explain your decision. Both parties will see this."
-              className="min-h-[80px] text-sm rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-lime focus:outline-none"
+              className="min-h-[80px] text-sm rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
               required
             />
           </div>

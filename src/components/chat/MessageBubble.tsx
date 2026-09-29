@@ -1,9 +1,35 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Check, CheckCheck, Shield } from 'lucide-react'
+import { Camera, Check, CheckCheck, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
+import { linkifySegments } from '@/lib/chat/linkify'
+import { DELIVERY_EVIDENCE_LABEL } from '@/lib/chat/system-notice'
+import ChatAttachment from './ChatAttachment'
+
+/** The label a file-only message stores (attachmentOnlyLabel). */
+function isAttachmentPlaceholder(content: string): boolean {
+  return content === 'Sent a photo' || content === 'Sent a PDF'
+}
+
+/** Plain text with http(s) URLs rendered as tappable links (new tab). */
+function renderLinks(text: string, keyPrefix: string) {
+  return linkifySegments(text).map((seg, i) =>
+    seg.type === 'link' ? (
+      <a
+        key={`${keyPrefix}-${i}`}
+        href={seg.href}
+        target="_blank"
+        rel="noopener noreferrer nofollow ugc"
+        className="break-all font-medium text-lime-text underline underline-offset-2 hover:opacity-90"
+      >
+        {seg.value}
+      </a>
+    ) : (
+      <span key={`${keyPrefix}-${i}`}>{seg.value}</span>
+    ),
+  )
+}
 
 // Simple markdown renderer for bold text
 function renderMarkdown(text: string) {
@@ -13,9 +39,9 @@ function renderMarkdown(text: string) {
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       const content = part.slice(2, -2)
-      return <strong key={index} className="font-semibold">{content}</strong>
+      return <strong key={index} className="font-semibold">{renderLinks(content, `b${index}`)}</strong>
     }
-    return <span key={index}>{part}</span>
+    return <span key={index}>{renderLinks(part, `t${index}`)}</span>
   })
 }
 
@@ -55,6 +81,7 @@ export default function MessageBubble({
   isSellerMessage = false,
   isAdminView = false,
 }: MessageBubbleProps) {
+  const hasFiles = !!message.attachments && message.attachments.length > 0
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -168,7 +195,7 @@ export default function MessageBubble({
             <img
               src={senderAvatar}
               alt={senderName || 'User'}
-              className="h-8 w-8 rounded-full ring-1 ring-white/10"
+              className="h-8 w-8 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
           ) : (
             <div className="w-8" />
@@ -192,26 +219,33 @@ export default function MessageBubble({
           className={cn(
             'px-3.5 py-2 break-words border',
             alignRight
-              ? 'rounded-[14px] rounded-tr-[5px] bg-lime/[0.13] border-lime/[0.22] text-text-primary'
+              ? 'rounded-[14px] rounded-tr-[5px] bg-[rgba(86,184,127,0.13)] border-[rgba(86,184,127,0.22)] text-text-primary'
               : 'rounded-[14px] rounded-tl-[5px] bg-bg-overlay border-border-subtle text-text-primary'
           )}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
-          {/* Image attachments */}
+          {/* An image/PDF-only message stores a placeholder ("Sent a photo")
+              for the inbox preview; inside the bubble the file speaks for
+              itself. The seller's proof photo gets a small label. */}
+          {message.content.startsWith(DELIVERY_EVIDENCE_LABEL) ? (
+            <p className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-text-secondary">
+              <Camera className="h-3.5 w-3.5" aria-hidden />
+              {message.content}
+            </p>
+          ) : hasFiles && isAttachmentPlaceholder(message.content) ? null : (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
+          )}
+          {/* Attachments — chat files (private, signed on render) and
+              any legacy image URLs. */}
           {message.attachments && message.attachments.length > 0 && (
-            <div className={cn('mt-2 grid gap-1.5', message.attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-              {message.attachments.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                  <div className="relative rounded-lg overflow-hidden aspect-video bg-black/20">
-                    <Image
-                      src={url}
-                      alt={`Delivery proof ${i + 1}`}
-                      fill
-                      className="object-cover hover:scale-105 transition-transform duration-200"
-                      unoptimized
-                    />
-                  </div>
-                </a>
+            <div
+              className={cn(
+                'grid gap-1.5',
+                message.attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2',
+                !(hasFiles && isAttachmentPlaceholder(message.content)) && 'mt-2',
+              )}
+            >
+              {message.attachments.map((value, i) => (
+                <ChatAttachment key={`${value}-${i}`} value={value} />
               ))}
             </div>
           )}
@@ -241,7 +275,7 @@ export default function MessageBubble({
             <img
               src={senderAvatar}
               alt={senderName || 'You'}
-              className="h-8 w-8 rounded-full ring-1 ring-white/10"
+              className="h-8 w-8 rounded-full bg-bg-overlay object-cover ring-1 ring-white/10"
             />
           </div>
         ) : (

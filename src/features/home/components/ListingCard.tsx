@@ -33,7 +33,7 @@ function compactAmount(n: number) {
  * flat two decimals renders them as "$0.00". Sub-cent prices get the extra
  * precision they need; everything else stays at two places.
  */
-function formatPrice(price: number) {
+export function formatPrice(price: number) {
   if (price >= 0.01) return `$${price.toFixed(2)}`
   return `$${price.toFixed(4).replace(/0+$/, '')}`
 }
@@ -66,7 +66,7 @@ export function ListingCard({ listing }: { listing: LatestListing }) {
         // `isolation` keeps the glow's stacking inside the card rather than
         // letting it fall behind the section's grid backdrop.
         style={{
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-card)',
           isolation: 'isolate',
           // An opaque fill is load-bearing, not decoration: the section has a
           // grid backdrop, and a transparent card lets it show through the

@@ -9,11 +9,20 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { StatusBadge, TABLE } from '../../components/kit'
 
 // Model C display labels for the escrow_status DB values (identifiers stay).
+// The badge tone is keyed on the DB value, the text on the label.
 const ESCROW_DISPLAY: Record<string, string> = {
   pending: 'Pending',
   held: 'Payout Pending',
+  frozen: 'Frozen',
   released: 'Seller Paid Out',
   refunded: 'Refunded',
+}
+const ESCROW_TONE: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+  pending: 'neutral',
+  held: 'warning',
+  frozen: 'error',
+  released: 'success',
+  refunded: 'error',
 }
 
 interface OrdersTableProps {
@@ -137,7 +146,10 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
                     <StatusBadge status={order.status} />
                   </td>
                   <td className={cn(TABLE.td, 'text-center')}>
-                    <StatusBadge status={ESCROW_DISPLAY[order.escrow_status ?? ''] ?? order.escrow_status} />
+                    <StatusBadge
+                      status={ESCROW_DISPLAY[order.escrow_status ?? ''] ?? order.escrow_status}
+                      tone={ESCROW_TONE[order.escrow_status ?? '']}
+                    />
                   </td>
                   <td className={cn(TABLE.td, 'text-right')}>
                     <div className="text-sm text-text-secondary">

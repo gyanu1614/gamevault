@@ -17,14 +17,20 @@
  * and under prefers-reduced-motion — see globals.css.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 interface GridSpotlightProps {
   /** How far the layer extends above and below its parent section, in px. */
   bleed?: number
+  /**
+   * Element whose pointer movement drives the spotlight. Defaults to the
+   * layer's parent. Pass one when the layer is wrapped (e.g. to lift it
+   * above background art) but should still track the whole stage.
+   */
+  hostRef?: RefObject<HTMLElement>
 }
 
-export function GridSpotlight({ bleed = 160 }: GridSpotlightProps) {
+export function GridSpotlight({ bleed = 160, hostRef }: GridSpotlightProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,7 +57,7 @@ export function GridSpotlight({ bleed = 160 }: GridSpotlightProps) {
 
     // Listen on the parent section, not the layer: the layer is
     // pointer-events:none, so it never sees the pointer itself.
-    const host = el.parentElement
+    const host = hostRef?.current ?? el.parentElement
     if (!host) return
     host.addEventListener('mousemove', onMove, { passive: true })
     host.addEventListener('mouseenter', onEnter)
@@ -62,7 +68,7 @@ export function GridSpotlight({ bleed = 160 }: GridSpotlightProps) {
       host.removeEventListener('mouseenter', onEnter)
       host.removeEventListener('mouseleave', onLeave)
     }
-  }, [])
+  }, [hostRef])
 
   return (
     <div

@@ -13,6 +13,9 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { transition } from '@/lib/escrow/transition'
+import { awardCashback } from '@/lib/loyalty/award'
+import { recordReferralCommission } from '@/lib/referral/commission'
+import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 export interface AutoReleaseResult {
   orderId: string
@@ -40,7 +43,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     const { data: full } = await service
       .from('orders')
       .select(
-        'id, status, escrow_status, order_number, buyer_id, seller_id, total_amount, seller_payout, listing:listings!orders_listing_id_fkey(title)'
+        'id, status, escrow_status, order_number, buyer_id, seller_id, total_amount, seller_payout, is_guest_order, listing:listings!orders_listing_id_fkey(title)'
       )
       .eq('id', orderId)
       .single() as any
@@ -82,7 +85,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     // the release as failed.
     try {
       const orderRef = full.order_number || full.id.slice(0, 8).toUpperCase()
-      const listingTitle = full.listing?.title || 'your item'
+      const listingTitle = await orderItemTitleFor(full.id, full.listing?.title || 'your item')
       const { data: parties } = await service
         .from('profiles')
         .select('id, email, username, full_name')
@@ -120,7 +123,7 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
           user_id: full.seller_id,
           type: 'order_completed',
           title: 'Order Auto-Completed',
-          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} is now in your seller balance. Withdraw any time from your wallet.`,
+          message: `The protection window on order #${orderRef} closed — your $${(full.seller_payout ?? 0).toFixed(2)} is now in your seller balance. See your wallet to withdraw.`,
           link: `/account/orders/${full.id}`,
           is_read: false,
         }),
@@ -128,6 +131,18 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
     } catch (commsError) {
       console.error(`[AutoRelease] Comms failed for order ${orderId} (non-fatal):`, commsError)
     }
+
+    // Same rewards as a buyer confirm (orders.ts afterBuyerRelease): a buyer
+    // who never pressed Confirm still earned their cashback, and their
+    // referrer the commission. Both are idempotent per order.
+    if (!full.is_guest_order) {
+      await awardCashback({ orderId }).catch((err) =>
+        console.error(`[AutoRelease] cashback failed for ${orderId} (retryable):`, err),
+      )
+    }
+    await recordReferralCommission(orderId).catch((err) =>
+      console.error(`[AutoRelease] referral commission failed for ${orderId} (retryable):`, err),
+    )
 
     return {
       orderId,

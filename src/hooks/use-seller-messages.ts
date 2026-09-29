@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 
 export function useSellerMessages() {
   const queryClient = useQueryClient()
@@ -55,7 +56,13 @@ export function useSellerMessages() {
             (c) => c.id === newMessage.conversation_id
           )
 
-          if (conversation) {
+          if (isSystemMessage(newMessage.sender_id)) {
+            // A DropMarket notice (dispute card): plain words, not JSON.
+            toast.message('DropMarket update', {
+              description: systemNoticePreview(newMessage.content),
+              duration: 5000,
+            })
+          } else if (conversation) {
             const sender =
               conversation.buyer_id === newMessage.sender_id
                 ? conversation.buyer

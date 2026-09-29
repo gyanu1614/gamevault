@@ -22,7 +22,7 @@ import {
 import { AdminPanel, SectionLabel, TABLE } from '../components/kit'
 
 const INPUT =
-  'h-9 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-[13px] tabular-nums text-text-primary outline-none transition-colors focus:border-lime'
+  'h-9 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-[13px] tabular-nums text-text-primary outline-none transition-colors focus:border-focus-border'
 const BTN = 'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-lime px-3 text-[13px] font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50'
 const TOGGLE = 'h-4 w-4 accent-lime'
 

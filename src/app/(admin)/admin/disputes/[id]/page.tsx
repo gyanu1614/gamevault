@@ -69,8 +69,15 @@ export default function DisputeDetailPage() {
       // Get order details
       const { data: orderData, error: orderError } = (await supabase
         .from('orders')
+        // Shared order columns only: '*' on orders is refused to a session
+        // client (orders column grant).
         .select(`
-          *,
+          id,
+          order_number,
+          total_amount,
+          status,
+          created_at,
+          chat_active_until,
           listing:listing_id (
             title,
             images,

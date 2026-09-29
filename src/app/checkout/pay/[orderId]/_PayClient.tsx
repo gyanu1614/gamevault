@@ -1068,7 +1068,7 @@ export default function PayClient({
                   <Check className="h-3 w-3" style={{ color: L.forest }} strokeWidth={3} />
                 </span>
                 <p className="text-[13px] font-bold" style={{ color: L.forest }}>
-                  SafeDrop Buyer Protection
+                  SafeDrop Protection
                 </p>
               </div>
               <p className="mt-2 text-[12px] leading-relaxed" style={{ color: L.muted }}>

@@ -194,7 +194,7 @@ const BLANK_HERO: Offer = {
 
 const DEFAULT_STEPS = [
   { n: 1, title: 'Pick an offer',          body: 'Compare verified sellers by price, rating, and delivery speed.' },
-  { n: 2, title: 'Pay at checkout',        body: 'Every order is covered by SafeDrop Buyer Protection.' },
+  { n: 2, title: 'Pay at checkout',        body: 'Every order is covered by SafeDrop Protection.' },
   { n: 3, title: 'Receive your currency',  body: "The seller delivers via the game's transfer method — most orders complete in minutes. Confirm and the order is complete. Not delivered or not as described? Full refund." },
 ]
 

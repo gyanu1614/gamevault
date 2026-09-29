@@ -403,7 +403,7 @@ export default function ListingDetailClient({
                 aria-label={`Images for ${listing.title}`}
                 tabIndex={0}
                 onKeyDown={onGalleryKey}
-                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-lime-tint-bg"
+                className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:ring-focus-soft"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {heroImg ? (
@@ -470,7 +470,7 @@ export default function ListingDetailClient({
                       className={cn(
                         'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all sm:h-20 sm:w-20',
                         i === activeImg
-                          ? 'border-lime ring-2 ring-lime/30'
+                          ? 'border-lime ring-2 ring-lime-tint-border'
                           : 'border-border-subtle hover:border-border-default',
                       )}
                     >
@@ -488,7 +488,7 @@ export default function ListingDetailClient({
             <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#2A2B32_0%,#1B1C21_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] rounded-lg">
               <CardContent className="p-5">
                 <div className="mb-3.5 flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime/10 text-lime-text ring-1 ring-lime/20">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text ring-1 ring-lime-tint-border">
                     <DescriptionIcon className="h-[18px] w-[18px]" />
                   </span>
                   <h2 className="text-[17px] font-bold leading-none text-text-primary">
@@ -1285,7 +1285,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
     () => [
       {
         q: `Is it safe to buy ${gameName} ${cat} on DropMarket?`,
-        a: `Yes — every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Buyer Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund — no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
+        a: `Yes. Every ${gameName} ${cat} purchase on DropMarket is covered by SafeDrop Protection. You're paying for an outcome: get the ${gameName} ${cat} you ordered, or your money back. Confirm and the order is complete. If a ${gameName} seller fails to deliver or the ${cat} aren't as described, you get a full refund, no questions asked. Every ${gameName} seller on DropMarket is verified before they can list.`,
       },
       {
         q: `How fast is ${gameName} ${cat} delivery?`,
@@ -1293,7 +1293,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `What if I don't receive my ${gameName} ${cat}?`,
-        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Buyer Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
+        a: `If a seller misses their stated ${gameName} ${cat} delivery window, you can open a dispute directly from your order page. Every order is covered by SafeDrop Protection, so an undelivered ${gameName} ${cat} order means a full refund for you. Our support team reviews ${gameName} ${cat} disputes and refunds every order that isn't delivered as described.`,
       },
       {
         q: `Do I need to share my password to buy ${gameName} ${cat}?`,
@@ -1301,7 +1301,7 @@ function FAQSection({ gameName, categoryName }: { gameName: string; categoryName
       },
       {
         q: `Why buy ${gameName} ${cat} from DropMarket instead of in-game?`,
-        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Buyer Protection — get what you ordered, or your money back — so you get the cheap price AND the safety net.`,
+        a: `${gameName} ${cat} on the DropMarket marketplace are usually significantly cheaper than the in-game store. Independent sellers compete on price, speed, and reputation, which keeps ${gameName} ${cat} prices buyer-friendly. Plus every ${gameName} ${cat} order is covered by SafeDrop Protection (get what you ordered, or your money back), so you get the cheap price AND the safety net.`,
       },
       {
         q: `What payment methods are accepted for ${gameName} ${cat}?`,

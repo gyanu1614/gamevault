@@ -29,7 +29,7 @@ export function GameCard({ slug, name, coverSrc, href, categoryLinks = [] }: Gam
   return (
     <SmartLink
       href={href ?? `/${slug}/buy-currency`}
-      className="group flex min-w-0 flex-col cursor-pointer transition-all duration-default ease-gv hover:-translate-y-1 focus-visible:shadow-focus-ring"
+      className="group flex min-w-0 flex-col cursor-pointer transition-all duration-default ease-gv hover:-translate-y-1 focus-visible:shadow-focus"
     >
       {/* Cover art — 3:4 portrait, rounded card */}
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl border border-border-subtle bg-bg-raised shadow-elevated transition-colors group-hover:border-border-strong">

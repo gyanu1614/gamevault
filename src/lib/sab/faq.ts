@@ -57,7 +57,7 @@ export function buildBrainrotFaq(input: FaqInput): { q: string; a: string }[] {
   // 2 — Buy cheapest / where
   faq.push({
     q: `Where can I buy ${name} for the cheapest price?`,
-    a: `The best place to buy ${name} safely is DropMarket, where every purchase is covered by buyer protection. ${
+    a: `The best place to buy ${name} safely is DropMarket, where every purchase is covered by SafeDrop Protection. ${
       price
         ? `The current cash value is around ${price}${range ? ` (typical range ${range})` : ''}.`
         : `Live listings show the current cheapest price.`

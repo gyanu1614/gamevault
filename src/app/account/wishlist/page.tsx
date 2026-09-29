@@ -169,7 +169,7 @@ export default function WishlistPage() {
             placeholder="Search wishlist..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle bg-bg-raised py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-text-tertiary focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all"
+            className="w-full rounded-lg border border-border-subtle bg-bg-raised py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all"
           />
           {searchQuery && (
             <button
@@ -187,7 +187,7 @@ export default function WishlistPage() {
             <select
               value={filterGame}
               onChange={(e) => setFilterGame(e.target.value)}
-              className="min-w-0 flex-1 sm:flex-none rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-sm text-white focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all"
+              className="min-w-0 flex-1 sm:flex-none rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-sm text-white focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all"
             >
               <option value="">All Games</option>
               {games.map(game => (
@@ -269,7 +269,7 @@ export default function WishlistPage() {
                 </button>
 
                 {/* Image Placeholder */}
-                <div className="aspect-video bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
+                <div className="aspect-video bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.05)] flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}
@@ -350,7 +350,7 @@ export default function WishlistPage() {
                 onClick={() => router.push(`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug}`)}
               >
                 {/* Image */}
-                <div className="h-20 w-24 sm:h-24 sm:w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-lime/10 to-lime/5 flex items-center justify-center overflow-hidden">
+                <div className="h-20 w-24 sm:h-24 sm:w-32 flex-shrink-0 rounded-lg bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.05)] flex items-center justify-center overflow-hidden">
                   {listing.images && listing.images.length > 0 ? (
                     <img
                       src={listing.images[0]}

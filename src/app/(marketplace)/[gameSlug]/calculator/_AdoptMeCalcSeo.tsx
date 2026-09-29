@@ -213,7 +213,7 @@ export function AdoptMeCalcSeo({
             calculator totals both sides and returns a Win, Fair, or Loss verdict — shown
             separately for trade value and for cash, since the two don&apos;t always agree.
             When you&apos;re ready, click through to buy any pet from verified DropMarket
-            sellers, with buyer protection on every order.
+            sellers, with SafeDrop Protection on every order.
           </p>
         </div>
       </section>

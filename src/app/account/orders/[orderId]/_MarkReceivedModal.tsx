@@ -1,34 +1,16 @@
 'use client'
 
 /**
- * MarkReceivedModal — V21/P5.f
- *
- * Buyer's "Confirm Delivery" flow. Centered shadcn Dialog. Layout:
- *   1. Amber warning banner — "Only confirm if you received your
- *      order in full."
- *   2. Centered SafeDrop amount block — title + amount stacked.
- *   3. Mandatory review block — thumbs up/down + quick chips that
- *      pre-fill the comment + a textarea. Must be filled before
- *      Confirm activates.
- *   4. Footer — Cancel + Confirm. Confirm uses the muted lime-tint
- *      surface (not full lime) so it doesn't punch you in the eyes.
- *
- * On submit: writes the review (createReview) then calls
- * confirmOrderReceipt. The order page realtime subscription picks
- * up the status flip and re-renders.
+ * MarkReceivedModal: the buyer's Confirm Delivery (or Mark As Received,
+ * which also closes their dispute) and the standalone Leave A Review form,
+ * in the shared OrderModal shell. Confirm: one warning line + the amount
+ * covered. Review: Recommend / Don't Recommend, quick chips, a note.
  */
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, Shield, Loader2, ThumbsUp, ThumbsDown, CheckCircle2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { AlertTriangle, Shield, Loader2, ThumbsUp, ThumbsDown, CheckCircle2, PackageCheck, MessageSquareHeart } from 'lucide-react'
+import { OrderModal, modalButton, modalField } from './_OrderModal'
 import { confirmOrderReceipt } from '@/lib/actions/orders'
 import { createReview } from '@/lib/api/reviews'
 import { toast } from 'sonner'
@@ -43,6 +25,9 @@ interface MarkReceivedModalProps {
   /** 'confirm' = full Confirm Receipt + Review flow.
    *  'review'  = standalone Review form for an already-completed order. */
   mode?: 'confirm' | 'review'
+  /** The order is disputed: confirming also closes the buyer's dispute
+   *  (same action; only the copy changes). */
+  closesDispute?: boolean
 }
 
 const POSITIVE_CHIPS = [
@@ -70,6 +55,7 @@ export function MarkReceivedModal({
   amount,
   onConfirmed,
   mode = 'confirm',
+  closesDispute = false,
 }: MarkReceivedModalProps) {
   const [rating, setRating] = useState<'positive' | 'negative' | null>(null)
   const [comment, setComment] = useState('')
@@ -91,8 +77,8 @@ export function MarkReceivedModal({
         : [...picked, chip]
       // Sync comment with selected chips (only append; user can edit).
       const chipText = next.join(' · ')
-      const userTail = comment.replace(/^([A-Za-z ·]+)?(\s—\s)?/, '')
-      setComment(chipText ? `${chipText}${userTail ? ' — ' + userTail : ''}` : userTail)
+      const userTail = comment.replace(/^([A-Za-z ·]+)?(\s-\s)?/, '')
+      setComment(chipText ? `${chipText}${userTail ? ' - ' + userTail : ''}` : userTail)
       return next
     })
   }
@@ -141,7 +127,7 @@ export function MarkReceivedModal({
         return
       }
 
-      toast.success('Delivery confirmed — your order is complete')
+      toast.success('Delivery confirmed. Your order is complete.')
       onConfirmed?.()
       setTimeout(() => {
         onOpenChange(false)
@@ -155,164 +141,139 @@ export function MarkReceivedModal({
   }
 
   const chips = rating === 'negative' ? NEGATIVE_CHIPS : POSITIVE_CHIPS
+  const title =
+    mode === 'review' ? 'Leave A Review' : closesDispute ? 'Mark As Received' : 'Confirm Delivery'
 
   return (
-    <Dialog
+    <OrderModal
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o)
         if (!o) reset()
       }}
-    >
-      <DialogContent className="max-w-[640px] gap-5 border-border-default bg-bg-raised p-7 sm:p-8">
-        <DialogHeader className="gap-2">
-          <DialogTitle className="text-[26px] font-bold tracking-tight">
-            {mode === 'review' ? 'Leave A Review' : 'Confirm Delivery'}
-          </DialogTitle>
-          <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
-            {mode === 'review'
-              ? 'Share your experience to help other buyers.'
-              : 'Confirm and the order is complete.'}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Warning + amount rows shown only when actually confirming. */}
-        {mode === 'confirm' && (
-          <>
-            <div className="mt-1 px-1 text-center">
-              <div className="mb-2.5 inline-flex items-center justify-center gap-2">
-                <AlertTriangle className="h-[20px] w-[20px] text-amber" />
-                <span className="text-[14px] font-bold uppercase tracking-[0.14em] text-amber">
-                  Important
-                </span>
-              </div>
-              <p className="text-[15.5px] leading-[1.55] text-text-primary">
-                <span className="font-bold text-amber">Only confirm delivery</span> if you received your order in full.
-              </p>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between px-1">
-              <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-secondary">
-                <Shield className="h-[18px] w-[18px] text-lime-text" />
-                Amount Covered
-              </span>
-              <span className="text-[22px] font-extrabold tabular-nums text-lime-text">
-                {fmtUsd(amount)}
-              </span>
-            </div>
-          </>
-        )}
-
-        {/* Review block — only in review-only mode. The confirm flow
-            no longer asks for a review; that's a separate step via the
-            completed-state "Leave Review" CTA on the strip. */}
-        {mode === 'review' && (
-          <div className="mt-2">
-            <div className="mb-2.5 text-[12.5px] font-bold uppercase tracking-[0.14em] text-text-secondary">
-              Leave A Review For Seller
-            </div>
-            <div className="flex items-center justify-center gap-2.5">
-              <RatingButton
-                active={rating === 'positive'}
-                tone="positive"
-                onClick={() => setRating('positive')}
-                label="Recommend"
-              />
-              <RatingButton
-                active={rating === 'negative'}
-                tone="negative"
-                onClick={() => setRating('negative')}
-                label="Don't Recommend"
-              />
-            </div>
-
-            <AnimatePresence initial={false}>
-              {rating && (
-                <motion.div
-                  key="review-expand"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-3">
-                    <div className="flex flex-wrap justify-center gap-1.5">
-                      {chips.map((chip) => {
-                        const picked = pickedChips.includes(chip)
-                        return (
-                          <button
-                            key={chip}
-                            type="button"
-                            onClick={() => toggleChip(chip)}
-                            className={cn(
-                              'rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-all',
-                              picked
-                                ? rating === 'positive'
-                                  ? 'border-green-400/40 bg-green-400/[0.10] text-green-400'
-                                  : 'border-red-400/40 bg-red-400/[0.10] text-red-400'
-                                : 'border-border-default bg-bg-overlay text-text-secondary hover:border-white/[0.18] hover:text-text-primary',
-                            )}
-                          >
-                            {chip}
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    <textarea
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      rows={3}
-                      placeholder="Share a quick note about your experience…"
-                      className="mt-3 w-full resize-none rounded-lg border border-border-default bg-bg-overlay px-3.5 py-2.5 text-[14px] leading-[1.5] text-text-primary placeholder:text-text-tertiary focus:border-lime/40 focus:outline-none focus:ring-2 focus:ring-lime/20"
-                    />
-                    <div className="mt-1.5 text-[12px] text-text-tertiary">
-                      {comment.trim().length < 10
-                        ? `${10 - comment.trim().length} more character${10 - comment.trim().length === 1 ? '' : 's'} required`
-                        : 'Looks good.'}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        <div className="mt-4 flex items-center justify-end gap-3">
-          <Button
+      icon={mode === 'review' ? MessageSquareHeart : PackageCheck}
+      title={title}
+      description={
+        mode === 'review'
+          ? 'Share your experience to help other buyers.'
+          : closesDispute
+            ? 'Confirm you received your order. This closes your dispute and completes the order.'
+            : 'Confirm you received your order and it is complete.'
+      }
+      footer={
+        <>
+          <button
             type="button"
-            variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
-            className="h-12 px-5 text-[15px] font-semibold"
+            className={modalButton('ghost')}
           >
             Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirm}
-            disabled={!canSubmit}
-            className={cn(
-              'h-12 bg-lime px-6 text-[15px] font-bold text-text-inverse hover:bg-lime-hover',
-              'shadow-[0_6px_18px_rgba(198,255,61,0.22)] disabled:opacity-50',
-            )}
-          >
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={!canSubmit} className={modalButton('primary')}>
             {submitting ? (
               <>
-                <Loader2 className="mr-2 h-[18px] w-[18px] animate-spin" />
-                {mode === 'review' ? 'Submitting…' : 'Confirming…'}
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {mode === 'review' ? 'Submitting' : 'Confirming'}
               </>
             ) : (
               <>
-                <CheckCircle2 className="mr-2 h-[18px] w-[18px]" />
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
                 {mode === 'review' ? 'Submit Review' : 'Confirm'}
               </>
             )}
-          </Button>
+          </button>
+        </>
+      }
+    >
+      {/* Confirming: one warning line + the amount, nothing else. */}
+      {mode === 'confirm' && (
+        <div className="mt-3.5 space-y-2.5">
+          <div className="flex items-start gap-2 rounded-[9px] border border-[rgba(255,178,62,0.25)] bg-warning-bg px-3 py-2.5 text-[13px] leading-[1.45] text-text-primary">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" aria-hidden />
+            <span>
+              <span className="font-bold text-warning">Only confirm</span> if you received your order in full.
+            </span>
+          </div>
+          <div className="flex items-center justify-between rounded-[9px] border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+            <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-text-secondary">
+              <Shield className="h-4 w-4 text-lime-text" aria-hidden />
+              Amount Covered
+            </span>
+            <span className="text-[16px] font-extrabold tabular-nums text-text-primary">{fmtUsd(amount)}</span>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {mode === 'review' && (
+        <div className="mt-3.5">
+          <div className="flex items-center gap-2">
+            <RatingButton
+              active={rating === 'positive'}
+              tone="positive"
+              onClick={() => setRating('positive')}
+              label="Recommend"
+            />
+            <RatingButton
+              active={rating === 'negative'}
+              tone="negative"
+              onClick={() => setRating('negative')}
+              label="Don't Recommend"
+            />
+          </div>
+
+          <AnimatePresence initial={false}>
+            {rating && (
+              <motion.div
+                key="review-expand"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {chips.map((chip) => {
+                      const picked = pickedChips.includes(chip)
+                      return (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => toggleChip(chip)}
+                          className={cn(
+                            'rounded-[8px] border px-2.5 py-1 text-[12.5px] font-semibold transition-colors',
+                            picked
+                              ? rating === 'positive'
+                                ? 'border-green-400/40 bg-green-400/[0.10] text-green-400'
+                                : 'border-red-400/40 bg-red-400/[0.10] text-red-400'
+                              : 'border-white/10 bg-white/[0.02] text-text-secondary hover:border-white/20 hover:text-text-primary',
+                          )}
+                        >
+                          {chip}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    rows={3}
+                    placeholder="Share a quick note about your experience"
+                    className={cn(modalField, 'mt-2.5 resize-none')}
+                  />
+                  <div className="mt-1 text-[12px] text-text-tertiary">
+                    {comment.trim().length < 10
+                      ? `${10 - comment.trim().length} more character${10 - comment.trim().length === 1 ? '' : 's'} needed`
+                      : 'Looks good.'}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+    </OrderModal>
   )
 }
 
@@ -333,16 +294,16 @@ function RatingButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'group inline-flex flex-1 items-center justify-center gap-2.5 rounded-lg border-2 px-4 py-3 transition-all',
+        'group inline-flex flex-1 items-center justify-center gap-2 rounded-[9px] border px-3 py-2.5 transition-colors',
         active
           ? tone === 'positive'
             ? 'border-green-400/40 bg-green-400/[0.10] text-green-400'
             : 'border-red-400/40 bg-red-400/[0.10] text-red-400'
-          : 'border-border-default bg-bg-overlay text-text-secondary hover:border-white/[0.18] hover:text-text-primary',
+          : 'border-white/10 bg-white/[0.02] text-text-secondary hover:border-white/20 hover:text-text-primary',
       )}
     >
-      <Icon className={cn('h-[18px] w-[18px]', active && tone === 'positive' && 'fill-green-400')} />
-      <span className="text-[14px] font-bold">{label}</span>
+      <Icon className={cn('h-4 w-4', active && tone === 'positive' && 'fill-green-400')} aria-hidden />
+      <span className="text-[13px] font-bold">{label}</span>
     </button>
   )
 }

@@ -79,7 +79,7 @@ export function FeeNoticeClient() {
               <label className="block text-[12.5px] font-medium text-text-primary">Type SEND to email {preview.recipients?.length ?? 0} seller{(preview.recipients?.length ?? 0) === 1 ? '' : 's'}</label>
               <div className="mt-2 flex gap-2">
                 <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="SEND"
-                  className="w-32 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 font-mono text-[13px] text-text-primary focus:outline-none focus:ring-1 focus:ring-lime-text" />
+                  className="w-32 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 font-mono text-[13px] text-text-primary focus:outline-none focus:ring-1 focus:ring-focus-ring" />
                 <Button size="sm" disabled={busy || confirm !== 'SEND' || (preview.recipients?.length ?? 0) === 0} onClick={send}>
                   {busy ? 'Sending…' : 'Send Notice'}
                 </Button>

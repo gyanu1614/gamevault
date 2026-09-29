@@ -24,6 +24,7 @@ import { listingUrl } from '@/lib/listings/url'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
+import { useSellerOnline } from '@/hooks/use-seller-presence'
 
 interface SellerStorefrontProps {
   seller: {
@@ -80,7 +81,9 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
   const filteredListings =
     selectedGame === 'all' ? seller.listings : listingsByGame[selectedGame] || []
 
-  const isOnline = false
+  // Live presence, read in the browser (the storefront HTML is cached):
+  // false until the first read, then polled every 60 s.
+  const isOnline = useSellerOnline(seller.profile.id) === true
   const sellerTier = (seller.profile.seller_tier || DEFAULT_TIER) as SellerTier
   const tier = tierByKey(sellerTier)
 
@@ -250,7 +253,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
                       title="Returns & refunds"
-                      body="Every order is covered by SafeDrop Buyer Protection. Not delivered or not as described within your protection window? Full refund."
+                      body="Every order is covered by SafeDrop Protection. Not delivered or not as described within your protection window? Full refund."
                     />
                     <PolicyBlock
                       title="Delivery"
@@ -302,7 +305,7 @@ function ShopListingCard({ listing }: { listing: any }) {
           </div>
         )}
         {/* Game chip */}
-        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg/80 px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
+        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-[rgba(86,184,127,0.10)] px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
           {game}
         </div>
         {hasPriceDrop && (

@@ -492,7 +492,7 @@ export default function ItemsPageClient({
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded border border-border-default bg-bg-raised px-6 font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+                  className="inline-flex items-center gap-2 rounded border border-border-default bg-bg-raised px-6 font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
                   style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
                 >
                   Load more items
@@ -529,7 +529,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
       <button
         type="button"
         onClick={onClear}
-        className="mt-5 inline-flex items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-4 font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+        className="mt-5 inline-flex items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-4 font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
         style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
       >
         Clear filters

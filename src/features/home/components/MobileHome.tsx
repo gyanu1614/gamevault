@@ -500,7 +500,7 @@ export function MobileHero() {
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
         </span>
         <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-white/75">
-          SafeDrop Buyer Protection on Every Order
+          SafeDrop Protection on Every Order
         </span>
       </motion.div>
 
@@ -519,7 +519,7 @@ export function MobileHero() {
         </span>
       </motion.h1>
       <p className="mx-auto mt-3 max-w-[30ch] text-[15px] font-medium leading-snug text-white/65 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)]">
-        Buy accounts, currency and items — every order covered by SafeDrop Buyer
+        Buy accounts, currency and items. Every order covered by SafeDrop
         Protection.
       </p>
 

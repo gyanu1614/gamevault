@@ -14,14 +14,11 @@
  */
 
 import { useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { Loader2, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { OrderModal, modalButton, modalField } from './_OrderModal'
 import { openDispute } from '@/lib/actions/orders'
 import { messagesApi } from '@/lib/api/seller-compatible'
 
@@ -76,7 +73,7 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
           console.warn('[DisputeModal] chat notify failed', err)
         }
       }
-      toast.success('Dispute opened. Support reviews within 24 hours.')
+      toast.success('Dispute opened. Support reviews within 24 to 48 hours.')
       router.refresh()
       setTimeout(() => {
         onOpenChange(false)
@@ -90,109 +87,86 @@ export function DisputeModal({ open, onOpenChange, orderId, conversationId }: Di
   }
 
   return (
-    <Dialog
+    <OrderModal
       open={open}
       onOpenChange={(o) => {
         if (submitting) return
         onOpenChange(o)
         if (!o) reset()
       }}
-    >
-      {/* Mirror MarkReceivedModal exactly — same DialogContent class
-          string, same DialogHeader gap, same title scale, same body
-          rhythm. The only thing that differs is body content + the
-          tone color (red instead of lime). */}
-      <DialogContent className="max-w-[640px] gap-5 border-border-default bg-bg-raised p-7 sm:p-8">
-        <DialogHeader className="gap-2">
-          <DialogTitle className="text-[26px] font-bold tracking-tight">
-            Open A Dispute
-          </DialogTitle>
-          <DialogDescription className="text-[15px] leading-[1.5] text-text-secondary">
-            A DropMarket admin reviews disputes within 24 hours. Your order stays open until the case resolves.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div>
-          <Label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-            What&rsquo;s The Issue?
-          </Label>
-          <div className="flex flex-wrap gap-2">
-            {DISPUTE_CATEGORIES.map((c) => {
-              const active = category === c
-              return (
-                <Button
-                  key={c}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCategory(c)}
-                  className={cn(
-                    'border-border-default bg-bg-overlay text-[13px] font-semibold text-text-secondary',
-                    'hover:border-white/[0.18] hover:bg-bg-overlay hover:text-text-primary',
-                    active &&
-                      'border-red-500/40 bg-red-500/[0.10] text-red-400 hover:border-red-500/40 hover:bg-red-500/[0.10] hover:text-red-400',
-                  )}
-                >
-                  {c}
-                </Button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div>
-          <Label
-            htmlFor="dispute-reason"
-            className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-text-secondary"
-          >
-            Describe What Happened
-          </Label>
-          <Textarea
-            id="dispute-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={4}
-            placeholder="A short note helps support resolve faster — what was expected, what arrived, any timestamps."
-            className="resize-none text-[14.5px] leading-[1.55]"
-          />
-          <div className="mt-1.5 text-[12px] text-text-tertiary">
-            {reason.trim().length < 10
-              ? `${10 - reason.trim().length} more character${10 - reason.trim().length === 1 ? '' : 's'} required`
-              : 'Looks good.'}
-          </div>
-        </div>
-
-        <div className="mt-1 flex items-center justify-end gap-3">
-          <Button
+      icon={ShieldAlert}
+      tone="warning"
+      title="Open A Dispute"
+      description="A DropMarket admin reviews disputes within 24 to 48 hours. Your order stays open until then."
+      footer={
+        <>
+          <button
             type="button"
-            variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={submitting}
-            className="h-12 px-5 text-[15px] font-semibold"
+            className={modalButton('ghost')}
           >
             Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            variant="destructive"
-            className="h-12 px-6 text-[15px] font-bold shadow-[0_6px_18px_rgba(239,68,68,0.22)]"
-          >
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={!canSubmit} className={modalButton('warning')}>
             {submitting ? (
               <>
-                <Loader2 className="mr-2 h-[18px] w-[18px] animate-spin" />
-                Opening…
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Opening
               </>
             ) : (
               <>
-                <AlertCircle className="mr-2 h-[18px] w-[18px]" />
+                <ShieldAlert className="h-4 w-4" aria-hidden />
                 Open Dispute
               </>
             )}
-          </Button>
+          </button>
+        </>
+      }
+    >
+      <div className="mt-3.5">
+        <p className="mb-1.5 text-[12.5px] font-semibold text-text-secondary">What&rsquo;s The Issue?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {DISPUTE_CATEGORIES.map((c) => {
+            const active = category === c
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                aria-pressed={active}
+                className={cn(
+                  'rounded-[8px] border px-2.5 py-1 text-[12.5px] font-semibold transition-colors',
+                  active
+                    ? 'border-[rgba(255,178,62,0.4)] bg-warning-bg text-warning'
+                    : 'border-white/10 bg-white/[0.02] text-text-secondary hover:border-white/20 hover:text-text-primary',
+                )}
+              >
+                {c}
+              </button>
+            )
+          })}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <div className="mt-3.5">
+        <label htmlFor="dispute-reason" className="mb-1.5 block text-[12.5px] font-semibold text-text-secondary">
+          Describe What Happened
+        </label>
+        <textarea
+          id="dispute-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+          placeholder="What you expected, what arrived, and when."
+          className={cn(modalField, 'resize-none')}
+        />
+        <div className="mt-1 text-[12px] text-text-tertiary">
+          {reason.trim().length < 10
+            ? `${10 - reason.trim().length} more character${10 - reason.trim().length === 1 ? '' : 's'} needed`
+            : 'Looks good.'}
+        </div>
+      </div>
+    </OrderModal>
   )
 }

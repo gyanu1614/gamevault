@@ -8,22 +8,22 @@ import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld
 export const metadata: Metadata = {
   title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
   description:
-    'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop Buyer Protection on every order. Lowest fees, instant delivery.',
+    'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop Protection on every order. Lowest fees, instant delivery.',
   keywords: [
     'buy game accounts', 'sell game items', 'gaming marketplace',
     'roblox accounts', 'fortnite accounts', 'valorant accounts',
-    'lol accounts', 'game currency', 'safe game trading', 'buyer protection gaming marketplace',
+    'lol accounts', 'game currency', 'safe game trading', 'safedrop protection gaming marketplace',
   ],
   openGraph: {
     title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop Buyer Protection',
+    description: 'Buy and sell game assets with SafeDrop Protection',
     type: 'website',
     siteName: 'DropMarket',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop Buyer Protection',
+    description: 'Buy and sell game assets with SafeDrop Protection',
   },
 }
 
@@ -50,22 +50,6 @@ const SCHEMAS = [
 export default function Page() {
   return (
     <>
-      {/* V20/P22 — Preload the hero backdrop so it's already cached by
-          the time the .hero-backdrop element mounts. Without this, the
-          image is invisible to the HTML preloader (CSS background-image)
-          and only starts downloading after CSS parses → visible pop-in
-          on every navigation back to home. */}
-      <link
-        rel="preload"
-        as="image"
-        // Must match HomeHeroArt's backdropSrc (HomePage.tsx), or the page
-        // preloads an image it never shows (it was /assets/heroes/home.avif,
-        // 279 KB, unused, while the real 78 KB hero was not preloaded).
-        href="/hero/home.avif"
-        type="image/avif"
-        fetchPriority="high"
-      />
-
       {/* JSON-LD */}
       {SCHEMAS.map((s, i) => (
         <script

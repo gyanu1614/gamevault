@@ -112,7 +112,7 @@ export default function PhoneInput({
               'w-full rounded-md border bg-transparent px-3 py-2.5 pr-9 text-xs text-white placeholder:text-text-tertiary transition-colors focus:outline-none sm:text-sm',
               invalid
                 ? 'border-error ring-2 ring-error-bg'
-                : 'border-border-default hover:border-border-strong focus:border-lime-tint-border focus:ring-1 focus:ring-lime/30'
+                : 'border-border-default hover:border-border-strong focus:border-focus-border focus:ring-1 focus:ring-focus-soft'
             )}
           />
           {isValid && (

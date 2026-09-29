@@ -17,7 +17,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight, Star, BadgeCheck, Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { ChevronRight, Star, BadgeCheck, Copy, Check, ThumbsUp, ThumbsDown, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
@@ -39,7 +39,16 @@ interface OrderDetailsCardProps {
   /** Raw UUID — used for dispute / sub-path links inside cards. */
   orderId: string
   placedAtLabel: string
-  paymentMethod: string
+  /** Buyer / admin: the payment breakdown (null for the seller, or before
+   *  payment). */
+  paymentSummary?: {
+    itemPrice: number
+    marketplaceFee: number
+    paymentFee: number
+    promoDiscount: number
+    total: number
+    paidWith: string | null
+  } | null
   subtotal: number
   fee: number
   totalPaid: number
@@ -48,8 +57,10 @@ interface OrderDetailsCardProps {
   escrowAmount: number
   /** For seller — the fee percentage shown next to the deduction. */
   feePercent?: number
-  /** For seller — net payout = subtotal - fee. */
+  /** For seller — net payout = subtotal - fee (less any partial refund). */
   netPayout?: number
+  /** For seller — part of the sale refunded to the buyer by a dispute. */
+  refundedToBuyer?: number
   /** Drives the payout status row (held / queued / released). */
   orderStatus: string
   /** orders.escrow_status — distinguishes a refunded cancel from an
@@ -211,17 +222,16 @@ function SafeDropBody({
   const cancelledWithRefund = escrowStatus === 'refunded'
   // Row + caption depend on order state.
   let amountLabel = 'Amount Covered'
-  let caption: React.ReactNode =
-    "Your purchase is covered by SafeDrop Buyer Protection. Not delivered or not as described? You get your money back."
+  let caption: React.ReactNode = 'Not delivered or not as described? You get your money back.'
   let showDisputeCta = false
 
   if (orderStatus === 'completed') {
     amountLabel = 'Seller Paid'
     caption = disputeWindowOpen ? (
       <>
-        The seller has been paid for this order. If anything was off with
-        your order, you can still open a dispute until {disputeUntilLabel} —
-        SafeDrop Protection covers you for that window.
+        The seller has been paid for this order. If anything was off, you
+        can still open a dispute until {disputeUntilLabel}. SafeDrop
+        Protection covers you for that window.
       </>
     ) : (
       <>The seller has been paid for this order and the dispute window has closed. Need help? Contact Support.</>
@@ -235,7 +245,7 @@ function SafeDropBody({
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
     caption =
-      'Your refund was added to your DropMarket wallet as store credit instantly — spend it right away or withdraw it.'
+      'Your refund was added to your DropMarket wallet as store credit. Spend it right away or withdraw it.'
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
     caption =
@@ -244,10 +254,10 @@ function SafeDropBody({
     if (cancelledWithRefund) {
       amountLabel = 'Amount Refunded'
       caption =
-        'Order cancelled — your refund was added to your DropMarket wallet as store credit instantly.'
+        'Order cancelled. Your refund was added to your DropMarket wallet as store credit.'
     } else {
       amountLabel = 'Order Total'
-      caption = 'Order cancelled — you were not charged.'
+      caption = 'Order cancelled. You were not charged.'
     }
   }
 
@@ -286,21 +296,21 @@ function SafeDropBody({
             type="button"
             onClick={onOpenDispute}
             className={cn(
-              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber/30 bg-amber/[0.08] px-3 py-2.5 text-[13px] font-bold text-amber transition-colors',
-              'hover:border-amber/50 hover:bg-amber/[0.14]',
+              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,178,62,0.32)] bg-warning-bg px-3 py-2.5 text-[13px] font-bold text-warning transition-colors',
+              'hover:border-[rgba(255,178,62,0.5)] hover:bg-[rgba(255,178,62,0.2)]',
             )}
           >
-            Issues With Your Order? Open Dispute
+            Issue With Your Order? Open Dispute
           </button>
         ) : (
           <Link
             href={`/account/orders/${orderId}#dispute`}
             className={cn(
-              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber/30 bg-amber/[0.08] px-3 py-2.5 text-[13px] font-bold text-amber transition-colors',
-              'hover:border-amber/50 hover:bg-amber/[0.14]',
+              'mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,178,62,0.32)] bg-warning-bg px-3 py-2.5 text-[13px] font-bold text-warning transition-colors',
+              'hover:border-[rgba(255,178,62,0.5)] hover:bg-[rgba(255,178,62,0.2)]',
             )}
           >
-            Issues With Your Order? Open Dispute
+            Issue With Your Order? Open Dispute
           </Link>
         )
       )}
@@ -318,15 +328,15 @@ function SafeDropStatusRow({ orderStatus }: { orderStatus: string }) {
     orderStatus === 'completed'
       ? { dot: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-400/[0.10]' }
       : orderStatus === 'delivered'
-      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime/[0.12]' }
-      : { dot: 'bg-amber', text: 'text-amber', bg: 'bg-amber/[0.12]' }
+      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime-tint-bg' }
+      : { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg' }
 
   const label =
     orderStatus === 'completed'
       ? 'Seller Paid Out'
       : orderStatus === 'delivered'
       ? 'Confirm Delivery To Complete'
-      : 'Covered By SafeDrop'
+      : 'Covered By SafeDrop Protection'
 
   return (
     <div className={cn('mt-3 flex items-center gap-2 rounded-[9px] px-3 py-2', tone.bg)}>
@@ -347,23 +357,44 @@ function PayoutBody({
   fee,
   netPayout,
   orderStatus,
+  role,
+  refundedToBuyer = 0,
 }: {
   subtotal: number
   feePercent: number
   fee: number
   netPayout: number
   orderStatus: string
+  role: 'buyer' | 'seller' | 'admin'
+  refundedToBuyer?: number
 }) {
   return (
     <>
       <Row label="Item Price">{fmtUsd(subtotal)}</Row>
       <Row label={`DropMarket Fee · ${feePercent}%`}>−{fmtUsd(fee)}</Row>
+      {refundedToBuyer > 0 && <Row label="Refunded To Buyer">−{fmtUsd(refundedToBuyer)}</Row>}
       <Row label="You Receive" emphasized>
         <span className="text-[18px] font-extrabold tabular-nums text-lime-text">
           {fmtUsd(netPayout)}
         </span>
       </Row>
-      <PayoutStatusRow orderStatus={orderStatus} />
+      {/* Completed → the money is in the seller's wallet; link there
+          instead of a status box. Admins view someone else's order, so
+          they keep the status row. */}
+      {orderStatus === 'completed' && role === 'seller' ? (
+        <Link
+          href="/account/wallet"
+          className="mt-3 flex items-center justify-between rounded-[9px] border border-border-subtle bg-white/[0.02] px-3 py-2.5 text-[12.5px] font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-lime-text" aria-hidden />
+            View In Wallet
+          </span>
+          <ChevronRight className="h-4 w-4 text-text-tertiary" aria-hidden />
+        </Link>
+      ) : (
+        <PayoutStatusRow orderStatus={orderStatus} />
+      )}
     </>
   )
 }
@@ -377,8 +408,8 @@ function PayoutStatusRow({ orderStatus }: { orderStatus: string }) {
     orderStatus === 'completed'
       ? { dot: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-400/[0.10]' }
       : orderStatus === 'delivered'
-      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime/[0.12]' }
-      : { dot: 'bg-amber', text: 'text-amber', bg: 'bg-amber/[0.12]' }
+      ? { dot: 'bg-lime-text', text: 'text-lime-text', bg: 'bg-lime-tint-bg' }
+      : { dot: 'bg-warning', text: 'text-warning', bg: 'bg-warning-bg' }
 
   const label =
     orderStatus === 'completed'
@@ -471,7 +502,7 @@ function PartyButton({ party }: { party: PartyInfo }) {
         )}
         {party.sales > 0 && (
           <span className="inline-flex items-center gap-1 text-[11.5px] text-text-tertiary">
-            <Star className="h-3 w-3 fill-amber text-amber" />
+            <Star className="h-3 w-3 fill-warning text-warning" />
             <span className="tabular-nums">{party.rating.toFixed(2)}</span>
           </span>
         )}
@@ -504,7 +535,7 @@ function PartyButton({ party }: { party: PartyInfo }) {
 function CardHeader({ iconSrc, title }: { iconSrc: string; title: string }) {
   return (
     <div className="mb-3 flex items-center gap-2.5">
-      <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime/[0.12] text-lime-text">
+      <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[7px] bg-lime-tint-bg text-lime-text">
         <span
           aria-hidden
           className="h-[15px] w-[15px] bg-current"
@@ -532,7 +563,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     orderNumber,
     orderId,
     placedAtLabel,
-    paymentMethod,
+    paymentSummary = null,
     subtotal,
     fee,
     totalPaid,
@@ -540,6 +571,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     escrowAmount,
     feePercent = 0,
     netPayout = 0,
+    refundedToBuyer = 0,
     orderStatus,
     otherParty,
     buyerReview,
@@ -552,11 +584,10 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
   // V21/P5.r — Stable, label-cased list of delivery-info entries to
   // render. Skip empty strings + nulls. Username comes first if
-  // present; rest follow in insertion order. When nothing was
-  // collected, surface a single placeholder row so the seller knows
-  // the buyer hasn't filled it in yet (or the listing didn't ask).
+  // present; rest follow in insertion order. Nothing collected → no rows.
+  // delivery_details is free-form jsonb: only a plain object is read.
   const deliveryEntries: Array<[string, string]> = (() => {
-    if (!deliveryInfo) return []
+    if (!deliveryInfo || typeof deliveryInfo !== 'object' || Array.isArray(deliveryInfo)) return []
     const out: Array<[string, string]> = []
     const ordered = ['username', 'email', 'password', 'region', 'platform']
     const seen = new Set<string>()
@@ -607,25 +638,38 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
         {/* Delivery info — usually buyer-collected at checkout (username,
             email, region, etc.). One row per filled field, or a single
             "Not Provided" stub when nothing was collected. */}
-        {deliveryEntries.length > 0 ? (
-          deliveryEntries.map(([k, v]) => (
-            <Row key={k} label={k}>
-              <CopyableValue value={v} />
-            </Row>
-          ))
-        ) : (
-          <Row label="Username">
-            <span className="text-[12.5px] font-semibold italic text-text-tertiary">
-              Not Provided
-            </span>
+        {/* Only what the buyer actually gave; nothing when checkout
+            collected nothing (no "Not Provided" placeholder). */}
+        {deliveryEntries.map(([k, v]) => (
+          <Row key={k} label={k}>
+            <CopyableValue value={v} />
           </Row>
-        )}
+        ))}
         <Row label="Order ID">
           <CopyableId value={orderNumber} />
         </Row>
-        <Row label="Total Paid" emphasized>
-          {fmtUsd(totalPaid)}
-        </Row>
+        {paymentSummary ? (
+          <>
+            <Row label="Item Price">{fmtUsd(paymentSummary.itemPrice)}</Row>
+            {paymentSummary.marketplaceFee > 0 && (
+              <Row label="Marketplace Fee">{fmtUsd(paymentSummary.marketplaceFee)}</Row>
+            )}
+            {paymentSummary.paymentFee > 0 && (
+              <Row label="Payment Fee">{fmtUsd(paymentSummary.paymentFee)}</Row>
+            )}
+            {paymentSummary.promoDiscount > 0 && (
+              <Row label="Promo Discount">−{fmtUsd(paymentSummary.promoDiscount)}</Row>
+            )}
+            <Row label="Total Paid" emphasized>
+              {fmtUsd(paymentSummary.total)}
+            </Row>
+            {paymentSummary.paidWith && <Row label="Paid With">{paymentSummary.paidWith}</Row>}
+          </>
+        ) : (
+          <Row label="Total Paid" emphasized>
+            {fmtUsd(totalPaid)}
+          </Row>
+        )}
         <Row label="Date Placed">{placedAtLabel}</Row>
         <Row label={otherPartyLabel}>
           <span className="-my-1 flex justify-end">
@@ -636,7 +680,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
 
       {(role === 'buyer' || role === 'admin') && (
         <OrderCard className="px-5 pb-4 pt-5">
-          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop™ Buyer Protection" />
+          <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop Protection" />
           <SafeDropBody
             amount={escrowAmount}
             orderStatus={orderStatus}
@@ -659,6 +703,8 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
             fee={fee}
             netPayout={netPayout}
             orderStatus={orderStatus}
+            role={role}
+            refundedToBuyer={refundedToBuyer}
           />
         </OrderCard>
       )}

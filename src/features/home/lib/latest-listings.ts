@@ -21,6 +21,11 @@ export interface LatestListing {
   quantity: number | null
   /** Account cards: delivery promise, the one fact every account listing has. */
   deliveryTime: string | null
+  /**
+   * Phone card background: the currency's own icon for currency listings,
+   * the item image for items, else the game logo. Null when none exists.
+   */
+  bgImage: string | null
 }
 
 /**
@@ -65,7 +70,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     .from('listings')
     .select(
       `id, title, price, images, slug, created_at, quantity, delivery_time,
-       game:games!inner(slug, name, is_active),
+       game:games!inner(id, slug, name, is_active, image_url),
        category:categories!inner(slug, name, metadata),
        seller:public_profiles!listings_seller_id_fkey!inner(is_test)`,
     )
@@ -84,11 +89,30 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     created_at: string
     quantity: number | null
     delivery_time: string | null
-    game: { slug: string; name: string }
+    game: { id: string; slug: string; name: string; image_url: string | null }
     category: { slug: string; name: string | null; metadata: { type?: string; label?: string } | null }
   }
 
-  const mapped = ((data ?? []) as unknown as Row[])
+  const rows = (data ?? []) as unknown as Row[]
+
+  // Currency icons (the logo beside each currency page title) for the games
+  // that have a currency listing here. One small read of two JSON fields.
+  const currencyGameIds = Array.from(
+    new Set(rows.filter((r) => r.category.metadata?.type === 'currency').map((r) => r.game.id)),
+  )
+  const currencyIcon = new Map<string, string>()
+  if (currencyGameIds.length > 0) {
+    const { data: cfgs } = await supabase
+      .from('category_configs')
+      .select('game_id, icon:config->>currency_icon_url')
+      .eq('category_type', 'currency')
+      .in('game_id', currencyGameIds)
+    for (const c of (cfgs ?? []) as Array<{ game_id: string; icon: string | null }>) {
+      if (c.icon) currencyIcon.set(c.game_id, c.icon)
+    }
+  }
+
+  const mapped = rows
     .filter((row) => {
       // Item cards are art-led, so an item listing with no real art (or with
       // the game's own logo standing in) has nothing to show and is dropped.
@@ -112,6 +136,11 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     cardType: cardTypeFor(row.category.metadata?.type ?? null),
     quantity: row.quantity ?? null,
     deliveryTime: row.delivery_time ?? null,
+    bgImage:
+      (row.category.metadata?.type === 'currency' ? currencyIcon.get(row.game.id) : undefined) ??
+      (cardTypeFor(row.category.metadata?.type ?? null) === 'item' ? row.images?.[0] : undefined) ??
+      row.game.image_url ??
+      null,
   }))
 
   // Bucket by game (each bucket already cheapest-first from the query), then

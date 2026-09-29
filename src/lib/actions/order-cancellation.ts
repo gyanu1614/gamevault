@@ -2,7 +2,7 @@
  * Server Actions for Order Cancellation Requests
  *
  * Handles buyer-initiated cancellation requests that require admin approval
- * Only available for orders with delivery time >= 6 hours, after 1 hour elapsed
+ * Only available for orders with delivery time >= 6 hours, an hour after payment
  */
 
 'use server'
@@ -10,14 +10,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
-import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
-// Ledger-backed money paths (funds-flow cutover): the order transition moves
-// held escrow to refunds atomically, then the wallet credit (refunds →
-// user_wallet) makes the buyer whole as store credit. The legacy
-// ./wallet refundToWallet wrote the RLS-locked wallet_balances float table
-// and silently stopped working after the ledger cutover.
-import { transition } from '@/lib/escrow/transition'
-import { refundToWallet } from '@/lib/wallet/wallet'
+import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
+// Money seams (CLAUDE.md): a cancellation's status move and the buyer's
+// wallet credit are ONE RPC each (order_cancel_return_wallet /
+// order_refund_to_wallet via lib/wallet/order-money), never composed here.
+import { cancelOrderReturnWallet, refundOrderToWallet } from '@/lib/wallet/order-money'
 
 export interface CancellationRequest {
   id: string
@@ -59,6 +56,8 @@ export async function createCancellationRequest(
         buyer_id,
         status,
         created_at,
+        paid_at,
+        delivered_at,
         listing:listings(
           id,
           delivery_time
@@ -76,41 +75,23 @@ export async function createCancellationRequest(
       return { error: { message: 'You can only request cancellation for your own orders' } }
     }
 
-    // Check order status is eligible
-    if (!['paid', 'processing', 'delivering', 'delivered'].includes(order.status)) {
-      return { error: { message: 'This order cannot be cancelled' } }
-    }
-
-    // Parse delivery time to hours
-    // Parsed by the shared util rather than substring matching. The old
-    // matcher knew a fixed list of strings and returned 0 for anything
-    // else — so the wizard's day windows ("2d".."7d") read as 0 hours
-    // and a 7-day listing failed the >= 6h check below. Every value the
-    // old matcher knew resolves to the same bucket here; unparseable
-    // values still fall back to 0 (ineligible), as before.
-    const getDeliveryHours = (deliveryTime?: string | null): number =>
-      parseDeliveryMinutes(deliveryTime, 0) / 60
-
-    // Check delivery time requirement (>= 6 hours)
-    const deliveryHours = getDeliveryHours(order.listing?.delivery_time)
-    if (deliveryHours < 6) {
-      return {
-        error: {
-          message: 'Cancellation requests are only available for orders with delivery time of 6 hours or more',
-        },
-      }
-    }
-
-    // Check time elapsed (>= 1 hour)
-    const hoursSinceOrder = Math.floor(
-      (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60)
-    )
-    if (hoursSinceOrder < 1) {
-      return {
-        error: {
-          message: 'You must wait at least 1 hour after placing the order before requesting cancellation',
-        },
-      }
+    // Same rule the order page uses to show the button: paid/delivering and
+    // not delivered, a delivery time of 6 h+, an hour after payment.
+    const eligibility = cancelRequestEligibility({
+      status: order.status,
+      delivered_at: order.delivered_at,
+      paid_at: order.paid_at,
+      created_at: order.created_at,
+      deliveryTime: order.listing?.delivery_time,
+    })
+    if (!eligibility.eligible) {
+      const message =
+        eligibility.reason === 'short_delivery'
+          ? 'Cancellation requests are only available for orders with delivery time of 6 hours or more'
+          : eligibility.reason === 'too_soon'
+            ? 'You can request a cancellation one hour after paying'
+            : 'This order cannot be cancelled'
+      return { error: { message } }
     }
 
     // Check if a PENDING request already exists (allow new requests after undo/rejection)
@@ -374,7 +355,9 @@ export async function processCancellationRequest(
     // Get the request
     const { data: request, error: fetchError } = await supabase
       .from('order_cancellation_requests')
-      .select('*, order:orders(*)')
+      // Shared order columns only: '*' on orders is refused to a session
+      // client (orders column grant).
+      .select('*, order:orders(id, buyer_id, seller_id, order_number, status, total_amount, currency)')
       .eq('id', requestId)
       .single() as any
 
@@ -386,7 +369,45 @@ export async function processCancellationRequest(
       return { error: { message: 'This request has already been processed' } }
     }
 
-    // Update the request status
+    // Approve: move the money FIRST, as ONE atomic RPC (CLAUDE.md money
+    // seams), and only then mark the request approved. The old order
+    // (mark approved -> transition -> separate wallet credit) could leave an
+    // approved request with no refund and no way to retry, because a
+    // non-pending request is refused above.
+    //   paid                 -> order_cancel_return_wallet (CANCELLED + credit)
+    //   delivering/delivered -> order_refund_to_wallet     (REFUNDED + credit)
+    // A disputed order is settled through the dispute tools, not here.
+    if (action === 'approve') {
+      const order = request.order
+      const dedupe = `cancel_request:${requestId}`
+      try {
+        const result =
+          order.status === 'paid'
+            ? await cancelOrderReturnWallet(request.order_id, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
+            : order.status === 'delivering' || order.status === 'delivered'
+              ? await refundOrderToWallet(request.order_id, dedupe)
+              : null
+        if (!result) {
+          return {
+            error: {
+              message: `This order is ${order.status}; it can't be cancelled here${order.status === 'disputed' ? ' — resolve the dispute instead' : ''}.`,
+            },
+          }
+        }
+        if (result.refused) {
+          return { error: { message: 'The order could not be cancelled in its current state. Nothing was changed.' } }
+        }
+      } catch (moneyError: any) {
+        console.error('Error cancelling / refunding order:', moneyError)
+        return {
+          error: {
+            message: `Failed to cancel the order: ${moneyError?.message ?? 'unknown error'}. Nothing was changed — please try again.`,
+          },
+        }
+      }
+    }
+
+    // Record the decision (after the money, for an approval).
     const { data: updatedRequest, error: updateError } = await (supabase
       .from('order_cancellation_requests')
       .update as any)({
@@ -401,47 +422,11 @@ export async function processCancellationRequest(
 
     if (updateError) {
       console.error('Error updating request:', updateError)
-      return { error: { message: 'Failed to process request' } }
+      return { error: { message: action === 'approve' ? 'The refund went through but saving the decision failed — refresh and check the request.' : 'Failed to process request' } }
     }
 
-    // If approved, cancel the order through the atomic ledger transition,
-    // THEN credit the buyer's wallet. Order matters for the ledger chain:
-    // the transition moves escrow_held → refunds, and the wallet credit
-    // moves refunds → user_wallet, keeping every account balanced.
     if (action === 'approve') {
       const order = request.order
-
-      try {
-        // A delivered order cancels as a refund in the state machine
-        // (delivered → cancelled is not a legal move; delivered → refunded is).
-        const event = order.status === 'delivered' ? 'REFUNDED' : 'CANCELLED'
-        await transition(request.order_id, event)
-      } catch (transitionError: any) {
-        console.error('Error cancelling order:', transitionError)
-        return {
-          error: {
-            message: `Failed to cancel the order: ${transitionError?.message ?? 'unknown error'}. Please try again or contact support.`,
-          },
-        }
-      }
-
-      // Store-credit refund — 100% of what the buyer paid, instantly
-      // (Refund & Dispute Policy). Idempotent on 'wallet_refund:<orderId>'.
-      try {
-        await refundToWallet({
-          userId: order.buyer_id,
-          amountMinor: BigInt(Math.round(Number(order.total_amount ?? 0) * 100)),
-          currency: (order.currency || 'EUR').toUpperCase(),
-          orderId: request.order_id,
-        })
-      } catch (refundError: any) {
-        console.error('Error refunding to wallet:', refundError)
-        return {
-          error: {
-            message: `Order cancelled but the wallet refund failed: ${refundError?.message ?? 'unknown error'}. Re-approve to retry the credit (it is idempotent) or contact support.`,
-          },
-        }
-      }
 
       // Tell the buyer their money is in their wallet (in-app + email,
       // wrapped — a comms failure must never fail the approval).

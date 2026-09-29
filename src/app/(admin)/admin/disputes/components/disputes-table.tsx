@@ -152,13 +152,16 @@ export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
                 {/* Order & Item - with game logo + listing title */}
                 <td className={TABLE.td}>
                   <div className="flex items-center gap-3">
-                    {dispute.game_icon && dispute.game_icon.startsWith('/') ? (
+                    {dispute.game_icon && /^(\/|https?:\/\/)/.test(dispute.game_icon) ? (
                       <div className="h-10 w-10 rounded-lg bg-bg-overlay border border-border-subtle flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {/* Game marks can live on any storage host: unoptimized
+                            skips the remotePatterns allow-list. */}
                         <Image
                           src={dispute.game_icon}
                           alt={dispute.game_name || 'Game'}
                           width={40}
                           height={40}
+                          unoptimized
                           className="object-cover"
                         />
                       </div>
@@ -178,6 +181,11 @@ export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
                       <p className="text-[11px] text-text-tertiary mt-0.5 line-clamp-1">
                         {dispute.listing_title || dispute.title}
                       </p>
+                      {dispute.order_number && (
+                        <p className="text-[11px] font-mono text-text-tertiary mt-0.5">
+                          #{dispute.order_number}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </td>

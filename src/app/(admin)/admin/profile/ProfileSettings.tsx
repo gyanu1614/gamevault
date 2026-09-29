@@ -24,7 +24,7 @@ interface ProfileSettingsProps {
 }
 
 const INPUT =
-  'w-full pl-10 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none transition-colors'
+  'w-full pl-10 pr-4 py-3 bg-bg-base border border-border-default rounded-lg text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none transition-colors'
 const INPUT_DISABLED =
   'w-full pl-10 pr-4 py-3 bg-bg-base border border-border-subtle rounded-lg text-text-disabled cursor-not-allowed'
 

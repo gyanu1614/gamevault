@@ -16,7 +16,7 @@ import { CHAIN_LABELS, COIN_CHAINS, validatePayoutAddress, type PayoutChain } fr
 import { getMyPayoutDetails, savePayoutDetails, type PayoutDetails } from '@/lib/actions/payout-details'
 
 const inputCls =
-  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-lime focus:outline-none focus:ring-2 focus:ring-lime-tint-bg transition-all'
+  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all'
 const btnCls =
   'inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:cursor-not-allowed disabled:opacity-50'
 

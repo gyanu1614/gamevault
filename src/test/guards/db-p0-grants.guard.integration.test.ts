@@ -54,6 +54,10 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   // the listing-images storage policy as the caller, and asked by the
   // middleware / actions about themselves.
   'sell_access_kind',
+  // orders column privacy (20260927224019): each party reads ITS OWN private
+  // order fields (seller_id / buyer_id = auth.uid()); the payout sum behind
+  // seller_dashboard_stats keeps the invoker view's row scope.
+  'orders_buyer_private', 'orders_seller_private', 'seller_completed_payout_sum',
 ].sort()
 
 /**

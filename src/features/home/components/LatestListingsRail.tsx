@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
 import { ListingCard } from './ListingCard'
+import { ListingCardCompact } from './ListingCardCompact'
 import type { LatestListing } from '../lib/latest-listings'
 
 const FADE = '56px'
@@ -68,9 +69,15 @@ export function LatestListingsRail({ listings }: { listings: LatestListing[] }) 
         {listings.map((listing) => (
           <div
             key={listing.id}
-            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-3 sm:basis-1/3 sm:pl-4 lg:basis-1/4 xl:basis-1/5"
+            // Phone: smaller compact cards (~2.5 in view); sm+ unchanged.
+            className="min-w-0 shrink-0 grow-0 basis-[40%] pl-3 sm:basis-1/3 sm:pl-4 lg:basis-1/4 xl:basis-1/5"
           >
-            <ListingCard listing={listing} />
+            <div className="sm:hidden">
+              <ListingCardCompact listing={listing} />
+            </div>
+            <div className="hidden sm:block">
+              <ListingCard listing={listing} />
+            </div>
           </div>
         ))}
       </div>
