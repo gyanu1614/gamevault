@@ -60,10 +60,10 @@ export default function CheckoutLoading() {
 
             {/* Method rows: mark tile + label + pick mark */}
             {[0, 1, 2].map((i) => (
-              <Card key={i} className="mt-3 flex items-center gap-3.5 px-4 py-3">
-                <Block className="h-10 w-10 rounded-md" />
+              <Card key={i} className="mt-2 flex items-center gap-3 px-3.5 py-2">
+                <Block className="h-8 w-8 rounded-md" />
                 <Block className="h-4 w-28 flex-1" />
-                <Block className="h-[22px] w-[22px] rounded-full" />
+                <Block className="h-5 w-5 rounded-full" />
               </Card>
             ))}
 

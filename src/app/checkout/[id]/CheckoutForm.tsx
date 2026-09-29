@@ -890,10 +890,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const pickMark = (checked: boolean) => (
     <span
       aria-hidden
-      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full transition-colors"
+      className="grid h-5 w-5 shrink-0 place-items-center rounded-full transition-colors"
       style={checked ? { background: T.forest } : { boxShadow: `inset 0 0 0 1.5px ${T.disLine}` }}
     >
-      {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+      {checked && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
     </span>
   )
 
@@ -909,7 +909,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
    *  tinted, when a method has no logo yet). */
   const markTile = (logo: string | undefined, Icon: typeof Smartphone) => (
     <span
-      className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
+      className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
       style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
     >
       {logo ? (
@@ -921,7 +921,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     </span>
   )
 
-  const rowButton = 'flex w-full items-center gap-3.5 rounded-lg px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40'
+  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40'
 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
@@ -929,7 +929,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       <div className={rowClass(checked)} style={{ boxShadow: rowSurface() }}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
           {markTile(m.logo, m.Icon)}
-          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
             {m.label}
           </span>
           {pickMark(checked)}
@@ -944,12 +944,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface() }}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
         <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
           style={{ background: '#F7931A' }}
         >
-          <Image src="/crypto/btc.svg" alt="" width={24} height={24} unoptimized />
+          <Image src="/crypto/btc.svg" alt="" width={20} height={20} unoptimized />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold" style={{ color: T.ink }}>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
           Crypto
         </span>
         {pickMark(cryptoChecked)}
@@ -1007,7 +1007,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3" role="radiogroup" aria-label="Payment Method">
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Payment Method">
           <AnimatePresence initial={false} mode="popLayout">
             {localRows.map((m) => (
               <motion.div key={m.id} {...rowMotion}>
