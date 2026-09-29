@@ -14,6 +14,13 @@
 ## Dark theme (2026-09-28)
 Checkout + pay pages moved from the ivory "Ledger" look to the marketplace's dark theme (`src/styles/tokens.css`): page `#171B21`, raised cards `#1F242C`, hover `#252B34`, borders as white alphas, text `#E9EDF2` / `#9AA6B3` / `#6C7684`, green `#2A7A50` for buttons and `#56B87F` for text/icons. The order summary is the listing page's glass card (`rgba(20,20,27,0.56)` + blur); select, tooltip, callouts, account menu, sticky bar, trust band, skeletons all follow. Logo tiles and the QR tile stay white on purpose (marks and QR codes need it).
 
+## Card system + listing pages (2026-09-28/29, same PR)
+- **Surface tokens are neutral black now** (`src/styles/tokens.css` + `theme-v2.css`): base `#16171B`, well `#191A1F`, cards/raised `#1D1E23`, hover `#24252B`, inputs/pills `#262730` / `#2A2B33`, popovers `#30313A`, border-default 12%. Literal copies in checkout, pay page, navbar, home rails, skeletons and the page gradient were updated; the 29 old `rgba(20,20,27,0.56)` glass cards became `#1D1E23`. Navbar / sub-nav / filter dropdown follow (`--subnav-pill-bg` = `#1D1E23` at 72%, one token for the live bar and every skeleton).
+- **Item card (`_ItemCard.tsx`) finish**: black gradient `#212228 → #1A1B1F`, 10% hairline, 1px inner top highlight, soft drop shadow; hover lifts the gradient and clears the hairline (never the grey inset token); no top spotlight. Footer strip below the divider on `#17181C`. Title weight 500 with slight negative tracking. Delivery + stock as small pills (Tabler icons, 28px, bare stock number) with hover tooltips "Delivery Time" / "Available Stock"; lowest-price badge = MUI price-tag icon.
+- **Listing detail**: Description, buy rail, trust card, similar-listing cards on the same finish. Description collapses past ~12 lines (315px) with a Show More/Less toggle (measured, so short text gets no button). Verified badge is the shared blue `VerifiedBadge` everywhere (the green `fill-lime` check is gone). Delivery/stock/buy/description icons are MUI Rounded at 15–21px in 36px tiles.
+- **Bug fixed**: the detail rail said "0 sold" for every seller — `getSellerStats` counted `orders` with the page's client, which cannot read orders on a public page. It now reads `public_profiles.total_sales`, the same counter the cards show (prod: this seller = 1 sale, 1 review).
+- Merged `origin/main` (up to #119/#120): kept the shared money block + profile sold count; took main's `PopularGameCard`, `MessagesSkeleton`, hero-layer removal. PR #121 (dead alpha colours) touches 7 of the same files and will need a merge after this lands.
+
 ## Copy (new / changed customer-facing strings)
 | Surface | Old | New |
 |---|---|---|
