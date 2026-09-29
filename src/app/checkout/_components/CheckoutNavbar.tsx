@@ -19,13 +19,13 @@ export function CheckoutNavbar({
 }) {
   return (
     <div
-      className="flex h-16 items-center justify-between px-4 sm:px-10"
-      style={{ background: '#141714' }}
+      className="flex h-16 items-center justify-between border-b px-4 sm:px-10"
+      style={{ background: '#171B21', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-mark-lime.avif" alt="" width={96} height={96} className="h-6 w-6" />
-        <span className="text-[15px] font-bold" style={{ color: '#FAFAF7' }}>
+        <span className="text-[15px] font-bold" style={{ color: '#E9EDF2' }}>
           DropMarket
         </span>
       </Link>

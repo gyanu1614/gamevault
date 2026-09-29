@@ -1,22 +1,22 @@
 /**
- * Checkout skeleton — Ivory Ledger era. Shape-faithful to the live page:
- * dark navbar strip, ivory ground, Secure Checkout header row, then the
+ * Checkout skeleton — dark marketplace theme. Shape-faithful to the live page:
+ * navbar strip, dark ground, Secure Checkout header row, then the
  * 1fr/400px grid — crypto method card + disabled rows on the left, the
- * white order-summary card on the right. Pulses in ivory tones so the
+ * order-summary card on the right. Pulses in dark tones so the
  * transition into the real page is colour- and shape-stable.
  */
 
-const IVORY = '#FAFAF7'
-const NAV = '#141714'
-const LINE = '#E4E5DE'
+const GROUND = '#171B21'
+const NAV = '#171B21'
+const LINE = 'rgba(255,255,255,0.14)'
 
 function Block({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-[#ECEBE3] ${className}`} />
+  return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border bg-white ${className}`} style={{ borderColor: LINE }}>
+    <div className={`rounded-lg border bg-[#1F242C] ${className}`} style={{ borderColor: LINE }}>
       {children}
     </div>
   )
@@ -24,7 +24,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 export default function CheckoutLoading() {
   return (
-    <div className="min-h-screen" style={{ background: IVORY }}>
+    <div className="min-h-screen" style={{ background: GROUND }}>
       {/* Navbar strip */}
       <div className="flex h-16 items-center justify-between px-4 sm:px-10" style={{ background: NAV }}>
         <div className="flex items-center gap-2">

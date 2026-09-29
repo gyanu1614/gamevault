@@ -3,7 +3,7 @@
 /**
  * Checkout — "Ivory Ledger" rebuild (design_handoff_checkout Option 1a).
  *
- * Trust-first checkout: dark 64px navbar strip, then an ivory (#FAFAF7)
+ * Trust-first checkout: 64px navbar strip, then the marketplace's dark
  * surface with a two-column grid — Payment method list (crypto expanded
  * with Coin + Network dropdowns, amber network warning, Pay Now) on the
  * left, the compact white order-summary card (item, seller chips,
@@ -71,24 +71,30 @@ import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
-  ivory: '#FAFAF7',
-  ivory2: '#F3F3ED',
-  row: '#FCFCFA',
-  ink: '#1A1D19',
-  ink2: '#5B6157',
-  dis: '#9AA096',
-  forest: '#14432A',
-  forest2: '#1B5E3A',
+  // Dark surfaces — the marketplace theme (src/styles/tokens.css): page
+  // ground, raised card, input well, hover; glass = the listing page's card.
+  page: '#171B21',
+  ivory: '#1F242C',
+  ivory2: '#181D25',
+  row: '#252B34',
+  glass: 'rgba(20,20,27,0.56)',
+  ink: '#E9EDF2',
+  ink2: '#9AA6B3',
+  dis: '#6C7684',
+  forest: '#2A7A50',
+  forest2: '#33935F',
+  accentText: '#56B87F',
   lime: '#A3E635',
-  limeTint: '#EDFBD3',
-  success: '#3F7D22',
-  line: '#E4E5DE',
-  disLine: '#D5D7CE',
-  amberTx: '#8A4308',
-  amberIc: '#B45309',
-  amberBg: '#FBF3E6',
-  amberLn: '#EBD9BC',
-  nav: '#141714',
+  limeTint: 'rgba(86,184,127,0.14)',
+  success: '#3FD986',
+  line: 'rgba(255,255,255,0.14)',
+  lineSubtle: 'rgba(255,255,255,0.08)',
+  disLine: 'rgba(255,255,255,0.22)',
+  amberTx: '#FFB23E',
+  amberIc: '#FFB23E',
+  amberBg: 'rgba(255,178,62,0.12)',
+  amberLn: 'rgba(255,178,62,0.35)',
+  nav: '#171B21',
 }
 
 function fmtUnitPrice(n: number): string {
@@ -131,7 +137,7 @@ const NETWORKS: Array<{ value: Net; label: string; fee: string; soon?: boolean }
 
 // ─── Small pieces ───────────────────────────────────────────────────────────
 
-/** Light dropdown per the handoff: 1px #E4E5DE border, radius 6, ivory bg. */
+/** Dropdown on the dark surface: hairline border, radius 6, well bg. */
 function LightSelect({
   value,
   onChange,
@@ -150,7 +156,7 @@ function LightSelect({
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium outline-none transition-colors focus-visible:border-[#14432A]"
+        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3 text-[14px] font-medium outline-none transition-colors focus-visible:border-[#56B87F]"
         style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
       >
         <span className="flex min-w-0 items-center gap-2">
@@ -176,7 +182,7 @@ function LightSelect({
         <Select.Content
           position="popper"
           sideOffset={4}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.18)]"
+          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-[#252B34] shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
           style={{ borderColor: T.line }}
         >
           <Select.Viewport className="p-1">
@@ -185,7 +191,7 @@ function LightSelect({
                 key={o.value}
                 value={o.value}
                 disabled={o.disabled}
-                className="flex cursor-pointer items-center justify-between gap-3 rounded px-2.5 py-2 text-[13.5px] font-medium outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[highlighted]:bg-[#F3F3ED]"
+                className="flex cursor-pointer items-center justify-between gap-3 rounded px-2.5 py-2 text-[13.5px] font-medium outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[highlighted]:bg-white/[0.08]"
                 style={{ color: T.ink }}
               >
                 <span className="flex items-center gap-2">
@@ -199,7 +205,7 @@ function LightSelect({
                     </span>
                   )}
                   <Select.ItemIndicator>
-                    <Check className="h-3.5 w-3.5" style={{ color: T.forest }} />
+                    <Check className="h-3.5 w-3.5" style={{ color: T.accentText }} />
                   </Select.ItemIndicator>
                 </span>
               </Select.Item>
@@ -232,14 +238,13 @@ function InfoDot({
         >
           <Info
             aria-hidden
-            className="h-[14px] w-[14px] text-[#5B6157] transition-colors group-hover:text-[#1A1D19]"
+            className="h-[14px] w-[14px] text-[#9AA6B3] transition-colors group-hover:text-[#E9EDF2]"
           />
         </button>
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="rounded-md border bg-white p-0 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.2)]"
-        style={{ borderColor: T.line }}
+        className="p-0"
       >
         {title ? (
           <div className="px-3 py-2.5">
@@ -302,8 +307,8 @@ function Callout({
   // px-5 py-4. Corners tightened to our 8px rectangular direction.
   const c =
     variant === 'warning'
-      ? { bg: '#FEFCE8', border: '#FEF08A', text: '#854D0E' }
-      : { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' }
+      ? { bg: 'rgba(255,178,62,0.10)', border: 'rgba(255,178,62,0.35)', text: '#FFB23E' }
+      : { bg: 'rgba(63,217,134,0.10)', border: 'rgba(63,217,134,0.35)', text: '#3FD986' }
   return (
     <div
       className="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5"
@@ -357,7 +362,7 @@ function TierBadge({ tier }: { tier?: string | null }) {
  *  band's header row). */
 function TrustChips() {
   const item = 'inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-semibold'
-  const ic = { color: T.forest } as const
+  const ic = { color: T.accentText } as const
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
       <span className={item} style={{ color: T.ink }}>
@@ -381,13 +386,13 @@ function TrustChips() {
  *  security line, support + legal links. Edge-to-edge with a top hairline;
  *  content aligns to the checkout container. */
 function CompanyStrip() {
-  const link = 'transition-colors hover:text-[#14432A]'
+  const link = 'transition-colors hover:text-[#56B87F]'
   return (
-    <footer className="border-t bg-white" style={{ borderColor: T.line }}>
+    <footer className="border-t" style={{ borderColor: T.lineSubtle, background: T.page }}>
       <div className="mx-auto flex w-full max-w-[1120px] flex-col items-center justify-between gap-2.5 px-4 py-4 sm:px-10 lg:flex-row lg:py-3.5">
         <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-6">
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
+            <Landmark className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
             <span>
               <b className="font-semibold" style={{ color: T.ink }}>DropMarket Ltd</b>
               <span className="hidden sm:inline"> · Registered In The United Kingdom · Company No. 17309867</span>
@@ -395,7 +400,7 @@ function CompanyStrip() {
             </span>
           </span>
           <span className="flex items-center gap-2 text-[11.5px]" style={{ color: T.ink2 }}>
-            <Lock className="h-4 w-4 shrink-0" style={{ color: T.forest }} />
+            <Lock className="h-4 w-4 shrink-0" style={{ color: T.accentText }} />
             <span>
               Secured By <b className="font-semibold" style={{ color: T.ink }}>DropMarket Payments</b>
             </span>
@@ -403,7 +408,7 @@ function CompanyStrip() {
         </div>
         <nav className="flex items-center gap-4 text-[11.5px] font-medium" style={{ color: T.ink2 }}>
           <Link href="/support" className={`${link} flex items-center gap-1.5`}>
-            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.forest }} />
+            <LifeBuoy className="h-3.5 w-3.5" style={{ color: T.accentText }} />
             Support
           </Link>
           <span aria-hidden className="h-3 w-px" style={{ background: T.line }} />
@@ -705,7 +710,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       payTab = window.open('', '_blank')
       try {
         payTab?.document.write(
-          '<title>Secure Payment</title><p style="font-family:system-ui;padding:24px;color:#1A1D19">Opening your secure payment page…</p>'
+          '<title>Secure Payment</title><body style="margin:0;background:#171B21"><p style="font-family:system-ui;padding:24px;color:#E9EDF2">Opening your secure payment page…</p></body>'
         )
       } catch {}
     }
@@ -817,15 +822,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               onClick={() => setCoin(c.value)}
               className="flex items-center gap-2.5 rounded-md px-3.5 py-3 text-left transition-[box-shadow,transform] active:scale-[0.98]"
               style={{
-                boxShadow: `inset 0 0 0 1.5px ${selected ? T.forest : T.line}`,
-                background: selected ? T.ivory : '#FFFFFF',
+                boxShadow: `inset 0 0 0 1.5px ${selected ? T.accentText : T.line}`,
+                background: selected ? T.row : T.ivory2,
               }}
             >
               <Image src={c.icon} alt="" width={22} height={22} unoptimized />
               <span className="text-[14px] font-semibold" style={{ color: T.ink }}>
                 {c.label}
               </span>
-              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.forest }} />}
+              {selected && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: T.accentText }} />}
             </button>
           )
         })}
@@ -901,9 +906,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const rowClass = (checked: boolean) =>
     cn(
       'rounded-lg transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-[#F3F3ED]' : 'bg-white hover:bg-[#F6F6F1]'
+      checked ? 'bg-[#252B34]' : 'bg-[#1F242C] hover:bg-[#252B34]'
     )
-  const rowSurface = () => `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(20,29,25,0.04)`
+  const rowSurface = (checked: boolean) =>
+    checked
+      ? `inset 0 0 0 1.5px ${T.accentText}, inset 0 1px 0 rgba(255,255,255,0.06)`
+      : `inset 0 0 0 1px ${T.line}, inset 0 1px 0 rgba(255,255,255,0.05)`
 
   /** The brand mark in a square white tile on the left (the row's icon,
    *  tinted, when a method has no logo yet). */
@@ -916,17 +924,17 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logo} alt="" className="h-full w-full object-contain p-1" />
       ) : (
-        <Icon className="h-[18px] w-[18px]" style={{ color: T.forest }} />
+        <Icon className="h-[18px] w-[18px]" style={{ color: T.accentText }} />
       )}
     </span>
   )
 
-  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40'
+  const rowButton = 'flex w-full items-center gap-3 rounded-lg px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56B87F]/50'
 
   const renderMethodRow = (m: LocalMethodRow) => {
     const checked = payMethod === m.id
     return (
-      <div className={rowClass(checked)} style={{ boxShadow: rowSurface() }}>
+      <div className={rowClass(checked)} style={{ boxShadow: rowSurface(checked) }}>
         <button type="button" role="radio" aria-checked={checked} onClick={() => setPayMethod(m.id)} className={rowButton}>
           {markTile(m.logo, m.Icon)}
           <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
@@ -941,7 +949,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Crypto: always the last row; opens the coin picker when picked.
   const cryptoChecked = payMethod === 'crypto'
   const cryptoRow = cryptoMethod && (
-    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface() }}>
+    <div className={rowClass(cryptoChecked)} style={{ boxShadow: rowSurface(cryptoChecked) }}>
       <button type="button" role="radio" aria-checked={cryptoChecked} onClick={() => setPayMethod('crypto')} className={rowButton}>
         <span
           className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
@@ -976,8 +984,8 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             type="button"
             aria-pressed={active}
             onClick={() => selectRegion(r.id)}
-            className="h-8 rounded-md px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14432A]/40 active:scale-[0.98]"
-            style={active ? { background: T.forest, color: '#FFFFFF' } : { background: '#FFFFFF', color: T.ink, boxShadow: `inset 0 0 0 1px ${T.line}` }}
+            className="h-8 rounded-md px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#56B87F]/50 active:scale-[0.98]"
+            style={active ? { background: T.forest, color: '#FFFFFF' } : { background: T.ivory, color: T.ink, boxShadow: `inset 0 0 0 1px ${T.line}` }}
           >
             {r.label}
           </button>
@@ -1031,7 +1039,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   const summaryCard = (compact = false) => (
-    <div className="rounded-lg border bg-white p-5" style={{ borderColor: T.line }}>
+    <div className="rounded-lg border p-5 backdrop-blur-md" style={{ borderColor: T.line, background: T.glass, boxShadow: '0 18px 44px rgba(0,0,0,0.35)' }}>
       {/* Item */}
       <div className="flex items-center gap-3.5">
         <Image
@@ -1059,13 +1067,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
       {/* Spec rows — full card width */}
       <div className="mt-3 divide-y text-[12.5px]">
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
           <span style={{ color: T.ink2 }}>Delivery Time</span>
           <span className="font-medium" style={{ color: T.ink }}>
             {fmtDelivery(deliveryTime)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: '#EFEDE6' }}>
+        <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
           <span style={{ color: T.ink2 }}>Quantity</span>
           <span className="font-medium" style={{ color: T.ink }}>
             {quantity.toLocaleString()}
@@ -1138,7 +1146,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   {promoResult?.valid ? (
             <div
               className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-[13px] font-semibold"
-              style={{ background: T.limeTint, borderColor: T.line, color: T.forest }}
+              style={{ background: T.limeTint, borderColor: 'rgba(86,184,127,0.35)', color: T.accentText }}
             >
               <span className="truncate">Code Applied: {promoResult.code}</span>
               <button type="button" onClick={handleRemovePromo} aria-label="Remove Code">
@@ -1154,7 +1162,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                   if (e.key === 'Enter') void handleApplyPromo()
                 }}
                 placeholder="Discount Code"
-                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#14432A]"
+                className="h-[38px] min-w-0 flex-1 rounded-md border px-2.5 text-[13px] outline-none transition-colors focus:border-[#56B87F]"
                 style={{ borderColor: T.line, background: T.ivory, color: T.ink }}
               />
               <button
@@ -1162,7 +1170,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 onClick={() => void handleApplyPromo()}
                 disabled={promoValidating}
                 className="h-[38px] rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
-                style={{ borderColor: T.forest, color: T.forest }}
+                style={{ borderColor: T.accentText, color: T.accentText }}
               >
                 {promoValidating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
               </button>
@@ -1193,7 +1201,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           info="Covers payment processing for the method you picked."
         />
         {promoDiscount > 0 && (
-          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.forest2} />
+          <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.success} />
         )}
         {walletBalance > 0 && (
           <div className="flex items-center justify-between gap-3">
@@ -1206,7 +1214,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
                 label="Apply Store Credit"
               />
             </span>
-            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.forest2 : T.ink }}>
+            <span className="tabular-nums font-medium" style={{ color: useWallet ? T.success : T.ink }}>
               −${walletAmount.toFixed(2)}
             </span>
           </div>
@@ -1235,7 +1243,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           By paying you agree to our{' '}
           <Link
             href="/terms"
-            className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
+            className="underline underline-offset-2 transition-colors hover:text-[#56B87F]"
             style={{ color: T.ink2 }}
           >
             Terms of Service
@@ -1243,7 +1251,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           and{' '}
           <Link
             href="/refunds"
-            className="underline underline-offset-2 transition-colors hover:text-[#14432A]"
+            className="underline underline-offset-2 transition-colors hover:text-[#56B87F]"
             style={{ color: T.ink2 }}
           >
             Refund Policy
@@ -1254,7 +1262,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    <div className="min-h-screen" style={{ background: T.ivory }}>
+    <div className="min-h-screen" style={{ background: T.page }}>
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
       <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10 lg:pb-14">
@@ -1265,12 +1273,12 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               type="button"
               onClick={() => router.back()}
               aria-label="Go Back"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-white/60 backdrop-blur-sm transition-colors hover:bg-white"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-[#1F242C] transition-colors hover:bg-[#252B34]"
               style={{ borderColor: T.line, color: T.ink }}
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.forest }} />
+            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: T.accentText }} />
             {/* Phone: smaller + nowrap so the title never breaks into two
                 lines beside the SSL chip. Desktop (sm:) unchanged. */}
             <span
@@ -1281,10 +1289,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             </span>
           </span>
           <span
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-white px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1F242C] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
             style={{ borderColor: T.line, color: T.ink }}
           >
-            <ShieldCheck className="h-4 w-4" style={{ color: T.forest }} />
+            <ShieldCheck className="h-4 w-4" style={{ color: T.accentText }} />
             {/* Phone: short label; desktop keeps the full one. */}
             <span className="sm:hidden">SSL Secure</span>
             <span className="hidden sm:inline">256-Bit SSL Secure</span>
@@ -1325,7 +1333,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         </p>
         <div
           className="relative overflow-hidden rounded-md px-5 py-5 sm:px-8 sm:py-6"
-          style={{ background: T.ivory2, boxShadow: `inset 0 0 0 1.5px ${T.line}` }}
+          style={{ background: T.ivory, boxShadow: `inset 0 0 0 1px ${T.line}` }}
         >
           {/* Full-bleed art (mirrored so the sky, not the cliff, sits
               behind the content) under one smooth left-to-right ivory wash:
@@ -1343,14 +1351,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             className="absolute inset-0 hidden sm:block"
             style={{
               background:
-                'linear-gradient(90deg, rgba(250,250,247,0.93) 0%, rgba(250,250,247,0.87) 50%, rgba(250,250,247,0.68) 82%, rgba(250,250,247,0.35) 100%)',
+                'linear-gradient(90deg, rgba(23,27,33,0.94) 0%, rgba(23,27,33,0.88) 50%, rgba(23,27,33,0.7) 82%, rgba(23,27,33,0.42) 100%)',
             }}
           />
           {/* Phones: rows span the full width, so the wash is uniform. */}
           <div
             aria-hidden
             className="absolute inset-0 sm:hidden"
-            style={{ background: 'rgba(250,250,247,0.9)' }}
+            style={{ background: 'rgba(23,27,33,0.9)' }}
           />
           <div className="relative">
             <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-7">
@@ -1378,10 +1386,10 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               ].map((step) => (
                 <li key={step.title} className="flex items-start gap-2.5">
                   <span
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white"
-                    style={{ boxShadow: `inset 0 0 0 1.5px ${T.line}` }}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+                    style={{ background: T.row, boxShadow: `inset 0 0 0 1px ${T.line}` }}
                   >
-                    <step.Icon className="h-4 w-4" style={{ color: T.forest }} />
+                    <step.Icon className="h-4 w-4" style={{ color: T.accentText }} />
                   </span>
                   <div>
                     <p className="text-[13px] font-semibold leading-snug" style={{ color: T.ink }}>
@@ -1405,7 +1413,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           12px base, or the home-indicator inset when the browser bar sits
           on top (Chrome/top-bar Safari) and exposes the safe area. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-[#1F242C]/95 px-4 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
         {payButton()}
