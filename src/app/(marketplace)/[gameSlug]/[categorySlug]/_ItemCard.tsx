@@ -28,7 +28,8 @@
 import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { ThumbsUp, TrendingDown } from 'lucide-react'
+import { ThumbsUp } from 'lucide-react'
+import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
@@ -191,7 +192,7 @@ export default function ItemCard({
               tone={isInstant ? 'success' : 'default'}
             />
             {!offer.isUnlimited && offer.stock != null && offer.stock > 0 && (
-              <MetaPill icon={IconPackage} label={`${fmtStock(offer.stock)} in stock`} />
+              <MetaPill icon={IconPackage} label={fmtStock(offer.stock)} />
             )}
           </div>
         </div>
@@ -253,7 +254,7 @@ export default function ItemCard({
                 aria-label="Lowest price"
                 className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/20 text-success ring-1 ring-success/30"
               >
-                <TrendingDown className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                <LocalOfferRoundedIcon aria-hidden style={{ fontSize: 14 }} />
               </span>
               <span
                 role="tooltip"
