@@ -63,7 +63,7 @@ export function TopSellingGamesRail() {
               style={{
                 borderRadius: 'var(--radius-lg)',
                 // Same recess as the listing cards — see ListingCard.
-                backgroundColor: 'var(--color-bg-well, #181D25)',
+                backgroundColor: 'var(--color-bg-well, #191A1F)',
                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.30)',
               }}
             >

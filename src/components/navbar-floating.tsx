@@ -1145,7 +1145,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               near-opaque dark surface + top sheen, roomier
                               type and spacing. Capped to the dynamic viewport
                               so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1F242C] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1290,7 +1290,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                         />
                         <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
                           {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1F242C] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                             <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                             {/* Header - hairline separator spans the full panel width */}
                             <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
@@ -1409,7 +1409,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             cramped context menu. dvh (not vh) cap so the
                             bottom rows never hide behind iOS Safari's
                             toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#1F242C] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
+                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
                           <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
                           {/* User Info card */}
                           <div className="relative border-b border-border-subtle p-2 pb-2">
@@ -2415,7 +2415,7 @@ function CategoryDropdown({
               // (the touch counterpart of the mouseleave debounce).
               data-dropdown
               className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
-              style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1F242C)' }}
+              style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
             >
               {/* V21/P7.aa — min-h on the GRID (not the card) so the left
                   "Popular" column's background + right border stretch the
@@ -2958,7 +2958,7 @@ function GlobalSearch({
               'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)]',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
-            style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1F242C)' }}
+            style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
           >
             <div className="max-h-[420px] overflow-y-auto p-1.5">
               {searching && !hasResults ? (

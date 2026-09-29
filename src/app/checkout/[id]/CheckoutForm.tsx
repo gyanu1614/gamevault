@@ -79,10 +79,10 @@ import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 const T = {
   // Dark surfaces — the marketplace theme (src/styles/tokens.css): page
   // ground, raised card, input well, hover; glass = the listing page's card.
-  page: '#171B21',
-  ivory: '#1F242C',
-  ivory2: '#181D25',
-  row: '#252B34',
+  page: '#16171B',
+  ivory: '#1D1E23',
+  ivory2: '#191A1F',
+  row: '#24252B',
   glass: '#1D1E23',
   ink: '#E9EDF2',
   ink2: '#9AA6B3',
@@ -100,7 +100,7 @@ const T = {
   amberIc: '#FFB23E',
   amberBg: 'rgba(255,178,62,0.12)',
   amberLn: 'rgba(255,178,62,0.35)',
-  nav: '#171B21',
+  nav: '#16171B',
 }
 
 function fmtUnitPrice(n: number): string {
@@ -194,7 +194,7 @@ function LightSelect({
         <Select.Content
           position="popper"
           sideOffset={4}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-[#252B34] shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
+          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-[#24252B] shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
           style={{ borderColor: T.line }}
         >
           <Select.Viewport className="p-1">
@@ -723,7 +723,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       payTab = window.open('', '_blank')
       try {
         payTab?.document.write(
-          '<title>Secure Payment</title><body style="margin:0;background:#171B21"><p style="font-family:system-ui;padding:24px;color:#E9EDF2">Opening your secure payment page…</p></body>'
+          '<title>Secure Payment</title><body style="margin:0;background:#16171B"><p style="font-family:system-ui;padding:24px;color:#E9EDF2">Opening your secure payment page…</p></body>'
         )
       } catch {}
     }
@@ -919,7 +919,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const rowClass = (checked: boolean) =>
     cn(
       'rounded-lg transition-[background-color,box-shadow] duration-150',
-      checked ? 'bg-[#252B34]' : 'bg-[#1F242C] hover:bg-[#252B34]'
+      checked ? 'bg-[#24252B]' : 'bg-[#1D1E23] hover:bg-[#24252B]'
     )
   const rowSurface = (checked: boolean) =>
     checked
@@ -1336,7 +1336,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
               type="button"
               onClick={() => router.back()}
               aria-label="Go Back"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-[#1F242C] transition-colors hover:bg-[#252B34]"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-[#1D1E23] transition-colors hover:bg-[#24252B]"
               style={{ borderColor: T.line, color: T.ink }}
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1352,7 +1352,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             </span>
           </span>
           <span
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1F242C] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border bg-[#1D1E23] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:text-[12.5px]"
             style={{ borderColor: T.line, color: T.ink }}
           >
             <HttpsRoundedIcon style={{ fontSize: 16, color: T.accentText }} />
@@ -1487,7 +1487,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           12px base, or the home-indicator inset when the browser bar sits
           on top (Chrome/top-bar Safari) and exposes the safe area. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-[#1F242C]/95 px-4 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-[#1D1E23]/95 px-4 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden"
         style={{ borderColor: T.line }}
       >
         {payButton()}

@@ -28,7 +28,8 @@
 import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { Bolt, Clock, ThumbsUp, TrendingDown } from 'lucide-react'
+import { ThumbsUp, TrendingDown } from 'lucide-react'
+import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
@@ -74,28 +75,35 @@ function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size
 
 type ChipTone = 'default' | 'success'
 
-/** One meta chip in the data-driven row (delivery, stock, attribute). */
+/** One meta chip: a small dark pill with an icon (delivery, stock). */
 function MetaPill({
   icon: Icon,
   label,
   tone = 'default',
 }: {
-  icon: React.ComponentType<{ className?: string }>
+  icon: typeof IconClock
   label: string
   tone?: ChipTone
 }) {
   return (
     <span
-      style={{ fontSize: 'var(--fs-micro)' }}
       className={cn(
-        'inline-flex items-center gap-1.5 font-semibold',
-        tone === 'success' ? 'text-success' : 'text-text-secondary',
+        'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium',
+        'bg-white/[0.06] ring-1 ring-inset ring-white/[0.05]',
+        tone === 'success' ? 'text-success' : 'text-text-primary',
       )}
     >
-      <Icon className={cn('h-3.5 w-3.5', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
+      <Icon size={15} stroke={2} className={tone === 'success' ? 'text-success' : 'text-text-secondary'} />
       {label}
     </span>
   )
+}
+
+/** 14 · 1.2K · 999.9K — stock in the fewest characters. */
+function fmtStock(n: number): string {
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K`
+  return `${(n / 1_000_000).toFixed(1)}M`
 }
 
 export default function ItemCard({
@@ -175,14 +183,16 @@ export default function ItemCard({
             {offer.name}
           </h3>
 
-          {/* Meta row — Delivery Time only (per product decision). Stock and
-              attribute chips live on the listing detail page, not the card. */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Meta row — delivery time + stock as pills (owner call 2026-09-28). */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             <MetaPill
-              icon={isInstant ? Bolt : Clock}
+              icon={isInstant ? IconBolt : IconClock}
               label={deliveryText}
               tone={isInstant ? 'success' : 'default'}
             />
+            {!offer.isUnlimited && offer.stock != null && offer.stock > 0 && (
+              <MetaPill icon={IconPackage} label={`${fmtStock(offer.stock)} in stock`} />
+            )}
           </div>
         </div>
 

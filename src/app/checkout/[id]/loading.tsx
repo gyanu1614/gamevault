@@ -6,8 +6,8 @@
  * transition into the real page is colour- and shape-stable.
  */
 
-const GROUND = '#171B21'
-const NAV = '#171B21'
+const GROUND = '#16171B'
+const NAV = '#16171B'
 const LINE = 'rgba(255,255,255,0.14)'
 
 function Block({ className = '' }: { className?: string }) {
@@ -16,7 +16,7 @@ function Block({ className = '' }: { className?: string }) {
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border bg-[#1F242C] ${className}`} style={{ borderColor: LINE }}>
+    <div className={`rounded-lg border bg-[#1D1E23] ${className}`} style={{ borderColor: LINE }}>
       {children}
     </div>
   )

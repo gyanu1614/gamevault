@@ -14,9 +14,9 @@
 
 /** Shared placeholder block — also used by the listing detail skeleton. */
 export function Block({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
-  // bg-bg-inset (#2C333F) — one step LIGHTER than the card surface. It used
+  // bg-bg-inset (#30313A) — one step LIGHTER than the card surface. It used
   // to be bg-overlay-2, which is the same hex as the card's bg-overlay
-  // (#252B34), so every block inside a skeleton card was invisible and the
+  // (#24252B), so every block inside a skeleton card was invisible and the
   // cards loaded as empty boxes.
   return (
     <div className={`animate-pulse rounded-md bg-bg-inset ${className}`} style={style} />
@@ -98,7 +98,7 @@ export default function ItemsSkeleton() {
           real page and made everything jump on swap. */}
       <div className="relative z-40 flex justify-center px-3 py-0.5 pointer-events-none sm:py-1 md:py-1.5 max-md:h-[52px] max-md:px-0 max-md:py-0">
         <div
-          className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#171B21]"
+          className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#16171B]"
           style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(28, 28, 37, 0.30))' }}
         >
           {/* One block per slot (game + each category). Slots are 38px

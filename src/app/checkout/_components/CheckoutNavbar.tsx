@@ -20,7 +20,7 @@ export function CheckoutNavbar({
   return (
     <div
       className="flex h-16 items-center justify-between border-b px-4 sm:px-10"
-      style={{ background: '#171B21', borderColor: 'rgba(255,255,255,0.08)' }}
+      style={{ background: '#16171B', borderColor: 'rgba(255,255,255,0.08)' }}
     >
       <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-85">
         {/* eslint-disable-next-line @next/next/no-img-element */}

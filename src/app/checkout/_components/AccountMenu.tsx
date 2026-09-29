@@ -70,7 +70,7 @@ export function AccountMenu({
         <Dropdown.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-[220px] rounded-lg border bg-[#252B34] p-1.5 shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
+          className="z-50 w-[220px] rounded-lg border bg-[#24252B] p-1.5 shadow-[0_18px_44px_rgba(0,0,0,0.6)]"
           style={{ borderColor: LINE, color: INK }}
         >
           <div className="px-2.5 pb-2 pt-1.5">

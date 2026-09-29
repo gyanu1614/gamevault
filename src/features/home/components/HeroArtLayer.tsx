@@ -49,7 +49,7 @@ interface HeroArtLayerProps {
 }
 
 /** Page ground as an rgb triplet, so stops can carry their own alpha. */
-const GROUND = 'var(--color-bg-base-rgb, 23, 27, 33)'
+const GROUND = 'var(--color-bg-base-rgb, 22, 23, 27)'
 
 /**
  * Normalising filter applied to every hero <img> BEFORE the gradient.

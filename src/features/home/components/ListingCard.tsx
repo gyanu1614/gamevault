@@ -72,7 +72,7 @@ export function ListingCard({ listing }: { listing: LatestListing }) {
           // grid backdrop, and a transparent card lets it show through the
           // card face. Set inline rather than via a utility so it doesn't
           // depend on a Tailwind rebuild.
-          backgroundColor: 'var(--color-bg-well, #181D25)',
+          backgroundColor: 'var(--color-bg-well, #191A1F)',
           // Recessed, not raised. A raised surface catches light on its TOP
           // edge and casts shadow below; a well does the opposite. Kept
           // deliberately shallow — the depth should register without the
