@@ -128,7 +128,7 @@ export function Combobox({
             'hover:border-border-strong',
             open && (tone === 'neutral'
               ? 'border-text-secondary'
-              : 'border-lime-tint-border ring-1 ring-lime/30'),
+              : 'border-lime-tint-border'),
             // Invalid (touched + empty) — overrides default border/ring.
             invalid && !open && 'border-error ring-2 ring-error-bg',
             disabled && 'cursor-not-allowed opacity-50',

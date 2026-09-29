@@ -225,7 +225,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lime/15 text-[15px] font-bold text-lime-text">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lime-tint-bg text-[15px] font-bold text-lime-text">
                     {displayName[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -362,7 +362,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 {item.badge && (
                   <span className={cn(
                     'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                    'bg-lime/20 text-lime-text'
+                    'bg-[rgba(86,184,127,0.20)] text-lime-text'
                   )}>
                     {item.badge}
                   </span>
@@ -448,7 +448,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               {item.badge && (
                 <span className={cn(
                   'px-2 py-0.5 text-[11px] font-bold rounded-full',
-                  'bg-lime/20 text-lime-text'
+                  'bg-[rgba(86,184,127,0.20)] text-lime-text'
                 )}>
                   {item.badge}
                 </span>

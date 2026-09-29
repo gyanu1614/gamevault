@@ -614,7 +614,7 @@ function CategoryCard({
           tap (sticky hover) and causes transient horizontal scroll. */}
       <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl p-6 transition-all duration-300 hover:-translate-y-0.5">
         <div className="flex items-start justify-between mb-4">
-          <div className="p-3 bg-lime/10 border border-lime-tint-border rounded-lg">
+          <div className="p-3 bg-lime-tint-bg border border-lime-tint-border rounded-lg">
             <span className="text-2xl">{icon || '📦'}</span>
           </div>
           <span className="text-sm text-text-secondary">
