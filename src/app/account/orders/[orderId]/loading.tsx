@@ -96,12 +96,24 @@ export default function OrderDetailLoading() {
             <div className={`${CARD} px-5 pb-4 pt-5`}>
               <Block className="mb-4 h-5 w-32" />
               <div className="space-y-3.5">
-                {Array.from({ length: 6 }).map((_, i) => (
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <Block className="h-3.5 w-24" />
                     <Block className="h-3.5 w-28" />
                   </div>
                 ))}
+              </div>
+            </div>
+            {/* SafeDrop (buyer) / Payout (seller) card */}
+            <div className={`${CARD} px-5 pb-4 pt-5`}>
+              <Block className="mb-4 h-5 w-40" />
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <Block className="h-3.5 w-28" />
+                  <Block className="h-4 w-16" />
+                </div>
+                <Block className="h-8 w-full rounded-[9px]" />
+                <Block className="mx-auto h-3 w-4/5" />
               </div>
             </div>
           </aside>
