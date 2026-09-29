@@ -14,9 +14,10 @@
  *     `text.*`, `border.*`, `ct.*`, `card`, `primary` …) has no `<alpha-value>`,
  *     so ANY opacity modifier on it generates nothing: `bg-lime/10`,
  *     `bg-bg-raised/95`, `text-text-primary/80`, `from-bg-base/0`. Use the
- *     token's own tint (`bg-lime-tint-bg`), the solid token, or an arbitrary
- *     value at that alpha (`bg-[rgba(31,36,44,0.95)]` — hexes in
- *     src/styles/tokens.css).
+ *     token's own tint (`bg-lime-tint-bg`), the solid token, or the token mixed
+ *     to that alpha: `bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)]`.
+ *     Not a hex copy — the surface palette moves (2026-09-29) and a copied
+ *     rgba silently keeps the old colour.
  *
  * This test derives those colour roots from the config, pulls every
  * `<utility>-<root>…` token out of src, compiles them all with the repo's
@@ -154,7 +155,7 @@ describe('tailwind dead colour classes guard', () => {
     const live = [
       'bg-lime', 'text-lime-text', 'bg-lime-tint-bg', 'hover:bg-lime-hover', 'text-amber-400', 'text-warning',
       'bg-bg-raised', 'text-text-secondary', 'border-border-subtle', 'bg-ct-surface', 'bg-card', 'from-bg-base',
-      'bg-[rgba(31,36,44,0.95)]',
+      'bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)]',
     ]
     const dead = [
       'text-amber', 'bg-amber/[0.12]', 'bg-lime/10', 'hover:bg-lime/20', 'text-lime-text/40',

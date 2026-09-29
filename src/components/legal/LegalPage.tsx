@@ -153,7 +153,7 @@ function Block({ block }: { block: LegalBlock }) {
     }
     case 'note':
       return (
-        <div className="rounded-xl border border-[rgba(255,178,62,0.30)] bg-[rgba(255,178,62,0.036)] px-4 py-3 text-[14px] leading-relaxed text-warning">
+        <div className="rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_30%,transparent)] px-4 py-3 text-[14px] leading-relaxed text-warning">
           <Inline md={block.md} />
         </div>
       )

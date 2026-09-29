@@ -26,12 +26,12 @@ interface OrderMessageCardProps {
 
 const getStatusColor = (status: string) => {
   const colors = {
-    pending: 'bg-warning-bg text-warning border-[rgba(255,178,62,0.40)]',
+    pending: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
     processing: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     delivered: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-    completed: 'bg-success-bg text-success border-[rgba(63,217,134,0.30)]',
-    disputed: 'bg-error-bg text-error border-[rgba(255,92,92,0.40)]',
-    resolved: 'bg-success-bg text-success border-[rgba(63,217,134,0.30)]',
+    completed: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
+    disputed: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]',
+    resolved: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
     refunded: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
     cancelled: 'bg-gray-500/10 text-text-secondary border-gray-500/30',
   }

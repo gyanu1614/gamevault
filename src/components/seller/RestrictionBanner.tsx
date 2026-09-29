@@ -29,8 +29,8 @@ export default function RestrictionBanner({ status, reason, dismissible = true }
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "relative rounded-xl border-2 p-4 mb-6",
-        isRestricted && "bg-warning-bg border-[rgba(255,178,62,0.40)]",
-        isBanned && "bg-error-bg border-[rgba(255,92,92,0.40)]"
+        isRestricted && "bg-warning-bg border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]",
+        isBanned && "bg-error-bg border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]"
       )}
     >
       <div className="flex items-start gap-4">

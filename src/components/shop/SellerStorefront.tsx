@@ -309,7 +309,7 @@ function ShopListingCard({ listing }: { listing: any }) {
           {game}
         </div>
         {hasPriceDrop && (
-          <div className="absolute right-2.5 top-2.5 rounded-full border border-[rgba(63,217,134,0.40)] bg-[rgba(63,217,134,0.096)] px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
+          <div className="absolute right-2.5 top-2.5 rounded-full border border-[color-mix(in_srgb,var(--color-success)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-success-bg)_80%,transparent)] px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
             -{discountPct}%
           </div>
         )}

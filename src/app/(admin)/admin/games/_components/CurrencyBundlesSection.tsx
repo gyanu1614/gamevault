@@ -95,7 +95,7 @@ export function CurrencyBundlesSection({ gameId, value, onChange }: Props) {
       </header>
 
       {bundles.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border-default bg-[rgba(37,43,52,0.30)] p-4 text-[12.5px] text-text-tertiary">
+        <div className="rounded-xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_30%,transparent)] p-4 text-[12.5px] text-text-tertiary">
           No bundles defined &mdash; this currency stays in flexible mode (Robux-style stepper).
         </div>
       )}
@@ -121,7 +121,7 @@ export function CurrencyBundlesSection({ gameId, value, onChange }: Props) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-[rgba(37,43,52,0.60)] px-3 py-1.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-3 py-1.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
         >
           {expanded
             ? 'Show fewer'
@@ -188,7 +188,7 @@ function BundleRow({
   }
 
   return (
-    <li className="grid grid-cols-[64px_1fr_120px_auto] items-center gap-3 rounded-xl border border-border-default bg-[rgba(37,43,52,0.40)] p-3 sm:grid-cols-[80px_1fr_140px_auto]">
+    <li className="grid grid-cols-[64px_1fr_120px_auto] items-center gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 sm:grid-cols-[80px_1fr_140px_auto]">
       {/* Image tile */}
       <button
         type="button"

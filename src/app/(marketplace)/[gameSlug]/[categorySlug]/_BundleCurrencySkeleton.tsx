@@ -42,7 +42,7 @@ function GameSubNavSkeleton() {
 // + 2px border (that was a tighter skeleton-only treatment).
 function BundleTileSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border-default bg-[rgba(37,43,52,0.40)] p-3">
+    <div className="relative overflow-hidden rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3">
       <div className="flex h-16 items-center justify-center sm:h-20">
         <Block className="h-14 w-14 rounded-md" />
       </div>
@@ -57,7 +57,7 @@ function BundleTileSkeleton() {
 function PlatformTileSkeleton() {
   // 140×88 card, icon h-10 + label.
   return (
-    <div className="relative flex h-[88px] w-[140px] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-border-default bg-[rgba(37,43,52,0.40)] p-2">
+    <div className="relative flex h-[88px] w-[140px] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-2">
       <Block className="h-10 w-10 rounded-md" />
       <Block className="h-3 w-12" />
     </div>

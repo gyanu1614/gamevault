@@ -89,7 +89,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-[rgba(233,237,242,0.80)]"
+            className="text-sm font-medium text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]"
           >
             {label}
           </label>
@@ -177,7 +177,7 @@ export const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>
     return (
       <div className={cn('flex flex-col gap-1.5', fullWidth && 'w-full')}>
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-[rgba(233,237,242,0.80)]">
+          <label htmlFor={inputId} className="text-sm font-medium text-[color-mix(in_srgb,var(--foreground)_80%,transparent)]">
             {label}
           </label>
         )}

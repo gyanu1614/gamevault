@@ -141,7 +141,7 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
   if (g.review_status === 'declining' && g.review_note) warnings.push(g.review_note)
 
   return (
-    <div className="border-b border-border-subtle bg-[rgba(23,27,33,0.60)] px-5 py-5">
+    <div className="border-b border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-base)_60%,transparent)] px-5 py-5">
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr_1fr]">
         {/* Evidence */}
         <div className="space-y-4">

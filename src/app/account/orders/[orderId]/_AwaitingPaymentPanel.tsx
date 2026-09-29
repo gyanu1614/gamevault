@@ -186,7 +186,7 @@ export function AwaitingPaymentPanel({
                   <button
                     onClick={() => setConfirmingCancel(true)}
                     disabled={paying}
-                    className="inline-flex items-center justify-center gap-2 rounded-md border border-[rgba(255,92,92,0.40)] px-5 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-md border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] px-5 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-60"
                   >
                     <XCircle className="h-4 w-4" />
                     Cancel Order

@@ -94,7 +94,7 @@ export default function DataPrivacySection() {
 
       <div className="space-y-3">
         {/* Export — safe, instant */}
-        <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[rgba(31,36,44,0.40)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="text-sm font-medium text-text-primary">Download Your Data</div>
             <p className="mt-0.5 text-xs text-text-tertiary">
@@ -112,7 +112,7 @@ export default function DataPrivacySection() {
         </div>
 
         {/* Delete — permanent, gated */}
-        <div className="rounded-lg border border-[rgba(255,92,92,0.40)] bg-error-bg p-4">
+        <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg p-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-error" />
             <span className="text-sm font-semibold text-error">Delete Account</span>
@@ -123,14 +123,14 @@ export default function DataPrivacySection() {
           </p>
 
           {pendingDeletion ? (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[rgba(255,178,62,0.20)] bg-warning-bg px-4 py-2.5 text-xs font-medium text-warning">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] bg-warning-bg px-4 py-2.5 text-xs font-medium text-warning">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Deletion request received — we’ll confirm by email.
             </div>
           ) : (
             <button
               onClick={() => setDeleteOpen(true)}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[rgba(255,92,92,0.40)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.096)]"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_80%,transparent)]"
             >
               <Trash2 className="h-4 w-4" />
               Request Account Deletion
@@ -156,7 +156,7 @@ export default function DataPrivacySection() {
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder={CONFIRM_PHRASE}
-                className="w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base text-text-primary placeholder:text-text-disabled focus:border-error focus:outline-none focus:ring-2 focus:ring-[rgba(255,92,92,0.20)] sm:text-sm"
+                className="w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base text-text-primary placeholder:text-text-disabled focus:border-error focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-error)_20%,transparent)] sm:text-sm"
               />
             </div>
 
@@ -170,7 +170,7 @@ export default function DataPrivacySection() {
               <button
                 onClick={handleDelete}
                 disabled={submitting || confirmText !== CONFIRM_PHRASE}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[rgba(255,92,92,0.40)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.096)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_80%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Delete Account

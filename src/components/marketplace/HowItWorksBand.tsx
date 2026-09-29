@@ -100,7 +100,7 @@ export default function HowItWorksBand({
             {/* Angled band surface with ambient underglow along the seam. */}
             <div
               aria-hidden
-              className="absolute inset-x-0 bottom-4 top-4 -skew-y-2 overflow-hidden border-t border-border-subtle bg-[rgba(31,36,44,0.90)]"
+              className="absolute inset-x-0 bottom-4 top-4 -skew-y-2 overflow-hidden border-t border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_90%,transparent)]"
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 h-72">
                 <span className="absolute inset-x-0 top-0 h-56 bg-[radial-gradient(55%_100%_at_50%_0%,rgba(255,255,255,0.05),transparent_70%)] animate-pulse [animation-duration:12s]" />

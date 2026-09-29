@@ -8,12 +8,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-[rgba(42,122,80,0.90)]",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-[rgba(255,92,92,0.90)]",
+        default: "bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--primary)_90%,transparent)]",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-[color-mix(in_srgb,var(--destructive)_90%,transparent)]",
         // V33 — outline/ghost hovers are neutral grey (site rule: lime is
         // reserved for real CTAs, not hover feedback on every button).
         outline: "border border-input bg-background hover:bg-bg-raised-hover hover:text-text-primary",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-[rgba(37,43,52,0.80)]",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_srgb,var(--secondary)_80%,transparent)]",
         ghost: "hover:bg-bg-raised-hover hover:text-text-primary",
         link: "text-primary underline-offset-4 hover:underline",
       },

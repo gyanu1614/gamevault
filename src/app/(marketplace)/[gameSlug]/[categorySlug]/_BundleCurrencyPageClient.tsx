@@ -588,7 +588,7 @@ export default function BundleCurrencyPageClient({
                 ))}
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-border-default bg-[rgba(31,36,44,0.40)] p-6 text-center">
+              <div className="rounded-lg border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-6 text-center">
                 <p className="text-[13px] text-text-tertiary">
                   No other sellers for this bundle yet. The best price above is the only
                   offer right now.
@@ -896,7 +896,7 @@ function OfferPanel({
 
       {/* 6) Buy now */}
       {isOwn ? (
-        <div className="mt-4 rounded-xl border border-[rgba(255,178,62,0.40)] bg-[rgba(255,178,62,0.048)] px-3 py-2.5 text-[12px] text-warning">
+        <div className="mt-4 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_40%,transparent)] px-3 py-2.5 text-[12px] text-warning">
           This is your listing. Buyers see the Buy button here.
         </div>
       ) : (
@@ -976,7 +976,7 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
   return (
     <Link
       href={`/shop/${offer.sellerSlug}`}
-      className="block rounded-xl transition-colors hover:bg-[rgba(37,43,52,0.40)]"
+      className="block rounded-xl transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)]"
     >
       {inner}
     </Link>

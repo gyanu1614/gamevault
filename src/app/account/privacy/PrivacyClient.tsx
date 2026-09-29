@@ -147,10 +147,10 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
       </motion.div>
 
       {/* Deletion request card */}
-      <motion.div variants={item} className="rounded-lg border border-[rgba(255,92,92,0.20)] card-frost p-5">
+      <motion.div variants={item} className="rounded-lg border border-[color-mix(in_srgb,var(--color-error)_20%,transparent)] card-frost p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-[rgba(255,92,92,0.30)] bg-error-bg">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--color-error)_30%,transparent)] bg-error-bg">
               <Trash2 className="h-5 w-5 text-error" />
             </div>
             <div>
@@ -182,7 +182,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
               <button
                 onClick={handleDeletionRequest}
                 disabled={requestingDel}
-                className="flex items-center gap-1 rounded-lg border border-[rgba(255,92,92,0.40)] bg-error-bg px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-[rgba(255,92,92,0.20)] disabled:opacity-50"
+                className="flex items-center gap-1 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_20%,transparent)] disabled:opacity-50"
               >
                 {requestingDel ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                 Confirm Delete
@@ -191,7 +191,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
           ) : (
             <button
               onClick={() => setShowDelConfirm(true)}
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-[rgba(255,92,92,0.40)] bg-error-bg px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-[rgba(255,92,92,0.20)]"
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_20%,transparent)]"
             >
               <Trash2 className="h-4 w-4" />
               Request Deletion
@@ -200,7 +200,7 @@ export default function PrivacyClient({ requests: initialRequests }: Props) {
         </div>
 
         {showDelConfirm && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[rgba(255,92,92,0.20)] bg-error-bg p-3">
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_20%,transparent)] bg-error-bg p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
             <p className="text-xs text-error">
               This will permanently delete your account, listings, order history, messages, and all personal data.

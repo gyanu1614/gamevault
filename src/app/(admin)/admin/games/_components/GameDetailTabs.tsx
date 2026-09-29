@@ -178,7 +178,7 @@ function CategoryEmptyHint({
 }) {
   if (!enabled) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-default bg-[rgba(31,36,44,0.60)] p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-8 text-center">
         <p className="text-[14px] font-semibold text-text-primary">
           {type} isn&apos;t enabled for this game.
         </p>

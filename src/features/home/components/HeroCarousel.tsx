@@ -33,9 +33,9 @@ export interface HeroCarouselProps {
 }
 
 const BADGE_TONE_CLASSES: Record<NonNullable<HeroSlide['badgeTone']>, string> = {
-  error:   'bg-error-bg text-error border-[rgba(255,92,92,0.26)]',
-  success: 'bg-success-bg text-success border-[rgba(63,217,134,0.26)]',
-  info:    'bg-info-bg text-info border-[rgba(88,155,255,0.26)]',
+  error:   'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_26%,transparent)]',
+  success: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_26%,transparent)]',
+  info:    'bg-info-bg text-info border-[color-mix(in_srgb,var(--color-info)_26%,transparent)]',
 }
 
 export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
@@ -102,7 +102,7 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
                     className="w-full h-full object-cover"
                   />
                   {/* Gradient overlay — keeps the CTA + dots legible. */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[rgba(23,27,33,0.92)] via-[rgba(23,27,33,0.10)] to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[color-mix(in_srgb,var(--color-bg-base)_92%,transparent)] via-[color-mix(in_srgb,var(--color-bg-base)_10%,transparent)] to-transparent" />
 
                   {slide.badge && (
                     <div className="absolute top-[14px] left-[14px] z-10">
@@ -118,7 +118,7 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
                       enter from the autoplay plugin so the user has
                       time to click it without the slide changing. */}
                   <button
-                    className="absolute top-[14px] right-[14px] z-10 w-10 h-10 lg:w-8 lg:h-8 rounded-sm bg-[rgba(23,27,33,0.55)] backdrop-blur-md border border-border-default grid place-items-center text-text-secondary hover:text-lime hover:border-lime-tint-border transition-all"
+                    className="absolute top-[14px] right-[14px] z-10 w-10 h-10 lg:w-8 lg:h-8 rounded-sm bg-[color-mix(in_srgb,var(--color-bg-base)_55%,transparent)] backdrop-blur-md border border-border-default grid place-items-center text-text-secondary hover:text-lime hover:border-lime-tint-border transition-all"
                     aria-label="Add to favorites"
                   >
                     <Heart aria-hidden="true" className="w-[18px] h-[18px]" />
@@ -148,7 +148,7 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
               type="button"
               onClick={scrollPrev}
               aria-label="Previous slide"
-              className="hidden sm:grid absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[rgba(23,27,33,0.55)] backdrop-blur-md border border-border-default place-items-center text-text-primary hover:bg-[rgba(23,27,33,0.75)] hover:border-border-strong transition-all"
+              className="hidden sm:grid absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[color-mix(in_srgb,var(--color-bg-base)_55%,transparent)] backdrop-blur-md border border-border-default place-items-center text-text-primary hover:bg-[color-mix(in_srgb,var(--color-bg-base)_75%,transparent)] hover:border-border-strong transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -156,7 +156,7 @@ export function HeroCarousel({ slides, intervalMs = 6000 }: HeroCarouselProps) {
               type="button"
               onClick={scrollNext}
               aria-label="Next slide"
-              className="hidden sm:grid absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[rgba(23,27,33,0.55)] backdrop-blur-md border border-border-default place-items-center text-text-primary hover:bg-[rgba(23,27,33,0.75)] hover:border-border-strong transition-all"
+              className="hidden sm:grid absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[color-mix(in_srgb,var(--color-bg-base)_55%,transparent)] backdrop-blur-md border border-border-default place-items-center text-text-primary hover:bg-[color-mix(in_srgb,var(--color-bg-base)_75%,transparent)] hover:border-border-strong transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

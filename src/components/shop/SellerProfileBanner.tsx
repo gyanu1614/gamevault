@@ -98,7 +98,7 @@ export default function SellerProfileBanner({
       {/* Backdrop — layered */}
       {customBg ? (
         <div className="absolute inset-0" style={customBg}>
-          <div className="absolute inset-0 bg-gradient-to-b from-[rgba(23,27,33,0.30)] via-[rgba(23,27,33,0.50)] to-[rgba(23,27,33,0.85)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_srgb,var(--color-bg-base)_30%,transparent)] via-[color-mix(in_srgb,var(--color-bg-base)_50%,transparent)] to-[color-mix(in_srgb,var(--color-bg-base)_85%,transparent)]" />
         </div>
       ) : (
         <>
@@ -124,7 +124,7 @@ export default function SellerProfileBanner({
             }}
           />
           {/* Bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[rgba(23,27,33,0.60)] to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[color-mix(in_srgb,var(--color-bg-base)_60%,transparent)] to-transparent" />
         </>
       )}
 
@@ -214,7 +214,7 @@ export default function SellerProfileBanner({
           {/* Stat chips */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
             <StatChip
-              icon={<ThumbsUp className="h-3.5 w-3.5 fill-[rgba(63,217,134,0.70)] text-success" />}
+              icon={<ThumbsUp className="h-3.5 w-3.5 fill-[color-mix(in_srgb,var(--color-success)_70%,transparent)] text-success" />}
               value={`${positivePercentage}%`}
               label={`${reviewsCount} ${reviewsCount === 1 ? 'review' : 'reviews'}`}
             />
@@ -290,7 +290,7 @@ function StatChip({
   icon, value, label,
 }: { icon: React.ReactNode; value: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-[rgba(37,43,52,0.60)] px-2.5 py-1 backdrop-blur-sm">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-2.5 py-1 backdrop-blur-sm">
       {icon}
       <span className="font-mono text-sm font-semibold tabular-nums text-text-primary">{value}</span>
       <span className="text-[11px] text-text-tertiary">{label}</span>

@@ -40,7 +40,7 @@ export default function Error({
 
   return (
     <main className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-20 text-center sm:px-6">
-      <div className="inline-flex rounded-2xl border border-[rgba(255,178,62,0.30)] bg-[rgba(255,178,62,0.036)] p-4">
+      <div className="inline-flex rounded-2xl border border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_30%,transparent)] p-4">
         <AlertCircle className="h-10 w-10 text-warning" />
       </div>
 

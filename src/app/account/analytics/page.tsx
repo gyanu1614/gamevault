@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                        className="h-8 rounded-lg bg-gradient-to-r from-primary to-[rgba(42,122,80,0.60)] flex items-center justify-end pr-3 min-w-[3rem]"
+                        className="h-8 rounded-lg bg-gradient-to-r from-primary to-[color-mix(in_srgb,var(--primary)_60%,transparent)] flex items-center justify-end pr-3 min-w-[3rem]"
                       >
                         <span className="text-xs font-medium text-white">${item.amount.toFixed(0)}</span>
                       </motion.div>
@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
                     className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[rgba(42,122,80,0.60)] text-xs font-bold text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[color-mix(in_srgb,var(--primary)_60%,transparent)] text-xs font-bold text-white">
                         #{index + 1}
                       </div>
                       <div>
@@ -362,8 +362,8 @@ export default function AnalyticsPage() {
               key={i}
               className={cn(
                 'rounded-lg border p-3 text-sm',
-                ins.tone === 'success' && 'border-[rgba(63,217,134,0.30)] bg-success-bg text-success',
-                ins.tone === 'warning' && 'border-[rgba(255,178,62,0.40)] bg-warning-bg text-warning',
+                ins.tone === 'success' && 'border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-success-bg text-success',
+                ins.tone === 'warning' && 'border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg text-warning',
                 ins.tone === 'lime' && 'border-lime-tint-border bg-lime-tint-bg text-text-secondary',
               )}
             >

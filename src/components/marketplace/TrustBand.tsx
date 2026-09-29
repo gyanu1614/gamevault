@@ -93,7 +93,7 @@ export function TrustBand({ className }: { className?: string }) {
             <TooltipContent
               side="bottom"
               sideOffset={8}
-              className="max-w-[250px] rounded-xl border-border-strong bg-[rgba(37,43,52,0.95)] px-3.5 py-3 backdrop-blur-md"
+              className="max-w-[250px] rounded-xl border-border-strong bg-[color-mix(in_srgb,var(--color-bg-overlay-2)_95%,transparent)] px-3.5 py-3 backdrop-blur-md"
             >
               <div className="flex items-center gap-1.5">
                 <span

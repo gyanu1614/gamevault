@@ -1323,7 +1323,7 @@ export default function SellWizard({
                 {/* Changes Requested — what the review team asked for.
                     Saving a non-draft edit resubmits into the queue. */}
                 {isEditMode && editStatus === 'changes_requested' && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-[rgba(255,178,62,0.40)] bg-warning-bg px-3 py-2.5">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg px-3 py-2.5">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
                     <div className="min-w-0 flex-1 text-[13px]">
                       <span className="font-semibold text-warning">
@@ -1917,7 +1917,7 @@ function FieldCard({
   // depth-2 inputs keep a usable width inside a 360px viewport.
   const shell = depth === 0
     ? ''
-    : 'rounded-xl border border-border-subtle bg-[rgba(37,43,52,0.30)] p-3 sm:p-4'
+    : 'rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_30%,transparent)] p-3 sm:p-4'
 
   return (
     <motion.div
@@ -2380,7 +2380,7 @@ function Step4Publish(p: Step4Props) {
               now so they can edit instead of filling the whole form
               and failing at publish. */}
           {p.existingBundleListingId && (
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,178,62,0.40)] bg-[rgba(255,178,62,0.036)] px-4 py-3">
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_30%,transparent)] px-4 py-3">
               <p className="text-[12.5px] text-text-secondary">
                 <span className="font-semibold text-text-primary">
                   You already list this bundle.
@@ -3087,7 +3087,7 @@ function FieldError({ children, className }: { children: React.ReactNode; classN
     <p
       role="alert"
       className={cn(
-        'rounded-md border border-[rgba(255,92,92,0.40)] bg-error-bg px-2.5 py-1.5 text-xs leading-snug text-error',
+        'rounded-md border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-2.5 py-1.5 text-xs leading-snug text-error',
         className,
       )}
     >
@@ -3117,7 +3117,7 @@ function PolicyBanner({ policy }: { policy: SellerPublishPolicy | null }) {
 
   if (policy.at_listing_limit) {
     return (
-      <div className="flex items-start gap-2.5 rounded-xl border border-[rgba(255,92,92,0.40)] bg-error-bg px-3 py-2.5">
+      <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-3 py-2.5">
         <IconX className="mt-0.5 h-4 w-4 shrink-0 text-error" strokeWidth={3} />
         <div className="min-w-0 flex-1 text-[13px]">
           <span className="font-semibold text-error">
@@ -3137,7 +3137,7 @@ function PolicyBanner({ policy }: { policy: SellerPublishPolicy | null }) {
       policy.pre_moderation_listings - policy.approved_listings,
     )
     return (
-      <div className="flex items-start gap-2.5 rounded-xl border border-[rgba(255,178,62,0.40)] bg-warning-bg px-3 py-2.5">
+      <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg px-3 py-2.5">
         <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
         <div className="min-w-0 flex-1 text-[13px]">
           <span className="font-semibold text-warning">

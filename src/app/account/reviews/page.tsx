@@ -146,7 +146,7 @@ export default function ReviewsPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-lg border border-white/10 bg-gradient-to-br from-[rgba(42,122,80,0.20)] to-[rgba(42,122,80,0.10)] p-4"
+              className="rounded-lg border border-white/10 bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_20%,transparent)] to-[color-mix(in_srgb,var(--primary)_10%,transparent)] p-4"
             >
               <div className="text-sm text-text-secondary">Average Rating</div>
               <div className="mt-1 flex items-baseline gap-2">
@@ -226,7 +226,7 @@ export default function ReviewsPage() {
               className={cn(
                 'rounded-lg border p-3 text-left transition-all',
                 selectedRating === rating
-                  ? 'border-primary bg-gradient-to-br from-[rgba(42,122,80,0.20)] to-[rgba(42,122,80,0.10)]'
+                  ? 'border-primary bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_20%,transparent)] to-[color-mix(in_srgb,var(--primary)_10%,transparent)]'
                   : 'border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20'
               )}
             >
@@ -318,7 +318,7 @@ export default function ReviewsPage() {
 
                 {/* Seller Response */}
                 {review.seller_response && (
-                  <div className="mt-4 rounded-lg border border-[rgba(42,122,80,0.20)] bg-[rgba(42,122,80,0.05)] p-4">
+                  <div className="mt-4 rounded-lg border border-[color-mix(in_srgb,var(--primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--primary)_5%,transparent)] p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm text-primary">
                       <MessageSquare className="h-4 w-4" />
                       Seller Response

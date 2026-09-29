@@ -62,7 +62,7 @@ function Field({
 function StatusBanner({ status, rejectionReason }: { status: string; rejectionReason?: string | null }) {
   if (status === 'certified') {
     return (
-      <div className="flex items-start gap-3 bg-success-bg border border-[rgba(63,217,134,0.20)] rounded-lg p-4">
+      <div className="flex items-start gap-3 bg-success-bg border border-[color-mix(in_srgb,var(--color-success)_20%,transparent)] rounded-lg p-4">
         <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-success">Disclosure Certified</p>
@@ -75,7 +75,7 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
   }
   if (status === 'submitted') {
     return (
-      <div className="flex items-start gap-3 bg-warning-bg border border-[rgba(255,178,62,0.20)] rounded-lg p-4">
+      <div className="flex items-start gap-3 bg-warning-bg border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] rounded-lg p-4">
         <Clock className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-warning">Under Review</p>
@@ -88,7 +88,7 @@ function StatusBanner({ status, rejectionReason }: { status: string; rejectionRe
   }
   if (status === 'rejected') {
     return (
-      <div className="flex items-start gap-3 bg-error-bg border border-[rgba(255,92,92,0.40)] rounded-lg p-4">
+      <div className="flex items-start gap-3 bg-error-bg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] rounded-lg p-4">
         <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-error">Disclosure Rejected — Resubmission Required</p>
