@@ -2,8 +2,7 @@
 
 import { CHAIN_LABELS } from '@/lib/crypto/address-validation'
 import React, { useState } from 'react'
-import { Clock, CheckCircle2, XCircle, Loader2, DollarSign, Calendar, X } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Clock, CheckCircle2, XCircle, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { cancelWithdrawalRequest, type WithdrawalRequest } from '@/lib/actions/withdrawals'
@@ -44,7 +43,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
     switch (status) {
       case 'pending':
         return {
-          icon: <Clock className="w-4 h-4" />,
+          icon: <Clock className="h-3 w-3" />,
           label: 'Pending',
           color: 'text-amber-400',
           bg: 'bg-amber-500/10',
@@ -52,7 +51,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'approved':
         return {
-          icon: <CheckCircle2 className="w-4 h-4" />,
+          icon: <CheckCircle2 className="h-3 w-3" />,
           label: 'Approved',
           color: 'text-blue-400',
           bg: 'bg-blue-500/10',
@@ -60,7 +59,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'processing':
         return {
-          icon: <Loader2 className="w-4 h-4 animate-spin" />,
+          icon: <Loader2 className="h-3 w-3 animate-spin" />,
           label: 'Processing',
           color: 'text-lime-text',
           bg: 'bg-lime-tint-bg',
@@ -68,7 +67,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'completed':
         return {
-          icon: <CheckCircle2 className="w-4 h-4" />,
+          icon: <CheckCircle2 className="h-3 w-3" />,
           label: 'Completed',
           color: 'text-emerald-400',
           bg: 'bg-emerald-500/10',
@@ -76,7 +75,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'rejected':
         return {
-          icon: <XCircle className="w-4 h-4" />,
+          icon: <XCircle className="h-3 w-3" />,
           label: 'Rejected',
           color: 'text-error',
           bg: 'bg-error-bg',
@@ -84,7 +83,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'cancelled':
         return {
-          icon: <X className="w-4 h-4" />,
+          icon: <X className="h-3 w-3" />,
           label: 'Cancelled',
           color: 'text-text-secondary',
           bg: 'bg-gray-500/10',
@@ -92,7 +91,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       case 'failed':
         return {
-          icon: <XCircle className="w-4 h-4" />,
+          icon: <XCircle className="h-3 w-3" />,
           label: 'Failed',
           color: 'text-error',
           bg: 'bg-error-bg',
@@ -100,7 +99,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
         }
       default:
         return {
-          icon: <Clock className="w-4 h-4" />,
+          icon: <Clock className="h-3 w-3" />,
           label: status,
           color: 'text-text-secondary',
           bg: 'bg-gray-500/10',
@@ -111,117 +110,85 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
 
   const statusConfig = getStatusConfig(request.status)
 
+  // One straight row per request (owner, 2026-09-28: the old cards were
+  // too tall). The destination, transaction hash and admin note ride on a
+  // quiet second line; the hash stays visible because it is the seller's
+  // proof of payment.
+  const shortAddr = (a: string) => (a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
+  const wallet = request.payment_details?.wallet_address
+  const network = request.payment_details?.network
+  const networkLabel = network ? CHAIN_LABELS[network as keyof typeof CHAIN_LABELS] ?? network : null
+  const hasDetails = !!(wallet || request.transaction_hash || request.admin_notes)
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-xl bg-bg-overlay border border-border-subtle hover:border-white/[0.12] transition-all group"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-lime-tint-bg border border-lime-tint-border">
-            <DollarSign className="w-4 h-4 text-lime-text" />
-          </div>
-          <div>
-            <p className="font-semibold text-white">{request.method_name}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <Calendar className="w-3 h-3 text-text-tertiary" />
-              <span className="text-xs text-text-tertiary">
-                {format(new Date(request.created_at), 'MMM d, yyyy • h:mm a')}
-              </span>
-            </div>
-          </div>
+    <div className="px-4 py-3 sm:px-5">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 sm:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.8fr))_auto_auto]">
+        {/* Method + date */}
+        <div className="min-w-0">
+          <p className="truncate text-[13.5px] font-semibold text-text-primary">{request.method_name}</p>
+          <p className="text-[11.5px] text-text-tertiary">{format(new Date(request.created_at), 'MMM d, yyyy · h:mm a')}</p>
         </div>
 
-        <div className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
-          statusConfig.color,
-          statusConfig.bg,
-          statusConfig.border
-        )}>
-          {statusConfig.icon}
-          <span>{statusConfig.label}</span>
-        </div>
-      </div>
+        {/* Amounts: three columns on sm+, one line on phones */}
+        <p className="hidden text-right text-[13px] tabular-nums text-text-primary sm:block">${request.amount.toFixed(2)}</p>
+        <p className="hidden text-right text-[13px] tabular-nums text-text-tertiary sm:block">−${request.fee_amount.toFixed(2)}</p>
+        <p className="hidden text-right text-[13px] font-semibold tabular-nums text-success sm:block">${request.net_amount.toFixed(2)}</p>
 
-      {/* Amount details */}
-      <div className="grid grid-cols-3 gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-bg-overlay">
-          <p className="text-xs text-text-tertiary mb-0.5">Amount</p>
-          <p className="text-sm font-semibold text-white font-mono">${request.amount.toFixed(2)}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-bg-overlay">
-          <p className="text-xs text-text-tertiary mb-0.5">Fee</p>
-          <p className="text-sm font-semibold text-amber-400 font-mono">-${request.fee_amount.toFixed(2)}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-bg-overlay">
-          <p className="text-xs text-text-tertiary mb-0.5">You receive</p>
-          <p className="text-sm font-semibold text-emerald-400 font-mono">${request.net_amount.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Destination + transaction proof.
-          No gaming marketplace surveyed (G2G, Eldorado, Gameflip, GameBoost,
-          PlayerAuctions) shows the seller a transaction hash — every crypto
-          exchange does. It costs nothing and it is the difference between
-          "we say we paid you" and "here is the proof, verify it yourself". */}
-      {(request.payment_details?.wallet_address || request.transaction_hash) && (
-        <div className="mb-3 space-y-2 rounded-lg border border-border-subtle bg-bg-overlay p-3">
-          {request.payment_details?.wallet_address && (
-            <div>
-              <p className="mb-0.5 text-xs text-text-tertiary">
-                Sent to
-                {request.payment_details?.network
-                  ? ` · ${CHAIN_LABELS[request.payment_details.network as keyof typeof CHAIN_LABELS] ?? request.payment_details.network}`
-                  : ''}
-              </p>
-              <p className="break-all font-mono text-xs text-text-secondary">
-                {request.payment_details.wallet_address}
-              </p>
-            </div>
-          )}
-          {request.transaction_hash && (
-            <div>
-              <p className="mb-0.5 text-xs text-text-tertiary">Transaction</p>
-              <p className="break-all font-mono text-xs text-lime-text">{request.transaction_hash}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Admin notes */}
-      {request.admin_notes && (
-        <div className="p-3 rounded-lg bg-bg-overlay border border-border-subtle mb-3">
-          <p className="text-xs text-text-tertiary mb-1">Admin note:</p>
-          <p className="text-sm text-text-secondary">{request.admin_notes}</p>
-        </div>
-      )}
-
-      {/* Cancel button */}
-      {request.status === 'pending' && (
-        <button
-          onClick={handleCancel}
-          disabled={isCancelling}
+        {/* Status */}
+        <span
           className={cn(
-            "w-full py-2 rounded-lg text-sm font-medium transition-all",
-            "bg-error-bg hover:bg-error-bg text-error border border-error/40",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            "flex items-center justify-center gap-2"
+            'inline-flex items-center gap-1 justify-self-end whitespace-nowrap rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
+            statusConfig.color,
+            statusConfig.bg,
+            statusConfig.border,
           )}
         >
-          {isCancelling ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Cancelling...
-            </>
+          {statusConfig.icon}
+          {statusConfig.label}
+        </span>
+
+        {/* Cancel (pending only) */}
+        <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end">
+          <p className="text-[12.5px] tabular-nums text-text-secondary sm:hidden">
+            ${request.amount.toFixed(2)} <span className="text-text-tertiary">− ${request.fee_amount.toFixed(2)} fee</span> →{' '}
+            <span className="font-semibold text-success">${request.net_amount.toFixed(2)}</span>
+          </p>
+          {request.status === 'pending' ? (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[12px] font-semibold text-error transition-colors hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+              Cancel
+            </button>
           ) : (
-            <>
-              <X className="w-4 h-4" />
-              Cancel Request
-            </>
+            <span className="hidden w-[62px] sm:block" aria-hidden />
           )}
-        </button>
+        </div>
+      </div>
+
+      {hasDetails && (
+        <p className="mt-1 truncate text-[11.5px] text-text-tertiary">
+          {wallet && (
+            <span title={wallet}>
+              To <span className="font-mono text-text-secondary">{shortAddr(wallet)}</span>
+              {networkLabel ? ` · ${networkLabel}` : ''}
+            </span>
+          )}
+          {request.transaction_hash && (
+            <span title={request.transaction_hash}>
+              {wallet ? ' · ' : ''}Tx <span className="font-mono text-lime-text">{shortAddr(request.transaction_hash)}</span>
+            </span>
+          )}
+          {request.admin_notes && (
+            <span>
+              {wallet || request.transaction_hash ? ' · ' : ''}Note: <span className="text-text-secondary">{request.admin_notes}</span>
+            </span>
+          )}
+        </p>
       )}
-    </motion.div>
+    </div>
   )
 }

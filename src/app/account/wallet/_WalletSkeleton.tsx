@@ -4,14 +4,24 @@
  * client's data-loading state are the SAME picture and nothing jumps when
  * the figures land.
  *
- *  - Seller: Available + Pending cards (sm: 2-up), 3-up stats strip,
- *    three tabs.
- *  - Buyer: one balance card with a rewards row, 2-up (lg: 4-up) stats,
- *    one tab.
+ *  - One balance panel: sellers get three columns (Available + Withdraw,
+ *    Store Credit, Pending), buyers one balance (+ top-up); a stats line
+ *    under it. Then the compact segmented tabs.
  */
 
 function Block({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
+}
+
+/** Label · figure · one-line note, as BalanceCell draws it. */
+function Cell() {
+  return (
+    <div className="space-y-2">
+      <Block className="h-3 w-28" />
+      <Block className="h-8 w-24" />
+      <Block className="h-3 w-40" />
+    </div>
+  )
 }
 
 export function WalletSkeleton({ isSeller }: { isSeller: boolean }) {
@@ -25,63 +35,33 @@ export function WalletSkeleton({ isSeller }: { isSeller: boolean }) {
             <Block className="h-3.5 w-48" />
           </div>
 
-          {isSeller ? (
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex items-start justify-between gap-4 rounded-lg border border-border-subtle card-frost p-5">
-                  <div className="space-y-2.5">
-                    <Block className="h-3.5 w-36" />
-                    <Block className="h-8 w-28" />
-                    <Block className="h-3 w-48" />
-                  </div>
-                  <Block className="h-11 w-28 shrink-0 rounded-lg" />
+          <div className="overflow-hidden rounded-lg bg-bg-raised">
+            {isSeller ? (
+              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <div className="flex items-start justify-between gap-3 p-5">
+                  <Cell />
+                  <Block className="h-10 w-28 shrink-0" />
                 </div>
-                <div className="space-y-2.5 rounded-lg border border-border-subtle card-frost p-5">
-                  <Block className="h-3.5 w-32" />
-                  <Block className="h-8 w-28" />
-                  <Block className="h-3 w-4/5" />
-                </div>
+                <div className="p-5"><Cell /></div>
+                <div className="p-5"><Cell /></div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="space-y-2 rounded-lg border border-border-subtle card-frost px-3 py-3">
-                    <Block className="h-3 w-16" />
-                    <Block className="h-5 w-14" />
-                  </div>
-                ))}
+            ) : (
+              <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+                <Cell />
               </div>
+            )}
+            <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-white/[0.07] px-5 py-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Block key={i} className="h-3.5 w-28" />
+              ))}
             </div>
-          ) : (
-            <div className="rounded-lg border border-border-subtle p-1">
-              <div className="rounded-lg bg-black/40 p-6">
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                  <div className="space-y-2.5">
-                    <Block className="h-3 w-20" />
-                    <Block className="h-10 w-32" />
-                  </div>
-                  <Block className="h-10 w-28 rounded-lg" />
-                </div>
-                <div className="grid grid-cols-2 gap-2.5 border-t border-border-subtle pt-3">
-                  <Block className="h-12 rounded-lg" />
-                  <Block className="h-12 rounded-lg" />
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
-        {!isSeller && (
-          <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Block key={i} className="h-[72px] rounded-lg" />
-            ))}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="mb-4 flex gap-2 sm:gap-3">
+        {/* Tabs — segmented control */}
+        <div className="mb-3 flex w-fit gap-1 rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1">
           {Array.from({ length: isSeller ? 3 : 1 }).map((_, i) => (
-            <Block key={i} className="h-10 w-28 rounded-lg sm:h-12" />
+            <Block key={i} className="h-8 w-24 rounded-[5px]" />
           ))}
         </div>
 

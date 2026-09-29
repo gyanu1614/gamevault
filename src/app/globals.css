@@ -2716,9 +2716,15 @@
    .popular-games-fold, the grid's own width. */
 @media (max-width: 639px) {
   .popular-games-fold { container-type: inline-size; }
+  /* Server render / first paint: clip by CSS. Once PopularGamesGrid has
+     measured the width it animates the height itself and keeps only the
+     fade (.popular-games--mask). */
   .popular-games--collapsed {
     max-height: calc((100cqw - 20px) * 4 / 9 * 2.75 + 88px);
     overflow: hidden;
+  }
+  .popular-games--collapsed,
+  .popular-games--mask {
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
     mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
   }

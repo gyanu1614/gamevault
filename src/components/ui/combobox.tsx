@@ -27,6 +27,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 export interface ComboboxOption {
   value: string
@@ -79,6 +80,8 @@ export function Combobox({
   iconInTrigger = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  // Phones: open on the list, not the keyboard (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const [query, setQuery] = React.useState('')
   const triggerRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -177,6 +180,8 @@ export function Combobox({
           // Don't refocus the trigger on close — the typed query state
           // already conveys what the seller did.
           onCloseAutoFocus={(e) => e.preventDefault()}
+          // Touch: keep focus off the search box so the keyboard stays down.
+          onOpenAutoFocus={(e) => { if (coarse) e.preventDefault() }}
         >
           <Command
             // cmdk handles fuzzy filtering when we give it a value to test
@@ -196,7 +201,7 @@ export function Combobox({
                 value={query}
                 onValueChange={setQuery}
                 placeholder="Search…"
-                autoFocus
+                autoFocus={!coarse}
                 className="h-6 flex-1 border-0 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
               />
             </div>

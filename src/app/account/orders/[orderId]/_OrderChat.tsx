@@ -71,8 +71,10 @@ export function OrderChat({
     // capped to the visual viewport (dvh) so the thread + composer always
     // fit on screen — including when the soft keyboard shrinks the
     // viewport — and the internal MessageList scroll does the work.
+    // Desktop: absolutely fills its wrapper in _OrderClient (flex-1, min
+    // 580px), so it ends level with the rail and messages never size it.
     <OrderCard
-      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100dvh_-_230px,640px)] lg:h-[580px]"
+      className="flex h-[clamp(360px,100dvh_-_180px,720px)] flex-col overflow-hidden p-0 max-sm:h-[clamp(340px,100dvh_-_230px,640px)] lg:absolute lg:inset-0 lg:h-auto"
       padded={false}
     >
       <ChatInterface

@@ -13,7 +13,7 @@
  * details / action panel; those fill in across P3–P10.
  */
 
-import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
+import { sellerDisplayName, sellerRatingPercent, sellerShopHref } from '@/lib/seller/identity'
 import { OrderHeader } from './_OrderHeader'
 import { DeliveryProgressBar } from './_DeliveryProgressBar'
 import { OrderCard } from './_OrderCard'
@@ -225,11 +225,16 @@ export function OrderClient(props: OrderClientProps) {
           username: order.seller?.username ?? '',
           avatarUrl: getAvatarUrl(order.seller?.avatar_url, order.seller?.username ?? 'seller'),
           verified: !!order.seller?.is_verified,
-          // seller_rating is already a 0–5 star average; the card shows it as
-          // "N.NN ★" (not a percent), so use it directly. The old `/ 20` shrank
-          // a real 5★ seller to 0.25.
           rating: Math.min(5, Math.max(0, Number(order.seller?.seller_rating ?? 0))),
-          sales: Number(order.seller?.total_reviews ?? 0),
+          sales: Number(order.seller?.total_sales ?? 0),
+          // Shared seller line (SellerStats): "👍 100% (12) · 34 Sold · Gold",
+          // or "Verified Seller" before the first sale.
+          stats: {
+            ratingPercent: sellerRatingPercent(order.seller),
+            reviews: Number(order.seller?.total_reviews ?? 0),
+            sales: Number(order.seller?.total_sales ?? 0),
+            tier: order.seller?.seller_tier ?? null,
+          },
           href: sellerShopHref(order.seller) ?? '#',
           ctaLabel: 'View store',
         }
@@ -449,8 +454,11 @@ export function OrderClient(props: OrderClientProps) {
                 Wrappers use empty:hidden so a null-rendering child never
                 leaves a ghost gap slot in the flex column. DOM (= lg
                 visual) order is unchanged: chat → instructions → evidence. */}
+            {/* Desktop: the chat takes the rest of the column, so its bottom
+                lines up with the rail's last card (never shorter than 580px).
+                The card is absolute inside, so its messages never size the row. */}
             {order.status !== 'pending' && conversationId && (
-              <div className="min-w-0 empty:hidden max-lg:order-2">
+              <div className="min-w-0 empty:hidden max-lg:order-2 lg:relative lg:min-h-[580px] lg:flex-1">
               <OrderChat
                 conversationId={conversationId}
                 currentUserId={currentUserId}

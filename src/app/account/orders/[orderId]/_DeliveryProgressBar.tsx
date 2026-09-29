@@ -109,7 +109,7 @@ export function DeliveryProgressBar({
       fill: 'linear-gradient(90deg,#c4504a,#FF6B6B)',
       knobBg: '#FF6B6B',
       labelClass: 'text-red-400',
-      borderTint: 'border-red-400/30',
+      borderTint: 'sm:border sm:border-red-400/30',
       label: `Overdue by ${formatOverdue(remainingSec)}`,
     },
   } as const

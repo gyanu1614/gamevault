@@ -55,6 +55,7 @@ import StepHeader from './StepHeader'
 import { LightCombobox } from './fields'
 import { COUNTRIES } from '../../data/countries'
 import { LANGUAGES } from '../../constants'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 /**
  * The sections each catalog game supports, keyed by game id. Precomputed
@@ -693,6 +694,8 @@ function GamePicker({
   invalid?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
+  // Phones: open on the list, not the keyboard (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const selectedObjs = games.filter((g) => selected.includes(g.id))
 
   return (
@@ -736,6 +739,7 @@ function GamePicker({
             }}
             className="z-50 overflow-hidden rounded-xl border shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
             onCloseAutoFocus={(e) => e.preventDefault()}
+            onOpenAutoFocus={(e) => { if (coarse) e.preventDefault() }}
           >
             <Command
               shouldFilter
@@ -761,7 +765,7 @@ function GamePicker({
                 />
                 <CommandInput
                   placeholder="Search games…"
-                  autoFocus
+                  autoFocus={!coarse}
                   className="h-6 flex-1 border-0 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none"
                   style={{ color: PALETTE.ink }}
                 />

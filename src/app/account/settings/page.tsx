@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Zap,
   ShieldCheck,
+  FileText,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -48,8 +49,10 @@ import { Label } from '@/components/ui/label'
 // Mobile-audit — hand-rolled fixed-center modals replaced with the shared
 // dialog base (bottom sheet below sm, centered at sm+, dvh-capped scroll).
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { ScrollRow } from '@/components/ui/scroll-row'
+import { InformTab, PrivacyTab } from './_PrivacyInformTabs'
 
-type SettingsTab = 'profile' | 'seller' | 'payouts' | 'notifications' | 'security'
+type SettingsTab = 'profile' | 'seller' | 'payouts' | 'notifications' | 'security' | 'privacy' | 'inform'
 
 // ── Reusable input wrapper (label + hint) ────────────────────────
 // V19/P21 — Thin Label-driven wrapper. The actual <input> element is
@@ -99,7 +102,7 @@ export default function SettingsPage() {
   // links). Window-read on mount keeps this Suspense-free.
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'profile' || t === 'seller' || t === 'payouts' || t === 'notifications' || t === 'security') {
+    if (t === 'profile' || t === 'seller' || t === 'payouts' || t === 'notifications' || t === 'security' || t === 'privacy' || t === 'inform') {
       setActiveTab(t)
     }
   }, [])
@@ -405,6 +408,11 @@ export default function SettingsPage() {
     ] : []),
     { id: 'notifications', label: 'Notifications', icon: Bell,       desc: 'Email & push alerts' },
     { id: 'security',      label: 'Security',      icon: Shield,     desc: 'Password & 2FA' },
+    // Moved in from the account sidebar (owner, 2026-09-28).
+    { id: 'privacy',       label: 'Privacy & Data', icon: Lock,      desc: 'Export your data or delete your account' },
+    ...(isApprovedSeller ? [
+      { id: 'inform' as SettingsTab, label: 'INFORM Disclosure', icon: FileText, desc: 'High-volume seller disclosure' },
+    ] : []),
   ]
 
   // Cooldown calc for shop name
@@ -459,11 +467,16 @@ export default function SettingsPage() {
             transition={{ delay: 0.05 }}
             className="min-w-0"
           >
-            <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
+            {/* Seven sections for a seller: the row scrolls until xl, with
+                the ‹ › cue on whichever edge has more (ScrollRow). */}
+            <ScrollRow
+              wrapperClassName="-mx-4 sm:mx-0"
+              className="overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:px-0 xl:overflow-visible [&::-webkit-scrollbar]:hidden"
+            >
               <div
                 role="tablist"
                 aria-label="Settings sections"
-                className="flex w-full min-w-max gap-1 rounded-lg border border-border-subtle card-frost p-1 sm:min-w-0"
+                className="flex w-full min-w-max gap-1 rounded-lg border border-border-subtle card-frost p-1 xl:min-w-0"
               >
                 {tabs.map((tab) => {
                   const active = activeTab === tab.id
@@ -493,7 +506,7 @@ export default function SettingsPage() {
                   )
                 })}
               </div>
-            </div>
+            </ScrollRow>
           </motion.div>
 
           {/* ── Main content ── */}
@@ -840,6 +853,9 @@ export default function SettingsPage() {
             )}
 
             {/* ── SECURITY ── */}
+            {activeTab === 'privacy' && <PrivacyTab />}
+            {activeTab === 'inform' && isApprovedSeller && <InformTab />}
+
             {activeTab === 'security' && (
               <>
                 <SectionCard>

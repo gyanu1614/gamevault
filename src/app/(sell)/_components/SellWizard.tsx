@@ -81,6 +81,8 @@ import type {
   AttributeTemplateFull,
   Attribute,
 } from '@/lib/actions/new-schema'
+import { SellWizardSkeleton } from './SellWizardSkeleton'
+import { classifyOfferType } from '@/lib/utils/offer-type'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1056,13 +1058,10 @@ export default function SellWizard({
       queryClient.invalidateQueries({ queryKey: ['seller', 'listings'] })
       queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] })
       succeeded = true
-      // A new live offer lands on the page buyers see it on — the game's
-      // currency page for currency, items page for items. Edits, drafts and
-      // offers waiting for review go back to the offers table.
-      const landingPath =
-        !isEditMode && 'path' in res.data && typeof res.data.path === 'string'
-          ? res.data.path
-          : '/account/listings'
+      // Every finished offer lands on the seller's own Offers tab for its
+      // type (Currency, Items, Accounts, Top Ups), next to their other
+      // offers of that kind (owner, 2026-09-28) — not on the public page.
+      const landingPath = `/account/listings?type=${classifyOfferType(undefined, selectedCategory?.slug)}`
       startTransition(() => router.push(landingPath))
     } finally {
       // Re-enable only if we're staying on the page (failure/error). On
@@ -1075,41 +1074,11 @@ export default function SellWizard({
     }
   }
 
-  // V14o — Edit-mode loader screen. While the listing is being fetched and
-  // the wizard is being walked to Step 3, show a centered loader instead
-  // of the half-built wizard (the seller doesn't need to see Step 1 → 2 → 3
-  // flash by — they only care about editing the details).
+  // Edit-mode loader: while the listing is fetched and the wizard is walked
+  // to Step 3, show the Details-step skeleton (the same one the route's
+  // loading.tsx shows), not the half-built wizard or a boxed spinner card.
   if (isEditMode && editLoading) {
-    return (
-      <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-3 pb-24 pt-20 sm:px-6 sm:pt-20 lg:max-w-5xl lg:pt-20">
-        <section
-          className="relative flex w-full flex-col items-center gap-4 rounded-3xl border border-border-default bg-bg-raised p-10 shadow-elevated sm:p-14"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <div className="relative flex h-14 w-14 items-center justify-center">
-            <div
-              aria-hidden
-              className="absolute inset-0 rounded-full border-2 border-border-subtle"
-            />
-            <div
-              aria-hidden
-              className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-lime border-r-lime"
-              style={{ animationDuration: '0.9s' }}
-            />
-            <Loader2 className="h-0 w-0" />
-          </div>
-          <div className="relative text-center">
-            <h1 className="text-[18px] font-bold text-text-primary sm:text-[20px]">
-              Loading your listing
-            </h1>
-            <p className="mt-1 text-[13.5px] text-text-tertiary">
-              Pulling in your offer details — one moment.
-            </p>
-          </div>
-        </section>
-      </main>
-    )
+    return <SellWizardSkeleton variant="edit" />
   }
 
   // V19/P14 — Top padding reduced so the wizard sits flush below the

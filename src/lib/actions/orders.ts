@@ -37,7 +37,8 @@ const ORDER_DETAIL_EMBEDS = `
     shop_slug,
     is_verified,
     seller_rating,
-    total_reviews
+    total_reviews,
+    total_sales
   ),
   listing:listing_id (
     id,

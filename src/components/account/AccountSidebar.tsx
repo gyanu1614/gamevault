@@ -19,16 +19,14 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles,
   Shield,
   ShieldCheck,
   Gift,
-  FileText,
-  Lock,
   ShieldAlert,
   Ban,
   ChevronDown,
 } from 'lucide-react'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 interface NavItem {
   label: string
@@ -168,10 +166,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       return [
         { label: 'Feedback',    href: '/account/reviews',  icon: Star,         showForBuyer: false, showForSeller: true },
         { label: 'Wishlist',    href: '/account/wishlist', icon: Heart,        showForBuyer: false, showForSeller: true },
-        { label: 'Rewards',     href: '/account/loyalty',           icon: Sparkles,  showForBuyer: false, showForSeller: true },
         { label: 'Refer & Earn', href: '/account/referral',          icon: Gift,      showForBuyer: false, showForSeller: true },
-        { label: 'INFORM Disclosure', href: '/account/inform-disclosure', icon: FileText, showForBuyer: false, showForSeller: true },
-        { label: 'Privacy & Data',    href: '/account/privacy',           icon: Lock,     showForBuyer: false, showForSeller: true },
       ]
     }
     // Buyer-only items
@@ -181,9 +176,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       { label: 'Messages',     href: '/account/messages',  icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, showForBuyer: true, showForSeller: false },
       { label: 'Wishlist',     href: '/account/wishlist',  icon: Heart,        showForBuyer: true, showForSeller: false },
       { label: 'Wallet',       href: '/account/wallet',    icon: Wallet,       showForBuyer: true, showForSeller: false },
-      { label: 'Rewards',      href: '/account/loyalty',   icon: Sparkles, showForBuyer: true, showForSeller: false },
       { label: 'Refer & Earn', href: '/account/referral',  icon: Gift,     showForBuyer: true, showForSeller: false },
-      { label: 'Privacy & Data', href: '/account/privacy', icon: Lock,    showForBuyer: true, showForSeller: false },
     ]
   }
 
@@ -234,16 +227,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-semibold leading-tight text-text-primary">{displayName}</p>
-                  {isSeller && (
-                    /* Verified badge. Swap public/assets/badges/verified.png to
-                       use your own (square image, transparent bg). */
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src="/assets/badges/verified.png"
-                      alt="Verified"
-                      className="h-4 w-4 shrink-0 object-contain"
-                    />
-                  )}
+                  {/* The one verified mark used for sellers site-wide. */}
+                  {isSeller && <VerifiedBadge size={16} />}
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-text-tertiary">
                   {joinedDate ? (

@@ -15,6 +15,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { PALETTE } from '../../theme'
 import { inputBaseClass, inputBaseStyle } from './styles'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 export interface LightComboOption {
   value: string
@@ -52,6 +53,8 @@ export default function LightCombobox({
   className,
 }: LightComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  // Phones: open on the list, not the keyboard (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const [query, setQuery] = React.useState('')
   const listboxId = React.useId()
 
@@ -118,6 +121,7 @@ export default function LightCombobox({
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
           }
           onCloseAutoFocus={(e) => e.preventDefault()}
+            onOpenAutoFocus={(e) => { if (coarse) e.preventDefault() }}
         >
           <Command
             shouldFilter
@@ -139,7 +143,7 @@ export default function LightCombobox({
                   value={query}
                   onValueChange={setQuery}
                   placeholder="Search…"
-                  autoFocus
+                  autoFocus={!coarse}
                   className="h-6 flex-1 border-0 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none focus-visible:[box-shadow:none]"
                   style={{ color: PALETTE.ink }}
                 />

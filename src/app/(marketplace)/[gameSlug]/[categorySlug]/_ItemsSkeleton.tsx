@@ -24,10 +24,9 @@ export function Block({ className = '', style }: { className?: string; style?: R
 }
 
 /* ── Item card skeleton — mirrors the current _ItemCard.tsx <article>:
-      breadcrumb row → content row (2-line title min-h + delivery chip |
-      square image) → bottom strip (price + /Unit left | avatar + name +
-      rating right). No stock pill, no arrow chip (both removed from the
-      real card). */
+      breadcrumb row → content row (2-line title min-h + delivery and
+      stock chips | square image) → bottom strip (price + /Unit left |
+      avatar + name + rating right). No arrow chip. */
 /** Exported: the listing detail page's "Similar Listings" row uses the
     same ItemCard, so its skeleton reuses this rather than drawing another. */
 export function ItemCardSkeleton() {
@@ -53,9 +52,10 @@ export function ItemCardSkeleton() {
               <Block className="h-[16px] w-3/4" />
               <Block className="h-[16px] w-1/2" />
             </div>
-            {/* Delivery chip only */}
-            <div className="mt-2">
-              <Block className="h-7 w-24 rounded-md" />
+            {/* Delivery + stock chips (28px rectangles) */}
+            <div className="mt-2 flex gap-1.5">
+              <Block className="h-7 w-20 rounded-md" />
+              <Block className="h-7 w-14 rounded-md" />
             </div>
           </div>
 
@@ -120,46 +120,29 @@ export default function ItemsSkeleton() {
           background), same wrapper padding. */}
       <section className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
-          {/* Page header — centred + stacked on mobile, row on md+:
-              72px logo | "{Game} Items" title / meta line. */}
-          <div className="mb-5 flex flex-col items-center gap-4 sm:mb-6 md:flex-row md:gap-6">
-            <Block className="h-16 w-16 shrink-0 rounded-2xl sm:h-[72px] sm:w-[72px]" />
-            <div className="flex w-full min-w-0 flex-1 flex-col items-center md:items-start">
-              {/* H1 — same clamp()ed size × line-height as the real title,
-                  so the block is exactly one title line at every width. */}
-              <Block
-                className="w-60 max-w-full"
-                style={{ height: 'calc(var(--fs-page-title) * var(--lh-page-title))' }}
-              />
-              {/* Meta line — listings · from · delivery · SafeDrop. Each real
-                  line is 20.8px (13px text beside 14px icons). On phones the
-                  centred row wraps to TWO lines (20.8 + 6px gap + 20.8), so
-                  the skeleton draws two there and one from sm up. */}
-              <div className="mt-3 flex h-[47.6px] flex-col items-center justify-between sm:h-[20.8px] sm:justify-center md:items-start">
-                <div className="flex h-[20.8px] items-center">
-                  <Block className="h-3.5 w-56 max-w-full sm:w-72" />
-                </div>
-                <div className="flex h-[20.8px] items-center sm:hidden">
-                  <Block className="h-3.5 w-32" />
-                </div>
-              </div>
-            </div>
+          {/* Page header — logo left, one-line title right, every width
+              (48px logo, 64px from sm). The stats line is sr-only. */}
+          <div className="mb-5 flex items-center gap-3.5 sm:mb-6 sm:gap-5">
+            <Block className="h-12 w-12 shrink-0 rounded-xl sm:h-16 sm:w-16 sm:rounded-2xl" />
+            {/* H1 — same clamp()ed size × line-height as the real title. */}
+            <Block
+              className="w-60 max-w-full"
+              style={{ height: 'calc(var(--fs-page-title) * var(--lh-page-title))' }}
+            />
           </div>
 
-          {/* Filter row — ONE row: search | filters | sort, 42px tall,
-              wrapping on sm+ and sliding on mobile, like the real row. */}
-          <div className="-mx-4 flex items-center gap-2.5 overflow-hidden px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0">
-            {/* Search, then content-width filter buttons (widths measured
-                off the live Adopt Me row: Item Type, Trait, Price,
-                Delivery Time), then sort. No Clear link any more. */}
-            <Block className="h-[42px] w-[220px] shrink-0 rounded sm:w-[300px]" />
+          {/* Filters row (slides on mobile, fills the row on sm+), then the
+              full-width search row, 42px each, like the real bar. */}
+          <div className="-mx-4 flex items-center gap-2.5 overflow-hidden px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0 sm:[&>*]:flex-1">
+            {/* Content-width filter buttons (measured off the live Adopt Me
+                row: Item Type, Trait, Price, Delivery Time), then sort. */}
             <Block className="h-[42px] w-[145px] shrink-0 rounded" />
             <Block className="h-[42px] w-[109px] shrink-0 rounded" />
             <Block className="h-[42px] w-[113px] shrink-0 rounded" />
             <Block className="h-[42px] w-[171px] shrink-0 rounded" />
-            {/* Sort — shows the current sort ("Recommended"), 180px. */}
             <Block className="h-[42px] w-[180px] shrink-0 rounded" />
           </div>
+          <Block className="mt-2.5 h-[42px] w-full rounded" />
         </div>
       </section>
 

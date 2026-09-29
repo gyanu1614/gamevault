@@ -372,7 +372,7 @@ export default function WithdrawPage() {
   )
 
   return (
-    <div className="pb-12">
+    <div className="pb-6">
       {/* Same container as /account/wallet — this is a sub-page of it, so the
           heading lands on the same x as "Wallet". */}
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">

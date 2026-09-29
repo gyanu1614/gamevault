@@ -22,6 +22,7 @@ import type { CalcPet, Variant } from './_adoptMeCalcTypes'
 import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
 import { VariantAxisPicker } from './_VariantAxisPicker'
 import { CompactVariantPicker } from '../values/_CompactVariantPicker'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -575,6 +576,8 @@ function PetPicker({
   onPick: (slug: string, variant: Variant) => void
   onClose: () => void
 }) {
+  // Phones: don't pop the keyboard over the list (see useCoarsePointer).
+  const coarse = useCoarsePointer()
   const [q, setQ] = useState('')
   const [rarity, setRarity] = useState('all')
   const [chosen, setChosen] = useState<CalcPet | null>(null)
@@ -629,7 +632,7 @@ function PetPicker({
               <div className="relative ml-auto w-full max-w-xs">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6D7A72]" />
                 <input
-                  autoFocus
+                  autoFocus={!coarse}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search pets…"

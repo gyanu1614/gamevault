@@ -110,6 +110,8 @@ interface Props {
   required:          boolean
   salesThreshold:    number
   revenueThreshold:  number
+  /** Rendered as a Settings tab: no page header, no page container. */
+  embedded?:         boolean
 }
 
 const INITIAL_FORM = {
@@ -127,8 +129,9 @@ const INITIAL_FORM = {
 }
 
 export default function InformDisclosureClient({
-  status, disclosure, required, salesThreshold, revenueThreshold,
+  status, disclosure, required, salesThreshold, revenueThreshold, embedded = false,
 }: Props) {
+  const wrap = embedded ? 'space-y-6' : 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10'
   const [form,     setForm]     = useState(INITIAL_FORM)
   const [saving,   setSaving]   = useState(false)
   const [consented, setConsented] = useState(false)
@@ -156,7 +159,9 @@ export default function InformDisclosureClient({
     setSaving(false)
     if (result.success) {
       toast.success('Disclosure submitted — thank you.')
-      window.location.reload()
+      // In Settings, come back to this tab rather than the default one.
+      if (embedded) window.location.assign('/account/settings?tab=inform')
+      else window.location.reload()
     } else {
       toast.error(result.error ?? 'Submission failed')
     }
@@ -165,15 +170,17 @@ export default function InformDisclosureClient({
   // ── Not required ─────────────────────────────────────────────────────────
   if (!required) {
     return (
-      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
-        <motion.div variants={item}>
-          {/* V21/P7.al — Standard account header. */}
-          <AccountPageHeader
-            icon="inform"
-            title="INFORM Act Compliance"
-            subtitle="Identity verification for high-volume sellers."
-          />
-        </motion.div>
+      <motion.div variants={container} initial="hidden" animate="show" className={wrap}>
+        {!embedded && (
+          <motion.div variants={item}>
+            {/* V21/P7.al — Standard account header (Settings shows its own). */}
+            <AccountPageHeader
+              icon="inform"
+              title="INFORM Act Compliance"
+              subtitle="Identity verification for high-volume sellers."
+            />
+          </motion.div>
+        )}
 
         <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
           <div className="flex items-start gap-3">
@@ -200,7 +207,7 @@ export default function InformDisclosureClient({
   // ── Certified or submitted — show status, no form ─────────────────────
   if (status === 'certified' || status === 'submitted') {
     return (
-      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
+      <motion.div variants={container} initial="hidden" animate="show" className={wrap}>
         <motion.div variants={item}>
           <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
             <ShieldCheck className="w-6 h-6 text-lime-text" />
@@ -233,7 +240,7 @@ export default function InformDisclosureClient({
 
   // ── Required or rejected — show form ─────────────────────────────────────
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10">
+    <motion.div variants={container} initial="hidden" animate="show" className={wrap}>
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2.5">
           <FileText className="w-6 h-6 text-warning" />

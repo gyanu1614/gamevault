@@ -7,10 +7,9 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Search, User, LogOut, Menu, X, ChevronDown, ChevronLeft, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, User, LogOut, Menu, X, ArrowLeft, ChevronDown, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
-  Check,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
@@ -32,6 +31,7 @@ import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 // 5 fixed nav tabs with their DB type keys
 /* Hamburger root on /account/* — the sidebar's destinations, flat.
@@ -43,7 +43,6 @@ const ACCOUNT_MENU_ITEMS = [
   { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
   { label: 'Wishlist', href: '/account/wishlist', Icon: Heart, sellerOnly: false },
-  { label: 'Rewards', href: '/account/loyalty', Icon: Sparkles, sellerOnly: false },
   { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
   { label: 'Settings', href: '/account/settings', Icon: Settings, sellerOnly: false },
 ] as const
@@ -807,18 +806,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     return groups
   }, [navCatsData])
 
-  // App-shell — per-game market count (how many active categories a game
-  // has across all types). Shown as the muted sub-count on the mobile
-  // menu's category sub-screen rows.
-  const gameCatCounts = useMemo(() => {
-    const m = new Map<string, number>()
-    navCatsData?.forEach((cat: any) => {
-      const slug = cat.game?.slug
-      if (slug) m.set(slug, (m.get(slug) ?? 0) + 1)
-    })
-    return m
-  }, [navCatsData])
-
   // V50 — Which nav tab owns the CURRENT page? Matched against the
   // same category data that powers the dropdowns: a page at
   // /{gameSlug}/{categorySlug} lights up the tab whose entries include
@@ -1455,14 +1442,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                       <span className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
                                         {sellerDisplayName(user.profile)}
                                       </span>
-                                      {user.profile?.is_verified && (
-                                        <span
-                                          aria-label="Verified seller"
-                                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-lime text-text-inverse"
-                                        >
-                                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                                        </span>
-                                      )}
+                                      {user.profile?.is_verified && <VerifiedBadge size={16} />}
                                     </div>
                                     {/* Tier — logo + "{Tier} Seller", links to the tier page.
                                         role=link (not <a>) since this sits inside the shop Link;
@@ -2209,30 +2189,32 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           mobileMenuTab === null && 'pointer-events-none translate-x-full',
                         )}
                       >
-                        {/* Header: back arrow + live search over this category's
-                            games (replaces the static "N Games" count). */}
-                        <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] px-3 py-3">
+                        {/* Header (GameBoost pattern, owner 2026-09-28): "← Items"
+                            on its own row, then a full-width RECTANGULAR search
+                            over this category's games. */}
+                        <div className="shrink-0 px-4 pb-3 pt-2">
                           <button
                             type="button"
                             onClick={() => setMobileMenuTab(null)}
                             aria-label="Back To Menu"
-                            className="grid h-10 w-9 shrink-0 place-items-center text-white/65 transition-colors hover:text-white active:scale-95"
+                            className="-ml-1 flex h-11 items-center gap-3 pr-2 text-white transition-colors active:scale-[0.98]"
                           >
-                            <ChevronLeft className="h-6 w-6" />
+                            <ArrowLeft className="h-5 w-5 text-white/70" />
+                            <span className="text-[17px] font-semibold">{tab?.label ?? 'Games'}</span>
                           </button>
-                          <div className="relative flex h-10 flex-1 items-center overflow-hidden rounded-xl border border-white/[0.09] bg-white/[0.05] focus-within:border-white/[0.20] focus-within:bg-white/[0.08]">
-                            <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/40" />
+                          <div className="relative mt-1 flex h-11 items-center overflow-hidden rounded-md border border-white/[0.10] bg-white/[0.03] focus-within:border-white/[0.22]">
+                            <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
                             <input
                               type="search"
                               value={mobileGameSearch}
                               onChange={(e) => setMobileGameSearch(e.target.value)}
-                              placeholder={`Search ${tab?.label ?? 'games'}…`}
+                              placeholder="Search for a game"
                               aria-label={`Search ${tab?.label ?? 'games'}`}
-                              className="h-full w-full bg-transparent pl-10 pr-3 text-[14px] text-white outline-none placeholder:text-white/40 [&::-webkit-search-cancel-button]:hidden"
+                              className="h-full w-full bg-transparent pl-10 pr-3 text-[16px] text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
                             />
                           </div>
                         </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [-webkit-overflow-scrolling:touch]">
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 [-webkit-overflow-scrolling:touch]">
                           {entries.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
                               <Search className="mb-2 h-5 w-5 text-white/30" />
@@ -2247,20 +2229,19 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                   setMobileMenuOpen(false)
                                   setMobileMenuTab(null)
                                 }}
-                                className="group flex h-12 items-center gap-2.5 border-b border-white/[0.06] transition-colors hover:bg-white/[0.035]"
+                                // Clean rows: no divider lines, no counts, just the
+                                // game and an arrow (owner, 2026-09-28).
+                                className="group -mx-2 flex h-14 items-center gap-3 rounded-md px-2 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
                               >
                                 {game.image_url && game.image_url !== '' ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={game.image_url} alt="" className="h-8 w-8 shrink-0 rounded-[7px] object-cover ring-1 ring-white/[0.10]" />
+                                  <img src={game.image_url} alt="" className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
                                 ) : (
-                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[7px] bg-white/[0.08] text-[9px] font-bold text-white/45">
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.08] text-[9px] font-bold text-white/45">
                                     {game.name.slice(0, 2).toUpperCase()}
                                   </span>
                                 )}
-                                <span className="flex-1 truncate text-[14px] font-semibold text-white/85">{game.name}</span>
-                                {(gameCatCounts.get(game.slug) ?? 0) > 1 && (
-                                  <span className="text-[11px] tabular-nums text-white/40">{gameCatCounts.get(game.slug)}</span>
-                                )}
+                                <span className="flex-1 truncate text-[15px] font-medium text-white/85">{game.name}</span>
                                 <ChevronRight className="h-4 w-4 shrink-0 text-white/45 group-hover:text-white/80" />
                               </Link>
                             ))

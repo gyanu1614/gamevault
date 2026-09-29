@@ -1,10 +1,9 @@
 /**
- * V19/P11 — Edit-listing loading skeleton.
- *
- * Identical chrome to /sell/new's skeleton; re-exports the same
- * default. Keeping the file ensures Next renders THIS skeleton (not
- * the parent (sell)/layout's, which has no loading state) while the
- * server action prefetches the listing for edit.
+ * /sell/edit/[id] route fallback: the wizard's Details step in plain blocks,
+ * the same skeleton the wizard shows while it loads the listing.
  */
+import { SellWizardSkeleton } from '../../../_components/SellWizardSkeleton'
 
-export { default } from '../../new/loading'
+export default function SellEditLoading() {
+  return <SellWizardSkeleton variant="edit" />
+}

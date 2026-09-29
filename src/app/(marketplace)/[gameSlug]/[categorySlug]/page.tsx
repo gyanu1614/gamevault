@@ -452,7 +452,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
             bundle_id, region, platform,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
-              seller_rating, total_reviews, is_verified
+              seller_rating, total_reviews, total_sales, is_verified
             )
           `)
           .eq('game_id', game.id)
@@ -476,6 +476,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           // -as-percent (5★ → "5%") or the fabricated 95 default.
           rating: sellerRatingPercent(l.seller),
           reviews: l.seller?.total_reviews ?? 0,
+          sales: Number(l.seller?.total_sales ?? 0),
           pricePerBundle: Number(l.price ?? 0),
           stock: l.is_unlimited ? 1_000_000_000 : (l.quantity ?? 0),
           deliveryLabel: formatBundleDelivery(l.delivery_time),
@@ -604,7 +605,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
             min_quantity, delivery_method, delivery_time, is_unlimited,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
-              seller_rating, total_reviews, is_verified
+              seller_rating, total_reviews, total_sales, is_verified
             )
           `)
           .eq('game_id', game.id)

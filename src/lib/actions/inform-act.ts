@@ -135,8 +135,13 @@ export async function getMyInformStatus(): Promise<{
   status?:    string
   disclosure?: InformDisclosure
   required?:  boolean
+  /** The high-volume thresholds, for the "No Action Required" copy (Settings
+   *  renders it client-side and cannot read these env vars itself). */
+  salesThreshold?:   number
+  revenueThreshold?: number
   error?:     string
 }> {
+  const thresholds = { salesThreshold: INFORM_SALES_THRESHOLD, revenueThreshold: INFORM_REVENUE_THRESHOLD }
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -150,7 +155,7 @@ export async function getMyInformStatus(): Promise<{
     const status   = profile?.inform_status ?? 'not_required'
     const required = status !== 'not_required'
 
-    if (!required) return { success: true, status, required: false }
+    if (!required) return { success: true, status, required: false, ...thresholds }
 
     // Fetch latest disclosure
     const { data: latest } = await supabase
@@ -166,6 +171,7 @@ export async function getMyInformStatus(): Promise<{
       status,
       required:    true,
       disclosure:  (latest as InformDisclosure | null) ?? undefined,
+      ...thresholds,
     }
   } catch (err: any) {
     return { success: false, error: err.message }

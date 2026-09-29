@@ -28,9 +28,11 @@
 import { sellerDisplayName, sellerInitial, sellerShopSlug } from '@/lib/seller/identity'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
-import { Bolt, Clock, ThumbsUp, TrendingDown } from 'lucide-react'
+import { Archive, Bolt, Clock } from 'lucide-react'
+import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SellerStats } from '@/components/seller/SellerStats'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
 
@@ -74,25 +76,29 @@ function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size
 
 type ChipTone = 'default' | 'success'
 
-/** One meta chip in the data-driven row (delivery, stock, attribute). */
+/** One meta chip (delivery time, stock): a small filled rectangle with its
+ *  icon, like the marketplaces buyers know (owner, 2026-09-28). */
 function MetaPill({
   icon: Icon,
   label,
   tone = 'default',
+  ariaLabel,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
   tone?: ChipTone
+  ariaLabel?: string
 }) {
   return (
     <span
       style={{ fontSize: 'var(--fs-micro)' }}
+      aria-label={ariaLabel}
       className={cn(
-        'inline-flex items-center gap-1.5 font-semibold',
-        tone === 'success' ? 'text-success' : 'text-text-secondary',
+        'inline-flex h-7 items-center gap-1.5 rounded-md px-2 font-semibold',
+        tone === 'success' ? 'bg-success-bg text-success' : 'bg-white/[0.07] text-text-secondary',
       )}
     >
-      <Icon className={cn('h-3.5 w-3.5', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
+      <Icon className={cn('h-3.5 w-3.5 shrink-0', tone === 'success' ? 'text-success' : 'text-text-tertiary')} />
       {label}
     </span>
   )
@@ -178,14 +184,19 @@ export default function ItemCard({
             {offer.name}
           </h3>
 
-          {/* Meta row — Delivery Time only (per product decision). Stock and
-              attribute chips live on the listing detail page, not the card. */}
+          {/* Meta row — delivery time + stock chips (owner, 2026-09-28).
+              Attribute chips live on the listing detail page, not the card. */}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <MetaPill
               icon={isInstant ? Bolt : Clock}
               label={deliveryText}
               tone={isInstant ? 'success' : 'default'}
             />
+            {offer.isUnlimited ? (
+              <MetaPill icon={Archive} label="Unlimited" ariaLabel="Unlimited stock" />
+            ) : offer.stock != null && offer.stock > 0 ? (
+              <MetaPill icon={Archive} label={fmtCount(offer.stock)} ariaLabel={`${offer.stock.toLocaleString('en-US')} in stock`} />
+            ) : null}
           </div>
         </div>
 
@@ -242,11 +253,13 @@ export default function ItemCard({
               the price. */}
           {isBestDeal && (
             <span className="group/tip pointer-events-auto relative inline-flex shrink-0 self-center">
+              {/* A price tag (Material LocalOffer), in the same filled
+                  rectangle as the card's chips. */}
               <span
                 aria-label="Lowest price"
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/20 text-success ring-1 ring-success/30"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-bg text-success"
               >
-                <TrendingDown className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                <LocalOfferRoundedIcon sx={{ width: 14, height: 14 }} aria-hidden />
               </span>
               <span
                 role="tooltip"
@@ -293,31 +306,15 @@ export default function ItemCard({
                 {offer.seller.verified && <VerifiedBadge size={13} />}
               </div>
 
-              {/* Reputation. A rated seller gets the figure; an unrated
-                  one gets a quiet "New seller" — never inside the green
-                  thumbs-up, where it read as though it were a score. */}
-              {offer.seller.ratingPercent != null &&
-              offer.seller.reviewCount > 0 ? (
-                <span className="inline-flex items-center gap-1 text-[11px]">
-                  <ThumbsUp
-                    className="h-[11px] w-[11px] shrink-0 fill-success text-success"
-                    aria-hidden
-                  />
-                  <span className="font-semibold tabular-nums text-success">
-                    {Number.isInteger(offer.seller.ratingPercent)
-                      ? offer.seller.ratingPercent
-                      : offer.seller.ratingPercent.toFixed(1)}
-                    %
-                  </span>
-                  <span className="tabular-nums text-text-tertiary">
-                    ({fmtCount(offer.seller.reviewCount)})
-                  </span>
-                </span>
-              ) : (
-                <span className="text-[11px] text-text-tertiary">
-                  New seller
-                </span>
-              )}
+              {/* "👍 100% (12) · 34 Sold · Gold", or "Verified Seller" before
+                  the first sale (shared rule: SellerStats). */}
+              <SellerStats
+                ratingPercent={offer.seller.ratingPercent}
+                reviews={offer.seller.reviewCount}
+                sales={offer.seller.sales}
+                tier={offer.seller.tier}
+                className="text-[11px]"
+              />
             </div>
           </SmartLink>
         )}

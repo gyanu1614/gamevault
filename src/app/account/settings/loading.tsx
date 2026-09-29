@@ -29,9 +29,10 @@ export default function SettingsLoading() {
         </div>
 
         <div className="mt-5 w-full max-w-4xl">
-          {/* Segmented tab bar — 5 tabs sharing the width evenly */}
-          <div className="flex w-full gap-1 rounded-lg border border-border-subtle card-frost p-1">
-            {Array.from({ length: 5 }).map((_, i) => (
+          {/* Segmented tab bar — up to 7 tabs (seller: + Privacy & Data,
+              INFORM Disclosure); it scrolls below xl like the real bar. */}
+          <div className="flex w-full gap-1 overflow-hidden rounded-lg border border-border-subtle card-frost p-1">
+            {Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="flex h-[38px] flex-1 items-center justify-center">
                 <div className="skeleton h-4 w-20 rounded" />
               </div>

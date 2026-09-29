@@ -1,26 +1,11 @@
 /**
- * P6.5 — GDPR Privacy & Data Controls Page
- *
- * Server component: loads user's existing GDPR requests, passes to client.
+ * Privacy & Data moved into Settings (owner, 2026-09-28). The old URL stays
+ * so links in emails and bookmarks still land on it.
  */
-
-import { getMyGdprRequests } from '@/lib/actions/gdpr'
-import PrivacyClient from './PrivacyClient'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Privacy & Data' }
 
-export default async function PrivacyPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const result = await getMyGdprRequests()
-
-  return (
-    <PrivacyClient
-      requests={result.success ? (result.requests ?? []) : []}
-    />
-  )
+export default function PrivacyPage() {
+  redirect('/account/settings?tab=privacy')
 }

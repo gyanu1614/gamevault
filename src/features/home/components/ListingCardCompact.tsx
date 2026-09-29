@@ -8,6 +8,9 @@
  * latest-listings.ts) fills the card as a faded background instead of
  * sitting in a centred image zone, and the text sits on top: game name,
  * then what's for sale, then the starting price.
+ *
+ * Owner, 2026-09-28: the game name (grey caps on the art) was unreadable →
+ * a white label on a dark tag; the title is ONE line; "From $x" one line.
  */
 
 import { useState } from 'react'
@@ -48,7 +51,7 @@ export function ListingCardCompact({ listing }: { listing: LatestListing }) {
             aria-hidden
             fill
             unoptimized
-            className="-z-20 scale-110 object-cover opacity-[0.28]"
+            className="-z-20 scale-110 object-cover opacity-[0.34]"
             onError={() => setBgFailed(true)}
           />
         )}
@@ -57,21 +60,21 @@ export function ListingCardCompact({ listing }: { listing: LatestListing }) {
           aria-hidden
           className="absolute inset-0 -z-10"
           style={{
-            background: `linear-gradient(to top, ${WELL} 12%, rgba(24,29,37,0.55) 55%, rgba(24,29,37,0.15) 100%)`,
+            background: `linear-gradient(to top, ${WELL} 22%, rgba(24,29,37,0.6) 58%, rgba(24,29,37,0.1) 100%)`,
           }}
         />
 
-        <p className="truncate text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-secondary">
+        <p className="max-w-full self-start truncate rounded-md bg-black/55 px-1.5 py-[3px] text-[10px] font-bold uppercase tracking-[0.07em] text-white backdrop-blur-sm">
           {listing.gameName}
         </p>
 
         <div className="min-w-0">
-          <p className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-text-primary">
+          <p className="truncate text-[13.5px] font-semibold leading-snug text-white" title={listing.title}>
             {listing.title}
           </p>
-          <p className="mt-1.5 text-[10.5px] font-medium text-text-tertiary">Starting From</p>
-          <p className="text-[15px] font-semibold leading-tight tabular-nums text-text-primary">
-            {formatPrice(listing.price)}
+          <p className="mt-1 truncate text-[12px] text-text-tertiary">
+            From{' '}
+            <span className="text-[15px] font-bold tabular-nums text-text-primary">{formatPrice(listing.price)}</span>
           </p>
         </div>
       </motion.div>
