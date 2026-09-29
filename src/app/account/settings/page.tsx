@@ -498,7 +498,7 @@ export default function SettingsPage() {
                         // a lime tint competed with the real lime CTAs.
                         active
                           ? 'bg-bg-overlay-2 text-text-primary shadow-sm'
-                          : 'text-text-secondary hover:bg-bg-overlay/60 hover:text-text-primary',
+                          : 'text-text-secondary hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] hover:text-text-primary',
                       )}
                     >
                       {tab.label}
@@ -620,7 +620,7 @@ export default function SettingsPage() {
                         </button>
                       </div>
                       {pendingEmail && pendingEmail !== email && (
-                        <div className="mt-2 flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
+                        <div className="mt-2 flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] bg-warning-bg px-4 py-2.5">
                           <Clock className="h-4 w-4 shrink-0 text-warning" />
                           <span className="min-w-0 text-sm text-warning">
                             Pending change to <span className="font-medium break-all">{pendingEmail}</span> — confirm the link sent to both inboxes.
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                       </label>
 
                       {!profile?.shop_name && (
-                        <div className="mb-3 flex items-center gap-2 rounded-lg border border-warning/20 bg-warning-bg px-4 py-2.5">
+                        <div className="mb-3 flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] bg-warning-bg px-4 py-2.5">
                           <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
                           <span className="text-sm text-warning">You must set a shop name before your store goes live</span>
                         </div>
@@ -718,7 +718,7 @@ export default function SettingsPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-lg border border-success/30 bg-success-bg p-6"
+                  className="rounded-lg border border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-success-bg p-6"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="h-4 w-4 text-success" />
@@ -781,7 +781,7 @@ export default function SettingsPage() {
                             </div>
                           </div>
                           {p.status === 'completed' ? (
-                            <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-bg px-3 py-1 text-xs font-medium text-success">
+                            <div className="flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-success)_20%,transparent)] bg-success-bg px-3 py-1 text-xs font-medium text-success">
                               <Check className="h-3 w-3" /> Completed
                             </div>
                           ) : (
@@ -936,7 +936,7 @@ export default function SettingsPage() {
           {emailChangeSent ? (
             <>
               <div className="mb-5 flex items-start gap-4 pr-8">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-bg border border-success/25">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success-bg border border-[color-mix(in_srgb,var(--color-success)_25%,transparent)]">
                   <Check className="h-5 w-5 text-success" />
                 </div>
                 <div className="min-w-0">
@@ -1009,7 +1009,7 @@ export default function SettingsPage() {
       <Dialog open={showShopNameConfirmation} onOpenChange={setShowShopNameConfirmation}>
         <DialogContent className="max-w-md gap-0">
           <div className="mb-5 flex items-start gap-4 pr-8">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-bg border border-warning/25">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-bg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)]">
               <AlertCircle className="h-5 w-5 text-warning" />
             </div>
             <div className="min-w-0">

@@ -347,12 +347,12 @@ export default function ItemsPageClient({
                   the homepage's "Every Gamer's Marketplace" split. The H1
                   still reads "{Game} {Category}" to crawlers: the game name
                   is inside it, visually hidden. */}
-              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-text-secondary sm:text-[14px]">
+              <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
                 {gameName}
               </p>
               <h1
-                className="mt-0.5 font-black leading-tight tracking-tight text-text-primary"
-                style={{ fontSize: 'var(--fs-page-title)', lineHeight: 'var(--lh-page-title)', fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
+                className="font-black tracking-tight text-text-primary"
+                style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
               >
                 <span className="sr-only">{gameName} </span>
                 {categoryLabel}

@@ -108,7 +108,7 @@ export default function SellerProfileBanner({
       {/* Backdrop — layered */}
       {customBg ? (
         <div className="absolute inset-0" style={customBg}>
-          <div className="absolute inset-0 bg-gradient-to-b from-bg-base/30 via-bg-base/50 to-bg-base/85" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_srgb,var(--color-bg-base)_30%,transparent)] via-[color-mix(in_srgb,var(--color-bg-base)_50%,transparent)] to-[color-mix(in_srgb,var(--color-bg-base)_85%,transparent)]" />
         </div>
       ) : (
         <>
@@ -134,7 +134,7 @@ export default function SellerProfileBanner({
             }}
           />
           {/* Bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg-base/60 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[color-mix(in_srgb,var(--color-bg-base)_60%,transparent)] to-transparent" />
         </>
       )}
 
@@ -311,7 +311,7 @@ function StatChip({
   icon, value, label, plain = false,
 }: { icon: React.ReactNode; value: string; label: string; plain?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-overlay/60 px-2.5 py-1 backdrop-blur-sm">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-2.5 py-1 backdrop-blur-sm">
       {icon}
       <span className={cn('text-sm font-semibold tabular-nums text-text-primary', !plain && 'font-mono')}>{value}</span>
       {label && <span className="text-[11px] text-text-tertiary">{label}</span>}

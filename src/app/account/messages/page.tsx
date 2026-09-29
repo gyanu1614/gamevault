@@ -429,10 +429,10 @@ export default function MessagesPage() {
                                 <span
                                   className={cn(
                                     'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                                    selectedConversation.order.status === 'completed' && 'bg-success-bg text-success border border-success/30',
-                                    selectedConversation.order.status === 'paid' && 'bg-info-bg text-info border border-info/30',
-                                    selectedConversation.order.status === 'processing' && 'bg-warning-bg text-warning border border-warning/30',
-                                    selectedConversation.order.status === 'disputed' && 'bg-error-bg text-error border border-error/30',
+                                    selectedConversation.order.status === 'completed' && 'bg-success-bg text-success border border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]',
+                                    selectedConversation.order.status === 'paid' && 'bg-info-bg text-info border border-[color-mix(in_srgb,var(--color-info)_30%,transparent)]',
+                                    selectedConversation.order.status === 'processing' && 'bg-warning-bg text-warning border border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)]',
+                                    selectedConversation.order.status === 'disputed' && 'bg-error-bg text-error border border-[color-mix(in_srgb,var(--color-error)_30%,transparent)]',
                                   )}
                                 >
                                   {selectedConversation.order.status.charAt(0).toUpperCase() +

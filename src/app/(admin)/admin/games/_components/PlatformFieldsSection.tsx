@@ -202,7 +202,7 @@ function PlatformKindCard({
         'rounded-xl border p-3 transition-colors ' +
         (field.enabled
           ? 'border-lime-tint-border bg-[rgba(86,184,127,0.04)]'
-          : 'border-border-default bg-bg-overlay/40')
+          : 'border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)]')
       }
     >
       <label className="flex cursor-pointer items-start gap-3">
@@ -376,7 +376,7 @@ function PlatformOptionRow({
   }
 
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-overlay/60 p-2">
+    <li className="flex items-center gap-2 rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] p-2">
       {/* Image tile */}
       <button
         type="button"
@@ -420,7 +420,7 @@ function PlatformOptionRow({
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${option.value}`}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-error transition-colors hover:bg-error-bg/30"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_30%,transparent)]"
       >
         <X className="h-3.5 w-3.5" />
       </button>

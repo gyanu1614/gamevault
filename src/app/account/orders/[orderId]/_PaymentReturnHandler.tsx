@@ -128,7 +128,7 @@ export function PaymentReturnHandler({
       }}
     >
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
-        <span className="grid h-14 w-14 place-items-center rounded-lg bg-bg-raised/80 ring-1 ring-white/10">
+        <span className="grid h-14 w-14 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--color-bg-raised)_80%,transparent)] ring-1 ring-white/10">
           {timedOut ? (
             <span aria-hidden className="text-2xl">⏳</span>
           ) : (

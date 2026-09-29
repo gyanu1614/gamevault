@@ -853,7 +853,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           }}
         >
           <div className="flex flex-col items-center gap-4">
-            <span className="grid h-14 w-14 place-items-center rounded-lg bg-bg-raised/80 ring-1 ring-white/10">
+            <span className="grid h-14 w-14 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--color-bg-raised)_80%,transparent)] ring-1 ring-white/10">
               <span
                 aria-hidden
                 className="h-7 w-7 animate-spin rounded-full border-2 border-white/[0.08] border-t-lime"
@@ -1396,7 +1396,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     <img
                       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
                       alt={user.profile?.username || 'User'}
-                      className="h-9 w-9 rounded-full ring-2 ring-primary/50 max-lg:h-8 max-lg:w-8"
+                      className="h-9 w-9 rounded-full ring-2 ring-[color-mix(in_srgb,var(--primary)_50%,transparent)] max-lg:h-8 max-lg:w-8"
                     />
                   </Button>
 

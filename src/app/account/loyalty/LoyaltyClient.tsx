@@ -31,7 +31,7 @@ function StatCard({
   const colors = {
     violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
-    amber:  "text-warning bg-warning-bg border-warning/20",
+    amber:  "text-warning bg-warning-bg border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
     blue:   "text-lime-text bg-lime-tint-bg border-lime-tint-border",
   }
   return (
@@ -137,7 +137,7 @@ export default function LoyaltyClient({ stats, cashbackRate }: LoyaltyClientProp
           </p>
 
           {stats.pendingFromOrders > 0 && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-warning-bg border border-warning/20 px-4 py-2.5">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-warning-bg border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] px-4 py-2.5">
               <Clock className="h-4 w-4 text-warning shrink-0" />
               <span className="text-sm text-warning">
                 <span className="font-semibold">${stats.pendingFromOrders.toFixed(2)}</span> cashback

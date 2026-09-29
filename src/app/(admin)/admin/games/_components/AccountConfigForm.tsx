@@ -112,7 +112,7 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
             return (
               <label
                 key={f.value}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-bg-overlay/40 p-3 transition-colors hover:bg-bg-overlay/70"
+                className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]"
               >
                 <input
                   type="checkbox"
@@ -153,7 +153,7 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
 
       <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
         <h3 className="text-[15px] font-semibold text-text-primary">Policy</h3>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-bg-overlay/40 p-3 transition-colors hover:bg-bg-overlay/70">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]">
           <input
             type="checkbox"
             checked={draft.allow_2fa_accounts}
@@ -182,7 +182,7 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
         </div>
       </section>
 
-      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-bg-raised/95 p-3 backdrop-blur-md shadow-elevated">
+      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)] p-3 backdrop-blur-md shadow-elevated">
         <button
           type="submit"
           disabled={mutation.isPending}
@@ -212,7 +212,7 @@ function DeliveryToggle({
       className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
         checked
           ? 'border-lime-tint-border bg-[rgba(86,184,127,0.05)]'
-          : 'border-border-default bg-bg-overlay/40 hover:bg-bg-overlay/70'
+          : 'border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]'
       }`}
     >
       <input

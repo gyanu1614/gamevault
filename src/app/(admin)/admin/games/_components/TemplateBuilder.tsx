@@ -928,7 +928,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
               onClick={handleDeleteAll}
               disabled={purging}
               title="Remove every choice on this attribute"
-              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border-default bg-bg-base px-2.5 text-[11px] font-semibold text-text-secondary transition-colors hover:border-error/40 hover:bg-error-bg hover:text-error disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border-default bg-bg-base px-2.5 text-[11px] font-semibold text-text-secondary transition-colors hover:border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] hover:bg-error-bg hover:text-error disabled:opacity-50"
             >
               {purging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
               Delete all
@@ -952,7 +952,7 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
 
       {/* Bulk-add panel */}
       {bulkOpen && (
-        <div className="space-y-2 border-b border-border-subtle bg-bg-base/50 p-4">
+        <div className="space-y-2 border-b border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-base)_50%,transparent)] p-4">
           <div className="flex items-baseline justify-between">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
               Paste choices — one per line or comma-separated

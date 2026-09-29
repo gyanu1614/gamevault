@@ -261,8 +261,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
             onClick={() => setIsMobileOpen(false)}
             className={cn(
               "mt-3 flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 border",
-              user.seller_status === 'restricted' && "bg-warning-bg border-yellow-500/20 text-warning hover:bg-yellow-500/15 hover:border-warning/40",
-              user.seller_status === 'banned' && "bg-error-bg border-error/40 text-error hover:bg-red-500/15 hover:border-error/40"
+              user.seller_status === 'restricted' && "bg-warning-bg border-yellow-500/20 text-warning hover:bg-yellow-500/15 hover:border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]",
+              user.seller_status === 'banned' && "bg-error-bg border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] text-error hover:bg-red-500/15 hover:border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]"
             )}
           >
             {user.seller_status === 'restricted' && <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />}

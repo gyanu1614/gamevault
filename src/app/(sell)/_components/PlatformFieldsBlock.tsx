@@ -81,7 +81,7 @@ export function PlatformFieldsBlock({ fields, values, onChange, showErrors }: Pr
               <SelectTrigger
                 aria-invalid={invalid || undefined}
                 aria-required
-                className={invalid ? 'border-error focus:ring-error/40' : ''}
+                className={invalid ? 'border-error focus:ring-[color-mix(in_srgb,var(--color-error)_40%,transparent)]' : ''}
               >
                 <SelectValue placeholder={cfg.placeholder}>
                   {selected && (

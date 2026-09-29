@@ -778,7 +778,7 @@ function OrdersContent() {
                   customDateEnd: null,
                   searchQuery: ''
                 })}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-error/40 text-xs text-error hover:bg-error-bg transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] text-xs text-error hover:bg-error-bg transition-colors"
               >
                 <X className="h-3 w-3" />
                 Clear All ({filters.games.length + (filters.category ? 1 : 0) + (filters.dateRange !== 'all' ? 1 : 0) + (filters.searchQuery ? 1 : 0)})

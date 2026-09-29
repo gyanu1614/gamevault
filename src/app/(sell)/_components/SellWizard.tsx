@@ -1292,7 +1292,7 @@ export default function SellWizard({
                 {/* Changes Requested — what the review team asked for.
                     Saving a non-draft edit resubmits into the queue. */}
                 {isEditMode && editStatus === 'changes_requested' && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-bg px-3 py-2.5">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg px-3 py-2.5">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
                     <div className="min-w-0 flex-1 text-[13px]">
                       <span className="font-semibold text-warning">
@@ -1880,13 +1880,13 @@ function FieldCard({
   // V19/P20 — Inside the SubCard wrapper, top-level fields are flat rows;
   // nested (depth > 0) fields previously used bg-bg-inset which made them
   // read as a black hole sitting inside the lime rail. Switching to a
-  // slightly raised tone (bg-bg-overlay/30) keeps the hierarchy cue
+  // slightly raised tone (bg-bg-overlay at 30%) keeps the hierarchy cue
   // without the heavy contrast.
   // Mobile trims the nested shell padding (~18px saved per level) so
   // depth-2 inputs keep a usable width inside a 360px viewport.
   const shell = depth === 0
     ? ''
-    : 'rounded-xl border border-border-subtle bg-bg-overlay/30 p-3 sm:p-4'
+    : 'rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_30%,transparent)] p-3 sm:p-4'
 
   return (
     <motion.div
@@ -2349,7 +2349,7 @@ function Step4Publish(p: Step4Props) {
               now so they can edit instead of filling the whole form
               and failing at publish. */}
           {p.existingBundleListingId && (
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-bg/30 px-4 py-3">
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_30%,transparent)] px-4 py-3">
               <p className="text-[12.5px] text-text-secondary">
                 <span className="font-semibold text-text-primary">
                   You already list this bundle.
@@ -3056,7 +3056,7 @@ function FieldError({ children, className }: { children: React.ReactNode; classN
     <p
       role="alert"
       className={cn(
-        'rounded-md border border-error/40 bg-error-bg px-2.5 py-1.5 text-xs leading-snug text-error',
+        'rounded-md border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-2.5 py-1.5 text-xs leading-snug text-error',
         className,
       )}
     >
@@ -3086,7 +3086,7 @@ function PolicyBanner({ policy }: { policy: SellerPublishPolicy | null }) {
 
   if (policy.at_listing_limit) {
     return (
-      <div className="flex items-start gap-2.5 rounded-xl border border-error/40 bg-error-bg px-3 py-2.5">
+      <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-3 py-2.5">
         <IconX className="mt-0.5 h-4 w-4 shrink-0 text-error" strokeWidth={3} />
         <div className="min-w-0 flex-1 text-[13px]">
           <span className="font-semibold text-error">
@@ -3106,7 +3106,7 @@ function PolicyBanner({ policy }: { policy: SellerPublishPolicy | null }) {
       policy.pre_moderation_listings - policy.approved_listings,
     )
     return (
-      <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-bg px-3 py-2.5">
+      <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-warning-bg px-3 py-2.5">
         <Clock className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={2.5} />
         <div className="min-w-0 flex-1 text-[13px]">
           <span className="font-semibold text-warning">

@@ -79,7 +79,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           label: 'Rejected',
           color: 'text-error',
           bg: 'bg-error-bg',
-          border: 'border-error/40'
+          border: 'border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
         }
       case 'cancelled':
         return {
@@ -95,7 +95,7 @@ export default function WithdrawalRequestCard({ request, onUpdate }: WithdrawalR
           label: 'Failed',
           color: 'text-error',
           bg: 'bg-error-bg',
-          border: 'border-error/40'
+          border: 'border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
         }
       default:
         return {

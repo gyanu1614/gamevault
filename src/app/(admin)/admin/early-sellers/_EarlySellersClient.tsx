@@ -239,7 +239,7 @@ export default function EarlySellersClient({
       </div>
 
       {fetchError && (
-        <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">{fetchError}</div>
+        <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-error)_30%,transparent)] bg-error-bg p-4 text-sm text-error">{fetchError}</div>
       )}
 
       {/* Card grid */}
