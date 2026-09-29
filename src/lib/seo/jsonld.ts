@@ -57,7 +57,7 @@ export function organization() {
     name: 'DropMarket',
     url: SITE_URL,
     description:
-      'Trusted gaming marketplace with SafeDrop Buyer Protection on every order',
+      'Trusted gaming marketplace with SafeDrop Protection on every order',
     logo: {
       '@type': 'ImageObject',
       url: `${SITE_URL}/brand/logo-mark-lime-256.png`,

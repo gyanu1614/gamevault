@@ -6,7 +6,7 @@ import { ImageResponse } from 'next/og'
 import { OgCard, OG_SIZE } from '@/lib/seo/og-template'
 
 export const alt =
-  'DropMarket — Buy & Sell Game Currency, Items & Accounts. Covered by SafeDrop Buyer Protection.'
+  'DropMarket: Buy & Sell Game Currency, Items & Accounts. Covered by SafeDrop Protection.'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 export const revalidate = 86400

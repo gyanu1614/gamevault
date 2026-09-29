@@ -290,8 +290,8 @@ const STATUS_CONFIG: Record<string, {
   // One entry per REAL order status (pending|paid|delivering|delivered|
   // disputed|completed|cancelled|refunded).
   completed:  { label: 'Completed',        icon: CircleCheck,  pill: 'bg-green-500/12 text-success border-green-500/25',  dot: 'bg-green-400',  pulse: false },
-  paid:       { label: 'Waiting For Seller', icon: CircleDot,  pill: 'bg-amber-500/12 text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
-  delivering: { label: 'Delivering',       icon: CircleDot,    pill: 'bg-amber-500/12 text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
+  paid:       { label: 'Waiting For Seller', icon: CircleDot,  pill: 'bg-amber-500/[0.12] text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
+  delivering: { label: 'Delivering',       icon: CircleDot,    pill: 'bg-amber-500/[0.12] text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
   delivered:  { label: 'Delivered',        icon: CircleCheck,  pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: false },
   disputed:   { label: 'Disputed',         icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: true  },
   pending:    { label: 'Awaiting Payment', icon: CircleDashed, pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: true  },
@@ -349,7 +349,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'violet' }: {
   color?: 'violet' | 'green' | 'amber' | 'blue'
 }) {
   const colors = {
-    violet: 'text-lime-text bg-lime/10 border-lime-tint-border',
+    violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
     green:  'text-success  bg-success-bg  border-green-500/20',
     amber:  'text-amber-400  bg-amber-500/10  border-amber-500/20',
     blue:   'text-blue-400   bg-blue-500/10   border-blue-500/20',
@@ -615,7 +615,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
           {/* ── Wallet Balance Card (Buyers Only - No Withdrawals) ── */}
           {!isSeller && (
-            <div className="rounded-lg border border-border-subtle bg-gradient-to-br from-lime/10 to-transparent p-1 shadow-xl">
+            <div className="rounded-lg border border-border-subtle bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-transparent p-1 shadow-xl">
               <div className="rounded-lg bg-black/40 backdrop-blur-sm p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                   <div className="min-w-0">
@@ -734,7 +734,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
               className={cn(
                 'flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition-all sm:px-4 sm:py-3',
                 isActive
-                  ? 'font-semibold border-2 border-lime bg-gradient-to-br from-lime/20 to-lime/5 text-white shadow-elevated'
+                  ? 'font-semibold border-2 border-lime bg-gradient-to-br from-[rgba(86,184,127,0.20)] to-[rgba(86,184,127,0.05)] text-white shadow-elevated'
                   : 'font-medium border border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border hover:bg-bg-overlay hover:text-text-secondary'
               )}
             >
@@ -954,7 +954,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
         <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
           {/* Stripe Connect prompt if seller hasn't connected */}
           {isSeller && (
-            <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4 bg-lime/5">
+            <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4 bg-[rgba(86,184,127,0.05)]">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-lime-text flex-shrink-0" />
                 <span className="text-xs text-text-secondary">Withdrawals Are Paid In Crypto</span>
@@ -993,7 +993,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                     transition={{ delay: i * 0.03 }}
                     className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-lime/10 border border-lime-tint-border">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg border border-lime-tint-border">
                       <CreditCard className="h-5 w-5 text-lime-text" />
                     </div>
 

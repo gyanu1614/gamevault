@@ -51,7 +51,7 @@ const STAGES: Stage[] = [
       { type: 'plain',  text: 'Check out on ' },
       { type: 'strong', text: 'DropMarket' },
       { type: 'plain',  text: ' like any store — and your order is covered by ' },
-      { type: 'accent', text: 'SafeDrop Buyer Protection' },
+      { type: 'accent', text: 'SafeDrop Protection' },
       { type: 'plain',  text: ' from the first second.' },
     ],
   },
@@ -120,11 +120,11 @@ export function HowItWorks() {
           whatever's behind (body bg or hero art continuation). */}
       <div className="max-w-container mx-auto px-6 pb-6 pt-12 text-center">
         <div className="mb-3 inline-flex items-center gap-2">
-          <span className="h-px w-10 bg-gradient-to-l from-lime/50 to-transparent" aria-hidden />
+          <span className="h-px w-10 bg-gradient-to-l from-[rgba(86,184,127,0.50)] to-transparent" aria-hidden />
           <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
             How it works
           </span>
-          <span className="h-px w-10 bg-gradient-to-r from-lime/50 to-transparent" aria-hidden />
+          <span className="h-px w-10 bg-gradient-to-r from-[rgba(86,184,127,0.50)] to-transparent" aria-hidden />
         </div>
         {/* App-shell — `t-section` supplies the 20px phone size; the
             existing sm/lg utilities restore 44/56px unchanged. */}
@@ -132,7 +132,7 @@ export function HowItWorks() {
           Safe drops, <span className="text-lime-text">every time</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-text-secondary">
-          Every order is covered by <span className="font-bold text-text-primary">SafeDrop™ Buyer Protection</span> — get what you ordered, or your money back.
+          Every order is covered by <span className="font-bold text-text-primary">SafeDrop Protection</span>. Get what you ordered, or your money back.
         </p>
       </div>
 
@@ -177,7 +177,7 @@ function StageCopy({ stage, index }: { stage: Stage; index: number }) {
           <span className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text tabular-nums">
             Step {stage.step}
           </span>
-          <span className="h-px w-6 bg-lime/40" aria-hidden />
+          <span className="h-px w-6 bg-[rgba(86,184,127,0.40)]" aria-hidden />
         </div>
         <h3 className="text-[28px] font-black leading-[1.05] tracking-tight text-text-primary sm:text-[36px] lg:text-[44px]">
           {stage.label}

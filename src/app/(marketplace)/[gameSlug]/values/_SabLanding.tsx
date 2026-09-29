@@ -267,7 +267,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
           <SwooshLink
             href="/steal-a-brainrot/values"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
           >
             Open values
             <ArrowRight className="h-4 w-4" />
@@ -316,7 +316,7 @@ function CalculatorPreviewCard() {
           <SwooshLink
             href="/steal-a-brainrot/calculator"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-lime-tint-bg/30 hover:text-lime-text"
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
           >
             Open calculator
             <ArrowRight className="h-4 w-4" />
@@ -340,7 +340,7 @@ function CalculatorPreviewCard() {
             Search a Brainrot…
           </div>
           {/* result row */}
-          <div className="flex items-center justify-between rounded-md border border-lime-tint-border bg-lime-tint-bg/25 px-2.5 py-2">
+          <div className="flex items-center justify-between rounded-md border border-lime-tint-border bg-[rgba(86,184,127,0.03)] px-2.5 py-2">
             <span className="text-[11px] font-semibold text-text-primary">Neon · La Vacca</span>
             <span className="font-mono text-[12px] font-bold tabular-nums text-lime-text">
               $42.00

@@ -196,9 +196,6 @@ export const TIERS: TierDef[] = [
     description: 'The ultimate rank — best of the best',
     colors: {
       text: 'text-lime-text',
-      // Tint tokens, not `bg-lime/10` / `ring-lime/30`: `lime` is a bare
-      // `var(...)`, so Tailwind cannot apply a slash opacity and never
-      // generates those classes.
       bg: 'bg-lime-tint-bg',
       border: 'border-lime-tint-border',
       ring: 'ring-lime-tint-border',

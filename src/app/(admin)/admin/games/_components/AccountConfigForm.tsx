@@ -211,7 +211,7 @@ function DeliveryToggle({
     <label
       className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
         checked
-          ? 'border-lime-tint-border bg-lime-tint-bg/40'
+          ? 'border-lime-tint-border bg-[rgba(86,184,127,0.05)]'
           : 'border-border-default bg-bg-overlay/40 hover:bg-bg-overlay/70'
       }`}
     >

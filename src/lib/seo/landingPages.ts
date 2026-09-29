@@ -57,10 +57,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-roblox-accounts',
     title: 'Buy Roblox Accounts – Safe & Instant Delivery',
     description:
-      'Browse verified Roblox accounts for sale. Every order covered by SafeDrop Buyer Protection. Instant delivery, money-back guarantee.',
+      'Browse verified Roblox accounts for sale. Every order covered by SafeDrop Protection. Instant delivery, money-back guarantee.',
     headline: 'Buy Roblox Accounts',
     subCopy:
-      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase covered by SafeDrop Buyer Protection.',
+      'Find high-value, verified Roblox accounts from trusted sellers. Every purchase covered by SafeDrop Protection.',
     gameSlug: 'roblox',
     categorySlug: 'buy-accounts',
     emoji: '🟥',
@@ -68,7 +68,7 @@ export const LANDING_PAGES: LandingPage[] = [
     faqs: [
       {
         q: 'Is it safe to buy a Roblox account on DropMarket?',
-        a: 'Yes. Every order is covered by SafeDrop Buyer Protection. Verify the account credentials, confirm delivery, and the order is complete. If your order isn\'t delivered or isn\'t as described, you get a full refund.',
+        a: 'Yes. Every order is covered by SafeDrop Protection. Verify the account credentials, confirm delivery, and the order is complete. If your order isn\'t delivered or isn\'t as described, you get a full refund.',
       },
       {
         q: 'What Roblox accounts are available?',
@@ -88,10 +88,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-roblox-items',
     title: 'Buy Roblox Items & Limiteds',
     description:
-      'Shop rare Roblox limiteds, UGC items, and accessories. SafeDrop Buyer Protection, instant delivery, trusted sellers.',
+      'Shop rare Roblox limiteds, UGC items, and accessories. SafeDrop Protection, instant delivery, trusted sellers.',
     headline: 'Buy Roblox Items & Limiteds',
     subCopy:
-      'Score rare Roblox limited items and UGC accessories from verified sellers — all covered by SafeDrop Buyer Protection.',
+      'Score rare Roblox limited items and UGC accessories from verified sellers, all covered by SafeDrop Protection.',
     gameSlug: 'roblox',
     categorySlug: 'buy-items',
     emoji: '🟥',
@@ -117,7 +117,7 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-valorant-accounts',
     title: 'Buy Valorant Accounts – Radiant, Immortal & More',
     description:
-      'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop Buyer Protection on every order.',
+      'Find Valorant accounts with rare skins, high ranks, and low prices. SafeDrop Protection on every order.',
     headline: 'Buy Valorant Accounts',
     subCopy:
       'Skip the grind. Purchase ranked Valorant accounts with top-tier skins from verified sellers.',
@@ -136,7 +136,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         q: 'How does SafeDrop protect me?',
-        a: 'Every order is covered by SafeDrop Buyer Protection: confirm the account works once you\'ve changed the credentials, and the order is complete. If there\'s an issue, we mediate and refund if necessary.',
+        a: 'Every order is covered by SafeDrop Protection: confirm the account works once you\'ve changed the credentials, and the order is complete. If there\'s an issue, we mediate and refund if necessary.',
       },
     ],
   },
@@ -144,7 +144,7 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-valorant-points',
     title: 'Buy Valorant Points (VP) – Cheapest Rates',
     description:
-      'Get Valorant Points for less. Verified sellers, instant delivery, buyer protection on every VP purchase.',
+      'Get Valorant Points for less. Verified sellers, instant delivery, SafeDrop Protection on every VP purchase.',
     headline: 'Buy Valorant Points',
     subCopy:
       'Top up your VP wallet at below-market rates from trusted DropMarket sellers.',
@@ -169,7 +169,7 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'buy-fortnite-accounts',
     title: 'Buy Fortnite Accounts – Rare Skins & OG Accounts',
     description:
-      'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. SafeDrop Buyer Protection, fast delivery.',
+      'Buy OG Fortnite accounts with rare skins like Black Knight, Skull Trooper, and more. SafeDrop Protection, fast delivery.',
     headline: 'Buy Fortnite Accounts',
     subCopy:
       'Find OG Fortnite accounts with season-1 skins and rare cosmetics. All sellers verified, every order covered by SafeDrop.',
@@ -199,7 +199,7 @@ export const LANDING_PAGES: LandingPage[] = [
       'Purchase rare Fortnite skins, emotes, pickaxes, and wraps from verified sellers. Instant delivery.',
     headline: 'Buy Fortnite Skins & Cosmetics',
     subCopy:
-      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, covered by SafeDrop Buyer Protection.',
+      'Get the rarest Fortnite cosmetics without grinding. Verified sellers, covered by SafeDrop Protection.',
     gameSlug: 'fortnite',
     categorySlug: 'buy-skins',
     emoji: '🎮',

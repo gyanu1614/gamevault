@@ -818,7 +818,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             'flex h-8 w-8 items-center justify-center rounded-lg border transition-all',
-                            enabled ? 'bg-lime/15 border-lime-tint-border text-lime-text' : 'bg-bg-overlay border-border-subtle text-text-disabled'
+                            enabled ? 'bg-lime-tint-bg border-lime-tint-border text-lime-text' : 'bg-bg-overlay border-border-subtle text-text-disabled'
                           )}>
                             <Icon className="h-4 w-4" />
                           </div>
@@ -942,7 +942,7 @@ export default function SettingsPage() {
           ) : (
             <>
               <div className="mb-5 flex items-start gap-4 pr-8">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime/15 border border-lime-tint-border">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg border border-lime-tint-border">
                   <Mail className="h-5 w-5 text-lime-text" />
                 </div>
                 <div className="min-w-0">
