@@ -259,7 +259,7 @@ export default async function SEOLandingPage({
               </h2>
 
               {/* Desktop table */}
-              <div className="hidden md:block rounded-2xl overflow-hidden border border-border-subtle bg-bg-overlay">
+              <div className="hidden md:block rounded-lg overflow-hidden bg-bg-raised">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border-subtle">
@@ -324,7 +324,7 @@ export default async function SEOLandingPage({
                   <Link
                     key={listing.id}
                     href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
-                    className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.04] border border-border-subtle hover:border-lime-tint-border transition-all"
+                    className="flex items-center justify-between gap-4 p-4 rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground line-clamp-1">{listing.title}</p>

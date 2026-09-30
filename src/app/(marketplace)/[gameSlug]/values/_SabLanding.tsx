@@ -50,7 +50,7 @@ export function SabLanding({
       {/* ── Hero header — floating, left-aligned game lockup (GameBoost-style) ── */}
       <div className="relative flex items-center gap-4 pt-9 sm:gap-5 sm:pt-11">
         {gameImageUrl && (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-overlay shadow-elevated sm:h-[68px] sm:w-[68px]">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.05] shadow-elevated sm:h-[68px] sm:w-[68px]">
             <Image
               src={gameImageUrl}
               alt={gameName}
@@ -111,11 +111,11 @@ export function SabLanding({
 
 function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-raised transition-colors hover:border-lime-tint-border">
+    <div className="flex flex-col overflow-hidden rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover">
       <div className="flex flex-col gap-3 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-default bg-bg-overlay text-lime-text">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
               <TrendingUp className="h-5 w-5" />
             </span>
             <h2 className="text-lg font-bold text-text-primary">Brainrot Values</h2>
@@ -127,7 +127,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
           <SwooshLink
             href="/steal-a-brainrot/values"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-md bg-white/[0.06] px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.1] hover:text-text-secondary"
           >
             Open values
             <ArrowRight className="h-4 w-4" />
@@ -136,7 +136,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
 
         {/* Mini value-table preview (a real slice of the /values UI). */}
         {topValues.length > 0 && (
-          <div className="w-full shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-base sm:w-[236px]">
+          <div className="w-full shrink-0 overflow-hidden rounded-lg bg-black/25 sm:w-[236px]">
             <div className="border-b border-border-subtle px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider text-text-tertiary">
               Top values
             </div>
@@ -165,7 +165,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
 /** Calculator card — mini calculator UI preview (not a black box) + CTA. */
 function CalculatorPreviewCard() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-raised transition-colors hover:border-lime-tint-border">
+    <div className="flex flex-col overflow-hidden rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover">
       <div className="flex flex-col gap-3 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-text-primary">Value &amp; Trade Calculator</h2>
@@ -176,7 +176,7 @@ function CalculatorPreviewCard() {
           <SwooshLink
             href="/steal-a-brainrot/calculator"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg border border-border-default bg-bg-overlay px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-md bg-white/[0.06] px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.1] hover:text-text-secondary"
           >
             Open calculator
             <ArrowRight className="h-4 w-4" />
@@ -184,9 +184,9 @@ function CalculatorPreviewCard() {
         </div>
 
         {/* Mini calculator UI preview. */}
-        <div className="w-full shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-base p-3 sm:w-[236px]">
+        <div className="w-full shrink-0 overflow-hidden rounded-lg bg-black/25 p-3 sm:w-[236px]">
           {/* tab row */}
-          <div className="mb-2.5 flex gap-1 rounded-md border border-border-subtle bg-bg-overlay p-1">
+          <div className="mb-2.5 flex gap-1 rounded-md bg-white/[0.05] p-1">
             <span className="flex-1 rounded bg-lime px-2 py-1 text-center text-[10.5px] font-bold text-text-inverse">
               Cash
             </span>
@@ -195,7 +195,7 @@ function CalculatorPreviewCard() {
             </span>
           </div>
           {/* fake search */}
-          <div className="mb-2.5 flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-overlay px-2 py-1.5 text-[10.5px] text-text-tertiary">
+          <div className="mb-2.5 flex items-center gap-1.5 rounded-md bg-white/[0.05] px-2 py-1.5 text-[10.5px] text-text-tertiary">
             <Search className="h-3 w-3" />
             Search a Brainrot…
           </div>

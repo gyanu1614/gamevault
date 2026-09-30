@@ -69,7 +69,6 @@ export default function SellerProfileBanner({
 }: SellerProfileBannerProps) {
   const displayName = sellerDisplayName({ username, shopName })
   const tierDef = tierByKey(sellerTier)
-  const tier = { ring: tierDef.colors.ring }
   const isOwnShop = currentUserId === sellerId
   const positivePercentage = rating > 0 ? Math.round((rating / 5) * 100) : 0
   // Shared seller rule (src/lib/seller/stat-line.ts): no sales yet →
@@ -101,7 +100,8 @@ export default function SellerProfileBanner({
     <motion.div
       initial={false}
       className={cn(
-        'relative w-full overflow-hidden rounded-2xl border border-border-default shadow-elevated',
+        // Fill only (card-surface system): no outline, no lime glow.
+        'relative w-full overflow-hidden rounded-xl shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]',
         className,
       )}
     >
@@ -113,14 +113,14 @@ export default function SellerProfileBanner({
       ) : (
         <>
           {/* Base */}
-          <div className="absolute inset-0 bg-bg-raised" />
-          {/* Lime radial glow top-left */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]" />
+          {/* Soft neutral light, top-left (no colour, no glow) */}
           <div
             aria-hidden
             className="absolute inset-0"
             style={{
               background:
-                'radial-gradient(ellipse 80% 60% at 15% 0%, rgba(198,255,61,0.18), transparent 70%)',
+                'radial-gradient(ellipse 70% 60% at 12% 0%, rgba(255,255,255,0.045), transparent 70%)',
             }}
           />
           {/* Soft dotted pattern */}
@@ -144,8 +144,7 @@ export default function SellerProfileBanner({
         <div className="relative shrink-0 self-center sm:self-auto">
           <div
             className={cn(
-              'relative h-20 w-20 overflow-hidden rounded-2xl border-2 border-bg-base ring-2 shadow-elevated sm:h-24 sm:w-24',
-              tier.ring,
+              'relative h-20 w-20 overflow-hidden rounded-2xl shadow-elevated ring-1 ring-white/10 sm:h-24 sm:w-24',
             )}
           >
             {avatarUrl ? (
@@ -156,7 +155,7 @@ export default function SellerProfileBanner({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-lime-tint-bg text-3xl font-bold text-lime-text">
+              <div className="flex h-full w-full items-center justify-center bg-white/[0.06] text-3xl font-bold text-text-primary">
                 {displayName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -201,13 +200,11 @@ export default function SellerProfileBanner({
                   type="button"
                   aria-label={`Tier ${tierDef.tierNumber}: ${tierDef.label}`}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[13px] font-semibold backdrop-blur-sm transition-colors',
-                    tierDef.colors.bg,
-                    tierDef.colors.border,
+                    'inline-flex h-8 items-center gap-1.5 rounded-md bg-white/[0.06] pl-1.5 pr-2.5 text-[13px] font-semibold backdrop-blur-sm transition-colors hover:bg-white/[0.1]',
                     tierDef.colors.text,
                   )}
                 >
-                  <SellerTierBadge tier={sellerTier} size={22} float={false} />
+                  <SellerTierBadge tier={sellerTier} size={18} float={false} />
                   {tierDef.label}
                 </button>
               </PopoverTrigger>
@@ -244,7 +241,7 @@ export default function SellerProfileBanner({
             />
             {statLine.kind === 'stats' && statLine.sales > 0 && (
               <StatChip
-                icon={<TrendingUp className="h-3.5 w-3.5 text-lime-text" />}
+                icon={<TrendingUp className="h-3.5 w-3.5 text-text-secondary" />}
                 value={String(totalSales)}
                 label="Sold"
               />
@@ -261,7 +258,7 @@ export default function SellerProfileBanner({
             <button
               type="button"
               onClick={onMessageClick}
-              className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow sm:h-10"
+              className="inline-flex h-11 items-center gap-1.5 rounded-md bg-white px-4 text-[14px] font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] sm:h-10"
             >
               <MessageCircle className="h-4 w-4" />
               <span>Message</span>
@@ -270,10 +267,8 @@ export default function SellerProfileBanner({
               type="button"
               onClick={onFollowClick}
               className={cn(
-                'inline-flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-medium transition-colors sm:h-10',
-                isFollowing
-                  ? 'border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover'
-                  : 'border-border-default bg-bg-raised text-text-primary hover:border-lime-tint-border hover:bg-bg-raised-hover',
+                'inline-flex h-11 items-center gap-1.5 rounded-md px-4 text-[14px] font-semibold text-text-primary transition-[background-color,transform] active:scale-[0.98] sm:h-10',
+                isFollowing ? 'bg-white/[0.1] hover:bg-white/[0.13]' : 'bg-white/[0.07] hover:bg-white/[0.11]',
               )}
             >
               {isFollowing ? (
@@ -293,7 +288,7 @@ export default function SellerProfileBanner({
           <Link
             href="/account/dashboard"
             prefetch={false}
-            className="inline-flex h-11 shrink-0 items-center gap-1.5 self-center rounded-xl bg-lime px-4 text-sm font-bold uppercase tracking-wider text-text-inverse shadow-elevated transition-all hover:bg-lime-hover hover:shadow-glow sm:h-10 sm:self-auto"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 self-center rounded-md bg-white px-4 text-[14px] font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] sm:h-10 sm:self-auto"
           >
             <Package className="h-4 w-4" />
             Dashboard
@@ -301,8 +296,6 @@ export default function SellerProfileBanner({
         )}
       </div>
 
-      {/* Bottom lime hairline */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-lime to-transparent opacity-50" />
     </motion.div>
   )
 }
@@ -311,10 +304,10 @@ function StatChip({
   icon, value, label, plain = false,
 }: { icon: React.ReactNode; value: string; label: string; plain?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-2.5 py-1 backdrop-blur-sm">
+    <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/[0.06] px-2.5 backdrop-blur-sm">
       {icon}
-      <span className={cn('text-sm font-semibold tabular-nums text-text-primary', !plain && 'font-mono')}>{value}</span>
-      {label && <span className="text-[11px] text-text-tertiary">{label}</span>}
+      <span className={cn('text-[13.5px] font-semibold tabular-nums text-text-primary', !plain && 'font-mono')}>{value}</span>
+      {label && <span className="text-[12px] text-text-tertiary">{label}</span>}
     </span>
   )
 }

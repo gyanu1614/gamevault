@@ -155,7 +155,7 @@ function StockDot({ stock }: { stock: number }) {
 // V14 — Hero-card info row. Left label / right value, bordered pill.
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-overlay px-3 py-2.5">
+    <div className="flex items-center justify-between rounded-lg bg-bg-raised px-3 py-2.5">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
         {label}
       </div>
@@ -554,7 +554,7 @@ function SectionCard({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-xl border border-border-default p-5 sm:p-6 lg:p-8',
+        'relative overflow-hidden rounded-lg p-5 sm:p-6 lg:p-8',
         tone === 'raised' && 'bg-bg-raised shadow-elevated',
         tone === 'overlay' && 'bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]',
         tone === 'gradient' && 'bg-gradient-to-br from-bg-raised via-bg-raised to-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] shadow-elevated',
@@ -570,10 +570,10 @@ function VariantSelector({ variant }: { variant: CurrencyPageData['currency']['v
   const [active, setActive] = useState(variant.options[0])
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+      <span className="text-[13px] font-semibold text-text-tertiary">
         {variant.label}
       </span>
-      <div className="inline-flex w-fit gap-1 rounded-lg border border-border-subtle bg-bg-raised p-1">
+      <div className="inline-flex w-fit gap-1 rounded-lg bg-bg-raised p-1">
         {variant.options.map((o) => (
           <button
             key={o}

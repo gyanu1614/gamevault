@@ -32,7 +32,7 @@ export function Block({ className = '', style }: { className?: string; style?: R
 export function ItemCardSkeleton() {
   return (
     <article
-      className="relative flex flex-col overflow-hidden rounded-lg border border-border-default bg-bg-overlay"
+      className="relative flex flex-col overflow-hidden rounded-lg bg-bg-raised"
       aria-hidden
     >
       {/* MAIN BLOCK — breadcrumb + content row. Padding is the same
@@ -91,24 +91,22 @@ export function ItemCardSkeleton() {
 export default function ItemsSkeleton() {
   return (
     <main className="min-h-screen" aria-busy>
-      {/* GameSubNav skeleton — wrapper and pill classes copied from the
-          live GameSubNav (measured 2026-09-25: 60px desktop = 6px padding +
-          48px pill; 52px on mobile). The old copy used py-5 and a 44px
-          round pill, which pushed the whole skeleton 24px lower than the
-          real page and made everything jump on swap. */}
-      <div className="relative z-40 flex justify-center px-3 py-0.5 pointer-events-none sm:py-1 md:py-1.5 max-md:h-[52px] max-md:px-0 max-md:py-0">
+      {/* GameSubNav skeleton — wrapper and pill classes copied from the live
+          GameSubNav (measured 2026-09-30 at 1024px: pill 56px, 15px under the
+          navbar, 20px below; 58px fixed bar on phones). Keep in lockstep. */}
+      <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[58px] max-md:px-0 max-md:py-0">
         <div
-          className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-[10px] border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-1.5 py-0.5 sm:px-2 sm:py-1 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-1.5 max-md:!bg-[#16171B]"
+          className="pointer-events-auto flex w-full max-w-fit items-center gap-0.5 rounded-full border border-white/[0.1] px-2 py-1 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]"
           style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
         >
-          {/* One block per slot (game + each category). Slots are 38px
-              tall, like the real tabs. */}
-          <div className="flex h-[38px] flex-shrink-0 items-center px-2.5 sm:px-3">
+          {/* Game lockup, divider, then text-only category tabs (40px). */}
+          <div className="flex h-10 flex-shrink-0 items-center gap-2 px-2.5 sm:px-3.5">
+            <Block className="h-5 w-5 rounded-md sm:h-[26px] sm:w-[26px]" />
             <Block className="h-3.5 w-20 sm:w-24" />
           </div>
-          <div className="mx-1 h-5 w-px flex-shrink-0 bg-white/[0.12] sm:mx-1.5" aria-hidden />
+          <div className="mx-1 h-4 w-px flex-shrink-0 bg-white/[0.12] sm:mx-1.5 sm:h-5" aria-hidden />
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex h-[38px] items-center px-2.5 sm:px-3">
+            <div key={i} className="flex h-10 items-center px-3 sm:px-3.5">
               <Block className="h-3.5 w-14 sm:w-16" />
             </div>
           ))}

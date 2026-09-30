@@ -19,7 +19,7 @@ function Block({ className = '' }: { className?: string }) {
 
 function GameSubNavSkeleton() {
   return (
-    <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0">
+    <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[42px] max-md:px-0 max-md:py-0">
       <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-40 max-md:h-[42px] max-md:max-w-none max-md:overflow-hidden max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:!bg-[rgba(14,22,17,0.94)]" style={{ backgroundColor: 'rgba(29, 30, 35, 0.72)' }}>
         {/* V21/P7.q — One block per slot (game + each category). */}
         <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
@@ -42,7 +42,7 @@ function GameSubNavSkeleton() {
 // + 2px border (that was a tighter skeleton-only treatment).
 function BundleTileSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3">
+    <div className="relative overflow-hidden rounded-lg bg-white/[0.03] p-3">
       <div className="flex h-16 items-center justify-center sm:h-20">
         <Block className="h-14 w-14 rounded-md" />
       </div>
@@ -57,7 +57,7 @@ function BundleTileSkeleton() {
 function PlatformTileSkeleton() {
   // 140×88 card, icon h-10 + label.
   return (
-    <div className="relative flex h-[88px] w-[140px] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-2">
+    <div className="relative flex h-[88px] w-[140px] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-white/[0.03] p-2">
       <Block className="h-10 w-10 rounded-md" />
       <Block className="h-3 w-12" />
     </div>
@@ -66,7 +66,7 @@ function PlatformTileSkeleton() {
 
 function OfferPanelSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border-default bg-bg-raised p-5 shadow-elevated">
+    <div className="relative overflow-hidden rounded-lg bg-bg-raised p-5 shadow-elevated">
       {/* Price */}
       <div className="flex items-baseline gap-2">
         <Block className="h-8 w-28" />
@@ -164,7 +164,7 @@ export default function BundleCurrencySkeleton() {
           </div>
           <div className="mt-7 grid gap-3 sm:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-border-subtle bg-bg-raised p-5">
+              <div key={i} className="rounded-lg bg-bg-raised p-5">
                 <div className="flex items-start justify-between">
                   <Block className="h-10 w-10 rounded-xl" />
                   <Block className="h-6 w-8" />
@@ -187,7 +187,7 @@ export default function BundleCurrencySkeleton() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-raised px-5 py-4"
+                className="flex items-center justify-between rounded-lg bg-bg-raised px-5 py-4"
               >
                 <Block className="h-4 w-3/4" />
                 <Block className="h-7 w-7 rounded-full" />

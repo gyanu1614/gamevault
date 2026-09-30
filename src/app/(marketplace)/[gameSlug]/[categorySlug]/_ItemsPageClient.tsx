@@ -475,10 +475,10 @@ export default function ItemsPageClient({
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded border border-border-default bg-bg-raised px-6 font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+                  className="inline-flex items-center gap-2 rounded-md bg-bg-raised px-6 font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
                   style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
                 >
-                  Load more items
+                  Load More Items
                   <span aria-hidden className="text-text-tertiary">·</span>
                   <span className="text-text-tertiary tabular-nums">
                     {sorted.length - visible.length} left
@@ -499,8 +499,8 @@ function Dot() {
 
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-default bg-bg-raised px-6 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-text-secondary">
+    <div className="flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
         <Search className="h-5 w-5" />
       </div>
       <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
@@ -512,10 +512,10 @@ function EmptyState({ onClear }: { onClear: () => void }) {
       <button
         type="button"
         onClick={onClear}
-        className="mt-5 inline-flex items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-4 font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+        className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-white/[0.07] px-4 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
         style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
       >
-        Clear filters
+        Clear Filters
       </button>
     </div>
   )

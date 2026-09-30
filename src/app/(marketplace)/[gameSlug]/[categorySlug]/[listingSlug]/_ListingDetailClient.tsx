@@ -32,6 +32,7 @@ import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import ItemCard from '../_ItemCard'
 import type { ItemOffer } from '../_itemsTypes'
@@ -1242,8 +1243,9 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
       data-mini-card
       href={`/${gameSlug}/${listing.categorySlug}/${listing.slug}`}
       className={cn(
-        'group relative flex w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-raised transition-all sm:w-[280px]',
-        'hover:-translate-y-0.5 hover:border-lime-tint-border hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.6)]',
+        'group relative flex w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-lg sm:w-[280px]',
+        MARKET_CARD,
+        MARKET_CARD_HOVER,
       )}
     >
       <div className="relative aspect-[4/3] bg-bg-overlay">

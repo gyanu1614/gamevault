@@ -78,9 +78,6 @@ const ALLOWED: Record<string, Array<{ text: string; reason: string }>> = {
   'src/features/home/components/MobileHome.tsx': [
     { text: 'width: ', reason: 'CSS percentage widths in inline styles' },
   ],
-  'src/app/(marketing)/sell/fees/page.tsx': [
-    { text: 'className="h-4 w-4" /> Seller Fees', reason: 'the eyebrow icon\'s size class sits next to the "Seller Fees" label, not a fee' },
-  ],
 }
 
 const PCT_RE = /\b\d{1,2}(?:\.\d+)?\s*%/g

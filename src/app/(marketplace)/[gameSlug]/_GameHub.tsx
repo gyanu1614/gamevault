@@ -34,12 +34,12 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { cn } from '@/lib/utils'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import type { HubCard } from './_hubModel'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
 
-const CARD =
-  'bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]'
-const CARD_HOVER = 'transition-[background-image,transform] duration-200 hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)]'
+const CARD = MARKET_CARD
+const CARD_HOVER = MARKET_CARD_HOVER
 /** CSS entrance: rises in once, staggered by `delay` (ms). */
 const RISE = 'animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none'
 

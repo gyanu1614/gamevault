@@ -31,6 +31,7 @@ import { SmartLink } from '@/components/global/SmartLink'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'
 import { PencilSimpleIcon } from '@phosphor-icons/react'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
@@ -158,11 +159,11 @@ export default function ItemCard({
         // drop shadow for depth. Hover lifts the whole gradient one step and
         // clears the hairline — still black, never the grey tokens.
         // h-full: every card fills its grid row, so a row never mixes heights.
-        'group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border border-white/[0.10]',
-        'bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]',
-        'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]',
-        'transition-[background-image,border-color,box-shadow] duration-200',
-        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
+        // Fill only (owner, 2026-09-30: no outlines anywhere): the shared
+        // marketplace surface, hover lifts the gradient one step.
+        'group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg',
+        MARKET_CARD,
+        MARKET_CARD_HOVER,
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
