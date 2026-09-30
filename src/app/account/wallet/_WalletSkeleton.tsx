@@ -58,31 +58,32 @@ export function WalletSkeleton({ isSeller }: { isSeller: boolean }) {
           </div>
         </div>
 
-        {/* Tabs — segmented control */}
+        {/* Tabs: SegmentedTabs, first tab selected (Sales for sellers, Purchases for buyers) */}
         <div className="mb-3 flex w-fit gap-1 rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1">
-          {Array.from({ length: isSeller ? 3 : 1 }).map((_, i) => (
-            <Block key={i} className="h-8 w-24 rounded-[5px]" />
+          {(isSeller ? [78, 104, 92] : [104]).map((w, i) => (
+            <div key={i} className={`h-8 rounded-[5px] ${i === 0 ? 'bg-white/[0.09]' : 'animate-pulse bg-white/[0.07] opacity-40'}`} style={{ width: w }} />
           ))}
         </div>
 
-        {/* Search + filter */}
+        {/* Search (+ status filter on Purchases) */}
         <div className="mb-3 flex gap-2">
-          <Block className="h-9 flex-1 rounded-lg" />
-          <Block className="h-9 w-24 rounded-lg" />
+          <Block className="h-10 flex-1" />
+          {!isSeller && <Block className="h-10 w-28" />}
         </div>
 
-        {/* Transactions */}
-        <div className="space-y-2">
+        {/* Transactions: one panel, hairlines between rows */}
+        <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 rounded-lg border border-border-subtle card-frost p-3.5">
+            <div key={i} className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5">
               <Block className="h-10 w-10 shrink-0 rounded-lg" />
               <div className="min-w-0 flex-1 space-y-1.5">
+                <Block className="h-3 w-24" />
                 <Block className="h-4 w-1/2" />
                 <Block className="h-3 w-1/3" />
               </div>
-              <div className="shrink-0 space-y-1.5">
-                <Block className="ml-auto h-4 w-16" />
-                <Block className="ml-auto h-3 w-12" />
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <Block className="h-6 w-20 rounded-full" />
+                <Block className="h-4 w-14" />
               </div>
             </div>
           ))}

@@ -19,6 +19,7 @@ import {
   Clock, Loader2, ChevronRight, Info,
 } from 'lucide-react'
 import { submitInformDisclosure } from '@/lib/actions/inform-act'
+import { accountInputCls } from '@/components/account/AccountSurface'
 import type { InformDisclosure } from '@/lib/actions/inform-act'
 
 // ── Animation variants ─────────────────────────────────────────────────────
@@ -49,8 +50,7 @@ function Field({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full bg-bg-raised border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-white
-                   placeholder:text-text-disabled focus:outline-none focus:border-focus-border transition-colors"
+        className={accountInputCls}
       />
       {hint && <p className="text-xs text-text-tertiary mt-1">{hint}</p>}
     </div>
@@ -182,7 +182,7 @@ export default function InformDisclosureClient({
           </motion.div>
         )}
 
-        <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
+        <motion.div variants={item} className="rounded-lg bg-bg-raised p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-lime-text flex-shrink-0 mt-0.5" />
             <div>
@@ -218,7 +218,7 @@ export default function InformDisclosureClient({
           <StatusBanner status={status} rejectionReason={disclosure?.rejection_reason} />
         </motion.div>
         {disclosure && (
-          <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5 space-y-2">
+          <motion.div variants={item} className="rounded-lg bg-bg-raised p-5 sm:p-6 space-y-2">
             <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-3">Submitted Information</p>
             {[
               ['Legal Name',    disclosure.legal_name],
@@ -262,7 +262,7 @@ export default function InformDisclosureClient({
         <form onSubmit={handleSubmit} className="space-y-5">
 
           {/* Identity */}
-          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+          <div className="rounded-lg bg-bg-raised p-5 sm:p-6 space-y-4">
             <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Legal Identity</p>
             <Field label="Legal Full Name or Business Name" name="legalName" value={form.legalName}
               onChange={set('legalName')} required placeholder="Jane Doe or Acme LLC" />
@@ -283,7 +283,7 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Financial identifiers */}
-          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+          <div className="rounded-lg bg-bg-raised p-5 sm:p-6 space-y-4">
             <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Financial Identifiers</p>
             <Field label="Tax ID — Last 4 digits only (SSN or EIN)" name="taxIdLast4" value={form.taxIdLast4}
               onChange={set('taxIdLast4')} required placeholder="4321"
@@ -294,7 +294,7 @@ export default function InformDisclosureClient({
           </div>
 
           {/* Public contact */}
-          <div className="rounded-lg border border-border-subtle card-frost p-5 space-y-4">
+          <div className="rounded-lg bg-bg-raised p-5 sm:p-6 space-y-4">
             <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Public Contact Information</p>
             <p className="text-xs text-text-tertiary">
               Under the INFORM Act, buyers may request this contact information. It will only be

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Search, User, LogOut, Menu, X, ArrowLeft, ChevronDown, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
+import { Search, LogOut, Menu, X, ArrowLeft, ChevronDown, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
   ShoppingCart,
   LayoutGrid,
 } from 'lucide-react'
@@ -42,7 +42,6 @@ const ACCOUNT_MENU_ITEMS = [
   { label: 'Offers', href: '/account/listings', Icon: Package, sellerOnly: true },
   { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
-  { label: 'Wishlist', href: '/account/wishlist', Icon: Heart, sellerOnly: false },
   { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
   { label: 'Settings', href: '/account/settings', Icon: Settings, sellerOnly: false },
 ] as const
@@ -244,6 +243,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     window.addEventListener('dm:account-sidebar-state', onState)
     return () => window.removeEventListener('dm:account-sidebar-state', onState)
   }, [])
+
+  // The account sidebar's Logout asks the navbar to run the sign-out flow.
+  const logoutRef = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    const onLogout = () => { void logoutRef.current?.() }
+    window.addEventListener('dm:logout', onLogout)
+    return () => window.removeEventListener('dm:logout', onLogout)
+  }, [])
+
   // Mobile: the bar floats transparent over the hero at the very top ONLY
   // on the homepage. Marketplace/category pages (which have a sub-navbar)
   // keep the solid bar so the two-bar unit reads as one solid block.
@@ -823,6 +831,113 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     }
     return null
   }, [pathname, gamesByType])
+
+  // Sign-out, shared by the user menu below and the account sidebar's Logout
+  // (which dispatches `dm:logout`, the same way it toggles via
+  // `dm:toggle-account-sidebar`), so both show the same overlay and redirect.
+  const performLogout = async () => {
+    // V21/P5.b + V23 — Sign-out flow:
+    //  1. Show full-screen blur+loader overlay
+    //  2. NAVIGATE FIRST (for protected paths),
+    //     THEN sign out. Order matters: signOut()
+    //     flips the auth state to logged-out, and
+    //     if we're still on a protected page like
+    //     /account/orders the page re-renders in
+    //     place as logged-out (collapsing to its
+    //     empty/footer fallback) — that's the
+    //     "see the bottom of the page" flash the
+    //     user reported. By starting the redirect
+    //     to '/' BEFORE awaiting signOut, we're
+    //     already leaving the protected page when
+    //     the state flips, so it never paints
+    //     logged-out in place.
+    //  3. Public paths just refresh in place
+    //     (scroll to top first so the user lands
+    //     cleanly, not stranded mid-scroll).
+    // The overlay stays up the whole time.
+    setIsLoggingOut(true)
+    setUserMenuOpen(false)
+
+    // Raise the cross-component logout flag so the
+    // protected layouts (e.g. /account) skip their
+    // "redirect to /login if !user" effect while we
+    // drive the user home — otherwise the two race
+    // and flash the login screen mid-logout.
+    beginLogout()
+
+    // Shared source of truth with the middleware
+    // (src/lib/auth/protected-routes.ts) so the two
+    // can't drift — logging out on a page you can no
+    // longer access sends you home.
+    const isProtected = isProtectedPath(pathname)
+
+    // Scroll to top BEFORE anything paints so the
+    // user never sees the page mid-scroll.
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+    }
+
+    // Kick off the redirect home for protected
+    // pages immediately — before signOut flips the
+    // auth state and re-renders the page in place.
+    // Arm the navigation-settle gate so the opaque
+    // overlay is lifted by the effect above (when
+    // pathname === '/' has painted), not by the
+    // blind timer — which could lift before home
+    // mounts and pop content in.
+    if (isProtected) {
+      setAwaitingHomePaint(true)
+      router.replace('/')
+    }
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+      if (error) console.error('Logout error:', error)
+
+      queryClient.clear()
+
+      // Public paths stay put — refresh in place so
+      // server components re-render logged-out.
+      if (!isProtected) {
+        router.refresh()
+      }
+
+      try {
+        const { toast } = await import('sonner')
+        toast.success('Signed out')
+      } catch {}
+
+      if (isProtected) {
+        // Primary lift is the navigation-settle
+        // effect (waits for home to paint). This
+        // timer is only a SAFETY CAP so the overlay
+        // can never get stuck if the route never
+        // settles on '/'. Generous (1500ms) so it
+        // doesn't pre-empt a slightly slow home mount.
+        setTimeout(() => {
+          setIsLoggingOut(false)
+          setAwaitingHomePaint(false)
+        }, 1500)
+      } else {
+        // Public path: page stays put + refreshed,
+        // so a short hold to let it re-render is all
+        // that's needed.
+        setTimeout(() => setIsLoggingOut(false), 350)
+      }
+    } catch (error) {
+      console.error('Logout failed:', error)
+      if (!isProtected) {
+        router.replace('/')
+      }
+      setTimeout(() => {
+        setIsLoggingOut(false)
+        setAwaitingHomePaint(false)
+      }, 1500)
+    }
+  }
+  logoutRef.current = performLogout
 
   return (
     <>
@@ -1544,7 +1659,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     white block. */}
                                 <Link
                                   href="/account/dashboard"
-                                  prefetch={false}
                                   className="mb-1 flex items-center gap-3 rounded-md border border-border-subtle bg-white/[0.06] px-4 py-2.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.10]"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
@@ -1669,7 +1783,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               <>
                                 <Link
                                   href="/account/dashboard"
-                                  prefetch={false}
                                   className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
                                 >
@@ -1684,7 +1797,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
 
                                 <div className="my-1.5 h-px bg-border-subtle" />
 
-                                {/* V68 — Shopping section: Orders, Wishlist, Wallet */}
+                                {/* V68 — Shopping section: Orders, Wallet */}
                                 <Link
                                   href="/account/orders"
                                   className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
@@ -1692,15 +1805,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 >
                                   <Package className="h-[18px] w-[18px]" />
                                   Orders
-                                </Link>
-
-                                <Link
-                                  href="/account/wishlist"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Heart className="h-[18px] w-[18px]" />
-                                  Wishlist
                                 </Link>
 
                                 <Link
@@ -1725,15 +1829,6 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 </Link>
 
                                 <Link
-                                  href="/account"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <User className="h-[18px] w-[18px]" />
-                                  Account
-                                </Link>
-
-                                <Link
                                   href="/account/settings"
                                   className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
                                   onClick={() => setUserMenuOpen(false)}
@@ -1748,110 +1843,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           {/* Logout */}
                           <div className="relative border-t border-border-subtle pt-1.5">
                             <button
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
-
-                                // V21/P5.b + V23 — Sign-out flow:
-                                //  1. Show full-screen blur+loader overlay
-                                //  2. NAVIGATE FIRST (for protected paths),
-                                //     THEN sign out. Order matters: signOut()
-                                //     flips the auth state to logged-out, and
-                                //     if we're still on a protected page like
-                                //     /account/orders the page re-renders in
-                                //     place as logged-out (collapsing to its
-                                //     empty/footer fallback) — that's the
-                                //     "see the bottom of the page" flash the
-                                //     user reported. By starting the redirect
-                                //     to '/' BEFORE awaiting signOut, we're
-                                //     already leaving the protected page when
-                                //     the state flips, so it never paints
-                                //     logged-out in place.
-                                //  3. Public paths just refresh in place
-                                //     (scroll to top first so the user lands
-                                //     cleanly, not stranded mid-scroll).
-                                // The overlay stays up the whole time.
-                                setIsLoggingOut(true)
-                                setUserMenuOpen(false)
-
-                                // Raise the cross-component logout flag so the
-                                // protected layouts (e.g. /account) skip their
-                                // "redirect to /login if !user" effect while we
-                                // drive the user home — otherwise the two race
-                                // and flash the login screen mid-logout.
-                                beginLogout()
-
-                                // Shared source of truth with the middleware
-                                // (src/lib/auth/protected-routes.ts) so the two
-                                // can't drift — logging out on a page you can no
-                                // longer access sends you home.
-                                const isProtected = isProtectedPath(pathname)
-
-                                // Scroll to top BEFORE anything paints so the
-                                // user never sees the page mid-scroll.
-                                if (typeof window !== 'undefined') {
-                                  window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-                                }
-
-                                // Kick off the redirect home for protected
-                                // pages immediately — before signOut flips the
-                                // auth state and re-renders the page in place.
-                                // Arm the navigation-settle gate so the opaque
-                                // overlay is lifted by the effect above (when
-                                // pathname === '/' has painted), not by the
-                                // blind timer — which could lift before home
-                                // mounts and pop content in.
-                                if (isProtected) {
-                                  setAwaitingHomePaint(true)
-                                  router.replace('/')
-                                }
-
-                                try {
-                                  const { createClient } = await import('@/lib/supabase/client')
-                                  const supabase = createClient()
-                                  const { error } = await supabase.auth.signOut()
-                                  if (error) console.error('Logout error:', error)
-
-                                  queryClient.clear()
-
-                                  // Public paths stay put — refresh in place so
-                                  // server components re-render logged-out.
-                                  if (!isProtected) {
-                                    router.refresh()
-                                  }
-
-                                  try {
-                                    const { toast } = await import('sonner')
-                                    toast.success('Signed out')
-                                  } catch {}
-
-                                  if (isProtected) {
-                                    // Primary lift is the navigation-settle
-                                    // effect (waits for home to paint). This
-                                    // timer is only a SAFETY CAP so the overlay
-                                    // can never get stuck if the route never
-                                    // settles on '/'. Generous (1500ms) so it
-                                    // doesn't pre-empt a slightly slow home mount.
-                                    setTimeout(() => {
-                                      setIsLoggingOut(false)
-                                      setAwaitingHomePaint(false)
-                                    }, 1500)
-                                  } else {
-                                    // Public path: page stays put + refreshed,
-                                    // so a short hold to let it re-render is all
-                                    // that's needed.
-                                    setTimeout(() => setIsLoggingOut(false), 350)
-                                  }
-                                } catch (error) {
-                                  console.error('Logout failed:', error)
-                                  if (!isProtected) {
-                                    router.replace('/')
-                                  }
-                                  setTimeout(() => {
-                                    setIsLoggingOut(false)
-                                    setAwaitingHomePaint(false)
-                                  }, 1500)
-                                }
+                                void performLogout()
                               }}
                               className="flex w-full items-center gap-3 rounded-md px-4 py-2 text-[14px] text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
                             >

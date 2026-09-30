@@ -14,6 +14,7 @@ import { createReview, updateReview } from '@/lib/api/reviews'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createPortal } from 'react-dom'
+import { notifySellerOfReview } from '@/lib/actions/review-notify'
 import type { ReviewWithRelations } from '@/types/database'
 
 interface ReviewFormProps {
@@ -123,6 +124,9 @@ export default function ReviewForm({
           throw new Error(error?.message || 'Failed to submit review')
         }
 
+        // Bell notification + (if they allow it) email to the seller.
+        // Fire-and-forget: the review already landed.
+        void notifySellerOfReview(data.id).catch(() => {})
         toast.success('Review submitted successfully!')
       }
 

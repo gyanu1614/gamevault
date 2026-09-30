@@ -69,7 +69,6 @@ export const PRIVATE_SEGMENTS = new Set([
   'signup',
   'support',
   'wallet',
-  'wishlist',
 ])
 
 /**

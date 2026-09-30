@@ -14,6 +14,7 @@ import { OrderModal, modalButton, modalField } from './_OrderModal'
 import { confirmOrderReceipt } from '@/lib/actions/orders'
 import { createReview } from '@/lib/api/reviews'
 import { toast } from 'sonner'
+import { notifySellerOfReview } from '@/lib/actions/review-notify'
 import { cn } from '@/lib/utils'
 
 interface MarkReceivedModalProps {
@@ -108,6 +109,9 @@ export function MarkReceivedModal({
           setSubmitting(false)
           return
         }
+        // Bell notification + (if they allow it) email to the seller.
+        // Fire-and-forget: the review already landed.
+        void notifySellerOfReview(data.id).catch(() => {})
         toast.success('Review submitted')
         onConfirmed?.()
         setTimeout(() => {

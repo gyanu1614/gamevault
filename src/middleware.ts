@@ -41,12 +41,15 @@ export async function middleware(request: NextRequest) {
       }
 
       // V17e / Beta C — Seller-only sections. Buyers and unapproved accounts
-      // hitting any /account/listings* route or /account/dashboard get bounced
-      // to "/". This is the authoritative server-side gate; the client-side
-      // SellerOnlyGate handles UX (toast + loader) for snappy feedback.
+      // hitting any /account/listings* route get bounced to "/". This is the
+      // authoritative server-side gate.
+      // /account/dashboard is NOT here (2026-09-29): it serves BuyerDashboard
+      // to buyers and SellerDashboard to sellers, and every data read behind
+      // either is scoped to the caller. Gating it bounced every buyer who
+      // clicked the first item in their sidebar to "/" with a "Sellers only"
+      // toast.
       const isSellerOnlyRoute =
         pathname.startsWith('/account/listings') ||
-        pathname.startsWith('/account/dashboard') ||
         pathname.startsWith('/account/analytics') ||
         pathname.startsWith('/account/earnings')
 

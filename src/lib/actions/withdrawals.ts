@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireAdmin, requireRole } from '@/lib/actions/admin-permissions'
+import { emailAllowed } from '@/lib/email/preferences'
 import { revealPayoutSecret } from '@/lib/crypto/payout-encryption'
 
 /**
@@ -458,7 +459,9 @@ export async function markWithdrawalPaid(params: {
     await (async () => {
       const { data: profile } = await serviceClient
         .from('profiles').select('email, username, full_name').eq('id', paid.user_id).single() as any
-      if (profile?.email) {
+      // Settings → Notifications → Payout Processed (the paid email only;
+      // requested / approved / rejected always go out).
+      if (profile?.email && (await emailAllowed(paid.user_id, 'payout_processed'))) {
         const { sendWithdrawalProcessedEmail } = await import('@/lib/email')
         await sendWithdrawalProcessedEmail({
           to: profile.email,

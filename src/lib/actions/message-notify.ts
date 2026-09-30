@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { emailAllowed } from '@/lib/email/preferences'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 
 /**
@@ -120,7 +121,8 @@ export async function notifyNewMessage(conversationId: string): Promise<void> {
       }
     }
 
-    if (recipient.email) {
+    // Settings → Notifications → New Messages
+    if (recipient.email && (await emailAllowed(recipientId, 'new_message'))) {
       const { sendNewMessageEmail } = await import('@/lib/email')
       await sendNewMessageEmail({
         to: recipient.email,

@@ -23,16 +23,11 @@ import {
   Search,
   X,
   Loader2,
-  Download,
   CreditCard,
   Package,
   ExternalLink,
   ChevronRight,
   Zap,
-  CircleDot,
-  CircleCheck,
-  CircleX,
-  CircleDashed,
   User,
   Plus,
   ArrowDownToLine,
@@ -44,6 +39,9 @@ import { toast } from 'sonner'
 import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
 import { lifetimeSpentOf, matchesPurchaseFilter, saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { WalletSkeleton } from './_WalletSkeleton'
+import { OrderStatusPill } from '@/components/account/OrderStatusPill'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { accountInputCls } from '@/components/account/AccountSurface'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -327,52 +325,6 @@ function GameIcon({ emoji, imageUrl, size = 10 }: { emoji?: string; imageUrl?: s
     <div className={`${cls} rounded-lg bg-bg-raised-hover border border-border-subtle flex items-center justify-center text-xl`}>
       {emoji || '🎮'}
     </div>
-  )
-}
-
-// ── Status badge ──────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, {
-  label: string
-  icon: React.ElementType
-  pill: string
-  dot: string
-  pulse: boolean
-}> = {
-  // One entry per REAL order status (pending|paid|delivering|delivered|
-  // disputed|completed|cancelled|refunded).
-  completed:  { label: 'Completed',        icon: CircleCheck,  pill: 'bg-green-500/12 text-success border-green-500/25',  dot: 'bg-green-400',  pulse: false },
-  paid:       { label: 'Waiting For Seller', icon: CircleDot,  pill: 'bg-amber-500/[0.12] text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
-  delivering: { label: 'Delivering',       icon: CircleDot,    pill: 'bg-amber-500/[0.12] text-amber-400 border-amber-500/25',  dot: 'bg-amber-400',  pulse: true  },
-  delivered:  { label: 'Delivered',        icon: CircleCheck,  pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: false },
-  disputed:   { label: 'Disputed',         icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: true  },
-  pending:    { label: 'Awaiting Payment', icon: CircleDashed, pill: 'bg-blue-500/12  text-blue-400  border-blue-500/25',   dot: 'bg-blue-400',   pulse: true  },
-  failed:     { label: 'Cancelled',   icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: false },
-  cancelled:  { label: 'Cancelled',   icon: CircleX,      pill: 'bg-red-500/12   text-error   border-red-500/25',    dot: 'bg-red-400',    pulse: false },
-  refunded:   { label: 'Refunded',    icon: CircleX,      pill: 'bg-orange-500/12 text-orange-400 border-orange-500/25', dot: 'bg-orange-400', pulse: false },
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? {
-    label: status, icon: CircleDot,
-    pill: 'bg-gray-500/12 text-text-secondary border-gray-500/25',
-    dot: 'bg-gray-400', pulse: false,
-  }
-  const Icon = cfg.icon
-  return (
-    <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap',
-      cfg.pill
-    )}>
-      {/* animated pulse dot */}
-      <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
-        {cfg.pulse && (
-          <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-60', cfg.dot)} />
-        )}
-        <span className={cn('relative inline-flex rounded-full h-1.5 w-1.5', cfg.dot)} />
-      </span>
-      {cfg.label}
-    </span>
   )
 }
 
@@ -668,40 +620,33 @@ export default function WalletClient({ userId, isSeller }: Props) {
           </div>
         </div>
 
-      {/* ── Tabs — compact segmented control (same as Messages) ── */}
-      <div className="mb-3 flex w-fit max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {tabs.map(tab => {
+      {/* ── Tabs: the shared compact control with the sliding pill ── */}
+      <SegmentedTabs
+        className="mb-3"
+        tabs={tabs.map((tab) => {
           const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setFilterStatus('all') }}
-              className={cn(
-                'flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[5px] px-3 text-[13px] font-semibold transition-colors',
-                isActive ? 'bg-white/[0.09] text-text-primary' : 'text-text-secondary hover:text-text-primary',
-              )}
-            >
-              <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-              {tab.label}
-            </button>
-          )
+          return { id: tab.id, label: <><Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />{tab.label}</> }
         })}
-      </div>
+        value={activeTab}
+        onChange={(id) => { setActiveTab(id); setSearchQuery(''); setFilterStatus('all') }}
+        layoutId="wallet-tab-pill"
+        ariaLabel="Wallet sections"
+      />
 
       {/* ── Search + Filter bar ── */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" aria-hidden />
           <input
             type="text"
             placeholder={activeTab === 'purchases' ? 'Search by item, game, order…' : 'Search by item, buyer, order…'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle card-frost py-2 pl-9 pr-8 text-sm text-white placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-1 focus:ring-focus-soft transition-all"
+            aria-label="Search transactions"
+            className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-9')}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors">
+            <button type="button" onClick={() => setSearchQuery('')} aria-label="Clear search" className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-text-tertiary transition-colors hover:text-text-primary">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -710,7 +655,8 @@ export default function WalletClient({ userId, isSeller }: Props) {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="min-h-[36px] rounded-lg border border-border-subtle card-frost px-3 py-2.5 text-xs text-white focus:border-focus-border focus:outline-none transition-all"
+            aria-label="Filter by status"
+            className={cn(accountInputCls, 'h-10 w-auto bg-bg-raised py-0 pr-8 text-[13px] sm:text-[13px]')}
           >
             <option value="all">All Status</option>
             <option value="in_progress">In Progress</option>
@@ -724,7 +670,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
       {/* ════════════════ TAB: PURCHASES ════════════════ */}
       {activeTab === 'purchases' && (
-        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
+        <div className="overflow-hidden rounded-lg bg-bg-raised">
           {purchasesError && !purchaseData ? (
             <LoadError what="your purchases" onRetry={() => void refetchPurchases()} />
           ) : filteredPurchases.length === 0 ? (
@@ -743,7 +689,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.05]">
+            <div className="divide-y divide-white/[0.07]">
               {filteredPurchases.map((txn, i) => (
                 <motion.div
                   key={txn.id}
@@ -753,7 +699,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                 >
                   <Link
                     href={`/account/orders/${txn.orderId}`}
-                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors group"
+                    className="group flex items-center gap-3 px-4 py-4 transition-colors hover:bg-white/[0.03] sm:gap-4 sm:px-5"
                   >
                     {/* Listing image (fallback to game icon) */}
                     <GameIcon emoji={txn.gameEmoji} imageUrl={txn.listingImageUrl || txn.gameImageUrl} size={10} />
@@ -782,7 +728,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
                     {/* Right side: Status + Price breakdown */}
                     <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
-                      <StatusBadge status={txn.status} />
+                      <OrderStatusPill status={txn.status} />
                       <div className="text-right">
                         <div className="text-base font-bold text-white">${txn.amount.toFixed(2)}</div>
                         {txn.platformFee > 0 && (
@@ -805,11 +751,19 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
       {/* ════════════════ TAB: SALES ════════════════ */}
       {activeTab === 'earnings' && (
-        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
+        <div className="overflow-hidden rounded-lg bg-bg-raised">
           {salesLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-lime-text mb-3" />
-              <p className="text-sm text-text-tertiary">Loading sales...</p>
+            <div className="divide-y divide-white/[0.07]" aria-busy>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 px-4 py-4 sm:px-5">
+                  <div className="skeleton h-10 w-10 shrink-0 rounded-md" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="skeleton h-3 w-24 rounded" />
+                    <div className="skeleton h-4 w-48 max-w-full rounded" />
+                  </div>
+                  <div className="skeleton h-6 w-20 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : salesError && !salesData ? (
             <LoadError what="your sales" onRetry={() => void refetchSales()} />
@@ -831,7 +785,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.05]">
+            <div className="divide-y divide-white/[0.07]">
               {filteredSales.map((txn, i) => (
                 <motion.div
                   key={txn.id}
@@ -841,7 +795,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
                 >
                   <Link
                     href={`/account/orders/${txn.orderId}`}
-                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors group"
+                    className="group flex items-center gap-3 px-4 py-4 transition-colors hover:bg-white/[0.03] sm:gap-4 sm:px-5"
                   >
                     {/* Listing image (fallback to game icon) */}
                     <GameIcon emoji={txn.gameEmoji} imageUrl={txn.listingImageUrl || txn.gameImageUrl} size={10} />
@@ -872,7 +826,7 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
                     {/* Right: status + price breakdown */}
                     <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
-                      <StatusBadge status={txn.status} />
+                      <OrderStatusPill status={txn.status} />
                       <div className="text-right">
                         <div className="text-base font-bold text-success">+${txn.netAmount.toFixed(2)}</div>
                         {txn.platformFee > 0 && (
@@ -895,10 +849,10 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
       {/* ════════════════ TAB: PAYOUTS ════════════════ */}
       {activeTab === 'payouts' && (
-        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
-          {/* Stripe Connect prompt if seller hasn't connected */}
+        <div className="overflow-hidden rounded-lg bg-bg-raised">
+          {/* Where withdrawals go */}
           {isSeller && (
-            <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4 bg-[rgba(86,184,127,0.05)]">
+            <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] bg-[rgba(86,184,127,0.05)] px-5 py-3">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-lime-text flex-shrink-0" />
                 <span className="text-xs text-text-secondary">Withdrawals Are Paid In Crypto</span>
@@ -920,25 +874,22 @@ export default function WalletClient({ userId, isSeller }: Props) {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle">
-                <span className="text-xs text-text-tertiary">{payouts.length} payout{payouts.length !== 1 ? 's' : ''}</span>
-                <button className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-raised hover:bg-bg-raised-hover px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-white transition-all">
-                  <Download className="h-3.5 w-3.5" />
-                  Export
-                </button>
+              {/* The "Export" button here had no handler; removed (2026-09-29). */}
+              <div className="border-b border-white/[0.07] px-5 py-3">
+                <span className="text-[12.5px] text-text-tertiary">{payouts.length} payout{payouts.length !== 1 ? 's' : ''}</span>
               </div>
 
-              <div className="divide-y divide-white/[0.05]">
+              <div className="divide-y divide-white/[0.07]">
                 {payouts.map((payout, i) => (
                   <motion.div
                     key={payout.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-bg-overlay transition-colors"
+                    className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-lime-tint-bg border border-lime-tint-border">
-                      <CreditCard className="h-5 w-5 text-lime-text" />
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-bg-overlay">
+                      <CreditCard className="h-4 w-4 text-text-secondary" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -948,9 +899,9 @@ export default function WalletClient({ userId, isSeller }: Props) {
 
                     <div className="flex-shrink-0 flex flex-col items-end gap-1">
                       <span className={cn(
-                        'inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold capitalize',
+                        'inline-flex h-6 items-center rounded-full border px-2 text-[12px] font-semibold capitalize',
                         payout.status === 'completed' ? 'bg-success-bg text-success border-green-500/20'
-                          : payout.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : payout.status === 'pending' ? 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)]'
                           : 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
                       )}>
                         {payout.status}

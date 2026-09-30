@@ -3,7 +3,7 @@
  * Fetches and manages seller reviews with response functionality
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { reviewsApi, Review } from '@/lib/api/seller-compatible'
 import { toast } from 'sonner'
 
@@ -23,6 +23,10 @@ export function useSellerReviews(options?: UseReviewsOptions) {
   } = useQuery<Review[]>({
     queryKey: ['seller', 'reviews', options],
     queryFn: () => reviewsApi.getAll(options),
+    // Search and rating filters are part of the key: keep showing the last
+    // results while the next ones load, so typing never blanks the page or
+    // unmounts the search box mid-word.
+    placeholderData: keepPreviousData,
   })
 
   // Fetch review stats

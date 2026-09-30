@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
-import { Check, Copy, Loader2, ShieldCheck, ShieldOff, Smartphone } from 'lucide-react'
+import { Check, Copy, Loader2, Smartphone } from 'lucide-react'
 import {
   confirmMfaEnrollment,
   disableMfa,
@@ -21,9 +21,12 @@ import {
 } from '@/lib/actions/mfa'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { SettingsCard, accountBtn, accountInputCls } from '@/components/account/AccountSurface'
 
-const codeInputCls =
-  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-center text-lg font-semibold tracking-[0.4em] text-text-primary placeholder:tracking-normal placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft'
+const codeInputCls = cn(
+  accountInputCls,
+  'text-center font-mono text-lg font-semibold tracking-[0.4em] placeholder:font-sans placeholder:tracking-normal sm:text-lg',
+)
 
 export default function TwoFactorSection() {
   const [loading, setLoading] = useState(true)
@@ -118,57 +121,40 @@ export default function TwoFactorSection() {
   }
 
   return (
-    <div>
-      <h2 className="mb-4 text-sm font-semibold text-text-primary">Two-Factor Authentication</h2>
-
-      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
+    <SettingsCard
+      title="Two-Factor Authentication"
+      description="Ask for a 6-digit code from an authenticator app when you sign in, on top of your password."
+      aside={
+        loading ? (
+          <span className="skeleton block h-6 w-12 rounded-full" aria-hidden />
+        ) : (
+          <span
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
-              enabled
-                ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                : 'border-border-subtle bg-bg-overlay text-text-tertiary',
+              'inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold',
+              enabled ? 'bg-success-bg text-success' : 'bg-white/[0.06] text-text-secondary',
             )}
           >
-            {enabled ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-text-primary">
-              {loading ? 'Checking…' : enabled ? 'On — Authenticator App' : 'Off'}
-            </div>
-            <p className="mt-0.5 text-xs text-text-tertiary">
-              {enabled
-                ? 'A 6-digit code from your authenticator app is required at sign-in.'
-                : 'Add a code from an authenticator app on top of your password.'}
-            </p>
-          </div>
-        </div>
-
-        {!loading && (
-          enabled ? (
-            <button
-              onClick={() => setDisableOpen(true)}
-              className="shrink-0 rounded-lg border border-border-subtle bg-bg-overlay px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover"
-            >
-              Turn Off
-            </button>
-          ) : (
-            <button
-              onClick={openSetup}
-              disabled={starting}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:opacity-50"
-            >
-              {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-              Turn On
-            </button>
-          )
-        )}
-      </div>
-
+            {enabled ? 'On' : 'Off'}
+          </span>
+        )
+      }
+      footerHint={enabled ? 'Authenticator app connected.' : 'Works with Google Authenticator, 1Password, Authy and other TOTP apps.'}
+      footerAction={
+        loading ? null : enabled ? (
+          <button type="button" onClick={() => setDisableOpen(true)} className={accountBtn.secondary}>
+            Turn Off
+          </button>
+        ) : (
+          <button type="button" onClick={openSetup} disabled={starting} className={accountBtn.primary}>
+            {starting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Smartphone className="h-3.5 w-3.5" aria-hidden />}
+            Turn On
+          </button>
+        )
+      }
+    >
       {/* ── Enrolment ── */}
       <Dialog open={setupOpen} onOpenChange={setSetupOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogTitle>Set Up Two-Factor Authentication</DialogTitle>
           <DialogDescription>
             Scan this with Google Authenticator, 1Password, Authy or any TOTP app, then enter
@@ -196,7 +182,7 @@ export default function TwoFactorSection() {
                 <p className="mb-1.5 text-xs text-text-tertiary">Can’t scan? Enter this key instead:</p>
                 <button
                   onClick={copySecret}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-left transition-colors hover:bg-bg-raised-hover"
+                  className="flex w-full items-center justify-between gap-3 rounded-md bg-bg-overlay px-3.5 py-2.5 text-left transition-colors hover:bg-bg-overlay-2"
                 >
                   <code className="min-w-0 break-all font-mono text-xs text-text-secondary">{secret}</code>
                   {secretCopied
@@ -215,24 +201,19 @@ export default function TwoFactorSection() {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                spellCheck={false}
+                aria-label="Verification code"
                 placeholder="000000"
                 className={codeInputCls}
               />
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setSetupOpen(false)}
-                className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover"
-              >
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setSetupOpen(false)} className={accountBtn.secondary}>
                 Cancel
               </button>
-              <button
-                onClick={confirm}
-                disabled={submitting || code.length !== 6}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <button type="button" onClick={confirm} disabled={submitting || code.length !== 6} className={accountBtn.primary}>
+                {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                 Verify & Enable
               </button>
             </div>
@@ -242,7 +223,7 @@ export default function TwoFactorSection() {
 
       {/* ── Disable ── */}
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogTitle>Turn Off Two-Factor Authentication</DialogTitle>
           <DialogDescription>
             Your account will be protected by your password alone. Enter a current code to
@@ -255,28 +236,23 @@ export default function TwoFactorSection() {
               onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               inputMode="numeric"
               autoComplete="one-time-code"
+              spellCheck={false}
+              aria-label="Verification code"
               placeholder="000000"
               className={codeInputCls}
             />
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDisableOpen(false)}
-                className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover"
-              >
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setDisableOpen(false)} className={accountBtn.secondary}>
                 Keep It On
               </button>
-              <button
-                onClick={confirmDisable}
-                disabled={disabling || disableCode.length !== 6}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2.5 text-sm font-semibold text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_80%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {disabling && <Loader2 className="h-4 w-4 animate-spin" />}
+              <button type="button" onClick={confirmDisable} disabled={disabling || disableCode.length !== 6} className={accountBtn.danger}>
+                {disabling && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                 Turn Off
               </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </SettingsCard>
   )
 }

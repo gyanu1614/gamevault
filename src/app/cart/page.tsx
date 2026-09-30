@@ -9,7 +9,7 @@
  * sat in PROTECTED_ROUTE_PREFIXES, so a logged-out visitor was bounced to
  * /login and, after authenticating, landed on a spinner that threw them to
  * /browse: an auth round-trip for a dead route. Both are fixed — this matches
- * the sibling deprecated stubs (/wallet, /purchases, /wishlist, /reviews).
+ * the sibling deprecated stubs (/wallet, /purchases, /reviews).
  */
 
 import { redirect } from 'next/navigation'

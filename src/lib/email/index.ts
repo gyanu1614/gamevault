@@ -1029,6 +1029,55 @@ export async function sendNewMessageEmail({
   return error ? { success: false, error } : { success: true, data }
 }
 
+/**
+ * A buyer reviewed the seller (Settings → Notifications → New Reviews).
+ * Sent by notifySellerOfReview, once per review, when the seller's
+ * `new_review` switch is on.
+ */
+export async function sendNewReviewEmail({
+  to,
+  name,
+  reviewerName,
+  rating,
+  comment,
+}: {
+  to: string
+  name: string
+  reviewerName: string
+  /** 1–5 */
+  rating: number
+  comment: string
+}) {
+  const stars = Math.max(1, Math.min(5, Math.round(rating)))
+  const starRow = `<span style="color:#F5B301;letter-spacing:2px;">${'&#9733;'.repeat(stars)}</span><span style="color:${EMAIL_TOKENS.INK};opacity:0.25;letter-spacing:2px;">${'&#9733;'.repeat(5 - stars)}</span>`
+  const trimmed = comment.trim()
+  const quote = trimmed.length > 240 ? `${trimmed.slice(0, 237)}...` : trimmed
+  const body =
+    emailText(`Hi ${escapeHtml(name)}, <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(reviewerName)}</strong> left you a ${stars}-star review.`) +
+    emailBox({
+      html:
+        `<div style="font-size:18px;line-height:1;">${starRow}</div>` +
+        (quote ? `<div style="margin-top:10px;font-style:italic;overflow-wrap:anywhere;">&ldquo;${escapeHtml(quote)}&rdquo;</div>` : ''),
+    }) +
+    emailButton('See Your Reviews', `${APP_URL}/account/reviews`) +
+    emailFooterNote(`A quick, friendly reply shows future buyers you care. You can turn these emails off in Settings, Notifications.`)
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${reviewerName} left you a ${stars}-star review`,
+    html: emailShell({
+      preview: quote ? `${stars}/5: ${quote}` : `${reviewerName} rated you ${stars} out of 5`,
+      icon: 'star',
+      heading: 'You Have A New Review',
+      body,
+    }),
+  })
+
+  return error ? { success: false, error } : { success: true, data }
+}
+
 // ============================================
 // TRUSTPILOT EMAILS
 // ============================================

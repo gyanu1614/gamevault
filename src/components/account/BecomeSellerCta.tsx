@@ -23,6 +23,10 @@ import { cn } from '@/lib/utils'
 
 type Variant = 'menu' | 'card'
 
+/** Account card surface with the order page's lime-tint fill, no outline. */
+const CARD_CLS =
+  'rounded-lg bg-bg-raised bg-gradient-to-b from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.02)] p-5 sm:p-6'
+
 interface BecomeSellerCtaProps {
   variant?: Variant
   /** Fired on navigation — lets the navbar close its dropdown. */
@@ -65,16 +69,16 @@ export default function BecomeSellerCta({
       )
     }
     return (
-      <div className={cn('rounded-lg border border-lime-tint-border bg-white/[0.04] p-6', className)}>
+      <div className={cn(CARD_CLS, className)}>
         <div className="mb-3 flex items-center gap-2">
           <Rocket className="h-5 w-5 text-lime-text" />
-          <h3 className="font-bold text-white">Founding Seller</h3>
+          <h3 className="text-[15px] font-semibold text-text-primary">Founding Seller</h3>
         </div>
         <p className="mb-4 text-sm text-text-secondary">Your founding-seller setup — status, next steps, and the door to start selling.</p>
         <Link
           href="/founding"
           onClick={onNavigate}
-          className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
+          className="flex h-10 items-center justify-center gap-2 rounded-md bg-lime px-4 text-[13px] font-semibold text-text-inverse transition-[background-color,transform] hover:bg-lime-hover active:scale-[0.98]"
         >
           Open Founding HQ
           <ArrowRight className="h-4 w-4" />
@@ -118,15 +122,10 @@ export default function BecomeSellerCta({
 
   // card variant — lime-on-dark, no purple/violet gradients
   return (
-    <div
-      className={cn(
-        'rounded-lg border border-lime-tint-border bg-white/[0.04] p-6',
-        className,
-      )}
-    >
+    <div className={cn(CARD_CLS, className)}>
       <div className="mb-3 flex items-center gap-2">
         <Store className="h-5 w-5 text-lime-text" />
-        <h3 className="font-bold text-white">
+        <h3 className="text-[15px] font-semibold text-text-primary">
           {isPending ? 'Application Pending' : 'Become a Seller'}
         </h3>
       </div>
@@ -138,7 +137,7 @@ export default function BecomeSellerCta({
       <Link
         href={href}
         onClick={onNavigate}
-        className="flex items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
+        className="flex h-10 items-center justify-center gap-2 rounded-md bg-lime px-4 text-[13px] font-semibold text-text-inverse transition-[background-color,transform] hover:bg-lime-hover active:scale-[0.98]"
       >
         {isPending ? 'View Status' : 'Get Started'}
         <ArrowRight className="h-4 w-4" />

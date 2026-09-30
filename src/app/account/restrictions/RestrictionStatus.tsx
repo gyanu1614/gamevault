@@ -1,337 +1,202 @@
 'use client'
 
+/**
+ * Seller account status (restricted / banned / active), on the account card
+ * system. The history no longer names the admin behind a restriction (it fell
+ * back to the admin's email address); the full list opens in the shared
+ * compact dialog instead of a hand-rolled 2xl modal.
+ */
+
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldAlert, Ban, CheckCircle, AlertCircle, Clock, Mail, X } from 'lucide-react'
+import { AlertCircle, Ban, CheckCircle, Clock, Mail, ShieldAlert } from 'lucide-react'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { AccountPage, SettingsCard, accountBtn } from '@/components/account/AccountSurface'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
+interface Restriction {
+  id: string
+  restriction_type: 'restricted' | 'banned' | 'unrestricted' | string
+  reason?: string | null
+  created_at: string
+}
+
 interface RestrictionStatusProps {
-  profile: any
-  restrictions: any[]
+  profile: {
+    seller_status?: string | null
+    seller_restriction_reason?: string | null
+    seller_restricted_at?: string | null
+  }
+  restrictions: Restriction[]
+}
+
+const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+function TypeIcon({ type, className }: { type: string; className?: string }) {
+  if (type === 'banned') return <Ban className={cn('text-error', className)} aria-hidden />
+  if (type === 'unrestricted') return <CheckCircle className={cn('text-success', className)} aria-hidden />
+  return <ShieldAlert className={cn('text-warning', className)} aria-hidden />
+}
+
+function HistoryItem({ restriction, full = false }: { restriction: Restriction; full?: boolean }) {
+  return (
+    <li className="rounded-md bg-bg-overlay px-3.5 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-sm font-medium capitalize text-text-primary">
+          <TypeIcon type={restriction.restriction_type} className="h-4 w-4" />
+          {restriction.restriction_type}
+        </span>
+        <span className="shrink-0 text-[12px] text-text-tertiary">
+          {full
+            ? fmtDateTime(restriction.created_at)
+            : new Date(restriction.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
+      {restriction.reason && <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">{restriction.reason}</p>}
+    </li>
+  )
+}
+
+const MEANING: Record<'active' | 'restricted' | 'banned', { ok: boolean; text: string }[]> = {
+  active: [
+    { ok: true, text: 'Create and publish new listings' },
+    { ok: true, text: 'Manage existing listings' },
+    { ok: true, text: 'Full seller dashboard access' },
+  ],
+  restricted: [
+    { ok: false, text: 'Cannot create new listings' },
+    { ok: false, text: 'Cannot publish listings' },
+    { ok: true, text: 'View existing listings (read-only)' },
+  ],
+  banned: [
+    { ok: false, text: 'No seller feature access' },
+    { ok: false, text: 'Cannot manage listings' },
+    { ok: false, text: 'Listings hidden from buyers' },
+  ],
 }
 
 export default function RestrictionStatus({ profile, restrictions }: RestrictionStatusProps) {
-  const [showAllHistoryModal, setShowAllHistoryModal] = useState(false)
-  const isRestricted = profile.seller_status === 'restricted'
-  const isBanned = profile.seller_status === 'banned'
-  const isActive = profile.seller_status === 'active'
+  const [showAll, setShowAll] = useState(false)
+  const state: 'active' | 'restricted' | 'banned' =
+    profile.seller_status === 'banned' ? 'banned' : profile.seller_status === 'restricted' ? 'restricted' : 'active'
 
-  // Always show only latest 2 in main view
-  const displayedRestrictions = restrictions.slice(0, 2)
+  const tone = {
+    active: { bg: 'bg-success-bg', text: 'text-success', Icon: CheckCircle, title: 'Account Active', body: 'Your seller account is in good standing.' },
+    restricted: { bg: 'bg-warning-bg', text: 'text-warning', Icon: ShieldAlert, title: 'Account Restricted', body: 'You cannot create or publish new listings.' },
+    banned: { bg: 'bg-error-bg', text: 'text-error', Icon: Ban, title: 'Account Banned', body: 'You no longer have access to seller features.' },
+  }[state]
 
   return (
-    <>
-      <div className="p-4 sm:p-5 lg:p-6 max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Account Status</h1>
-          <p className="text-xs text-text-secondary">View and manage your seller restriction information</p>
-        </div>
+    <AccountPage>
+      <AccountPageHeader title="Account Status" subtitle="View and manage your seller restriction information" />
 
-        {/* Status Card */}
-        <div
-          className={cn(
-            "rounded-xl border-2 p-3 sm:p-4 mb-4",
-            isActive && "bg-success-bg border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]",
-            isRestricted && "bg-warning-bg border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]",
-            isBanned && "bg-error-bg border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]"
-          )}
-        >
-          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-            {/* Icon */}
-            <div className={cn(
-              "h-12 w-12 sm:h-14 sm:w-14 rounded-full flex items-center justify-center flex-shrink-0",
-              isActive && "bg-success-bg",
-              isRestricted && "bg-warning-bg",
-              isBanned && "bg-error-bg"
-            )}>
-              {isActive && <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7 text-success" />}
-              {isRestricted && <ShieldAlert className="h-6 w-6 sm:h-7 sm:w-7 text-warning" />}
-              {isBanned && <Ban className="h-6 w-6 sm:h-7 sm:w-7 text-error" />}
-            </div>
+      <RevealGroup className="mt-6 space-y-4">
+        <RevealItem>
+          <section className={cn('rounded-lg p-5 sm:p-6', tone.bg)}>
+            <div className="flex flex-col items-start gap-4 sm:flex-row">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black/20">
+                <tone.Icon className={cn('h-6 w-6', tone.text)} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className={cn('text-lg font-bold', tone.text)}>{tone.title}</h2>
+                <p className="mt-1 text-sm text-text-secondary">{tone.body}</p>
 
-            {/* Content */}
-            <div className="flex-1">
-              <h2 className={cn(
-                "text-lg sm:text-xl font-bold mb-1.5",
-                isActive && "text-success",
-                isRestricted && "text-warning",
-                isBanned && "text-error"
-              )}>
-                {isActive && "Account Active"}
-                {isRestricted && "Account Restricted"}
-                {isBanned && "Account Banned"}
-              </h2>
+                {state !== 'active' && profile.seller_restriction_reason && (
+                  <div className="mt-3 rounded-md bg-black/25 px-3.5 py-3">
+                    <p className={cn('text-[12px] font-semibold', tone.text)}>Reason</p>
+                    <p className="mt-0.5 text-[13px] text-text-secondary">{profile.seller_restriction_reason}</p>
+                  </div>
+                )}
 
-              {isActive && (
-                <p className="text-sm text-text-secondary mb-3">
-                  Your seller account is in good standing.
-                </p>
-              )}
-
-              {isRestricted && (
-                <>
-                  <p className="text-sm text-text-secondary mb-3">
-                    You cannot create or publish new listings.
+                {state !== 'active' && profile.seller_restricted_at && (
+                  <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-text-secondary">
+                    <Clock className="h-3.5 w-3.5" aria-hidden />
+                    {state === 'banned' ? 'Banned on ' : 'Restricted on '}
+                    {fmtDateTime(profile.seller_restricted_at)}
                   </p>
-                  {profile.seller_restriction_reason && (
-                    <div className="bg-black/30 rounded-lg p-2.5 mb-3">
-                      <p className="text-xs font-medium text-warning mb-1">Reason:</p>
-                      <p className="text-xs text-text-secondary">{profile.seller_restriction_reason}</p>
+                )}
+
+                {state !== 'active' && (
+                  <div className="mt-4 flex flex-col gap-3 rounded-md bg-black/25 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-text-secondary" aria-hidden />
+                      <div>
+                        <p className="text-[13px] font-semibold text-text-primary">Need Help?</p>
+                        <p className="text-[12.5px] text-text-secondary">Contact support to appeal this restriction.</p>
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
-
-              {isBanned && (
-                <>
-                  <p className="text-sm text-text-secondary mb-3">
-                    You no longer have access to seller features.
-                  </p>
-                  {profile.seller_restriction_reason && (
-                    <div className="bg-black/30 rounded-lg p-2.5 mb-3">
-                      <p className="text-xs font-medium text-error mb-1">Reason:</p>
-                      <p className="text-xs text-text-secondary">{profile.seller_restriction_reason}</p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Timestamps */}
-              {profile.seller_restricted_at && (
-                <div className="flex items-center gap-1.5 text-xs text-text-secondary mb-3">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>
-                    {isRestricted && "Restricted on "}
-                    {isBanned && "Banned on "}
-                    {new Date(profile.seller_restricted_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-              )}
-
-              {/* Contact Support */}
-              {!isActive && (
-                <div className="flex items-start gap-2.5 bg-lime-tint-bg border border-lime-tint-border rounded-lg p-2.5">
-                  <AlertCircle className="h-4 w-4 text-lime-text flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-lime-text mb-0.5">Need Help?</p>
-                    <p className="text-xs text-text-secondary mb-1.5">
-                      Contact support to appeal this restriction.
-                    </p>
-                    <a
-                      href="mailto:support@dropmarket.gg"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-lime-text hover:text-lime transition-colors"
-                    >
-                      <Mail className="h-3.5 w-3.5" />
+                    <a href="mailto:support@dropmarket.gg" className={cn(accountBtn.secondary, 'shrink-0')}>
+                      <Mail className="h-4 w-4" aria-hidden />
                       support@dropmarket.gg
                     </a>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Two Column Grid for What This Means and History */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* What This Means */}
-          <div className="bg-bg-overlay backdrop-blur-sm rounded-xl border border-white/10 p-3 sm:p-4">
-            <h3 className="text-base font-semibold text-white mb-3">What This Means</h3>
-
-            <div className="space-y-2">
-              {isActive && (
-                <>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Create and publish new listings</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Manage existing listings</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Full seller dashboard access</p>
-                  </div>
-                </>
-              )}
-
-              {isRestricted && (
-                <>
-                  <div className="flex items-start gap-2">
-                    <Ban className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Cannot create new listings</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Ban className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Cannot publish listings</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">View existing listings (read-only)</p>
-                  </div>
-                </>
-              )}
-
-              {isBanned && (
-                <>
-                  <div className="flex items-start gap-2">
-                    <Ban className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">No seller feature access</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Ban className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Cannot manage listings</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Ban className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-text-secondary">Listings hidden from buyers</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Restriction History */}
-          {restrictions.length > 0 && (
-            <div className="bg-bg-overlay backdrop-blur-sm rounded-xl border border-white/10 p-3 sm:p-4">
-              <h3 className="text-base font-semibold text-white mb-3">Restriction History</h3>
-
-              <div className="space-y-2">
-                {displayedRestrictions.map((restriction: any) => (
-                  <div
-                    key={restriction.id}
-                    className="bg-black/30 rounded-lg p-2.5 border border-white/10"
-                  >
-                    <div className="flex items-start justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        {restriction.restriction_type === 'restricted' && (
-                          <ShieldAlert className="h-3.5 w-3.5 text-warning" />
-                        )}
-                        {restriction.restriction_type === 'banned' && (
-                          <Ban className="h-3.5 w-3.5 text-error" />
-                        )}
-                        {restriction.restriction_type === 'unrestricted' && (
-                          <CheckCircle className="h-3.5 w-3.5 text-success" />
-                        )}
-                        <span className="text-xs font-medium text-white capitalize">
-                          {restriction.restriction_type}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-text-tertiary">
-                        {new Date(restriction.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-
-                    {restriction.reason && (
-                      <p className="text-xs text-text-secondary mb-1.5">{restriction.reason}</p>
-                    )}
-
-                    {restriction.admin && (
-                      <p className="text-[10px] text-text-tertiary">
-                        By: {restriction.admin.username || restriction.admin.email}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                )}
               </div>
-
-              {restrictions.length > 2 && (
-                <button
-                  onClick={() => setShowAllHistoryModal(true)}
-                  className="mt-3 w-full text-xs font-medium text-lime-text hover:text-lime-text transition-colors py-1.5 px-3 bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] border border-lime-tint-border rounded-lg"
-                >
-                  View All ({restrictions.length})
-                </button>
-              )}
             </div>
+          </section>
+        </RevealItem>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <RevealItem>
+            <SettingsCard title="What This Means" className="h-full">
+              <ul className="space-y-2.5">
+                {MEANING[state].map((m) => (
+                  <li key={m.text} className="flex items-start gap-2.5 text-[13.5px] text-text-secondary">
+                    {m.ok ? (
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
+                    ) : (
+                      <Ban className="mt-0.5 h-4 w-4 shrink-0 text-error" aria-hidden />
+                    )}
+                    {m.text}
+                  </li>
+                ))}
+              </ul>
+            </SettingsCard>
+          </RevealItem>
+
+          {restrictions.length > 0 && (
+            <RevealItem>
+              <SettingsCard
+                title="Restriction History"
+                className="h-full"
+                aside={
+                  restrictions.length > 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowAll(true)}
+                      className="text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
+                    >
+                      View All ({restrictions.length})
+                    </button>
+                  ) : null
+                }
+              >
+                <ul className="space-y-2">
+                  {restrictions.slice(0, 2).map((r) => (
+                    <HistoryItem key={r.id} restriction={r} />
+                  ))}
+                </ul>
+              </SettingsCard>
+            </RevealItem>
           )}
         </div>
-      </div>
+      </RevealGroup>
 
-      {/* View All History Modal */}
-      <AnimatePresence>
-        {showAllHistoryModal && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowAllHistoryModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", duration: 0.3, bounce: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-2xl max-h-[80vh] overflow-y-auto bg-[rgba(10,10,15,0.95)] backdrop-blur-2xl border border-border-default rounded-lg shadow-2xl"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setShowAllHistoryModal(false)}
-                className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors z-10"
-              >
-                <X className="h-5 w-5 text-text-secondary hover:text-white" />
-              </button>
-
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Complete Restriction History</h2>
-
-                <div className="space-y-3">
-                  {restrictions.map((restriction: any) => (
-                    <div
-                      key={restriction.id}
-                      className="bg-bg-overlay rounded-lg p-4 border border-white/10"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {restriction.restriction_type === 'restricted' && (
-                            <ShieldAlert className="h-4 w-4 text-warning" />
-                          )}
-                          {restriction.restriction_type === 'banned' && (
-                            <Ban className="h-4 w-4 text-error" />
-                          )}
-                          {restriction.restriction_type === 'unrestricted' && (
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          )}
-                          <span className="text-sm font-medium text-white capitalize">
-                            {restriction.restriction_type}
-                          </span>
-                        </div>
-                        <span className="text-xs text-text-secondary">
-                          {new Date(restriction.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-
-                      {restriction.reason && (
-                        <p className="text-sm text-text-secondary mb-2 bg-black/30 rounded p-2">
-                          {restriction.reason}
-                        </p>
-                      )}
-
-                      {restriction.admin && (
-                        <p className="text-xs text-text-tertiary">
-                          By: {restriction.admin.username || restriction.admin.email}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+      <Dialog open={showAll} onOpenChange={setShowAll}>
+        <DialogContent className="max-w-[480px] gap-0 p-5 sm:p-6">
+          <DialogTitle className="pr-8 text-base font-semibold text-text-primary">Restriction History</DialogTitle>
+          <DialogDescription className="mt-1 text-[13px] text-text-secondary">
+            Every change to your seller status, newest first.
+          </DialogDescription>
+          <ul className="mt-4 max-h-[60dvh] space-y-2 overflow-y-auto overscroll-contain">
+            {restrictions.map((r) => (
+              <HistoryItem key={r.id} restriction={r} full />
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+    </AccountPage>
   )
 }

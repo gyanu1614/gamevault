@@ -17,15 +17,8 @@ import {
   Search,
   Download,
   MessageSquare,
-  Clock,
   CheckCircle2,
-  AlertCircle,
   X,
-  Loader2,
-  Truck,
-  PackageCheck,
-  Undo2,
-  XCircle,
   Eye,
   Store,
   ShoppingCart,
@@ -35,7 +28,7 @@ import {
   Calendar,
   ChevronDown,
   Copy as CopyIcon,
-  Filter as FilterIcon
+  Filter as FilterIcon,
 } from 'lucide-react'
 import LeaveReviewButton from '@/components/reviews/LeaveReviewButton'
 import { motion } from 'framer-motion'
@@ -46,8 +39,10 @@ import { displayOrderRef, normalizeOrderNumber } from '@/lib/orders/order-number
 import { orderItemImage, orderItemTitle } from '@/lib/orders/display-title'
 import { saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { countByStatusGroup, inStatusGroup, type OrderStatusGroup } from '@/lib/orders/status-groups'
-import { orderListStatus, type ListStatusKey } from '@/lib/orders/list-status'
+import { OrderStatusPill } from '@/components/account/OrderStatusPill'
+import { accountBtn, accountInputCls } from '@/components/account/AccountSurface'
 import { ScrollRow } from '@/components/ui/scroll-row'
+import OrdersLoading from './loading'
 import { currencyMetaConfig, useCurrencyMeta } from '@/hooks/use-currency-meta'
 
 type FilterStatus = 'all' | 'pending' | 'completed' | 'disputed' | 'cancelled'
@@ -355,16 +350,6 @@ function OrdersContent() {
   }, [dbOrders])
 
   // One plain status per row (lib/orders/list-status): colour + icon by key.
-  const STATUS_STYLE: Record<ListStatusKey, { cls: string; Icon: typeof Clock }> = {
-    awaiting_payment: { cls: 'bg-warning-bg text-warning border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)]', Icon: Clock },
-    delivering: { cls: 'bg-blue-500/10 text-blue-400 border-blue-500/30', Icon: Truck },
-    delivered: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: PackageCheck },
-    disputed: { cls: 'bg-error-bg text-error border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]', Icon: AlertCircle },
-    completed: { cls: 'bg-success-bg text-success border-[color-mix(in_srgb,var(--color-success)_30%,transparent)]', Icon: CheckCircle2 },
-    refunded: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: Undo2 },
-    cancelled: { cls: 'bg-gray-500/10 text-text-secondary border-gray-500/30', Icon: XCircle },
-  }
-
   const getTimeAgo = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
     if (seconds < 60) return `${seconds}s ago`
@@ -377,15 +362,10 @@ function OrdersContent() {
   }
 
   // A cached signed-in user renders at once (no wait on the profile refetch).
+  // Same skeleton as the route fallback (loading.tsx), not an opaque spinner
+  // that blacked out the hero between the skeleton and the list.
   if ((authLoading && !user) || ordersLoading) {
-    return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg-base">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-          <p className="text-text-secondary">Loading orders...</p>
-        </div>
-      </div>
-    )
+    return <OrdersLoading />
   }
 
   if (!user) {
@@ -434,10 +414,10 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
                   openDropdown === 'status'
-                    ? "border-lime-tint-border card-frost text-text-primary"
-                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
+                    ? "bg-bg-raised-hover text-text-primary"
+                    : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -461,9 +441,9 @@ function OrdersContent() {
                             setOpenDropdown(null)
                           }}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left",
                             isSelected
-                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              ? "bg-white/[0.08] text-text-primary"
                               : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
@@ -483,10 +463,10 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'game' ? null : 'game')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
                   openDropdown === 'game'
-                    ? "border-lime-tint-border card-frost text-text-primary"
-                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
+                    ? "bg-bg-raised-hover text-text-primary"
+                    : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -513,9 +493,9 @@ function OrdersContent() {
                             }
                           }}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left",
                             isSelected
-                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              ? "bg-white/[0.08] text-text-primary"
                               : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
@@ -544,10 +524,10 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
                   openDropdown === 'category'
-                    ? "border-lime-tint-border card-frost text-text-primary"
-                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
+                    ? "bg-bg-raised-hover text-text-primary"
+                    : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -567,9 +547,9 @@ function OrdersContent() {
                         setOpenDropdown(null)
                       }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left",
                         !filters.category
-                          ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                          ? "bg-white/[0.08] text-text-primary"
                           : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                       )}
                     >
@@ -586,9 +566,9 @@ function OrdersContent() {
                             setOpenDropdown(null)
                           }}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left",
                             isSelected
-                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              ? "bg-white/[0.08] text-text-primary"
                               : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
@@ -607,10 +587,10 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md border text-sm transition-all",
+                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
                   openDropdown === 'date'
-                    ? "border-lime-tint-border card-frost text-text-primary"
-                    : "border-border-subtle card-frost text-text-secondary hover:border-lime-tint-border card-frost-hover"
+                    ? "bg-bg-raised-hover text-text-primary"
+                    : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -647,9 +627,9 @@ function OrdersContent() {
                             setOpenDropdown(null)
                           }}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left",
                             isSelected
-                              ? "bg-lime-tint-bg text-text-primary border border-lime-tint-border"
+                              ? "bg-white/[0.08] text-text-primary"
                               : "text-text-secondary hover:bg-white/[0.05] hover:text-text-primary"
                           )}
                         >
@@ -673,7 +653,8 @@ function OrdersContent() {
               placeholder="Search listings…"
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-              className="h-10 w-full rounded-md border border-border-subtle card-frost pl-9 pr-10 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-sm"
+              aria-label="Search orders"
+              className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-10')}
             />
             {filters.searchQuery && (
               <button
@@ -690,12 +671,12 @@ function OrdersContent() {
           {(filters.status !== 'all' || filters.games.length > 0 || filters.category || filters.dateRange !== 'all' || filters.searchQuery) && (
             <div className="flex flex-wrap items-center gap-2">
               {filters.status !== 'all' && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                <div className="flex items-center gap-1.5 rounded-md bg-bg-raised px-2.5 py-1.5 text-xs text-text-primary">
                   <FilterIcon className="h-3 w-3" />
                   <span>{STATUS_OPTIONS.find(s => s.value === filters.status)?.label}</span>
                   <button
                     onClick={() => setFilters({ ...filters, status: 'all' })}
-                    className="-m-2 p-2 hover:text-lime"
+                    className="-m-2 p-2 text-text-tertiary hover:text-text-primary"
                     aria-label="Remove status filter"
                   >
                     <X className="h-3 w-3" />
@@ -706,12 +687,12 @@ function OrdersContent() {
               {filters.games.map(gameId => {
                 const game = availableGames.find(g => g.id === gameId)
                 return game ? (
-                  <div key={gameId} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                  <div key={gameId} className="flex items-center gap-1.5 rounded-md bg-bg-raised px-2.5 py-1.5 text-xs text-text-primary">
                     <Gamepad2 className="h-3 w-3" />
                     <span>{game.name}</span>
                     <button
                       onClick={() => setFilters({ ...filters, games: filters.games.filter(id => id !== gameId) })}
-                      className="-m-2 p-2 hover:text-lime"
+                      className="-m-2 p-2 text-text-tertiary hover:text-text-primary"
                       aria-label={`Remove ${game.name} filter`}
                     >
                       <X className="h-3 w-3" />
@@ -721,12 +702,12 @@ function OrdersContent() {
               })}
 
               {filters.category && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                <div className="flex items-center gap-1.5 rounded-md bg-bg-raised px-2.5 py-1.5 text-xs text-text-primary">
                   <Folder className="h-3 w-3" />
                   <span>{availableCategories.find(c => c.id === filters.category)?.name}</span>
                   <button
                     onClick={() => setFilters({ ...filters, category: null })}
-                    className="-m-2 p-2 hover:text-lime"
+                    className="-m-2 p-2 text-text-tertiary hover:text-text-primary"
                     aria-label="Remove category filter"
                   >
                     <X className="h-3 w-3" />
@@ -735,7 +716,7 @@ function OrdersContent() {
               )}
 
               {filters.dateRange !== 'all' && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                <div className="flex items-center gap-1.5 rounded-md bg-bg-raised px-2.5 py-1.5 text-xs text-text-primary">
                   <Calendar className="h-3 w-3" />
                   <span>
                     {filters.dateRange === 'today' ? 'Today' :
@@ -746,7 +727,7 @@ function OrdersContent() {
                   </span>
                   <button
                     onClick={() => setFilters({ ...filters, dateRange: 'all' })}
-                    className="-m-2 p-2 hover:text-lime"
+                    className="-m-2 p-2 text-text-tertiary hover:text-text-primary"
                     aria-label="Remove date filter"
                   >
                     <X className="h-3 w-3" />
@@ -755,12 +736,12 @@ function OrdersContent() {
               )}
 
               {filters.searchQuery && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-lime-tint-bg border border-lime-tint-border text-xs text-lime-text">
+                <div className="flex items-center gap-1.5 rounded-md bg-bg-raised px-2.5 py-1.5 text-xs text-text-primary">
                   <Search className="h-3 w-3" />
                   <span className="max-w-[120px] truncate">{filters.searchQuery}</span>
                   <button
                     onClick={() => setFilters({ ...filters, searchQuery: '' })}
-                    className="-m-2 p-2 hover:text-lime"
+                    className="-m-2 p-2 text-text-tertiary hover:text-text-primary"
                     aria-label="Clear search filter"
                   >
                     <X className="h-3 w-3" />
@@ -778,7 +759,7 @@ function OrdersContent() {
                   customDateEnd: null,
                   searchQuery: ''
                 })}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-error-bg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] text-xs text-error hover:bg-error-bg transition-colors"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
               >
                 <X className="h-3 w-3" />
                 Clear All ({filters.games.length + (filters.category ? 1 : 0) + (filters.dateRange !== 'all' ? 1 : 0) + (filters.searchQuery ? 1 : 0)})
@@ -790,31 +771,30 @@ function OrdersContent() {
         {/* Orders — reference-style table card. Vertical list scroll +
             horizontal pan for the wide columns; never a diagonal free-scroll.
             Row click opens the order (review/dispute actions live there). */}
-        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-subtle bg-[#1D1E23] shadow-elevated backdrop-blur-md">
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
-          <div className="shrink-0 border-b border-white/[0.06] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
+        <div className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-bg-raised">
+          <div className="shrink-0 border-b border-white/[0.07] px-4 py-2.5 text-[12.5px] font-semibold text-text-secondary">
             {filteredOrders.length} Result{filteredOrders.length === 1 ? '' : 's'}
           </div>
           {(activeTab === 'purchases' ? buyerOrdersError : sellerOrdersError) && (dbOrders?.length ?? 0) === 0 ? (
             // A failed load is not "no orders".
             <div role="alert" className="flex flex-1 flex-col items-center justify-center p-10 text-center">
-              <h3 className="mb-1.5 text-lg font-bold text-text-primary">We couldn&apos;t load your {activeTab === 'purchases' ? 'purchases' : 'sales'}</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-text-primary">We couldn&apos;t load your {activeTab === 'purchases' ? 'purchases' : 'sales'}</h3>
               <p className="text-sm text-text-secondary">Check your connection and try again.</p>
               <button
                 type="button"
                 onClick={() =>
                   queryClient.invalidateQueries({ queryKey: activeTab === 'purchases' ? ['buyer', 'orders'] : ['seller', 'orders'] })
                 }
-                className="mt-4 inline-flex min-h-[40px] items-center rounded-md border border-border-default px-4 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.04]"
+                className={cn(accountBtn.secondary, 'mt-4')}
               >
                 Try Again
               </button>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
-              <ShoppingCart className="mb-4 h-14 w-14 text-[rgba(86,184,127,0.40)]" />
-              <h3 className="mb-1.5 text-lg font-bold text-text-primary">
-                {activeTab === 'purchases' ? 'No purchases found' : 'No sales found'}
+              <ShoppingCart className="mb-3 h-10 w-10 text-text-tertiary" aria-hidden />
+              <h3 className="mb-1 text-[15px] font-semibold text-text-primary">
+                {activeTab === 'purchases' ? 'No Purchases Found' : 'No Sales Found'}
               </h3>
               <p className="text-sm text-text-secondary">
                 {filters.searchQuery
@@ -844,8 +824,6 @@ function OrdersContent() {
                       const gameData = order.listing?.game || (order as any).game
                       const gameName = gameData?.name
                       const disputeResolution = disputeResolutions[order.id]
-                      const listStatus = orderListStatus(order.status)
-                      const statusStyle = STATUS_STYLE[listStatus.key]
                       const orderNo = displayOrderRef(order.order_number, order.id)
                       const qty = (order as any).quantity ?? 1
                       const cat = (order as any).listing?.category
@@ -886,16 +864,16 @@ function OrdersContent() {
                         <tr
                           key={order.id}
                           onClick={() => router.push(`/account/orders/${order.id}`)}
-                          className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
+                          className="cursor-pointer border-t border-white/[0.07] transition-colors hover:bg-white/[0.03]"
                         >
                           <td className="px-4 py-2">
                             <div className="flex items-center gap-3">
                               {displayImage ? (
-                                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border-subtle">
+                                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-bg-overlay">
                                   <Image src={displayImage} alt="" fill unoptimized className="object-cover" />
                                 </div>
                               ) : (
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-bg-overlay">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-bg-overlay">
                                   <ShoppingCart className="h-4 w-4 text-text-disabled" />
                                 </div>
                               )}
@@ -919,7 +897,7 @@ function OrdersContent() {
                                   () => toast.error('Copy Failed'),
                                 )
                               }}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-white/[0.03] px-2 py-1 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                              className="inline-flex items-center gap-1.5 rounded-md bg-bg-overlay px-2 py-1 font-mono text-[12px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary"
                               aria-label={`Copy order id ${orderNo}`}
                             >
                               {orderNo}
@@ -927,10 +905,7 @@ function OrdersContent() {
                             </button>
                           </td>
                           <td className="px-3 py-2">
-                            <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', statusStyle.cls)}>
-                              <statusStyle.Icon className="h-3.5 w-3.5" aria-hidden />
-                              {listStatus.label}
-                            </span>
+                            <OrderStatusPill status={order.status} />
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-[13.5px] font-semibold text-text-primary">
                             ${(activeTab === 'sales' ? sellerGets : Number(order.total_amount ?? 0)).toFixed(2)}
@@ -970,7 +945,7 @@ function OrdersContent() {
 // V22 — Suspense boundary for useSearchParams (?type= sub-page).
 export default function OrdersPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<OrdersLoading />}>
       <OrdersContent />
     </Suspense>
   )

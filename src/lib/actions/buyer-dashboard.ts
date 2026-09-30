@@ -3,7 +3,7 @@
  *
  * One server action returning everything BuyerDashboard renders, computed from
  * real tables — no dummy data:
- *   - Stats: total spent, active/completed order counts, wishlist + reviews
+ *   - Stats: total spent, active/completed order counts, reviews
  *   - Active orders (paid/delivered) with listing title + seller username
  *   - Favorite games (grouped from completed purchases)
  */
@@ -33,7 +33,6 @@ export interface BuyerDashboardData {
   totalSpent: number
   activeOrders: number
   completedOrders: number
-  wishlistItems: number
   reviewsGiven: number
   active: BuyerActiveOrder[]
   favoriteGames: BuyerFavoriteGame[]
@@ -49,7 +48,7 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [ordersRes, wishlistRes, reviewsRes] = await Promise.all([
+  const [ordersRes, reviewsRes] = await Promise.all([
     // Paged: Total Spent is a sum — a 1000-row cap would under-count it.
     fetchAllRows<any>((from, to) =>
       supabase
@@ -62,10 +61,6 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
         .order('id', { ascending: false })
         .range(from, to),
     ),
-    supabase
-      .from('wishlists')
-      .select('id', { count: 'exact' })
-      .eq('user_id', user.id).limit(1),
     supabase
       .from('reviews')
       .select('id', { count: 'exact' })
@@ -103,7 +98,6 @@ export async function getBuyerDashboard(): Promise<BuyerDashboardData | null> {
     totalSpent,
     activeOrders: activeList.length,
     completedOrders: completed.length,
-    wishlistItems: wishlistRes.count ?? 0,
     reviewsGiven: reviewsRes.count ?? 0,
     active,
     favoriteGames,

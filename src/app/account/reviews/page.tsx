@@ -1,389 +1,294 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-import AccountPageHeader from '@/components/account/AccountPageHeader'
-import { useSellerReviews } from '@/hooks/use-seller-reviews'
-import { getAvatarUrl } from '@/lib/utils/avatar'
-import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import {
-  Star,
-  MessageSquare,
-  ThumbsUp,
-  Search,
-  X,
-  Loader2,
-  Award,
-  Send,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-react'
+/**
+ * Feedback: what buyers said about this seller, with a reply per review.
+ *
+ * 2026-09-29 rebuild: one fetch of the received reviews, filtered by rating
+ * and search in the browser (the old page refetched on every keystroke and
+ * counted stars from the already-filtered list, so picking "5 Stars" zeroed
+ * every other count). The "Given" tab is gone: the reviews API only returns
+ * received reviews, so it could never show anything.
+ */
 
-type ViewTab = 'received' | 'given'
-type FilterRating = 'all' | '5' | '4' | '3' | '2' | '1'
+import { useMemo, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Loader2, Search, Star, X } from 'lucide-react'
+import ReviewsRounded from '@mui/icons-material/ReviewsRounded'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { AccountCard, AccountPage, StatStrip, accountBtn, accountInputCls } from '@/components/account/AccountSurface'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { useSellerReviews } from '@/hooks/use-seller-reviews'
+import type { Review } from '@/lib/api/seller-compatible'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { cn } from '@/lib/utils'
+import ReviewsLoading from './loading'
+
+type RatingFilter = 'all' | '5' | '4' | '3' | '2' | '1'
+const RATINGS: RatingFilter[] = ['all', '5', '4', '3', '2', '1']
+
+function timeAgo(date: string) {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 60) return 'Just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function Stars({ rating, size = 'h-4 w-4' }: { rating: number; size?: string }) {
+  return (
+    <div className="flex gap-0.5" role="img" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          aria-hidden
+          className={cn(size, star <= rating ? 'fill-yellow-400 text-warning' : 'text-text-disabled')}
+        />
+      ))}
+    </div>
+  )
+}
 
 export default function ReviewsPage() {
-  const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<ViewTab>('received')
-  const [selectedRating, setSelectedRating] = useState<FilterRating>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [respondingToId, setRespondingToId] = useState<string | null>(null)
-  const [responseText, setResponseText] = useState('')
+  const [rating, setRating] = useState<RatingFilter>('all')
+  const [query, setQuery] = useState('')
+  const { reviews, stats, isLoading, respondToReview, isResponding } = useSellerReviews()
+  const reduceMotion = useReducedMotion()
 
-  // Fetch seller reviews (reviews about the seller)
-  const {
-    reviews,
-    stats,
-    isLoading,
-    respondToReview,
-    isResponding,
-  } = useSellerReviews({
-    rating: selectedRating !== 'all' ? parseInt(selectedRating) : undefined,
-    search: searchQuery
-  })
+  const counts = useMemo(() => {
+    const byStar: Record<string, number> = { all: reviews.length, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+    for (const r of reviews) byStar[String(r.rating)] = (byStar[String(r.rating)] ?? 0) + 1
+    return byStar
+  }, [reviews])
 
-  // Filter reviews based on active tab
-  const filteredReviews = useMemo(() => {
-    let filtered = reviews
-
-    // Filter by tab (received vs given)
-    if (activeTab === 'received') {
-      filtered = filtered.filter(r => r.reviewed_user_id === user?.id)
-    } else {
-      filtered = filtered.filter(r => r.reviewer_id === user?.id)
-    }
-
-    // Filter by rating
-    if (selectedRating !== 'all') {
-      filtered = filtered.filter(r => r.rating === parseInt(selectedRating))
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(r =>
-        r.comment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.reviewer?.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return reviews
+      .filter((r) => rating === 'all' || r.rating === Number(rating))
+      .filter(
+        (r) =>
+          !q ||
+          r.comment?.toLowerCase().includes(q) ||
+          r.reviewer?.username?.toLowerCase().includes(q) ||
+          r.order?.listing?.title?.toLowerCase().includes(q),
       )
-    }
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [reviews, rating, query])
 
-    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [reviews, activeTab, selectedRating, searchQuery, user?.id])
+  if (isLoading) return <ReviewsLoading />
 
-  const ratingCounts = useMemo(() => ({
-    all: filteredReviews.length,
-    5: filteredReviews.filter(r => r.rating === 5).length,
-    4: filteredReviews.filter(r => r.rating === 4).length,
-    3: filteredReviews.filter(r => r.rating === 3).length,
-    2: filteredReviews.filter(r => r.rating === 2).length,
-    1: filteredReviews.filter(r => r.rating === 1).length,
-  }), [filteredReviews])
+  return (
+    <AccountPage>
+      <AccountPageHeader title="Feedback" subtitle="What buyers say about your shop." />
 
-  const handleSubmitResponse = async (reviewId: string) => {
-    if (!responseText.trim()) return
+      <RevealGroup className="mt-6 space-y-4">
+        <RevealItem>
+          <StatStrip
+            stats={[
+              {
+                label: 'Average Rating',
+                value: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {stats.avgRating.toFixed(1)}
+                    <Star className="h-5 w-5 fill-yellow-400 text-warning" aria-hidden />
+                  </span>
+                ),
+              },
+              { label: 'Total Reviews', value: String(stats.totalReviews) },
+              { label: 'Response Rate', value: `${stats.responseRate}%`, hint: 'Reviews you replied to' },
+              { label: '5-Star Reviews', value: String(stats.ratingCounts[5] || 0) },
+            ]}
+          />
+        </RevealItem>
 
+        <RevealItem className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SegmentedTabs
+            tabs={RATINGS.map((id) => ({
+              id,
+              label: (
+                <>
+                  {id === 'all' ? 'All' : `${id} Star${id === '1' ? '' : 's'}`}
+                  <TabCount n={counts[id] ?? 0} />
+                </>
+              ),
+            }))}
+            value={rating}
+            onChange={setRating}
+            layoutId="reviews-rating-pill"
+            ariaLabel="Filter by rating"
+          />
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search reviews…"
+              aria-label="Search reviews"
+              className={cn(accountInputCls, 'h-10 py-0 pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden')}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+                className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-text-tertiary transition-colors hover:text-text-primary"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </RevealItem>
+
+        {visible.length === 0 ? (
+          <RevealItem>
+            <AccountCard className="flex flex-col items-center px-6 py-14 text-center">
+              <ReviewsRounded style={{ fontSize: 36 }} className="text-text-tertiary" aria-hidden />
+              <h2 className="mt-3 text-[15px] font-semibold text-text-primary">
+                {reviews.length === 0 ? 'No Reviews Yet' : 'No Matching Reviews'}
+              </h2>
+              <p className="mt-1 max-w-sm text-[13px] text-text-secondary">
+                {reviews.length === 0
+                  ? 'Buyers can review you after an order is completed. Their feedback shows up here.'
+                  : 'Try another rating or a different search.'}
+              </p>
+            </AccountCard>
+          </RevealItem>
+        ) : (
+          <div className="space-y-3">
+            {visible.map((review, i) => (
+              <motion.div
+                key={review.id}
+                layout="position"
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                // Capped: a long list shouldn't make the 40th card wait 2 s.
+                transition={{ duration: 0.28, delay: Math.min(i, 6) * 0.04, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <ReviewCard review={review} respond={respondToReview} responding={isResponding} />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </RevealGroup>
+    </AccountPage>
+  )
+}
+
+function ReviewCard({
+  review,
+  respond,
+  responding,
+}: {
+  review: Review
+  respond: (input: { id: string; response: string }) => Promise<unknown>
+  responding: boolean
+}) {
+  const [replying, setReplying] = useState(false)
+  const [text, setText] = useState('')
+
+  const submit = async () => {
+    if (!text.trim()) return
     try {
-      await respondToReview({ id: reviewId, response: responseText })
-      setRespondingToId(null)
-      setResponseText('')
+      await respond({ id: review.id, response: text.trim() })
+      setReplying(false)
+      setText('')
     } catch (error) {
       console.error('Error submitting response:', error)
     }
   }
 
-  const getTimeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return `${seconds}s ago`
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={cn(
-              'h-4 w-4',
-              star <= rating ? 'fill-yellow-400 text-warning' : 'text-text-disabled'
-            )}
-          />
-        ))}
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-text-secondary">Loading reviews...</p>
-        </div>
-      </div>
-    )
-  }
+  const name = review.reviewer?.username || 'Unknown User'
 
   return (
-    <div className="pb-12">
-      <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
-        {/* V21/P7.al — Standard account header. */}
-        <AccountPageHeader
-          icon="feedback"
-          title="Feedback"
-          subtitle="Manage your reviews and feedback"
-          className="mb-6"
-        />
-
-        {/* Stats Overview (only for received reviews) */}
-        {activeTab === 'received' && user?.isApprovedSeller && (
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-lg border border-white/10 bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_20%,transparent)] to-[color-mix(in_srgb,var(--primary)_10%,transparent)] p-4"
-            >
-              <div className="text-sm text-text-secondary">Average Rating</div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <div className="text-2xl font-bold text-white">{stats.avgRating.toFixed(1)}</div>
-                <Star className="h-5 w-5 fill-yellow-400 text-warning" />
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
-            >
-              <div className="text-sm text-text-secondary">Total Reviews</div>
-              <div className="mt-1 text-2xl font-bold text-white">{stats.totalReviews}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
-            >
-              <div className="text-sm text-text-secondary">Response Rate</div>
-              <div className="mt-1 text-2xl font-bold text-white">{stats.responseRate}%</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4"
-            >
-              <div className="text-sm text-text-secondary">5-Star Reviews</div>
-              <div className="mt-1 text-2xl font-bold text-white">
-                {stats.ratingCounts[5] || 0}
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setActiveTab('received')}
-            className={cn(
-              activeTab === 'received'
-                ? "flex items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-sm font-semibold text-lime-text transition-colors"
-                : "flex items-center gap-2 rounded-lg border border-border-subtle card-frost px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
-            )}
-          >
-            <TrendingDown className="w-4 h-4" />
-            Received
-          </button>
-          <button
-            onClick={() => setActiveTab('given')}
-            className={cn(
-              activeTab === 'given'
-                ? "flex items-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-sm font-semibold text-lime-text transition-colors"
-                : "flex items-center gap-2 rounded-lg border border-border-subtle card-frost px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-lime-tint-border hover:text-text-primary"
-            )}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Given
-          </button>
-        </div>
-
-        {/* Rating Filter */}
-        <div className="mb-6 flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
-          {(['all', '5', '4', '3', '2', '1'] as FilterRating[]).map((rating) => (
-            <motion.button
-              key={rating}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setSelectedRating(rating)}
-              className={cn(
-                'rounded-lg border p-3 text-left transition-all',
-                selectedRating === rating
-                  ? 'border-primary bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_20%,transparent)] to-[color-mix(in_srgb,var(--primary)_10%,transparent)]'
-                  : 'border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] hover:border-white/20'
-              )}
-            >
-              <div className="text-sm text-text-secondary">
-                {rating === 'all' ? 'All' : `${rating} Star`}
-              </div>
-              <div className="mt-1 text-xl font-bold text-white">
-                {rating === 'all' ? ratingCounts.all : ratingCounts[rating as '1' | '2' | '3' | '4' | '5']}
-              </div>
-            </motion.button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
-          <input
-            type="text"
-            placeholder="Search reviews..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 py-3 pl-10 pr-10 text-white placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+    <AccountCard className="p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- user avatar, any host */}
+          <img
+            src={getAvatarUrl(review.reviewer?.avatar_url, review.reviewer?.username || 'user')}
+            alt=""
+            width={40}
+            height={40}
+            loading="lazy"
+            className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-white/10"
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Reviews List */}
-        {filteredReviews.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-12 backdrop-blur-md">
-            <Award className="mb-4 h-16 w-16 text-lime-text" />
-            <h3 className="mb-2 text-xl font-bold text-white">No reviews found</h3>
-            <p className="text-text-secondary">
-              {searchQuery ? 'Try adjusting your search' : `You haven't ${activeTab === 'received' ? 'received' : 'given'} any reviews yet`}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-text-primary">{name}</p>
+            <p className="truncate text-[12px] text-text-tertiary">
+              {timeAgo(review.created_at)}
+              {review.order?.listing?.title && <span>{`  ·  ${review.order.listing.title}`}</span>}
             </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredReviews.map((review, index) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-md"
-              >
-                {/* Review Header */}
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={getAvatarUrl(review.reviewer?.avatar_url, review.reviewer?.username || 'user')}
-                      alt={review.reviewer?.username || 'User'}
-                      className="h-12 w-12 rounded-full ring-2 ring-white/10"
-                    />
-                    <div>
-                      <div className="font-medium text-white">{review.reviewer?.username || 'Unknown User'}</div>
-                      <div className="text-sm text-text-secondary">{getTimeAgo(review.created_at)}</div>
-                    </div>
-                  </div>
-                  {renderStars(review.rating)}
-                </div>
-
-                {/* Order Info */}
-                {review.order?.listing?.title && (
-                  <div className="mb-3 rounded-lg border border-white/5 bg-bg-overlay p-3">
-                    <div className="text-xs text-text-secondary">Order</div>
-                    <div className="text-sm text-white">{review.order.listing.title}</div>
-                  </div>
-                )}
-
-                {/* Review Comment */}
-                {review.comment && (
-                  <p className="mb-4 text-text-secondary">{review.comment}</p>
-                )}
-
-                {/* Helpful Count */}
-                {review.helpful_count && review.helpful_count > 0 && (
-                  <div className="mb-4 flex items-center gap-2 text-sm text-text-secondary">
-                    <ThumbsUp className="h-4 w-4" />
-                    {review.helpful_count} {review.helpful_count === 1 ? 'person' : 'people'} found this helpful
-                  </div>
-                )}
-
-                {/* Seller Response */}
-                {review.seller_response && (
-                  <div className="mt-4 rounded-lg border border-[color-mix(in_srgb,var(--primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--primary)_5%,transparent)] p-4">
-                    <div className="mb-2 flex items-center gap-2 text-sm text-primary">
-                      <MessageSquare className="h-4 w-4" />
-                      Seller Response
-                    </div>
-                    <p className="text-text-secondary">{review.seller_response}</p>
-                    {review.seller_responded_at && (
-                      <div className="mt-2 text-xs text-text-secondary">
-                        Responded {getTimeAgo(review.seller_responded_at)}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Response Form (only for received reviews by sellers) */}
-                {activeTab === 'received' && user?.isApprovedSeller && !review.seller_response && (
-                  <div className="mt-4">
-                    {respondingToId === review.id ? (
-                      <div className="space-y-3">
-                        <textarea
-                          value={responseText}
-                          onChange={(e) => setResponseText(e.target.value)}
-                          placeholder="Write your response..."
-                          rows={3}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleSubmitResponse(review.id)}
-                            disabled={isResponding || !responseText.trim()}
-                            className="flex items-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-all hover:bg-lime-hover hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                          >
-                            {isResponding ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Send className="h-4 w-4" />
-                            )}
-                            Submit Response
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRespondingToId(null)
-                              setResponseText('')
-                            }}
-                            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white transition-all hover:bg-white/10"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setRespondingToId(review.id)}
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Respond to this review
-                      </button>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        )}
+        </div>
+        <Stars rating={review.rating} />
       </div>
-    </div>
+
+      {review.comment && (
+        <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-text-secondary">{review.comment}</p>
+      )}
+
+      {review.seller_response ? (
+        <div className="mt-4 rounded-md bg-bg-overlay px-4 py-3">
+          <p className="text-[12px] font-semibold text-text-primary">
+            Your Reply
+            {review.seller_responded_at && (
+              <span className="font-normal text-text-tertiary">{`  ·  ${timeAgo(review.seller_responded_at)}`}</span>
+            )}
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">{review.seller_response}</p>
+        </div>
+      ) : (
+        <AnimatePresence initial={false} mode="wait">
+          {replying ? (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="mt-4 space-y-3">
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={`Reply to ${name}…`}
+                  aria-label="Your reply"
+                  rows={3}
+                  autoFocus
+                  className={cn(accountInputCls, 'resize-none leading-relaxed')}
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplying(false)
+                      setText('')
+                    }}
+                    className={accountBtn.secondary}
+                  >
+                    Cancel
+                  </button>
+                  <button type="button" onClick={submit} disabled={responding || !text.trim()} className={accountBtn.primary}>
+                    {responding && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                    Post Reply
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="cta" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-4">
+              <button type="button" onClick={() => setReplying(true)} className={cn(accountBtn.secondary, 'h-9')}>
+                Reply
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </AccountCard>
   )
 }

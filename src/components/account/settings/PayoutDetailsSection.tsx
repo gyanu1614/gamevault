@@ -4,21 +4,17 @@
  * Payout details (PR 7): the ONE place a seller saves where they are paid —
  * a crypto destination (coin + network + address) and/or a Payoneer email.
  * Withdrawal requests read from here; any change pauses withdrawals for the
- * freeze window and emails the seller. Same tokens as the rest of settings.
+ * freeze window and emails the seller. Two cards on the Payouts tab, each
+ * saving itself.
  */
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Mail, ShieldAlert, Wallet } from 'lucide-react'
+import { Loader2, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Label } from '@/components/ui/label'
+import { SettingsCard, Field, accountInputCls, accountBtn } from '@/components/account/AccountSurface'
 import { CHAIN_LABELS, COIN_CHAINS, validatePayoutAddress, type PayoutChain } from '@/lib/crypto/address-validation'
 import { getMyPayoutDetails, savePayoutDetails, type PayoutDetails } from '@/lib/actions/payout-details'
-
-const inputCls =
-  'w-full rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-base sm:text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-all'
-const btnCls =
-  'inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:cursor-not-allowed disabled:opacity-50'
 
 const fmt = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
@@ -83,93 +79,106 @@ export default function PayoutDetailsSection() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-text-secondary">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading payout details…
+      <div className="space-y-4" aria-busy>
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-lg bg-bg-raised p-5 sm:p-6">
+            <div className="skeleton h-4 w-32 rounded" />
+            <div className="skeleton mt-2 h-3.5 w-72 max-w-full rounded" />
+            <div className="skeleton mt-5 h-11 w-full rounded-md" />
+          </div>
+        ))}
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-[13px] leading-relaxed text-text-secondary">
-        Withdrawals are paid to the details saved here — a crypto wallet (USDT over TRON, Ethereum or Polygon) or a
-        Payoneer account. For your security, any change pauses withdrawals for 48 hours and we email you.
-      </p>
+    <div className="space-y-4">
       {frozen && (
-        <p className="flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)] bg-warning-bg px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+        <p className="flex items-start gap-2.5 rounded-md bg-warning-bg px-4 py-3 text-[13px] leading-relaxed text-warning">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           Payout details changed {fmt(details?.detailsChangedAt)}. Withdrawals reopen {fmt(details?.freezeUntil)}.
         </p>
       )}
 
-      {/* Crypto */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-lime-text" />
-          <h3 className="text-sm font-semibold text-text-primary">Crypto Wallet</h3>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-text-secondary">Coin</Label>
-            <select value={coin} onChange={(e) => setCoin(e.target.value)} className={inputCls}>
-              {Object.keys(COIN_CHAINS).map((c) => (
-                <option key={c} value={c}>{c.toUpperCase()}</option>
-              ))}
-            </select>
+      <SettingsCard
+        title="Crypto Wallet"
+        description="Withdrawals can be paid to a crypto wallet (USDT over TRON, Ethereum or Polygon). For your security, any change pauses withdrawals for 48 hours and we email you."
+        footerHint="Only send over the network you pick. A wrong-network payout can’t be recovered."
+        footerAction={
+          <button type="button" onClick={saveCrypto} disabled={savingCrypto || !addressCheck?.valid} className={accountBtn.primary}>
+            {savingCrypto && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+            Save Wallet
+          </button>
+        }
+      >
+        <div className="space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Coin" htmlFor="payout-coin">
+              <select id="payout-coin" value={coin} onChange={(e) => setCoin(e.target.value)} className={accountInputCls}>
+                {Object.keys(COIN_CHAINS).map((c) => (
+                  <option key={c} value={c}>{c.toUpperCase()}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Network" htmlFor="payout-network">
+              <select id="payout-network" value={effectiveChain} onChange={(e) => setChain(e.target.value)} className={accountInputCls}>
+                {chains.map((c) => (
+                  <option key={c} value={c}>{CHAIN_LABELS[c]}</option>
+                ))}
+              </select>
+            </Field>
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-text-secondary">Network</Label>
-            <select value={effectiveChain} onChange={(e) => setChain(e.target.value)} className={inputCls}>
-              {chains.map((c) => (
-                <option key={c} value={c}>{CHAIN_LABELS[c]}</option>
-              ))}
-            </select>
-          </div>
+          <Field
+            label="Wallet Address"
+            htmlFor="payout-address"
+            error={addressCheck && !addressCheck.valid ? addressCheck.error : null}
+            hint={addressCheck?.valid ? <span className="text-success">Address looks valid.</span> : null}
+          >
+            <input
+              id="payout-address"
+              name="crypto_address"
+              type="text"
+              translate="no"
+              spellCheck={false}
+              autoComplete="off"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={effectiveChain === 'tron' ? 'T…' : effectiveChain === 'bitcoin' ? 'bc1… or 1… / 3…' : '0x…'}
+              className={cn(
+                accountInputCls,
+                'font-mono',
+                addressCheck && !addressCheck.valid && 'border-[color-mix(in_srgb,var(--color-error)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--color-error)_50%,transparent)]',
+              )}
+            />
+          </Field>
         </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-text-secondary">Wallet Address</Label>
-          <input
-            type="text"
-            spellCheck={false}
-            autoComplete="off"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder={effectiveChain === 'tron' ? 'T…' : effectiveChain === 'bitcoin' ? 'bc1… or 1… / 3…' : '0x…'}
-            className={cn(inputCls, 'font-mono', addressCheck && !addressCheck.valid && 'border-[color-mix(in_srgb,var(--color-error)_50%,transparent)] focus:border-error')}
-          />
-          {addressCheck && !addressCheck.valid && <p className="text-xs text-error">{addressCheck.error}</p>}
-          {addressCheck?.valid && <p className="text-xs text-lime-text">Address looks valid.</p>}
-          <p className="text-xs text-text-tertiary">Only send over the network you pick — a wrong-network payout cannot be recovered.</p>
-        </div>
-        <button type="button" onClick={saveCrypto} disabled={savingCrypto || !addressCheck?.valid} className={btnCls}>
-          {savingCrypto && <Loader2 className="h-4 w-4 animate-spin" />}
-          Save Wallet Address
-        </button>
-      </div>
+      </SettingsCard>
 
-      {/* Payoneer */}
-      <div className="space-y-3 border-t border-border-subtle pt-5">
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-lime-text" />
-          <h3 className="text-sm font-semibold text-text-primary">Payoneer</h3>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-text-secondary">Payoneer Email</Label>
+      <SettingsCard
+        title="Payoneer"
+        description="The email your Payoneer account is registered with. One Payoneer account per seller."
+        footerHint="A change pauses withdrawals for 48 hours."
+        footerAction={
+          <button type="button" onClick={saveEmail} disabled={savingEmail || !email.trim()} className={accountBtn.primary}>
+            {savingEmail && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+            Save Email
+          </button>
+        }
+      >
+        <Field label="Payoneer Email" htmlFor="payout-payoneer">
           <input
+            id="payout-payoneer"
+            name="payoneer_email"
             type="email"
+            spellCheck={false}
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className={inputCls}
+            className={accountInputCls}
           />
-          <p className="text-xs text-text-tertiary">The email your Payoneer account is registered with. One Payoneer account per seller.</p>
-        </div>
-        <button type="button" onClick={saveEmail} disabled={savingEmail || !email.trim()} className={btnCls}>
-          {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />}
-          Save Payoneer Email
-        </button>
-      </div>
+        </Field>
+      </SettingsCard>
     </div>
   )
 }
