@@ -41,21 +41,31 @@ Section by section, starting with the 2FA screen.
 Reachable but not in the sidebar: `/activities`, `/reviews`, `/notifications`,
 `/gdpr`, `/inform` (dashboard tiles, header search, bell).
 
-## Order of work
+## Order of work (all ✅ on feat/admin-overhaul, not pushed)
 1. ✅ `/admin/mfa` 2FA screen
-2. Shell: layout canvas, `AdminChrome`, `Sidebar` (Phosphor, fill-only, mobile
-   drawer), `EnhancedAdminHeader` (mobile menu/search overlap, `NavPanel` for
-   dropdowns), `kit.tsx` primitives
-3. Dashboard (`CompactDashboard`)
-4. Orders → order detail
-5. Withdrawals, Fees & Payouts
-6. Seller Applications → detail; Active Sellers → detail; Founding Sellers;
+2. ✅ Shell: layout canvas, `AdminChrome`, `Sidebar`, `EnhancedAdminHeader`, `kit.tsx`
+3. ✅ Dashboard (`CompactDashboard`)
+4. ✅ Orders → order detail
+5. ✅ Withdrawals, Fees & Payouts
+6. ✅ Seller Applications → detail; Active Sellers → detail; Founding Sellers;
    Seller Leads; Founding Notices
-7. Disputes → detail; Fraud; Moderation; Reviews
-8. Analytics, Activities, Notifications, GDPR, INFORM
-9. Games → edit → templates; Blog (list/new/edit); Promos
-10. Settings (+ Profile tab), Utils
-11. Remove dead routes/exports; final sweep for lucide/tabler/borders/gradients
+7. ✅ Disputes → detail; Fraud; Moderation; Reviews (+ paging)
+8. ✅ Analytics, Activities, Notifications, GDPR (+ Delete Account confirm), INFORM
+9. ✅ Games → edit → templates; Blog (list/new/edit); Promos
+10. ✅ Profile (Settings merged into it; `/admin/settings` redirects), Utils (restyled — **owner to decide removal**)
+11. ✅ Dead code removed (89c24d25): redesign, categories, categories-v2 (+ actions),
+    promo-codes redirect, forest.ts, SectionIcons, ui/glass-*, ui/pagination-controls.
+    Final sweep: no lucide/tabler, no `border-border-*`, no palette colours in admin.
+    Kept on purpose: promo code input caps, Founding Notices + blog previews (they mimic
+    the public pages), Discord tint on founding sellers.
+
+## Open (pre-existing, not fixed)
+- Currency bundle upload spinner never shows (`setUploading(false)` runs before upload);
+  upload handlers have no try/catch; wizard file inputs aren't keyboard-reachable;
+  `GameWizard mode="create"` looks dead.
+- `/admin/utils` "Debug Database" logs listing data to the browser console in prod.
+- RLS on withdrawal_requests / withdrawal_methods / reviews checks `profiles.role='admin'`
+  (task chip spawned).
 
 ## Verifying
 - Local-only server on :3005 against this worktree's Supabase stack

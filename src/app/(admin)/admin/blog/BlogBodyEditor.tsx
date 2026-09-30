@@ -211,7 +211,7 @@ export function BlogBodyEditor({
               {previewBlocks.length ? (
                 <ArticleBody body={previewBlocks} />
               ) : (
-                <p className="text-sm text-[#5E685E]">Start writing — the preview renders here exactly as it will publish.</p>
+                <p className="text-sm text-text-tertiary">Start writing — the preview renders here exactly as it will publish.</p>
               )}
             </div>
           </div>
