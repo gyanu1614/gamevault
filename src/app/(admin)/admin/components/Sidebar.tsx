@@ -23,7 +23,7 @@ import {
   Article,
   ChartLineUp,
   GameController,
-  GearSix,
+  UserCircle,
   HandCoins,
   ListChecks,
   Megaphone,
@@ -111,7 +111,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
     title: 'System',
     links: [
       { label: 'Utilities', href: '/admin/utils', icon: Wrench, roles: ['admin', 'super_admin'] },
-      { label: 'Settings', href: '/admin/settings', icon: GearSix, roles: ['super_admin'] },
+      { label: 'Profile', href: '/admin/profile', icon: UserCircle, roles: ALL },
     ],
   },
 ]

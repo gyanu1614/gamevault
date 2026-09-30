@@ -30,7 +30,6 @@ import {
   Checks,
   Copy,
   FileText,
-  GearSix,
   KeyReturn,
   List,
   MagnifyingGlass,
@@ -80,7 +79,7 @@ const PAGES: Array<{ label: string; href: string; keywords?: string }> = [
   { label: 'Notifications', href: '/admin/notifications' },
   { label: 'Activities', href: '/admin/activities', keywords: 'log audit' },
   { label: 'Utilities', href: '/admin/utils', keywords: 'tools' },
-  { label: 'Settings', href: '/admin/settings' },
+  { label: 'Profile', href: '/admin/profile', keywords: 'settings account' },
   { label: 'GDPR Requests', href: '/admin/gdpr', keywords: 'privacy export deletion' },
   { label: 'INFORM Act', href: '/admin/inform', keywords: 'compliance disclosure' },
 ]
@@ -688,16 +687,6 @@ export default function EnhancedAdminHeader({
                           router.push('/admin/profile')
                         }}
                       />
-                      {role === 'super_admin' && (
-                        <MenuItem
-                          icon={GearSix}
-                          label="Admin Settings"
-                          onClick={() => {
-                            setShowUserMenu(false)
-                            router.push('/admin/settings')
-                          }}
-                        />
-                      )}
                       <MenuItem
                         icon={ArrowSquareOut}
                         label="View Marketplace"
