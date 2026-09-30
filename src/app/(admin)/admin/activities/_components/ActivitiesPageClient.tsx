@@ -1,9 +1,7 @@
 'use client'
 
 /**
- * /admin/activities — V53 restyle on the admin kit.
- * Neutral surfaces, lime accent for active filters, semantic status
- * colors via the kit StatusBadge.
+ * /admin/activities — every dispute, application and fraud alert in one feed.
  *
  * V54 — The activity feed is fetched by the server wrapper (../page.tsx)
  * via the same getAllActivities() action and seeded into react-query via
@@ -15,20 +13,25 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAllActivities } from '@/lib/actions/admin-dashboard'
 import { cn } from '@/lib/utils'
-import {
-  AlertTriangle,
-  UserPlus,
-  Shield,
-  ArrowLeft,
-  Filter,
-  Calendar
-} from 'lucide-react'
+import { CalendarBlank, CaretLeft, CaretRight, Scales, ShieldWarning, UserPlus, Warning } from '@phosphor-icons/react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { PageHeader, StatusBadge, type ChipTone } from '../../components/kit'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import {
+  AdminEmpty,
+  AdminLoadingRows,
+  FilterChip,
+  FilterRow,
+  PageHeader,
+  StatusBadge,
+  type AdminIcon,
+  type ChipTone,
+} from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 
 // The activity array shape as returned by the getAllActivities action.
 type ActivityList = NonNullable<Awaited<ReturnType<typeof getAllActivities>>['activities']>
+type TypeFilter = 'all' | 'dispute' | 'application' | 'fraud'
+type StatusFilter = 'all' | 'active' | 'resolved'
 
 // Free-form status strings → kit badge tone (preserves the old
 // `.includes` matching semantics).
@@ -42,9 +45,28 @@ function activityTone(status: string): ChipTone {
   return 'neutral'
 }
 
-const FILTER_BTN = 'px-3 py-1 text-xs font-semibold rounded-md transition-colors'
-const FILTER_ACTIVE = 'border border-lime-tint-border bg-lime-tint-bg text-lime-text'
-const FILTER_IDLE = 'text-text-tertiary hover:text-text-secondary'
+const TYPE_CONFIG: Record<Exclude<TypeFilter, 'all'>, { icon: AdminIcon; tile: string; label: string }> = {
+  dispute: { icon: Scales, tile: 'bg-error-bg text-error', label: 'Disputes' },
+  application: { icon: UserPlus, tile: 'bg-warning-bg text-warning', label: 'Applications' },
+  fraud: { icon: ShieldWarning, tile: 'bg-white/[0.06] text-text-secondary', label: 'Fraud Alerts' },
+}
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+
+const formatWhen = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
 export default function ActivitiesPageClient({
   initialActivities,
@@ -53,8 +75,8 @@ export default function ActivitiesPageClient({
   // fetch (loading → error state) exactly as before.
   initialActivities?: ActivityList
 }) {
-  const [filter, setFilter] = useState<'all' | 'dispute' | 'application' | 'fraud'>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'resolved'>('all')
+  const [filter, setFilter] = useState<TypeFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-all-activities'],
@@ -72,214 +94,126 @@ export default function ActivitiesPageClient({
     staleTime: 60_000,
   })
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
+  const isResolved = (status?: string | null) =>
+    !!status && (status.toLowerCase().includes('resolved') || status.toLowerCase().includes('closed'))
 
-  const filteredActivities = data?.filter(activity => {
-    // Type filter
-    if (filter !== 'all' && activity.type !== filter) return false
+  const statusMatches = (activity: ActivityList[number]) =>
+    statusFilter === 'all' ||
+    (statusFilter === 'resolved' ? isResolved(activity.status) : !isResolved(activity.status))
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      const isResolved = activity.status?.toLowerCase().includes('resolved') ||
-                        activity.status?.toLowerCase().includes('closed')
-      if (statusFilter === 'resolved' && !isResolved) return false
-      if (statusFilter === 'active' && isResolved) return false
-    }
+  const filteredActivities =
+    data?.filter((activity) => (filter === 'all' || activity.type === filter) && statusMatches(activity)) || []
 
-    return true
-  }) || []
-
-  const typeConfig = {
-    dispute: { icon: AlertTriangle, color: 'text-error', bg: 'bg-error-bg', label: 'Disputes' },
-    application: { icon: UserPlus, color: 'text-warning', bg: 'bg-warning-bg', label: 'Applications' },
-    fraud: { icon: Shield, color: 'text-lime-text', bg: 'bg-lime-tint-bg', label: 'Fraud Alerts' },
-  }
+  const countFor = (type: TypeFilter) =>
+    (data ?? []).filter((a) => (type === 'all' || a.type === type) && statusMatches(a)).length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+    <div className="space-y-5 pb-10">
+      <div>
         <Link
           href="/admin"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-default bg-bg-overlay transition-colors hover:bg-bg-overlay-2"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
         >
-          <ArrowLeft className="h-4 w-4 text-text-secondary" />
+          <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Dashboard
         </Link>
         <PageHeader
-          className="mb-0"
+          className="mb-0 mt-2 sm:mb-0"
           title="All Activities"
-          description={`${filteredActivities.length} ${statusFilter === 'all' ? '' : statusFilter} activities`}
+          description="Disputes, seller applications and fraud alerts, newest first. Refreshes every 30 seconds."
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Type Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-text-tertiary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Type:</span>
-          <div className="flex items-center gap-1 rounded-lg border border-border-default bg-bg-raised p-1">
-            <button
-              onClick={() => setFilter('all')}
-              className={cn(FILTER_BTN, filter === 'all' ? FILTER_ACTIVE : FILTER_IDLE)}
-            >
-              All
-            </button>
-            {Object.entries(typeConfig).map(([key, config]) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key as any)}
-                className={cn(FILTER_BTN, filter === key ? FILTER_ACTIVE : FILTER_IDLE)}
-              >
-                {config.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Status:</span>
-          <div className="flex items-center gap-1 rounded-lg border border-border-default bg-bg-raised p-1">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={cn(FILTER_BTN, statusFilter === 'all' ? FILTER_ACTIVE : FILTER_IDLE)}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setStatusFilter('active')}
-              className={cn(FILTER_BTN, statusFilter === 'active' ? FILTER_ACTIVE : FILTER_IDLE)}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setStatusFilter('resolved')}
-              className={cn(FILTER_BTN, statusFilter === 'resolved' ? FILTER_ACTIVE : FILTER_IDLE)}
-            >
-              Resolved
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SegmentedTabs<TypeFilter>
+          tabs={[
+            { id: 'all', label: <>All <TabCount n={countFor('all')} /></> },
+            ...(Object.keys(TYPE_CONFIG) as Exclude<TypeFilter, 'all'>[]).map((key) => ({
+              id: key,
+              label: (
+                <>
+                  {TYPE_CONFIG[key].label} <TabCount n={countFor(key)} />
+                </>
+              ),
+            })),
+          ]}
+          value={filter}
+          onChange={setFilter}
+          layoutId="activities-type"
+          ariaLabel="Activity type"
+        />
+        <FilterRow label="Status">
+          {(['all', 'active', 'resolved'] as const).map((s) => (
+            <FilterChip key={s} selected={statusFilter === s} onClick={() => setStatusFilter(s)}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </FilterChip>
+          ))}
+        </FilterRow>
       </div>
 
-      {/* Activities List */}
-      <div className="rounded-xl border border-border-default bg-bg-raised">
+      <div role="tabpanel" id={`activities-type-panel-${filter}`} aria-labelledby={`activities-type-tab-${filter}`}>
         {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-lime border-r-transparent"></div>
-            <p className="mt-3 text-sm text-text-tertiary">Loading activities...</p>
-          </div>
+          <AdminLoadingRows rows={6} />
         ) : error ? (
-          <div className="p-12 text-center">
-            <p className="text-sm text-error">Failed to load activities</p>
-          </div>
+          <AdminEmpty icon={Warning} tone="error" title="Couldn't Load Activities" hint="Try again in a moment." />
         ) : filteredActivities.length === 0 ? (
-          <div className="p-12 text-center">
-            <Calendar className="mx-auto mb-3 h-12 w-12 text-text-disabled" />
-            <p className="text-sm text-text-tertiary">No activities found</p>
-          </div>
+          <AdminEmpty icon={CalendarBlank} title="No Activities Found" hint="Nothing matches these filters." />
         ) : (
-          <div className="divide-y divide-border-subtle">
+          <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
             {filteredActivities.map((activity) => {
-              const config = typeConfig[activity.type]
+              const config = TYPE_CONFIG[activity.type]
               const Icon = config.icon
+              const meta = activity.metadata
 
               return (
-                <Link
-                  key={activity.id}
-                  href={activity.link || '#'}
-                  className="group flex items-start gap-4 p-4 transition-colors hover:bg-state-hover"
-                >
-                  {/* Icon or Game Logo */}
-                  {activity.metadata?.gameIcon ? (
-                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-overlay">
-                      <Image
-                        src={activity.metadata.gameIcon}
-                        alt={activity.metadata.gameName || 'Game'}
-                        width={48}
-                        height={48}
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className={cn('flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-border-subtle', config.bg)}>
-                      <Icon className={cn('h-6 w-6', config.color)} />
-                    </div>
-                  )}
+                <li key={activity.id}>
+                  <Link
+                    href={activity.link || '#'}
+                    className="group flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] sm:gap-4"
+                  >
+                    {meta?.gameIcon ? (
+                      <GameTile src={meta.gameIcon} name={meta.gameName} className="h-10 w-10" />
+                    ) : (
+                      <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-md', config.tile)}>
+                        <Icon aria-hidden weight="bold" className="h-5 w-5" />
+                      </span>
+                    )}
 
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-text-primary">
-                          {activity.title}
-                        </p>
-
-                        {/* For disputes: show game name, item, amount */}
-                        {activity.type === 'dispute' && activity.metadata ? (
-                          <div className="mt-1.5 space-y-1">
-                            {activity.metadata.gameName && (
-                              <p className="text-sm text-text-secondary">
-                                {activity.metadata.gameName}
-                              </p>
-                            )}
-                            {activity.metadata.itemTitle && (
-                              <p className="text-sm text-text-tertiary">
-                                {activity.metadata.itemTitle}
-                              </p>
-                            )}
-                            <div className="mt-1.5 flex items-center gap-3">
-                              {activity.metadata.amount && (
-                                <p className="text-sm font-semibold tabular-nums text-lime-text">
-                                  {formatCurrency(activity.metadata.amount)}
-                                </p>
-                              )}
-                              {activity.metadata.orderNumber && (
-                                <p className="text-xs text-text-tertiary">
-                                  Order #{activity.metadata.orderNumber}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="mt-1 text-sm text-text-tertiary">
-                            {activity.description}
-                          </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 text-[13.5px] font-semibold text-text-primary">{activity.title}</p>
+                        {activity.status && (
+                          <StatusBadge status={activity.status} tone={activityTone(activity.status)} className="shrink-0" />
                         )}
-
-                        <p className="mt-2 text-xs text-text-tertiary">
-                          {new Date(activity.timestamp).toLocaleString('en-US', {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit'
-                          })}
-                        </p>
                       </div>
 
-                      {/* Status Badge */}
-                      {activity.status && (
-                        <StatusBadge
-                          status={activity.status}
-                          tone={activityTone(activity.status)}
-                          className="flex-shrink-0 whitespace-nowrap"
-                        />
+                      {/* Disputes: game, item, amount, order */}
+                      {activity.type === 'dispute' && meta ? (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12.5px] text-text-tertiary">
+                          {meta.amount ? (
+                            <span className="font-semibold tabular-nums text-text-primary">{formatCurrency(meta.amount)}</span>
+                          ) : null}
+                          {meta.gameName && <span className="text-text-secondary">{meta.gameName}</span>}
+                          {meta.itemTitle && <span className="truncate">{meta.itemTitle}</span>}
+                          {meta.orderNumber && <span className="font-mono text-[12px]">#{meta.orderNumber}</span>}
+                        </div>
+                      ) : (
+                        <p className="mt-0.5 text-[12.5px] text-text-tertiary">{activity.description}</p>
                       )}
+
+                      <p className="mt-1.5 text-[12px] text-text-tertiary">{formatWhen(activity.timestamp)}</p>
                     </div>
-                  </div>
-                </Link>
+
+                    <CaretRight
+                      aria-hidden
+                      weight="bold"
+                      className="mt-3 hidden h-4 w-4 shrink-0 text-text-disabled transition-colors group-hover:text-text-secondary sm:block"
+                    />
+                  </Link>
+                </li>
               )
             })}
-          </div>
+          </ul>
         )}
       </div>
     </div>
