@@ -542,7 +542,7 @@ BEGIN
 END;
 $$;
 
--- withdrawal_quote: body from 20260923031644 §5 verbatim + the not_a_seller message.
+-- withdrawal_quote: body from 20260923184455 (payout encryption: *_hash columns) verbatim + the not_a_seller message.
 CREATE OR REPLACE FUNCTION public.withdrawal_quote(p_seller_id uuid, p_method_id uuid, p_amount numeric) RETURNS jsonb
   LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -586,8 +586,8 @@ BEGIN
     v_refusal := 'open_withdrawal';
     v_message := 'You already have a withdrawal in progress. Wait for it to complete or cancel it first.';
     v_extra := jsonb_build_object('open_request_id', v_open);
-  ELSIF (v_m.method_type = 'crypto' AND (v_details.crypto_address IS NULL OR v_details.crypto_chain IS DISTINCT FROM v_m.chain OR v_details.crypto_coin IS DISTINCT FROM v_m.coin))
-     OR (v_m.method_name = 'payoneer' AND v_details.payoneer_email IS NULL) THEN
+  ELSIF (v_m.method_type = 'crypto' AND (v_details.crypto_address_hash IS NULL OR v_details.crypto_chain IS DISTINCT FROM v_m.chain OR v_details.crypto_coin IS DISTINCT FROM v_m.coin))
+     OR (v_m.method_name = 'payoneer' AND v_details.payoneer_email_hash IS NULL) THEN
     v_refusal := 'payout_details_missing';
     v_message := CASE WHEN v_m.method_type = 'crypto'
       THEN 'Save a ' || upper(COALESCE(v_m.coin, '')) || ' address on ' || COALESCE(v_m.chain, '') || ' in your payout settings first.'
