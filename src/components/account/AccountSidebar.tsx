@@ -15,7 +15,6 @@ import {
   Star,
   Settings,
   Wallet,
-  Heart,
   LogOut,
   Menu,
   X,
@@ -155,7 +154,6 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         { label: 'Currency', href: '/account/listings?type=currency' },
         { label: 'Items',    href: '/account/listings?type=items' },
         { label: 'Accounts', href: '/account/listings?type=accounts' },
-        { label: 'Top Ups',  href: '/account/listings?type=top-up' },
       ] },
     { label: 'Messages',    href: '/account/messages',   icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, requiresSeller: true, showForBuyer: false, showForSeller: true },
     { label: 'Wallet',      href: '/account/wallet',     icon: Wallet,          requiresSeller: true, showForBuyer: false, showForSeller: true },
@@ -165,7 +163,6 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     if (user?.isApprovedSeller) {
       return [
         { label: 'Feedback',    href: '/account/reviews',  icon: Star,         showForBuyer: false, showForSeller: true },
-        { label: 'Wishlist',    href: '/account/wishlist', icon: Heart,        showForBuyer: false, showForSeller: true },
         { label: 'Refer & Earn', href: '/account/referral',          icon: Gift,      showForBuyer: false, showForSeller: true },
       ]
     }
@@ -174,7 +171,6 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       { label: 'Dashboard',    href: '/account/dashboard', icon: LayoutDashboard, showForBuyer: true, showForSeller: false },
       { label: 'My Purchases', href: '/account/orders',    icon: ShoppingCart, showForBuyer: true, showForSeller: false },
       { label: 'Messages',     href: '/account/messages',  icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, showForBuyer: true, showForSeller: false },
-      { label: 'Wishlist',     href: '/account/wishlist',  icon: Heart,        showForBuyer: true, showForSeller: false },
       { label: 'Wallet',       href: '/account/wallet',    icon: Wallet,       showForBuyer: true, showForSeller: false },
       { label: 'Refer & Earn', href: '/account/referral',  icon: Gift,     showForBuyer: true, showForSeller: false },
     ]
@@ -323,7 +319,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
                 // hard refresh. prefetch={false} makes every click hit the
                 // middleware live.
                 prefetch={
-                  ['/account/dashboard', '/account/analytics', '/account/earnings', '/account/listings'].some(
+                  ['/account/analytics', '/account/earnings', '/account/listings'].some(
                     (r) => item.href.startsWith(r),
                   )
                     ? false
@@ -468,8 +464,15 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
           )
         })}
 
-        {/* Logout */}
+        {/* Logout: the navbar owns the sign-out flow (overlay, redirect home,
+            cache clear), so the sidebar asks it to run rather than copying it.
+            This button had no handler at all before 2026-09-29. */}
         <button
+          type="button"
+          onClick={() => {
+            setIsMobileOpen(false)
+            window.dispatchEvent(new Event('dm:logout'))
+          }}
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14.5px] font-medium text-text-secondary hover:text-error hover:bg-red-500/[0.08] transition-all duration-200"
         >
           <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
@@ -511,8 +514,9 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar - Modern Floating Card */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 card-frost border border-border-subtle rounded-lg shadow-2xl overflow-hidden">
+      {/* Desktop sidebar: a floating account card (fill only, like every
+          account card; the old frosted panel had an outline). */}
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden">
         {/* V21/P7.aj — Call as a function, not <NavItems/>, so it inlines
             into this render tree. As a child component it got a fresh
             identity every parent re-render, remounting the subtree and
@@ -520,5 +524,43 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         {NavItems()}
       </aside>
     </>
+  )
+}
+
+/**
+ * Desktop sidebar while sign-in resolves: the same floating card, identity
+ * row and nav rhythm, so the real sidebar replaces it without a shift.
+ * (Phones have no persistent sidebar, so nothing to draw there.)
+ */
+export function AccountSidebarSkeleton() {
+  return (
+    <aside
+      aria-hidden
+      className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden"
+    >
+      <div className="flex items-center gap-3 border-b border-border-subtle p-3">
+        <div className="skeleton h-10 w-10 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="skeleton h-3.5 w-24 rounded" />
+          <div className="skeleton h-3 w-28 rounded" />
+        </div>
+      </div>
+      <div className="flex-1 space-y-1 px-2 py-3">
+        {[64, 52, 50, 70, 46].map((w, i) => (
+          <div key={i} className="flex h-9 items-center gap-2.5 px-2.5">
+            <div className="skeleton h-[18px] w-[18px] rounded" />
+            <div className="skeleton h-3.5 rounded" style={{ width: w }} />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-1 border-t border-border-subtle p-2">
+        {[56, 50].map((w, i) => (
+          <div key={i} className="flex h-9 items-center gap-2.5 px-2.5">
+            <div className="skeleton h-[18px] w-[18px] rounded" />
+            <div className="skeleton h-3.5 rounded" style={{ width: w }} />
+          </div>
+        ))}
+      </div>
+    </aside>
   )
 }

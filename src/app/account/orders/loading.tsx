@@ -1,72 +1,64 @@
 /**
- * V16 — Orders list skeleton.
- *
- * Mirrors /account/orders: max-w-7xl wrapper, page header, tab row
- * (Purchases / Sales), filter chip row, then a stack of order cards.
+ * Orders skeleton: the same viewport-locked frame as orders/page.tsx (fixed
+ * under the navbar, right of the sidebar), header, the four filter buttons,
+ * the full-width search row, then the table panel with its results line and
+ * rows (item, ID, status, total, party, date).
  */
 
-function Block({ className = '' }: { className?: string }) {
-  return (
-    <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
-  )
-}
-
-function OrderCardSkeleton() {
-  return (
-    <div className="rounded-lg border border-border-subtle card-frost p-4 sm:p-5">
-      <div className="flex items-start gap-4">
-        <Block className="h-16 w-16 shrink-0 rounded-xl" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Block className="h-5 w-3/4 max-w-xs" />
-          <div className="flex flex-wrap gap-1.5">
-            <Block className="h-5 w-20 rounded-md" />
-            <Block className="h-5 w-24 rounded-md" />
-          </div>
-          <Block className="h-3 w-40" />
-        </div>
-        <div className="hidden shrink-0 space-y-2 text-right sm:block">
-          <Block className="ml-auto h-6 w-20" />
-          <Block className="ml-auto h-6 w-24 rounded-full" />
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-        <Block className="h-4 w-32" />
-        <Block className="h-9 w-28 rounded-lg" />
-      </div>
-    </div>
-  )
-}
+import { Sk } from '@/components/account/AccountSkeletons'
 
 export default function OrdersLoading() {
   return (
-    <div className="min-h-screen pb-20">
-      <div className="mx-auto w-full max-w-full px-4 pt-6 sm:px-6 md:max-w-7xl lg:px-8">
-        {/* Page header */}
-        <div className="mb-6 space-y-1.5">
-          <Block className="h-8 w-32" />
-          <Block className="h-4 w-64" />
+    <div
+      className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] lg:left-72"
+      aria-busy
+      aria-label="Loading orders"
+    >
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
+        <div className="mb-4 shrink-0">
+          <Sk className="h-8 w-40 rounded-md" />
+          <Sk className="mt-1.5 h-4 w-80 max-w-full" />
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6 flex gap-3">
-          <Block className="h-10 w-28 rounded-lg" />
-          <Block className="h-10 w-24 rounded-lg" />
+        <div className="mb-4 shrink-0 space-y-3">
+          <div className="flex gap-2 overflow-hidden sm:flex-wrap">
+            {[128, 124, 150, 118].map((w, i) => (
+              <div key={i} className="h-10 shrink-0 rounded-md bg-bg-raised sm:h-[42px]" style={{ width: w }} />
+            ))}
+          </div>
+          <div className="h-10 rounded-md bg-bg-raised sm:h-[42px]" />
         </div>
 
-        {/* Filter chips */}
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          <Block className="h-9 w-24 rounded-full" />
-          <Block className="h-9 w-28 rounded-full" />
-          <Block className="h-9 w-32 rounded-full" />
-          <Block className="h-9 w-24 rounded-full" />
-          <Block className="ml-auto h-9 w-9 rounded-lg" />
-        </div>
-
-        {/* Order cards */}
-        <div className="space-y-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <OrderCardSkeleton key={i} />
-          ))}
+        <div className="mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-bg-raised">
+          <div className="shrink-0 border-b border-white/[0.07] px-4 py-2.5">
+            <Sk className="h-3.5 w-20" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="flex gap-6 px-4 py-3">
+              {[180, 50, 60, 50, 60, 50].map((w, i) => (
+                <Sk key={i} className="h-3" style={{ width: w }} />
+              ))}
+            </div>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-6 border-t border-white/[0.07] px-4 py-2.5">
+                <div className="flex w-[230px] shrink-0 items-center gap-3">
+                  <Sk className="h-9 w-9 shrink-0 rounded-md" />
+                  <div className="flex-1 space-y-1.5">
+                    <Sk className="h-3.5 w-32" />
+                    <Sk className="h-3 w-20" />
+                  </div>
+                </div>
+                <Sk className="h-6 w-24 shrink-0 rounded-md" />
+                <Sk className="h-6 w-24 shrink-0 rounded-full" />
+                <Sk className="h-4 w-14 shrink-0" />
+                <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                  <Sk className="h-6 w-6 rounded-full" />
+                  <Sk className="h-3.5 w-20" />
+                </div>
+                <Sk className="hidden h-3.5 w-12 shrink-0 md:block" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

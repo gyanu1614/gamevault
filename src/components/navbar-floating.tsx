@@ -1,23 +1,18 @@
 'use client'
 
-import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
-import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
-import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Search, User, LogOut, Menu, X, ArrowLeft, ChevronDown, ChevronRight, Settings, Store, Package, MessageSquare, MessagesSquare, PanelLeftOpen, PanelLeftClose, PlusCircle, Heart, Wallet, Star, List, Bell, BellDot, LayoutDashboard, Activity, Gauge, Sparkles, Shield, Coins, UserCircle2, Swords, Zap, Rocket, LifeBuoy ,
-  ShoppingCart,
-  LayoutGrid,
+import {
+  Search, Menu, X, ArrowLeft, ChevronRight, Settings, Store, Package, MessageSquare, PanelLeftOpen, PanelLeftClose, Wallet, LayoutDashboard, Activity, Coins, UserCircle2, Swords, Rocket, LifeBuoy, ShoppingCart, LayoutGrid,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
-import BecomeSellerCta from '@/components/account/BecomeSellerCta'
 import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
@@ -31,7 +26,20 @@ import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import {
+  BellIcon,
+  ChatCircleDotsIcon,
+  ReceiptIcon,
+  CaretDownIcon,
+  CaretRightIcon,
+  MagnifyingGlassIcon,
+  XIcon,
+} from '@phosphor-icons/react'
+import { NavIconButton, NavPanel, NavPanelHeader } from '@/components/navbar/NavChrome'
+import { ProfileMenu } from '@/components/navbar/ProfileMenu'
+import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 
 // 5 fixed nav tabs with their DB type keys
 /* Hamburger root on /account/* — the sidebar's destinations, flat.
@@ -42,7 +50,6 @@ const ACCOUNT_MENU_ITEMS = [
   { label: 'Offers', href: '/account/listings', Icon: Package, sellerOnly: true },
   { label: 'Messages', href: '/account/messages', Icon: MessageSquare, sellerOnly: false },
   { label: 'Wallet', href: '/account/wallet', Icon: Wallet, sellerOnly: false },
-  { label: 'Wishlist', href: '/account/wishlist', Icon: Heart, sellerOnly: false },
   { label: 'Founding HQ', href: '/founding', Icon: Rocket, sellerOnly: false },
   { label: 'Settings', href: '/account/settings', Icon: Settings, sellerOnly: false },
 ] as const
@@ -51,7 +58,6 @@ const NAV_TABS = [
   { id: 'currency', label: 'Currency', type: 'currency' },
   { id: 'accounts', label: 'Accounts', type: 'account' },
   { id: 'items',    label: 'Items',    type: 'items' },
-  { id: 'top-up',  label: 'Top Up',   type: 'top_up' },
   { id: 'boosting', label: 'Boosting', type: 'service' },
 ]
 
@@ -60,7 +66,6 @@ const NAV_TAB_ICONS: Record<string, React.ElementType> = {
   currency: Coins,
   accounts: UserCircle2,
   items: Swords,
-  'top-up': Zap,
   boosting: Rocket,
 }
 
@@ -74,7 +79,6 @@ const MOBILE_SERVICE_ITEMS = [
   { id: 'currency', label: 'Currencies', description: 'Cheapest game currency deals', icon: 'currency', tabId: 'currency' },
   { id: 'items', label: 'Items', description: 'Unlock in-game items fast', icon: 'items', tabId: 'items' },
   { id: 'accounts', label: 'Accounts', description: 'Get game accounts instantly', icon: 'accounts', tabId: 'accounts' },
-  { id: 'top-up', label: 'Top Ups', description: 'Top-up in-game balance instantly', icon: 'top-up', tabId: 'top-up' },
   { id: 'boosting', label: 'Boosting', description: 'Rank up fast with pro boosting', icon: 'boosting', tabId: 'boosting' },
 ] as const
 
@@ -101,15 +105,12 @@ function MobileServiceRow({
 }) {
   const content = (
     <>
-      {/* Dark recessed tile + quiet platinum glyph — the premium engraved
-          treatment (F). Material lives in the tile; the icon stays a
-          restrained near-white. Drop-in-replaceable house category SVG
-          (public/icons/categories) tinted via CSS mask. */}
-      <span className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[12px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)]">
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
+      {/* Neutral tile, the house category glyph in soft white (tinted via
+          CSS mask, drop-in-replaceable from public/icons/categories). */}
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-bg-overlay">
         <span
           aria-hidden
-          className="relative h-[22px] w-[22px] bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+          className="h-5 w-5 bg-white/85"
           style={{
             maskImage: `url(/icons/categories/${item.icon}.svg)`,
             WebkitMaskImage: `url(/icons/categories/${item.icon}.svg)`,
@@ -123,14 +124,14 @@ function MobileServiceRow({
         />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-white transition-colors group-hover:text-white">
+        <span className="block truncate text-[15px] font-medium leading-tight text-white">
           {item.label}
         </span>
-        <span className="mt-0.5 block truncate text-[12px] leading-tight text-white/55">
+        <span className="mt-0.5 block truncate text-[12.5px] leading-tight text-text-tertiary">
           {item.description}
         </span>
       </span>
-      <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-white/65 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white" />
+      <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
     </>
   )
 
@@ -139,7 +140,7 @@ function MobileServiceRow({
       <button
         type="button"
         onClick={() => onSelect(item.tabId!)}
-        className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+        className="group flex min-h-[64px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
       >
         {content}
       </button>
@@ -150,7 +151,7 @@ function MobileServiceRow({
     <Link
       href={item.href ?? '/browse'}
       onClick={onClose}
-      className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+      className="group flex min-h-[64px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
     >
       {content}
     </Link>
@@ -168,37 +169,28 @@ function MobileServiceRow({
  * mount so the visual transition is identical to what scrolling
  * triggers.
  */
-/** V62 — Live-order row (activity dropdown). Status pill uses token
- *  tints; 'delivering' gets the lime treatment. */
+/** Live-order row (Live Orders panel): game icon, title, the orders-list
+ *  status pill (shared labels), total. Fill-only row. */
 function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => void }) {
-  const statusColors: Record<string, string> = {
-    pending: 'bg-warning-bg text-warning',
-    paid: 'bg-info-bg text-info',
-    processing: 'bg-info-bg text-info',
-    delivering: 'bg-lime-tint-bg text-lime-text',
-  }
-  const statusText: Record<string, string> = {
-    pending: 'Awaiting Payment',
-    paid: 'Payment Confirmed',
-    processing: 'Payment Confirmed',
-  }
   return (
     <Link
       href={`/account/orders/${order.id}`}
       onClick={onNavigate}
-      className="flex items-start gap-3 rounded-md border border-border-subtle bg-white/[0.03] p-3 transition-colors hover:border-border-default hover:bg-white/[0.06]"
+      className="group flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/[0.05] focus-visible:bg-white/[0.05] focus-visible:outline-none"
     >
-      <div className="grid h-9 w-9 flex-shrink-0 place-items-center overflow-hidden rounded-md border border-border-subtle bg-bg-overlay">
+      <div className="grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.06]">
         {(order.listing as any)?.game?.slug ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={getGameIcon((order.listing as any).game.slug)}
             alt=""
             aria-hidden
+            width={40}
+            height={40}
             className="h-full w-full object-cover"
           />
         ) : (
-          <Package className="h-4 w-4 text-lime-text" />
+          <ReceiptIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -206,14 +198,13 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
           {(order.listing as any)?.title || 'Order'}
         </p>
         <div className="mt-1 flex items-center gap-2">
-          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize', statusColors[order.status] || 'bg-white/10 text-text-secondary')}>
-            {statusText[order.status] ?? order.status}
-          </span>
-          <span className="text-xs tabular-nums text-text-tertiary">
+          <OrderStatusPill status={order.status} className="h-5 px-1.5 text-[11px]" />
+          <span className="text-[12.5px] tabular-nums text-text-tertiary">
             ${Number(order.total_amount).toFixed(2)}
           </span>
         </div>
       </div>
+      <CaretRightIcon size={12} weight="bold" aria-hidden className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5" />
     </Link>
   )
 }
@@ -244,6 +235,15 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     window.addEventListener('dm:account-sidebar-state', onState)
     return () => window.removeEventListener('dm:account-sidebar-state', onState)
   }, [])
+
+  // The account sidebar's Logout asks the navbar to run the sign-out flow.
+  const logoutRef = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    const onLogout = () => { void logoutRef.current?.() }
+    window.addEventListener('dm:logout', onLogout)
+    return () => window.removeEventListener('dm:logout', onLogout)
+  }, [])
+
   // Mobile: the bar floats transparent over the hero at the very top ONLY
   // on the homepage. Marketplace/category pages (which have a sub-navbar)
   // keep the solid bar so the two-bar unit reads as one solid block.
@@ -824,6 +824,113 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     return null
   }, [pathname, gamesByType])
 
+  // Sign-out, shared by the user menu below and the account sidebar's Logout
+  // (which dispatches `dm:logout`, the same way it toggles via
+  // `dm:toggle-account-sidebar`), so both show the same overlay and redirect.
+  const performLogout = async () => {
+    // V21/P5.b + V23 — Sign-out flow:
+    //  1. Show full-screen blur+loader overlay
+    //  2. NAVIGATE FIRST (for protected paths),
+    //     THEN sign out. Order matters: signOut()
+    //     flips the auth state to logged-out, and
+    //     if we're still on a protected page like
+    //     /account/orders the page re-renders in
+    //     place as logged-out (collapsing to its
+    //     empty/footer fallback) — that's the
+    //     "see the bottom of the page" flash the
+    //     user reported. By starting the redirect
+    //     to '/' BEFORE awaiting signOut, we're
+    //     already leaving the protected page when
+    //     the state flips, so it never paints
+    //     logged-out in place.
+    //  3. Public paths just refresh in place
+    //     (scroll to top first so the user lands
+    //     cleanly, not stranded mid-scroll).
+    // The overlay stays up the whole time.
+    setIsLoggingOut(true)
+    setUserMenuOpen(false)
+
+    // Raise the cross-component logout flag so the
+    // protected layouts (e.g. /account) skip their
+    // "redirect to /login if !user" effect while we
+    // drive the user home — otherwise the two race
+    // and flash the login screen mid-logout.
+    beginLogout()
+
+    // Shared source of truth with the middleware
+    // (src/lib/auth/protected-routes.ts) so the two
+    // can't drift — logging out on a page you can no
+    // longer access sends you home.
+    const isProtected = isProtectedPath(pathname)
+
+    // Scroll to top BEFORE anything paints so the
+    // user never sees the page mid-scroll.
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+    }
+
+    // Kick off the redirect home for protected
+    // pages immediately — before signOut flips the
+    // auth state and re-renders the page in place.
+    // Arm the navigation-settle gate so the opaque
+    // overlay is lifted by the effect above (when
+    // pathname === '/' has painted), not by the
+    // blind timer — which could lift before home
+    // mounts and pop content in.
+    if (isProtected) {
+      setAwaitingHomePaint(true)
+      router.replace('/')
+    }
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+      if (error) console.error('Logout error:', error)
+
+      queryClient.clear()
+
+      // Public paths stay put — refresh in place so
+      // server components re-render logged-out.
+      if (!isProtected) {
+        router.refresh()
+      }
+
+      try {
+        const { toast } = await import('sonner')
+        toast.success('Signed out')
+      } catch {}
+
+      if (isProtected) {
+        // Primary lift is the navigation-settle
+        // effect (waits for home to paint). This
+        // timer is only a SAFETY CAP so the overlay
+        // can never get stuck if the route never
+        // settles on '/'. Generous (1500ms) so it
+        // doesn't pre-empt a slightly slow home mount.
+        setTimeout(() => {
+          setIsLoggingOut(false)
+          setAwaitingHomePaint(false)
+        }, 1500)
+      } else {
+        // Public path: page stays put + refreshed,
+        // so a short hold to let it re-render is all
+        // that's needed.
+        setTimeout(() => setIsLoggingOut(false), 350)
+      }
+    } catch (error) {
+      console.error('Logout failed:', error)
+      if (!isProtected) {
+        router.replace('/')
+      }
+      setTimeout(() => {
+        setIsLoggingOut(false)
+        setAwaitingHomePaint(false)
+      }, 1500)
+    }
+  }
+  logoutRef.current = performLogout
+
   return (
     <>
       {/* V21/P5.b + V23 — Full-screen loader during signOut. Sits above
@@ -1035,6 +1142,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     gameEntries={gamesByType[tab.type] || []}
                     isActive={activeDropdown === tab.id}
                     isCurrent={currentNavTabId === tab.id}
+                    showPill={activeDropdown ? activeDropdown === tab.id : currentNavTabId === tab.id}
                     onHoverStart={() => openDropdown(tab.id)}
                     onHoverEnd={() => closeDropdown()}
                     onSelect={() => setActiveDropdown(null)}
@@ -1090,278 +1198,206 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   {/* h-10 w-10 to match the real bell/messages/activity
                       Buttons (40×40) so the navbar width is identical
                       before and after auth resolves. */}
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
+                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
+                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
                 </>
               )}
 
               {user && (
                 <>
-                  {/* Mobile chat shortcut — straight to Messages (parity with
-                      the reference top bar); desktop keeps its existing entry
-                      points, so lg:hidden. */}
-                  <Link
+                  {/* Phones: straight to Messages (desktop has its own link
+                      below, after the bell). */}
+                  <NavIconButton
                     href="/account/messages"
-                    aria-label="Messages"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-gray-100 transition-colors hover:bg-white/15 hover:text-white lg:hidden"
-                  >
-                    <MessagesSquare className="h-[19px] w-[19px]" />
-                  </Link>
+                    icon={ChatCircleDotsIcon}
+                    label="Messages"
+                    count={unreadCount}
+                    className="lg:hidden"
+                  />
 
-                  {/* Notifications Dropdown */}
+                  {/* Notifications */}
                   <div className="relative" data-dropdown>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
+                    <NavIconButton
+                      icon={BellIcon}
+                      label="Notifications"
+                      count={unreadNotificationCount}
+                      active={notificationsOpen}
                       onClick={() => {
                         setNotificationsOpen(!notificationsOpen)
                         setActivityOpen(false)
                         setUserMenuOpen(false)
                         setMobileMenuOpen(false)
                       }}
-                    >
-                      {unreadNotificationCount > 0 ? (
-                        <BellDot className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
-                      ) : (
-                        <Bell className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
-                      )}
-                      {unreadNotificationCount > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
-                          {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
-                        </span>
-                      )}
-                    </Button>
+                    />
 
-                    {/* V61 — CSS entry animation (framer stalls mid-fade
-                        under heavy trees and strands the panel half-visible;
-                        same fix as the admin header). */}
                     {notificationsOpen && (
-                      /* App-shell (<sm): ATTACHED sheet — full-width flush
-                         under the 60px bar, square top so the bar's hairline
-                         reads as the seam, rounded bottom, page dimmed by the
-                         scrim below. sm+ keeps the anchored desktop popover
-                         unchanged. */
-                      <>
-                        <div
-                          aria-hidden
-                          onClick={() => setNotificationsOpen(false)}
-                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
+                      <NavPanel onClose={() => setNotificationsOpen(false)}>
+                        <NavPanelHeader
+                          title="Notifications"
+                          aside={
+                            unreadNotificationCount > 0 ? (
+                              <span className="inline-flex h-6 items-center rounded-md bg-white/[0.07] px-2 text-[12px] font-semibold tabular-nums text-text-secondary">
+                                {unreadNotificationCount} Unread
+                              </span>
+                            ) : undefined
+                          }
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
-                          {/* V61 — Marketplace glass panel (was flat black):
-                              near-opaque dark surface + top sheen, roomier
-                              type and spacing. Capped to the dynamic viewport
-                              so short phones scroll the list internally. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
-                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
-                            {/* Header - hairline separator spans the full panel width */}
-                            <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
-                              <h3 className="text-[16px] font-bold text-text-primary">Notifications</h3>
-                              {unreadNotificationCount > 0 && (
-                                <span className="inline-flex h-6 items-center rounded-md border border-lime-tint-border bg-lime-tint-bg px-2 text-[11.5px] font-bold text-lime-text">
-                                  {unreadNotificationCount} unread
-                                </span>
-                              )}
-                            </div>
 
-                            {/* Notifications List */}
-                            {recentNotifications.length === 0 ? (
-                              <div className="relative py-14 text-center">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="/characters/sleepy-pup.webp"
-                                  alt=""
-                                  aria-hidden
-                                  className="mx-auto mb-3 h-28 w-auto select-none object-contain"
-                                />
-                                <p className="text-[14.5px] font-semibold text-text-primary">You&apos;re all caught up!</p>
-                                <p className="mt-1 text-[12.5px] text-text-tertiary">No new notifications</p>
-                              </div>
-                            ) : (
-                              <div className="relative min-h-0 max-h-[420px] space-y-2 overflow-y-auto overscroll-contain pr-1">
-                                {recentNotifications.map((notification: any) => (
-                                  <Link
-                                    key={notification.id}
-                                    href={safeInternalPath(notification.link)}
-                                    onClick={() => {
-                                      markAsRead(notification.id)
-                                      setNotificationsOpen(false)
-                                    }}
-                                    className="block rounded-md border border-white/[0.06] bg-white/[0.03] p-3.5 transition-colors hover:border-[rgba(86,184,127,0.20)] hover:bg-[rgba(86,184,127,0.10)]"
-                                  >
-                                    <div className="flex items-start gap-3">
-                                      <div className="flex-shrink-0">
-                                        <div className="grid h-9 w-9 place-items-center rounded-md border border-[rgba(86,184,127,0.18)] bg-[rgba(86,184,127,0.12)]">
-                                          <Bell className="h-4 w-4 text-lime-text" />
-                                        </div>
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="truncate text-[14px] font-semibold text-text-primary">
-                                          {notification.title}
-                                        </p>
-                                        <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-relaxed text-text-secondary">
-                                          {notification.message}
-                                        </p>
-                                        <p className="mt-1.5 text-[11.5px] text-text-tertiary">
-                                          {new Date(notification.created_at).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: 'numeric',
-                                            minute: '2-digit',
-                                          })}
-                                        </p>
-                                      </div>
-                                      <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                                        <button
-                                          type="button"
-                                          aria-label="Dismiss notification"
-                                          className="-my-1 -mr-1 grid h-8 w-8 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/10 hover:text-text-primary"
-                                          onPointerDown={(e) => e.stopPropagation()}
-                                          onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            markAsRead(notification.id)
-                                          }}
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </button>
-                                        <span aria-hidden className="mr-2 h-2 w-2 rounded-full bg-lime shadow-[0_0_8px_rgba(86,184,127,0.8)]" />
-                                      </div>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* View All Button */}
-                            <Link
-                              href="/notifications"
-                              className="relative mt-3 flex h-10 shrink-0 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-[13px] font-semibold text-text-primary transition-colors hover:border-border-strong hover:bg-bg-overlay-2"
-                              onClick={() => setNotificationsOpen(false)}
-                            >
-                              View All Notifications
-                            </Link>
+                        {recentNotifications.length === 0 ? (
+                          <div className="py-12 text-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src="/characters/sleepy-pup.webp"
+                              alt=""
+                              aria-hidden
+                              width={112}
+                              height={112}
+                              className="mx-auto mb-3 h-28 w-auto select-none object-contain"
+                            />
+                            <p className="text-[14.5px] font-semibold text-text-primary">You&apos;re all caught up!</p>
+                            <p className="mt-1 text-[13px] text-text-tertiary">No new notifications</p>
                           </div>
+                        ) : (
+                          <div className="min-h-0 max-h-[420px] space-y-0.5 overflow-y-auto overscroll-contain p-2">
+                            {recentNotifications.map((notification: any) => (
+                              <div key={notification.id} className="group relative rounded-lg transition-colors hover:bg-white/[0.05]">
+                                <Link
+                                  href={safeInternalPath(notification.link)}
+                                  onClick={() => {
+                                    markAsRead(notification.id)
+                                    setNotificationsOpen(false)
+                                  }}
+                                  className="flex items-start gap-3 rounded-lg p-2.5 pr-11 focus-visible:bg-white/[0.05] focus-visible:outline-none"
+                                >
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-text-secondary">
+                                    <BellIcon size={17} weight="bold" aria-hidden />
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[14px] font-semibold text-text-primary">
+                                      {notification.title}
+                                    </span>
+                                    <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-text-secondary">
+                                      {notification.message}
+                                    </span>
+                                    <span className="mt-1 block text-[12px] text-text-tertiary">
+                                      {new Date(notification.created_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                  </span>
+                                </Link>
+                                {/* Dismiss: a sibling of the link (a button
+                                    can't live inside an anchor). Shows on
+                                    hover/focus with a mouse; always on touch. */}
+                                <button
+                                  type="button"
+                                  aria-label="Dismiss notification"
+                                  className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-md text-text-tertiary transition-[opacity,background-color,color] hover:bg-white/10 hover:text-text-primary focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                  onClick={() => markAsRead(notification.id)}
+                                >
+                                  <XIcon size={14} weight="bold" aria-hidden />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="shrink-0 border-t border-white/[0.07] p-2">
+                          <Link
+                            href="/notifications"
+                            onClick={() => setNotificationsOpen(false)}
+                            className="flex h-10 items-center justify-center rounded-lg text-[13.5px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+                          >
+                            View All Notifications
+                          </Link>
                         </div>
-                      </>
+                      </NavPanel>
                     )}
                   </div>
 
-                  {/* Messages — desktop only; on phones the mobile bar keeps
-                      just [bell][avatar] (messages live in the menu/tab bar). */}
-                  <Link href="/account/messages" className="hidden lg:block">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
-                    >
-                      <MessagesSquare className="h-[19px] w-[19px]" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </Button>
-                  </Link>
+                  {/* Messages — desktop (phones use the shortcut above). */}
+                  <NavIconButton
+                    href="/account/messages"
+                    icon={ChatCircleDotsIcon}
+                    label="Messages"
+                    count={unreadCount}
+                    className="hidden lg:grid"
+                  />
 
-                  {/* Activity Dropdown — now shown on mobile too (floating
-                      chrome: notifications + activity + avatar). */}
+                  {/* Live Orders */}
                   <div className="relative" data-dropdown>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative h-10 w-10 rounded-full text-gray-100 hover:bg-white/15 hover:text-white max-lg:h-9 max-lg:w-9"
+                    <NavIconButton
+                      icon={ReceiptIcon}
+                      label="Live Orders"
+                      count={totalActiveOrders}
+                      active={activityOpen}
                       onClick={() => {
                         setActivityOpen(!activityOpen)
                         setNotificationsOpen(false)
                         setUserMenuOpen(false)
                         setMobileMenuOpen(false)
                       }}
-                    >
-                      <Package className="h-[21px] w-[21px] max-lg:h-[19px] max-lg:w-[19px]" />
-                      {totalActiveOrders > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse">
-                          {totalActiveOrders > 9 ? '9+' : totalActiveOrders}
-                        </span>
-                      )}
-                    </Button>
+                    />
 
                     {activityOpen && (
-                      /* App-shell (<sm): ATTACHED sheet (see Notifications
-                         above); sm+ keeps the anchored desktop popover. */
-                      <>
-                        <div
-                          aria-hidden
-                          onClick={() => setActivityOpen(false)}
-                          className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
+                      <NavPanel onClose={() => setActivityOpen(false)}>
+                        <NavPanelHeader
+                          title="Live Orders"
+                          aside={
+                            <Link
+                              href="/account/orders"
+                              onClick={() => setActivityOpen(false)}
+                              className="group inline-flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+                            >
+                              View All
+                              <CaretRightIcon size={11} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
+                            </Link>
+                          }
                         />
-                        <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-[27px] sm:w-[480px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
-                          {/* V61 — Same glass panel as Notifications. */}
-                          <div className="relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] p-5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
-                            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
-                            {/* Header - hairline separator spans the full panel width */}
-                            <div className="relative -mx-5 mb-4 flex shrink-0 items-center justify-between border-b border-border-subtle px-5 pb-3.5">
-                              <h3 className="text-[16px] font-bold text-text-primary">Live Orders</h3>
-                              <Link
-                                href="/account/orders"
-                                className="text-[12.5px] font-semibold text-lime-text transition-opacity hover:opacity-80"
-                                onClick={() => setActivityOpen(false)}
-                              >
-                                View All
-                              </Link>
-                            </div>
 
-                            {/* V62 — No tabs: one view. Buying stacks above
-                                Selling; a section renders only when it has
-                                orders, so buyers see just Buying, sellers see
-                                just Selling, and dual-role users see both. */}
-                            {activeOrders.buying.length === 0 && activeOrders.selling.length === 0 ? (
-                              <div className="relative py-14 text-center">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="/characters/box-cat.webp"
-                                  alt=""
-                                  aria-hidden
-                                  className="mx-auto mb-3 h-28 w-auto select-none object-contain"
-                                />
-                                <p className="text-[14.5px] font-semibold text-text-primary">No active orders</p>
-                                <p className="mt-1 text-[12.5px] text-text-tertiary">Orders in progress will appear here</p>
-                              </div>
-                            ) : (
-                              <div className="relative min-h-0 max-h-[440px] space-y-4 overflow-y-auto overscroll-contain pr-1">
-                                {activeOrders.buying.length > 0 && (
-                                  <div>
-                                    <div className="mb-2 flex items-center gap-2">
-                                      <span className="text-[14px] font-bold text-text-primary">Buying</span>
-                                      <span className="text-[12.5px] font-semibold text-text-tertiary">({activeOrders.buying.length})</span>
-                                    </div>
-                                    <div className="space-y-2">
-                                      {activeOrders.buying.map((order: any) => (
-                                        <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {activeOrders.selling.length > 0 && (
-                                  <div className={cn(activeOrders.buying.length > 0 && 'border-t border-border-subtle pt-4')}>
-                                    <div className="mb-2 flex items-center gap-2">
-                                      <span className="text-[14px] font-bold text-text-primary">Selling</span>
-                                      <span className="text-[12.5px] font-semibold text-text-tertiary">({activeOrders.selling.length})</span>
-                                    </div>
-                                    <div className="space-y-2">
-                                      {activeOrders.selling.map((order: any) => (
-                                        <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                        {/* One view: Buying above Selling; a section renders
+                            only when it has orders. */}
+                        {activeOrders.buying.length === 0 && activeOrders.selling.length === 0 ? (
+                          <div className="py-12 text-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src="/characters/box-cat.webp"
+                              alt=""
+                              aria-hidden
+                              width={112}
+                              height={112}
+                              className="mx-auto mb-3 h-28 w-auto select-none object-contain"
+                            />
+                            <p className="text-[14.5px] font-semibold text-text-primary">No active orders</p>
+                            <p className="mt-1 text-[13px] text-text-tertiary">Orders in progress will appear here</p>
                           </div>
-                        </div>
-                      </>
+                        ) : (
+                          <div className="min-h-0 max-h-[440px] overflow-y-auto overscroll-contain p-2">
+                            {[
+                              { title: 'Buying', orders: activeOrders.buying },
+                              { title: 'Selling', orders: activeOrders.selling },
+                            ]
+                              .filter((section) => section.orders.length > 0)
+                              .map((section, i) => (
+                                <div key={section.title} className={cn(i > 0 && 'mt-1.5 border-t border-white/[0.07] pt-1.5')}>
+                                  <div className="flex items-center gap-1.5 px-2.5 pb-1 pt-1.5 text-[13px] font-semibold text-text-tertiary">
+                                    {section.title}
+                                    <span className="tabular-nums">({section.orders.length})</span>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {section.orders.map((order: any) => (
+                                      <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </NavPanel>
                     )}
                   </div>
                 </>
@@ -1379,489 +1415,63 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 // navbar doesn't grow when the user data resolves. `!user`
                 // guard so a cached-then-fresh hydration doesn't flash the
                 // skeleton over the real avatar.
-                <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                <div className="h-10 w-10 animate-pulse rounded-full bg-white/10 max-lg:h-9 max-lg:w-9 lg:w-[62px] lg:rounded-lg" />
               ) : user ? (
                 <div className="relative" data-dropdown>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full hover:bg-white/10 max-lg:h-9 max-lg:w-9"
+                  {/* Avatar + caret on desktop, avatar alone on phones. */}
+                  <button
+                    type="button"
+                    aria-label="Account menu"
+                    aria-expanded={userMenuOpen}
                     onClick={() => {
                       setUserMenuOpen(!userMenuOpen)
                       setNotificationsOpen(false)
                       setActivityOpen(false)
                       setMobileMenuOpen(false)
                     }}
+                    className={cn(
+                      'group flex h-10 items-center gap-1.5 rounded-lg p-1 transition-[background-color,transform] duration-150 hover:bg-white/[0.07] active:scale-[0.96] lg:pr-2',
+                      'max-lg:h-9 max-lg:w-9 max-lg:justify-center max-lg:rounded-full max-lg:p-0',
+                      userMenuOpen && 'bg-white/[0.09]',
+                    )}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-                      alt={user.profile?.username || 'User'}
-                      className="h-9 w-9 rounded-full ring-2 ring-[color-mix(in_srgb,var(--primary)_50%,transparent)] max-lg:h-8 max-lg:w-8"
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15"
                     />
-                  </Button>
+                    <CaretDownIcon
+                      size={12}
+                      weight="bold"
+                      aria-hidden
+                      className={cn(
+                        'hidden text-white/55 transition-[transform,color] duration-200 group-hover:text-white/85 lg:block',
+                        userMenuOpen && 'rotate-180 text-white/85',
+                      )}
+                    />
+                  </button>
 
                   {userMenuOpen && (
-                    /* App-shell (<sm): ATTACHED sheet — full-width flush under
-                       the 60px bar on the shared forest surface, page dimmed
-                       behind. sm+ keeps the anchored desktop popover
-                       unchanged. */
-                    <>
-                      <div
-                        aria-hidden
-                        onClick={() => setUserMenuOpen(false)}
-                        className="animate-fade-in fixed left-0 right-0 top-full h-[100dvh] bg-black/60 sm:hidden"
+                    <NavPanel
+                      onClose={() => setUserMenuOpen(false)}
+                      width="sm:w-[340px]"
+                      position="sm:-right-6 sm:mt-[25px]"
+                    >
+                      <ProfileMenu
+                        user={user}
+                        isAdmin={isAdmin}
+                        walletBalance={navWalletBalance != null ? Number(navWalletBalance.available_balance ?? 0) : null}
+                        unreadMessages={unreadCount}
+                        offlineMode={offlineMode}
+                        pendingOffline={pendingOffline}
+                        onToggleOffline={toggleOfflineMode}
+                        onNavigate={() => setUserMenuOpen(false)}
+                        onLogout={() => void performLogout()}
                       />
-                      <div className="fixed inset-x-0 top-full sm:absolute sm:inset-x-auto sm:-right-6 sm:top-full sm:mt-[25px] sm:w-[360px] sm:max-w-[92vw] animate-in fade-in-0 sm:zoom-in-95 slide-in-from-top-2 duration-200 max-sm:animation-duration-[250ms]">
-                        {/* V61 — Marketplace glass panel: near-opaque dark
-                            surface + top sheen, wider (360px) with roomier
-                            rows so the menu reads as a proper panel, not a
-                            cramped context menu. dvh (not vh) cap so the
-                            bottom rows never hide behind iOS Safari's
-                            toolbar. */}
-                        <div className="relative overflow-hidden rounded-lg border border-border-default bg-[#1D1E23] p-2 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.85)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-14 before:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)] before:content-[''] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain max-sm:rounded-none max-sm:rounded-b-lg max-sm:border-x-0 max-sm:border-t-0 max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)]">
-                          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(to_bottom,rgba(163,230,53,0.06),transparent)]" />
-                          {/* User Info card */}
-                          <div className="relative border-b border-border-subtle p-2 pb-2">
-                            {user.isApprovedSeller ? (
-                              // Outer container — shared bg/border
-                              <div className="flex items-center gap-2.5 w-full rounded-md bg-white/[0.04] border border-border-subtle hover:border-border-strong transition-all overflow-hidden group/card">
-                                {/* Left — shop link */}
-                                <Link
-                                  href={`/shop/${sellerShopSlug(user.profile) ?? ''}`}
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 flex-1 min-w-0 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group/link"
-                                >
-                                  <img
-                                    src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-                                    alt={user.profile?.username || 'User'}
-                                    className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10 group-hover/link:ring-[#56B87F66] transition-all"
-                                  />
-                                  <div className="min-w-0">
-                                    {/* Name + blue verified badge */}
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="font-bold text-text-primary text-[15px] truncate group-hover/link:text-lime-text transition-colors leading-tight">
-                                        {sellerDisplayName(user.profile)}
-                                      </span>
-                                      {user.profile?.is_verified && <VerifiedBadge size={16} />}
-                                    </div>
-                                    {/* Tier — logo + "{Tier} Seller", links to the tier page.
-                                        role=link (not <a>) since this sits inside the shop Link;
-                                        stopPropagation so it navigates to tiers, not the shop. */}
-                                    {(() => {
-                                      const def = tierByKey(user.profile?.seller_tier || DEFAULT_TIER)
-                                      return (
-                                        <span
-                                          role="link"
-                                          tabIndex={0}
-                                          onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            setUserMenuOpen(false)
-                                            router.push('/account/tiers')
-                                          }}
-                                          className={cn(
-                                            'mt-1 inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold hover:underline',
-                                            def.colors.text,
-                                          )}
-                                        >
-                                          <SellerTierBadge tier={def.key} size={16} float={false} />
-                                          {def.label} Seller
-                                        </span>
-                                      )
-                                    })()}
-                                  </div>
-                                </Link>
-                                {/* Right — Sell button (pill CTA) */}
-                                <div className="flex-shrink-0 pr-2">
-                                  <Link
-                                    href="/sell/new"
-                                    onClick={() => setUserMenuOpen(false)}
-                                    className="flex items-center gap-1.5 rounded-lg bg-lime px-3 py-1.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover whitespace-nowrap"
-                                  >
-                                    <PlusCircle className="h-4 w-4" />
-                                    Sell
-                                  </Link>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-3 w-full rounded-md px-3 py-2.5 bg-white/[0.04] border border-border-subtle">
-                                {/* V66 — Buyer identity card: Rookie rank chip +
-                                    member-since line. */}
-                                <img
-                                  src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-                                  alt={user.profile?.username || 'User'}
-                                  className="h-10 w-10 rounded-full flex-shrink-0 object-cover ring-2 ring-white/10"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="truncate font-bold text-text-primary text-[15px] leading-tight">
-                                      {user.profile?.username || 'User'}
-                                    </span>
-                                    <span className="inline-flex flex-none items-center gap-1 rounded-md border border-[rgba(96,165,250,0.3)] bg-info-bg px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-info">
-                                      <Sparkles className="h-2.5 w-2.5" />
-                                      Rookie
-                                    </span>
-                                  </div>
-                                  <div className="mt-0.5 text-[11.5px] text-text-tertiary">
-                                    Member since{' '}
-                                    {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Menu Items */}
-                          <div className="relative py-1.5">
-
-                            {/* Admin Panel - Admins Only */}
-                            {isAdmin && (
-                              <>
-                                <Link
-                                  href="/admin"
-                                  className="mb-1.5 flex items-center gap-3 rounded-md border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5 text-[14px] font-semibold text-lime-text transition-colors hover:border-lime"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Shield className="h-[18px] w-[18px]" />
-                                  Admin Panel
-                                </Link>
-                                <div className="my-1.5 h-px bg-border-subtle" />
-                              </>
-                            )}
-
-                            {/* V21/P7.ae — SELLER MENU. Order:
-                                Seller Dashboard → My Offers → My Orders →
-                                ─ → Messages, Feedback → ─ → Offline Mode
-                                toggle → ─ → Settings, Support.
-                                Icons are swappable mask SVGs in
-                                /public/assets/menu-icons/. */}
-                            {user.isApprovedSeller ? (
-                              <>
-                                {/* V21/P7.ag — Primary item: soft elevated
-                                    fill + lime icon, distinct from the
-                                    lime-bordered Admin Panel above and the
-                                    plain hover rows below. No more jarring
-                                    white block. */}
-                                <Link
-                                  href="/account/dashboard"
-                                  prefetch={false}
-                                  className="mb-1 flex items-center gap-3 rounded-md border border-border-subtle bg-white/[0.06] px-4 py-2.5 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.10]"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="seller-dashboard" className="text-lime-text" />
-                                  Seller Dashboard
-                                </Link>
-
-                                <div className="my-1.5 h-px bg-border-subtle" />
-
-                                {/* V63 — Money section: Orders, Offers, Wallet (with live
-                                    available balance on the right). */}
-                                <Link
-                                  href="/account/orders"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="my-orders" />
-                                  Orders
-                                </Link>
-
-                                <Link
-                                  href="/account/listings"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="my-offers" />
-                                  Offers
-                                </Link>
-
-                                <Link
-                                  href="/account/wallet"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Wallet className="h-[18px] w-[18px] shrink-0" />
-                                  Wallet
-                                  {navWalletBalance != null && (
-                                    <span className="ml-auto text-[13.5px] font-semibold tabular-nums text-text-primary">
-                                      ${Number(navWalletBalance.available_balance ?? 0).toFixed(2)}
-                                    </span>
-                                  )}
-                                </Link>
-
-                                <div className="my-1.5 h-px bg-border-subtle" />
-
-                                {/* Offline Mode toggle — pauses all offers
-                                    (hidden from buyers) until toggled back. */}
-                                <button
-                                  type="button"
-                                  role="switch"
-                                  aria-checked={offlineMode}
-                                  disabled={pendingOffline}
-                                  onClick={toggleOfflineMode}
-                                  className="flex w-full items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary disabled:opacity-60"
-                                >
-                                  <MenuIcon
-                                    name="power"
-                                    className={offlineMode ? 'text-amber-400' : 'text-text-secondary'}
-                                  />
-                                  <span className="flex min-w-0 flex-col items-start">
-                                    <span className="leading-tight">Offline Mode</span>
-                                    <span className="text-[11.5px] leading-tight text-text-tertiary">
-                                      {offlineMode ? 'Offers hidden from buyers' : 'Your offers are live'}
-                                    </span>
-                                  </span>
-                                  {/* Track */}
-                                  <span
-                                    className={cn(
-                                      'ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors',
-                                      offlineMode ? 'bg-amber-400/90' : 'bg-white/15',
-                                    )}
-                                  >
-                                    <span
-                                      className={cn(
-                                        'h-4 w-4 rounded-full bg-white shadow transition-transform',
-                                        offlineMode ? 'translate-x-4' : 'translate-x-0',
-                                      )}
-                                    />
-                                  </span>
-                                </button>
-
-                                <div className="my-1.5 h-px bg-border-subtle" />
-
-                                <Link
-                                  href="/account/messages"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="messages" />
-                                  Messages
-                                </Link>
-
-                                <Link
-                                  href="/account/reviews"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="feedback" />
-                                  Feedback
-                                </Link>
-
-                                <Link
-                                  href="/account/settings"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="settings" />
-                                  Settings
-                                </Link>
-
-                                <Link
-                                  href="/support"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MenuIcon name="support" />
-                                  Support
-                                </Link>
-                              </>
-                            ) : (
-                              /* BUYER / PENDING-SELLER MENU (unchanged flow) */
-                              <>
-                                <Link
-                                  href="/account/dashboard"
-                                  prefetch={false}
-                                  className="mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <LayoutDashboard className="h-[18px] w-[18px]" />
-                                  Dashboard
-                                </Link>
-
-                                <BecomeSellerCta
-                                  variant="menu"
-                                  onNavigate={() => setUserMenuOpen(false)}
-                                />
-
-                                <div className="my-1.5 h-px bg-border-subtle" />
-
-                                {/* V68 — Shopping section: Orders, Wishlist, Wallet */}
-                                <Link
-                                  href="/account/orders"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Package className="h-[18px] w-[18px]" />
-                                  Orders
-                                </Link>
-
-                                <Link
-                                  href="/account/wishlist"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Heart className="h-[18px] w-[18px]" />
-                                  Wishlist
-                                </Link>
-
-                                <Link
-                                  href="/account/wallet"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Wallet className="h-[18px] w-[18px]" />
-                                  Wallet
-                                </Link>
-
-                                <div className="my-1.5 h-px bg-border-subtle" />
-
-                                {/* V68 — Inbox + account management */}
-                                <Link
-                                  href="/account/messages"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <MessageSquare className="h-[18px] w-[18px]" />
-                                  Messages
-                                </Link>
-
-                                <Link
-                                  href="/account"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <User className="h-[18px] w-[18px]" />
-                                  Account
-                                </Link>
-
-                                <Link
-                                  href="/account/settings"
-                                  className="flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <Settings className="h-[18px] w-[18px]" />
-                                  Settings
-                                </Link>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Logout */}
-                          <div className="relative border-t border-border-subtle pt-1.5">
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-
-                                // V21/P5.b + V23 — Sign-out flow:
-                                //  1. Show full-screen blur+loader overlay
-                                //  2. NAVIGATE FIRST (for protected paths),
-                                //     THEN sign out. Order matters: signOut()
-                                //     flips the auth state to logged-out, and
-                                //     if we're still on a protected page like
-                                //     /account/orders the page re-renders in
-                                //     place as logged-out (collapsing to its
-                                //     empty/footer fallback) — that's the
-                                //     "see the bottom of the page" flash the
-                                //     user reported. By starting the redirect
-                                //     to '/' BEFORE awaiting signOut, we're
-                                //     already leaving the protected page when
-                                //     the state flips, so it never paints
-                                //     logged-out in place.
-                                //  3. Public paths just refresh in place
-                                //     (scroll to top first so the user lands
-                                //     cleanly, not stranded mid-scroll).
-                                // The overlay stays up the whole time.
-                                setIsLoggingOut(true)
-                                setUserMenuOpen(false)
-
-                                // Raise the cross-component logout flag so the
-                                // protected layouts (e.g. /account) skip their
-                                // "redirect to /login if !user" effect while we
-                                // drive the user home — otherwise the two race
-                                // and flash the login screen mid-logout.
-                                beginLogout()
-
-                                // Shared source of truth with the middleware
-                                // (src/lib/auth/protected-routes.ts) so the two
-                                // can't drift — logging out on a page you can no
-                                // longer access sends you home.
-                                const isProtected = isProtectedPath(pathname)
-
-                                // Scroll to top BEFORE anything paints so the
-                                // user never sees the page mid-scroll.
-                                if (typeof window !== 'undefined') {
-                                  window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-                                }
-
-                                // Kick off the redirect home for protected
-                                // pages immediately — before signOut flips the
-                                // auth state and re-renders the page in place.
-                                // Arm the navigation-settle gate so the opaque
-                                // overlay is lifted by the effect above (when
-                                // pathname === '/' has painted), not by the
-                                // blind timer — which could lift before home
-                                // mounts and pop content in.
-                                if (isProtected) {
-                                  setAwaitingHomePaint(true)
-                                  router.replace('/')
-                                }
-
-                                try {
-                                  const { createClient } = await import('@/lib/supabase/client')
-                                  const supabase = createClient()
-                                  const { error } = await supabase.auth.signOut()
-                                  if (error) console.error('Logout error:', error)
-
-                                  queryClient.clear()
-
-                                  // Public paths stay put — refresh in place so
-                                  // server components re-render logged-out.
-                                  if (!isProtected) {
-                                    router.refresh()
-                                  }
-
-                                  try {
-                                    const { toast } = await import('sonner')
-                                    toast.success('Signed out')
-                                  } catch {}
-
-                                  if (isProtected) {
-                                    // Primary lift is the navigation-settle
-                                    // effect (waits for home to paint). This
-                                    // timer is only a SAFETY CAP so the overlay
-                                    // can never get stuck if the route never
-                                    // settles on '/'. Generous (1500ms) so it
-                                    // doesn't pre-empt a slightly slow home mount.
-                                    setTimeout(() => {
-                                      setIsLoggingOut(false)
-                                      setAwaitingHomePaint(false)
-                                    }, 1500)
-                                  } else {
-                                    // Public path: page stays put + refreshed,
-                                    // so a short hold to let it re-render is all
-                                    // that's needed.
-                                    setTimeout(() => setIsLoggingOut(false), 350)
-                                  }
-                                } catch (error) {
-                                  console.error('Logout failed:', error)
-                                  if (!isProtected) {
-                                    router.replace('/')
-                                  }
-                                  setTimeout(() => {
-                                    setIsLoggingOut(false)
-                                    setAwaitingHomePaint(false)
-                                  }, 1500)
-                                }
-                              }}
-                              className="flex w-full items-center gap-3 rounded-md px-4 py-2 text-[14px] text-red-400 transition-colors hover:bg-red-500/10 cursor-pointer"
-                            >
-                              <LogOut className="h-[18px] w-[18px]" />
-                              Log Out
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
+                    </NavPanel>
                   )}
                 </div>
               ) : (
@@ -1934,13 +1544,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               className="fixed inset-0 z-[70] lg:hidden"
             >
               <div className="relative flex h-full flex-col overflow-hidden bg-[var(--color-bg-base)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(86,184,127,0.10),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
-                />
 
-                {/* Full-modal header — brand at left, unboxed X at right. */}
-                <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 pb-4 pt-4">
+                {/* Header: the navbar's own wordmark (white, no lime) + a close
+                    button on a quiet fill. Same 60px as the bar it replaces. */}
+                <div className="relative z-10 flex h-[60px] shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
                   <Link
                     href="/"
                     onClick={() => {
@@ -1950,10 +1557,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="flex items-center gap-2.5"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-white.avif" alt="DropMarket" width={96} height={96} className="h-9 w-9" />
-                    <span className="font-display text-[20px] font-extrabold tracking-[-0.03em] text-white">
-                      Drop<span className="text-lime-text">Market</span>
-                    </span>
+                    <img src="/brand/logo-mark-white.avif" alt="" width={96} height={96} className="h-7 w-7" />
+                    <span className="text-[16px] font-bold tracking-[-0.01em] text-white">DropMarket</span>
                   </Link>
                   <button
                     type="button"
@@ -1962,9 +1567,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       setMobileMenuTab(null)
                     }}
                     aria-label="Close menu"
-                    className="grid h-10 w-10 place-items-center text-white/55 transition-colors hover:text-white active:scale-95"
+                    className="grid h-10 w-10 place-items-center rounded-md bg-white/[0.06] text-white/75 transition-[background-color,color,transform] hover:bg-white/[0.10] hover:text-white active:scale-95"
                   >
-                    <X aria-hidden className="h-7 w-7" strokeWidth={1.8} />
+                    <X aria-hidden className="h-5 w-5" strokeWidth={2} />
                   </button>
                 </div>
 
@@ -1977,197 +1582,200 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
                     )}
                   >
+                    <RevealGroup className="space-y-7">
                     {/* ACCOUNT ROOT — retained for the account-aware menu path. */}
                     {menuRoot === 'account' && (
-                      <>
-                        <div className="mb-4">
-                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">My Account</h2>
-                          <p className="mt-0.5 text-[12px] text-white/50">Manage your DropMarket account</p>
-                        </div>
-                        <div className="divide-y divide-white/[0.06]">
-                          {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
-                            ({ label, href, Icon }) => (
-                              <Link
-                                key={href}
-                                href={href}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="group flex min-h-[58px] w-full items-center gap-3 text-left transition-colors hover:bg-white/[0.035]"
-                              >
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
-                                  <Icon className="h-[18px] w-[18px] text-[#3d9bff]" />
-                                </span>
-                                <span className="flex-1 truncate text-[14px] font-semibold text-white">{label}</span>
-                                <ChevronRight className="h-4 w-4 text-white/60" />
-                              </Link>
-                            ),
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setMenuRoot('browse')}
-                          className="group mt-5 flex min-h-[58px] w-full items-center gap-3 border-t border-white/[0.08] pt-4 text-left"
-                        >
-                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
-                            <LayoutGrid className="h-[18px] w-[18px] text-[#3d9bff]" />
-                          </span>
-                          <span className="flex-1 text-[14px] font-semibold text-white">Browse Marketplace</span>
-                          <ChevronRight className="h-4 w-4 text-white/60" />
-                        </button>
-                      </>
+                      <RevealItem>
+                        <section>
+                          <div className="mb-2.5 px-1">
+                            <h2 className="text-[15px] font-semibold text-white">My Account</h2>
+                            <p className="mt-0.5 text-[12.5px] text-text-tertiary">Manage your DropMarket account</p>
+                          </div>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
+                              ({ label, href, Icon }) => (
+                                <Link
+                                  key={href}
+                                  href={href}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                  className="group flex min-h-[56px] w-full items-center gap-3 px-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                                >
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
+                                    <Icon className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                                  </span>
+                                  <span className="flex-1 truncate text-[15px] font-medium text-white">{label}</span>
+                                  <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                </Link>
+                              ),
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setMenuRoot('browse')}
+                            className="group mt-3 flex min-h-[56px] w-full items-center gap-3 rounded-lg bg-bg-raised px-3.5 text-left transition-colors hover:bg-bg-raised-hover"
+                          >
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
+                              <LayoutGrid className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                            </span>
+                            <span className="flex-1 text-[15px] font-medium text-white">Browse Marketplace</span>
+                            <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                          </button>
+                        </section>
+                      </RevealItem>
+                    )}
+
+                    {menuRoot === 'browse' && spotlightGames.length > 0 && (
+                      <RevealItem>
+                        {/* Popular Games — admin-curated (games.is_spotlight).
+                            One card, hairlines between games; each game shows
+                            its sections as slim pills. */}
+                        <section>
+                          <h2 className="mb-2.5 px-1 text-[15px] font-semibold text-white">Popular Games</h2>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {spotlightGames.slice(0, 4).map((game) => (
+                              <div key={game.slug} className="group flex items-center gap-3 px-3.5 py-3">
+                                {/* Pills sit OUTSIDE the game Link (anchors
+                                    can't nest) but visually inside the row. */}
+                                <Link
+                                  href={game.href}
+                                  onClick={() => {
+                                    setMobileMenuOpen(false)
+                                    setMobileMenuTab(null)
+                                  }}
+                                  className="flex shrink-0 items-center"
+                                  aria-label={game.name}
+                                >
+                                  <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-bg-overlay ring-1 ring-white/[0.08]">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={game.iconSrc}
+                                      alt=""
+                                      width={44}
+                                      height={44}
+                                      loading="lazy"
+                                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                  </span>
+                                </Link>
+                                <div className="min-w-0 flex-1">
+                                  <Link
+                                    href={game.href}
+                                    onClick={() => {
+                                      setMobileMenuOpen(false)
+                                      setMobileMenuTab(null)
+                                    }}
+                                    className="block truncate text-[15px] font-semibold leading-tight text-white"
+                                  >
+                                    {game.name}
+                                  </Link>
+                                  {game.categoryLinks.length > 0 && (
+                                    <div className="mt-1.5 flex flex-nowrap gap-1.5 overflow-hidden">
+                                      {game.categoryLinks.slice(0, 3).map((cat) => (
+                                        <Link
+                                          key={cat.slug}
+                                          href={`/${game.slug}/${cat.slug}`}
+                                          onClick={() => {
+                                            setMobileMenuOpen(false)
+                                            setMobileMenuTab(null)
+                                          }}
+                                          className="inline-flex h-6 shrink-0 items-center rounded-md bg-white/[0.07] px-2 text-[12px] font-medium leading-none text-text-secondary transition-[background-color,color,transform] hover:bg-white/[0.12] hover:text-white active:scale-[0.97]"
+                                        >
+                                          <span className="max-w-[84px] truncate">
+                                            {cat.label.replace(/\s*\(.*?\)\s*/g, '')}
+                                          </span>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <Link
+                                  href={game.href}
+                                  onClick={() => {
+                                    setMobileMenuOpen(false)
+                                    setMobileMenuTab(null)
+                                  }}
+                                  aria-hidden
+                                  tabIndex={-1}
+                                  className="grid h-8 w-6 shrink-0 place-items-center"
+                                >
+                                  <ChevronRight aria-hidden className="h-4 w-4 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      </RevealItem>
                     )}
 
                     {menuRoot === 'browse' && (
-                      <>
-                        {/* Popular Games — admin-curated (games.is_spotlight)
-                            single-column rows. Frameless: squared game icon +
-                            name + category pills, divided by hairlines like the
-                            Services list. Hidden when nothing is spotlit. */}
-                        {spotlightGames.length > 0 && (
-                          <div className="mb-6">
-                            <h2 className="mb-1 font-display text-[13px] font-bold uppercase tracking-[0.14em] text-white/55">
-                              Popular Games
-                            </h2>
-                            <div>
-                              {spotlightGames.slice(0, 4).map((game) => (
-                                <div
-                                  key={game.slug}
-                                  className="group flex items-center gap-3 border-b border-white/[0.06] py-3"
-                                >
-                                  {/* Game tap → the game's currency/items
-                                      section. Squared icon tile, no round frame.
-                                      Pills sit OUTSIDE this Link (anchors can't
-                                      nest) but visually inside the row. */}
-                                  <Link
-                                    href={game.href}
-                                    onClick={() => {
-                                      setMobileMenuOpen(false)
-                                      setMobileMenuTab(null)
-                                    }}
-                                    className="flex shrink-0 items-center"
-                                    aria-label={game.name}
-                                  >
-                                    <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-white/[0.05] shadow-[0_6px_14px_-6px_rgba(0,0,0,0.7)]">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img
-                                        src={game.iconSrc}
-                                        alt=""
-                                        loading="lazy"
-                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                      />
-                                    </span>
-                                  </Link>
-                                  <div className="min-w-0 flex-1">
-                                    <Link
-                                      href={game.href}
-                                      onClick={() => {
-                                        setMobileMenuOpen(false)
-                                        setMobileMenuTab(null)
-                                      }}
-                                      className="block truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-white transition-colors hover:text-white/90"
-                                    >
-                                      {game.name}
-                                    </Link>
-                                    {/* Category pills — rectangular, home-search
-                                        style. Each links straight to its section. */}
-                                    {game.categoryLinks.length > 0 && (
-                                      <div className="mt-1.5 flex flex-nowrap gap-1.5 overflow-hidden">
-                                        {game.categoryLinks.slice(0, 3).map((cat) => (
-                                          <Link
-                                            key={cat.slug}
-                                            href={`/${game.slug}/${cat.slug}`}
-                                            onClick={() => {
-                                              setMobileMenuOpen(false)
-                                              setMobileMenuTab(null)
-                                            }}
-                                            className="inline-flex min-h-[24px] shrink-0 items-center rounded-[7px] border border-white/[0.09] bg-white/[0.06] px-2 text-[11px] font-semibold leading-none text-white/80 transition-colors hover:border-white/[0.18] hover:bg-white/[0.12] hover:text-white active:scale-[0.97]"
-                                          >
-                                            <span className="truncate max-w-[84px]">
-                                              {cat.label.replace(/\s*\(.*?\)\s*/g, '')}
-                                            </span>
-                                          </Link>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Link
-                                    href={game.href}
-                                    onClick={() => {
-                                      setMobileMenuOpen(false)
-                                      setMobileMenuTab(null)
-                                    }}
-                                    aria-hidden
-                                    tabIndex={-1}
-                                    className="shrink-0"
-                                  >
-                                    <ChevronRight aria-hidden className="h-5 w-5 text-white/45 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/80" />
-                                  </Link>
-                                </div>
-                              ))}
-                            </div>
+                      <RevealItem>
+                        <section>
+                          <div className="mb-2.5 px-1">
+                            <h2 className="text-[15px] font-semibold text-white">Services</h2>
+                            <p className="mt-0.5 text-[12.5px] text-text-tertiary">Everything you need to play more</p>
                           </div>
-                        )}
-
-                        <div className="mb-4">
-                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">Services</h2>
-                          <p className="mt-0.5 text-[12px] text-white/50">Everything you need to play more</p>
-                        </div>
-                        <div>
-                          {MOBILE_SERVICE_ITEMS.map((item) => (
-                            <MobileServiceRow
-                              key={item.id}
-                              item={item}
-                              onSelect={(tabId) => setMobileMenuTab(tabId)}
-                              onClose={() => {
-                                setMobileMenuOpen(false)
-                                setMobileMenuTab(null)
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {MOBILE_SERVICE_ITEMS.map((item) => (
+                              <MobileServiceRow
+                                key={item.id}
+                                item={item}
+                                onSelect={(tabId) => setMobileMenuTab(tabId)}
+                                onClose={() => {
+                                  setMobileMenuOpen(false)
+                                  setMobileMenuTab(null)
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      </RevealItem>
                     )}
 
-                    <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.08] pt-4">
-                      <Link
-                        href="/account/wallet"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <Wallet className="h-4 w-4" /> Wallet
-                      </Link>
-                      <Link
-                        href="/support"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <LifeBuoy className="h-4 w-4" /> Support
-                      </Link>
-                    </div>
-
-                    {!loading && !user && (
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMobileMenuOpen(false)
-                            authDialog.open('signup')
-                          }}
-                          className="h-10 rounded-lg bg-[#174d31] text-[13px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_24px_-14px_rgba(0,0,0,0.8)] transition-colors hover:bg-[#1e6540]"
+                    <RevealItem>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link
+                          href="/account/wallet"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
-                          Sign Up
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMobileMenuOpen(false)
-                            authDialog.open('login')
-                          }}
-                          className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                          <Wallet className="h-4 w-4" aria-hidden /> Wallet
+                        </Link>
+                        <Link
+                          href="/support"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
-                          Log In
-                        </button>
+                          <LifeBuoy className="h-4 w-4" aria-hidden /> Support
+                        </Link>
                       </div>
-                    )}
+
+                      {!loading && !user && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMobileMenuOpen(false)
+                              authDialog.open('login')
+                            }}
+                            className="h-10 rounded-md bg-bg-raised text-[13px] font-semibold text-white transition-colors hover:bg-bg-raised-hover"
+                          >
+                            Log In
+                          </button>
+                          {/* Same white Sign Up as the navbar bar. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMobileMenuOpen(false)
+                              authDialog.open('signup')
+                            }}
+                            className="h-10 rounded-md bg-white text-[13px] font-semibold text-black transition-colors hover:bg-white/90"
+                          >
+                            Sign Up
+                          </button>
+                        </div>
+                      )}
+                    </RevealItem>
+                    </RevealGroup>
                   </div>
 
                   {/* SCREEN 2 — game list. */}
@@ -2202,7 +1810,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             <ArrowLeft className="h-5 w-5 text-white/70" />
                             <span className="text-[17px] font-semibold">{tab?.label ?? 'Games'}</span>
                           </button>
-                          <div className="relative mt-1 flex h-11 items-center overflow-hidden rounded-md border border-white/[0.10] bg-white/[0.03] focus-within:border-white/[0.22]">
+                          <div className="relative mt-1 flex h-10 items-center overflow-hidden rounded-md bg-bg-raised ring-1 ring-transparent transition-shadow focus-within:ring-white/20">
                             <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
                             <input
                               type="search"
@@ -2271,6 +1879,7 @@ function CategoryDropdown({
   gameEntries,
   isActive,
   isCurrent = false,
+  showPill = false,
   onHoverStart,
   onHoverEnd,
   onSelect,
@@ -2281,6 +1890,9 @@ function CategoryDropdown({
   isActive: boolean
   /** V50 — True when the page being viewed belongs to this category. */
   isCurrent?: boolean
+  /** The shared highlight sits on this tab: the open one, else the current
+   *  page's. One pill (layoutId) slides between tabs. */
+  showPill?: boolean
   onHoverStart: () => void
   onHoverEnd: () => void
   /** V14u — Called when the user picks a game so the dropdown can close. */
@@ -2298,6 +1910,7 @@ function CategoryDropdown({
   // autofocused when the menu opens; arrow keys scroll the list.
   const [q, setQ] = useState('')
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const reduceMotion = useReducedMotion()
 
   // V15o — Don't auto-focus the search input on open. Hover-opens
   // shouldn't steal focus from whatever the user was doing (typing in a
@@ -2336,13 +1949,27 @@ function CategoryDropdown({
           onPointerEnter={(e) => { if (e.pointerType === 'mouse') onHoverStart() }}
           onPointerLeave={(e) => { if (e.pointerType === 'mouse') onHoverEnd() }}
           onClick={() => (isActive ? onSelect() : onHoverStart())}
+          aria-expanded={isActive}
           className={cn(
-            'flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white whitespace-nowrap',
-            isCurrent ? 'bg-white/[0.08] text-white' : 'text-white',
+            'relative flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[14px] font-medium transition-colors',
+            showPill || isCurrent ? 'text-white' : 'text-white/75 hover:text-white',
           )}
         >
-          {tab.label}
-          <ChevronDown className={cn('h-3 w-3 transition-transform', isActive && 'rotate-180')} />
+          {showPill && (
+            <motion.span
+              layoutId="nav-tab-pill"
+              aria-hidden
+              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 40 }}
+            />
+          )}
+          <span className="relative">{tab.label}</span>
+          <CaretDownIcon
+            size={12}
+            weight="bold"
+            aria-hidden
+            className={cn('relative text-white/50 transition-transform duration-200', isActive && 'rotate-180 text-white/80')}
+          />
         </button>
       </Popover.Trigger>
       {/* V17v — Anchor the popover content to the shared element
@@ -2418,7 +2045,7 @@ function CategoryDropdown({
               // inside the mega-menu stay open, anywhere else dismisses it
               // (the touch counterpart of the mouseleave debounce).
               data-dropdown
-              className="w-[min(960px,92vw)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
+              className="w-[min(960px,92vw)] overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)]"
               style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
             >
               {/* V21/P7.aa — min-h on the GRID (not the card) so the left
@@ -2430,37 +2057,46 @@ function CategoryDropdown({
                   Up/Boosting. */}
               {/* min-h capped by 62dvh so tablet-landscape viewports
                   (~620-650px usable) don't force the card past the fold. */}
-              <div className="grid min-h-[min(520px,62dvh)] grid-cols-1 items-stretch md:grid-cols-[260px_1fr]">
-                {/* LEFT — Popular */}
-                <div className="border-b border-white/10 bg-white/[0.02] p-4 md:border-b-0 md:border-r">
-                  <div className="mb-3 px-1.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text">
-                    Popular {tab.label}
+              <div className="grid min-h-[min(480px,62dvh)] grid-cols-1 items-stretch md:grid-cols-[252px_1fr]">
+                {/* LEFT — Popular: a darker well so the two halves read
+                    apart without an outline. */}
+                <div className="bg-bg-well p-3">
+                  <div className="px-2.5 pb-2 pt-1.5 text-[13px] font-semibold text-text-tertiary">
+                    Popular
                   </div>
-                  <ul className="flex flex-col gap-1">
+                  <ul className="flex flex-col gap-0.5">
                     {popular.map(({ game, categorySlug }) => (
                       <li key={game.slug}>
-                        {/* V17v — SmartLink fixes the scroll-to-top
-                            glitch users were seeing when clicking a
-                            game in the dropdown. */}
+                        {/* SmartLink fixes the scroll-to-top glitch on
+                            same-route navigations. */}
                         <SmartLink
                           href={`/${game.slug}/${categorySlug}`}
                           onClick={onSelect}
-                          className="group flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/[0.06]"
+                          className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
                         >
                           {game.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={game.image_url}
                               alt=""
-                              className="h-9 w-9 shrink-0 rounded-lg object-contain"
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 shrink-0 rounded-lg object-contain"
                             />
                           ) : (
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-bold text-gray-300">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07] text-[12px] font-bold text-text-secondary">
                               {game.name.slice(0, 2).toUpperCase()}
                             </span>
                           )}
-                          <span className="truncate text-[14.5px] font-semibold text-gray-200 group-hover:text-white">
+                          <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-text-primary">
                             {game.name}
                           </span>
+                          <CaretRightIcon
+                            size={12}
+                            weight="bold"
+                            aria-hidden
+                            className="shrink-0 -translate-x-1 text-text-tertiary opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-x-0 group-hover:opacity-100"
+                          />
                         </SmartLink>
                       </li>
                     ))}
@@ -2468,55 +2104,66 @@ function CategoryDropdown({
                 </div>
 
                 {/* RIGHT — Searchable */}
-                <div className="flex max-h-[min(520px,62dvh)] flex-col p-4">
+                <div className="flex max-h-[min(480px,62dvh)] flex-col p-4">
                   <div className="relative mb-3">
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                    <MagnifyingGlassIcon
+                      size={16}
+                      weight="bold"
+                      aria-hidden
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary"
+                    />
                     <input
                       ref={searchRef}
                       type="text"
+                      name="nav-game-search"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-label={`Search ${tab.label} games`}
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
-                      placeholder={`Search ${tab.label.toLowerCase()}…`}
-                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-[14px] text-white placeholder:text-gray-500 outline-none transition-colors focus:border-focus-border focus:bg-white/[0.08]"
+                      placeholder="Search Games…"
+                      className="h-10 w-full rounded-md bg-white/[0.05] pl-10 pr-3 text-[14px] text-white outline-none transition-colors placeholder:text-text-tertiary focus:bg-white/[0.08] focus:ring-1 focus:ring-white/20"
                     />
                   </div>
-                  <div className="mb-2 flex items-center justify-between px-1">
-                    <div className="text-[12px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                      All {tab.label}
-                    </div>
-                    <div className="text-[12px] tabular-nums text-gray-500">
-                      {filtered.length} game{filtered.length === 1 ? '' : 's'}
+                  <div className="mb-1.5 flex items-center justify-between px-1">
+                    <div className="text-[13px] font-semibold text-text-tertiary">All Games</div>
+                    <div className="text-[12.5px] tabular-nums text-text-tertiary">
+                      {filtered.length} {filtered.length === 1 ? 'Game' : 'Games'}
                     </div>
                   </div>
-                  <div className="-mr-1 flex-1 overflow-y-auto pr-1">
+                  <div className="-mr-1 flex-1 overflow-y-auto overscroll-contain pr-1">
                     {filtered.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <Search className="mb-2 h-5 w-5 text-gray-600" />
-                        <p className="text-[13px] text-gray-500">
+                        <MagnifyingGlassIcon size={20} weight="bold" aria-hidden className="mb-2 text-text-tertiary" />
+                        <p className="text-[13.5px] text-text-tertiary">
                           No games match &ldquo;{q}&rdquo;
                         </p>
                       </div>
                     ) : (
-                      <ul className="grid grid-cols-2 gap-1 lg:grid-cols-3">
+                      <ul className="grid grid-cols-2 gap-0.5 lg:grid-cols-3">
                         {filtered.map(({ game, categorySlug }) => (
                           <li key={game.slug}>
                             <SmartLink
                               href={`/${game.slug}/${categorySlug}`}
                               onClick={onSelect}
-                              className="group flex items-center gap-2.5 rounded-lg p-2.5 transition-colors hover:bg-white/[0.06]"
+                              className="group flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
                             >
                               {game.image_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={game.image_url}
                                   alt=""
+                                  width={32}
+                                  height={32}
+                                  loading="lazy"
                                   className="h-8 w-8 shrink-0 rounded-md object-contain"
                                 />
                               ) : (
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-gray-300">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/[0.07] text-[11px] font-bold text-text-secondary">
                                   {game.name.slice(0, 2).toUpperCase()}
                                 </span>
                               )}
-                              <span className="truncate text-[13.5px] font-semibold text-gray-200 group-hover:text-white">
+                              <span className="truncate text-[14px] font-medium text-text-secondary transition-colors group-hover:text-text-primary">
                                 {game.name}
                               </span>
                             </SmartLink>
@@ -2552,28 +2199,6 @@ function CategoryDropdown({
 // override per game via category_configs.currency_icon_url; this is the
 // default art when none is set. Swap the SVGs in
 // /public/assets/category-icons/ to change the defaults.
-// V21/P7.ae — currentColor mask icon for the profile menu. Drop a new
-// SVG into /public/assets/menu-icons/<name>.svg to swap the art; the
-// mask inherits the row's text color so hover/active states tint it.
-function MenuIcon({ name, className }: { name: string; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn('inline-block h-[18px] w-[18px] shrink-0 bg-current', className)}
-      style={{
-        WebkitMaskImage: `url(/assets/menu-icons/${name}.svg)`,
-        maskImage: `url(/assets/menu-icons/${name}.svg)`,
-        WebkitMaskRepeat: 'no-repeat',
-        maskRepeat: 'no-repeat',
-        WebkitMaskPosition: 'center',
-        maskPosition: 'center',
-        WebkitMaskSize: 'contain',
-        maskSize: 'contain',
-      }}
-    />
-  )
-}
-
 function categoryFallbackIcon(
   type: string | undefined,
   slug: string,
@@ -2883,7 +2508,12 @@ function GlobalSearch({
       transition={{ type: 'spring', stiffness: 420, damping: 36 }}
     >
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
+        <MagnifyingGlassIcon
+          size={18}
+          weight="bold"
+          aria-hidden
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -2912,14 +2542,13 @@ function GlobalSearch({
             // V21/P7.t — rounded-lg (rectangular) so the search reads as
             // a distinct field, not a second pill matching the navbar's
             // rounded-full shape.
-            'h-10 rounded-lg border pl-11 text-sm text-white placeholder:text-gray-500 outline-none ring-0 transition-colors focus:outline-none focus:ring-0 focus-visible:shadow-none',
+            // Fill only (no resting border), like every other field.
+            'h-10 rounded-lg pl-11 text-[14px] text-white placeholder:text-white/45 outline-none transition-[background-color,box-shadow] focus:outline-none focus-visible:shadow-none',
             expanded
-              ? 'w-full border-white/[0.14] bg-white/[0.04] pr-11'
+              ? 'w-full bg-white/[0.07] pr-11 ring-1 ring-white/15'
               : cn(
-                  'w-56 cursor-pointer bg-white/5 pr-3 xl:w-72',
-                  focused
-                    ? 'border-white/20 bg-white/[0.08]'
-                    : 'border-white/10 hover:border-white/20',
+                  'w-56 cursor-pointer pr-3 xl:w-72',
+                  focused ? 'bg-white/[0.09] ring-1 ring-white/15' : 'bg-white/[0.06] hover:bg-white/[0.08]',
                 ),
           )}
         />
@@ -2959,7 +2588,7 @@ function GlobalSearch({
             // behind the results. Width tracks the bar: full when expanded,
             // fixed when collapsed.
             className={cn(
-              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_16px_50px_rgba(0,0,0,0.6)]',
+              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)]',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
             style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
@@ -2970,7 +2599,7 @@ function GlobalSearch({
                 // matches". The empty state only shows once the search
                 // settles with nothing found.
                 <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-                  <span className="mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-white/[0.12] border-t-lime" />
+                  <span className="mb-2.5 h-6 w-6 animate-spin rounded-full border-2 border-white/[0.12] border-t-white/70" />
                   <p className="text-[14px] font-semibold text-gray-300">
                     Searching…
                   </p>

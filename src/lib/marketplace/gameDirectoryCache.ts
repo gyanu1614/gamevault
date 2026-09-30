@@ -28,6 +28,8 @@ export interface DirectoryGameRow {
   id: string
   slug: string
   name: string
+  /** games.image_url — the icon admin/radar uploaded (null on a few). */
+  image_url: string | null
   sort_order: number | null
 }
 
@@ -48,7 +50,7 @@ export const getCachedGameDirectory = unstable_cache(
     const [gamesResult, categoriesResult] = await Promise.all([
       supabase
         .from('games')
-        .select('id, slug, name, is_active, sort_order')
+        .select('id, slug, name, image_url, is_active, sort_order')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
         .limit(24),

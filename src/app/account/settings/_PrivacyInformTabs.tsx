@@ -17,7 +17,16 @@ function TabSkeleton() {
   return (
     <div className="space-y-4" aria-busy>
       {[0, 1].map((i) => (
-        <div key={i} className="h-28 animate-pulse rounded-lg bg-white/[0.05]" />
+        <div key={i} className="overflow-hidden rounded-lg bg-bg-raised">
+          <div className="p-5 sm:p-6">
+            <div className="skeleton h-4 w-36 rounded" />
+            <div className="skeleton mt-2 h-3.5 w-80 max-w-full rounded" />
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] bg-black/[0.14] px-5 py-3 sm:px-6">
+            <div className="skeleton h-3.5 w-56 max-w-[55%] rounded" />
+            <div className="skeleton h-10 w-32 rounded-md" />
+          </div>
+        </div>
       ))}
     </div>
   )

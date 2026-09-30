@@ -82,8 +82,8 @@ function Block({ block }: { block: LegalBlock }) {
         <div
           className={
             isWide
-              ? 'hidden overflow-x-auto rounded-xl border border-border-default md:block'
-              : 'overflow-x-auto rounded-xl border border-border-default'
+              ? 'hidden overflow-x-auto rounded-lg bg-bg-raised md:block'
+              : 'overflow-x-auto rounded-lg bg-bg-raised'
           }
         >
           <table className="w-full border-collapse text-left">
@@ -127,7 +127,7 @@ function Block({ block }: { block: LegalBlock }) {
             {block.rows.map((row, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-border-default bg-white/[0.02] p-4"
+                className="rounded-lg bg-bg-raised p-4"
               >
                 <div className="text-[14px] font-semibold leading-snug text-text-primary">
                   {row[0]}

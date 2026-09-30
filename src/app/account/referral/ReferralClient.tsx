@@ -2,268 +2,201 @@
 
 import { SITE_URL } from '@/config/site'
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { Check, Copy, Share2 } from 'lucide-react'
+import RedeemRounded from '@mui/icons-material/RedeemRounded'
+import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded'
+import CardGiftcardRounded from '@mui/icons-material/CardGiftcardRounded'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
-import {
-  Copy, Check, Share2, Users, DollarSign,
-  TrendingUp, Clock, Gift, ChevronRight, ExternalLink,
-} from 'lucide-react'
+import { AccountPage, SettingsCard, StatStrip, accountBtn } from '@/components/account/AccountSurface'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import type { ReferralStats } from '@/lib/actions/referral'
 import type { ReferralEarning } from '@/types/database'
+import { cn } from '@/lib/utils'
 
 interface ReferralClientProps {
   stats: ReferralStats
 }
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color = 'violet',
-}: {
-  icon: React.ElementType
-  label: string
-  value: string
-  sub?: string
-  color?: 'violet' | 'green' | 'amber' | 'blue'
-}) {
-  const colors = {
-    violet: 'text-lime-text bg-lime-tint-bg border-lime-tint-border',
-    green:  'text-success  bg-success-bg  border-green-500/20',
-    amber:  "text-warning bg-warning-bg border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]",
-    blue:   "text-lime-text bg-lime-tint-bg border-lime-tint-border",
-  }
-  return (
-    <div className="rounded-lg border border-border-subtle card-frost p-5">
-      <div className={`inline-flex items-center justify-center h-10 w-10 rounded-lg border mb-3 ${colors[color]}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-sm text-text-secondary mt-0.5">{label}</div>
-      {sub && <div className="text-xs text-text-disabled mt-1">{sub}</div>}
-    </div>
-  )
-}
+const usd = (n: number) => `$${n.toFixed(2)}`
 
-// ── Earning row ───────────────────────────────────────────────────────────────
+const STEPS = [
+  'Share your unique link or code with friends',
+  'They sign up using your code',
+  'You earn 10% of the platform fee on every purchase they make',
+  'Commissions are credited once orders complete',
+]
+
 function EarningRow({ earning }: { earning: ReferralEarning }) {
-  const isPaid    = earning.status === 'paid'
-  const isBonus   = earning.type === 'signup_bonus'
+  const isPaid = earning.status === 'paid'
+  const isCancelled = earning.status === 'cancelled'
+  const isBonus = earning.type === 'signup_bonus'
+  const Icon = isBonus ? CardGiftcardRounded : TrendingUpRounded
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-0">
-      <div className="flex items-center gap-3">
-        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isBonus ? 'bg-warning-bg text-warning' : 'bg-lime-tint-bg text-lime-text'}`}>
-          {isBonus ? <Gift className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
-        </div>
-        <div>
-          <div className="text-sm font-medium text-white">
+    <li className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-bg-overlay text-text-secondary">
+          <Icon style={{ fontSize: 18 }} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-text-primary">
             {isBonus ? 'Signup Bonus' : 'Purchase Commission'}
-          </div>
-          <div className="text-xs text-text-tertiary">
-            {new Date(earning.created_at).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric', year: 'numeric',
-            })}
-          </div>
+          </p>
+          <p className="text-[12px] text-text-tertiary">
+            {new Date(earning.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <div className={`text-sm font-semibold ${isPaid ? 'text-success' : 'text-warning'}`}>
-            +${earning.amount.toFixed(2)}
-          </div>
-        </div>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-          isPaid
-            ? 'bg-success-bg text-success border border-green-500/20'
-            : earning.status === 'cancelled'
-            ? 'bg-error-bg text-error border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)]'
-            : 'bg-warning-bg text-warning border border-[color-mix(in_srgb,var(--color-warning)_20%,transparent)]'
-        }`}>
-          {isPaid ? 'Paid' : earning.status === 'cancelled' ? 'Cancelled' : 'Pending'}
+      <div className="flex shrink-0 items-center gap-3">
+        <span className={cn('text-sm font-semibold tabular-nums', isCancelled ? 'text-text-tertiary line-through' : 'text-text-primary')}>
+          +{usd(earning.amount)}
+        </span>
+        <span
+          className={cn(
+            'inline-flex h-6 w-[76px] items-center justify-center rounded-full text-[12px] font-semibold',
+            isPaid ? 'bg-success-bg text-success' : isCancelled ? 'bg-white/[0.06] text-text-secondary' : 'bg-warning-bg text-warning',
+          )}
+        >
+          {isPaid ? 'Paid' : isCancelled ? 'Cancelled' : 'Pending'}
         </span>
       </div>
-    </div>
+    </li>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function ReferralClient({ stats }: ReferralClientProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null)
+  const referralUrl = `${SITE_URL}/signup?ref=${stats.referralCode}`
 
-  const appUrl     = SITE_URL
-  const referralUrl = `${appUrl}/signup?ref=${stats.referralCode}`
-
-  const copyCode = () => {
-    navigator.clipboard.writeText(stats.referralCode).then(() => {
-      setCopied(true)
-      toast.success('Referral code copied!')
-      setTimeout(() => setCopied(false), 2000)
-    })
+  const copy = (what: 'code' | 'link') => {
+    const value = what === 'code' ? stats.referralCode : referralUrl
+    navigator.clipboard.writeText(value).then(
+      () => {
+        setCopied(what)
+        toast.success(what === 'code' ? 'Referral code copied' : 'Referral link copied')
+        setTimeout(() => setCopied((c) => (c === what ? null : c)), 2000)
+      },
+      () => toast.error('Couldn’t copy. Select it and copy it manually.'),
+    )
   }
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(referralUrl).then(() => {
-      toast.success('Referral link copied!')
-    })
-  }
-
-  const shareLink = () => {
+  const share = () => {
     if (navigator.share) {
-      navigator.share({
-        title: 'Join DropMarket',
-        text: `Use my referral code ${stats.referralCode} to sign up on DropMarket — the lowest-fee gaming marketplace!`,
-        url: referralUrl,
-      }).catch(() => { /* user cancelled */ })
+      navigator
+        .share({
+          title: 'Join DropMarket',
+          text: `Use my referral code ${stats.referralCode} to sign up on DropMarket, the lowest-fee gaming marketplace!`,
+          url: referralUrl,
+        })
+        .catch(() => { /* user cancelled */ })
     } else {
-      copyLink()
+      copy('link')
     }
   }
 
   return (
-    <div className="min-h-screen pb-20">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <AccountPage>
+      <AccountPageHeader
+        title="Refer & Earn"
+        subtitle="Share your link. Earn 10% commission on platform fees from every purchase your referrals make."
+      />
 
-        {/* V21/P7.al — Standard account header. */}
-        <AccountPageHeader
-          icon="referral"
-          title="Refer & Earn"
-          subtitle="Share your link. Earn 10% commission on platform fees from every purchase your referrals make."
-          className="mb-8"
-        />
-
-        {/* Referral Code Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-lg border border-lime-tint-border bg-gradient-to-br from-[rgba(86,184,127,0.10)] to-transparent p-6 mb-6"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Gift className="h-4 w-4 text-lime-text" />
-            <span className="text-sm font-medium text-lime-text">Your Referral Code</span>
-          </div>
-
-          {/* Code display */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 rounded-lg bg-black/40 border border-white/[0.1] px-5 py-3.5 font-mono text-2xl font-bold text-white tracking-[0.3em] text-center">
-              {stats.referralCode}
-            </div>
-            <button
-              onClick={copyCode}
-              className="flex items-center gap-2 rounded-lg bg-lime hover:bg-lime-hover active:scale-95 transition-all px-4 py-3.5 text-sm font-medium text-text-inverse shrink-0"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-
-          {/* Link display */}
-          <div className="flex items-center gap-2 rounded-lg bg-black/30 border border-border-subtle px-4 py-2.5 mb-4">
-            <ExternalLink className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
-            <span className="flex-1 truncate text-xs text-text-secondary font-mono">
-              {referralUrl}
-            </span>
-            <button
-              onClick={copyLink}
-              className="text-xs text-lime-text hover:text-lime-text transition-colors shrink-0 font-medium"
-            >
-              Copy
-            </button>
-          </div>
-
-          {/* Share button */}
-          <button
-            onClick={shareLink}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-lime-tint-border bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] transition-colors py-3 text-sm font-medium text-lime-text"
-          >
-            <Share2 className="h-4 w-4" />
-            Share Your Link
-          </button>
-        </motion.div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            icon={Users}
-            label="Total Referrals"
-            value={stats.totalReferrals.toString()}
-            sub="Signed up with your code"
-            color="blue"
-          />
-          <StatCard
-            icon={DollarSign}
-            label="Total Earned"
-            value={`$${stats.totalEarned.toFixed(2)}`}
-            sub="Lifetime paid commissions"
-            color="green"
-          />
-          <StatCard
-            icon={Clock}
-            label="Pending"
-            value={`$${stats.pendingEarnings.toFixed(2)}`}
-            sub="Awaiting order completion"
-            color="amber"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="This Month"
-            value={`$${stats.thisMonthEarned.toFixed(2)}`}
-            sub="Paid this calendar month"
-            color="violet"
-          />
-        </div>
-
-        {/* How it works */}
-        <div className="rounded-lg border border-border-subtle card-frost p-5 mb-8">
-          <h2 className="text-sm font-semibold text-white mb-4">How it works</h2>
-          <div className="space-y-3">
-            {[
-              { step: '1', text: 'Share your unique link or code with friends' },
-              { step: '2', text: 'They sign up using your code' },
-              { step: '3', text: 'You earn 10% of the platform fee on every purchase they make' },
-              { step: '4', text: 'Commissions are credited once orders complete' },
-            ].map(({ step, text }) => (
-              <div key={step} className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full bg-[rgba(86,184,127,0.20)] border border-lime-tint-border flex items-center justify-center text-[11px] font-bold text-lime-text shrink-0">
-                  {step}
-                </div>
-                <p className="text-sm text-text-secondary">{text}</p>
+      <RevealGroup className="mt-6 space-y-4">
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          {/* Invite: code, link, share */}
+          <RevealItem>
+            <section className="h-full rounded-lg bg-bg-raised bg-gradient-to-b from-[rgba(86,184,127,0.10)] to-[rgba(86,184,127,0.02)] p-5 sm:p-6">
+              <div className="flex items-center gap-2 text-lime-text">
+                <RedeemRounded style={{ fontSize: 18 }} aria-hidden />
+                <h2 className="text-[15px] font-semibold text-text-primary">Your Referral Code</h2>
               </div>
-            ))}
-          </div>
+
+              <div className="mt-5 flex items-stretch gap-2">
+                <div translate="no" className="flex min-w-0 flex-1 items-center justify-center rounded-md bg-black/30 px-4 py-3 font-mono text-[22px] font-bold tracking-[0.3em] text-text-primary sm:text-2xl">
+                  {stats.referralCode}
+                </div>
+                <button type="button" onClick={() => copy('code')} className={cn(accountBtn.primary, 'h-auto min-w-[96px]')}>
+                  {copied === 'code' ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                  {copied === 'code' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 rounded-md bg-black/25 py-1 pl-3.5 pr-1">
+                <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-text-secondary">{referralUrl}</span>
+                <button
+                  type="button"
+                  onClick={() => copy('link')}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-semibold text-text-primary transition-colors hover:bg-white/[0.08]"
+                >
+                  {copied === 'link' ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+                  {copied === 'link' ? 'Copied' : 'Copy Link'}
+                </button>
+              </div>
+
+              <button type="button" onClick={share} className={cn(accountBtn.secondary, 'mt-4 w-full')}>
+                <Share2 className="h-4 w-4" aria-hidden />
+                Share Your Link
+              </button>
+            </section>
+          </RevealItem>
+
+          <RevealItem>
+            <SettingsCard title="How It Works" className="h-full">
+              <ol className="space-y-3.5">
+                {STEPS.map((text, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bg-overlay text-[12px] font-bold tabular-nums text-text-primary">
+                      {i + 1}
+                    </span>
+                    <p className="pt-0.5 text-[13.5px] leading-snug text-text-secondary">{text}</p>
+                  </li>
+                ))}
+              </ol>
+            </SettingsCard>
+          </RevealItem>
         </div>
 
-        {/* Earnings History */}
-        <div className="rounded-lg border border-border-subtle card-frost overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-            <h2 className="text-sm font-semibold text-white">Earnings History</h2>
-            {stats.recentEarnings.length > 0 && (
-              <span className="text-xs text-text-tertiary">{stats.recentEarnings.length} records</span>
+        <RevealItem>
+          <StatStrip
+            stats={[
+              { label: 'Total Referrals', value: String(stats.totalReferrals), hint: 'Signed up with your code' },
+              { label: 'Total Earned', value: usd(stats.totalEarned), hint: 'Lifetime paid commissions' },
+              { label: 'Pending', value: usd(stats.pendingEarnings), hint: 'Awaiting order completion' },
+              { label: 'This Month', value: usd(stats.thisMonthEarned), hint: 'Paid this calendar month' },
+            ]}
+          />
+        </RevealItem>
+
+        <RevealItem>
+          <SettingsCard
+            title="Earnings History"
+            aside={
+              stats.recentEarnings.length > 0 ? (
+                <span className="text-[12.5px] tabular-nums text-text-tertiary">
+                  {stats.recentEarnings.length} {stats.recentEarnings.length === 1 ? 'record' : 'records'}
+                </span>
+              ) : null
+            }
+          >
+            {stats.recentEarnings.length === 0 ? (
+              <div className="flex flex-col items-center rounded-md bg-bg-overlay px-6 py-10 text-center">
+                <CardGiftcardRounded style={{ fontSize: 32 }} className="text-text-tertiary" aria-hidden />
+                <p className="mt-2 text-sm font-medium text-text-primary">No Earnings Yet</p>
+                <p className="mt-1 max-w-xs text-[13px] text-text-secondary">
+                  Start sharing your referral link. You’ll earn commissions once your referrals make purchases.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-white/[0.07]">
+                {stats.recentEarnings.map((earning) => (
+                  <EarningRow key={earning.id} earning={earning} />
+                ))}
+              </ul>
             )}
-          </div>
-
-          {stats.recentEarnings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Gift className="h-12 w-12 text-gray-700 mb-3" />
-              <p className="text-sm font-medium text-text-tertiary">No earnings yet</p>
-              <p className="text-xs text-text-disabled mt-1 max-w-xs">
-                Start sharing your referral link. You’ll earn commissions once your
-                referrals make purchases.
-              </p>
-            </div>
-          ) : (
-            <div className="px-5 py-2">
-              {stats.recentEarnings.map((earning) => (
-                <EarningRow key={earning.id} earning={earning} />
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
-    </div>
+          </SettingsCard>
+        </RevealItem>
+      </RevealGroup>
+    </AccountPage>
   )
 }

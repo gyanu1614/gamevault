@@ -190,7 +190,7 @@ function ListingCard({
 
   return (
     <Link href={`/${gameSlug}/${categorySlug}/${listing.slug || listing.id}`}>
-      <div className="group relative overflow-hidden rounded-2xl border border-border-subtle bg-bg-raised transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover">
+      <div className="group relative overflow-hidden rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover hover:bg-bg-raised-hover">
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-bg-overlay">
           {imageUrl ? (

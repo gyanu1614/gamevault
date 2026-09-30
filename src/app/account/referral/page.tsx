@@ -7,6 +7,8 @@
 
 import { getReferralStats } from '@/lib/actions/referral'
 import ReferralClient from './ReferralClient'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { AccountCard, AccountPage } from '@/components/account/AccountSurface'
 
 export const metadata = {
   title: 'Refer & Earn',
@@ -18,12 +20,13 @@ export default async function ReferralPage() {
 
   if (!result.success || !result.data) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <p className="text-text-secondary mb-2">Could not load referral data.</p>
-          <p className="text-sm text-text-disabled">{result.error}</p>
-        </div>
-      </div>
+      <AccountPage>
+        <AccountPageHeader title="Refer & Earn" />
+        <AccountCard className="mt-6 px-6 py-12 text-center">
+          <p className="text-[15px] font-semibold text-text-primary">Couldn’t Load Your Referral Data</p>
+          <p className="mt-1 text-[13px] text-text-secondary">Refresh the page in a moment. {result.error}</p>
+        </AccountCard>
+      </AccountPage>
     )
   }
 

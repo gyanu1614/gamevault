@@ -1,19 +1,17 @@
 'use client'
 
 /**
- * SellerTierBadge — the visual tier medallion.
+ * SellerTierBadge — the tier medallion on the storefront banner, tier cards
+ * and the profile menu. Draws <TierIcon> (Phosphor medal / gem / crown in a
+ * metal gradient) at any size, optionally floating.
  *
- * Renders the ornate per-tier art from `public/tiers/{tier}.png` (gently
- * floating), and falls back to the flat lucide rank icon when the PNG isn't
- * present yet — so the app works with a full set, a partial set, or none.
- *
- * Drop the images at:  public/tiers/{bronze,silver,gold,diamond,legendary}.png
- * (transparent, square). See public/tiers/README.md for the spec.
+ * The old version tried `public/tiers/{tier}.png` first; none of the metal
+ * tiers ever had art, so every render 404'd and fell back to a generic
+ * lucide shape (owner, 2026-09-30: "bad icons for tiers").
  */
 
-import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { tierByKey } from '@/lib/seller/tiers'
+import { TierIcon } from './TierIcon'
 
 interface SellerTierBadgeProps {
   tier: string | null | undefined
@@ -24,51 +22,6 @@ interface SellerTierBadgeProps {
   className?: string
 }
 
-export default function SellerTierBadge({
-  tier,
-  size = 40,
-  float = true,
-  className,
-}: SellerTierBadgeProps) {
-  const def = tierByKey(tier)
-  // Start by trying the PNG; flip to the lucide fallback if it 404s / is absent.
-  const [useArt, setUseArt] = useState(true)
-  const TierIcon = def.Icon
-
-  const floatCls = float ? 'motion-safe:animate-float' : ''
-
-  if (useArt) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- static per-tier art, sized inline
-      <img
-        src={`/tiers/${def.key}.png`}
-        alt={`${def.label} tier`}
-        width={size}
-        height={size}
-        loading="lazy"
-        onError={() => setUseArt(false)}
-        className={cn('inline-block select-none object-contain', floatCls, className)}
-        style={{ width: size, height: size }}
-        draggable={false}
-      />
-    )
-  }
-
-  // Fallback: the flat lucide rank icon in the rank's colour, on a soft chip.
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center justify-center rounded-full border',
-        def.colors.text,
-        def.colors.bg,
-        def.colors.border,
-        floatCls,
-        className,
-      )}
-      style={{ width: size, height: size }}
-      aria-label={`${def.label} tier`}
-    >
-      <TierIcon style={{ width: size * 0.55, height: size * 0.55 }} aria-hidden="true" />
-    </span>
-  )
+export default function SellerTierBadge({ tier, size = 40, float = true, className }: SellerTierBadgeProps) {
+  return <TierIcon tier={tier} size={size} className={cn(float && 'motion-safe:animate-float', className)} />
 }

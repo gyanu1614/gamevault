@@ -16,6 +16,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
 import { Search, Gamepad2, ShieldCheck } from 'lucide-react'
+import { bestOfferId, sortOffers } from './_itemsSort'
 import ItemCard from './_ItemCard'
 import { ScrollRow } from '@/components/ui/scroll-row'
 import type {
@@ -260,44 +261,14 @@ export default function ItemsPageClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offers, attrFilters, priceRange, delivery, debouncedQ, visibleFilters])
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered]
-    switch (sort) {
-      case 'price-asc':
-        arr.sort((a, b) => a.pricePerUnit - b.pricePerUnit)
-        break
-      case 'price-desc':
-        arr.sort((a, b) => b.pricePerUnit - a.pricePerUnit)
-        break
-      case 'top-rated':
-        arr.sort((a, b) => (b.seller.ratingPercent ?? -1) - (a.seller.ratingPercent ?? -1))
-        break
-      case 'best-sellers':
-        arr.sort((a, b) => b.seller.sales - a.seller.sales)
-        break
-      case 'recommended':
-      default:
-        arr.sort((a, b) => b.recommended - a.recommended)
-    }
-    return arr
-  }, [filtered, sort])
+  // Best offer (cheapest in stock) is flagged on its card and pinned first
+  // in the default order; see _itemsSort.ts. Computed from `filtered` so the
+  // flag is stable whatever the sort.
+  const bestDealId = useMemo(() => bestOfferId(filtered), [filtered])
+  const sorted = useMemo(() => sortOffers(filtered, sort), [filtered, sort])
 
   const visible = sorted.slice(0, page * PAGE_SIZE)
   const hasMore = sorted.length > visible.length
-
-  // Best-deal showcase (Eldorado/G2G pattern): flag the single cheapest
-  // in-stock offer in the current filtered set. Computed from `filtered`
-  // (not `sorted`) so the flagged offer is stable no matter how the user
-  // sorts. Only meaningful when there's more than one offer to compare.
-  const bestDealId = useMemo(() => {
-    const candidates = filtered.filter(
-      (o) => o.pricePerUnit > 0 && (o.isUnlimited || (o.stock ?? 0) > 0),
-    )
-    if (candidates.length < 2) return null
-    return candidates.reduce((best, o) =>
-      o.pricePerUnit < best.pricePerUnit ? o : best,
-    ).id
-  }, [filtered])
 
   const clearFilters = () => {
     setQ('')
@@ -398,18 +369,24 @@ export default function ItemsPageClient({
           {/* Filter bar (owner, 2026-09-28): the filters on one full-width
               row, the search on its own full-width row below.
 
-              Filters: sm+ they share the row (each grows to fill it, wrapping
-              when there are many); phones scroll them sideways, and
-              ScrollRow puts a blur + ‹ › button on whichever edge has more.
+              Filters: sm+ they sit in one row at their natural width (wrapping
+              when there are many); phones scroll them sideways, and ScrollRow
+              fades the clipped edge with a ‹ / › chevron.
 
-              Control height is raised HERE, not in tokens.css: the two
-              height vars are overridden on this block and cascade to every
-              control in it, so search, chips and sort stay one height and
-              nothing else on the site changes. */}
-          <div style={{ ['--h-input' as string]: '42px', ['--h-btn-secondary' as string]: '42px' }}>
+              Control height is set HERE, not in tokens.css: the two height
+              vars are overridden on this block and cascade to every control
+              in it, so search, chips and sort stay one height and nothing
+              else on the site changes. */}
+          {/* GameBoost sizing (measured 2026-09-29): 40px controls on phones,
+              42px from sm; buttons as wide as their label, not stretched. */}
+          <div className="[--h-btn-secondary:40px] [--h-input:40px] sm:[--h-btn-secondary:42px] sm:[--h-input:42px]">
+          {/* Phones: the filters live in ONE bar exactly like the Messages
+              tab bar (owner, 2026-09-30): well fill + hairline frame, 34px
+              segments, the scroll cue inside the frame. sm+: loose pills. */}
+          <div className="max-sm:w-fit max-sm:max-w-full max-sm:overflow-hidden max-sm:rounded-lg max-sm:border max-sm:border-white/[0.08] max-sm:bg-bg-well max-sm:[--h-btn-secondary:34px]">
           <ScrollRow
-            wrapperClassName="-mx-4 sm:mx-0"
-            className="flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 sm:[&>*]:flex-1 [&::-webkit-scrollbar]:hidden"
+            edgeColor="var(--color-bg-well)"
+            className="flex items-center overflow-x-auto [scrollbar-width:none] max-sm:w-max max-sm:max-w-full max-sm:gap-0.5 max-sm:p-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible [&::-webkit-scrollbar]:hidden"
           >
             {/* Attribute filters (admin-defined per game), then Price and
                 Delivery Time. All multi-select except Price (a range). */}
@@ -437,17 +414,18 @@ export default function ItemsPageClient({
             )}
 
             {/* Sort */}
-            <div className="shrink-0 sm:[&>button]:w-full">
+            <div className="shrink-0">
               <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
             </div>
           </ScrollRow>
+          </div>
 
           {/* Search — its own full-width row under the filters. */}
           <div className="relative mt-2.5 w-full">
             <Search
               // z-10: the input's backdrop-blur gives it its own layer, which
               // otherwise paints over this icon (it comes first in the DOM).
-              className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-secondary"
+              className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-text-tertiary"
               aria-hidden
             />
             <input
@@ -456,14 +434,10 @@ export default function ItemsPageClient({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search for an Item"
               aria-label="Search for an item"
-              // A recessed well, darker than the filter buttons beside it,
-              // so the search reads as the place you type rather than one
-              // more grey button. Interaction is an OUTLINE ONLY: hover
-              // turns the border white; focus changes nothing (the caret is
-              // the cue, and the site-wide green :focus-visible ring is
-              // switched off here).
-              className="w-full rounded border border-white/[0.13] bg-black/25 pl-10 pr-3 text-text-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] outline-none backdrop-blur-sm transition-colors placeholder:text-white/45 hover:border-white/40 focus-visible:shadow-none"
-              style={{ height: 'var(--h-input)', fontSize: 'var(--fs-body)' }}
+              // Same family as the filter bar above: well fill + hairline.
+              // Focus brightens the hairline (no green ring).
+              className="w-full appearance-none rounded-lg border border-white/[0.08] bg-bg-well pl-10 pr-3 text-[16px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-white/[0.14] focus:border-white/25 focus-visible:shadow-none sm:text-[length:var(--fs-body)] [&::-webkit-search-cancel-button]:appearance-none"
+              style={{ height: 'var(--h-input)' }}
             />
           </div>
           </div>
@@ -489,6 +463,7 @@ export default function ItemsPageClient({
                   key={o.id}
                   offer={o}
                   gameSlug={gameSlug}
+                  gameName={gameName}
                   isOwn={!!viewerId && o.sellerId === viewerId}
                   isBestDeal={o.id === bestDealId}
                 />
@@ -500,10 +475,10 @@ export default function ItemsPageClient({
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded border border-border-default bg-bg-raised px-6 font-bold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+                  className="inline-flex items-center gap-2 rounded-md bg-bg-raised px-6 font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
                   style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
                 >
-                  Load more items
+                  Load More Items
                   <span aria-hidden className="text-text-tertiary">·</span>
                   <span className="text-text-tertiary tabular-nums">
                     {sorted.length - visible.length} left
@@ -524,8 +499,8 @@ function Dot() {
 
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-default bg-bg-raised px-6 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border-default bg-bg-overlay text-text-secondary">
+    <div className="flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
         <Search className="h-5 w-5" />
       </div>
       <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
@@ -537,10 +512,10 @@ function EmptyState({ onClear }: { onClear: () => void }) {
       <button
         type="button"
         onClick={onClear}
-        className="mt-5 inline-flex items-center gap-1.5 rounded border border-border-default bg-bg-overlay px-4 font-semibold text-text-primary transition-colors hover:border-lime-tint-border hover:bg-[rgba(86,184,127,0.04)] hover:text-lime-text"
+        className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-white/[0.07] px-4 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
         style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
       >
-        Clear filters
+        Clear Filters
       </button>
     </div>
   )

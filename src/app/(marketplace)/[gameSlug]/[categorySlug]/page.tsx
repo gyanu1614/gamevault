@@ -887,7 +887,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ── Hero header ──────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-default bg-bg-raised mt-4 mb-8 px-6 py-8 sm:px-10 sm:py-10">
+        <div className="relative overflow-hidden rounded-lg bg-bg-raised mt-4 mb-8 px-6 py-8 sm:px-10 sm:py-10">
           {/* Lime radial glow */}
           <div
             aria-hidden
@@ -899,7 +899,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           />
           <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
             {(game as any).image_url && (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-overlay shadow-elevated sm:h-20 sm:w-20">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.05] shadow-elevated sm:h-20 sm:w-20">
                 <Image
                   src={(game as any).image_url}
                   alt={game.name}

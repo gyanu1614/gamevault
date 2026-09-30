@@ -62,7 +62,7 @@ export default function ListingDetailSkeleton() {
             <Block className="mx-auto aspect-square w-full max-w-[360px] rounded-lg" />
 
             {/* Description card — icon + heading, then body lines. */}
-            <div className="rounded-lg border border-border-default bg-bg-overlay p-5">
+            <div className="rounded-lg bg-bg-raised p-5">
               <div className="mb-3.5 flex items-center gap-2.5">
                 <Block className="h-8 w-8 shrink-0 rounded-lg" />
                 <Block className="h-[17px] w-28" />
@@ -77,7 +77,7 @@ export default function ListingDetailSkeleton() {
           {/* ── RIGHT rail ───────────────────────────────────────────── */}
           <div>
             {/* Buy card — same surface as the real one. */}
-            <div className="relative flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] p-5 shadow-elevated backdrop-blur-md">
+            <div className="relative flex flex-col overflow-hidden rounded-lg bg-[#1D1E23] p-5 shadow-elevated backdrop-blur-md">
               {/* Seller row — 36px avatar, name + meta line, arrow. */}
               <div className="flex items-center gap-2.5 pb-4">
                 <Block className="h-9 w-9 shrink-0 rounded-full" />
@@ -109,7 +109,7 @@ export default function ListingDetailSkeleton() {
             </div>
 
             {/* Trust card — three icon cells. */}
-            <div className="relative mt-3 overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] p-4 shadow-elevated backdrop-blur-md">
+            <div className="relative mt-3 overflow-hidden rounded-lg bg-[#1D1E23] p-4 shadow-elevated backdrop-blur-md">
               <div className="grid grid-cols-3 gap-2">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="flex flex-col items-center gap-1.5 px-1.5 py-2">

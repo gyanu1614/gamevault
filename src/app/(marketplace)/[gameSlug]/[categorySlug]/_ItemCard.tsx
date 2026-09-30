@@ -31,6 +31,9 @@ import { SmartLink } from '@/components/global/SmartLink'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import { IconBolt, IconClock, IconPackage } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
+import { TierIcon } from '@/components/seller/tiers/TierIcon'
+import { PencilSimpleIcon } from '@phosphor-icons/react'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
@@ -117,11 +120,14 @@ function fmtStock(n: number): string {
 export default function ItemCard({
   offer,
   gameSlug,
+  gameName,
   isOwn,
   isBestDeal,
 }: {
   offer: ItemOffer
   gameSlug: string
+  /** Shown on the top line when the listing has no filter values. */
+  gameName?: string
   isOwn?: boolean
   isBestDeal?: boolean
 }) {
@@ -152,11 +158,12 @@ export default function ItemCard({
         // a 10% hairline, a 1px inner highlight on the top edge and a soft
         // drop shadow for depth. Hover lifts the whole gradient one step and
         // clears the hairline — still black, never the grey tokens.
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-white/[0.10]',
-        'bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]',
-        'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]',
-        'transition-[background-image,border-color,box-shadow] duration-200',
-        'hover:border-white/[0.16] hover:bg-[linear-gradient(180deg,#27282F_0%,#1E1F25_100%)] hover:shadow-[0_14px_36px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.09)]',
+        // h-full: every card fills its grid row, so a row never mixes heights.
+        // Fill only (owner, 2026-09-30: no outlines anywhere): the shared
+        // marketplace surface, hover lifts the gradient one step.
+        'group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg',
+        MARKET_CARD,
+        MARKET_CARD_HOVER,
       )}
     >
       {/* Whole-card stretched link (see V15g pattern). */}
@@ -173,11 +180,16 @@ export default function ItemCard({
             chains have the whole card width to wrap into (the image no
             longer crowds it from the right). Muted/light, not accent —
             it's metadata, kept minimal. */}
-        {offer.breadcrumb.length > 0 && (
-          <div className="mb-2 line-clamp-1 font-medium text-text-tertiary" style={{ fontSize: 'var(--fs-caption)', letterSpacing: '0.02em' }}>
-            {offer.breadcrumb.join(' · ')}
-          </div>
-        )}
+        {/* The row is ALWAYS there (one line), so a card with no filter
+            values is exactly as tall as one with them (owner, 2026-09-30:
+            "some cards have filters and some don't"). No filter values:
+            the game's name (owner: "Steal a Brainrot", not "Buy Items"). */}
+        <div
+          className="mb-2 line-clamp-1 min-h-[1.4em] font-medium text-text-tertiary"
+          style={{ fontSize: 'var(--fs-caption)', letterSpacing: '0.02em' }}
+        >
+          {offer.breadcrumb.length > 0 ? offer.breadcrumb.join(' · ') : gameName || '\u00A0'}
+        </div>
 
         {/* CONTENT ROW — left (title + delivery), right (image). The image
             aligns to the TITLE, not the breadcrumb above. */}
@@ -241,7 +253,7 @@ export default function ItemCard({
       <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
-        <div className="flex min-w-0 items-baseline gap-1.5">
+        <div className="flex min-w-0 shrink-0 items-baseline gap-1.5 whitespace-nowrap">
           <span className="tabular-nums leading-none text-text-primary" style={{ fontSize: 'var(--fs-price)', fontWeight: 'var(--fw-heading)', fontVariantNumeric: 'tabular-nums' }}>
             {fmtPrice(offer.pricePerUnit)}
           </span>
@@ -261,7 +273,7 @@ export default function ItemCard({
               {/* A price tag (Material LocalOffer), in the same filled
                   rectangle as the card's chips. */}
               <span
-                aria-label="Lowest price"
+                aria-label="Best Offer"
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-bg text-success"
               >
                 <LocalOfferRoundedIcon aria-hidden style={{ fontSize: 14 }} />
@@ -271,7 +283,7 @@ export default function ItemCard({
                 className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded border border-border-default bg-bg-overlay-2 px-2 py-1 font-semibold text-text-primary opacity-0 shadow-md transition-opacity duration-150 group-hover/tip:opacity-100"
                 style={{ fontSize: 'var(--fs-micro)' }}
               >
-                Lowest Price
+                Best Offer
               </span>
             </span>
           )}
@@ -280,47 +292,44 @@ export default function ItemCard({
         {/* Right — seller block, OR the owner "Yours" edit link.
             Direction 2: reputation collapses into ONE trust-score token on
             the far right; the seller identity (name + verified) + sold count
-            sit quietly beside it, right-aligned. One click target → shop. */}
+            sit beside the avatar as one unit. One click target → shop. */}
         {isOwn ? (
           <Link
             href={`/sell/edit/${offer.id}`}
             onClick={stop}
-            className="pointer-events-auto relative z-10 inline-flex shrink-0 items-center gap-1.5 rounded border border-amber-500/35 bg-amber-500/10 px-3 py-1.5 font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
-            style={{ minHeight: 'var(--h-btn-tertiary)', fontSize: 'var(--fs-micro)' }}
+            aria-label="Edit your offer"
+            className="pointer-events-auto relative z-10 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-amber-400/10 px-3 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-400/[0.16]"
           >
+            <PencilSimpleIcon size={14} weight="bold" aria-hidden />
             Yours
           </Link>
         ) : (
           <SmartLink
             href={`/shop/${sellerShopSlug(offer.seller) ?? ''}`}
             onClick={stop}
-            className="pointer-events-auto inline-flex min-w-0 shrink items-center gap-2.5 rounded py-0.5 pl-0.5 pr-1 transition-colors hover:bg-bg-overlay-2"
+            className="pointer-events-auto -mr-1 inline-flex min-w-0 shrink items-center gap-2.5 rounded-lg py-1 pl-2 pr-1 transition-colors hover:bg-white/[0.05]"
           >
-            <SellerAvatar seller={offer.seller} size={32} />
-
-            {/* Identity above, reputation below. Both lines are right-
-                aligned so the block reads as one column flush to the
-                card edge instead of two ragged lines; `items-end` plus
-                the avatar's own centring keeps the pair optically
-                balanced against the 32px circle. */}
-            <div className="flex min-w-0 flex-col items-end gap-[3px] leading-none">
-              <div className="flex min-w-0 items-center gap-1">
-                <span className="max-w-[112px] truncate text-[12.5px] font-medium text-text-primary">
+            {/* Anchored to the corner: text right-aligned into the avatar,
+                the avatar on the card's right edge under the thumbnail.
+                Top line: name, verified, tier icon. Bottom: 👍 % · Sold. */}
+            <div className="flex min-w-0 flex-col items-end gap-1 leading-none">
+              <div className="flex min-w-0 max-w-full items-center gap-1">
+                <span className="truncate text-[13px] font-semibold text-text-primary">
                   {sellerName}
                 </span>
                 {offer.seller.verified && <VerifiedBadge size={13} />}
+                <TierIcon tier={offer.seller.tier} size={14} />
               </div>
-
-              {/* "👍 100% (12) · 34 Sold · Gold", or "Verified Seller" before
-                  the first sale (shared rule: SellerStats). */}
               <SellerStats
                 ratingPercent={offer.seller.ratingPercent}
                 reviews={offer.seller.reviewCount}
                 sales={offer.seller.sales}
                 tier={offer.seller.tier}
-                className="text-[11px]"
+                hideTier
+                className="text-[12px]"
               />
             </div>
+            <SellerAvatar seller={offer.seller} size={34} />
           </SmartLink>
         )}
       </div>

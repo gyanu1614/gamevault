@@ -422,7 +422,6 @@ const HERO_CHIPS = [
   { label: 'Items', icon: 'items', tabId: 'items' },
   { label: 'Accounts', icon: 'accounts', tabId: 'accounts' },
   { label: 'Boosting', icon: 'boosting', tabId: 'boosting' },
-  { label: 'Top Ups', icon: 'top-up', tabId: 'top-up' },
 ] as const
 
 function maskStyle(icon: string): React.CSSProperties {
@@ -529,7 +528,7 @@ export function MobileHero() {
 
       {/* Category rail — even 5-column grid so tiles line up on one grid
           and labels center under each. All 5 fit at every phone width. */}
-      <div className="mt-5 grid grid-cols-5 gap-1.5">
+      <div className="mt-5 grid grid-cols-4 gap-1.5">
         {HERO_CHIPS.map(({ label, icon, tabId }) => (
           <button
             key={label}

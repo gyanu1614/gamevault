@@ -3,22 +3,26 @@
 /**
  * V22 — Seller Dashboard (real data).
  *
- * Sections: KPI strip · Needs Your Attention · Earnings trend ·
- * Top offers + Reputation · derived nudges. All fed by
- * getSellerDashboard() — no dummy data.
+ * Sections: KPI strip, Needs Your Attention, Earnings trend, Top offers,
+ * Reputation, derived nudges. All fed by getSellerDashboard(), no dummy
+ * data. Account card system (AccountSurface): fill-only cards, one stat
+ * panel, cards rise in on load.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, TrendingDown, Wallet, ShoppingBag, Percent,
-  Package, MessageSquare, ShieldAlert, Star, Lightbulb, ArrowRight, ChevronRight,
+  TrendingUp, TrendingDown,
+  Package, MessageSquare, ShieldAlert, Star, Lightbulb, ChevronRight,
 } from 'lucide-react'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { AccountPage, SettingsCard, StatStrip, accountRowCls } from '@/components/account/AccountSurface'
+import { CardLink } from '@/components/account/CardLink'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import SellerOnboardingChecklist from '@/components/account/SellerOnboardingChecklist'
 import { getSellerDashboard, type DashboardData } from '@/lib/actions/seller-dashboard-v2'
 import { cn } from '@/lib/utils'
@@ -26,26 +30,28 @@ import { cn } from '@/lib/utils'
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 1000 ? 0 : 2 })
 
-const WINDOWS = [
-  { days: 7, label: '7 Days' },
-  { days: 30, label: '30 Days' },
-] as const
+type WindowId = '7' | '30'
+const WINDOWS: { id: WindowId; label: string }[] = [
+  { id: '7', label: '7 Days' },
+  { id: '30', label: '30 Days' },
+]
 
 export default function SellerDashboard({ username, userId }: { username: string; userId: string }) {
-  const [windowDays, setWindowDays] = useState<number>(7)
+  const [windowDays, setWindowDays] = useState<WindowId>('7')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
     setLoading(true)
-    getSellerDashboard(windowDays).then((d) => {
+    getSellerDashboard(Number(windowDays)).then((d) => {
       if (active) { setData(d); setLoading(false) }
     })
     return () => { active = false }
   }, [windowDays])
 
   const kpis = data?.kpis
+  const days = Number(windowDays)
 
   const delta = useMemo(() => {
     if (!kpis) return null
@@ -59,212 +65,163 @@ export default function SellerDashboard({ username, userId }: { username: string
   }, [kpis])
 
   return (
-    <div className="min-h-screen pb-20">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <AccountPageHeader
-          icon="dashboard"
-          title="Seller Dashboard"
-          subtitle={`Welcome back, ${username}.`}
-          actions={
-            <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
-              {WINDOWS.map((w) => (
-                <button
-                  key={w.days}
-                  onClick={() => setWindowDays(w.days)}
-                  className={cn(
-                    'rounded-md px-4 py-2 text-sm font-medium transition-all',
-                    windowDays === w.days
-                      ? 'bg-lime text-text-inverse'
-                      : 'text-text-secondary hover:text-white',
-                  )}
-                >
-                  {w.label}
-                </button>
-              ))}
-            </div>
-          }
-        />
+    <AccountPage>
+      <AccountPageHeader
+        title="Seller Dashboard"
+        subtitle={`Welcome back, ${username}.`}
+        actions={
+          <SegmentedTabs
+            tabs={WINDOWS}
+            value={windowDays}
+            onChange={setWindowDays}
+            layoutId="dashboard-window-pill"
+            ariaLabel="Time range"
+          />
+        }
+      />
 
-        {/* Get Started checklist — real completion signals, dismissible */}
+      <RevealGroup className="mt-6 space-y-4">
+        {/* Get Started checklist: real completion signals, dismissible */}
         {data?.onboarding && (
-          <SellerOnboardingChecklist onboarding={data.onboarding} userId={userId} />
+          <RevealItem>
+            <SellerOnboardingChecklist onboarding={data.onboarding} userId={userId} />
+          </RevealItem>
         )}
 
-        {/* KPI strip */}
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard
-            icon={Wallet}
-            label={`Net Earnings · ${windowDays}d`}
-            value={kpis ? usd(kpis.netEarnings) : '—'}
-            deltaPct={delta?.earnings}
+        <RevealItem>
+          <StatStrip
             loading={loading}
+            stats={[
+              {
+                label: 'Net Earnings',
+                value: kpis ? usd(kpis.netEarnings) : '—',
+                hint: delta ? <Delta pct={delta.earnings} days={days} /> : null,
+              },
+              {
+                label: 'Pending Payout',
+                value: kpis ? usd(kpis.pendingPayout) : '—',
+                hint: 'Awaiting delivery confirmation',
+              },
+              {
+                label: 'Orders',
+                value: kpis ? String(kpis.orders) : '—',
+                hint: delta ? <Delta pct={delta.orders} days={days} /> : null,
+              },
+              {
+                label: 'Conversion',
+                value: kpis ? `${kpis.conversionRate.toFixed(1)}%` : '—',
+                hint: kpis ? `${kpis.totalSales} sales from ${kpis.totalViews} views` : null,
+              },
+            ]}
           />
-          <KpiCard
-            icon={ShoppingBag}
-            label="Pending Payout"
-            value={kpis ? usd(kpis.pendingPayout) : '—'}
-            hint="Awaiting Delivery Confirmation"
-            loading={loading}
-          />
-          <KpiCard
-            icon={Package}
-            label={`Orders · ${windowDays}d`}
-            value={kpis ? String(kpis.orders) : '—'}
-            deltaPct={delta?.orders}
-            loading={loading}
-          />
-          <KpiCard
-            icon={Percent}
-            label="Conversion"
-            value={kpis ? `${kpis.conversionRate.toFixed(1)}%` : '—'}
-            hint={kpis ? `${kpis.totalSales} sales · ${kpis.totalViews} views` : undefined}
-            loading={loading}
-          />
-        </div>
+        </RevealItem>
 
         {/* Nudges */}
         {data && data.nudges.length > 0 && (
-          <div className="mt-4 space-y-2">
+          <RevealItem className="space-y-2">
             {data.nudges.map((n, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-2.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-4 py-2.5"
-              >
-                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" />
+              <div key={i} className="flex items-start gap-2.5 rounded-lg bg-lime-tint-bg px-4 py-3">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-lime-text" aria-hidden />
                 <p className="text-[13px] text-text-primary">{n}</p>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </RevealItem>
         )}
 
         {/* Main grid */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
           {/* Left: trend + top offers */}
           <div className="space-y-4">
-            <Card title="Earnings Trend">
-              {loading || !data ? (
-                <div className="h-48 animate-pulse rounded-lg card-frost" />
-              ) : (
-                <EarningsTrend trend={data.trend} />
-              )}
-            </Card>
+            <RevealItem>
+              <SettingsCard title="Earnings Trend" description={`Net earnings over the last ${days} days.`}>
+                {loading || !data ? (
+                  <div aria-hidden>
+                    <div className="skeleton h-8 w-28 rounded" />
+                    <div className="skeleton mt-3 h-44 w-full rounded-md" />
+                  </div>
+                ) : (
+                  <EarningsTrend trend={data.trend} />
+                )}
+              </SettingsCard>
+            </RevealItem>
 
-            <Card title="Top Offers" href="/account/listings">
-              {loading || !data ? (
-                <SkeletonRows />
-              ) : data.topOffers.length === 0 ? (
-                <Empty text="No offers yet. Create your first listing to start selling." />
-              ) : (
-                <ul className="divide-y divide-border-subtle">
-                  {data.topOffers.map((o) => (
-                    <li key={o.id} className="flex items-center justify-between gap-3 py-2.5">
-                      <span className="min-w-0 truncate text-sm font-medium text-text-primary">{o.title}</span>
-                      <div className="flex shrink-0 items-center gap-4 text-[12px] text-text-secondary tabular-nums">
-                        <span>{o.views} views</span>
-                        <span>{o.sales} sold</span>
-                        <span className="font-semibold text-lime-text">{o.conversion.toFixed(1)}%</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            <RevealItem>
+              <SettingsCard title="Top Offers" aside={<CardLink href="/account/listings" />}>
+                {loading || !data ? (
+                  <SkeletonRows />
+                ) : data.topOffers.length === 0 ? (
+                  <Empty text="No offers yet. Create your first listing to start selling." />
+                ) : (
+                  <ul className="divide-y divide-white/[0.07]">
+                    {data.topOffers.map((o) => (
+                      <li key={o.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                        <span className="min-w-0 truncate text-sm font-medium text-text-primary">{o.title}</span>
+                        <div className="flex shrink-0 items-center gap-4 text-[12.5px] tabular-nums text-text-secondary">
+                          <span>{o.views} views</span>
+                          <span>{o.sales} sold</span>
+                          <span className="w-12 text-right font-semibold text-text-primary">{o.conversion.toFixed(1)}%</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SettingsCard>
+            </RevealItem>
           </div>
 
           {/* Right: attention queue + reputation */}
           <div className="space-y-4">
-            <Card title="Needs Your Attention">
-              {loading || !data ? (
-                <SkeletonRows />
-              ) : data.attention.length === 0 ? (
-                <Empty text="All caught up — nothing needs action right now." />
-              ) : (
-                <ul className="space-y-2">
-                  {data.attention.map((a) => (
-                    <li key={`${a.kind}-${a.id}`}>
-                      <Link
-                        href={a.href}
-                        className="flex items-center gap-3 rounded-lg border border-border-subtle bg-white/[0.02] px-3 py-2.5 transition-colors hover:bg-white/[0.05]"
-                      >
-                        <AttentionIcon kind={a.kind} overdue={a.overdue} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-text-primary">{a.title}</p>
-                          <p className="truncate text-[12px] text-text-secondary">{a.detail}</p>
-                        </div>
-                        {a.overdue && (
-                          <span className="shrink-0 rounded-full bg-error-bg px-2 py-0.5 text-[12px] font-bold uppercase text-error">
-                            Overdue
-                          </span>
-                        )}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            <RevealItem>
+              <SettingsCard title="Needs Your Attention">
+                {loading || !data ? (
+                  <SkeletonRows />
+                ) : data.attention.length === 0 ? (
+                  <Empty text="All caught up. Nothing needs action right now." />
+                ) : (
+                  <ul className="space-y-2">
+                    {data.attention.map((a) => (
+                      <li key={`${a.kind}-${a.id}`}>
+                        <Link href={a.href} className={accountRowCls}>
+                          <AttentionIcon kind={a.kind} overdue={a.overdue} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-text-primary">{a.title}</p>
+                            <p className="truncate text-[12px] text-text-secondary">{a.detail}</p>
+                          </div>
+                          {a.overdue && (
+                            <span className="shrink-0 rounded-full bg-error-bg px-2 py-0.5 text-[12px] font-semibold text-error">
+                              Overdue
+                            </span>
+                          )}
+                          <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SettingsCard>
+            </RevealItem>
 
-            <Card title="Reputation" href="/account/reviews">
-              {loading || !data ? (
-                <SkeletonRows />
-              ) : (
-                <Reputation rep={data.reputation} />
-              )}
-            </Card>
+            <RevealItem>
+              <SettingsCard title="Reputation" aside={<CardLink href="/account/reviews" />}>
+                {loading || !data ? <SkeletonRows /> : <Reputation rep={data.reputation} />}
+              </SettingsCard>
+            </RevealItem>
           </div>
         </div>
-      </div>
-    </div>
+      </RevealGroup>
+    </AccountPage>
   )
 }
 
 // ── Pieces ────────────────────────────────────────────────────────────────
 
-function KpiCard({
-  icon: Icon, label, value, deltaPct, hint, loading,
-}: {
-  icon: React.ElementType; label: string; value: string
-  deltaPct?: number; hint?: string; loading?: boolean
-}) {
-  const up = (deltaPct ?? 0) >= 0
+function Delta({ pct, days }: { pct: number; days: number }) {
+  const up = pct >= 0
   return (
-    <div className="rounded-lg border border-border-default bg-bg-raised px-4 py-3">
-      <div className="flex items-center gap-2 text-text-secondary">
-        <Icon className="h-4 w-4" />
-        <span className="text-[12px] font-medium">{label}</span>
-      </div>
-      {loading ? (
-        <div className="mt-1.5 h-6 w-24 animate-pulse rounded bg-white/[0.06]" />
-      ) : (
-        <div className="mt-0.5 text-2xl font-bold leading-tight text-text-primary">{value}</div>
-      )}
-      {!loading && deltaPct !== undefined && (
-        <div className={cn('mt-0.5 flex items-center gap-1 text-[12px] font-medium', up ? 'text-success' : 'text-error')}>
-          {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {Math.abs(deltaPct).toFixed(0)}% vs prev
-        </div>
-      )}
-      {!loading && hint && <div className="mt-0.5 text-[12px] text-text-tertiary">{hint}</div>}
-    </div>
-  )
-}
-
-function Card({ title, href, children }: { title: string; href?: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border-default bg-bg-raised p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-text-secondary">{title}</h2>
-        {href && (
-          <Link href={href} className="flex items-center gap-1 text-[12px] font-medium text-lime-text hover:underline">
-            View all <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        )}
-      </div>
-      {children}
-    </div>
+    <span className={cn('inline-flex items-center gap-1 font-medium', up ? 'text-success' : 'text-error')}>
+      {up ? <TrendingUp className="h-3 w-3" aria-hidden /> : <TrendingDown className="h-3 w-3" aria-hidden />}
+      {Math.abs(pct).toFixed(0)}% vs previous {days} days
+    </span>
   )
 }
 
@@ -300,10 +257,11 @@ function EarningsTrend({ trend }: { trend: { date: string; amount: number }[] })
             <Tooltip
               cursor={{ stroke: 'rgba(255,255,255,0.15)' }}
               contentStyle={{
-                background: 'rgba(10,10,15,0.95)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 12,
+                background: 'var(--color-bg-overlay, #262730)',
+                border: 'none',
+                borderRadius: 6,
                 fontSize: 12,
+                boxShadow: '0 10px 30px -12px rgba(0,0,0,0.6)',
               }}
               labelFormatter={(d) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               formatter={(v) => [usd(Number(v) || 0), 'Earnings'] as [string, string]}
@@ -367,14 +325,14 @@ function Reputation({ rep }: { rep: DashboardData['reputation'] }) {
 
 function SkeletonRows() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" aria-hidden>
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-12 animate-pulse rounded-lg card-frost" />
+        <div key={i} className="skeleton h-12 rounded-md" />
       ))}
     </div>
   )
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="py-6 text-center text-sm text-text-secondary">{text}</p>
+  return <p className="rounded-md bg-bg-overlay px-4 py-6 text-center text-[13px] text-text-secondary">{text}</p>
 }

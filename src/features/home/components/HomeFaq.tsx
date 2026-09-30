@@ -43,7 +43,7 @@ const ITEMS = [
   },
   {
     q: 'What can I buy, and how do I pay?',
-    a: 'Four categories: in-game currency, items, accounts and top-ups, across every game we support. Pay by card and local methods through Payssion, or in crypto through CoinGate and BTCPay.',
+    a: 'In-game currency, items and accounts, across every game we support. Pay by card and local methods through Payssion, or in crypto through CoinGate and BTCPay.',
   },
 ]
 

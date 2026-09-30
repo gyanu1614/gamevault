@@ -33,7 +33,7 @@ function HeroCardSkeleton() {
     <section aria-hidden>
       <div className="grid gap-4 lg:grid-cols-[1fr_minmax(360px,440px)]">
         {/* LEFT CARD — seller row → delivery/stock → instructions → badges */}
-        <div className="rounded-lg border border-border-default bg-bg-raised p-5 sm:p-6">
+        <div className="rounded-lg bg-bg-raised p-5 sm:p-6">
           {/* Seller row (avatar size=48) */}
           <div className="-m-1 mb-1 flex items-center gap-3 rounded-lg p-1">
             <Block className="h-12 w-12 shrink-0 rounded-full" />
@@ -81,7 +81,7 @@ function HeroCardSkeleton() {
 
         {/* RIGHT CARD — desktop only (mobile uses the sticky tile below).
             recommended chip → price → stepper → meta → buy → trust. */}
-        <div className="relative hidden rounded-lg border border-border-default bg-bg-raised p-5 sm:p-6 lg:block">
+        <div className="relative hidden rounded-lg bg-bg-raised p-5 sm:p-6 lg:block">
           {/* Recommended chip top-right */}
           <div className="absolute right-5 top-5 z-10">
             <Block className="h-6 w-[122px] rounded-md" />
@@ -95,7 +95,7 @@ function HeroCardSkeleton() {
 
           {/* Stepper — border-t pt-4, real is h-12 sm:h-[52px] rounded-lg */}
           <div className="mt-4 border-t border-border-subtle pt-4">
-            <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay sm:h-[52px]">
+            <div className="flex h-12 items-center overflow-hidden rounded-lg bg-bg-raised sm:h-[52px]">
               <Block className="m-3 h-6 w-6 rounded" />
               <span aria-hidden className="h-6 w-px bg-border-subtle" />
               <Block className="mx-auto h-5 w-24" />
@@ -127,11 +127,11 @@ function HeroCardSkeleton() {
 }
 
 /* ── SellerRow skeleton — mirrors the real <article> wrapper:
-      overflow-hidden rounded-xl border border-border-subtle bg-bg-raised
+      overflow-hidden rounded-lg bg-bg-raised
       with relative > flex content + p-4 sm:p-5 inner padding. */
 function SellerRowSkeleton() {
   return (
-    <article className="overflow-hidden rounded-lg border border-border-default bg-bg-raised">
+    <article className="overflow-hidden rounded-lg bg-bg-raised">
       <div className="relative">
         <div className="relative z-10 flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
           {/* Seller chunk (avatar size=40 → h-10 w-10) */}
@@ -187,7 +187,7 @@ export default function CurrencySkeleton() {
       {/* GameSubNav skeleton — classNames copy-pasted from
           src/components/marketplace/GameSubNav.tsx so width/padding
           match the real pill exactly. */}
-      <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[42px] max-md:px-0 max-md:py-0">
+      <div className="relative z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[42px] max-md:px-0 max-md:py-0">
         <div className="pointer-events-auto w-full max-w-fit flex items-center gap-0.5 rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150 px-2 py-1.5 sm:px-2.5 sm:py-2 max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-40 max-md:h-[42px] max-md:max-w-none max-md:overflow-hidden max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:!bg-[rgba(14,22,17,0.94)]" style={{ backgroundColor: 'rgba(29, 30, 35, 0.72)' }}>
           {/* V21/P7.q — One block per slot (game + each category). */}
           <div className="flex flex-shrink-0 items-center px-2.5 py-1 sm:px-3.5 sm:py-1.5">
@@ -257,7 +257,7 @@ export default function CurrencySkeleton() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-4"
+                  className="rounded-lg bg-white/[0.03] p-4"
                 >
                   <Block className="mb-3 h-8 w-8 rounded-full" />
                   <Block className="mb-1.5 h-4 w-24" />
@@ -275,7 +275,7 @@ export default function CurrencySkeleton() {
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-4"
+                  className="rounded-lg bg-white/[0.03] p-4"
                 >
                   <Block className="h-4 w-3/4" />
                 </div>

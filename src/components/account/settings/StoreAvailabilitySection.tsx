@@ -12,9 +12,10 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Power } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { getMyStorePaused, setStorePaused } from '@/lib/actions/seller-presence'
 import { Switch } from '@/components/ui/switch'
+import { SettingsCard } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 
 export default function StoreAvailabilitySection() {
@@ -54,34 +55,20 @@ export default function StoreAvailabilitySection() {
   }
 
   return (
-    <div>
-      <h2 className="mb-4 text-sm font-semibold text-text-primary">Store Availability</h2>
-
-      <div className="flex flex-col gap-4 rounded-lg border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
-              paused
-                ? 'border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)] bg-warning-bg text-warning'
-                : 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
-            )}
-          >
-            <Power className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-text-primary">
-              {loading ? 'Checking…' : paused ? 'Paused — Offers Hidden' : 'Live — Accepting Orders'}
-            </div>
-            <p className="mt-0.5 text-xs text-text-tertiary">
-              Pause while you’re away. Your listings stay saved and reappear the moment you
-              switch back. Orders already placed still need fulfilling.
-            </p>
-          </div>
+    <SettingsCard
+      title="Store Availability"
+      description="Pause while you’re away. Your offers stay saved and come back the moment you switch back on. Orders already placed still need delivering."
+      aside={<StatusPill loading={loading} paused={paused} />}
+    >
+      <div className="flex items-center justify-between gap-4 rounded-md bg-bg-overlay px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-text-primary">Pause My Store</p>
+          <p className="mt-0.5 text-[12.5px] text-text-tertiary">
+            {paused ? 'Your offers are hidden from buyers.' : 'Buyers can see and order your offers.'}
+          </p>
         </div>
-
         <div className="flex shrink-0 items-center gap-2">
-          {pending && <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />}
+          {pending && <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" aria-hidden />}
           <Switch
             checked={paused}
             onCheckedChange={toggle}
@@ -90,6 +77,20 @@ export default function StoreAvailabilitySection() {
           />
         </div>
       </div>
-    </div>
+    </SettingsCard>
+  )
+}
+
+function StatusPill({ loading, paused }: { loading: boolean; paused: boolean }) {
+  if (loading) return <span className="skeleton block h-6 w-16 rounded-full" aria-hidden />
+  return (
+    <span
+      className={cn(
+        'inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold',
+        paused ? 'bg-warning-bg text-warning' : 'bg-success-bg text-success',
+      )}
+    >
+      {paused ? 'Paused' : 'Live'}
+    </span>
   )
 }

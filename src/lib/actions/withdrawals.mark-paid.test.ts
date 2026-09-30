@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   createClient: vi.fn(),
   createServiceRoleClient: vi.fn(),
   sendWithdrawalProcessedEmail: vi.fn(),
+  emailAllowed: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: h.createClient }))
@@ -25,6 +26,7 @@ vi.mock('@/lib/actions/admin-permissions', () => ({
 vi.mock('@/lib/email', () => ({
   sendWithdrawalProcessedEmail: h.sendWithdrawalProcessedEmail,
 }))
+vi.mock('@/lib/email/preferences', () => ({ emailAllowed: h.emailAllowed }))
 
 import { markWithdrawalPaid } from '@/lib/actions/withdrawals'
 
@@ -58,6 +60,7 @@ beforeEach(() => {
   h.requireAdmin.mockResolvedValue({ userId: ADMIN_ID })
   h.requireRole.mockResolvedValue({ userId: ADMIN_ID, role: 'admin' })
   h.sendWithdrawalProcessedEmail.mockResolvedValue({ success: true })
+  h.emailAllowed.mockResolvedValue(true)
 })
 
 describe('markWithdrawalPaid', () => {
@@ -153,5 +156,17 @@ describe('markWithdrawalPaid', () => {
     expect(h.requireRole).toHaveBeenCalledWith(['admin', 'super_admin'])
     expect(service.from).not.toHaveBeenCalled()
     expect(service.rpc).not.toHaveBeenCalled()
+  })
+
+  it('skips the paid email when the seller turned Payout Processed off (payout still settles)', async () => {
+    h.emailAllowed.mockResolvedValue(false)
+    const service = createServiceMock({ data: paid, error: null })
+    h.createServiceRoleClient.mockReturnValue(service)
+
+    const result = await markWithdrawalPaid({ requestId: REQUEST_ID, transactionHash: '0xabc123' })
+
+    expect(result).toEqual({ success: true })
+    expect(h.emailAllowed).toHaveBeenCalledWith('seller-1', 'payout_processed')
+    expect(h.sendWithdrawalProcessedEmail).not.toHaveBeenCalled()
   })
 })

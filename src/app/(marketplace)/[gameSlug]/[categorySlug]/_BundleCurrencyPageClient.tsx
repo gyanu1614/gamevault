@@ -50,6 +50,8 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
 import { getRegionIcon } from '@/lib/marketplace/region-platform-presets'
 import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { BuyButton } from '@/components/marketplace/BuyButton'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 
 export interface BundleOffer {
@@ -416,17 +418,12 @@ export default function BundleCurrencyPageClient({
                           utilities don't compile). */}
                       <Card
                         className={cn(
-                          'group relative cursor-pointer overflow-hidden border-2 bg-[#1D1E23] p-3 backdrop-blur-md transition-all duration-200',
+                          'group relative cursor-pointer overflow-hidden border-2 bg-bg-raised p-3 transition-[background-color,border-color,transform,box-shadow] duration-200',
                           on
                             ? 'border-[#ABE52BB3] shadow-[0_10px_26px_-10px_rgba(171,229,43,0.22)]'
-                            : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
+                            : 'border-transparent hover:-translate-y-0.5 hover:bg-bg-raised-hover hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
                         )}
                       >
-                        {/* Top sheen — faint light falling from above. */}
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
-                        />
                         {/* Icon spotlight — soft pool of light behind the
                             art so the 3D render pops off the surface. */}
                         <span
@@ -550,10 +547,10 @@ export default function BundleCurrencyPageClient({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
-                Other <span className="text-lime-text">Sellers</span>
+                Other Sellers
               </h2>
               <p className="mt-1.5 text-[13.5px] text-text-tertiary sm:text-[14px]">
-                {otherOffers.length} more {otherOffers.length === 1 ? 'offer' : 'offers'} — pick by price, speed, or rating.
+                {otherOffers.length} more {otherOffers.length === 1 ? 'offer' : 'offers'}. Pick by price, speed or rating.
               </p>
             </div>
             {otherOffers.length > 0 && (
@@ -563,10 +560,6 @@ export default function BundleCurrencyPageClient({
               />
             )}
           </div>
-          <div
-            aria-hidden
-            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]"
-          />
 
           {/* V19/P24/P7.oo — Outer "box-in-box" wrapper removed.
               Seller rows float directly on the page; each row is its
@@ -590,7 +583,7 @@ export default function BundleCurrencyPageClient({
                 ))}
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_40%,transparent)] p-6 text-center">
+              <div className="rounded-lg bg-bg-raised p-6 text-center">
                 <p className="text-[13px] text-text-tertiary">
                   No other sellers for this bundle yet. The best price above is the only
                   offer right now.
@@ -703,20 +696,16 @@ function OptionTiles({
                   lime selection glow. */}
               <Card
                 className={cn(
-                  'group relative flex cursor-pointer overflow-hidden border-2 bg-[#1D1E23] backdrop-blur-md transition-all duration-200',
+                  'group relative flex cursor-pointer overflow-hidden border-2 bg-bg-raised transition-[background-color,border-color,transform,box-shadow] duration-200',
                   variant === 'pill'
                     ? // Horizontal: icon + label + check on one line.
                       'h-[52px] items-center gap-2.5 px-3.5 py-0'
                     : 'h-[76px] flex-col items-center justify-center gap-1.5 p-2',
                   on
                     ? 'border-[#ABE52BB3] shadow-[0_8px_22px_-8px_rgba(171,229,43,0.22)]'
-                    : 'border-border-default hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
+                    : 'border-transparent hover:-translate-y-0.5 hover:bg-bg-raised-hover hover:shadow-[0_10px_22px_-10px_rgba(0,0,0,0.6)]',
                 )}
               >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
-                />
                 {/* Tile: check floats in the corner. Pill: it's the trailing
                     item on the line (like the reference's radio dot), so it
                     can't overlap the label. */}
@@ -797,7 +786,7 @@ function OfferPanel({
 }) {
   if (!bestOffer) {
     return (
-      <Card className="relative overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-6">
+      <Card className="relative overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-6">
         <div className="text-[24px] font-black text-text-disabled">N/A</div>
         <p className="mt-3 text-[13px] text-text-tertiary">
           No sellers for this bundle in the selected region yet. Try another region
@@ -814,7 +803,7 @@ function OfferPanel({
     {/* V43 — SafeDrop emblem watermark peeks from the corner (matches
         the item + currency buy panels). `isolate` creates the stacking
         context so the -z-10 art paints above the card bg but below rows. */}
-    <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5">
+    <Card className="relative isolate flex h-full min-h-[440px] flex-col overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/icons/safedrop-emblem.avif"
@@ -836,7 +825,7 @@ function OfferPanel({
       </div>
 
       {/* 2) Delivery time */}
-      <div className="border-t border-border-subtle py-3.5">
+      <div className="border-t border-white/[0.07] py-3.5">
         <KeyValue
           label="Delivery Time"
           value={
@@ -850,7 +839,7 @@ function OfferPanel({
 
       {/* 3) Delivery instructions — always render, falls back to a
           generic line so the row never disappears. */}
-      <div className="border-t border-border-subtle py-3.5">
+      <div className="border-t border-white/[0.07] py-3.5">
         <div className="mb-1.5 text-[14.5px] font-semibold text-text-primary">
           Delivery Instructions
         </div>
@@ -865,7 +854,7 @@ function OfferPanel({
       </div>
 
       {/* 4) Quantity */}
-      <div className="flex items-center justify-between gap-3 border-t border-border-subtle py-3.5">
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] py-3.5">
         <span className="text-[14.5px] font-semibold text-text-primary">
           Quantity
         </span>
@@ -880,7 +869,7 @@ function OfferPanel({
       </div>
 
       {/* 5) Total */}
-      <div className="flex items-baseline justify-between gap-2 border-t border-border-subtle py-3.5">
+      <div className="flex items-baseline justify-between gap-2 border-t border-white/[0.07] py-3.5">
         <span className="text-[14.5px] font-semibold text-text-primary">
           Total
         </span>
@@ -889,7 +878,7 @@ function OfferPanel({
             <span className="text-[26px] font-black tabular-nums leading-none text-text-primary">
               {formatPrice(total)}
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+            <span className="text-[12px] font-medium text-text-tertiary">
               USD
             </span>
           </div>
@@ -898,23 +887,20 @@ function OfferPanel({
 
       {/* 6) Buy now */}
       {isOwn ? (
-        <div className="mt-4 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning-bg)_40%,transparent)] px-3 py-2.5 text-[12px] text-warning">
+        <div className="mt-4 rounded-md bg-warning-bg px-3.5 py-2.5 text-[12.5px] text-warning">
           This is your listing. Buyers see the Buy button here.
         </div>
       ) : (
-        <Button
-          onClick={() => onBuy(bestOffer.listingId, qty)}
-          className="mt-4 h-12 w-full bg-lime text-[15px] font-bold tracking-wide text-text-inverse hover:bg-lime-hover"
-        >
+        <BuyButton onClick={() => onBuy(bestOffer.listingId, qty)} className="mt-4 w-full">
           {BUY_CTA_LABEL}
-        </Button>
+        </BuyButton>
       )}
 
     </Card>
 
       {/* 7) Trust tiles — own card below the panel (item-page rail
           format; same width so alignment is automatic). */}
-      <Card className="relative mt-3 overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4">
+      <Card className="relative mt-3 overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-4">
         <TrustBand />
       </Card>
     </>
@@ -1003,12 +989,7 @@ function SellerRow({
   onSelect: () => void
 }) {
   return (
-    <Card className="group relative overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
-      {/* Top sheen — bundle-tile light-from-above. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]"
-      />
+    <Card className="group relative overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-12px_rgba(0,0,0,0.7)]">
       <div className="relative flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
         {/* Seller — leads the row, clickable chip → /shop/{slug} */}
         <div className="min-w-0 flex-1">
@@ -1060,7 +1041,7 @@ function SellerRow({
               type="button"
               size="sm"
               onClick={onSelect}
-              className="mt-1.5 h-9 bg-lime px-4 font-bold text-text-inverse hover:bg-lime-hover"
+              className="mt-1.5 h-9 bg-white/[0.08] px-4 font-semibold text-text-primary hover:bg-white/[0.14]"
             >
               Select
             </Button>
@@ -1086,7 +1067,7 @@ function MetricCol({
 }) {
   return (
     <div style={{ width }} className="shrink-0">
-      <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+      <div className="flex items-center gap-1 text-[12px] text-text-tertiary">
         <Icon className="h-3 w-3" />
         {label}
       </div>
@@ -1106,60 +1087,26 @@ function FilterChips({
   filter: 'recommended' | 'cheapest' | 'fastest'
   setFilter: (f: 'recommended' | 'cheapest' | 'fastest') => void
 }) {
-  return (
-    // Mobile-audit — flex-wrap so the chip group never forces horizontal
-    // page scroll at 360px (mirrors the fix in _CurrencyPageClient).
-    <div className="flex flex-wrap items-center gap-1.5">
-      <FilterChip
-        active={filter === 'recommended'}
-        onClick={() => setFilter('recommended')}
-        icon={Star}
-        label="Recommended"
-      />
-      <FilterChip
-        active={filter === 'cheapest'}
-        onClick={() => setFilter('cheapest')}
-        icon={SlidersHorizontal}
-        label="Cheapest"
-      />
-      <FilterChip
-        active={filter === 'fastest'}
-        onClick={() => setFilter('fastest')}
-        icon={Zap}
-        label="Fastest"
-      />
-    </div>
-  )
-}
-
-function FilterChip({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: LucideIcon
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        // Mobile-audit — min-h-9 (36px) keeps the tap target at the dense
-        // control floor on phones without changing the visual pill shape.
-        'inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors sm:text-[13px]',
-        active
-          ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-          : 'border-border-subtle bg-transparent text-text-secondary hover:border-border-default hover:text-text-primary',
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
+  // The shared tab control (sliding neutral pill), same as the flexible
+  // currency page's sort.
+  const tab = (Icon: LucideIcon, label: string) => (
+    <>
+      <Icon className="h-3.5 w-3.5" aria-hidden />
       {label}
-    </button>
+    </>
+  )
+  return (
+    <SegmentedTabs
+      tabs={[
+        { id: 'recommended', label: tab(Star, 'Recommended') },
+        { id: 'cheapest', label: tab(SlidersHorizontal, 'Cheapest') },
+        { id: 'fastest', label: tab(Zap, 'Fastest') },
+      ]}
+      value={filter}
+      onChange={setFilter}
+      layoutId="bundle-sort-pill"
+      ariaLabel="Sort sellers"
+    />
   )
 }
 

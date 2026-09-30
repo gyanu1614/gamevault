@@ -32,9 +32,11 @@ import { normalizeOrderNumber } from '@/lib/orders/order-number'
 import { inboxOrderLabel } from '@/lib/chat/inbox-row'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
 import { useCurrencyMeta } from '@/hooks/use-currency-meta'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { accountInputCls } from '@/components/account/AccountSurface'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
-type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'top-up' | 'dm'
+type ChatTab = 'all' | 'unread' | 'currency' | 'items' | 'accounts' | 'dm'
 
 const CHAT_TABS: { value: ChatTab; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -42,7 +44,6 @@ const CHAT_TABS: { value: ChatTab; label: string }[] = [
   { value: 'currency', label: 'Currencies' },
   { value: 'items', label: 'Items' },
   { value: 'accounts', label: 'Accounts' },
-  { value: 'top-up', label: 'Top Ups' },
   { value: 'dm', label: 'Direct Messages' },
 ]
 
@@ -172,8 +173,12 @@ export default function MessagesPage() {
     // FIXED shell pinned to the navbar's own bottom edge (--navbar-bottom)
     // and the true viewport bottom — no guessed heights, so there is no gap
     // under the navbar and the last row always clears iOS Safari's bar.
-    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:px-10 lg:pb-4 lg:pt-4 xl:px-14">
-      <div className="mx-auto flex h-full w-full max-w-[1400px] min-h-0 flex-col">
+    // Desktop: the sidebar card ends at 272px (left-4 + w-64); the chat starts
+    // 16px after it (left-72, no left padding) and keeps 16px on the right —
+    // the same 16px the sidebar keeps from the screen edge (owner,
+    // 2026-09-30: the old 56-72px gap "looks a bit weird").
+    <main className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-7 sm:px-6 lg:left-72 lg:pb-4 lg:pl-0 lg:pr-4 lg:pt-4">
+      <div className="flex h-full w-full min-h-0 flex-col">
       {/* Compact chat chrome (reference: GameBoost). The PAGE never scrolls —
           only the conversation list and the message thread do. */}
       {/* Desktop: title and tabs share one row so the chat gets the height
@@ -181,22 +186,15 @@ export default function MessagesPage() {
       <div className="shrink-0 lg:flex lg:items-center lg:gap-5">
       <h1 className="shrink-0 px-1 text-[22px] font-bold text-text-primary">Chat</h1>
 
-      {/* Tabs — one horizontally scrollable row on phones, never wrapping. */}
-      <div className="mt-3.5 flex w-fit max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-md border border-white/[0.08] bg-[#1D1E23] p-1 lg:mt-0 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {CHAT_TABS.map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTab(t.value)}
-            className={cn(
-              'h-8 whitespace-nowrap rounded-[5px] px-3 text-[13px] font-semibold transition-colors',
-              tab === t.value ? 'bg-white/[0.09] text-text-primary' : 'text-text-secondary hover:text-text-primary',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs: the shared compact control, one scrollable row on phones. */}
+      <SegmentedTabs
+        className="mt-3.5 shrink-0 lg:mt-0"
+        tabs={CHAT_TABS.map((t) => ({ id: t.value, label: t.label }))}
+        value={tab}
+        onChange={setTab}
+        layoutId="messages-tab-pill"
+        ariaLabel="Conversation filters"
+      />
       </div>
 
       <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[272px_1fr] xl:grid-cols-[300px_1fr]">
@@ -204,11 +202,10 @@ export default function MessagesPage() {
             is opened (the chat pane replaces it, with a back button). ── */}
         <aside
           className={cn(
-            'relative flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] backdrop-blur-md',
+            'relative flex-col overflow-hidden rounded-lg bg-bg-raised',
             selectedConversationId ? 'hidden lg:flex' : 'flex',
           )}
         >
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           <div className="border-b border-border-subtle p-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
@@ -217,7 +214,8 @@ export default function MessagesPage() {
                 placeholder="Search conversations…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-md border border-border-default bg-bg-overlay pl-9 pr-3 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-border-strong focus:outline-none focus-visible:shadow-none sm:text-sm"
+                aria-label="Search conversations"
+                className={cn(accountInputCls, 'h-10 py-0 pl-9 pr-3')}
               />
             </div>
           </div>
@@ -316,11 +314,10 @@ export default function MessagesPage() {
             conversation (native-chat feel, framer-motion). ── */}
         <section
           className={cn(
-            'relative flex-col overflow-hidden rounded-lg border border-border-subtle bg-[#1D1E23] backdrop-blur-md',
+            'relative flex-col overflow-hidden rounded-lg bg-bg-raised',
             selectedConversationId ? 'flex' : 'hidden lg:flex',
           )}
         >
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]" />
           {selectedConversation ? (
             <motion.div
               key={selectedConversation.id}
@@ -337,7 +334,7 @@ export default function MessagesPage() {
                     type="button"
                     onClick={() => setSelectedConversationId(null)}
                     aria-label="Back To Conversations"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border-default bg-white/[0.04] text-text-secondary transition-colors hover:text-text-primary lg:hidden"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary lg:hidden"
                   >
                     <ChevronLeft className="h-[18px] w-[18px]" />
                   </button>
@@ -374,7 +371,7 @@ export default function MessagesPage() {
 
               {/* Order banner */}
               {selectedConversation.order && (
-                <div className="mx-3 mt-3 overflow-hidden rounded-lg border border-border-default bg-white/[0.03] sm:mx-4 sm:mt-4">
+                <div className="mx-3 mt-3 overflow-hidden rounded-md bg-bg-overlay sm:mx-4 sm:mt-4">
                   <button
                     type="button"
                     onClick={() => setIsOrderInfoCollapsed(!isOrderInfoCollapsed)}

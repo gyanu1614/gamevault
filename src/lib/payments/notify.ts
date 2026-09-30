@@ -13,6 +13,7 @@ import { isInternalPath } from '@/lib/utils/safe-link'
 import type { OrderEvent } from '@/lib/escrow/state-machine'
 import type { CanonicalEvent } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
+import { emailAllowed } from '@/lib/email/preferences'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
 
 interface OrderComms {
@@ -165,8 +166,8 @@ export async function notifyOrderTransition(
               totalPaid: order.total_amount ?? 0,
             })
           : Promise.resolve(),
-        // Seller new-sale email
-        order.seller.email
+        // Seller new-sale email (Settings → Notifications → New Orders)
+        order.seller.email && (await emailAllowed(order.seller_id, 'new_order'))
           ? sendNewOrderNotificationEmail({
               to: order.seller.email,
               sellerName: order.seller.name,

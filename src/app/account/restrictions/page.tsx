@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import RestrictionStatus from './RestrictionStatus'
-import { Loader2 } from 'lucide-react'
+import AccountPageHeader from '@/components/account/AccountPageHeader'
+import { AccountCard, AccountPage } from '@/components/account/AccountSurface'
+import { RestrictionsSkeleton } from './_RestrictionsSkeleton'
 
 export default function RestrictionsPage() {
   const [loading, setLoading] = useState(true)
@@ -16,20 +18,22 @@ export default function RestrictionsPage() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
+        setLoading(false)
         return
       }
 
       // Get seller profile with restriction info
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('*, restricted_by:seller_restricted_by(username, email)')
+        // Only what the page shows (no admin identity).
+        .select('seller_status, seller_restriction_reason, seller_restricted_at')
         .eq('id', user.id)
         .single()
 
       // Get restriction history
       const { data: restrictionsData } = await supabase
         .from('seller_restrictions')
-        .select('*, admin:restricted_by(username, email)')
+        .select('id, restriction_type, reason, created_at')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
@@ -42,19 +46,17 @@ export default function RestrictionsPage() {
     fetchData()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-      </div>
-    )
-  }
+  if (loading) return <RestrictionsSkeleton />
 
   if (!profile) {
     return (
-      <div className="p-6">
-        <p className="text-text-secondary">Unable to load restriction information.</p>
-      </div>
+      <AccountPage>
+        <AccountPageHeader title="Account Status" />
+        <AccountCard className="mt-6 px-6 py-12 text-center">
+          <p className="text-[15px] font-semibold text-text-primary">Couldn’t Load Your Account Status</p>
+          <p className="mt-1 text-[13px] text-text-secondary">Refresh the page in a moment.</p>
+        </AccountCard>
+      </AccountPage>
     )
   }
 

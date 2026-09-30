@@ -8,7 +8,6 @@ import { Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-rea
 import type { ListingWithRelations } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { listingUrl } from '@/lib/listings/url'
-import WishlistButton from '@/components/wishlist/WishlistButton'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
@@ -80,14 +79,8 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
             </span>
           </div>
 
-          {/* Top right corner — Wishlist + Stock badge */}
+          {/* Top right corner — Stock badge */}
           <div className="absolute right-2.5 top-2.5 flex flex-col gap-2 items-end z-10">
-            {/* Wishlist Button */}
-            <WishlistButton
-              listingId={listing.id}
-              variant="card"
-            />
-
             {/* Stock badge */}
             {isUnlimited && (
               <div className="flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-1 backdrop-blur-md">

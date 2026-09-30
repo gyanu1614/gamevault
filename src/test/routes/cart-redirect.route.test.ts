@@ -8,7 +8,7 @@
  * on a spinner that threw them to /browse — an auth round-trip for a dead
  * route.
  *
- * The sibling deprecated stubs (/wallet, /purchases, /wishlist, /reviews) all
+ * The sibling deprecated stubs (/wallet, /purchases, /reviews) all
  * use a bare server redirect(); /cart now matches them.
  */
 import { describe, it, expect } from 'vitest'
@@ -37,9 +37,9 @@ describe('ROUTE-007 — /cart redirects server-side', () => {
   })
 
   it('matches the sibling deprecated stubs', () => {
-    // /wishlist is the reference shape: import redirect, call it, nothing else.
-    const wishlist = readFileSync('src/app/wishlist/page.tsx', 'utf8')
-    for (const s of [raw, wishlist]) {
+    // /wallet is the reference shape: import redirect, call it, nothing else.
+    const wallet = readFileSync('src/app/wallet/page.tsx', 'utf8')
+    for (const s of [raw, wallet]) {
       expect(s).toMatch(/import \{ redirect \} from 'next\/navigation'/)
     }
   })

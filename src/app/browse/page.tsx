@@ -9,6 +9,8 @@
  * game/category graph wasn't linked from a hub.
  */
 
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
+import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
@@ -52,7 +54,6 @@ const CATEGORY_SHORTCUTS = [
   { label: 'Currency', type: 'currency', blurb: 'Coins, gold, V-Bucks and more' },
   { label: 'Items', type: 'items', blurb: 'Skins, gear and rare drops' },
   { label: 'Accounts', type: 'account', blurb: 'Ready-to-play game accounts' },
-  { label: 'Top-Ups', type: 'top_up', blurb: 'Direct balance top-ups' },
   { label: 'Boosting', type: 'service', blurb: 'Rank-ups from pro players' },
 ] as const
 
@@ -155,17 +156,17 @@ export default async function BrowsePage() {
 
       {/* Category shortcuts — internal link row. */}
       <section aria-labelledby="browse-categories" className="mb-10">
-        <h2 id="browse-categories" className="mb-3 text-sm font-bold uppercase tracking-wider text-text-secondary">
+        <h2 id="browse-categories" className="mb-4 text-[18px] font-bold tracking-[-0.01em] text-text-primary sm:text-[20px]">
           Browse by Category
         </h2>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {CATEGORY_SHORTCUTS.map((c) => (
             <Link
               key={c.type}
               href={`/browse?category=${c.type}`}
-              className="group rounded-xl border border-border-subtle bg-bg-overlay p-3.5 transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
+              className={`group rounded-lg p-4 ${MARKET_CARD} ${MARKET_CARD_HOVER}`}
             >
-              <span className="block text-[15px] font-bold text-text-primary group-hover:text-lime-text">
+              <span className="block text-[15px] font-bold text-text-primary">
                 {c.label}
               </span>
               <span className="mt-0.5 block text-[12px] leading-snug text-text-tertiary">{c.blurb}</span>
@@ -178,7 +179,7 @@ export default async function BrowsePage() {
           active game's marketplace page. */}
       {games.length > 0 && (
         <section aria-labelledby="browse-games" className="mb-12">
-          <h2 id="browse-games" className="mb-3 text-sm font-bold uppercase tracking-wider text-text-secondary">
+          <h2 id="browse-games" className="mb-4 text-[18px] font-bold tracking-[-0.01em] text-text-primary sm:text-[20px]">
             Browse by Game
           </h2>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -186,16 +187,16 @@ export default async function BrowsePage() {
               <Link
                 key={g.slug}
                 href={g.href}
-                className="group flex items-center gap-2.5 rounded-xl border border-border-subtle bg-bg-overlay p-2.5 transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
+                className={`group flex items-center gap-2.5 rounded-lg p-2.5 ${MARKET_CARD} ${MARKET_CARD_HOVER}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={g.image_url || getGameIcon(g.slug)}
                   alt=""
                   loading="lazy"
-                  className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-white/[0.08]"
+                  className="h-9 w-9 shrink-0 rounded-md object-cover"
                 />
-                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-text-primary group-hover:text-lime-text">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text-primary">
                   {g.name}
                 </span>
               </Link>
@@ -217,14 +218,8 @@ export default async function BrowsePage() {
         <h2 id="browse-faq" className="mb-5 text-xl font-bold text-text-primary sm:text-2xl">
           Frequently Asked Questions
         </h2>
-        <dl className="space-y-5">
-          {FAQS.map((f) => (
-            <div key={f.q} className="rounded-xl border border-border-subtle bg-bg-overlay p-4">
-              <dt className="text-[15px] font-semibold text-text-primary">{f.q}</dt>
-              <dd className="mt-1.5 text-[14px] leading-relaxed text-text-secondary">{f.a}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* Shared FAQ cards (every answer stays in the HTML). */}
+        <FaqCards items={FAQS} defaultOpen={0} />
       </section>
     </main>
   )

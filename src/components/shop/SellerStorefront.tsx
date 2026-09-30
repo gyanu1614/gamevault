@@ -15,7 +15,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Package, Calendar, Star } from 'lucide-react'
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { TierIcon } from '@/components/seller/tiers/TierIcon'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import SellerProfileBanner from '@/components/shop/SellerProfileBanner'
 import ReviewsList from '@/components/reviews/ReviewsList'
@@ -147,20 +149,23 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
 
         {/* Tabs */}
         <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList variant="underline" className="w-full justify-start gap-6">
-              <TabsTrigger value="shop">Shop</TabsTrigger>
-              <TabsTrigger value="reviews">
-                Reviews
-                <span className="ml-1.5 rounded-full bg-bg-inset px-1.5 text-[10px] font-semibold text-text-tertiary data-[state=active]:bg-lime-tint-bg data-[state=active]:text-lime-text">
-                  {seller.stats.totalReviews}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="about">About</TabsTrigger>
-            </TabsList>
+          {/* The Messages tab bar; each panel below is labelled by its tab. */}
+          <SegmentedTabs<'shop' | 'reviews' | 'about'>
+            tabs={[
+              { id: 'shop', label: 'Shop' },
+              { id: 'reviews', label: <>Reviews<TabCount n={seller.stats.totalReviews} /></> },
+              { id: 'about', label: 'About' },
+            ]}
+            value={activeTab as 'shop' | 'reviews' | 'about'}
+            onChange={(v) => setActiveTab(v as any)}
+            layoutId="shop-tabs"
+            ariaLabel="Shop sections"
+            idPrefix="shop"
+          />
 
             {/* Shop */}
-            <TabsContent value="shop" className="pt-6">
+            {activeTab === 'shop' && (
+            <div role="tabpanel" id="shop-panel-shop" aria-labelledby="shop-tab-shop" className="pt-6">
               {/* Filter row */}
               <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="sm:w-64">
@@ -186,10 +191,12 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
               ) : (
                 <EmptyShop sellerName={seller.profile.username} />
               )}
-            </TabsContent>
+            </div>
+            )}
 
             {/* Reviews */}
-            <TabsContent value="reviews" className="pt-6">
+            {activeTab === 'reviews' && (
+            <div role="tabpanel" id="shop-panel-reviews" aria-labelledby="shop-tab-reviews" className="pt-6">
               <div className="mx-auto max-w-3xl">
                 <ReviewsList
                   sellerId={seller.profile.id}
@@ -197,22 +204,24 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   allowSellerReply={false}
                 />
               </div>
-            </TabsContent>
+            </div>
+            )}
 
             {/* About */}
-            <TabsContent value="about" className="pt-6">
+            {activeTab === 'about' && (
+            <div role="tabpanel" id="shop-panel-about" aria-labelledby="shop-tab-about" className="pt-6">
               <div className="mx-auto max-w-3xl space-y-5">
                 {/* About */}
-                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-                  <h2 className="mb-3 text-base font-bold text-text-primary">About this seller</h2>
+                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
+                  <h2 className="mb-3 text-base font-bold text-text-primary">About This Seller</h2>
                   <p className="text-sm leading-relaxed text-text-secondary">
                     {seller.profile.bio?.trim() || 'No description provided yet.'}
                   </p>
                 </section>
 
                 {/* Info */}
-                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-                  <h2 className="mb-4 text-base font-bold text-text-primary">Seller information</h2>
+                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
+                  <h2 className="mb-4 text-base font-bold text-text-primary">Seller Information</h2>
                   <dl className="space-y-2.5 text-sm">
                     <InfoRow
                       icon={Calendar}
@@ -230,7 +239,8 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                       icon={Star}
                       label="Seller tier"
                       value={
-                        <span className={cn('font-semibold uppercase', tier.colors.text)}>
+                        <span className={cn('inline-flex items-center gap-1.5 font-semibold', tier.colors.text)}>
+                          <TierIcon tier={tier.key} size={16} decorative />
                           {tier.label}
                         </span>
                       }
@@ -248,8 +258,8 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                 </section>
 
                 {/* Policies */}
-                <section className="rounded-2xl border border-border-subtle bg-bg-overlay p-5 sm:p-6">
-                  <h2 className="mb-4 text-base font-bold text-text-primary">Shop policies</h2>
+                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
+                  <h2 className="mb-4 text-base font-bold text-text-primary">Shop Policies</h2>
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
                       title="Returns & refunds"
@@ -266,8 +276,8 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   </div>
                 </section>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+            )}
         </div>
       </main>
     </>
@@ -288,9 +298,9 @@ function ShopListingCard({ listing }: { listing: any }) {
   return (
     <Link
       href={listingUrl(listing)}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-overlay transition-colors hover:border-lime-tint-border hover:bg-bg-raised-hover"
+      className={cn('group flex flex-col overflow-hidden rounded-lg', MARKET_CARD, MARKET_CARD_HOVER)}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-bg-raised">
+      <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
         {img ? (
           <Image
             src={img}
@@ -305,21 +315,21 @@ function ShopListingCard({ listing }: { listing: any }) {
           </div>
         )}
         {/* Game chip */}
-        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-[rgba(86,184,127,0.10)] px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-lime-text backdrop-blur-sm">
+        <div className="absolute left-2.5 top-2.5 inline-flex h-6 items-center rounded-md bg-black/55 px-2 text-[12px] font-semibold text-white backdrop-blur-sm">
           {game}
         </div>
         {hasPriceDrop && (
-          <div className="absolute right-2.5 top-2.5 rounded-full border border-[color-mix(in_srgb,var(--color-success)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-success-bg)_80%,transparent)] px-2 py-0.5 text-[10px] font-bold text-success backdrop-blur-sm">
+          <div className="absolute right-2.5 top-2.5 inline-flex h-6 items-center rounded-md bg-success-bg px-2 text-[12px] font-bold text-success backdrop-blur-sm">
             -{discountPct}%
           </div>
         )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="text-[12.5px] font-medium text-text-tertiary">
           {category}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-text-primary group-hover:text-lime-text">
+        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug text-text-primary">
           {listing.title}
         </h3>
         <div className="mt-auto flex items-center justify-between pt-2">
@@ -334,11 +344,11 @@ function ShopListingCard({ listing }: { listing: any }) {
             )}
           </div>
           {listing.quantity > 0 ? (
-            <span className="text-[11px] text-text-secondary">
+            <span className="text-[12px] text-text-secondary">
               {listing.quantity > 10000 ? '∞' : listing.quantity} in stock
             </span>
           ) : (
-            <span className="text-[11px] text-error">Out of stock</span>
+            <span className="text-[12px] text-error">Out of stock</span>
           )}
         </div>
       </div>
@@ -352,7 +362,7 @@ function InfoRow({
   icon: Icon, label, value,
 }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0">
+    <div className="flex items-center justify-between border-b border-white/[0.07] pb-2.5 last:border-b-0 last:pb-0">
       <dt className="inline-flex items-center gap-2 text-text-secondary">
         <Icon className="h-4 w-4 text-text-tertiary" />
         {label}
@@ -373,8 +383,8 @@ function PolicyBlock({ title, body }: { title: string; body: string }) {
 
 function EmptyShop({ sellerName }: { sellerName: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-bg-raised p-12 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.05]">
         <Package className="h-5 w-5 text-text-tertiary" />
       </div>
       <div>

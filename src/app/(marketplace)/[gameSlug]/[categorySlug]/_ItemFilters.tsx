@@ -83,20 +83,26 @@ function Trigger({
       <button
         type="button"
         className={cn(
-          'inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded border bg-bg-overlay px-3.5 font-semibold text-text-primary transition-colors',
-          'hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15',
-          // Active or open: a brighter border. Neutral — no accent colour.
-          active || open ? 'border-white/30' : 'border-border-default',
+          // Fill only, no outline (card-surface system). sm+: a soft pill.
+          // Phones: a segment inside the filter bar (the Messages tab bar's
+          // look: 34px, 14px medium, text-only), see _ItemsPageClient.
+          'inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3.5 font-semibold text-text-primary transition-colors',
+          'text-[14px] sm:text-[length:var(--fs-body)] max-sm:gap-1.5 max-sm:px-3 max-sm:font-medium',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15',
+          // Active or open: one step lighter. Neutral — no accent colour.
+          active || open
+            ? 'bg-white/[0.11] max-sm:bg-white/[0.08] max-sm:text-white'
+            : 'bg-white/[0.05] hover:bg-white/[0.08] max-sm:bg-transparent max-sm:text-text-secondary max-sm:hover:bg-white/[0.05] max-sm:hover:text-text-primary',
         )}
-        style={{ height: 'var(--h-btn-secondary)', fontSize: 'var(--fs-body)' }}
+        style={{ height: 'var(--h-btn-secondary)' }}
       >
-        <Icon aria-hidden className="h-4 w-4 shrink-0 text-text-secondary" />
+        <Icon aria-hidden className="h-4 w-4 shrink-0 text-text-secondary max-sm:hidden" />
         {/* grow: when a row stretches the button (category filter bar),
             the chevron sits at its far right. */}
         <span className="max-w-[180px] grow truncate text-left sm:max-w-none">{label}</span>
         <ChevronDown
           aria-hidden
-          className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')}
+          className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform max-sm:h-3.5 max-sm:w-3.5', open && 'rotate-180')}
         />
       </button>
     </Popover.Trigger>

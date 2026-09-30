@@ -14,9 +14,12 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import {
-  Shield, Download, Trash2, Loader2, Clock,
+  Trash2, Loader2, Clock,
   CheckCircle2, XCircle, AlertTriangle, FileJson,
 } from 'lucide-react'
+import { SettingsCard, accountBtn } from '@/components/account/AccountSurface'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import { exportMyData, submitGdprRequest } from '@/lib/actions/gdpr'
 import type { GdprRequest } from '@/lib/actions/gdpr'
 
@@ -112,155 +115,117 @@ export default function PrivacyClient({ requests: initialRequests, embedded = fa
       variants={container}
       initial="hidden"
       animate="show"
-      className={embedded ? 'space-y-6' : 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 pb-10'}
+      className={embedded ? 'space-y-4' : 'mx-auto w-full max-w-7xl space-y-4 px-4 pb-10 sm:px-6 lg:px-8'}
     >
-
-      {/* V21/P7.al — Standard account header (Settings shows its own). */}
       {!embedded && (
         <motion.div variants={item}>
           <AccountPageHeader
             icon="privacy"
             title="Privacy & Data"
-            subtitle="Your rights under GDPR — export your data or request account deletion."
+            subtitle="Your rights under GDPR: export your data or request account deletion."
           />
         </motion.div>
       )}
 
-      {/* Data export card */}
-      <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-lime-tint-border bg-lime-tint-bg">
-              <Download className="h-5 w-5 text-lime-text" />
-            </div>
-            <div>
-              <h2 className="mb-1 text-sm font-semibold text-text-primary">Download My Data</h2>
-              <p className="text-xs text-text-secondary">
-                Export all your personal data — profile, orders, messages, reviews, and more —
-                as a JSON file. Available instantly.
-              </p>
-              <p className="mt-1 text-xs text-text-tertiary">
-                Exercising your right under GDPR Article 20 (Right to Data Portability).
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-lime px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
-          >
-            {exporting
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <FileJson className="h-4 w-4" />}
-            {exporting ? 'Exporting…' : 'Download JSON'}
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Deletion request card */}
-      <motion.div variants={item} className="rounded-lg border border-[color-mix(in_srgb,var(--color-error)_20%,transparent)] card-frost p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--color-error)_30%,transparent)] bg-error-bg">
-              <Trash2 className="h-5 w-5 text-error" />
-            </div>
-            <div>
-              <h2 className="mb-1 text-sm font-semibold text-text-primary">Request Account Deletion</h2>
-              <p className="text-xs text-text-secondary">
-                Request permanent deletion of your account and all associated personal data.
-                This action is irreversible. Any active orders must be completed or resolved first.
-              </p>
-              <p className="mt-1 text-xs text-text-tertiary">
-                Exercising your right under GDPR Article 17 (Right to Erasure).
-                Requests are processed within 30 days.
-              </p>
-            </div>
-          </div>
-
-          {hasPendingDeletion ? (
-            <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-warning">
-              <Clock className="h-4 w-4" />
-              Pending
-            </div>
-          ) : showDelConfirm ? (
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <button
-                onClick={() => setShowDelConfirm(false)}
-                className="rounded-lg px-3 py-1.5 text-xs text-text-secondary transition-colors hover:text-text-primary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeletionRequest}
-                disabled={requestingDel}
-                className="flex items-center gap-1 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_20%,transparent)] disabled:opacity-50"
-              >
-                {requestingDel ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                Confirm Delete
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowDelConfirm(true)}
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] bg-error-bg px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_20%,transparent)]"
-            >
-              <Trash2 className="h-4 w-4" />
-              Request Deletion
+      <motion.div variants={item}>
+        <SettingsCard
+          title="Download My Data"
+          description="Export all your personal data (profile, orders, messages, reviews and more) as a JSON file. Available instantly."
+          footerHint="Exercising your right under GDPR Article 20 (Right to Data Portability)."
+          footerAction={
+            <button type="button" onClick={handleExport} disabled={exporting} className={accountBtn.primary}>
+              {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <FileJson className="h-3.5 w-3.5" aria-hidden />}
+              {exporting ? 'Exporting…' : 'Download JSON'}
             </button>
-          )}
-        </div>
-
-        {showDelConfirm && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-error)_20%,transparent)] bg-error-bg p-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
-            <p className="text-xs text-error">
-              This will permanently delete your account, listings, order history, messages, and all personal data.
-              This cannot be undone. Click &ldquo;Confirm Delete&rdquo; to proceed.
-            </p>
-          </div>
-        )}
+          }
+        />
       </motion.div>
 
-      {/* Request history */}
+      <motion.div variants={item}>
+        <SettingsCard
+          tone="danger"
+          title="Request Account Deletion"
+          description="Request permanent deletion of your account and all associated personal data. This action is irreversible. Any active orders must be completed or resolved first."
+          aside={
+            hasPendingDeletion ? (
+              <span className="inline-flex h-6 items-center gap-1 rounded-full bg-warning-bg px-2.5 text-[12px] font-semibold text-warning">
+                <Clock className="h-3 w-3" aria-hidden />
+                Pending
+              </span>
+            ) : null
+          }
+          footerHint="Exercising your right under GDPR Article 17 (Right to Erasure). Requests are processed within 30 days."
+          footerAction={
+            hasPendingDeletion ? null : (
+              <button type="button" onClick={() => setShowDelConfirm(true)} className={accountBtn.danger}>
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Request Deletion
+              </button>
+            )
+          }
+        />
+      </motion.div>
+
       {requests.length > 0 && (
-        <motion.div variants={item} className="rounded-lg border border-border-subtle card-frost p-5">
-          <h2 className="mb-4 text-sm font-semibold text-text-primary">Request History</h2>
-          <div className="space-y-3">
-            {requests.map(r => (
-              <div key={r.id} className="flex items-center gap-3 border-b border-border-subtle py-2.5 last:border-0">
-                <StatusIcon status={r.status} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm capitalize text-text-primary">{r.type} request</p>
-                  <p className="text-xs text-text-tertiary">
-                    Submitted {new Date(r.requested_at).toLocaleDateString()}
-                    {r.completed_at && ` · Completed ${new Date(r.completed_at).toLocaleDateString()}`}
-                  </p>
-                  {r.rejection_reason && (
-                    <p className="mt-0.5 text-xs text-error">Rejected: {r.rejection_reason}</p>
-                  )}
-                </div>
-                <span className={`rounded px-2 py-0.5 text-xs font-medium capitalize ${
-                  r.status === 'completed' ? 'text-success bg-success-bg' :
-                  r.status === 'rejected'  ? 'text-error bg-error-bg'    :
-                  r.status === 'pending'   ? 'text-warning bg-warning-bg' :
-                  'text-text-secondary bg-white/[0.06]'
-                }`}>
-                  {r.status}
-                </span>
-              </div>
-            ))}
-          </div>
+        <motion.div variants={item}>
+          <SettingsCard title="Request History">
+            <ul className="divide-y divide-white/[0.07]">
+              {requests.map(r => (
+                <li key={r.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <StatusIcon status={r.status} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm capitalize text-text-primary">{r.type} request</p>
+                    <p className="text-xs text-text-tertiary">
+                      Submitted {new Date(r.requested_at).toLocaleDateString()}
+                      {r.completed_at && `, completed ${new Date(r.completed_at).toLocaleDateString()}`}
+                    </p>
+                    {r.rejection_reason && (
+                      <p className="mt-0.5 text-xs text-error">Rejected: {r.rejection_reason}</p>
+                    )}
+                  </div>
+                  <span className={cn(
+                    'inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold capitalize',
+                    r.status === 'completed' ? 'bg-success-bg text-success'
+                      : r.status === 'rejected' ? 'bg-error-bg text-error'
+                      : r.status === 'pending' ? 'bg-warning-bg text-warning'
+                      : 'bg-white/[0.06] text-text-secondary',
+                  )}>
+                    {r.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </SettingsCard>
         </motion.div>
       )}
 
-      {/* Legal note */}
-      <motion.div variants={item} className="space-y-1 text-xs text-text-tertiary">
+      <motion.div variants={item} className="space-y-1 px-1 text-xs text-text-tertiary">
         <p>DropMarket processes personal data under GDPR (EU) 2016/679 and applicable privacy laws.</p>
         {/* support@, not privacy@ — matches the privacy policy's stated contact
             (lib/legal/documents.ts) and the one alias that's actually
             monitored. A dedicated privacy@ inbox would just bounce. */}
         <p>For questions, contact <span className="text-text-secondary">support@dropmarket.gg</span></p>
       </motion.div>
+
+      <Dialog open={showDelConfirm} onOpenChange={(open) => !requestingDel && setShowDelConfirm(open)}>
+        <DialogContent className="max-w-[420px] gap-0 p-5 sm:p-6">
+          <AlertTriangle className="h-6 w-6 text-error" aria-hidden />
+          <DialogTitle className="mt-3 text-base font-semibold text-text-primary">Delete Your Account?</DialogTitle>
+          <DialogDescription className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">
+            This permanently deletes your account, listings, order history, messages and all personal data. It
+            can&apos;t be undone.
+          </DialogDescription>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setShowDelConfirm(false)} disabled={requestingDel} className={accountBtn.secondary}>
+              Keep My Account
+            </button>
+            <button type="button" onClick={handleDeletionRequest} disabled={requestingDel} className={accountBtn.danger}>
+              {requestingDel && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+              Request Deletion
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }

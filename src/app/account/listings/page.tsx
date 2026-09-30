@@ -54,6 +54,7 @@ import { getMyStorePaused } from '@/lib/actions/seller-presence'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import RestrictionBanner from '@/components/seller/RestrictionBanner'
 import { SellerOnlyGate } from '@/components/seller/SellerOnlyGate'
+import ListingsLoading from './loading'
 
 import { Checkbox } from '@/components/ui/checkbox'
 import { PriceField } from '@/components/ui/price-field'
@@ -72,6 +73,8 @@ import { cn } from '@/lib/utils'
 // ─── Offer sections ──────────────────────────────────────────────────────────
 
 import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { ScrollRow } from '@/components/ui/scroll-row'
 import { listingUnits, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 
 const OFFER_META: Record<OfferType, { title: string }> = {
@@ -240,24 +243,22 @@ const FilterTrigger = React.forwardRef<
     disabled={disabled}
     {...props}
     className={cn(
-      // Bundle platform-card surface: blackened plate + top sheen. Hover
-      // brightens in place (border-strong + lighter plate), no lift
-      // (owner, 2026-09-28). Active (filter applied) holds the bright
-      // plate — no lime.
-      'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md border-2 px-4 text-[13.5px] font-semibold backdrop-blur-md transition-colors duration-200',
+      // Account card surface: fill only, no outline or sheen (2026-09-29,
+      // same as the orders filters). Hover brightens in place, no lift
+      // (owner, 2026-09-28). Active (filter applied) holds the lighter
+      // fill — no lime.
+      // GameBoost sizing (measured 2026-09-29): 40px on phones, 42px from sm,
+      // 14px medium labels.
+      'relative flex h-10 min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors duration-200 sm:h-[42px]',
       active
-        ? 'border-border-strong bg-[rgba(26,26,35,0.70)] text-text-primary'
-        : 'border-border-subtle bg-[#1D1E23] text-text-secondary',
+        ? 'bg-bg-raised-hover text-text-primary'
+        : 'bg-bg-raised text-text-secondary',
       disabled
         ? 'cursor-not-allowed opacity-50'
-        : 'hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)] hover:text-text-primary',
+        : 'hover:bg-bg-raised-hover hover:text-text-primary',
       className,
     )}
   >
-    <span
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent)]"
-    />
     {/* Children clip inside their own box so the ✕/chevron never gets
         pushed out of the trigger at narrow widths. */}
     <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">{children}</span>
@@ -311,7 +312,7 @@ function OfferIdChip({ listing }: { listing: Listing }) {
 
 export default function ListingsPage() {
   return (
-    <SellerOnlyGate>
+    <SellerOnlyGate fallback={<ListingsLoading />}>
       <OffersContent />
     </SellerOnlyGate>
   )
@@ -658,7 +659,8 @@ function OffersContent() {
     // Viewport-locked like Messages/Purchases: chrome static, ONLY the
     // results table scrolls. Pinned to the navbar's real bottom edge.
     <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-bottom)] z-[1] flex flex-col overflow-hidden lg:left-72">
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col px-4 pt-7 sm:px-6 lg:px-10 xl:px-14">
+    {/* Standard page width (max-w-7xl + px-4/6/8), same x as every account page. */}
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-4 pt-7 sm:px-6 md:max-w-7xl lg:px-8">
       {isRestricted && (
         <div className="mb-3 shrink-0">
           <RestrictionBanner status={sellerStatus} />
@@ -685,7 +687,11 @@ function OffersContent() {
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
         <div className="flex w-full items-center gap-2 sm:contents">
-        <div className="flex min-w-0 flex-1 flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
+        {/* Phones: the triggers scroll under a faded edge + chevron (ScrollRow). */}
+        <ScrollRow
+          wrapperClassName="min-w-0 flex-1 sm:contents"
+          className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents"
+        >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
@@ -796,7 +802,7 @@ function OffersContent() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        </div>
+        </ScrollRow>
         {/* Phones: Add New Offer pinned at the row's RIGHT edge — the chips
             scroll underneath it. */}
         <Link
@@ -814,7 +820,8 @@ function OffersContent() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search offers…"
-            className="h-[42px] w-full rounded-md border-2 border-border-subtle bg-[#1D1E23] pl-9 pr-3 text-[13px] font-medium text-text-primary backdrop-blur-md transition-colors placeholder:text-text-tertiary focus:border-border-strong focus:outline-none focus-visible:shadow-none"
+            aria-label="Search offers"
+            className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-3 font-medium sm:h-[42px]')}
           />
         </div>
 
@@ -843,9 +850,7 @@ function OffersContent() {
       </div>
 
       {/* ── Results card ── */}
-      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border-subtle bg-[#1D1E23] shadow-elevated backdrop-blur-md lg:mb-4">
-        {/* Top sheen — the bundle-card light-from-above, on the card itself. */}
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent)]" />
+      <div className="relative mt-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-bg-raised lg:mb-4">
 
         {/* The table renders at EVERY width (owner call 2026-09-07 — the
             reference app ships the same row look on phones, horizontally
@@ -1135,7 +1140,7 @@ function OffersContent() {
         </div>
 
         {/* ── Pagination footer ── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5 max-sm:justify-center">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] px-5 py-3.5 max-sm:justify-center">
           <div className="flex items-center gap-5 text-[12.5px] text-text-tertiary">
             <span>
               Showing <span className="font-semibold text-text-secondary">{rangeStart}–{rangeEnd}</span> of{' '}
@@ -1147,7 +1152,7 @@ function OffersContent() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-9 items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#12151e] px-2.5 text-[12.5px] font-semibold text-text-secondary transition-colors max-md:h-10 hover:border-white/[0.16] hover:text-text-primary"
+                    className="flex h-9 items-center gap-1.5 rounded-md bg-bg-overlay px-2.5 text-[12.5px] font-semibold text-text-secondary transition-colors max-md:h-10 hover:bg-bg-overlay-2 hover:text-text-primary"
                   >
                     {perPage} <ChevronDown className="h-3 w-3 text-text-tertiary" />
                   </button>
@@ -1177,7 +1182,7 @@ function OffersContent() {
 
       {/* ── Archive confirm ── */}
       <Dialog open={archiveTarget != null} onOpenChange={(o) => !o && setArchiveTarget(null)}>
-        <DialogContent className="rounded-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogHeader>
             <DialogTitle>Archive This Offer?</DialogTitle>
             <DialogDescription>
@@ -1204,7 +1209,7 @@ function OffersContent() {
 
       {/* ── Delete confirm (single offer) ── */}
       <Dialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="rounded-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogHeader>
             <DialogTitle>Delete This Offer?</DialogTitle>
             <DialogDescription>
@@ -1232,7 +1237,7 @@ function OffersContent() {
 
       {/* ── Bulk delete confirm ── */}
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent className="rounded-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogHeader>
             <DialogTitle>Delete {selected.size} {selected.size === 1 ? 'Offer' : 'Offers'}?</DialogTitle>
             <DialogDescription>
@@ -1259,7 +1264,7 @@ function OffersContent() {
 
       {/* ── Bulk delivery time ── */}
       <Dialog open={bulkDeliveryOpen} onOpenChange={setBulkDeliveryOpen}>
-        <DialogContent className="rounded-md">
+        <DialogContent className="max-w-[420px] p-5 sm:p-6">
           <DialogHeader>
             <DialogTitle>Change Delivery Time</DialogTitle>
             <DialogDescription>
@@ -1297,8 +1302,8 @@ function PagerButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-md border border-white/[0.08] text-text-tertiary transition-colors max-md:h-10 max-md:w-10',
-        disabled ? 'opacity-40' : 'hover:border-white/[0.16] hover:text-text-primary',
+        'flex h-9 w-9 items-center justify-center rounded-md bg-bg-overlay text-text-tertiary transition-colors max-md:h-10 max-md:w-10',
+        disabled ? 'opacity-40' : 'hover:bg-bg-overlay-2 hover:text-text-primary',
       )}
     >
       {children}

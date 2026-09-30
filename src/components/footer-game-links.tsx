@@ -79,7 +79,9 @@ async function getDirectory(): Promise<GameGroup[]> {
       name: g.name,
       // First active category is the canonical landing for the game link.
       href: raw[0] ? `/${g.slug}/${raw[0].slug}` : `/${g.slug}`,
-      icon: getGameIcon(g.slug),
+      // DB icon first (every radar/admin game has one); the static map
+      // covers the few without, then the neutral placeholder.
+      icon: g.image_url || getGameIcon(g.slug),
       cats: gameCats,
     }
   })
@@ -107,9 +109,9 @@ export async function FooterGameLinks() {
                   width={22}
                   height={22}
                   loading="lazy"
-                  className="h-[22px] w-[22px] shrink-0 rounded-md border border-white/10 object-cover"
+                  className="h-[22px] w-[22px] shrink-0 rounded-md bg-white/[0.06] object-cover"
                 />
-                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-lime-text">
+                <span className="truncate text-[13px] font-semibold text-white transition-colors group-hover:text-white/80">
                   {g.name}
                 </span>
               </Link>

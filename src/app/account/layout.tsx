@@ -1,13 +1,13 @@
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
-import AccountSidebar from '@/components/account/AccountSidebar'
+import AccountSidebar, { AccountSidebarSkeleton } from '@/components/account/AccountSidebar'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { isLoggingOut } from '@/lib/auth/logout-signal'
 import BuyingOpensSoonBanner from '@/components/seller/BuyingOpensSoonBanner'
+import { AccountRouteSkeleton } from './_AccountRouteSkeleton'
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -25,51 +25,36 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     }
   }, [user, loading, pathname, router])
 
-  // V21/P7.ah — Auth-resolving state renders OVER the hero backdrop (not
-  // flat black) so navigating into /account/* doesn't flash a black
-  // screen before the backdrop fades in. Same backdrop the resolved
-  // layout uses, so there's no visual swap when auth settles.
-  // Only block while there is no user at all. useAuth puts the signed-in
-  // user (from the session + cached profile) in place BEFORE its fresh
-  // profile fetch finishes; waiting on `loading` alone held every account
-  // page behind this full-screen spinner for that whole fetch, even though
-  // the page itself (and its skeleton) could already render. Middleware
-  // has already verified the session for /account/*.
-  if (loading && !user) {
-    // Context-aware loader copy. Coming back from checkout lands on an order
-    // page — "Preparing your order" reads far better than a bare "Loading…".
-    const loadingLabel = (() => {
-      const p = pathname || ''
-      if (/^\/account\/orders\/[^/]+/.test(p)) return 'Preparing your order…'
-      if (p.startsWith('/account/orders')) return 'Loading your orders…'
-      if (p.startsWith('/account/wallet')) return 'Loading your wallet…'
-      return 'Loading your account…'
-    })()
+  // Hide sidebar on certain pages for a clean full-width view
+  const isOrderDetail = /^\/account\/orders\/[^/]+$/.test(pathname || '')
+  const isBecomeSeller = pathname === '/account/become-seller'
+  const isSellerStatus = pathname === '/account/seller-status'
+  const bare = isOrderDetail || isBecomeSeller || isSellerStatus
+
+  if (!user) {
+    // During a logout the navbar's overlay is up and driving the user home;
+    // painting anything here would flash the page logged-out in place.
+    if (!loading || isLoggingOut()) return null
+
+    // Sign-in still resolving (hard load, new tab). Middleware has already
+    // verified the session for /account/*, so draw the page's own frame and
+    // skeleton (the same one its loading.tsx uses) instead of a full-screen
+    // spinner: skeleton, then content, with nothing in between.
+    const skeleton = <AccountRouteSkeleton pathname={pathname || ''} />
+    if (bare) return <div className="min-h-screen">{skeleton}</div>
     return (
       <>
         <HeroBackdropPreload name="account" />
-        <HeroBackdrop name="account" className="hero-dim">
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-              <p className="text-sm font-medium text-text-secondary">{loadingLabel}</p>
-            </div>
-          </div>
+        <HeroBackdrop name="account" className="hero-dim min-h-[calc(100dvh-var(--navbar-bottom,0px))] lg:pl-64">
+          <div className="pt-7">{skeleton}</div>
         </HeroBackdrop>
+        <AccountSidebarSkeleton />
       </>
     )
   }
 
-  // Don't render protected content if not authenticated. During a logout the
-  // navbar's full-screen overlay is already up and driving the user home, so
-  // returning null here is invisible (and avoids briefly painting this page
-  // logged-out in place — the "bottom of the page" flash).
-  if (!user) {
-    return null
-  }
-
   // Flatten profile data for AccountSidebar
-  const sidebarUser = user ? {
+  const sidebarUser = {
     id: user.id,
     username: user.profile?.username || user.email?.split('@')[0] || '',
     email: user.email || '',
@@ -82,14 +67,9 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     shop_slug: user.profile?.shop_slug,
     seller_status: (user.profile as any)?.seller_status as 'active' | 'restricted' | 'banned',
     joinedAt: (user.profile as any)?.created_at as string | undefined,
-  } : undefined
+  }
 
-  // Hide sidebar on certain pages for a clean full-width view
-  const isOrderDetail = /^\/account\/orders\/[^/]+$/.test(pathname || '')
-  const isBecomeSeller = pathname === '/account/become-seller'
-  const isSellerStatus = pathname === '/account/seller-status'
-
-  if (isOrderDetail || isBecomeSeller || isSellerStatus) {
+  if (bare) {
     // V21/P5.v — Dropped the `bg-[#0a0a0f] pt-8 sm:pt-10 md:pt-12`
     // wrapper styles. The pt-* was painting a solid black band
     // between the (transparent-over-hero) navbar and the order

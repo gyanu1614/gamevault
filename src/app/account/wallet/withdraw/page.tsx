@@ -29,6 +29,8 @@ import { useAuth } from '@/hooks/use-auth'
 // net, first refusal). The destination is the seller's SAVED payout details.
 import { getMyWalletOverview, type WalletOverview } from '@/lib/actions/wallet-ledger'
 import { getMyPayoutDetails, type PayoutDetails } from '@/lib/actions/payout-details'
+import { accountBtn, accountInputCls } from '@/components/account/AccountSurface'
+import { MethodGridSkeleton, WithdrawSkeleton } from './_WithdrawSkeleton'
 import {
   getWithdrawalMethods,
   quoteWithdrawal,
@@ -213,12 +215,9 @@ export default function WithdrawPage() {
     return null
   })()
 
+  // Same picture as the route's loading.tsx while the balance loads.
   if (availableBalance === null) {
-    return (
-      <div className="flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-text" />
-      </div>
-    )
+    return <WithdrawSkeleton />
   }
 
   const amountNum = parseFloat(amount) || 0
@@ -236,19 +235,17 @@ export default function WithdrawPage() {
   /** Sticky summary rail — balance, and once a method is chosen, the maths. */
   const summaryRail = (
     <aside className="space-y-4 lg:sticky lg:top-24">
-      <div className="rounded-lg border border-border-subtle card-frost p-4">
+      <div className="rounded-lg bg-bg-raised p-5">
         <div className="flex items-center gap-2">
-          <Wallet className="h-4 w-4 text-success" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            Available
-          </span>
+          <Wallet className="h-4 w-4 text-success" aria-hidden />
+          <span className="text-[12.5px] font-medium text-text-secondary">Available</span>
         </div>
         <p className="mt-1.5 text-3xl font-bold text-text-primary">
           ${(availableBalance ?? 0).toFixed(2)}
         </p>
         <p className="mt-1 text-[12px] text-text-tertiary">Ready to withdraw.</p>
         {overview && (
-          <dl className="mt-3 space-y-1.5 border-t border-border-subtle pt-3 text-[12px]">
+          <dl className="mt-3 space-y-1.5 border-t border-white/[0.07] pt-3 text-[12px]">
             {overview.pending > 0 && (
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-text-secondary">Pending release{overview.nextMaturityAt ? ` · ${fmtDateTime(overview.nextMaturityAt)}` : ''}</dt>
@@ -282,7 +279,7 @@ export default function WithdrawPage() {
           </dl>
         )}
         {gateMessage && (
-          <p className="mt-3 flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)] bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">
+          <p className="mt-3 flex items-start gap-2 rounded-md bg-warning-bg px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             {gateMessage}
           </p>
@@ -291,10 +288,8 @@ export default function WithdrawPage() {
 
       {selectedMethod ? (
         <>
-          <div className="rounded-lg border border-border-subtle card-frost p-4">
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              Summary
-            </h2>
+          <div className="rounded-lg bg-bg-raised p-5">
+            <h2 className="mb-3 text-[15px] font-semibold text-text-primary">Summary</h2>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Amount</span>
@@ -311,14 +306,12 @@ export default function WithdrawPage() {
                 </div>
               )}
               {quote && !quote.ok && amountNum > 0 && quote.message && (
-                <p className="rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)] bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">{quote.message}</p>
+                <p className="rounded-md bg-warning-bg px-3 py-2 text-[12px] leading-relaxed text-text-secondary">{quote.message}</p>
               )}
-              <div className="my-2 h-px bg-border-subtle" />
+              <div className="my-2 h-px bg-white/[0.07]" />
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-                  You Receive
-                </span>
-                <span className="text-2xl font-bold text-lime-text">${netAmount.toFixed(2)}</span>
+                <span className="text-[13px] font-semibold text-text-primary">You Receive</span>
+                <span className="text-2xl font-bold tabular-nums text-lime-text">${netAmount.toFixed(2)}</span>
               </div>
             </div>
 
@@ -326,7 +319,7 @@ export default function WithdrawPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !amount || amountNum <= 0 || !quote?.ok}
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className={cn(accountBtn.primary, 'h-11 w-full')}
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
@@ -337,14 +330,14 @@ export default function WithdrawPage() {
               <button
                 onClick={() => { setSelectedMethod(null); setAmount(''); setQuote(null) }}
                 disabled={isSubmitting}
-                className="min-h-[44px] w-full rounded-lg border border-border-default bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
+                className={cn(accountBtn.secondary, 'h-11 w-full')}
               >
                 Choose Another Method
               </button>
             </div>
           </div>
 
-          <div className="space-y-2 rounded-lg border border-border-subtle card-frost p-4">
+          <div className="space-y-2 rounded-lg bg-bg-raised p-5">
             <p className="flex items-start gap-2 text-[12px] text-text-secondary">
               <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
               {selectedMethod.method_type === 'crypto'
@@ -358,10 +351,8 @@ export default function WithdrawPage() {
           </div>
         </>
       ) : (
-        <div className="rounded-lg border border-border-subtle card-frost p-4">
-          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            How Payouts Work
-          </h2>
+        <div className="rounded-lg bg-bg-raised p-5">
+          <h2 className="mb-2.5 text-[15px] font-semibold text-text-primary">How Payouts Work</h2>
           <ol className="space-y-2 text-[12px] leading-relaxed text-text-secondary">
             <li>1. Choose how you want to be paid: crypto (pick the coin and network) or Payoneer.</li>
             <li>2. Enter the amount — it goes to the destination saved in your payout settings.</li>
@@ -374,7 +365,7 @@ export default function WithdrawPage() {
   )
 
   return (
-    <div className="pb-6">
+    <div className="pb-12">
       {/* Same container as /account/wallet — this is a sub-page of it, so the
           heading lands on the same x as "Wallet". */}
       <div className="mx-auto w-full max-w-full px-4 sm:px-6 md:max-w-7xl lg:px-8">
@@ -413,9 +404,7 @@ export default function WithdrawPage() {
                   transition={{ duration: 0.18 }}
                 >
                   {isLoadingMethods ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-7 w-7 animate-spin text-lime-text" />
-                    </div>
+                    <MethodGridSkeleton />
                   ) : (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {methods.map((method) => (
@@ -425,10 +414,10 @@ export default function WithdrawPage() {
                           disabled={!!method.coming_soon}
                           aria-disabled={!!method.coming_soon}
                           className={cn(
-                            'group flex items-center gap-3 rounded-lg border border-border-subtle card-frost p-4 text-left transition-colors',
+                            'group flex items-center gap-3 rounded-lg bg-bg-raised p-4 text-left transition-[background-color,transform]',
                             method.coming_soon
                               ? 'cursor-not-allowed opacity-55'
-                              : 'hover:border-lime-tint-border hover:bg-white/[0.07]',
+                              : 'hover:bg-bg-raised-hover active:scale-[0.99]',
                           )}
                         >
                           <CoinBadge
@@ -445,7 +434,7 @@ export default function WithdrawPage() {
                                 disappearing reads as a fault, not a roadmap. */}
                             <span className="mt-1 flex items-center gap-1.5">
                               {method.chain && !method.coming_soon && (
-                                <span className="rounded border border-border-subtle bg-bg-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-tertiary">
+                                <span className="rounded bg-bg-overlay px-1.5 py-0.5 text-[11px] font-medium uppercase text-text-tertiary">
                                   {method.chain}
                                 </span>
                               )}
@@ -472,7 +461,7 @@ export default function WithdrawPage() {
                   className="space-y-4"
                 >
                   {/* Chosen method */}
-                  <div className="flex items-center gap-3 rounded-lg border border-border-subtle card-frost p-4">
+                  <div className="flex items-center gap-3 rounded-lg bg-bg-raised p-4">
                     <CoinBadge coin={selectedMethod.coin} methodName={selectedMethod.method_name} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-text-primary">
@@ -488,26 +477,28 @@ export default function WithdrawPage() {
                   </div>
 
                   {/* Amount */}
-                  <div className="rounded-lg border border-border-subtle card-frost p-5">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                  <div className="rounded-lg bg-bg-raised p-5 sm:p-6">
+                    <label htmlFor="withdraw-amount" className="mb-2 block text-[13px] font-medium text-text-secondary">
                       Amount
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg font-semibold text-text-tertiary">$</span>
                       <input
+                        id="withdraw-amount"
                         type="number"
+                        inputMode="decimal"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
                         min={selectedMethod.min_withdrawal}
                         max={Math.min(selectedMethod.max_withdrawal || Infinity, availableBalance ?? 0)}
                         step="0.01"
-                        className="w-full rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-base)_60%,transparent)] py-2.5 pl-7 pr-16 text-lg font-semibold text-text-primary placeholder:text-text-disabled transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+                        className={cn(accountInputCls, 'h-12 py-0 pl-7 pr-16 text-lg font-semibold tabular-nums sm:text-lg')}
                       />
                       <button
                         type="button"
                         onClick={() => setAmount((availableBalance ?? 0).toFixed(2))}
-                        className="absolute right-2 top-1/2 min-h-[36px] -translate-y-1/2 rounded-md border border-border-subtle px-2.5 py-1.5 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg"
+                        className="absolute right-1.5 top-1/2 flex h-9 -translate-y-1/2 items-center rounded-md px-3 text-[12px] font-semibold text-text-primary transition-colors hover:bg-white/[0.08]"
                       >
                         Max
                       </button>
@@ -519,14 +510,14 @@ export default function WithdrawPage() {
                   </div>
 
                   {/* Destination — the saved payout details, never typed here */}
-                  <div className="rounded-lg border border-border-subtle card-frost p-5">
-                    <h2 className="mb-3 text-sm font-bold text-text-primary">
+                  <div className="rounded-lg bg-bg-raised p-5 sm:p-6">
+                    <h2 className="mb-3 text-[15px] font-semibold text-text-primary">
                       {selectedMethod.method_type === 'crypto' ? 'Wallet Details' : 'Payout Details'}
                     </h2>
                     {savedDestination ? (
                       <div className="space-y-3">
-                        <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">{savedDestination.label}</p>
+                        <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                          <p className="text-[12px] font-medium text-text-tertiary">{savedDestination.label}</p>
                           <p className={cn('mt-1 break-all text-[13px] text-text-primary', savedDestination.mono && 'font-mono')}>{savedDestination.value}</p>
                         </div>
                         <p className="text-[12px] text-text-secondary">
@@ -536,7 +527,7 @@ export default function WithdrawPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)] bg-warning-bg px-3 py-2.5">
+                      <div className="flex items-start gap-2 rounded-md bg-warning-bg px-3.5 py-3">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                         <p className="text-[12px] leading-relaxed text-text-secondary">
                           No {selectedMethod.method_type === 'crypto' ? `${(selectedMethod.coin ?? '').toUpperCase()} address on ${CHAIN_LABELS[selectedMethod.chain as keyof typeof CHAIN_LABELS] ?? selectedMethod.chain}` : 'Payoneer email'} saved yet.{' '}
@@ -562,8 +553,8 @@ export default function WithdrawPage() {
           here would defeat the point of confirming at all. */}
       {selectedMethod && (
         <Dialog open={showConfirm} onOpenChange={(open) => !isSubmitting && setShowConfirm(open)}>
-          <DialogContent className="max-w-md">
-            <DialogTitle>Confirm Withdrawal</DialogTitle>
+          <DialogContent className="max-w-[440px] p-5 sm:p-6">
+            <DialogTitle className="pr-8 text-base font-semibold">Confirm Withdrawal</DialogTitle>
             <DialogDescription>
               Check every character of the address. Crypto transfers can’t be reversed or
               refunded once sent.
@@ -572,7 +563,7 @@ export default function WithdrawPage() {
             <div className="mt-4 space-y-4">
               {selectedMethod.method_type === 'crypto' && (
                 <>
-                  <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-warning)_25%,transparent)] bg-warning-bg px-3 py-2.5">
+                  <div className="rounded-md bg-warning-bg px-3.5 py-2.5">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
                       <span className="text-[12px] font-semibold text-text-primary">
@@ -585,7 +576,7 @@ export default function WithdrawPage() {
 
                   <div>
                     <p className="mb-1.5 text-[12px] text-text-secondary">Destination address</p>
-                    <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5">
+                    <div className="rounded-md bg-bg-overlay px-3.5 py-3">
                       <p className="flex flex-wrap gap-x-2 gap-y-1 font-mono text-[13px] leading-relaxed text-text-primary">
                         {chunkAddress(savedDestination?.value ?? '').map((group, i) => (
                           <span key={i}>{group}</span>
@@ -598,11 +589,11 @@ export default function WithdrawPage() {
               {selectedMethod.method_name === 'payoneer' && savedDestination && (
                 <div>
                   <p className="mb-1.5 text-[12px] text-text-secondary">Payoneer account</p>
-                  <div className="rounded-lg border border-border-subtle bg-bg-raised px-3 py-2.5 text-[13px] text-text-primary">{savedDestination.value}</div>
+                  <div className="rounded-md bg-bg-overlay px-3.5 py-3 text-[13px] text-text-primary">{savedDestination.value}</div>
                 </div>
               )}
 
-              <div className="space-y-2 rounded-lg border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_50%,transparent)] p-3 text-sm">
+              <div className="space-y-2 rounded-md bg-bg-overlay p-3.5 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-text-secondary">Amount</span>
                   <span className="font-semibold text-text-primary">${amountNum.toFixed(2)}</span>
@@ -611,11 +602,9 @@ export default function WithdrawPage() {
                   <span className="text-text-secondary">Fee</span>
                   <span className="font-semibold text-text-primary">-${fee.toFixed(2)}</span>
                 </div>
-                <div className="h-px bg-border-subtle" />
+                <div className="h-px bg-white/[0.07]" />
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-                    You Receive
-                  </span>
+                  <span className="text-[13px] font-semibold text-text-primary">You Receive</span>
                   <span className="text-lg font-bold text-lime-text">${netAmount.toFixed(2)}</span>
                 </div>
               </div>
@@ -625,20 +614,22 @@ export default function WithdrawPage() {
                 returns to your available balance.
               </p>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
+                  type="button"
                   onClick={() => setShowConfirm(false)}
                   disabled={isSubmitting}
-                  className="flex-1 rounded-lg border border-border-subtle bg-bg-raised px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
+                  className={accountBtn.secondary}
                 >
                   Go Back
                 </button>
                 <button
+                  type="button"
                   onClick={submitRequest}
                   disabled={isSubmitting}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-lime px-4 py-2.5 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className={accountBtn.primary}
                 >
-                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                   Submit Request
                 </button>
               </div>

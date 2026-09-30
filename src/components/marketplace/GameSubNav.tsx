@@ -106,12 +106,15 @@ export default function GameSubNav({
        fixed 60px primary header. */
     <nav
       aria-label={`${gameName} categories`}
-      /* IMPORTANT: `.has-backdrop > *` in globals.css forces every direct
+      /* Desktop: pulled up under the navbar (owner, 2026-09-30: "reduce the
+         space between navbar and subnavbar"): the page spacer already leaves
+         27px below the bar, so no top padding and a -12px nudge → ~15px gap.
+         IMPORTANT: `.has-backdrop > *` in globals.css forces every direct
          child (this <nav> AND the page <main>) to `z-index: 1`. With equal
          z, DOM order wins and page content paints over the fixed sub-nav.
          `!z-40` (z-index !important) beats that global rule so the sub-nav
          always sits above page content. */
-      className="relative !z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:py-5 max-md:h-[58px] max-md:px-0 max-md:py-0"
+      className="relative !z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[58px] max-md:px-0 max-md:py-0"
     >
       <motion.div
         initial={false}
@@ -187,8 +190,6 @@ export default function GameSubNav({
               // V14s — Only swap to the spinner / lime tint after the
               // 150ms grace period. Sub-150ms navs stay clean — no flash.
               const showLoading = isPending && spinnerVisible
-              const showIcon = cat.icon_type === 'image' || cat.icon_type === 'svg'
-              const icon = showIcon && cat.icon_url ? cat.icon_url : cat.icon_emoji
 
               return (
                 <button
@@ -210,35 +211,18 @@ export default function GameSubNav({
                   {(isActive || showLoading) && (
                     <motion.span
                       layoutId="activeCategory"
-                      className="absolute inset-x-1.5 bottom-0 h-[2.5px] rounded-full bg-[#3f9d5a] shadow-[0_0_10px_rgba(63,157,90,0.55)]"
+                      className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-white/85"
                       /* Snappy tween instead of a springy slide — the old
                          spring read as a slow/wacky swipe when the sub-nav
                          re-mounts on each category navigation. */
                       transition={{ type: 'tween', duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     />
                   )}
-                  {/* V14m — Swap the leading icon for a spinner while the
-                      target page is loading. V14s — only after 150ms so
-                      cached/instant navs don't flash. */}
-                  {showLoading ? (
-                    <Loader2 className="relative z-10 h-4 w-4 animate-spin text-lime-text" />
-                  ) : icon ? (
-                    <span className="relative z-10">
-                      {showIcon ? (
-                        <img
-                          src={icon}
-                          alt={cat.name}
-                          className="w-4 h-4 sm:w-4.5 sm:h-4.5 rounded object-cover"
-                        />
-                      ) : (
-                        <span className="text-sm">{icon}</span>
-                      )}
-                    </span>
-                  ) : null}
-                  <span className={cn(
-                    'relative z-10',
-                    showLoading && 'text-lime-text'
-                  )}>{cat.name}</span>
+                  {/* Text-only tabs (owner, 2026-09-30: no category icons).
+                      A slow navigation (>350ms, V14s) shows a small neutral
+                      spinner before the label. */}
+                  {showLoading && <Loader2 className="relative z-10 h-3.5 w-3.5 animate-spin text-white/70" />}
+                  <span className="relative z-10">{cat.name}</span>
                 </button>
               )
             })}

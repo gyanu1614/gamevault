@@ -40,9 +40,9 @@ export function HowItWorks({ steps }: { steps: CurrencyStep[] }) {
         {steps.map((s, i) => {
           const Icon = ICONS[i] ?? SlidersHorizontal
           return (
-            <div key={s.n} className="rounded-xl border border-border-subtle bg-bg-raised p-5">
+            <div key={s.n} className="rounded-lg bg-bg-raised p-5">
               <div className="flex items-start justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-default bg-bg-overlay text-lime-text">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="font-display text-2xl font-black tabular-nums text-text-tertiary">

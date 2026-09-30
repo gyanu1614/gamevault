@@ -125,26 +125,26 @@ function BrowseContent() {
   const FilterPanel = (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[13px] font-semibold text-text-secondary">
           Game
         </label>
         <Combobox value={gameId} onChange={setGameId} options={gameOptions} unsorted ariaLabel="Game" />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[13px] font-semibold text-text-secondary">
           Category
         </label>
         <Combobox value={categoryId} onChange={setCategoryId} options={categoryOptions} unsorted ariaLabel="Category" />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+        <label className="block text-[13px] font-semibold text-text-secondary">
           Price range
         </label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Min</span>
+            <span className="text-[12px] text-text-tertiary">Min</span>
             <NumberField
               value={minPrice}
               onChange={(v) => setMinPrice(v ?? 0)}
@@ -156,7 +156,7 @@ function BrowseContent() {
             />
           </div>
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-text-tertiary">Max</span>
+            <span className="text-[12px] text-text-tertiary">Max</span>
             <NumberField
               value={maxPrice}
               onChange={(v) => setMaxPrice(v ?? 0)}
@@ -193,7 +193,7 @@ function BrowseContent() {
             placeholder="Search listings…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-md border border-border-default bg-bg-raised pl-9 pr-9 text-sm text-text-primary placeholder:text-text-tertiary transition-colors focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+            className="h-11 w-full rounded-md bg-bg-raised pl-9 pr-9 text-[16px] text-text-primary placeholder:text-text-tertiary transition-[background-color,box-shadow] hover:bg-bg-raised-hover focus:outline-none focus:ring-1 focus:ring-white/15 focus-visible:shadow-none sm:text-sm"
           />
           {search && (
             <button
@@ -223,12 +223,12 @@ function BrowseContent() {
           <Button
             variant="outline"
             onClick={() => setFiltersOpen(true)}
-            className="h-10 gap-1.5 rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border lg:hidden"
+            className="h-11 gap-1.5 rounded-md border-0 bg-bg-raised text-text-primary hover:bg-bg-raised-hover lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
-              <span className="rounded-full bg-lime px-1.5 text-[10px] font-bold text-text-inverse">
+              <span className="rounded-full bg-white/[0.12] px-1.5 text-[11px] font-bold text-text-primary">
                 {activeFilterCount}
               </span>
             )}
@@ -257,9 +257,9 @@ function BrowseContent() {
           <button
             type="button"
             onClick={clearAll}
-            className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary transition-colors hover:text-error"
+            className="h-7 rounded-md px-2 text-[12.5px] font-semibold text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-primary"
           >
-            Clear all
+            Clear All
           </button>
         </div>
       )}
@@ -268,11 +268,11 @@ function BrowseContent() {
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         {/* Sidebar */}
         <aside className="hidden lg:block">
-          <div className="sticky top-32 rounded-2xl border border-border-subtle bg-bg-overlay p-4">
+          <div className="sticky top-32 rounded-lg bg-bg-raised p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-text-primary">Filters</h2>
+              <h2 className="text-[14px] font-bold text-text-primary">Filters</h2>
               {activeFilterCount > 0 && (
-                <span className="rounded-full bg-lime-tint-bg px-2 py-0.5 text-[10px] font-bold text-lime-text">
+                <span className="rounded-full bg-white/[0.1] px-2 py-0.5 text-[11px] font-bold text-text-primary">
                   {activeFilterCount}
                 </span>
               )}
@@ -328,12 +328,12 @@ function BrowseContent() {
                 onClick={clearAll}
                 className="text-text-secondary hover:text-text-primary"
               >
-                Clear all
+                Clear All
               </Button>
             )}
             <Button
               onClick={() => setFiltersOpen(false)}
-              className="bg-lime text-text-inverse hover:bg-lime-hover"
+              className="bg-white font-semibold text-black hover:bg-white/90"
             >
               Done
             </Button>
@@ -346,7 +346,7 @@ function BrowseContent() {
 
 function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border-default bg-bg-raised px-2.5 py-1 text-[11px] font-medium text-text-secondary">
+    <span className="inline-flex h-7 items-center gap-1 rounded-md bg-white/[0.06] pl-2.5 pr-1 text-[12.5px] font-medium text-text-secondary">
       {label}
       <button
         type="button"
@@ -362,8 +362,8 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
 
 function EmptyState({ onClear, hasActiveFilters }: { onClear: () => void; hasActiveFilters: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border-subtle bg-bg-overlay p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-raised">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-bg-raised p-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.05]">
         <Package className="h-5 w-5 text-text-tertiary" />
       </div>
       <div>
@@ -376,7 +376,7 @@ function EmptyState({ onClear, hasActiveFilters }: { onClear: () => void; hasAct
         <Button
           variant="outline"
           onClick={onClear}
-          className="rounded-md border-border-default bg-bg-raised text-text-primary hover:bg-bg-raised-hover hover:border-lime-tint-border"
+          className="rounded-md border-0 bg-white/[0.07] text-text-primary hover:bg-white/[0.11]"
         >
           Clear all filters
         </Button>

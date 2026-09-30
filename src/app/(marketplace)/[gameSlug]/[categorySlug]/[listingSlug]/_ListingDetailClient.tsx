@@ -23,20 +23,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ChevronLeft, ChevronRight, Globe, Gamepad2,
-  Loader2, ArrowUpRight,
-  Award, Sparkles, ChevronDown,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, Globe, Gamepad2, ArrowUpRight, Award, Sparkles, ChevronDown } from 'lucide-react'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
-import ShoppingBagRoundedIcon from '@mui/icons-material/ShoppingBagRounded'
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import ItemCard from '../_ItemCard'
 import type { ItemOffer } from '../_itemsTypes'
@@ -51,6 +47,7 @@ import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import type { TemplateField } from '@/lib/templates/types'
+import { BuyButton } from '@/components/marketplace/BuyButton'
 import { SellerStats } from '@/components/seller/SellerStats'
 
 const fmtPrice = (n: number) => {
@@ -682,27 +679,19 @@ export default function ListingDetailClient({
                     <Link href={`/sell/edit/${listing.id}`}>Edit your listing</Link>
                   </Button>
                 ) : (
-                  <Button
+                  <BuyButton
                     onClick={onBuy}
-                    disabled={!!previewStatus || navigating || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)}
-                    className="mt-4 h-12 w-full gap-2 bg-lime text-[15px] font-bold tracking-wide text-text-inverse hover:bg-lime-hover"
+                    loading={navigating}
+                    disabled={!!previewStatus || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)}
+                    icon={previewStatus || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0) ? null : undefined}
+                    className="mt-4 w-full"
                   >
-                    {previewStatus ? (
-                      'Purchasing Disabled — Preview'
-                    ) : navigating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading checkout…
-                      </>
-                    ) : (!listing.isUnlimited && (listing.quantity ?? 0) <= 0) ? (
-                      'Out of stock'
-                    ) : (
-                      <>
-                        <ShoppingBagRoundedIcon style={{ fontSize: 20 }} />
-                        {BUY_CTA_LABEL}
-                      </>
-                    )}
-                  </Button>
+                    {previewStatus
+                      ? 'Purchasing Disabled — Preview'
+                      : (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)
+                        ? 'Out Of Stock'
+                        : BUY_CTA_LABEL}
+                  </BuyButton>
                 )}
 
               </Card>
@@ -738,6 +727,7 @@ export default function ListingDetailClient({
             subtitle={`Other ${listing.categoryName.toLowerCase()} listings for ${listing.gameName}`}
             offers={similarOffersAsItems}
             gameSlug={listing.gameSlug}
+            gameName={listing.gameName}
             viewerId={viewerId}
             className="mt-12 sm:mt-16"
           />
@@ -807,26 +797,21 @@ export default function ListingDetailClient({
           >
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+                <div className="text-[12px] font-medium text-text-tertiary">
                   Total
                 </div>
                 <div className="text-[20px] font-bold tabular-nums leading-tight text-text-primary">
                   {fmtPrice(listing.price * qty)}
                 </div>
               </div>
-              <Button
-                size="lg"
+              <BuyButton
                 onClick={onBuy}
-                disabled={navigating || (!listing.isUnlimited && (listing.quantity ?? 0) <= 0)}
-                className="h-12 gap-2 bg-lime px-5 text-text-inverse shadow-glow hover:bg-lime-hover"
+                loading={navigating}
+                loadingLabel="Loading…"
+                disabled={!listing.isUnlimited && (listing.quantity ?? 0) <= 0}
               >
-                {navigating ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                  <>
-                    {BUY_CTA_LABEL}
-                    <ShoppingBagRoundedIcon style={{ fontSize: 18 }} />
-                  </>
-                )}
-              </Button>
+                {BUY_CTA_LABEL}
+              </BuyButton>
             </div>
           </motion.div>
         )}
@@ -927,13 +912,14 @@ function CarouselSection({
  * viewport.
  */
 function ItemCarouselSection({
-  title, offers, gameSlug, viewerId, className,
+  title, offers, gameSlug, gameName, viewerId, className,
 }: {
   title: string
   /** Kept for call-site parity with CarouselSection; no longer rendered. */
   subtitle?: string
   offers: ItemOffer[]
   gameSlug: string
+  gameName: string
   viewerId: string | null
   className?: string
 }) {
@@ -995,6 +981,7 @@ function ItemCarouselSection({
             <ItemCard
               offer={o}
               gameSlug={gameSlug}
+              gameName={gameName}
               isOwn={!!viewerId && o.sellerId === viewerId}
             />
           </div>
@@ -1256,8 +1243,9 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
       data-mini-card
       href={`/${gameSlug}/${listing.categorySlug}/${listing.slug}`}
       className={cn(
-        'group relative flex w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-raised transition-all sm:w-[280px]',
-        'hover:-translate-y-0.5 hover:border-lime-tint-border hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.6)]',
+        'group relative flex w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-lg sm:w-[280px]',
+        MARKET_CARD,
+        MARKET_CARD_HOVER,
       )}
     >
       <div className="relative aspect-[4/3] bg-bg-overlay">

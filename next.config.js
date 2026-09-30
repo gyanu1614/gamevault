@@ -14,6 +14,7 @@ const nextConfig = {
     // future barrel import there is optimised too.
     optimizePackageImports: [
       '@tabler/icons-react',
+      '@phosphor-icons/react',
       'lucide-react',
       '@mui/icons-material',
       'recharts',

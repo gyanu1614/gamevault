@@ -86,7 +86,7 @@ export function AccountMenu({
           <Dropdown.Item className={item} onSelect={() => router.push('/account/wallet')}>
             <Wallet className="h-4 w-4" style={{ color: INK2 }} /> Wallet
           </Dropdown.Item>
-          <Dropdown.Item className={item} onSelect={() => router.push('/account')}>
+          <Dropdown.Item className={item} onSelect={() => router.push('/account/settings')}>
             <Settings className="h-4 w-4" style={{ color: INK2 }} /> Account Settings
           </Dropdown.Item>
           <Dropdown.Separator className="mx-1 my-1 h-px" style={{ background: LINE }} />
