@@ -6,9 +6,14 @@
  *    "Payout After Delivery Is Confirmed";
  *  · cards carry no outline (only their fill; lines separate rows inside).
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import React, { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+
+// The card imports the refund-to-source server action (a 'use server'
+// module that reaches the cookie client); static rendering never calls it.
+vi.mock('@/lib/actions/refund-to-source', () => ({ requestRefundToSource: async () => ({ success: true }) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: () => undefined, push: () => undefined }) }))
 
 ;(globalThis as any).React = React
 import { OrderDetailsCard } from './_OrderDetailsCard'

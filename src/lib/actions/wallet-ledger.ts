@@ -198,7 +198,7 @@ export interface WalletOverview {
   negative: boolean
   gate: {
     eligible: boolean
-    reason: 'account_age' | 'payout_details_freeze' | null
+    reason: 'not_a_seller' | 'account_age' | 'payout_details_freeze' | null
     sellerSince: string | null
     unlockAt: string | null
     freezeUntil: string | null

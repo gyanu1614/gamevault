@@ -332,6 +332,30 @@ export default async function OrderDetailPage({ params }: PageProps) {
           return { credited: round2(feeKept ? Math.max(0, itemPrice - promoDiscount) : total), feeKept }
         })()
       : null
+  // Refund to the original payment method: the buyer's existing request, and
+  // whether one can be made (a provider charge was paid; the RPC re-checks
+  // the rail and the unspent credit when they click).
+  const refundToSource =
+    buyerRefund && userRole === 'buyer'
+      ? await (async () => {
+          const { getMyRefundToSourceRequest } = await import('@/lib/actions/refund-to-source')
+          const [request, { data: paidAttempt }] = await Promise.all([
+            getMyRefundToSourceRequest(order.id),
+            (createServiceRoleClient() as any)
+              .from('payment_attempts')
+              .select('id')
+              .eq('order_id', order.id)
+              .eq('status', 'paid')
+              .not('provider_charge_id', 'is', null)
+              .limit(1)
+              .maybeSingle(),
+          ])
+          return {
+            request: request ? { status: request.status, adminNotes: request.admin_notes, amount: Number(request.amount_minor) / 100 } : null,
+            canRequest: !request && !!paidAttempt,
+          }
+        })()
+      : null
   const paymentSummary =
     userRole !== 'seller' && PAID_STATUSES.includes(order.status)
       ? await (async () => {
@@ -499,6 +523,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         itemImageUrl={itemImageUrl}
         paymentSummary={paymentSummary}
         buyerRefund={buyerRefund}
+        refundToSource={refundToSource}
         cancelRequest={cancelRequest}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}

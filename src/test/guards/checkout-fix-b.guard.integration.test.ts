@@ -244,10 +244,12 @@ describe.skipIf(!hasEnv)('checkout fix round B (integration)', () => {
       const walletBefore = await walletMinor(fx!.buyer.id)
       sessionClient = fx!.buyer.client
       const { createCheckout } = await import('@/lib/actions/checkout')
-      // price 1 → marketplace 2% (2¢) + the GCash row's quote (checkout B3:
-      // buyer_fee_quote, not a TS constant) → total; wallet 0.50 → charge the rest
-      const { data: gq } = await fx!.svc.rpc('buyer_fee_quote', { p_method: 'gcash_ph', p_subtotal_minor: 100, p_currency: CUR } as any)
-      const expectedTotal = 100 + 2 + Number((gq as any).fee_minor)
+      // price 1 → the GCash row's quote for THIS store credit (buyer-service-fee:
+      // marketplace $0.30 floor + processing on the charged remainder, total
+      // topped up to $1.00 — buyer_fee_quote, not a TS constant); wallet 0.50
+      // → charge the rest
+      const { data: gq } = await fx!.svc.rpc('buyer_fee_quote', { p_method: 'gcash_ph', p_subtotal_minor: 100, p_currency: CUR, p_wallet_minor: 50 } as any)
+      const expectedTotal = Number((gq as any).total_minor)
       const r = await createCheckout({ listingId: fx!.listingId, quantity: 1, walletAmount: 0.5, paymentMethodId: 'gcash_ph' })
       expect(r.success, r.error).toBe(true)
       createdOrderIds.push(r.orderId!)

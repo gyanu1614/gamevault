@@ -37,12 +37,11 @@ export function WalletSkeleton({ isSeller }: { isSeller: boolean }) {
 
           <div className="overflow-hidden rounded-lg bg-bg-raised">
             {isSeller ? (
-              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
                 <div className="flex items-start justify-between gap-3 p-5">
                   <Cell />
                   <Block className="h-10 w-28 shrink-0" />
                 </div>
-                <div className="p-5"><Cell /></div>
                 <div className="p-5"><Cell /></div>
               </div>
             ) : (

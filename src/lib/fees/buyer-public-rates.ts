@@ -41,7 +41,7 @@ const pct = (n: number) => `${Number(n).toFixed(3).replace(/\.?0+$/, '')}%`
 const money = (minor: number, currency: string) =>
   currency === 'USD' ? `$${(minor / 100).toFixed(2)}` : `${currency} ${(minor / 100).toFixed(2)}`
 
-/** One line of TERMS for a method: "3.75% + 7.5% currency conversion + 1% buffer, at least 5% of the item price, minimum $0.35". */
+/** One line of TERMS for a method: "3.75% + 7.5% currency conversion + 1% buffer, at least 5% of the amount charged, minimum $0.35". */
 export function describeMethodFee(r: PublicMethodFee): string {
   const parts: string[] = []
   if (r.providerPct > 0) parts.push(pct(r.providerPct))
@@ -49,7 +49,7 @@ export function describeMethodFee(r: PublicMethodFee): string {
   if (r.fxMarkupPct > 0) parts.push(`${pct(r.fxMarkupPct)} currency conversion`)
   if (r.bufferPct > 0) parts.push(`${pct(r.bufferPct)} buffer`)
   const clauses: string[] = [parts.length ? parts.join(' + ') : 'no provider charge']
-  clauses.push(`at least ${pct(r.floorPct)} of the item price`)
+  clauses.push(`at least ${pct(r.floorPct)} of the amount charged`)
   if (r.minFeeMinor > 0) clauses.push(`minimum ${money(r.minFeeMinor, r.feeCurrency)}`)
   if (r.minTotalMinor != null) clauses.push(`orders from ${money(r.minTotalMinor, r.feeCurrency)}`)
   if (r.maxTotalMinor != null) clauses.push(`orders up to ${money(r.maxTotalMinor, r.feeCurrency)}`)

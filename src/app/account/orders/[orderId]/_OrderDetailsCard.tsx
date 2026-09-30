@@ -17,8 +17,11 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronRight, Copy, Check, ThumbsUp, ThumbsDown, Wallet, Info } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { ChevronRight, Copy, Check, ThumbsUp, ThumbsDown, Wallet, Info, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { requestRefundToSource } from '@/lib/actions/refund-to-source'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
@@ -40,6 +43,13 @@ interface PartyInfo {
   stats?: SellerStatInput | null
 }
 
+/** The buyer's refund-to-original-method request on this order, if any. */
+export interface RefundToSourceState {
+  request: { status: 'pending' | 'approved' | 'sent' | 'failed' | 'rejected'; adminNotes: string | null; amount: number } | null
+  /** No request yet and a provider charge was paid (the RPC re-checks the rest). */
+  canRequest: boolean
+}
+
 interface OrderDetailsCardProps {
   orderNumber: string
   /** Raw UUID — used for dispute / sub-path links inside cards. */
@@ -58,6 +68,8 @@ interface OrderDetailsCardProps {
   /** Buyer / admin: what came back as store credit and whether the service
    *  fee was kept (buyer-fault cancel). null before any refund. */
   buyerRefund?: { credited: number; feeKept: boolean } | null
+  /** Buyer: refund-to-original-method request state (refund policy). */
+  refundToSource?: RefundToSourceState | null
   subtotal: number
   fee: number
   totalPaid: number
@@ -232,6 +244,57 @@ function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; payme
 }
 
 /**
+ * RefundToSourceRow — "send my refund back to my payment method": the
+ * request button, or the state of the request already made. The RPC behind
+ * requestRefundToSource decides eligibility (unspent credit, refundable
+ * rail); this only renders and refreshes.
+ */
+function RefundToSourceRow({ orderId, state }: { orderId: string; state: RefundToSourceState }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const req = state.request
+  if (req) {
+    const line =
+      req.status === 'pending'
+        ? 'Refund to your payment method requested — support reviews it within 24 to 48 hours. The store credit stays in your Store Balance until then.'
+        : req.status === 'approved'
+          ? `Refund approved — $${req.amount.toFixed(2)} is on its way to your original payment method. It usually arrives within 5 to 10 business days.`
+          : req.status === 'sent'
+            ? `Refund sent — $${req.amount.toFixed(2)} went back to your original payment method. Allow 5 to 10 business days for it to land.`
+            : req.status === 'failed'
+              ? 'The refund could not be sent to your payment method. The full amount is back in your Store Balance; support will follow up.'
+              : `Refund to your payment method declined${req.adminNotes ? `: ${req.adminNotes}` : '.'} The store credit stays in your Store Balance.`
+    return <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">{line}</p>
+  }
+  return (
+    <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">
+      Prefer a refund to your original payment method?{' '}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true)
+          try {
+            const r = await requestRefundToSource(orderId)
+            if (!r.success) toast.error(r.error ?? 'Could not send the request')
+            else {
+              toast.success('Refund Requested — support reviews it within 24 to 48 hours.')
+              router.refresh()
+            }
+          } finally {
+            setBusy(false)
+          }
+        }}
+        className="inline-flex items-center gap-1 font-semibold text-text-secondary underline underline-offset-2 transition-colors hover:text-lime-text disabled:opacity-60"
+      >
+        {busy && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
+        Request It
+      </button>
+    </p>
+  )
+}
+
+/**
  * SafeDropBody — V21/P5.k
  *
  * Buyer's SafeDrop protection card body, mirrors PayoutBody for the
@@ -248,6 +311,7 @@ function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; payme
 function SafeDropBody({
   amount,
   refund = null,
+  refundToSource = null,
   orderStatus,
   orderId,
   orderNumber,
@@ -259,6 +323,7 @@ function SafeDropBody({
   amount: number
   /** What came back as store credit, and whether the service fee was kept. */
   refund?: { credited: number; feeKept: boolean } | null
+  refundToSource?: RefundToSourceState | null
   orderStatus: string
   orderId: string
   orderNumber: string
@@ -318,12 +383,15 @@ function SafeDropBody({
     }
   }
 
-  // Escape hatch (Refund & Dispute Policy §9.4): store credit is the default
-  // outcome, but the buyer can ask support for a refund to their original
-  // payment method instead. Only shown when a refund actually landed.
-  const showSupportEscapeHatch =
+  // Refund to the original payment method (Refund & Dispute Policy 7.2):
+  // store credit is the default outcome; the buyer can ask for it to go
+  // back to the method they paid with. Never automatic — an admin approves
+  // (each provider refund costs a fee). Only shown when a refund landed.
+  const showRefundToSource =
     role === 'buyer' &&
-    (orderStatus === 'refunded' || (orderStatus === 'cancelled' && cancelledWithRefund))
+    (orderStatus === 'refunded' || (orderStatus === 'cancelled' && cancelledWithRefund)) &&
+    refundToSource != null &&
+    (refundToSource.request != null || refundToSource.canRequest)
 
   // After a refund the row shows what actually came back (the item price on
   // a buyer-fault cancel), not the amount that was covered.
@@ -338,19 +406,7 @@ function SafeDropBody({
       <p className="mt-3 text-center text-[13px] leading-[1.55] text-text-secondary">
         {caption}
       </p>
-      {showSupportEscapeHatch && (
-        <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">
-          Prefer a refund to your original payment method?{' '}
-          <a
-            href={`mailto:support@dropmarket.gg?subject=${encodeURIComponent(
-              `Refund To Original Payment Method — Order #${orderNumber}`,
-            )}`}
-            className="font-semibold text-text-secondary underline underline-offset-2 transition-colors hover:text-lime-text"
-          >
-            Contact Support
-          </a>
-        </p>
-      )}
+      {showRefundToSource && <RefundToSourceRow orderId={orderId} state={refundToSource!} />}
       {showDisputeCta && (
         onOpenDispute ? (
           <button
@@ -643,6 +699,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     placedAtLabel,
     paymentSummary = null,
     buyerRefund = null,
+    refundToSource = null,
     subtotal,
     fee,
     totalPaid,
@@ -760,6 +817,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
           <SafeDropBody
             amount={escrowAmount}
             refund={buyerRefund}
+            refundToSource={refundToSource}
             orderStatus={orderStatus}
             orderId={orderId}
             orderNumber={orderNumber}

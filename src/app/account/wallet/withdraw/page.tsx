@@ -224,9 +224,11 @@ export default function WithdrawPage() {
   const amountNum = parseFloat(amount) || 0
   const gate = overview?.gate
   const gateMessage = gate && !gate.eligible
-    ? gate.reason === 'account_age'
-      ? `Withdrawals open ${gate.minAgeDays} days after your seller account is approved — from ${fmtDate(gate.unlockAt)}.`
-      : `You changed your payout details recently. Withdrawals reopen ${fmtDateTime(gate.freezeUntil)}.`
+    ? gate.reason === 'not_a_seller'
+      ? 'Store credit is spent at checkout, with no service fee. To withdraw it instead, contact support@dropmarket.gg.'
+      : gate.reason === 'account_age'
+        ? `Withdrawals open ${gate.minAgeDays} days after your seller account is approved — from ${fmtDate(gate.unlockAt)}.`
+        : `You changed your payout details recently. Withdrawals reopen ${fmtDateTime(gate.freezeUntil)}.`
     : overview?.negative
       ? 'Your balance is below zero after a refund. Withdrawals reopen once new sales bring it back above zero.'
       : null
