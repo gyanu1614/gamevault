@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import AdminChrome from './admin/components/AdminChrome'
-import { ADMIN_FOREST, FOREST_BG } from './admin/_theme/forest'
 
 export const metadata: Metadata = {
   title: {
@@ -67,16 +66,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div
-      className="relative min-h-screen text-text-primary"
-      style={{ backgroundColor: ADMIN_FOREST.canvas }}
-    >
-      {/* Forest Ledger — deep-forest canvas gradient (never flat black).
-          Fixed, so the gradient stays put while ledger content scrolls. */}
-      <div className="fixed inset-0" style={{ background: FOREST_BG.canvas }} />
-
-      {/* V55 — Client chrome owns the sidebar-collapse state and keeps
-          sidebar width, header offset, and content margin in lockstep. */}
+    // The site canvas, flat (the account-section design): cards on it are
+    // solid bg-bg-raised fills.
+    <div className="relative min-h-[100dvh] bg-bg-base text-text-primary">
       <AdminChrome role={adminRole.role} user={user} profile={profile}>
         {children}
       </AdminChrome>

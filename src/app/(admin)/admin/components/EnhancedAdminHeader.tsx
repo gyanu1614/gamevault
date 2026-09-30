@@ -24,21 +24,24 @@
  */
 
 import {
+  ArrowSquareOut,
   Bell,
-  Search,
-  LogOut,
-  FileText,
-  MessageSquare,
-  Shield,
-  ExternalLink,
-  User as UserIcon,
-  Settings,
-  ChevronDown,
+  CaretDown,
+  Checks,
   Copy,
+  FileText,
+  GearSix,
+  KeyReturn,
+  List,
+  MagnifyingGlass,
   Package,
-  CheckCheck,
-  CornerDownLeft,
-} from 'lucide-react'
+  Scales,
+  ShieldWarning,
+  SignOut,
+  User as UserIcon,
+  UserCircle,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -50,13 +53,14 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 import type { AdminProfile } from './AdminChrome'
+import { NavIconButton, NavMenuDivider, NavPanel, NavPanelHeader, navMenuIconCls, navMenuRowCls } from '@/components/navbar/NavChrome'
 
 interface EnhancedAdminHeaderProps {
   role: string
   user: { id: string; email?: string }
   profile: AdminProfile | null
-  /** Sidebar rail state; shifts the fixed header's left edge. */
-  collapsed?: boolean
+  /** Opens the phone/tablet nav drawer. */
+  onMenu: () => void
 }
 
 /* Quick page jump — searchable from the header, including pages that
@@ -89,27 +93,26 @@ interface EntityResult {
   link: string | null
 }
 
-const RESULT_ICON: Record<EntityResult['type'], typeof UserIcon> = {
+const RESULT_ICON: Record<EntityResult['type'], PhosphorIcon> = {
   user: UserIcon,
   application: FileText,
-  dispute: MessageSquare,
+  dispute: Scales,
   order: Package,
 }
 
-/** CSS entrance — framer's JS-driven opacity stalls under the admin
- *  tree (same bug family as the analytics freeze); these tailwindcss-
- *  animate classes are pure CSS and always complete. */
-const PANEL_IN = 'animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150'
-
-/** Solid forest surface for every header dropdown. */
-const PANEL =
-  'absolute right-0 mt-2 rounded-xl border border-white/[0.09] bg-[#0F2419] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)] overflow-hidden z-50'
+/** The dropdown surface the site navbar uses (NavPanel): fill only, a dark
+ *  edge ring + shadow. CSS entrance — framer's JS opacity stalls under heavy
+ *  admin trees. */
+const SEARCH_PANEL =
+  'absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl bg-[#1D1E23] ' +
+  'shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)] ' +
+  'animate-in fade-in-0 slide-in-from-top-1 duration-150'
 
 export default function EnhancedAdminHeader({
   role,
   user,
   profile,
-  collapsed = false,
+  onMenu,
 }: EnhancedAdminHeaderProps) {
   const displayName =
     profile?.full_name || profile?.username || user.email?.split('@')[0] || 'Admin'
@@ -124,6 +127,8 @@ export default function EnhancedAdminHeader({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchResults, setSearchResults] = useState<EntityResult[]>([])
   const [searching, setSearching] = useState(false)
+  /** Phones: the search field takes over the whole bar while open. */
+  const [mobileSearch, setMobileSearch] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -166,6 +171,9 @@ export default function EnhancedAdminHeader({
         setSearchOpen(true)
       } else if (e.key === 'Escape') {
         setSearchOpen(false)
+        setMobileSearch(false)
+        setShowNotifications(false)
+        setShowUserMenu(false)
         searchInputRef.current?.blur()
       }
     }
@@ -320,6 +328,7 @@ export default function EnhancedAdminHeader({
 
   const closeSearch = () => {
     setSearchOpen(false)
+    setMobileSearch(false)
     setSearchQuery('')
     setSearchResults([])
   }
@@ -368,337 +377,357 @@ export default function EnhancedAdminHeader({
   const hasSearchContent =
     searchQuery.trim().length > 0 && (searchResults.length > 0 || pageMatches.length > 0 || searching)
 
+  const searchField = (
+    <div className="relative">
+      <MagnifyingGlass
+        aria-hidden
+        weight="bold"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+      />
+      <input
+        ref={searchInputRef}
+        type="search"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onFocus={() => setSearchOpen(true)}
+        placeholder="Search users, orders, disputes, pages…"
+        aria-label="Search the admin"
+        className={cn(
+          'h-10 w-full rounded-md border border-transparent bg-bg-raised pl-9 pr-3 text-base text-text-primary sm:pr-14 sm:text-[13.5px]',
+          'placeholder:text-text-disabled transition-colors hover:border-white/[0.08]',
+          'focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft',
+          '[&::-webkit-search-cancel-button]:hidden',
+        )}
+      />
+      <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10.5px] font-semibold text-text-tertiary sm:block">
+        ⌘K
+      </kbd>
+    </div>
+  )
+
+  const searchResultsPanel = searchOpen && hasSearchContent && (
+    <div className={SEARCH_PANEL}>
+      <div className="max-h-[min(420px,70dvh)] overflow-y-auto p-1.5">
+        {pageMatches.length > 0 && (
+          <>
+            <p className="px-2.5 pb-1 pt-1.5 text-[12px] font-medium text-text-tertiary">Pages</p>
+            {pageMatches.map((p) => (
+              <button
+                key={p.href}
+                type="button"
+                onClick={() => {
+                  router.push(p.href)
+                  closeSearch()
+                }}
+                className="flex h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left transition-colors hover:bg-white/[0.06]"
+              >
+                <span className="text-[13.5px] font-medium text-text-primary">{p.label}</span>
+                <KeyReturn aria-hidden weight="bold" className="h-3.5 w-3.5 text-text-disabled" />
+              </button>
+            ))}
+          </>
+        )}
+
+        {searchResults.length > 0 && (
+          <>
+            <p className="px-2.5 pb-1 pt-2 text-[12px] font-medium text-text-tertiary">Results</p>
+            {searchResults.map((result) => {
+              const Icon = RESULT_ICON[result.type]
+              return (
+                <button
+                  key={`${result.type}-${result.id}`}
+                  type="button"
+                  onClick={() => onResultClick(result)}
+                  className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]"
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white/[0.05]">
+                    <Icon aria-hidden weight="bold" className="h-4 w-4 text-text-secondary" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-medium text-text-primary">{result.title}</span>
+                    <span className="block truncate text-[12px] text-text-tertiary">{result.subtitle}</span>
+                  </span>
+                  {result.type === 'user' && (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] font-semibold text-text-tertiary">
+                      <Copy aria-hidden weight="bold" className="h-3 w-3" /> ID
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {searching && searchResults.length === 0 && (
+          <p className="px-2.5 py-4 text-center text-[12.5px] text-text-tertiary">Searching…</p>
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <header
       className={cn(
-        'fixed top-0 right-0 left-0 h-20 z-40 transition-[left] duration-300 ease-out',
-        collapsed ? 'lg:left-[4.5rem]' : 'lg:left-[14.3rem]',
+        // Any backdrop-filter makes the bar the containing block for the
+        // NavPanel phone sheets (`fixed top-full`), so they hang flush under it.
+        'sticky top-0 z-30 bg-[rgba(var(--color-bg-base-rgb),0.9)] backdrop-blur-xl',
+        'lg:pt-3',
       )}
     >
-      <div
-        className="absolute inset-0 backdrop-blur-xl border-b border-white/[0.09]"
-        style={{ background: 'rgba(12,29,20,0.78)' }}
-      />
-
-      <div className="relative flex h-full items-center justify-between gap-3 px-4 lg:px-6">
-        {/* ── Search ─────────────────────────────────────────────── */}
-        <div ref={searchRef} className="relative w-full max-w-lg">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchOpen(true)}
-              placeholder="Search users, orders, disputes, pages…"
-              className={cn(
-                'h-10 w-full rounded-lg border bg-white/[0.04] pl-9 pr-14 text-[13px] text-text-primary',
-                'placeholder:text-text-disabled transition-colors',
-                'border-white/[0.06] hover:border-white/[0.12]',
-                'focus:border-focus-border focus:outline-none',
-              )}
-            />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/[0.08] bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold text-text-tertiary">
-              ⌘K
-            </kbd>
+      <div className="relative flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8">
+        {/* Phones: the search takes over the bar */}
+        {mobileSearch ? (
+          <div ref={searchRef} className="flex w-full items-center gap-2 sm:hidden">
+            <div className="relative min-w-0 flex-1">
+              {searchField}
+              {searchResultsPanel}
+            </div>
+            <button
+              type="button"
+              onClick={closeSearch}
+              className="h-10 shrink-0 rounded-md px-2 text-[14px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
+            >
+              Cancel
+            </button>
           </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onMenu}
+              aria-label="Open menu"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-text-primary transition-colors hover:bg-white/[0.07] active:scale-[0.94] lg:hidden"
+            >
+              <List aria-hidden weight="bold" className="h-[21px] w-[21px]" />
+            </button>
 
-          {searchOpen && hasSearchContent && (
-              <div
-                className={cn(
-                  'absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-white/[0.09] bg-[#0F2419] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]',
-                  PANEL_IN,
+            {/* sm+: inline search */}
+            <div ref={searchRef} className="relative hidden w-full max-w-md sm:block">
+              {searchField}
+              {searchResultsPanel}
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Right cluster */}
+            <div className="flex shrink-0 items-center gap-1">
+              <div className="hidden items-center gap-1.5 lg:flex">
+                <QueueChip
+                  href="/admin/sellers?status=pending"
+                  icon={FileText}
+                  count={quickStats?.pendingApplications ?? 0}
+                  label="Pending"
+                  tone="warning"
+                />
+                <QueueChip
+                  href="/admin/disputes"
+                  icon={Scales}
+                  count={quickStats?.openDisputes ?? 0}
+                  label="Disputes"
+                  tone="error"
+                />
+                {(quickStats?.highSeverityFraud ?? 0) > 0 && (
+                  <QueueChip
+                    href="/admin/fraud"
+                    icon={ShieldWarning}
+                    count={quickStats!.highSeverityFraud}
+                    label="Fraud"
+                    tone="error"
+                  />
                 )}
-              >
-                <div className="max-h-[420px] overflow-y-auto p-1.5">
-                  {/* Page jumps */}
-                  {pageMatches.length > 0 && (
-                    <>
-                      <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
-                        Pages
-                      </div>
-                      {pageMatches.map((p) => (
-                        <button
-                          key={p.href}
-                          type="button"
-                          onClick={() => {
-                            router.push(p.href)
-                            closeSearch()
-                          }}
-                          className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]"
-                        >
-                          <span className="text-[13px] font-medium text-text-primary">{p.label}</span>
-                          <CornerDownLeft className="h-3.5 w-3.5 text-text-disabled" />
-                        </button>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Entities */}
-                  {searchResults.length > 0 && (
-                    <>
-                      <div className="px-2.5 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
-                        Results
-                      </div>
-                      {searchResults.map((result) => {
-                        const Icon = RESULT_ICON[result.type]
-                        return (
-                          <button
-                            key={`${result.type}-${result.id}`}
-                            type="button"
-                            onClick={() => onResultClick(result)}
-                            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]"
-                          >
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.06]">
-                              <Icon className="h-4 w-4 text-text-secondary" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-medium text-text-primary">
-                                {result.title}
-                              </span>
-                              <span className="block truncate text-[11.5px] text-text-tertiary">
-                                {result.subtitle}
-                              </span>
-                            </span>
-                            {result.type === 'user' && (
-                              <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-text-tertiary">
-                                <Copy className="h-3 w-3" /> ID
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </>
-                  )}
-
-                  {searching && searchResults.length === 0 && (
-                    <div className="px-2.5 py-4 text-center text-[12px] text-text-tertiary">
-                      Searching…
-                    </div>
-                  )}
-                </div>
+                <div className="mx-1.5 h-6 w-px bg-white/[0.08]" />
               </div>
-            )}
-        </div>
 
-        {/* ── Right cluster ──────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          {/* Queue chips — live "needs me" counts */}
-          <div className="hidden items-center gap-1.5 lg:flex">
-            <QueueChip
-              href="/admin/sellers?status=pending"
-              icon={FileText}
-              count={quickStats?.pendingApplications ?? 0}
-              label="pending"
-              tone="warning"
-            />
-            <QueueChip
-              href="/admin/disputes"
-              icon={MessageSquare}
-              count={quickStats?.openDisputes ?? 0}
-              label="disputes"
-              tone="error"
-            />
-            {(quickStats?.highSeverityFraud ?? 0) > 0 && (
-              <QueueChip
-                href="/admin/fraud"
-                icon={Shield}
-                count={quickStats!.highSeverityFraud}
-                label="fraud"
-                tone="error"
-                pulse
-              />
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileSearch(true)
+                  setSearchOpen(true)
+                  requestAnimationFrame(() => searchInputRef.current?.focus())
+                }}
+                aria-label="Search"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white sm:hidden"
+              >
+                <MagnifyingGlass aria-hidden weight="bold" className="h-5 w-5" />
+              </button>
 
-          <div className="mx-1.5 hidden h-6 w-px bg-white/[0.08] lg:block" />
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open the marketplace"
+                title="Open the marketplace"
+                className="hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/[0.07] hover:text-white sm:grid"
+              >
+                <ArrowSquareOut aria-hidden weight="bold" className="h-[20px] w-[20px]" />
+              </a>
 
-          {/* View site */}
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open the marketplace"
-            className="flex h-10 items-center gap-2 rounded-lg px-3 text-[13px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span className="hidden xl:inline">View site</span>
-          </a>
-
-          {/* Notifications */}
-          <div className="relative" ref={notificationsRef}>
-            <button
-              onClick={() => {
-                setShowNotifications(!showNotifications)
-                setShowUserMenu(false)
-              }}
-              aria-label="Notifications"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
-            >
-              <Bell className="h-[18px] w-[18px]" />
-              {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 text-[10px] font-bold text-text-inverse ring-2 ring-[#0C1D14]">
-                  {unread > 9 ? '9+' : unread}
-                </span>
-              )}
-            </button>
-
-              {showNotifications && (
-                <div className={cn(PANEL, PANEL_IN, 'w-96')}>
-                  <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
-                    <h3 className="text-[13.5px] font-semibold text-text-primary">Notifications</h3>
-                    {unread > 0 && (
-                      <button
-                        onClick={markAllRead}
-                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-lime-text transition-colors hover:text-text-primary"
-                      >
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {recent.length === 0 ? (
-                      <div className="p-10 text-center">
-                        <Bell className="mx-auto mb-3 h-8 w-8 text-text-disabled" />
-                        <p className="text-[13px] text-text-tertiary">All caught up</p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-white/[0.08]">
-                        {recent.map((n: any) => (
-                          <Link
-                            key={n.id}
-                            href={n.link || '/admin/notifications'}
-                            onClick={() => {
-                              markAsRead(n.id)
-                              setShowNotifications(false)
-                            }}
-                            className="block px-4 py-3 transition-colors hover:bg-white/[0.06]"
+              {/* Notifications */}
+              <div ref={notificationsRef} className="sm:relative">
+                <NavIconButton
+                  icon={Bell}
+                  label="Notifications"
+                  count={unread}
+                  active={showNotifications}
+                  onClick={() => {
+                    setShowNotifications((v) => !v)
+                    setShowUserMenu(false)
+                  }}
+                />
+                {showNotifications && (
+                  <NavPanel onClose={() => setShowNotifications(false)} width="sm:w-[380px]" position="sm:right-0 sm:mt-3">
+                    <NavPanelHeader
+                      title="Notifications"
+                      aside={
+                        unread > 0 ? (
+                          <button
+                            type="button"
+                            onClick={markAllRead}
+                            className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
                           >
-                            <p className="text-[13px] font-medium text-text-primary">{n.title}</p>
-                            <p className="mt-0.5 line-clamp-2 text-[12px] text-text-secondary">
-                              {n.message}
-                            </p>
-                            <p className="mt-1 text-[11px] text-text-tertiary">
-                              {new Date(n.created_at).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t border-white/[0.08] p-2">
-                    <Link
-                      href="/admin/notifications"
-                      onClick={() => setShowNotifications(false)}
-                      className="block rounded-lg py-2 text-center text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-white/[0.06]"
-                    >
-                      View all notifications
-                    </Link>
-                  </div>
-                </div>
-              )}
-          </div>
-
-          {/* Identity */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => {
-                setShowUserMenu(!showUserMenu)
-                setShowNotifications(false)
-              }}
-              className="flex h-10 items-center gap-2.5 rounded-lg px-1.5 transition-colors hover:bg-white/[0.06]"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={avatarSrc}
-                alt={displayName}
-                className="h-8 w-8 rounded-full object-cover ring-1 ring-border-strong"
-              />
-              <span className="hidden min-w-0 flex-col items-start md:flex">
-                <span className="max-w-[120px] truncate text-[13px] font-semibold leading-tight text-text-primary">
-                  {displayName}
-                </span>
-                <span className="text-[10.5px] font-medium capitalize leading-tight text-lime-text">
-                  {role.replace('_', ' ')}
-                </span>
-              </span>
-              <ChevronDown
-                className={cn(
-                  'hidden h-3.5 w-3.5 text-text-tertiary transition-transform md:block',
-                  showUserMenu && 'rotate-180',
-                )}
-              />
-            </button>
-
-              {showUserMenu && (
-                <div className={cn(PANEL, PANEL_IN, 'w-64')}>
-                  <div className="flex items-center gap-3 border-b border-white/[0.08] px-4 py-3.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={avatarSrc}
-                      alt=""
-                      className="h-10 w-10 rounded-full object-cover ring-1 ring-border-strong"
+                            <Checks aria-hidden weight="bold" className="h-4 w-4" />
+                            Mark All Read
+                          </button>
+                        ) : null
+                      }
                     />
-                    <div className="min-w-0">
-                      <p className="truncate text-[13.5px] font-semibold text-text-primary">
-                        {displayName}
-                      </p>
-                      <p className="truncate text-[11.5px] text-text-tertiary">{user.email}</p>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      {recent.length === 0 ? (
+                        <div className="px-6 py-10 text-center">
+                          <Bell aria-hidden weight="bold" className="mx-auto mb-3 h-7 w-7 text-text-disabled" />
+                          <p className="text-[13.5px] text-text-tertiary">All caught up</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-white/[0.06]">
+                          {recent.map((n: any) => (
+                            <Link
+                              key={n.id}
+                              href={n.link || '/admin/notifications'}
+                              onClick={() => {
+                                markAsRead(n.id)
+                                setShowNotifications(false)
+                              }}
+                              className="block px-4 py-3 transition-colors hover:bg-white/[0.05]"
+                            >
+                              <p className="text-[13.5px] font-medium text-text-primary">{n.title}</p>
+                              <p className="mt-0.5 line-clamp-2 text-[12.5px] text-text-secondary">{n.message}</p>
+                              <p className="mt-1 text-[11.5px] text-text-tertiary">
+                                {new Date(n.created_at).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="p-1.5">
-                    <MenuItem
-                      icon={UserIcon}
-                      label="Profile"
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        router.push('/admin/profile')
-                      }}
-                    />
-                    {role === 'super_admin' && (
+                    <div className="shrink-0 border-t border-white/[0.07] p-2">
+                      <Link
+                        href="/admin/notifications"
+                        onClick={() => setShowNotifications(false)}
+                        className="flex h-10 items-center justify-center rounded-lg text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.06]"
+                      >
+                        View All Notifications
+                      </Link>
+                    </div>
+                  </NavPanel>
+                )}
+              </div>
+
+              {/* Identity */}
+              <div ref={userMenuRef} className="sm:relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu((v) => !v)
+                    setShowNotifications(false)
+                  }}
+                  aria-expanded={showUserMenu}
+                  aria-label="Account menu"
+                  className={cn(
+                    'flex h-10 items-center gap-2.5 rounded-lg pl-1 pr-1 transition-colors hover:bg-white/[0.06] md:pr-2',
+                    showUserMenu && 'bg-white/[0.07]',
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={avatarSrc} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  <span className="hidden min-w-0 flex-col items-start md:flex">
+                    <span className="max-w-[120px] truncate text-[13px] font-semibold leading-tight text-text-primary">
+                      {displayName}
+                    </span>
+                    <span className="text-[11.5px] font-medium capitalize leading-tight text-text-tertiary">
+                      {role.replace('_', ' ')}
+                    </span>
+                  </span>
+                  <CaretDown
+                    aria-hidden
+                    weight="bold"
+                    className={cn('hidden h-3.5 w-3.5 text-text-tertiary transition-transform md:block', showUserMenu && 'rotate-180')}
+                  />
+                </button>
+
+                {showUserMenu && (
+                  <NavPanel onClose={() => setShowUserMenu(false)} width="sm:w-[280px]" position="sm:right-0 sm:mt-3">
+                    <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={avatarSrc} alt="" className="h-10 w-10 rounded-full object-cover" />
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-semibold text-text-primary">{displayName}</p>
+                        <p className="truncate text-[12px] text-text-tertiary">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="p-1.5">
                       <MenuItem
-                        icon={Settings}
-                        label="Admin settings"
+                        icon={UserCircle}
+                        label="Profile"
                         onClick={() => {
                           setShowUserMenu(false)
-                          router.push('/admin/settings')
+                          router.push('/admin/profile')
                         }}
                       />
-                    )}
-                    <MenuItem
-                      icon={ExternalLink}
-                      label="View marketplace"
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        window.open('/', '_blank', 'noopener,noreferrer')
-                      }}
-                    />
-                    <div className="mx-2 my-1.5 h-px bg-white/[0.08]" />
-                    <button
-                      onClick={handleSignOut}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-error transition-colors hover:bg-error-bg"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
+                      {role === 'super_admin' && (
+                        <MenuItem
+                          icon={GearSix}
+                          label="Admin Settings"
+                          onClick={() => {
+                            setShowUserMenu(false)
+                            router.push('/admin/settings')
+                          }}
+                        />
+                      )}
+                      <MenuItem
+                        icon={ArrowSquareOut}
+                        label="View Marketplace"
+                        onClick={() => {
+                          setShowUserMenu(false)
+                          window.open('/', '_blank', 'noopener,noreferrer')
+                        }}
+                      />
+                      <NavMenuDivider />
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className={cn(navMenuRowCls, 'text-error hover:bg-[color-mix(in_srgb,var(--color-error)_10%,transparent)] hover:text-error')}
+                      >
+                        <SignOut aria-hidden weight="bold" className="h-[18px] w-[18px] shrink-0" />
+                        Log Out
+                      </button>
+                    </div>
+                  </NavPanel>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </header>
   )
 }
 
-/* ── Queue chip ────────────────────────────────────────────────── */
+/* ── Queue chip: a live "needs me" count. Fill only, no outline. ── */
 
 function QueueChip({
   href,
@@ -706,52 +735,40 @@ function QueueChip({
   count,
   label,
   tone,
-  pulse = false,
 }: {
   href: string
-  icon: typeof FileText
+  icon: PhosphorIcon
   count: number
   label: string
   tone: 'warning' | 'error'
-  pulse?: boolean
 }) {
-  const tones = {
-    warning: 'border-[rgba(251,191,36,0.25)] bg-warning-bg text-warning hover:border-[rgba(251,191,36,0.45)]',
-    error: 'border-[rgba(248,113,113,0.25)] bg-error-bg text-error hover:border-[rgba(248,113,113,0.45)]',
-  }
   return (
     <Link
       href={href}
+      title={`${count} ${label}`}
       className={cn(
-        'flex h-10 items-center gap-2 rounded-lg border px-3 transition-colors',
-        tones[tone],
-        pulse && 'animate-pulse',
+        'flex h-9 items-center gap-1.5 rounded-md px-2.5 transition-[filter,background-color] hover:brightness-125',
+        // Colour only when something is waiting; zero reads calm.
+        count === 0
+          ? 'bg-white/[0.05] text-text-tertiary hover:text-text-secondary'
+          : tone === 'warning'
+            ? 'bg-warning-bg text-warning'
+            : 'bg-error-bg text-error',
       )}
     >
-      <Icon className="h-4 w-4" />
-      <span className="text-[14px] font-bold tabular-nums">{count}</span>
-      <span className="hidden text-[12px] font-medium opacity-80 xl:inline">{label}</span>
+      <Icon aria-hidden weight="bold" className="h-4 w-4" />
+      <span className="text-[13.5px] font-bold tabular-nums">{count}</span>
+      <span className="hidden text-[12.5px] font-medium xl:inline">{label}</span>
     </Link>
   )
 }
 
-/* ── Menu item ─────────────────────────────────────────────────── */
+/* ── Account menu row (the site navbar's row) ── */
 
-function MenuItem({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: typeof UserIcon
-  label: string
-  onClick: () => void
-}) {
+function MenuItem({ icon: Icon, label, onClick }: { icon: PhosphorIcon; label: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
-    >
-      <Icon className="h-4 w-4" />
+    <button type="button" onClick={onClick} className={navMenuRowCls}>
+      <Icon aria-hidden weight="bold" className={cn('h-[18px] w-[18px]', navMenuIconCls)} />
       {label}
     </button>
   )

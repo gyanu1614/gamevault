@@ -1,23 +1,21 @@
 /**
- * V53 — Admin UI kit.
+ * Admin UI kit (account-section design, 2026-09-30 overhaul).
  *
- * The shared primitives every admin page builds from, codifying the
- * marketplace design language for data-dense admin surfaces:
+ * The shared primitives every admin page builds from:
  *
- *   - Dark neutral surfaces (bg-bg-raised / bg-bg-overlay), hairline
- *     borders, rounded-xl. No glass, no gradients, no purple.
- *   - ONE accent: lime — reserved for primary actions, active states,
- *     and focus. Everything else is neutral or a SEMANTIC status
- *     color (success / warning / error / info).
- *   - Icon chips are neutral tiles with a tinted glyph, never
- *     gradient squares.
+ *   - Cards are solid fills (bg-bg-raised, rounded-lg) with NO outline,
+ *     gradient or glow; hairlines only between rows. Controls inside a card
+ *     sit one step lighter (bg-bg-overlay / white 5%).
+ *   - ONE accent: lime, for primary actions and the active nav item. Status
+ *     colours are semantic (success / warning / error / info), as fills.
+ *   - Icons are Phosphor, bold. Labels are Title Case (no uppercase eyebrows).
  *
  * Pages compose: <PageHeader/> → stat row of <StatCard/> → content in
  * <AdminPanel/> with TABLE_* classes for tabular data.
  */
 
 import Link from 'next/link'
-import { type LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 /* ── Page header ──────────────────────────────────────────────────
@@ -35,16 +33,16 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn('mb-6 flex flex-wrap items-end justify-between gap-3', className)}>
+    <div className={cn('mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6', className)}>
       <div className="min-w-0">
-        <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
+        <h1 className="text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
           {title}
         </h1>
         {description && (
-          <p className="mt-1 text-[13.5px] text-text-secondary">{description}</p>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-text-secondary">{description}</p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   )
 }
@@ -63,8 +61,8 @@ export function AdminPanel({
   return (
     <section
       className={cn(
-        'rounded-xl border border-border-default bg-bg-raised',
-        pad && 'p-5 sm:p-6',
+        'rounded-lg bg-bg-raised',
+        pad && 'p-4 sm:p-6',
         className,
       )}
     >
@@ -87,13 +85,16 @@ const CHIP_TEXT: Record<ChipTone, string> = {
   info: 'text-info',
 }
 
+/** Any icon component: Phosphor (preferred; drawn bold) or a legacy lucide one. */
+export type AdminIcon = React.ComponentType<any>
+
 export function IconChip({
   icon: Icon,
   tone = 'neutral',
   size = 'md',
   className,
 }: {
-  icon: LucideIcon
+  icon: AdminIcon
   tone?: ChipTone
   size?: 'sm' | 'md' | 'lg'
   className?: string
@@ -103,12 +104,12 @@ export function IconChip({
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay',
+        'flex shrink-0 items-center justify-center rounded-md bg-white/[0.05]',
         box,
         className,
       )}
     >
-      <Icon className={cn(glyph, CHIP_TEXT[tone])} />
+      <Icon aria-hidden weight="bold" className={cn(glyph, CHIP_TEXT[tone])} />
     </span>
   )
 }
@@ -128,7 +129,7 @@ export function StatCard({
   label: string
   value: React.ReactNode
   sub?: React.ReactNode
-  icon?: LucideIcon
+  icon?: AdminIcon
   tone?: ChipTone
   /** Percent change vs previous period; renders green up / red down. */
   delta?: number | null
@@ -138,16 +139,16 @@ export function StatCard({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11.5px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <span className="truncate text-[12.5px] font-medium text-text-secondary">
           {label}
         </span>
         {icon && <IconChip icon={icon} tone={tone} size="sm" />}
       </div>
-      <div className="mt-1.5 text-[24px] font-extrabold tabular-nums leading-none text-text-primary">
+      <div className="mt-1.5 truncate text-[24px] font-bold tabular-nums leading-tight text-text-primary">
         {value}
       </div>
       {(sub != null || delta != null) && (
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
+        <div className="mt-1 flex items-center gap-1.5 truncate text-[12px] text-text-tertiary">
           {delta != null && (
             <span
               className={cn(
@@ -156,9 +157,9 @@ export function StatCard({
               )}
             >
               {delta >= 0 ? (
-                <ArrowUpRight className="h-3 w-3" />
+                <ArrowUpRight aria-hidden weight="bold" className="h-3 w-3" />
               ) : (
-                <ArrowDownRight className="h-3 w-3" />
+                <ArrowDownRight aria-hidden weight="bold" className="h-3 w-3" />
               )}
               {Math.abs(delta).toFixed(1)}%
             </span>
@@ -169,8 +170,8 @@ export function StatCard({
     </>
   )
   const surface = cn(
-    'block rounded-xl border border-border-default bg-bg-raised p-4 transition-colors',
-    href && 'hover:border-border-strong hover:bg-bg-raised-hover',
+    'block min-w-0 rounded-lg bg-bg-raised p-4 transition-colors',
+    href && 'hover:bg-bg-raised-hover',
     className,
   )
   if (href) {
@@ -201,15 +202,15 @@ const STATUS_TONE: Record<string, ChipTone> = {
 }
 
 // NOTE: custom-token alpha modifiers (bg-success/10) don't compile in
-// this repo (tokens lack <alpha-value>). Use the solid -bg tokens plus
-// rgba literals for borders.
+// this repo (tokens lack <alpha-value>). Use the solid -bg tokens.
+// Fill only: no outline.
 const BADGE_CLASSES: Record<ChipTone, string> = {
-  neutral: 'border-border-default bg-bg-overlay text-text-secondary',
-  lime: 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
-  success: 'border-[rgba(74,222,128,0.25)] bg-success-bg text-success',
-  warning: 'border-[rgba(251,191,36,0.25)] bg-warning-bg text-warning',
-  error: 'border-[rgba(248,113,113,0.25)] bg-error-bg text-error',
-  info: 'border-[rgba(96,165,250,0.25)] bg-info-bg text-info',
+  neutral: 'bg-white/[0.07] text-text-secondary',
+  lime: 'bg-lime-tint-bg text-lime-text',
+  success: 'bg-success-bg text-success',
+  warning: 'bg-warning-bg text-warning',
+  error: 'bg-error-bg text-error',
+  info: 'bg-info-bg text-info',
 }
 
 export function StatusBadge({
@@ -227,7 +228,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold capitalize',
+        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-semibold capitalize',
         BADGE_CLASSES[resolved],
         className,
       )}
@@ -241,17 +242,17 @@ export function StatusBadge({
    Not a component (pages own their markup) — shared class strings so
    every table reads identically. */
 export const TABLE = {
-  wrap: 'overflow-x-auto',
+  wrap: 'overflow-x-auto overscroll-x-contain',
   table: 'w-full border-collapse text-left',
-  th: 'border-b border-border-subtle px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary whitespace-nowrap',
-  td: 'border-b border-border-subtle px-4 py-3 text-[13.5px] text-text-secondary align-middle',
+  th: 'border-b border-white/[0.06] px-4 py-3 text-[12px] font-medium text-text-tertiary whitespace-nowrap',
+  td: 'border-b border-white/[0.06] px-4 py-3 text-[13.5px] text-text-secondary align-middle',
   tdPrimary:
-    'border-b border-border-subtle px-4 py-3 text-[13.5px] font-semibold text-text-primary align-middle',
-  row: 'transition-colors hover:bg-[rgba(28,28,37,0.5)]',
+    'border-b border-white/[0.06] px-4 py-3 text-[13.5px] font-semibold text-text-primary align-middle',
+  row: 'transition-colors hover:bg-white/[0.03]',
 } as const
 
 /* ── Section label ────────────────────────────────────────────────
-   Small uppercase divider label used between page sections. */
+   Small Title Case heading between page sections. */
 export function SectionLabel({
   children,
   className,
@@ -262,7 +263,7 @@ export function SectionLabel({
   return (
     <div
       className={cn(
-        'mb-3 text-[11.5px] font-semibold uppercase tracking-wider text-text-tertiary',
+        'mb-3 text-[14px] font-semibold text-text-primary',
         className,
       )}
     >
