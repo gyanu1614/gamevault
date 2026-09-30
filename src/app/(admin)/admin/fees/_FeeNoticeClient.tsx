@@ -8,8 +8,8 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { AdminPanel } from '../components/kit'
+import { cn } from '@/lib/utils'
+import { AdminPanel, PanelHead, adminBtnSm, adminNumCls } from '../components/kit'
 import { previewFeeNotice, sendFeeNotice } from '@/lib/actions/fee-notice'
 
 type Preview = Awaited<ReturnType<typeof previewFeeNotice>>
@@ -40,27 +40,27 @@ export function FeeNoticeClient() {
 
   return (
     <AdminPanel>
-      <div className="mb-4">
-        <h2 className="text-[15px] font-semibold text-text-primary">Seller fee notice</h2>
-        <p className="mt-0.5 text-[12.5px] text-text-tertiary">
-          Emails every active seller once: the new commission schedule and its start date, the founding rate, payout fees and minimums,
-          the new-seller withdrawal rule, the completion hold and the dispute window. Dry run first — nothing is sent until you type SEND.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={dryRun} disabled={busy}>{busy ? 'Working…' : 'Dry Run'}</Button>
+      <PanelHead
+        title="Seller Fee Notice"
+        subtitle="Emails every active seller once: the new commission schedule and its start date, the founding rate, payout fees and minimums, the new-seller withdrawal rule, the completion hold and the dispute window. Dry run first — nothing is sent until you type SEND."
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className={adminBtnSm.secondary} onClick={dryRun} disabled={busy}>
+          {busy ? 'Working…' : 'Dry Run'}
+        </button>
         {preview?.success && (
           <span className="text-[12.5px] text-text-secondary">
-            {preview.recipients?.length ?? 0} to send · {preview.alreadySent ?? 0} already sent · {preview.failed ?? 0} failed · key <span className="font-mono">{preview.noticeKey}</span>
+            {preview.recipients?.length ?? 0} to send · {preview.alreadySent ?? 0} already sent · {preview.failed ?? 0} failed · key{' '}
+            <span className="font-mono">{preview.noticeKey}</span>
           </span>
         )}
       </div>
 
       {preview?.success && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="mt-5 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
           <div className="space-y-3">
-            <div className="rounded-lg border border-border-default bg-bg-overlay p-3 text-[12.5px]">
-              <div className="font-semibold text-text-primary">Facts (from the database)</div>
+            <div className="rounded-md bg-bg-overlay p-3.5 text-[12.5px]">
+              <div className="font-semibold text-text-primary">Facts (From the Database)</div>
               <ul className="mt-1.5 space-y-0.5 text-text-secondary">
                 <li>Rates start: <b className="text-text-primary">{new Date(preview.facts!.ratesStartAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}</b></li>
                 <li>Founding: {preview.facts!.foundingDiscountPct}% off for the {preview.facts!.foundingPeriodText}</li>
@@ -68,28 +68,43 @@ export function FeeNoticeClient() {
                 <li>Hold {preview.facts!.completionHoldHours} h · dispute window {preview.facts!.disputeWindowDays} d · seller gate {preview.facts!.minAccountAgeDays} d · payout freeze {preview.facts!.payoutFreezeHours} h</li>
               </ul>
             </div>
-            <div className="rounded-lg border border-border-default bg-bg-overlay p-3 text-[12.5px]">
+            <div className="rounded-md bg-bg-overlay p-3.5 text-[12.5px]">
               <div className="font-semibold text-text-primary">Recipients ({preview.recipients?.length ?? 0})</div>
               <ul className="mt-1.5 max-h-56 space-y-0.5 overflow-auto text-text-secondary">
                 {(preview.recipients ?? []).map((r) => <li key={r.id} className="truncate">{r.name} · {r.email}</li>)}
                 {(preview.recipients?.length ?? 0) === 0 && <li className="text-text-tertiary">Nobody left to send to.</li>}
               </ul>
             </div>
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-              <label className="block text-[12.5px] font-medium text-text-primary">Type SEND to email {preview.recipients?.length ?? 0} seller{(preview.recipients?.length ?? 0) === 1 ? '' : 's'}</label>
+            <div className="rounded-md bg-warning-bg p-3.5">
+              <label htmlFor="fee-notice-confirm" className="block text-[12.5px] font-medium text-text-primary">
+                Type SEND to email {preview.recipients?.length ?? 0} seller{(preview.recipients?.length ?? 0) === 1 ? '' : 's'}
+              </label>
               <div className="mt-2 flex gap-2">
-                <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="SEND"
-                  className="w-32 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 font-mono text-[13px] text-text-primary focus:outline-none focus:ring-1 focus:ring-focus-ring" />
-                <Button size="sm" disabled={busy || confirm !== 'SEND' || (preview.recipients?.length ?? 0) === 0} onClick={send}>
+                <input
+                  id="fee-notice-confirm"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="SEND"
+                  autoComplete="off"
+                  className={cn(adminNumCls, 'w-28 font-mono')}
+                />
+                <button
+                  type="button"
+                  className={adminBtnSm.primary}
+                  disabled={busy || confirm !== 'SEND' || (preview.recipients?.length ?? 0) === 0}
+                  onClick={send}
+                >
                   {busy ? 'Sending…' : 'Send Notice'}
-                </Button>
+                </button>
               </div>
               {result && <p className="mt-2 text-[12.5px] text-text-secondary">{result}</p>}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="mb-1.5 text-[12.5px] text-text-secondary">Subject: <span className="font-medium text-text-primary">{preview.subject}</span></div>
-            <iframe title="Fee notice preview" srcDoc={preview.html} className="h-[720px] w-full rounded-lg border border-border-default bg-white" sandbox="" />
+            <div className="mb-1.5 text-[12.5px] text-text-secondary">
+              Subject: <span className="font-medium text-text-primary">{preview.subject}</span>
+            </div>
+            <iframe title="Fee notice preview" srcDoc={preview.html} className="h-[720px] w-full rounded-md bg-white" sandbox="" />
           </div>
         </div>
       )}

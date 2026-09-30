@@ -454,3 +454,55 @@ export function FilterChip({
     </button>
   )
 }
+
+/* ── Compact fields (settings editors) ────────────────────────────
+   A 36px number/text box on a card (one step lighter than the card), and a
+   label-above wrapper. 16px text below sm so iOS doesn't zoom. */
+export const adminNumCls =
+  'h-9 w-full rounded-md border border-transparent bg-bg-overlay px-2.5 text-base tabular-nums text-text-primary ' +
+  'placeholder:text-text-disabled transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none ' +
+  'focus:ring-2 focus:ring-focus-soft disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px]'
+
+export function LabeledField({
+  label,
+  htmlFor,
+  children,
+  className,
+}: {
+  label: string
+  htmlFor?: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('min-w-0', className)}>
+      <label htmlFor={htmlFor} className="mb-1 block truncate text-[12px] font-medium text-text-tertiary">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+/** A card's title row: title, optional one-line description, optional right slot. */
+export function PanelHead({
+  title,
+  subtitle,
+  aside,
+  className,
+}: {
+  title: string
+  subtitle?: React.ReactNode
+  aside?: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('mb-4 flex flex-wrap items-start justify-between gap-3', className)}>
+      <div className="min-w-0 max-w-2xl">
+        <h2 className="text-[15px] font-semibold text-text-primary">{title}</h2>
+        {subtitle && <p className="mt-1 text-[12.5px] leading-relaxed text-text-tertiary">{subtitle}</p>}
+      </div>
+      {aside}
+    </div>
+  )
+}
