@@ -1,41 +1,46 @@
 'use client'
 
-import { cn } from '@/lib/utils'
-import {
-  type LucideIcon,
-  FileText,
-  Clock,
-  AlertTriangle,
-  Users,
-  Store,
-  MessageSquare,
-  TrendingUp,
-  DollarSign,
-  Shield,
-  ChevronRight,
-  BarChart3,
-  UserPlus,
-  Gamepad2,
-  Lock,
-  BadgeCheck,
-  ClipboardCheck,
-  Wrench,
-  ArrowRight,
-  Ban
-} from 'lucide-react'
-import Link from 'next/link'
+/**
+ * Admin dashboard (account-section design, 2026-09-30 overhaul).
+ *
+ *   Header + system health
+ *   Quick Actions   the queues, as cards: a swipeable row on phones, a grid
+ *                   from sm. The count takes its queue's colour only when
+ *                   something is waiting.
+ *   Key Metrics     one panel with hairlines (StatStrip), not six boxes.
+ *   Recent Activity Active / Resolved (SegmentedTabs), latest nine.
+ *   Other Pages     admin pages that are NOT in the sidebar (Reviews,
+ *                   Activities, Notifications, GDPR, INFORM Act): the sidebar
+ *                   already lists the rest, so the old ten-row guide repeated it.
+ *   Queue Health    the second row of counts.
+ */
+
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
-import type { DashboardStats } from '@/lib/actions/admin-dashboard'
 import {
-  PageHeader,
-  AdminPanel,
-  StatCard,
-  IconChip,
-  StatusBadge,
-  SectionLabel,
-  type ChipTone,
-} from './kit'
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  Bell,
+  CaretRight,
+  ClockCounterClockwise,
+  FileText,
+  IdentificationBadge,
+  LockKey,
+  Prohibit,
+  Scales,
+  ShieldWarning,
+  Star,
+  Storefront,
+  UserPlus,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
+import type { DashboardStats } from '@/lib/actions/admin-dashboard'
+import { StatStrip, type Stat } from '@/components/account/AccountSurface'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { AdminPanel, IconChip, PageHeader, SectionLabel, StatusBadge, type ChipTone } from './kit'
 
 interface CompactDashboardProps {
   stats: DashboardStats
@@ -62,459 +67,299 @@ interface CompactDashboardProps {
   admin: any
 }
 
+const COUNT_TEXT: Record<ChipTone, string> = {
+  neutral: 'text-text-primary',
+  lime: 'text-lime-text',
+  success: 'text-success',
+  warning: 'text-warning',
+  error: 'text-error',
+  info: 'text-text-primary',
+}
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+
+const ACTIVITY_TYPE: Record<'dispute' | 'application' | 'fraud', { icon: PhosphorIcon; tone: ChipTone }> = {
+  dispute: { icon: Scales, tone: 'error' },
+  application: { icon: UserPlus, tone: 'info' },
+  fraud: { icon: ShieldWarning, tone: 'warning' },
+}
+
+/** Admin pages the sidebar doesn't list (reachable here and from search). */
+const OTHER_PAGES: Array<{ title: string; description: string; icon: PhosphorIcon; href: string }> = [
+  { title: 'Reviews', description: 'Buyer reviews and their moderation', icon: Star, href: '/admin/reviews' },
+  { title: 'Activities', description: 'The full activity log', icon: ClockCounterClockwise, href: '/admin/activities' },
+  { title: 'Notifications', description: 'Everything sent to your admin inbox', icon: Bell, href: '/admin/notifications' },
+  { title: 'GDPR Requests', description: 'Data export and deletion requests', icon: LockKey, href: '/admin/gdpr' },
+  { title: 'INFORM Act', description: 'High-volume seller compliance', icon: IdentificationBadge, href: '/admin/inform' },
+]
+
 export default function CompactDashboard({ stats, activities, activityFailed, admin }: CompactDashboardProps) {
   const [activityFilter, setActivityFilter] = useState<'active' | 'resolved'>('active')
 
-  // Helper to format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
+  const revenueChange =
+    stats.revenueLastMonth === 0 ? 0 : ((stats.revenueThisMonth - stats.revenueLastMonth) / stats.revenueLastMonth) * 100
 
-  // Helper to calculate percentage change
-  const getRevenueChange = () => {
-    if (stats.revenueLastMonth === 0) return 0
-    return ((stats.revenueThisMonth - stats.revenueLastMonth) / stats.revenueLastMonth) * 100
-  }
-
-  // Quick action buttons
-  const quickActions: Array<{
-    label: string
-    href: string
-    icon: LucideIcon
-    tone: ChipTone
-    count: number
-  }> = [
-    {
-      label: 'Review Applications',
-      href: '/admin/sellers?status=pending',
-      icon: FileText,
-      tone: 'warning',
-      count: stats.pendingApplications
-    },
-    {
-      label: 'Cancel Requests',
-      href: '/admin/orders?tab=cancellations',
-      icon: Ban,
-      tone: 'warning',
-      count: stats.pendingCancellations
-    },
-    {
-      label: 'View Disputes',
-      href: '/admin/disputes',
-      icon: MessageSquare,
-      tone: 'error',
-      count: stats.openDisputes
-    },
-    {
-      label: 'Check Fraud',
-      href: '/admin/fraud',
-      icon: Shield,
-      tone: 'error',
-      count: stats.openFraudFlags
-    },
-    {
-      label: 'Active Sellers',
-      href: '/admin/active-sellers',
-      icon: Store,
-      tone: 'info',
-      count: stats.activeSellers
-    },
+  const quickActions: Array<{ label: string; href: string; icon: PhosphorIcon; tone: ChipTone; count: number }> = [
+    { label: 'Review Applications', href: '/admin/sellers?status=pending', icon: FileText, tone: 'warning', count: stats.pendingApplications },
+    { label: 'Cancel Requests', href: '/admin/orders?tab=cancellations', icon: Prohibit, tone: 'warning', count: stats.pendingCancellations },
+    { label: 'View Disputes', href: '/admin/disputes', icon: Scales, tone: 'error', count: stats.openDisputes },
+    { label: 'Check Fraud', href: '/admin/fraud', icon: ShieldWarning, tone: 'error', count: stats.openFraudFlags },
+    { label: 'Active Sellers', href: '/admin/active-sellers', icon: Storefront, tone: 'info', count: stats.activeSellers },
   ]
 
-  // Admin pages guide
-  const adminPages: Array<{
-    title: string
-    description: string
-    icon: LucideIcon
-    href: string
-  }> = [
-    {
-      title: 'Seller Applications',
-      description: 'Review and approve new seller registrations',
-      icon: FileText,
-      href: '/admin/sellers',
-    },
-    {
-      title: 'Active Sellers',
-      description: 'Manage and monitor active seller accounts',
-      icon: Store,
-      href: '/admin/active-sellers',
-    },
-    {
-      title: 'Disputes',
-      description: 'Handle buyer-seller disputes and refunds',
-      icon: MessageSquare,
-      href: '/admin/disputes',
-    },
-    {
-      title: 'Analytics',
-      description: 'View platform metrics and insights',
-      icon: BarChart3,
-      href: '/admin/analytics',
-    },
-    {
-      title: 'Fraud Detection',
-      description: 'Monitor and investigate fraud alerts',
-      icon: Shield,
-      href: '/admin/fraud',
-    },
-    {
-      title: 'INFORM Act',
-      description: 'High-value seller compliance tracking',
-      icon: BadgeCheck,
-      href: '/admin/inform',
-    },
-    {
-      title: 'GDPR',
-      description: 'Data privacy and user rights management',
-      icon: Lock,
-      href: '/admin/gdpr',
-    },
-    {
-      title: 'Games',
-      description: 'Manage supported games and categories',
-      icon: Gamepad2,
-      href: '/admin/games',
-    },
-    {
-      title: 'Moderation',
-      description: 'Review listings and user content',
-      icon: ClipboardCheck,
-      href: '/admin/moderation',
-    },
-    {
-      title: 'Utilities',
-      description: 'Admin tools and system utilities',
-      icon: Wrench,
-      href: '/admin/utils',
-    },
-  ]
-
-  // System health indicator
-  const healthConfig: Record<
-    DashboardStats['systemHealth'],
-    { label: string; dot: string; text: string }
-  > = {
+  const health = {
     good: { label: 'Good', dot: 'bg-success', text: 'text-success' },
     warning: { label: 'Warning', dot: 'bg-warning', text: 'text-warning' },
     critical: { label: 'Critical', dot: 'bg-error', text: 'text-error' },
-  }
-  const health = healthConfig[stats.systemHealth]
+  }[stats.systemHealth]
 
-  const revenueChange = getRevenueChange()
+  const keyMetrics: Stat[] = [
+    { label: 'Orders', value: stats.totalOrders.toLocaleString(), hint: `${stats.ordersToday} today` },
+    { label: 'Active Orders', value: stats.activeOrders.toLocaleString(), hint: 'In progress' },
+    { label: 'Revenue', value: formatCurrency(stats.totalRevenue), hint: 'All time' },
+    {
+      label: 'This Month',
+      value: formatCurrency(stats.revenueThisMonth),
+      hint: (
+        <span className="inline-flex items-center gap-1">
+          <span
+            className={cn(
+              'inline-flex items-center gap-0.5 font-semibold tabular-nums',
+              revenueChange >= 0 ? 'text-success' : 'text-error',
+            )}
+          >
+            {revenueChange >= 0 ? (
+              <ArrowUpRight aria-hidden weight="bold" className="h-3 w-3" />
+            ) : (
+              <ArrowDownRight aria-hidden weight="bold" className="h-3 w-3" />
+            )}
+            {Math.abs(revenueChange).toFixed(1)}%
+          </span>
+          vs last month
+        </span>
+      ),
+    },
+    { label: 'Users', value: stats.totalUsers.toLocaleString(), hint: `${stats.usersToday} today` },
+    { label: 'Active Sellers', value: stats.activeSellers.toLocaleString(), hint: `${stats.approvedToday} approved today` },
+  ]
+
+  const queueHealth: Stat[] = [
+    { label: 'Pending Reviews', value: stats.pendingReviews },
+    { label: 'High Priority Disputes', value: stats.highPriorityDisputes },
+    { label: 'High Severity Fraud', value: stats.highSeverityFlags },
+    { label: 'Unread Notifications', value: stats.unreadNotifications },
+  ]
+
+  const filteredActivities = activities.filter((activity) => {
+    const s = activity.status?.toLowerCase() ?? ''
+    const isResolved = s.includes('resolved') || s.includes('closed')
+    return activityFilter === 'resolved' ? isResolved : !isResolved
+  })
+  const displayedActivities = filteredActivities.slice(0, 9)
+  const hasMore = filteredActivities.length > 9
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-7 sm:space-y-8">
       <PageHeader
         title={`Welcome back, ${admin.full_name || admin.username || 'Admin'}`}
         description="Platform overview and quick actions"
         actions={
-          <div className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-[12.5px] font-semibold text-text-secondary">
-            <span className={cn('h-2 w-2 animate-pulse rounded-full', health.dot)} />
-            System <span className={health.text}>{health.label}</span>
+          <div className="flex h-9 items-center gap-2 rounded-md bg-bg-raised px-3 text-[13px] font-medium text-text-secondary">
+            <span className={cn('h-2 w-2 rounded-full', health.dot)} aria-hidden />
+            System <span className={cn('font-semibold', health.text)}>{health.label}</span>
           </div>
         }
-        className="mb-0"
+        className="mb-0 sm:mb-0"
       />
 
-      {/* Quick Actions */}
-      <div>
+      {/* Quick Actions — swipe row on phones, grid from sm */}
+      <section>
         <SectionLabel>Quick Actions</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
           {quickActions.map((action) => (
             <Link
               key={action.href}
               href={action.href}
-              className="group relative rounded-xl border border-border-default bg-bg-raised p-4 transition-all hover:-translate-y-0.5 hover:border-border-strong hover:bg-bg-raised-hover"
+              className="group flex w-[44%] min-w-[152px] shrink-0 snap-start flex-col rounded-lg bg-bg-raised p-4 transition-colors hover:bg-bg-raised-hover sm:w-auto sm:min-w-0"
             >
-              <div className="mb-2.5 flex items-center justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <IconChip icon={action.icon} tone={action.tone} size="lg" />
-                {action.count > 0 && (
-                  <span className="text-xl font-bold tabular-nums text-lime-text">
-                    {action.count}
-                  </span>
-                )}
+                <span
+                  className={cn(
+                    'text-[22px] font-bold leading-none tabular-nums',
+                    action.count > 0 ? COUNT_TEXT[action.tone] : 'text-text-disabled',
+                  )}
+                >
+                  {action.count.toLocaleString()}
+                </span>
               </div>
-              <p className="text-[13px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
-                {action.label}
-              </p>
-              <ChevronRight className="absolute bottom-3 right-3 h-4 w-4 text-text-tertiary transition-colors group-hover:text-text-primary" />
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <p className="text-[13.5px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
+                  {action.label}
+                </p>
+                <CaretRight
+                  aria-hidden
+                  weight="bold"
+                  className="h-4 w-4 shrink-0 text-text-tertiary transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-text-primary"
+                />
+              </div>
             </Link>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Key Metrics Grid */}
-      <div>
+      {/* Key Metrics — one panel, hairlines between cells */}
+      <section>
         <SectionLabel>Key Metrics</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <StatCard
-            label="Orders"
-            value={stats.totalOrders.toLocaleString()}
-            sub={`${stats.ordersToday} today`}
-            icon={FileText}
-            tone="info"
-          />
-          <StatCard
-            label="Active"
-            value={stats.activeOrders}
-            sub="In progress"
-            icon={Clock}
-            tone="neutral"
-          />
-          <StatCard
-            label="Revenue"
-            value={formatCurrency(stats.totalRevenue)}
-            sub="All time"
-            icon={DollarSign}
-            tone="success"
-          />
-          <StatCard
-            label="This Month"
-            value={formatCurrency(stats.revenueThisMonth)}
-            sub="vs last month"
-            delta={revenueChange}
-            icon={TrendingUp}
-            tone="success"
-          />
-          <StatCard
-            label="Users"
-            value={stats.totalUsers.toLocaleString()}
-            sub={`${stats.usersToday} today`}
-            icon={Users}
-            tone="neutral"
-          />
-          <StatCard
-            label="Sellers"
-            value={stats.activeSellers}
-            sub={`${stats.approvedToday} approved today`}
-            icon={Store}
-            tone="lime"
-          />
-        </div>
-      </div>
+        <StatStrip stats={keyMetrics} className="md:grid-cols-3 lg:grid-cols-6" />
+      </section>
 
-      {/* Two Column Layout for Pages Guide and Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-7 lg:grid-cols-5 lg:gap-6">
+        {/* Recent Activity */}
+        <section className="min-w-0 lg:col-span-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <SectionLabel className="mb-0">Recent Activity</SectionLabel>
+            <SegmentedTabs
+              tabs={[
+                { id: 'active', label: 'Active' },
+                { id: 'resolved', label: 'Resolved' },
+              ]}
+              value={activityFilter}
+              onChange={setActivityFilter}
+              layoutId="admin-dashboard-activity"
+              ariaLabel="Activity filter"
+            />
+          </div>
 
-        {/* Admin Pages Guide */}
-        <div>
-          <SectionLabel>Admin Pages</SectionLabel>
           <AdminPanel pad={false} className="overflow-hidden">
-            <div className="divide-y divide-border-subtle">
-              {adminPages.map((page) => (
+            {activityFailed ? (
+              <div className="px-4 py-10 text-center" role="alert">
+                <p className="text-[13.5px] text-error">Couldn’t load activity. Refresh to try again.</p>
+              </div>
+            ) : displayedActivities.length === 0 ? (
+              <div className="px-4 py-12 text-center">
+                <p className="text-[13.5px] font-medium text-text-secondary">No {activityFilter} activity</p>
+                {activityFilter === 'active' && (
+                  <p className="mt-1.5 text-[12.5px] text-text-tertiary">
+                    Older items are under <span className="font-semibold text-text-secondary">Resolved</span>.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.06]">
+                {displayedActivities.map((activity) => {
+                  const config = ACTIVITY_TYPE[activity.type]
+                  return (
+                    <Link
+                      key={activity.id}
+                      href={activity.link || '#'}
+                      className="group flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03]"
+                    >
+                      {activity.metadata?.gameIcon ? (
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-bg-overlay">
+                          <Image
+                            src={activity.metadata.gameIcon}
+                            alt={activity.metadata.gameName || 'Game'}
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <IconChip icon={config.icon} tone={config.tone} size="lg" />
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13.5px] font-semibold text-text-primary">{activity.title}</p>
+
+                        {activity.type === 'dispute' && activity.metadata ? (
+                          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px]">
+                            {activity.metadata.gameName && (
+                              <span className="text-text-secondary">{activity.metadata.gameName}</span>
+                            )}
+                            {activity.metadata.itemTitle && (
+                              <span className="min-w-0 truncate text-text-tertiary">{activity.metadata.itemTitle}</span>
+                            )}
+                            {!!activity.metadata.amount && (
+                              <span className="font-semibold tabular-nums text-text-primary">
+                                {formatCurrency(activity.metadata.amount)}
+                              </span>
+                            )}
+                            {activity.metadata.orderNumber && (
+                              <span className="text-text-tertiary">#{activity.metadata.orderNumber}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="mt-0.5 line-clamp-1 text-[12.5px] text-text-tertiary">{activity.description}</p>
+                        )}
+
+                        <p className="mt-1 text-[12px] text-text-tertiary">
+                          {new Date(activity.timestamp).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+
+                      {activity.status && <StatusBadge status={activity.status} className="shrink-0" />}
+                    </Link>
+                  )
+                })}
+
+                {hasMore && (
+                  <Link
+                    href="/admin/activities"
+                    className="group flex h-12 items-center justify-center gap-2 text-[13.5px] font-semibold text-text-primary transition-colors hover:bg-white/[0.03]"
+                  >
+                    View All Activity
+                    <ArrowRight aria-hidden weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                )}
+              </div>
+            )}
+          </AdminPanel>
+        </section>
+
+        {/* Other Pages — the ones the sidebar doesn't list */}
+        <section className="min-w-0 lg:col-span-2">
+          <SectionLabel className="flex h-[38px] items-center">Other Pages</SectionLabel>
+          <AdminPanel pad={false} className="overflow-hidden">
+            <div className="divide-y divide-white/[0.06]">
+              {OTHER_PAGES.map((page) => (
                 <Link
                   key={page.href}
                   href={page.href}
-                  className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
+                  className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]"
                 >
-                  <IconChip icon={page.icon} tone="neutral" />
+                  <IconChip icon={page.icon} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-semibold text-text-primary transition-colors group-hover:text-lime-text">
-                      {page.title}
-                    </p>
-                    <p className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">
-                      {page.description}
-                    </p>
+                    <p className="text-[13.5px] font-semibold text-text-primary">{page.title}</p>
+                    <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">{page.description}</p>
                   </div>
-                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-text-tertiary transition-colors group-hover:text-text-secondary" />
+                  <CaretRight
+                    aria-hidden
+                    weight="bold"
+                    className="h-4 w-4 shrink-0 text-text-tertiary transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-text-primary"
+                  />
                 </Link>
               ))}
             </div>
           </AdminPanel>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <SectionLabel className="mb-0">Recent Activity</SectionLabel>
-
-            {/* Active/Resolved Toggle */}
-            <div className="flex items-center gap-1 rounded-lg border border-border-default bg-bg-raised p-1">
-              <button
-                onClick={() => setActivityFilter('active')}
-                className={cn(
-                  'rounded-md border px-3 py-1 text-[11.5px] font-semibold transition-colors',
-                  activityFilter === 'active'
-                    ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                    : 'border-transparent text-text-tertiary hover:text-text-secondary'
-                )}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setActivityFilter('resolved')}
-                className={cn(
-                  'rounded-md border px-3 py-1 text-[11.5px] font-semibold transition-colors',
-                  activityFilter === 'resolved'
-                    ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                    : 'border-transparent text-text-tertiary hover:text-text-secondary'
-                )}
-              >
-                Resolved
-              </button>
-            </div>
-          </div>
-
-          <AdminPanel pad={false} className="overflow-hidden">
-            {(() => {
-              if (activityFailed) {
-                return (
-                  <div className="px-4 py-10 text-center" role="alert">
-                    <p className="text-[13px] text-error">Failed to load activity</p>
-                  </div>
-                )
-              }
-
-              // Filter activities based on resolved status
-              const filteredActivities = activities.filter(activity => {
-                const isResolved = activity.status?.toLowerCase().includes('resolved') ||
-                                  activity.status?.toLowerCase().includes('closed')
-                return activityFilter === 'resolved' ? isResolved : !isResolved
-              })
-
-              // Limit to 9 activities
-              const displayedActivities = filteredActivities.slice(0, 9)
-              const hasMore = filteredActivities.length > 9
-
-              if (displayedActivities.length === 0) {
-                return (
-                  <div className="px-4 py-10 text-center">
-                    <p className="text-[13px] text-text-tertiary">
-                      No {activityFilter} activities
-                    </p>
-                    {activityFilter === 'active' && (
-                      <p className="mt-2 text-xs text-text-tertiary">
-                        Check <span className="font-semibold text-text-secondary">Resolved</span> for history
-                      </p>
-                    )}
-                  </div>
-                )
-              }
-
-              return (
-                <div className="divide-y divide-border-subtle">
-                  {displayedActivities.map((activity) => {
-                    const typeConfig: Record<
-                      typeof activity.type,
-                      { icon: LucideIcon; tone: ChipTone }
-                    > = {
-                      dispute: { icon: AlertTriangle, tone: 'error' },
-                      application: { icon: UserPlus, tone: 'info' },
-                      fraud: { icon: Shield, tone: 'warning' },
-                    }
-                    const config = typeConfig[activity.type]
-
-                    return (
-                      <Link
-                        key={activity.id}
-                        href={activity.link || '#'}
-                        className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
-                      >
-                        {/* Icon or Game Logo */}
-                        {activity.metadata?.gameIcon ? (
-                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-overlay">
-                            <Image
-                              src={activity.metadata.gameIcon}
-                              alt={activity.metadata.gameName || 'Game'}
-                              width={36}
-                              height={36}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <IconChip icon={config.icon} tone={config.tone} />
-                        )}
-
-                        {/* Content */}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13.5px] font-semibold text-text-primary">
-                            {activity.title}
-                          </p>
-
-                          {/* For disputes: show game name, item, amount */}
-                          {activity.type === 'dispute' && activity.metadata ? (
-                            <div className="mt-1 space-y-0.5">
-                              {activity.metadata.gameName && (
-                                <p className="text-xs text-text-secondary">
-                                  {activity.metadata.gameName}
-                                </p>
-                              )}
-                              {activity.metadata.itemTitle && (
-                                <p className="line-clamp-1 text-xs text-text-tertiary">
-                                  {activity.metadata.itemTitle}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-2">
-                                {activity.metadata.amount && (
-                                  <p className="text-xs font-semibold tabular-nums text-lime-text">
-                                    {formatCurrency(activity.metadata.amount)}
-                                  </p>
-                                )}
-                                {activity.metadata.orderNumber && (
-                                  <p className="text-xs text-text-tertiary">
-                                    #{activity.metadata.orderNumber}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">
-                              {activity.description}
-                            </p>
-                          )}
-
-                          <p className="mt-1.5 text-[11px] text-text-tertiary">
-                            {new Date(activity.timestamp).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-
-                        {/* Status Badge */}
-                        {activity.status && (
-                          <div className="flex shrink-0 flex-col items-end gap-1">
-                            <StatusBadge status={activity.status} />
-                          </div>
-                        )}
-                      </Link>
-                    )
-                  })}
-
-                  {/* View All Button */}
-                  {hasMore && (
-                    <Link
-                      href="/admin/activities"
-                      className="group flex items-center justify-center gap-2 px-4 py-3 text-[13px] font-semibold text-lime-text transition-colors hover:bg-bg-overlay"
-                    >
-                      View All Activities
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  )}
-                </div>
-              )
-            })()}
-          </AdminPanel>
-        </div>
-
+        </section>
       </div>
 
-      {/* Additional Stats Row */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Pending Reviews" value={stats.pendingReviews} />
-        <StatCard label="High Priority Disputes" value={stats.highPriorityDisputes} />
-        <StatCard label="High Severity Fraud" value={stats.highSeverityFlags} />
-        <StatCard label="Unread Notifications" value={stats.unreadNotifications} />
-      </div>
+      <section>
+        <SectionLabel>Queue Health</SectionLabel>
+        <StatStrip stats={queueHealth} />
+      </section>
     </div>
   )
 }
