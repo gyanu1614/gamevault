@@ -26,9 +26,7 @@ Local commits only (NOT pushed, no PR yet): 01ffea51, 12b3d6ff, 0bcc7e99, 26266a
 14. Same-height item cards (game name on the top line when a listing has no filters); best offer
     (cheapest) pinned first; phone filter bar = the Messages tab bar; search restyled.
 15. /account/tiers full revamp + check its functionality.
-16. OPEN QUESTION to owner: /{game} hub page. Recommendation given: keep + rebuild as a landing hub
-    (SEO: broad game terms, sitemap 0.8, breadcrumb parent of every category); tiles may link straight
-    to the main category. Waiting on the owner's call before building.
+16. /{game} hub: owner chose "keep + rebuild as a landing hub" (2026-09-30). DONE (e579dae3).
 
 ## Design rules decided
 - Account/marketplace card = fill only, no outline (owner 2026-09-28/29). Account: `rounded-lg bg-bg-raised`;
@@ -96,6 +94,15 @@ Local commits only (NOT pushed, no PR yet): 01ffea51, 12b3d6ff, 0bcc7e99, 26266a
   swipe + prev/next). `_TiersSkeleton.tsx` + route skeleton map. `getMyTierInfo` rewritten on the RPC
   window facts. Bugs fixed: "0 / 0" legacy thresholds, "qualify for bronze" shown to Gold, listing limit
   null→20, "You Qualify" on a lower card. TierCard/TierProgressBar/TierBadge deleted.
+
+- Game hub (/[gameSlug], every game but SAB): `_GameHub.tsx` (server), `_hubData.ts` (cookie-free loaders:
+  getCategoryStats per category, currency config for icon + per-unit suffix, item/account offers without
+  paused/test sellers), `_hubModel.ts` (+12 tests: cards, currency spotlight, from-labels, pitch, rails).
+  Sections: GameSubNav, header (logo/name/pitch/facts), Buy {currency} card, Shop by Category (live count +
+  from-price), Best Item/Account Offers (shared `OfferRail`, Embla), sell prompt, HowItWorksBand, About
+  (seo.h1 + seo.intro + keyword category links), FAQ (FaqCards), BlogRail, PaymentsMarquee. Binds every
+  category's listings tag; revalidate 86400. SAB landing now uses OfferRail too. Popular Games tiles still
+  link to the hub (now a real landing page).
 
 ## Checks
 tsc clean; eslint 0 errors (pre-existing img warnings); unit suite 196 files / 1,589 green; security review: no findings;
