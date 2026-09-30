@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Store, Clock, ArrowRight, Rocket } from 'lucide-react'
+import { Store, ArrowRight, Rocket } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
+import { StorefrontIcon, ClockIcon, RocketLaunchIcon } from '@phosphor-icons/react'
+import { navMenuIconCls, navMenuRowCls } from '@/components/navbar/NavChrome'
 
 /**
  * Beta C — Single, reactive Become-a-Seller CTA.
@@ -58,12 +60,9 @@ export default function BecomeSellerCta({
         <Link
           href="/founding"
           onClick={onNavigate}
-          className={cn(
-            'mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary',
-            className,
-          )}
+          className={cn(navMenuRowCls, className)}
         >
-          <Rocket className="h-[18px] w-[18px] text-lime-text" />
+          <RocketLaunchIcon size={18} weight="bold" aria-hidden className={navMenuIconCls} />
           Founding Seller
         </Link>
       )
@@ -97,24 +96,18 @@ export default function BecomeSellerCta({
       <Link
         href={href}
         onClick={onNavigate}
-        className={cn(
-          'mb-1 flex items-center gap-3 rounded-lg border border-yellow-500/20 px-4 py-2 text-sm text-yellow-400 transition-colors hover:bg-yellow-500/10',
-          className,
-        )}
+        className={cn(navMenuRowCls, className)}
       >
-        <Clock className="h-4 w-4" />
+        <ClockIcon size={18} weight="bold" aria-hidden className="shrink-0 text-amber-400" />
         Application Pending
       </Link>
     ) : (
       <Link
         href={href}
         onClick={onNavigate}
-        className={cn(
-          'mb-1 flex items-center gap-3 rounded-md px-4 py-2 text-[14px] text-text-secondary transition-colors hover:bg-white/[0.07] hover:text-text-primary',
-          className,
-        )}
+        className={cn(navMenuRowCls, className)}
       >
-        <Store className="h-[18px] w-[18px] text-lime-text" />
+        <StorefrontIcon size={18} weight="bold" aria-hidden className={navMenuIconCls} />
         Become a Seller
       </Link>
     )
