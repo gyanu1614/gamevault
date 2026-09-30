@@ -81,6 +81,7 @@ export function SabLanding({
         seeAllHref="/steal-a-brainrot/buy-items"
         offers={itemOffers}
         gameSlug={gameSlug}
+        gameName={gameName}
         empty={{
           icon: <Store className="h-5 w-5" />,
           title: 'No items listed yet',
@@ -94,6 +95,7 @@ export function SabLanding({
         seeAllHref="/steal-a-brainrot/accounts"
         offers={accountOffers}
         gameSlug={gameSlug}
+        gameName={gameName}
         empty={{
           icon: <User className="h-5 w-5" />,
           title: 'No accounts listed yet',
@@ -118,12 +120,14 @@ function CarouselSection({
   seeAllHref,
   offers,
   gameSlug,
+  gameName,
   empty,
 }: {
   title: string
   seeAllHref: string
   offers: ItemOffer[]
   gameSlug: string
+  gameName: string
   empty: {
     icon: React.ReactNode
     title: string
@@ -194,7 +198,7 @@ function CarouselSection({
                 key={offer.id}
                 className="min-w-0 shrink-0 grow-0 basis-[300px] sm:basis-[360px]"
               >
-                <ItemCard offer={offer} gameSlug={gameSlug} />
+                <ItemCard offer={offer} gameSlug={gameSlug} gameName={gameName} />
               </div>
             ))}
           </div>

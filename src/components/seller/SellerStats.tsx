@@ -2,16 +2,19 @@
  * SellerStats — the one line every buyer-facing surface shows under a
  * seller's name (rule: src/lib/seller/stat-line.ts).
  *
- *   compact (cards, rows):  👍 100% (12) · 34 Sold · Gold
+ *   compact (cards, rows):  👍 100% · 34 Sold 🏅   (owner 2026-09-30: no review
+ *                           count, and the tier is its icon, not the word;
+ *                           `hideTier` when the surface shows it elsewhere)
  *   full (listing page, shop, checkout, order page):
- *                           100% Positive · 12 Reviews · 34 Sold · Gold
+ *                           100% Positive · 12 Reviews · 34 Sold · 🏅 Gold
  *   no sales yet (both):    Verified Seller
  *
  * Text size comes from `className` so it sits in each surface's scale.
  */
-import { ThumbsUp } from 'lucide-react'
+import { ThumbsUpIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { sellerStatLine, sellerStatText, type SellerStatInput } from '@/lib/seller/stat-line'
+import { TierIcon } from '@/components/seller/tiers/TierIcon'
 
 const fmtCount = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
@@ -22,10 +25,12 @@ const fmtCount = (v: number) => {
 
 interface SellerStatsProps extends SellerStatInput {
   variant?: 'compact' | 'full'
+  /** Compact only: leave the tier icon off (the surface shows it by the name). */
+  hideTier?: boolean
   className?: string
 }
 
-export function SellerStats({ variant = 'compact', className, ...input }: SellerStatsProps) {
+export function SellerStats({ variant = 'compact', hideTier = false, className, ...input }: SellerStatsProps) {
   const line = sellerStatLine(input)
   const label = sellerStatText(input)
 
@@ -47,9 +52,8 @@ export function SellerStats({ variant = 'compact', className, ...input }: Seller
       {line.rating &&
         (variant === 'compact' ? (
           <>
-            <ThumbsUp aria-hidden className="h-[1em] w-[1em] shrink-0 fill-success text-success" />
+            <ThumbsUpIcon aria-hidden weight="fill" className="h-[1.05em] w-[1.05em] shrink-0 text-success" />
             <span aria-hidden className="font-semibold tabular-nums text-success">{line.rating.percent}%</span>
-            <span aria-hidden className="tabular-nums">({fmtCount(line.rating.reviews)})</span>
             <Dot />
           </>
         ) : (
@@ -66,14 +70,25 @@ export function SellerStats({ variant = 'compact', className, ...input }: Seller
           </>
         ))}
       {line.sales > 0 && (
-        <>
-          <span aria-hidden>
-            <span className="font-semibold tabular-nums text-text-secondary">{fmtCount(line.sales)}</span> Sold
+        <span aria-hidden>
+          <span className="font-semibold tabular-nums text-text-secondary">{fmtCount(line.sales)}</span> Sold
+        </span>
+      )}
+      {variant === 'compact' ? (
+        !hideTier && (
+          <span aria-hidden title={`${line.tierLabel} Seller`} className="ml-0.5 inline-flex">
+            <TierIcon tier={input.tier} size={14} decorative className="h-[1.15em] w-[1.15em]" />
           </span>
-          <Dot />
+        )
+      ) : (
+        <>
+          {line.sales > 0 && <Dot />}
+          <span aria-hidden className={cn('inline-flex items-center gap-1 font-semibold', line.tierClass)}>
+            <TierIcon tier={input.tier} size={14} decorative className="h-[1.1em] w-[1.1em]" />
+            {line.tierLabel}
+          </span>
         </>
       )}
-      <span aria-hidden className={cn('font-semibold', line.tierClass)}>{line.tierLabel}</span>
     </span>
   )
 }

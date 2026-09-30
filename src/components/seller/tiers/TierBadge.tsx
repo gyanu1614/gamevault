@@ -7,6 +7,7 @@
 
 import { cn } from '@/lib/utils'
 import { tierByKey, type SellerTier } from '@/lib/seller/tiers'
+import { TierIcon } from './TierIcon'
 
 export type { SellerTier }
 
@@ -30,7 +31,6 @@ export default function TierBadge({
   className,
 }: TierBadgeProps) {
   const def = tierByKey(tier)
-  const TierIcon = def.Icon
 
   return (
     <span
@@ -43,7 +43,7 @@ export default function TierBadge({
         className
       )}
     >
-      {showIcon && <TierIcon className="h-3 w-3" aria-hidden="true" />}
+      {showIcon && <TierIcon tier={def.key} size={size === 'md' ? 15 : 13} decorative />}
       {def.label}
     </span>
   )

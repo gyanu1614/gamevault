@@ -76,12 +76,12 @@ export function ItemCardSkeleton() {
         </div>
 
         {/* Seller block — avatar + [name / rating] */}
-        <div className="flex shrink-0 items-center gap-2.5">
-          <Block className="h-[34px] w-[34px] shrink-0 rounded-full" />
-          <div className="space-y-1.5">
+        <div className="flex shrink-0 items-center gap-2.5 py-1">
+          <div className="flex flex-col items-end space-y-1.5">
             <Block className="h-3 w-24" />
-            <Block className="h-3 w-16" />
+            <Block className="h-3 w-20" />
           </div>
+          <Block className="h-[34px] w-[34px] shrink-0 rounded-full" />
         </div>
       </div>
     </article>
@@ -133,18 +133,14 @@ export default function ItemsSkeleton() {
             </div>
           </div>
 
-          {/* Filters row (slides on mobile, natural widths on sm+), then the
-              full-width search row: 40px on phones, 42px from sm. */}
-          <div className="-mx-4 flex items-center gap-2 overflow-hidden px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0">
-            {/* Content-width filter buttons (measured off the live Adopt Me
-                row: Item Type, Trait, Price, Delivery Time), then sort. */}
-            <Block className="h-10 w-[145px] shrink-0 rounded sm:h-[42px]" />
-            <Block className="h-10 w-[109px] shrink-0 rounded sm:h-[42px]" />
-            <Block className="h-10 w-[113px] shrink-0 rounded sm:h-[42px]" />
-            <Block className="h-10 w-[171px] shrink-0 rounded sm:h-[42px]" />
-            <Block className="h-10 w-[180px] shrink-0 rounded sm:h-[42px]" />
+          {/* Filters: phones = one framed bar of 34px segments (Messages
+              tab bar look); sm+ = loose 42px pills. Then the search row. */}
+          <div className="flex items-center overflow-hidden max-sm:w-full max-sm:gap-0.5 max-sm:rounded-lg max-sm:border max-sm:border-white/[0.08] max-sm:bg-bg-well max-sm:p-0.5 sm:flex-wrap sm:gap-2">
+            {[145, 109, 113, 171, 180].map((w, i) => (
+              <Block key={i} className="h-[34px] shrink-0 rounded-md max-sm:opacity-60 sm:h-[42px]" style={{ width: w }} />
+            ))}
           </div>
-          <Block className="mt-2.5 h-10 w-full rounded sm:h-[42px]" />
+          <Block className="mt-2.5 h-10 w-full rounded-lg sm:h-[42px]" />
         </div>
       </section>
 

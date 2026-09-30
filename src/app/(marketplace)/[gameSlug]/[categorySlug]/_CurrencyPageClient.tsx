@@ -12,11 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, t
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  ShieldCheck, Zap, Store, Minus, Plus, ArrowRight,
-  ChevronDown,
-  Loader2,
-} from 'lucide-react'
+import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown } from 'lucide-react'
 import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
@@ -31,12 +27,16 @@ import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
+import { useKeyboardInset } from '@/hooks/use-keyboard-inset'
+import { motion, useReducedMotion } from 'framer-motion'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyPageData, Offer } from './_currencyData'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import { quantityUnit, priceUnit } from '@/lib/currency/quantity-unit'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { BuyButton, BuySweep, FACE as BUY_FACE } from '@/components/marketplace/BuyButton'
 import { sellerStatLine } from '@/lib/seller/stat-line'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ function MetricCol({
         <Icon className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} />
         <span className="truncate">{value}</span>
       </div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wider text-text-tertiary">
+      <div className="mt-0.5 text-[12px] text-text-tertiary">
         {label}
       </div>
     </div>
@@ -384,19 +384,15 @@ export default function CurrencyPageClient({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary sm:text-[30px]">
-                Other <span className="text-lime-text">Sellers</span>
+                Other Sellers
               </h2>
               <p className="mt-1.5 text-[13.5px] text-text-tertiary sm:text-[14px]">
-                {otherSellers.length} more {otherSellers.length === 1 ? 'offer' : 'offers'} — pick by price, speed, or rating.
+                {otherSellers.length} more {otherSellers.length === 1 ? 'offer' : 'offers'}. Pick by price, speed or rating.
               </p>
             </div>
             <FilterChips filter={filter} setFilter={setFilter} />
           </div>
-          <div
-            aria-hidden
-            className="mt-4 h-px w-full bg-[linear-gradient(to_right,#C6FF3D66,transparent_40%)]"
-          />
-          <div className="mt-4 space-y-2">
+          <div className="mt-5 space-y-2">
             {otherSellers.length === 0 ? (
               <EmptyState />
             ) : (
@@ -616,6 +612,10 @@ function HeroCard({
   isOwnOffer: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Phone sheet rides on top of the keyboard while the quantity is typed.
+  const keyboard = useKeyboardInset(mobileOpen)
+  const typing = keyboard.inset > 0
+  const reduceMotion = useReducedMotion()
   const outOfStock = offer.stock === 0
   // Step in the unit the buyer is actually picking. On a per-K or
   // per-M game one "unit" is already a big number, so the old
@@ -652,7 +652,7 @@ function HeroCard({
         {/* LEFT CARD — Product identity + seller + delivery + stock + instructions.
             Canonical OrderCard shape: rounded-lg, border-border-default,
             bg-bg-raised, no glass/blur. */}
-        <Card className="border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 sm:p-6">
+        <Card className="border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-5 sm:p-6">
           {/* `offer.seller` is a DISPLAY name ("BloxMarket"), not a slug —
               linking to it produced /shop/BloxMarket. Use the canonical
               sellerSlug, and degrade to a non-link when there is none. */}
@@ -676,14 +676,14 @@ function HeroCard({
                 className="mt-0.5 text-[12.5px]"
               />
             </div>
-            <ArrowRight className="h-4 w-4 text-text-tertiary transition-colors group-hover:text-lime-text" />
+            <ArrowRight className="h-4 w-4 text-text-tertiary transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-text-primary" />
           </ShopLink>
 
           {/* V19/P24/P7.rr — Equal py-3.5 rhythm on all three rows.
               Instructions clamps to 5 lines (whichever comes first
               between line count and ~180 chars) and exposes a
               View more / View less toggle. */}
-          <div className="flex items-center justify-between gap-3 border-t border-border-subtle py-3.5">
+          <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] py-3.5">
             <span className="text-[14px] font-semibold text-text-primary">
               Delivery Time
             </span>
@@ -691,7 +691,7 @@ function HeroCard({
               {fmtMinutes(offer.deliveryMin, offer.deliveryMax)}
             </span>
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-border-subtle py-3.5">
+          <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] py-3.5">
             <span className="text-[14px] font-semibold text-text-primary">
               In Stock
             </span>
@@ -707,7 +707,7 @@ function HeroCard({
             )}
           </div>
 
-          <div className="border-t border-border-subtle py-3.5">
+          <div className="border-t border-white/[0.07] py-3.5">
             <div className="text-[14px] font-semibold text-text-primary">
               Delivery Instructions
             </div>
@@ -727,13 +727,13 @@ function HeroCard({
           </div>
 
           {offer.badges?.length ? (
-            <ul className="mt-3 flex flex-wrap gap-2 border-t border-border-subtle pt-3.5">
+            <ul className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.07] pt-3.5">
               {offer.badges.map((b) => (
                 <li
                   key={b}
-                  className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-bg-overlay px-2.5 py-1 text-[11.5px] text-text-secondary"
+                  className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2.5 py-1 text-[12px] font-medium text-text-secondary"
                 >
-                  <ShieldCheck className="h-3 w-3 text-lime-text" />
+                  <ShieldCheck className="h-3 w-3 text-text-tertiary" aria-hidden />
                   {b}
                 </li>
               ))}
@@ -751,7 +751,7 @@ function HeroCard({
             trust tiles in their OWN card below (item-page rail format;
             same width so alignment is automatic). */}
         <div className="hidden lg:block">
-          <Card className="relative isolate overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-5 sm:p-6">
+          <Card className="relative isolate overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-5 sm:p-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/safedrop-emblem.avif"
@@ -765,14 +765,14 @@ function HeroCard({
               {/* V24 — Amber/gold "Recommended" badge. Reads as a premium
                   distinction mark, distinct from lime (which is reserved for
                   the Buy CTA). Warm gold pairs cleanly with the black + lime. */}
-              <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2.5 py-1 text-[12px] font-semibold text-amber-300">
                 <StarRoundedIcon style={{ fontSize: 14 }} />
                 Recommended
               </span>
             </div>
             {purchasePanel}
           </Card>
-          <Card className="relative mt-3 overflow-hidden border-white/[0.10] bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)] p-4">
+          <Card className="relative mt-3 overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] p-4">
             <TrustBand />
           </Card>
         </div>
@@ -785,55 +785,73 @@ function HeroCard({
         {isOwnOffer ? (
           <a
             href={`/sell/edit/${offer.id}`}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 text-[14px] font-bold uppercase tracking-wider text-amber-300"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-amber-500/10 text-[14px] font-semibold text-amber-300"
           >
             <Store className="h-4 w-4" />
-            Your Listing — Edit
+            Edit Your Listing
           </a>
         ) : (
-          <button
+          <motion.button
             type="button"
             onClick={() => setMobileOpen(true)}
             disabled={outOfStock}
+            whileTap={outOfStock || reduceMotion ? undefined : { scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 600, damping: 32 }}
+            // One wide button carries the whole row (owner, 2026-09-30: the
+            // box-with-a-button "doesn't look nice"): the action on the left,
+            // what you get and what it costs on the right. Opens the sheet
+            // with the quantity stepper.
             className={cn(
-              'flex h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 text-left transition-colors',
+              'h-14 w-full justify-between rounded-lg px-5 text-[16px]',
               outOfStock
-                ? 'cursor-not-allowed border-border-default bg-bg-overlay text-text-tertiary'
-                : 'border-border-strong bg-bg-overlay text-text-primary hover:border-lime hover:bg-[rgba(86,184,127,0.05)]',
+                ? 'flex cursor-not-allowed items-center bg-bg-raised font-semibold text-text-tertiary'
+                : cn('group', BUY_FACE),
             )}
           >
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] opacity-80">
-                {outOfStock ? 'Out Of Stock' : 'Price'}
-              </div>
-              <div className="text-[16px] font-bold tabular-nums">
-                {outOfStock ? '—' : `${money(total)} · ${qty.toLocaleString('en-US')} ${unitLabel}`}
-              </div>
-            </div>
-            {!outOfStock && (
-              <span className="inline-flex items-center gap-1.5 text-[14px] font-bold uppercase tracking-wider">
-                <Zap className="h-4 w-4" />
-                Buy Now
-              </span>
+            {outOfStock ? (
+              <span>Out Of Stock</span>
+            ) : (
+              <>
+                <BuySweep />
+                <span className="relative">{PURCHASES_ENABLED ? 'Buy Now' : 'Opens Soon'}</span>
+                <span className="relative flex min-w-0 items-center gap-2.5">
+                  <span className="truncate text-[14px] font-medium text-white/75">
+                    {qty.toLocaleString('en-US')} {unitLabel}
+                  </span>
+                  <span className="tabular-nums">{money(total)}</span>
+                  <ArrowRight aria-hidden className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.5} />
+                </span>
+              </>
             )}
-          </button>
+          </motion.button>
         )}
       </div>
 
       <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-        <DialogContent className="max-w-[640px] gap-5 p-6 sm:p-7">
+        <DialogContent
+          // Opening must not focus the quantity field: on phones that pops
+          // the keyboard over the sheet before the buyer has read it.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          // While the keyboard is up: sit on top of it, fit the visible
+          // viewport, and drop the description + trust row so the price,
+          // quantity box and Buy button stay in view together.
+          style={typing ? { bottom: keyboard.inset, maxHeight: keyboard.viewportHeight - 12 } : undefined}
+          className={cn('max-w-[640px] gap-5 p-6 transition-[bottom] duration-200 ease-out sm:p-7', typing && 'gap-4 pt-5')}
+        >
           <DialogHeader className="gap-1.5">
             <DialogTitle className="text-[20px] font-bold tracking-tight">
               Confirm Your Purchase
             </DialogTitle>
-            <DialogDescription className="text-[14px] leading-[1.5] text-text-secondary">
+            <DialogDescription className={cn('text-[14px] leading-[1.5] text-text-secondary', typing && 'sr-only')}>
               Review quantity and price below, then continue to checkout.
             </DialogDescription>
           </DialogHeader>
           {purchasePanel}
-          <div className="border-t border-border-subtle pt-4">
-            <TrustBand />
-          </div>
+          {!typing && (
+            <div className="border-t border-white/[0.07] pt-4">
+              <TrustBand />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </section>
@@ -868,7 +886,7 @@ function PurchasePanel({
   return (
     <>
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="text-[12.5px] font-medium text-text-tertiary">
           Price Per {priceUnit(granularity)}
         </div>
         <div className="mt-0.5 text-[26px] font-bold tabular-nums leading-none text-text-primary">
@@ -876,8 +894,8 @@ function PurchasePanel({
         </div>
       </div>
 
-      <div className="mt-4 border-t border-border-subtle pt-4">
-        <div className="flex h-12 items-center overflow-hidden rounded-lg border border-border-default bg-bg-overlay focus-within:border-focus-border focus-within:ring-2 focus-within:ring-focus-soft sm:h-[52px]">
+      <div className="mt-4 border-t border-white/[0.07] pt-4">
+        <div className="flex h-12 items-center overflow-hidden rounded-md bg-bg-overlay transition-[background-color,box-shadow] focus-within:bg-bg-overlay-2 focus-within:ring-1 focus-within:ring-white/15 sm:h-[52px]">
           <button
             type="button"
             onClick={stepDown}
@@ -914,7 +932,9 @@ function PurchasePanel({
                 else if (offer.stock > 0 && qty > offer.stock) setQty(offer.stock)
               }}
               aria-label={`Quantity in ${unitLabel}`}
-              className="h-full min-w-0 border-0 bg-transparent p-0 text-center outline-none"
+              // The field around it shows focus; the input itself draws no
+              // box (the global :focus-visible ring boxed just the digits).
+              className="h-full min-w-0 border-0 bg-transparent p-0 text-center outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:shadow-none focus-visible:outline-none"
             />
             <span className="text-text-secondary">{unitLabel}</span>
           </label>
@@ -937,48 +957,24 @@ function PurchasePanel({
       {isOwnOffer ? (
         <a
           href={`/sell/edit/${offer.id}`}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 text-[14px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-amber-500/10 text-[14px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
         >
           <Store className="h-4 w-4" />
-          Your Listing — Edit
+          Edit Your Listing
         </a>
       ) : outOfStock ? (
         <button
           type="button"
           disabled
-          className="mt-4 flex h-12 w-full cursor-not-allowed items-center justify-center rounded-lg border border-border-default bg-bg-overlay text-[14px] font-semibold text-text-tertiary"
+          className="mt-4 flex h-12 w-full cursor-not-allowed items-center justify-center rounded-md bg-bg-overlay text-[14px] font-semibold text-text-tertiary"
         >
-          Out Of Stock — Notify Me
+          Out Of Stock
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={onBuy}
-          disabled={buying}
-          className={cn(
-            'group mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-[14.5px] font-bold uppercase tracking-wider',
-            // V24 — Muted lime (pressed shade, #ABE52B) instead of the bright
-            // neon #C6FF3D, and a neutral drop shadow instead of the lime glow,
-            // so the CTA reads as premium/solid rather than eye-searing. Still
-            // clearly the primary action.
-            'bg-lime-pressed text-text-inverse hover:bg-lime',
-            'shadow-[0_6px_18px_rgba(0,0,0,0.35)]',
-            'transition-colors active:scale-[0.99]',
-            'disabled:cursor-wait disabled:opacity-80',
-          )}
-        >
-          {buying ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading Checkout…
-            </>
-          ) : (
-            <>
-              {PURCHASES_ENABLED ? 'Buy Now · ' : 'Buying Opens Soon · '}
-              <span className="tabular-nums">{money(total)}</span>
-            </>
-          )}
-        </button>
+        <BuyButton onClick={onBuy} loading={buying} className="mt-4 w-full">
+          {PURCHASES_ENABLED ? 'Buy Now · ' : 'Buying Opens Soon · '}
+          <span className="tabular-nums">{money(total)}</span>
+        </BuyButton>
       )}
     </>
   )
@@ -986,52 +982,29 @@ function PurchasePanel({
 
 function FilterChips({
   filter, setFilter,
-}: { filter: 'recommended' | 'cheapest' | 'fastest'; setFilter: (f: any) => void }) {
-  return (
-    // Mobile-audit — flex-wrap so the chip group can never force the page
-    // wider than 360px viewports (the parent header wraps the group as a
-    // unit, but the group itself must also be allowed to break).
-    <div className="flex flex-wrap items-center gap-1.5">
-      <FilterChip active={filter === 'recommended'} onClick={() => setFilter('recommended')} iconSrc="/icons/sort/recommended.webp" label="Recommended" shortLabel="Recommended" />
-      <FilterChip active={filter === 'cheapest'} onClick={() => setFilter('cheapest')} iconSrc="/icons/sort/cheapest.webp" label="Cheapest First" shortLabel="Cheapest" />
-      <FilterChip active={filter === 'fastest'} onClick={() => setFilter('fastest')} iconSrc="/icons/sort/fastest.webp" label="Fastest Delivery" shortLabel="Fastest" />
-    </div>
-  )
-}
-
-function FilterChip({
-  active, onClick, iconSrc, label, shortLabel,
-}: { active: boolean; onClick: () => void; iconSrc: string; label: string; shortLabel: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13.5px] font-semibold transition-colors sm:px-3.5',
-        active
-          ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-          : 'border-border-subtle bg-transparent text-text-secondary hover:border-border-default hover:text-text-primary',
-      )}
-    >
-      {/* V60 — 3D icon set (public/icons/sort), dimmed slightly until
-          the chip is active so the full-color art doesn't outshout the
-          inactive label. Mobile-audit — hidden below sm so all three
-          chips fit a single 360px line without wrapping. */}
+}: { filter: 'recommended' | 'cheapest' | 'fastest'; setFilter: (f: 'recommended' | 'cheapest' | 'fastest') => void }) {
+  // The shared account/marketplace tab control (sliding pill, no lime).
+  // Icons from sm up; short labels on phones so all three fit one line.
+  const tab = (iconSrc: string, label: string, shortLabel: string) => (
+    <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={iconSrc}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className={cn(
-          'hidden h-5 w-5 select-none object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,0.45)] transition-all sm:block',
-          active ? 'opacity-100 saturate-100' : 'opacity-80 saturate-[0.9]',
-        )}
-      />
+      <img src={iconSrc} alt="" aria-hidden draggable={false} width={18} height={18} className="hidden h-[18px] w-[18px] select-none object-contain sm:block" />
       <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">{shortLabel}</span>
-    </button>
+    </>
+  )
+  return (
+    <SegmentedTabs
+      tabs={[
+        { id: 'recommended', label: tab('/icons/sort/recommended.webp', 'Recommended', 'Recommended') },
+        { id: 'cheapest', label: tab('/icons/sort/cheapest.webp', 'Cheapest First', 'Cheapest') },
+        { id: 'fastest', label: tab('/icons/sort/fastest.webp', 'Fastest Delivery', 'Fastest') },
+      ]}
+      value={filter}
+      onChange={setFilter}
+      layoutId="currency-sort-pill"
+      ariaLabel="Sort sellers"
+    />
   )
 }
 
@@ -1051,11 +1024,11 @@ function sellerFactText(offer: Offer): string {
 function Fact({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border-subtle bg-bg-overlay">
+      <span className="grid h-8 w-8 flex-none place-items-center rounded-md bg-bg-overlay">
         <Icon className="text-text-tertiary" style={{ fontSize: 16 }} aria-hidden />
       </span>
       <div className="min-w-0">
-        <div className="text-[11px] uppercase tracking-wider text-text-tertiary">{label}</div>
+        <div className="text-[12px] text-text-tertiary">{label}</div>
         <div className="truncate text-[13px] font-bold tabular-nums text-text-primary">{value}</div>
       </div>
     </div>
@@ -1089,18 +1062,14 @@ function SellerRow({
           // is softened behind the row (a light 4% wash let the busy hero
           // image show through and look muddy). Open/hover lift the fill.
           // V49 — bundle-tile hover language: gentle lift + deeper shadow.
-          'relative overflow-hidden rounded-lg border backdrop-blur-md transition-all duration-200',
+          // Fill-only card (owner 2026-09-29: no outlines); open/hover step
+          // one shade lighter in the same black family.
+          'relative overflow-hidden rounded-lg transition-[background-color,transform,box-shadow] duration-200',
           open
-            ? 'border-border-strong bg-bg-overlay-2'
-            : 'border-border-default bg-bg-overlay hover:-translate-y-0.5 hover:border-border-strong hover:bg-bg-overlay-2 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
+            ? 'bg-bg-raised-hover'
+            : 'bg-bg-raised hover:-translate-y-0.5 hover:bg-bg-raised-hover hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
         )}
       >
-        {/* Top sheen — bundle-tile light-from-above. Sits above the
-            full-row trigger (z-0) but below the z-10 content row. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]"
-        />
         {/* V13b/V60 — The expand trigger is a transparent overlay button
             behind the content; the content layers are pointer-events-none
             so every click on the row (not just a caret) reaches it. Only
@@ -1168,7 +1137,7 @@ function SellerRow({
                 <div className="text-[20px] font-bold tabular-nums leading-none text-text-primary sm:text-[22px]">
                   {unitPrice(offer.pricePerUnit)}
                 </div>
-                <div className="mt-1 text-[11px] uppercase tracking-wider text-text-tertiary">
+                <div className="mt-1 text-[12px] text-text-tertiary">
                   per {perLabel}
                 </div>
               </div>
@@ -1183,7 +1152,7 @@ function SellerRow({
                 <a
                   href={`/sell/edit/${offer.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-500/10 px-4 text-[13px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-amber-500/10 px-4 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
                 >
                   <Store className="h-3.5 w-3.5" />
                   Yours
@@ -1192,7 +1161,7 @@ function SellerRow({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border-strong bg-transparent px-4 text-[13px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-white/[0.08] px-4 text-[13px] font-semibold text-text-primary transition-[background-color,transform] hover:bg-white/[0.14] active:scale-[0.97]"
                 >
                   Select
                 </button>
@@ -1205,7 +1174,7 @@ function SellerRow({
               flex-wrap so long delivery windows ("1-24 Hours") wrap to a
               second line instead of getting clipped by the card's
               overflow-hidden at 360px. */}
-          <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-border-subtle px-4 py-2.5 sm:hidden">
+          <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 sm:hidden">
             <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
               <span className="font-bold tabular-nums text-text-primary">{unitPrice(offer.pricePerUnit)}</span>
               <span className="text-text-tertiary">per {perLabel}</span>
@@ -1216,7 +1185,7 @@ function SellerRow({
         </div>
 
         <Collapsible.Content
-          className="overflow-hidden border-t border-border-subtle data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className="overflow-hidden border-t border-white/[0.07] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         >
           {/* V60 — Full-width detail panel: two glass tiles (the seller's
               own instructions + structured offer facts) over the whole row,
@@ -1224,14 +1193,10 @@ function SellerRow({
           <div className="p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row">
               {/* Seller instructions tile */}
-              <div className="relative flex-1 overflow-hidden rounded-lg border border-border-subtle bg-white/[0.03] p-4">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]"
-                />
+              <div className="relative flex-1 overflow-hidden rounded-md bg-bg-overlay p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-                    Seller instructions
+                  <span className="text-[13px] font-semibold text-text-primary">
+                    Seller Instructions
                   </span>
                 </div>
                 {hasInstructions ? (
@@ -1246,14 +1211,10 @@ function SellerRow({
               </div>
 
               {/* Offer facts tile */}
-              <div className="relative shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-white/[0.03] p-4 lg:w-[380px]">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)]"
-                />
+              <div className="relative shrink-0 overflow-hidden rounded-md bg-bg-overlay p-4 lg:w-[380px]">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-                    Offer details
+                  <span className="text-[13px] font-semibold text-text-primary">
+                    Offer Details
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
@@ -1275,22 +1236,22 @@ function SellerRow({
                 <a
                   href={`/sell/edit/${offer.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-9 items-center gap-1 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 text-[12.5px] font-bold uppercase tracking-wider text-amber-300 transition-colors hover:bg-amber-500/15"
+                  className="inline-flex h-9 items-center gap-1 rounded-md bg-amber-500/10 px-3 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
                 >
-                  Edit listing
+                  Edit Listing
                 </a>
               ) : (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-9 items-center gap-1 rounded-md border border-border-strong bg-transparent px-3 text-[12.5px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-lime hover:bg-[rgba(86,184,127,0.05)]"
+                  className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
                 >
-                  View full offer
+                  View Full Offer
                   <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
                 </button>
               )}
               <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
-                <ShieldCheck className="h-3.5 w-3.5 text-lime-text" aria-hidden />
+                <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
                 SafeDrop Protection: Item Guaranteed or Full Refund
               </span>
             </div>
@@ -1303,20 +1264,14 @@ function SellerRow({
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border-default bg-bg-raised p-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border-default bg-bg-overlay">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-bg-raised p-12 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-overlay">
         <Store className="h-5 w-5 text-text-tertiary" />
       </div>
-      <h3 className="text-base font-bold text-text-primary">No other sellers yet</h3>
+      <h3 className="text-base font-bold text-text-primary">No Other Sellers Yet</h3>
       <p className="max-w-md text-sm text-text-secondary">
-        This is the only offer for now. New sellers list daily — check back soon or set a price alert.
+        This is the only offer for now. New sellers list daily, so check back soon.
       </p>
-      <button
-        type="button"
-        className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-md border border-border-default bg-bg-overlay px-4 text-sm font-medium text-text-primary transition-colors hover:border-lime-tint-border hover:text-lime-text"
-      >
-        Notify me of new offers
-      </button>
     </div>
   )
 }
@@ -1327,7 +1282,7 @@ function EmptyState() {
 // Prose inside is still capped to a comfortable reading measure.
 function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
   return (
-    <section className="rounded-2xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-6 sm:p-8 lg:p-10">
+    <section className="rounded-lg bg-bg-raised p-6 sm:p-8 lg:p-10">
       <h2 className="text-[22px] font-bold text-text-primary sm:text-[26px]">
         About buying {currency.name}
       </h2>
