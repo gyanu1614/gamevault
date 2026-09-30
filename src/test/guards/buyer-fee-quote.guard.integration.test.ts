@@ -31,6 +31,9 @@ type Quote = {
   reason: string | null
   method: string
   fee_minor: number | null
+  marketplace_minor: number | null
+  service_fee_minor: number | null
+  charge_minor: number | null
   total_minor: number | null
   pct_effective: number | null
   fee_currency: string | null
@@ -56,47 +59,58 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
   }, 60_000)
 
   // ── worked examples ────────────────────────────────────────────────────────
-  it('Pix $20: 3.75% + 7.5% FX + 1% buffer grossed up on the total → $2.79 (13.95%)', async () => {
+  // Since buyer-service-fee (2026-09-30) the processing base is subtotal +
+  // marketplace fee (max($0.30, 2%)) — what the provider is actually charged —
+  // and total_minor is the ORDER total: subtotal + marketplace + processing.
+  it('Pix $20: 3.75% + 7.5% FX + 1% buffer grossed up on $20.40 → $2.85 (14.25% of the item)', async () => {
     const q = await quote('pix_br', 2000)
     expect(q.ok).toBe(true)
-    // 2000 / (1 − 0.0375 − 0.075 − 0.01) = 2279.20 → fee 279 > floor 100 > min 35
-    expect(q.fee_minor).toBe(279)
-    expect(q.total_minor).toBe(2279)
-    expect(q.pct_effective).toBe(13.95)
+    expect(q.marketplace_minor).toBe(40)
+    // 2040 / (1 − 0.0375 − 0.075 − 0.01) = 2324.79 → fee 285 > floor 102 > min 35
+    expect(q.fee_minor).toBe(285)
+    expect(q.service_fee_minor).toBe(325)
+    expect(q.total_minor).toBe(2325)
+    expect(q.pct_effective).toBe(14.25)
     expect(q.fee_currency).toBe('USD')
     expect(q.refundable).toBe(true)
   })
 
-  it('GCash $20: 10 PHP fixed converted through currency_rates before the gross-up → $2.27', async () => {
+  it('GCash $20: 10 PHP fixed converted through currency_rates before the gross-up → $2.31', async () => {
     const q = await quote('gcash_ph', 2000)
     expect(q.ok).toBe(true)
-    // fixed 10 PHP × 0.0176 = 17.6¢; (2000 + 17.6) / (1 − 0.05 − 0.034 − 0.01) = 2226.93
-    expect(q.fee_minor).toBe(227)
-    expect(q.total_minor).toBe(2227)
-    expect(q.pct_effective).toBe(11.35)
+    // fixed 10 PHP × 0.0176 = 17.6¢; (2040 + 17.6) / (1 − 0.05 − 0.034 − 0.01) = 2271.08
+    expect(q.fee_minor).toBe(231)
+    expect(q.total_minor).toBe(2271)
+    expect(q.pct_effective).toBe(11.55)
   })
 
-  it('Pix $1: the $0.35 minimum wins over both the gross-up (14¢) and the 5% floor (5¢)', async () => {
+  it('Pix $1: the $0.35 minimum wins over both the gross-up (18¢ on $1.30) and the 5% floor (7¢)', async () => {
     const q = await quote('pix_br', 100)
     expect(q.ok).toBe(true)
+    expect(q.marketplace_minor).toBe(30) // the $0.30 floor beats 2% (2¢)
     expect(q.fee_minor).toBe(35)
-    expect(q.total_minor).toBe(135)
+    expect(q.total_minor).toBe(165)
     expect(q.pct_effective).toBe(35)
   })
 
-  it('crypto (btcpay) keeps today’s buyer fee: the 5% floor, no provider %, no FX', async () => {
+  it('crypto (btcpay) keeps the 5% floor on the charged amount: no provider %, no FX', async () => {
     const q = await quote('btcpay', 10000)
     expect(q.ok).toBe(true)
-    // 10000 / 0.99 = 10101.01 → 101 < floor 500
-    expect(q.fee_minor).toBe(500)
-    expect(q.total_minor).toBe(10500)
-    expect(q.pct_effective).toBe(5)
+    // marketplace 2% = 200; 10200 / 0.99 = 10303.03 → 103 < floor 510
+    expect(q.marketplace_minor).toBe(200)
+    expect(q.fee_minor).toBe(510)
+    expect(q.total_minor).toBe(10710)
+    expect(q.pct_effective).toBe(5.1)
   })
 
-  it('wallet quotes like crypto (today’s 5%), so a fully wallet-paid order snapshots the same fee', async () => {
+  it('store credit (wallet) pays no service fee at all: no marketplace fee, no processing, nothing to charge', async () => {
     const q = await quote('wallet', 10000)
     expect(q.ok).toBe(true)
-    expect(q.fee_minor).toBe(500)
+    expect(q.marketplace_minor).toBe(0)
+    expect(q.fee_minor).toBe(0)
+    expect(q.service_fee_minor).toBe(0)
+    expect(q.total_minor).toBe(10000)
+    expect(q.charge_minor).toBe(0)
   })
 
   it('QR Ph is quoted with refundable=false and Maya (hidden) is refused as not_selectable', async () => {
@@ -129,10 +143,10 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
     const over = await quote('paysafecard', 30000)
     expect(over.ok).toBe(false)
     expect(over.reason).toBe('over_cap')
-    // $200 / 0.865 = $231.21 = €197.62 < €250 → fee 3121
+    // $204 (with the 2% marketplace fee) / 0.865 = $235.84 = €201.57 < €250 → fee 3184
     const under = await quote('paysafecard', 20000)
     expect(under.ok).toBe(true)
-    expect(under.fee_minor).toBe(3121)
+    expect(under.fee_minor).toBe(3184)
     expect(under.refundable).toBe(false)
   })
 
@@ -153,19 +167,21 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
   })
 
   // ── three currencies ───────────────────────────────────────────────────────
-  it('Trustly €0.35 fixed converts into the quote currency: EUR 109, GBP 104, USD 115 on 20.00', async () => {
-    // EUR: (2000 + 35) / 0.965 = 2108.81 → 109
-    expect((await quote('trustly', 2000, 'EUR')).fee_minor).toBe(109)
-    // GBP: 35 × 1.17 / 1.35 = 30.33; (2000 + 30.33) / 0.965 = 2103.97 → 104
-    expect((await quote('trustly', 2000, 'GBP')).fee_minor).toBe(104)
-    // USD: 35 × 1.17 = 40.95; (2000 + 40.95) / 0.965 = 2114.97 → 115
-    expect((await quote('trustly', 2000, 'USD')).fee_minor).toBe(115)
+  it('Trustly €0.35 fixed converts into the quote currency: EUR 110, GBP 105, USD 116 on 20.00 (+ 0.40 marketplace)', async () => {
+    // EUR: (2040 + 35) / 0.965 = 2150.26 → 110
+    expect((await quote('trustly', 2000, 'EUR')).fee_minor).toBe(110)
+    // GBP: 35 × 1.17 / 1.35 = 30.33; (2040 + 30.33) / 0.965 = 2145.42 → 105
+    expect((await quote('trustly', 2000, 'GBP')).fee_minor).toBe(105)
+    // USD: 35 × 1.17 = 40.95; (2040 + 40.95) / 0.965 = 2156.42 → 116
+    expect((await quote('trustly', 2000, 'USD')).fee_minor).toBe(116)
   })
 
-  it('a zero subtotal yields the minimum/fixed only and no effective percentage', async () => {
+  it('a zero subtotal yields the minimum/fixed only, a $1.00 order total and no effective percentage', async () => {
     const q = await quote('pix_br', 0)
     expect(q.ok).toBe(true)
     expect(q.fee_minor).toBe(35)
+    // marketplace $0.30 + Pix minimum $0.35 = $0.65 → raised to the $1.00 minimum order
+    expect(q.total_minor).toBe(100)
     expect(q.pct_effective).toBeNull()
   })
 
@@ -189,7 +205,7 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
     const rows = data as Quote[]
     expect(rows.map((r) => r.method)).toEqual(['pix_br', 'maya_ph', 'nope'])
     expect(rows.map((r) => r.ok)).toEqual([true, false, false])
-    expect(rows[0].fee_minor).toBe(279)
+    expect(rows[0].fee_minor).toBe(285)
   })
 
   // ── posture ────────────────────────────────────────────────────────────────
