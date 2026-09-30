@@ -327,7 +327,14 @@ export async function cancelCancellationRequest(
 export async function processCancellationRequest(
   requestId: string,
   action: 'approve' | 'reject',
-  adminNotes?: string
+  adminNotes?: string,
+  /**
+   * Refund policy (2026-09-30): who is at fault. 'buyer' (default) credits
+   * the item price and keeps the service fee; 'seller' (the seller went
+   * quiet / could not deliver) credits everything and counts against the
+   * seller's 5-in-7-days non-delivery fee.
+   */
+  fault: 'buyer' | 'seller' = 'buyer'
 ): Promise<{ data?: CancellationRequest; error?: { message: string } }> {
   try {
     const supabase = await createClient()
@@ -377,15 +384,19 @@ export async function processCancellationRequest(
     //   paid                 -> order_cancel_return_wallet (CANCELLED + credit)
     //   delivering/delivered -> order_refund_to_wallet     (REFUNDED + credit)
     // A disputed order is settled through the dispute tools, not here.
+    // What the RPC credits (the item price on a buyer-fault approval, the
+    // total on a seller-fault one) — read back for the comms below.
+    let creditedAmount = Number(request.order?.total_amount ?? 0)
     if (action === 'approve') {
       const order = request.order
       const dedupe = `cancel_request:${requestId}`
       try {
+        const refundFault = fault === 'seller' ? 'seller' : 'buyer'
         const result =
           order.status === 'paid'
-            ? await cancelOrderReturnWallet(request.order_id, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
+            ? await cancelOrderReturnWallet(request.order_id, dedupe, { allowPaid: true, closeAttemptAs: 'void', fault: refundFault })
             : order.status === 'delivering' || order.status === 'delivered'
-              ? await refundOrderToWallet(request.order_id, dedupe)
+              ? await refundOrderToWallet(request.order_id, dedupe, undefined, refundFault)
               : null
         if (!result) {
           return {
@@ -397,6 +408,7 @@ export async function processCancellationRequest(
         if (result.refused) {
           return { error: { message: 'The order could not be cancelled in its current state. Nothing was changed.' } }
         }
+        if (result.creditedMinor != null) creditedAmount = Number(result.creditedMinor) / 100
       } catch (moneyError: any) {
         console.error('Error cancelling / refunding order:', moneyError)
         return {
@@ -437,8 +449,8 @@ export async function processCancellationRequest(
         const { error: notifError } = await (service.from('notifications').insert as any)({
           user_id: order.buyer_id,
           type: 'order_refunded',
-          title: 'Money In Your Wallet',
-          message: `Your cancellation for order #${orderRef} was approved — $${Number(order.total_amount ?? 0).toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`,
+          title: 'Refund In Your Store Balance',
+          message: `Your cancellation for order #${orderRef} was approved — $${creditedAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.`,
           link: '/account/wallet',
           is_read: false,
         })
@@ -472,8 +484,8 @@ export async function processCancellationRequest(
             name: buyer.full_name || buyer.username || 'Gamer',
             orderNumber: orderRef,
             listingTitle: cancelledListing?.title || 'your item',
-            amount: Number(order.total_amount ?? 0),
-            destination: 'your DropMarket wallet',
+            amount: creditedAmount,
+            destination: 'your Store Balance',
             pending: false,
           })
         }

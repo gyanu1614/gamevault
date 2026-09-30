@@ -54,6 +54,9 @@ interface OrderClientProps {
     paidWith: string | null
   } | null
   itemTitle: string
+  /** Buyer / admin: what came back as store credit and whether the service
+   *  fee was kept (buyer-fault cancel). null before any refund. */
+  buyerRefund?: { credited: number; feeKept: boolean } | null
   /** Buyer: Request Cancellation eligibility, and an already pending request. */
   cancelRequest?: { eligible: boolean; pending: boolean } | null
   gameName: string | null
@@ -89,6 +92,7 @@ export function OrderClient(props: OrderClientProps) {
     disputeUntil = null,
     itemImageUrl,
     paymentSummary = null,
+    buyerRefund = null,
     cancelRequest = null,
     itemTitle,
     gameName,
@@ -548,6 +552,7 @@ export function OrderClient(props: OrderClientProps) {
               orderId={order.id}
               placedAtLabel={placedAtFull}
               paymentSummary={paymentSummary}
+              buyerRefund={buyerRefund}
               subtotal={subtotal}
               fee={sellerFeeAmount}
               totalPaid={totalPaid}

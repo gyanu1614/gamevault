@@ -702,7 +702,7 @@ export async function sendOrderRefundedEmail({
           pending
             ? `You'll get a confirmation the moment your refund is issued. Any questions in the meantime, support is one click away.`
             : toWallet
-              ? `Your store credit is available instantly — spend it on your next order or withdraw it from your wallet.`
+              ? `Your store credit is in your Store Balance now — spend it on your next order with no service fee.`
               : `Refunds to a payment method usually arrive within 5&ndash;10 business days, depending on your provider.`,
         ),
     }),

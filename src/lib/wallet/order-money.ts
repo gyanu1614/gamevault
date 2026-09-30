@@ -26,6 +26,12 @@ export interface OrderMoneyResult extends TransitionResult {
    *  refusal — `stale_attempt` = the charge named is no longer the order's
    *  open attempt (a retry superseded it). */
   reason?: string | null
+  /** Refund policy: minor units credited to the buyer's wallet by this call
+   *  (the item price on a buyer-fault refund, the total otherwise); null
+   *  when the call credited nothing (pending cancel, replay, refusal). */
+  creditedMinor: bigint | null
+  /** Refund policy: minor units of buyer fees kept on a buyer-fault refund. */
+  feeKeptMinor: bigint
 }
 
 /** Round B: the provider charge an event names — bound to its attempt in the RPC. */
@@ -44,6 +50,8 @@ function toResult(data: any): OrderMoneyResult {
     walletTxnId: data.wallet_txn_id ?? null,
     refused: data.refused === true,
     reason: data.reason ?? null,
+    creditedMinor: data.credited_minor != null ? BigInt(data.credited_minor) : null,
+    feeKeptMinor: data.fee_kept_minor != null ? BigInt(data.fee_kept_minor) : 0n,
   }
 }
 
@@ -66,6 +74,15 @@ function toResult(data: any): OrderMoneyResult {
  * 'void' = we closed it (sweep, supersede, buyer cancel) — the live charge
  * is then queued in provider_cancel_outbox inside the same transaction.
  */
+/**
+ * Who is at fault for a refund (refund policy, 2026-09-30). The SQL decides
+ * the amount from it:
+ *   buyer    → the item price (subtotal − promo) is credited; the fees stay
+ *   seller   → full credit + a seller fault (the 5-in-7-days fee lives in SQL)
+ *   platform → full credit, nothing recorded (oversold, provider events)
+ */
+export type RefundFault = 'buyer' | 'seller' | 'platform'
+
 export async function cancelOrderReturnWallet(
   orderId: string,
   dedupeKey?: string,
@@ -76,6 +93,8 @@ export async function cancelOrderReturnWallet(
     /** The caller already asked the provider (the sweep voids first): its
      *  answer is recorded on the outbox row, born done — the drain skips it. */
     providerVoidOutcome?: 'voided' | 'already_closed' | 'unsupported'
+    /** Paid orders only: who is at fault (default platform = full credit). */
+    fault?: RefundFault
   }
 ): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
@@ -87,6 +106,7 @@ export async function cancelOrderReturnWallet(
     p_provider_charge_id: opts?.charge?.providerChargeId ?? null,
     p_attempt_close: opts?.closeAttemptAs ?? null,
     p_provider_void_outcome: opts?.providerVoidOutcome ?? null,
+    p_fault: opts?.fault ?? 'platform',
   })
   if (error) throw new Error(`order_cancel_return_wallet failed: ${error.message}`)
   return toResult(data)
@@ -101,13 +121,16 @@ export async function cancelOrderReturnWallet(
 export async function refundOrderToWallet(
   orderId: string,
   dedupeKey?: string,
-  amountMinor?: bigint
+  amountMinor?: bigint,
+  /** Who is at fault (default platform = full credit, nothing recorded). */
+  fault: RefundFault = 'platform'
 ): Promise<OrderMoneyResult> {
   const supabase = createServiceRoleClient()
   const { data, error } = await (supabase.rpc as any)('order_refund_to_wallet', {
     p_order_id: orderId,
     p_dedupe_key: dedupeKey ?? null,
     p_amount_minor: amountMinor !== undefined ? amountMinor.toString() : null,
+    p_fault: fault,
   })
   if (error) throw new Error(`order_refund_to_wallet failed: ${error.message}`)
   return toResult(data)

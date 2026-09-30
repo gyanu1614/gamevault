@@ -55,6 +55,9 @@ interface OrderDetailsCardProps {
     total: number
     paidWith: string | null
   } | null
+  /** Buyer / admin: what came back as store credit and whether the service
+   *  fee was kept (buyer-fault cancel). null before any refund. */
+  buyerRefund?: { credited: number; feeKept: boolean } | null
   subtotal: number
   fee: number
   totalPaid: number
@@ -244,6 +247,7 @@ function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; payme
  */
 function SafeDropBody({
   amount,
+  refund = null,
   orderStatus,
   orderId,
   orderNumber,
@@ -253,6 +257,8 @@ function SafeDropBody({
   disputeUntil,
 }: {
   amount: number
+  /** What came back as store credit, and whether the service fee was kept. */
+  refund?: { credited: number; feeKept: boolean } | null
   orderStatus: string
   orderId: string
   orderNumber: string
@@ -293,8 +299,9 @@ function SafeDropBody({
     showDisputeCta = true
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
-    caption =
-      'Your refund was added to your DropMarket wallet as store credit. Spend it right away or withdraw it.'
+    caption = refund?.feeKept
+      ? 'The item price was added to your Store Balance as store credit. The service fee is not refunded when you cancel a paid order. Spend your credit at checkout with no service fee.'
+      : 'Your refund was added to your Store Balance as store credit. Spend it at checkout on any listing with no service fee.'
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
     caption =
@@ -302,8 +309,9 @@ function SafeDropBody({
   } else if (orderStatus === 'cancelled') {
     if (cancelledWithRefund) {
       amountLabel = 'Amount Refunded'
-      caption =
-        'Order cancelled. Your refund was added to your DropMarket wallet as store credit.'
+      caption = refund?.feeKept
+        ? 'Order cancelled. The item price was added to your Store Balance as store credit; the service fee is not refunded when you cancel a paid order.'
+        : 'Order cancelled. Your refund was added to your Store Balance as store credit. Spend it at checkout with no service fee.'
     } else {
       amountLabel = 'Order Total'
       caption = 'Order cancelled. You were not charged.'
@@ -317,10 +325,14 @@ function SafeDropBody({
     role === 'buyer' &&
     (orderStatus === 'refunded' || (orderStatus === 'cancelled' && cancelledWithRefund))
 
+  // After a refund the row shows what actually came back (the item price on
+  // a buyer-fault cancel), not the amount that was covered.
+  const shownAmount = refund && (orderStatus === 'refunded' || cancelledWithRefund) ? refund.credited : amount
+
   return (
     <>
       <Row label={amountLabel} emphasized>
-        {fmtUsd(amount)}
+        {fmtUsd(shownAmount)}
       </Row>
       <SafeDropStatusRow orderStatus={orderStatus} />
       <p className="mt-3 text-center text-[13px] leading-[1.55] text-text-secondary">
@@ -630,6 +642,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     orderId,
     placedAtLabel,
     paymentSummary = null,
+    buyerRefund = null,
     subtotal,
     fee,
     totalPaid,
@@ -746,6 +759,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
           <CardHeader iconSrc="/assets/order-icons/escrow.svg" title="SafeDrop Protection" />
           <SafeDropBody
             amount={escrowAmount}
+            refund={buyerRefund}
             orderStatus={orderStatus}
             orderId={orderId}
             orderNumber={orderNumber}

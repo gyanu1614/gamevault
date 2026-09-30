@@ -18,6 +18,16 @@ export function sellerCancelReasonLabel(id: string | null | undefined): string |
   return SELLER_CANCEL_REASONS.find((r) => r.id === id)?.label ?? null
 }
 
+/**
+ * Refund policy (2026-09-30): whose fault a seller cancel is. The buyer
+ * asking, or going quiet, is the buyer's (item price back, service fee
+ * kept); everything else is the seller's (full refund, a fault on their
+ * record, the 5-in-7-days non-delivery fee).
+ */
+export function sellerCancelFault(reason: string | null | undefined): 'buyer' | 'seller' {
+  return reason === 'buyer_requested' || reason === 'buyer_unresponsive' ? 'buyer' : 'seller'
+}
+
 /** A reason is required; "Other" also needs a short note (5+ characters). */
 export function validateSellerCancel(reason: string | null | undefined, note: string | null | undefined): string | null {
   if (!sellerCancelReasonLabel(reason)) return 'Pick a reason for cancelling.'

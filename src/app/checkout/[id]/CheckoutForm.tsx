@@ -497,7 +497,7 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
   paysafecard: {
     logo: '/payments/paysafecard.svg',
     Icon: CreditCard,
-    points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your DropMarket wallet'],
+    points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your Store Balance'],
   },
 }
 const FALLBACK_UI = {

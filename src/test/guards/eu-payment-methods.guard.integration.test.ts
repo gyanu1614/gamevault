@@ -299,6 +299,6 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
     const rates = read('src/lib/fees/buyer-public-rates.ts')
     expect(rates).toMatch(/r\.refundable \? 'Yes' : 'Store credit only'/)
     // The checkout tile tells a paysafecard buyer the same thing.
-    expect(read('src/app/checkout/[id]/CheckoutForm.tsx')).toMatch(/paysafecard: \{[\s\S]*?Refunds go to your DropMarket wallet/)
+    expect(read('src/app/checkout/[id]/CheckoutForm.tsx')).toMatch(/paysafecard: \{[\s\S]*?Refunds go to your Store Balance/)
   })
 })
