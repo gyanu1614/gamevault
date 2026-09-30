@@ -31,6 +31,7 @@ import { searchAttributeOptions, type AttrOptionHit } from '@/lib/actions/search
 import { setStorePaused, getMyStorePaused } from '@/lib/actions/seller-presence'
 import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
+import { RevealGroup, RevealItem } from '@/components/account/Reveal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 // 5 fixed nav tabs with their DB type keys
@@ -100,15 +101,12 @@ function MobileServiceRow({
 }) {
   const content = (
     <>
-      {/* Dark recessed tile + quiet platinum glyph — the premium engraved
-          treatment (F). Material lives in the tile; the icon stays a
-          restrained near-white. Drop-in-replaceable house category SVG
-          (public/icons/categories) tinted via CSS mask. */}
-      <span className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[12px] border border-white/[0.07] bg-[radial-gradient(circle_at_50%_18%,rgba(38,40,46,0.9),rgba(12,13,16,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-8px_14px_-8px_rgba(0,0,0,0.85)]">
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.07),transparent)]" />
+      {/* Neutral tile, the house category glyph in soft white (tinted via
+          CSS mask, drop-in-replaceable from public/icons/categories). */}
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-bg-overlay">
         <span
           aria-hidden
-          className="relative h-[22px] w-[22px] bg-[linear-gradient(180deg,#ffffff,#d8dde1)] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+          className="h-5 w-5 bg-white/85"
           style={{
             maskImage: `url(/icons/categories/${item.icon}.svg)`,
             WebkitMaskImage: `url(/icons/categories/${item.icon}.svg)`,
@@ -122,14 +120,14 @@ function MobileServiceRow({
         />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-white transition-colors group-hover:text-white">
+        <span className="block truncate text-[15px] font-medium leading-tight text-white">
           {item.label}
         </span>
-        <span className="mt-0.5 block truncate text-[12px] leading-tight text-white/55">
+        <span className="mt-0.5 block truncate text-[12.5px] leading-tight text-text-tertiary">
           {item.description}
         </span>
       </span>
-      <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-white/65 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white" />
+      <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
     </>
   )
 
@@ -138,7 +136,7 @@ function MobileServiceRow({
       <button
         type="button"
         onClick={() => onSelect(item.tabId!)}
-        className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+        className="group flex min-h-[64px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
       >
         {content}
       </button>
@@ -149,7 +147,7 @@ function MobileServiceRow({
     <Link
       href={item.href ?? '/browse'}
       onClick={onClose}
-      className="group flex min-h-[68px] w-full items-center gap-3 border-b border-white/[0.06] py-2.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+      className="group flex min-h-[64px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
     >
       {content}
     </Link>
@@ -1929,13 +1927,10 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               className="fixed inset-0 z-[70] lg:hidden"
             >
               <div className="relative flex h-full flex-col overflow-hidden bg-[var(--color-bg-base)] shadow-[0_28px_80px_-24px_rgba(0,0,0,0.9)]">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(ellipse_at_18%_-20%,rgba(86,184,127,0.10),transparent_68%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent)]"
-                />
 
-                {/* Full-modal header — brand at left, unboxed X at right. */}
-                <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 pb-4 pt-4">
+                {/* Header: the navbar's own wordmark (white, no lime) + a close
+                    button on a quiet fill. Same 60px as the bar it replaces. */}
+                <div className="relative z-10 flex h-[60px] shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
                   <Link
                     href="/"
                     onClick={() => {
@@ -1945,10 +1940,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="flex items-center gap-2.5"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-white.avif" alt="DropMarket" width={96} height={96} className="h-9 w-9" />
-                    <span className="font-display text-[20px] font-extrabold tracking-[-0.03em] text-white">
-                      Drop<span className="text-lime-text">Market</span>
-                    </span>
+                    <img src="/brand/logo-mark-white.avif" alt="" width={96} height={96} className="h-7 w-7" />
+                    <span className="text-[16px] font-bold tracking-[-0.01em] text-white">DropMarket</span>
                   </Link>
                   <button
                     type="button"
@@ -1957,9 +1950,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       setMobileMenuTab(null)
                     }}
                     aria-label="Close menu"
-                    className="grid h-10 w-10 place-items-center text-white/55 transition-colors hover:text-white active:scale-95"
+                    className="grid h-10 w-10 place-items-center rounded-md bg-white/[0.06] text-white/75 transition-[background-color,color,transform] hover:bg-white/[0.10] hover:text-white active:scale-95"
                   >
-                    <X aria-hidden className="h-7 w-7" strokeWidth={1.8} />
+                    <X aria-hidden className="h-5 w-5" strokeWidth={2} />
                   </button>
                 </div>
 
@@ -1972,197 +1965,200 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       mobileMenuTab !== null && 'pointer-events-none -translate-x-full',
                     )}
                   >
+                    <RevealGroup className="space-y-7">
                     {/* ACCOUNT ROOT — retained for the account-aware menu path. */}
                     {menuRoot === 'account' && (
-                      <>
-                        <div className="mb-4">
-                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">My Account</h2>
-                          <p className="mt-0.5 text-[12px] text-white/50">Manage your DropMarket account</p>
-                        </div>
-                        <div className="divide-y divide-white/[0.06]">
-                          {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
-                            ({ label, href, Icon }) => (
-                              <Link
-                                key={href}
-                                href={href}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="group flex min-h-[58px] w-full items-center gap-3 text-left transition-colors hover:bg-white/[0.035]"
-                              >
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
-                                  <Icon className="h-[18px] w-[18px] text-[#3d9bff]" />
-                                </span>
-                                <span className="flex-1 truncate text-[14px] font-semibold text-white">{label}</span>
-                                <ChevronRight className="h-4 w-4 text-white/60" />
-                              </Link>
-                            ),
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setMenuRoot('browse')}
-                          className="group mt-5 flex min-h-[58px] w-full items-center gap-3 border-t border-white/[0.08] pt-4 text-left"
-                        >
-                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.07] bg-white/[0.05]">
-                            <LayoutGrid className="h-[18px] w-[18px] text-[#3d9bff]" />
-                          </span>
-                          <span className="flex-1 text-[14px] font-semibold text-white">Browse Marketplace</span>
-                          <ChevronRight className="h-4 w-4 text-white/60" />
-                        </button>
-                      </>
+                      <RevealItem>
+                        <section>
+                          <div className="mb-2.5 px-1">
+                            <h2 className="text-[15px] font-semibold text-white">My Account</h2>
+                            <p className="mt-0.5 text-[12.5px] text-text-tertiary">Manage your DropMarket account</p>
+                          </div>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {ACCOUNT_MENU_ITEMS.filter((i) => !i.sellerOnly || user?.isApprovedSeller).map(
+                              ({ label, href, Icon }) => (
+                                <Link
+                                  key={href}
+                                  href={href}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                  className="group flex min-h-[56px] w-full items-center gap-3 px-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                                >
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
+                                    <Icon className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                                  </span>
+                                  <span className="flex-1 truncate text-[15px] font-medium text-white">{label}</span>
+                                  <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                </Link>
+                              ),
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setMenuRoot('browse')}
+                            className="group mt-3 flex min-h-[56px] w-full items-center gap-3 rounded-lg bg-bg-raised px-3.5 text-left transition-colors hover:bg-bg-raised-hover"
+                          >
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-overlay">
+                              <LayoutGrid className="h-[18px] w-[18px] text-white/80" aria-hidden />
+                            </span>
+                            <span className="flex-1 text-[15px] font-medium text-white">Browse Marketplace</span>
+                            <ChevronRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                          </button>
+                        </section>
+                      </RevealItem>
+                    )}
+
+                    {menuRoot === 'browse' && spotlightGames.length > 0 && (
+                      <RevealItem>
+                        {/* Popular Games — admin-curated (games.is_spotlight).
+                            One card, hairlines between games; each game shows
+                            its sections as slim pills. */}
+                        <section>
+                          <h2 className="mb-2.5 px-1 text-[15px] font-semibold text-white">Popular Games</h2>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {spotlightGames.slice(0, 4).map((game) => (
+                              <div key={game.slug} className="group flex items-center gap-3 px-3.5 py-3">
+                                {/* Pills sit OUTSIDE the game Link (anchors
+                                    can't nest) but visually inside the row. */}
+                                <Link
+                                  href={game.href}
+                                  onClick={() => {
+                                    setMobileMenuOpen(false)
+                                    setMobileMenuTab(null)
+                                  }}
+                                  className="flex shrink-0 items-center"
+                                  aria-label={game.name}
+                                >
+                                  <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-bg-overlay ring-1 ring-white/[0.08]">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={game.iconSrc}
+                                      alt=""
+                                      width={44}
+                                      height={44}
+                                      loading="lazy"
+                                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                  </span>
+                                </Link>
+                                <div className="min-w-0 flex-1">
+                                  <Link
+                                    href={game.href}
+                                    onClick={() => {
+                                      setMobileMenuOpen(false)
+                                      setMobileMenuTab(null)
+                                    }}
+                                    className="block truncate text-[15px] font-semibold leading-tight text-white"
+                                  >
+                                    {game.name}
+                                  </Link>
+                                  {game.categoryLinks.length > 0 && (
+                                    <div className="mt-1.5 flex flex-nowrap gap-1.5 overflow-hidden">
+                                      {game.categoryLinks.slice(0, 3).map((cat) => (
+                                        <Link
+                                          key={cat.slug}
+                                          href={`/${game.slug}/${cat.slug}`}
+                                          onClick={() => {
+                                            setMobileMenuOpen(false)
+                                            setMobileMenuTab(null)
+                                          }}
+                                          className="inline-flex h-6 shrink-0 items-center rounded-md bg-white/[0.07] px-2 text-[12px] font-medium leading-none text-text-secondary transition-[background-color,color,transform] hover:bg-white/[0.12] hover:text-white active:scale-[0.97]"
+                                        >
+                                          <span className="max-w-[84px] truncate">
+                                            {cat.label.replace(/\s*\(.*?\)\s*/g, '')}
+                                          </span>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <Link
+                                  href={game.href}
+                                  onClick={() => {
+                                    setMobileMenuOpen(false)
+                                    setMobileMenuTab(null)
+                                  }}
+                                  aria-hidden
+                                  tabIndex={-1}
+                                  className="grid h-8 w-6 shrink-0 place-items-center"
+                                >
+                                  <ChevronRight aria-hidden className="h-4 w-4 text-white/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/75" />
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      </RevealItem>
                     )}
 
                     {menuRoot === 'browse' && (
-                      <>
-                        {/* Popular Games — admin-curated (games.is_spotlight)
-                            single-column rows. Frameless: squared game icon +
-                            name + category pills, divided by hairlines like the
-                            Services list. Hidden when nothing is spotlit. */}
-                        {spotlightGames.length > 0 && (
-                          <div className="mb-6">
-                            <h2 className="mb-1 font-display text-[13px] font-bold uppercase tracking-[0.14em] text-white/55">
-                              Popular Games
-                            </h2>
-                            <div>
-                              {spotlightGames.slice(0, 4).map((game) => (
-                                <div
-                                  key={game.slug}
-                                  className="group flex items-center gap-3 border-b border-white/[0.06] py-3"
-                                >
-                                  {/* Game tap → the game's currency/items
-                                      section. Squared icon tile, no round frame.
-                                      Pills sit OUTSIDE this Link (anchors can't
-                                      nest) but visually inside the row. */}
-                                  <Link
-                                    href={game.href}
-                                    onClick={() => {
-                                      setMobileMenuOpen(false)
-                                      setMobileMenuTab(null)
-                                    }}
-                                    className="flex shrink-0 items-center"
-                                    aria-label={game.name}
-                                  >
-                                    <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-white/[0.05] shadow-[0_6px_14px_-6px_rgba(0,0,0,0.7)]">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img
-                                        src={game.iconSrc}
-                                        alt=""
-                                        loading="lazy"
-                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                      />
-                                    </span>
-                                  </Link>
-                                  <div className="min-w-0 flex-1">
-                                    <Link
-                                      href={game.href}
-                                      onClick={() => {
-                                        setMobileMenuOpen(false)
-                                        setMobileMenuTab(null)
-                                      }}
-                                      className="block truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-white transition-colors hover:text-white/90"
-                                    >
-                                      {game.name}
-                                    </Link>
-                                    {/* Category pills — rectangular, home-search
-                                        style. Each links straight to its section. */}
-                                    {game.categoryLinks.length > 0 && (
-                                      <div className="mt-1.5 flex flex-nowrap gap-1.5 overflow-hidden">
-                                        {game.categoryLinks.slice(0, 3).map((cat) => (
-                                          <Link
-                                            key={cat.slug}
-                                            href={`/${game.slug}/${cat.slug}`}
-                                            onClick={() => {
-                                              setMobileMenuOpen(false)
-                                              setMobileMenuTab(null)
-                                            }}
-                                            className="inline-flex min-h-[24px] shrink-0 items-center rounded-[7px] border border-white/[0.09] bg-white/[0.06] px-2 text-[11px] font-semibold leading-none text-white/80 transition-colors hover:border-white/[0.18] hover:bg-white/[0.12] hover:text-white active:scale-[0.97]"
-                                          >
-                                            <span className="truncate max-w-[84px]">
-                                              {cat.label.replace(/\s*\(.*?\)\s*/g, '')}
-                                            </span>
-                                          </Link>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Link
-                                    href={game.href}
-                                    onClick={() => {
-                                      setMobileMenuOpen(false)
-                                      setMobileMenuTab(null)
-                                    }}
-                                    aria-hidden
-                                    tabIndex={-1}
-                                    className="shrink-0"
-                                  >
-                                    <ChevronRight aria-hidden className="h-5 w-5 text-white/45 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/80" />
-                                  </Link>
-                                </div>
-                              ))}
-                            </div>
+                      <RevealItem>
+                        <section>
+                          <div className="mb-2.5 px-1">
+                            <h2 className="text-[15px] font-semibold text-white">Services</h2>
+                            <p className="mt-0.5 text-[12.5px] text-text-tertiary">Everything you need to play more</p>
                           </div>
-                        )}
-
-                        <div className="mb-4">
-                          <h2 className="font-display text-[22px] font-extrabold tracking-[-0.03em] text-white">Services</h2>
-                          <p className="mt-0.5 text-[12px] text-white/50">Everything you need to play more</p>
-                        </div>
-                        <div>
-                          {MOBILE_SERVICE_ITEMS.map((item) => (
-                            <MobileServiceRow
-                              key={item.id}
-                              item={item}
-                              onSelect={(tabId) => setMobileMenuTab(tabId)}
-                              onClose={() => {
-                                setMobileMenuOpen(false)
-                                setMobileMenuTab(null)
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </>
+                          <div className="divide-y divide-white/[0.07] overflow-hidden rounded-lg bg-bg-raised">
+                            {MOBILE_SERVICE_ITEMS.map((item) => (
+                              <MobileServiceRow
+                                key={item.id}
+                                item={item}
+                                onSelect={(tabId) => setMobileMenuTab(tabId)}
+                                onClose={() => {
+                                  setMobileMenuOpen(false)
+                                  setMobileMenuTab(null)
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      </RevealItem>
                     )}
 
-                    <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.08] pt-4">
-                      <Link
-                        href="/account/wallet"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <Wallet className="h-4 w-4" /> Wallet
-                      </Link>
-                      <Link
-                        href="/support"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
-                      >
-                        <LifeBuoy className="h-4 w-4" /> Support
-                      </Link>
-                    </div>
-
-                    {!loading && !user && (
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMobileMenuOpen(false)
-                            authDialog.open('signup')
-                          }}
-                          className="h-10 rounded-lg bg-[#174d31] text-[13px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_24px_-14px_rgba(0,0,0,0.8)] transition-colors hover:bg-[#1e6540]"
+                    <RevealItem>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link
+                          href="/account/wallet"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
-                          Sign Up
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMobileMenuOpen(false)
-                            authDialog.open('login')
-                          }}
-                          className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                          <Wallet className="h-4 w-4" aria-hidden /> Wallet
+                        </Link>
+                        <Link
+                          href="/support"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex h-10 items-center justify-center gap-2 rounded-md bg-bg-raised text-[13px] font-semibold text-white/80 transition-colors hover:bg-bg-raised-hover hover:text-white"
                         >
-                          Log In
-                        </button>
+                          <LifeBuoy className="h-4 w-4" aria-hidden /> Support
+                        </Link>
                       </div>
-                    )}
+
+                      {!loading && !user && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMobileMenuOpen(false)
+                              authDialog.open('login')
+                            }}
+                            className="h-10 rounded-md bg-bg-raised text-[13px] font-semibold text-white transition-colors hover:bg-bg-raised-hover"
+                          >
+                            Log In
+                          </button>
+                          {/* Same white Sign Up as the navbar bar. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMobileMenuOpen(false)
+                              authDialog.open('signup')
+                            }}
+                            className="h-10 rounded-md bg-white text-[13px] font-semibold text-black transition-colors hover:bg-white/90"
+                          >
+                            Sign Up
+                          </button>
+                        </div>
+                      )}
+                    </RevealItem>
+                    </RevealGroup>
                   </div>
 
                   {/* SCREEN 2 — game list. */}
@@ -2197,7 +2193,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             <ArrowLeft className="h-5 w-5 text-white/70" />
                             <span className="text-[17px] font-semibold">{tab?.label ?? 'Games'}</span>
                           </button>
-                          <div className="relative mt-1 flex h-11 items-center overflow-hidden rounded-md border border-white/[0.10] bg-white/[0.03] focus-within:border-white/[0.22]">
+                          <div className="relative mt-1 flex h-10 items-center overflow-hidden rounded-md bg-bg-raised ring-1 ring-transparent transition-shadow focus-within:ring-white/20">
                             <Search aria-hidden className="pointer-events-none absolute left-3 h-[17px] w-[17px] text-white/45" />
                             <input
                               type="search"
