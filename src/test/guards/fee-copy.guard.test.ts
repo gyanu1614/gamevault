@@ -57,8 +57,9 @@ const PINNED_FILES = [
   'src/lib/email/index.ts',
   'src/lib/email/fee-notice.ts',
   'src/lib/discord/embeds.ts',
-  'src/components/seller/tiers/TierCard.tsx',
   'src/app/account/tiers/page.tsx',
+  'src/app/account/tiers/_TiersClient.tsx',
+  'src/app/account/tiers/_tiers-model.ts',
   // The one page that shows rates: every number on it comes from the
   // resolver at render time, so a literal in its source is a hard-coded rate.
   'src/app/(marketing)/sell/fees/page.tsx',
@@ -73,9 +74,6 @@ const PINNED_FILES = [
 const ALLOWED: Record<string, Array<{ text: string; reason: string }>> = {
   'src/lib/email/index.ts': [
     { text: 'width="100%"', reason: 'HTML table width attributes in the email shell, not a fee' },
-  ],
-  'src/components/seller/tiers/TierCard.tsx': [
-    { text: 'completion rate', reason: 'the rank REQUIREMENT "N% completion rate" is not a fee' },
   ],
   'src/features/home/components/MobileHome.tsx': [
     { text: 'width: ', reason: 'CSS percentage widths in inline styles' },

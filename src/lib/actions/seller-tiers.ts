@@ -25,6 +25,13 @@ const FALLBACK_TIER_CONFIGS = TIERS.map((t) => ({
   // Rank steps are DATA (seller_tier_config.discount_pts, fee engine); the
   // TS fallback claims no discount rather than inventing a ladder.
   discount_pts: 0,
+  // Same rule for the volume bars (the real rank criteria since the volume
+  // ranks): no numbers are claimed when the table can't be read.
+  gmv_90d_min: null,
+  orders_90d_min: null,
+  positive_rating_min: null,
+  pre_moderation_listings: t.preModerationListings,
+  bulk_daily_cap: null,
   listing_limit: t.listingLimit,
   banner_access: t.bannerAccess,
   badge_color: t.colors.badgeColor,
@@ -63,99 +70,63 @@ export async function getAllTierConfigs() {
   }
 }
 
-// ─── Current seller's tier info + stats ───────────────────────────────────────
+// ─── Current seller's rank + 90-day window facts ──────────────────────────────
 
-export async function getMyTierInfo() {
+export interface MyTierInfo {
+  /** profiles.role === 'seller' (buyers see the ladder, not a rank). */
+  isSeller: boolean
+  currentTier: string
+  /** What the 90-day window qualifies for today (the daily check only
+   *  ever moves a seller UP to it). */
+  eligibleTier: string
+  /** The same window facts check_seller_tier_eligibility uses. */
+  window: {
+    gmv: number
+    orders: number
+    positivePct: number | null
+    completionPct: number
+  }
+}
+
+/**
+ * The signed-in seller's rank and the 90-day facts it is judged on, from
+ * get_seller_tier_info (service role, scoped to the session user). The old
+ * version also read all-time sales, account age and every order status
+ * (unbounded) — the legacy criteria the page no longer shows.
+ */
+export async function getMyTierInfo(): Promise<MyTierInfo | null> {
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
   const service = getServiceClient()
-
-  // Get live seller stats (always available regardless of migration)
-  const [salesResult, profileResult, completionResult] = await Promise.all([
-    service
-      .from('orders')
-      .select('id', { count: 'exact' })
-      .eq('seller_id', user.id)
-      .eq('status', 'completed').limit(1),
-
-    service
-      .from('profiles')
-      .select('seller_rating, created_at, seller_tier')
-      .eq('id', user.id)
-      .single(),
-
-    service
-      .from('orders')
-      .select('status')
-      .eq('seller_id', user.id)
-      .not('status', 'in', '(cancelled,refunded)'),
+  const [profileResult, rpcResult] = await Promise.all([
+    service.from('profiles').select('role, seller_tier').eq('id', user.id).single(),
+    service.rpc('get_seller_tier_info', { p_user_id: user.id }),
   ])
 
-  const totalSales = salesResult.count ?? 0
-  const rating = profileResult.data?.seller_rating ?? null
-  const createdAt = profileResult.data?.created_at
-  const accountAgeDays = createdAt
-    ? Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000)
-    : 0
-  const orders = completionResult.data ?? []
-  const completionRate =
-    orders.length === 0
-      ? 100
-      : (orders.filter((o: any) => o.status === 'completed').length / orders.length) * 100
+  const profile = profileResult.data as { role: string | null; seller_tier: string | null } | null
+  const info = (rpcResult.error ? null : rpcResult.data) as {
+    current_tier?: string
+    eligible_tier?: string
+    window_gmv?: number | string | null
+    window_orders?: number | null
+    window_positive_pct?: number | string | null
+    window_completion_pct?: number | string | null
+  } | null
+  if (rpcResult.error) console.warn('[getMyTierInfo] get_seller_tier_info failed:', rpcResult.error.message)
 
-  const stats = {
-    totalSales,
-    rating,
-    accountAgeDays,
-    completionRate: Math.round(completionRate * 10) / 10,
-  }
-
-  // Try the RPC first (requires migration to be applied)
-  const { data: tierInfo, error: tierError } = await service.rpc(
-    'get_seller_tier_info',
-    { p_user_id: user.id }
-  )
-
-  if (!tierError && tierInfo) {
-    return {
-      tierInfo: tierInfo as {
-        current_tier: string
-        eligible_tier: string
-        /** Rank step — points off the category rate (fee engine); never a rate. */
-        discount_pts: number | null
-        listing_limit: number | null
-        banner_access: boolean
-        next_tier: string | null
-        next_discount_pts: number | null
-        next_min_sales: number | null
-        next_min_rating: number | null
-      },
-      stats,
-    }
-  }
-
-  // RPC not available — build fallback from profile + hardcoded config
-  console.warn('[getMyTierInfo] RPC unavailable, using fallback tier config')
-  const currentTier = profileResult.data?.seller_tier ?? DEFAULT_TIER
-  const tierConfig = FALLBACK_TIER_CONFIGS.find(t => t.tier === currentTier)
-    ?? FALLBACK_TIER_CONFIGS[0]
-  const nextConfig = FALLBACK_TIER_CONFIGS.find(t => t.sort_order === tierConfig.sort_order + 1) ?? null
-
+  const currentTier = info?.current_tier ?? profile?.seller_tier ?? DEFAULT_TIER
+  const n = (v: unknown, d: number) => (v == null || !Number.isFinite(Number(v)) ? d : Number(v))
   return {
-    tierInfo: {
-      current_tier: currentTier,
-      eligible_tier: currentTier, // can't compute without SQL function
-      discount_pts: tierConfig.discount_pts,
-      listing_limit: tierConfig.listing_limit,
-      banner_access: tierConfig.banner_access,
-      next_tier: nextConfig?.tier ?? null,
-      next_discount_pts: nextConfig?.discount_pts ?? null,
-      next_min_sales: nextConfig?.min_sales ?? null,
-      next_min_rating: nextConfig?.min_rating ?? null,
+    isSeller: profile?.role === 'seller',
+    currentTier,
+    eligibleTier: info?.eligible_tier ?? currentTier,
+    window: {
+      gmv: n(info?.window_gmv, 0),
+      orders: n(info?.window_orders, 0),
+      positivePct: info?.window_positive_pct == null ? null : n(info.window_positive_pct, 0),
+      completionPct: n(info?.window_completion_pct, 100),
     },
-    stats,
   }
 }

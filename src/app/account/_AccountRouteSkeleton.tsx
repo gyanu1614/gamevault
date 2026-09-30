@@ -23,6 +23,7 @@ import WalletLoading from './wallet/loading'
 import { WithdrawSkeleton } from './wallet/withdraw/_WithdrawSkeleton'
 import { RestrictionsSkeleton } from './restrictions/_RestrictionsSkeleton'
 import { SettingsSkeleton } from './settings/_SettingsSkeleton'
+import { TiersSkeleton } from './tiers/_TiersSkeleton'
 
 const ROUTES: { match: (path: string) => boolean; Skeleton: () => React.ReactNode }[] = [
   { match: (p) => p.startsWith('/account/settings'), Skeleton: () => <SettingsSkeleton /> },
@@ -38,6 +39,7 @@ const ROUTES: { match: (path: string) => boolean; Skeleton: () => React.ReactNod
   { match: (p) => p.startsWith('/account/analytics'), Skeleton: AnalyticsLoading },
   { match: (p) => p.startsWith('/account/become-seller'), Skeleton: BecomeSellerLoading },
   { match: (p) => p.startsWith('/account/seller-status'), Skeleton: SellerStatusLoading },
+  { match: (p) => p.startsWith('/account/tiers'), Skeleton: () => <TiersSkeleton /> },
   { match: (p) => p === '/account' || p.startsWith('/account/dashboard'), Skeleton: DashboardLoading },
 ]
 
