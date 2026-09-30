@@ -1,23 +1,11 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getDisputeById } from '@/lib/actions/admin-disputes'
 import { createClient } from '@/lib/supabase/client'
-import { motion } from 'framer-motion'
-import {
-  ArrowLeft,
-  AlertTriangle,
-  DollarSign,
-  Calendar,
-  User,
-  CheckCircle,
-  AlertOctagon,
-  Shield,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { CaretDown, CaretLeft, ChatsCircle, CheckCircle, Scales, WarningOctagon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import ChatInterface from '@/components/chat/ChatInterface'
 import { useAuth } from '@/hooks/use-auth'
@@ -26,11 +14,11 @@ import ResolveDisputeModal from '@/components/admin/disputes/ResolveDisputeModal
 import EscalateDisputeModal from '@/components/admin/disputes/EscalateDisputeModal'
 import EscalationBanner from '@/components/admin/disputes/EscalationBanner'
 import DisputeResolutionCard from '@/components/admin/disputes/DisputeResolutionCard'
-import { IconChip } from '../../components/kit'
+import { AdminEmpty, AdminPanel, StatusBadge, adminBtn, type ChipTone } from '../../components/kit'
+import { DisputeSkeleton } from './_DisputeSkeleton'
 
 export default function DisputeDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const disputeId = params.id as string
   const { user } = useAuth()
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -57,14 +45,12 @@ export default function DisputeDetailPage() {
   // Fetch conversation for this order
   useEffect(() => {
     if (!dispute?.transaction_id) {
-      console.log('❌ No transaction_id in dispute:', dispute)
       return
     }
 
     const fetchConversation = async () => {
       const supabase = createClient()
 
-      console.log('🔍 Fetching order for transaction_id:', dispute.transaction_id)
 
       // Get order details
       const { data: orderData, error: orderError } = (await supabase
@@ -102,7 +88,6 @@ export default function DisputeDetailPage() {
         return
       }
 
-      console.log('✅ Order data:', orderData)
 
       if (orderData) {
         setOrder({
@@ -129,7 +114,6 @@ export default function DisputeDetailPage() {
           return
         }
 
-        console.log('✅ Conversation found:', conv)
 
         if (conv) {
           setConversationId(conv.id)
@@ -140,90 +124,64 @@ export default function DisputeDetailPage() {
     fetchConversation()
   }, [dispute?.transaction_id])
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
-  }
 
-  const formatAmount = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount)
-  }
+  const formatAmount = (amount: number, currency: string = 'USD') =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      open: { label: 'Open', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-      under_review: { label: 'Under Review', className: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-      escalated: { label: 'Escalated', className: 'bg-red-500/20 text-red-400 border-red-500/30' },
-      resolved_buyer_favor: { label: 'Resolved - Buyer', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
-      resolved_seller_favor: { label: 'Resolved - Seller', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
-      resolved_partial: { label: 'Resolved - Partial', className: 'bg-green-500/20 text-green-400 border-green-500/30' },
-      closed: { label: 'Closed', className: 'border-border-default bg-bg-overlay text-text-secondary' },
-    }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.open
-
-    return (
-      <span className={cn(
-        "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border",
-        config.className
-      )}>
-        {config.label}
-      </span>
-    )
+  const STATUS: Record<string, { label: string; tone: ChipTone }> = {
+    open: { label: 'Open', tone: 'warning' },
+    under_review: { label: 'Under Review', tone: 'info' },
+    escalated: { label: 'Escalated', tone: 'error' },
+    resolved_buyer_favor: { label: 'Resolved – Buyer', tone: 'success' },
+    resolved_seller_favor: { label: 'Resolved – Seller', tone: 'success' },
+    resolved_partial: { label: 'Resolved – Partial', tone: 'success' },
+    closed: { label: 'Closed', tone: 'neutral' },
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-border-default border-t-lime"></div>
-      </div>
-    )
+    return <DisputeSkeleton />
   }
 
   if (!dispute) {
-    return (
-      <div className="p-6">
-        <div className="rounded-xl border border-border-default bg-bg-raised p-12 text-center">
-          <AlertTriangle className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
-          <p className="text-lg font-medium text-text-primary">Dispute not found</p>
-        </div>
-      </div>
-    )
+    return <AdminEmpty icon={Scales} title="Dispute not found" hint="It may have been removed, or the link is wrong." />
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Back Button */}
-      <button
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Disputes
-      </button>
+  const resolved = dispute.status.startsWith('resolved_') || dispute.status === 'closed'
+  const st = STATUS[dispute.status] ?? STATUS.open
+  const ref = `#${dispute.id.slice(0, 8).toUpperCase()}`
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Order Chat */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Resolution Card - Show when dispute is resolved - Merged with order details */}
-          {(dispute.status.startsWith('resolved_') || dispute.status === 'closed') && (
+  return (
+    <div className="space-y-5">
+      <Link
+        href="/admin/disputes"
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+      >
+        <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+        Disputes
+      </Link>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Main */}
+        <div className="min-w-0 space-y-5 lg:col-span-2">
+          {resolved && (
             <DisputeResolutionCard
               status={dispute.status}
               resolutionType={dispute.resolution_type}
               resolvedAmount={dispute.resolved_amount}
               resolutionNotes={dispute.resolution_notes}
-              resolvedBy={dispute.resolved_by_user ? {
-                username: dispute.resolved_by_username,
-                full_name: dispute.resolved_by_name
-              } : undefined}
+              resolvedBy={
+                dispute.resolved_by_user
+                  ? { username: dispute.resolved_by_username, full_name: dispute.resolved_by_name }
+                  : undefined
+              }
               resolvedAt={dispute.resolved_at}
               currency={dispute.currency}
               buyerUsername={dispute.buyer_username}
@@ -238,328 +196,214 @@ export default function DisputeDetailPage() {
             />
           )}
 
-          {/* Escalation Banner - Show when dispute is escalated */}
           {dispute.status === 'escalated' && dispute.escalated_at && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <EscalationBanner
-                escalatedBy={dispute.escalated_by ? {
-                  username: dispute.escalated_by_username || 'Admin',
-                  full_name: dispute.escalated_by_name
-                } : undefined}
-                escalatedAt={dispute.escalated_at}
-                escalationReason={dispute.escalation_reason}
-              />
-            </motion.div>
+            <EscalationBanner
+              escalatedBy={
+                dispute.escalated_by
+                  ? { username: dispute.escalated_by_username || 'Admin', full_name: dispute.escalated_by_name }
+                  : undefined
+              }
+              escalatedAt={dispute.escalated_at}
+              escalationReason={dispute.escalation_reason}
+            />
           )}
 
-          {/* Dispute Header - Hide for resolved disputes (info is in DisputeResolutionCard) */}
-          {!(dispute.status.startsWith('resolved_') || dispute.status === 'closed') && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-border-default bg-bg-raised overflow-hidden"
-          >
-            {/* Product Visual Header */}
-            <div className="relative bg-bg-overlay border-b border-border-subtle p-6">
-              <div className="flex items-start gap-4">
-                {/* Listing Image */}
+          {!resolved && (
+            <AdminPanel pad={false} className="overflow-hidden">
+              <div className="flex items-start gap-4 border-b border-white/[0.06] p-4 sm:p-6">
                 {order?.listing?.images && order.listing.images.length > 0 ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={order.listing.images[0]}
-                    alt={order?.listing?.title}
-                    className="w-20 h-20 rounded-xl object-cover border border-border-default flex-shrink-0"
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-md object-cover sm:h-20 sm:w-20"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-xl bg-bg-overlay-2 border border-border-default flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="h-8 w-8 text-text-tertiary" />
-                  </div>
+                  <span className="grid h-16 w-16 shrink-0 place-items-center rounded-md bg-white/[0.05] text-text-tertiary sm:h-20 sm:w-20">
+                    <Scales aria-hidden weight="bold" className="h-7 w-7" />
+                  </span>
                 )}
-
-                {/* Order Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h1 className="text-xl font-bold text-text-primary mb-1 line-clamp-1">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h1 className="line-clamp-2 text-[18px] font-bold leading-tight text-text-primary sm:text-[20px]">
                         {order?.listing?.title || 'Order Item'}
                       </h1>
-                      <p className="text-xs text-text-tertiary font-medium">
-                        Order #{order?.order_number || dispute.transaction_id?.slice(0, 8).toUpperCase()}
+                      <p className="mt-1 text-[12.5px] text-text-tertiary">
+                        Order{' '}
+                        {order?.id ? (
+                          <Link href={`/admin/orders/${order.id}`} className="font-mono text-text-secondary underline-offset-4 hover:underline">
+                            #{order.order_number || dispute.transaction_id?.slice(0, 8).toUpperCase()}
+                          </Link>
+                        ) : (
+                          <span className="font-mono">#{dispute.transaction_id?.slice(0, 8).toUpperCase()}</span>
+                        )}
                       </p>
                     </div>
-                    {getStatusBadge(dispute.status)}
+                    <StatusBadge status={st.label} tone={st.tone} className="px-2.5 py-1 text-[12.5px]" />
                   </div>
-
-                  {/* Dispute Reason Badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 mt-2">
-                    <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
-                    <span className="text-xs font-medium text-red-400 capitalize">
-                      {dispute.reason?.replace(/_/g, ' ')}
-                    </span>
-                  </div>
+                  <span className="mt-2 inline-flex rounded-full bg-error-bg px-2.5 py-0.5 text-[12px] font-semibold capitalize text-error">
+                    {dispute.reason?.replace(/_/g, ' ')}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Dispute Details */}
-            <div className="p-6 space-y-6">
-              {/* Dispute Description */}
-              <div>
-                <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">
-                  Dispute Reason
-                </h3>
-                <p className="text-sm font-medium text-text-primary mb-2">
-                  {dispute.title}
-                </p>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                  {dispute.description}
-                </p>
-              </div>
-
-              {/* Metadata Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <IconChip icon={DollarSign} tone="lime" size="lg" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-text-tertiary">Disputed Amount</p>
-                    <p className="text-sm font-semibold tabular-nums text-text-primary">
+              <div className="space-y-5 p-4 sm:p-6">
+                <div>
+                  <p className="text-[12.5px] font-medium text-text-tertiary">What the Buyer Says</p>
+                  <p className="mt-1 text-[14px] font-medium text-text-primary">{dispute.title}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-[13.5px] leading-relaxed text-text-secondary">{dispute.description}</p>
+                </div>
+                <dl className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                    <dt className="text-[12px] text-text-tertiary">Disputed Amount</dt>
+                    <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-text-primary">
                       {formatAmount(dispute.disputed_amount, dispute.currency)}
-                    </p>
+                    </dd>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <IconChip icon={Calendar} tone="neutral" size="lg" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-text-tertiary">Created</p>
-                    <p className="text-xs font-medium text-text-primary">
-                      {formatDate(dispute.created_at)}
-                    </p>
+                  <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                    <dt className="text-[12px] text-text-tertiary">Opened</dt>
+                    <dd className="mt-0.5 text-[13px] font-medium text-text-primary">{formatDate(dispute.created_at)}</dd>
                   </div>
-                </div>
+                </dl>
               </div>
-            </div>
-          </motion.div>
+            </AdminPanel>
           )}
 
-          {/* Order Conversation - Admin Can Intervene */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-xl border border-border-default bg-bg-raised overflow-hidden"
-          >
-            <div
-              className="bg-lime-tint-bg border-b border-lime-tint-border px-4 py-3 cursor-pointer transition-opacity hover:opacity-80"
+          {/* Order conversation — the admin can step in */}
+          <AdminPanel pad={false} className="overflow-hidden">
+            <button
+              type="button"
               onClick={() => setIsChatCollapsed(!isChatCollapsed)}
+              aria-expanded={!isChatCollapsed}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] sm:px-5"
             >
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-lime-text" />
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-lime-text">
-                    Order Conversation - Admin View
-                  </div>
-                  <div className="text-xs text-text-secondary">
-                    You can view and participate in this conversation
-                  </div>
-                </div>
-                {isChatCollapsed ? (
-                  <ChevronDown className="w-5 h-5 text-lime-text flex-shrink-0" />
-                ) : (
-                  <ChevronUp className="w-5 h-5 text-lime-text flex-shrink-0" />
-                )}
-              </div>
-            </div>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/[0.05] text-text-primary">
+                <ChatsCircle aria-hidden weight="bold" className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold text-text-primary">Order Conversation</span>
+                <span className="block text-[12.5px] text-text-tertiary">Admin view — you can read and reply</span>
+              </span>
+              <CaretDown
+                aria-hidden
+                weight="bold"
+                className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', !isChatCollapsed && 'rotate-180')}
+              />
+            </button>
 
             {!isChatCollapsed && (
-              <div className="h-[600px]">
-              {conversationId && user && order ? (
-                <ChatInterface
-                  conversationId={conversationId}
-                  currentUserId={user.id}
-                  order={order}
-                  className="h-full"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-sm text-text-secondary">Loading conversation...</p>
+              <div className="h-[560px] border-t border-white/[0.06] sm:h-[600px]">
+                {conversationId && user && order ? (
+                  <ChatInterface conversationId={conversationId} currentUserId={user.id} order={order} className="h-full" />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[13.5px] text-text-tertiary">
+                    Loading conversation…
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             )}
-          </motion.div>
+          </AdminPanel>
         </div>
 
-        {/* Sidebar - Right Side */}
-        <div className="space-y-6">
-          {/* Parties */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="rounded-xl border border-border-default bg-bg-raised p-6"
-          >
-            <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-              Parties
-            </h3>
-
-            {/* Buyer */}
-            <div className="mb-4 pb-4 border-b border-border-subtle">
-              <p className="text-xs text-text-tertiary mb-2">Buyer</p>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center">
-                  <User className="h-5 w-5 text-text-secondary" />
+        {/* Side */}
+        <div className="min-w-0 space-y-5">
+          <AdminPanel pad={false}>
+            <div className="divide-y divide-white/[0.06]">
+              {[
+                { role: 'Buyer', name: dispute.buyer_name || dispute.buyer_username, email: dispute.buyer_email },
+                { role: 'Seller', name: dispute.seller_name || dispute.seller_username, email: dispute.seller_email },
+              ].map((p) => (
+                <div key={p.role} className="p-4 sm:p-5">
+                  <p className="mb-2.5 text-[12.5px] font-medium text-text-tertiary">{p.role}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.07] text-[14px] font-bold text-text-primary">
+                      {(p.name || '?').charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-semibold text-text-primary">{p.name}</p>
+                      {p.email && <p className="truncate text-[12.5px] text-text-tertiary">{p.email}</p>}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {dispute.buyer_name || dispute.buyer_username}
-                  </p>
-                  <p className="text-xs text-text-tertiary">{dispute.buyer_email}</p>
-                </div>
-              </div>
+              ))}
             </div>
+          </AdminPanel>
 
-            {/* Seller */}
-            <div>
-              <p className="text-xs text-text-tertiary mb-2">Seller</p>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center">
-                  <User className="h-5 w-5 text-text-secondary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {dispute.seller_name || dispute.seller_username}
-                  </p>
-                  <p className="text-xs text-text-tertiary">{dispute.seller_email}</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Actions or Resolution Info */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="rounded-xl border border-border-default bg-bg-raised p-6 space-y-4"
-          >
-            {dispute.status.startsWith('resolved_') || dispute.status === 'closed' ? (
+          <AdminPanel>
+            {resolved ? (
               <>
-                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
-                  Resolution Details
-                </h3>
-
-                {/* Dispute Reference ID */}
-                <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-                  <p className="text-xs text-text-tertiary mb-1">Dispute Reference ID</p>
-                  <p className="text-sm font-mono font-medium text-text-primary">
-                    #{dispute.id.slice(0, 8).toUpperCase()}
-                  </p>
-                  <p className="text-xs text-text-tertiary mt-1">Use this ID to reference this case</p>
-                </div>
-
-                {/* Resolved By */}
-                {dispute.resolved_by_user && (
-                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <User className="h-3.5 w-3.5 text-text-tertiary" />
-                      <p className="text-xs text-text-tertiary">Resolved By</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full border border-border-subtle bg-bg-overlay-2 flex items-center justify-center flex-shrink-0">
-                        <User className="h-4 w-4 text-text-secondary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">
-                          {dispute.resolved_by_name || dispute.resolved_by_username || 'Admin'}
-                        </p>
-                        <p className="text-xs text-text-tertiary">
-                          {dispute.resolved_at ? formatDate(dispute.resolved_at) : ''}
-                        </p>
-                      </div>
-                    </div>
+                <h2 className="mb-3 text-[15px] font-semibold text-text-primary">Resolution</h2>
+                <dl className="space-y-2">
+                  <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                    <dt className="text-[12px] text-text-tertiary">Dispute Reference</dt>
+                    <dd className="mt-0.5 font-mono text-[13.5px] font-semibold text-text-primary">{ref}</dd>
                   </div>
-                )}
-
-                {/* Resolution Type */}
-                {dispute.resolution_type && (
-                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-                    <p className="text-xs text-text-tertiary mb-1">Resolution Type</p>
-                    <p className="text-sm font-medium text-text-primary capitalize">
-                      {dispute.resolution_type.replace(/_/g, ' ')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Refund Amount */}
-                {dispute.resolved_amount !== undefined && dispute.resolved_amount > 0 && (
-                  <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="h-3.5 w-3.5 text-text-tertiary" />
-                      <p className="text-xs text-text-tertiary">Refund Amount</p>
+                  {dispute.resolved_by_user && (
+                    <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                      <dt className="text-[12px] text-text-tertiary">Resolved By</dt>
+                      <dd className="mt-0.5 text-[13.5px] font-medium text-text-primary">
+                        {dispute.resolved_by_name || dispute.resolved_by_username || 'Admin'}
+                        {dispute.resolved_at && (
+                          <span className="block text-[12px] font-normal text-text-tertiary">{formatDate(dispute.resolved_at)}</span>
+                        )}
+                      </dd>
                     </div>
-                    <p className="text-lg font-bold tabular-nums text-green-400">
-                      {formatAmount(dispute.resolved_amount, dispute.currency)}
-                    </p>
-                  </div>
-                )}
+                  )}
+                  {dispute.resolution_type && (
+                    <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                      <dt className="text-[12px] text-text-tertiary">Resolution Type</dt>
+                      <dd className="mt-0.5 text-[13.5px] font-medium capitalize text-text-primary">
+                        {dispute.resolution_type.replace(/_/g, ' ')}
+                      </dd>
+                    </div>
+                  )}
+                  {dispute.resolved_amount !== undefined && dispute.resolved_amount > 0 && (
+                    <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+                      <dt className="text-[12px] text-text-tertiary">Refund Amount</dt>
+                      <dd className="mt-0.5 text-[16px] font-bold tabular-nums text-success">
+                        {formatAmount(dispute.resolved_amount, dispute.currency)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
               </>
             ) : dispute.status === 'escalated' ? (
               <>
-                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
-                  Escalation Info
-                </h3>
-                <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <AlertOctagon className="h-4 w-4 text-orange-400" />
-                    <div>
-                      <p className="text-sm font-medium text-orange-400">Escalated to Senior Admin</p>
-                      <p className="text-xs text-text-secondary mt-1">Requires senior admin review</p>
-                    </div>
-                  </div>
-                </div>
+                <h2 className="mb-3 text-[15px] font-semibold text-text-primary">Escalation</h2>
+                <p className="flex items-start gap-2 rounded-md bg-warning-bg px-3.5 py-3 text-[13px] text-warning">
+                  <WarningOctagon aria-hidden weight="bold" className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Escalated to a senior admin</span>
+                    <span className="text-text-secondary">Waiting for senior review.</span>
+                  </span>
+                </p>
+                <p className="mt-3 text-[12.5px] text-text-tertiary">
+                  Reference <span className="font-mono text-text-secondary">{ref}</span>
+                </p>
               </>
             ) : (
               <>
-                <h3 className="text-[11.5px] font-semibold text-text-tertiary uppercase tracking-wider">
-                  Actions
-                </h3>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-start border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-400"
-                  onClick={() => setShowResolveModal(true)}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Resolve Dispute
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-start border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400"
-                  onClick={() => setShowEscalateModal(true)}
-                >
-                  <AlertOctagon className="h-4 w-4 mr-2" />
-                  Escalate to Senior
-                </Button>
-
-                {/* Dispute Reference ID */}
-                <div className="mt-4 pt-4 border-t border-border-subtle">
-                  <p className="text-xs text-text-tertiary mb-1">Dispute Reference</p>
-                  <p className="text-xs font-mono font-medium text-text-secondary">
-                    #{dispute.id.slice(0, 8).toUpperCase()}
-                  </p>
+                <h2 className="mb-3 text-[15px] font-semibold text-text-primary">Actions</h2>
+                <div className="space-y-2">
+                  <button type="button" onClick={() => setShowResolveModal(true)} className={cn(adminBtn.primary, 'w-full')}>
+                    <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+                    Resolve Dispute
+                  </button>
+                  <button type="button" onClick={() => setShowEscalateModal(true)} className={cn(adminBtn.danger, 'w-full')}>
+                    <WarningOctagon aria-hidden weight="bold" className="h-4 w-4" />
+                    Escalate to Senior
+                  </button>
                 </div>
+                <p className="mt-4 border-t border-white/[0.06] pt-3 text-[12.5px] text-text-tertiary">
+                  Reference <span className="font-mono text-text-secondary">{ref}</span>
+                </p>
               </>
             )}
-          </motion.div>
+          </AdminPanel>
         </div>
       </div>
 
-      {/* Resolve Dispute Modal */}
       {dispute && order && (
         <ResolveDisputeModal
           isOpen={showResolveModal}
@@ -575,7 +419,6 @@ export default function DisputeDetailPage() {
         />
       )}
 
-      {/* Escalate Dispute Modal */}
       {dispute && (
         <EscalateDisputeModal
           isOpen={showEscalateModal}

@@ -1,4 +1,4 @@
-import { AlertTriangle, User, Calendar } from 'lucide-react'
+import { WarningOctagon } from '@phosphor-icons/react/dist/ssr/WarningOctagon'
 import { cn } from '@/lib/utils'
 
 interface EscalationBannerProps {
@@ -11,67 +11,41 @@ interface EscalationBannerProps {
   className?: string
 }
 
-export default function EscalationBanner({
-  escalatedBy,
-  escalatedAt,
-  escalationReason,
-  className
-}: EscalationBannerProps) {
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
+/** Shown on an escalated dispute: who, when, why. Fill only (warning tint). */
+export default function EscalationBanner({ escalatedBy, escalatedAt, escalationReason, className }: EscalationBannerProps) {
   return (
-    <div className={cn(
-      'rounded-xl border border-orange-500/30 bg-orange-500/[0.08] p-5',
-      className
-    )}>
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-orange-500/40 bg-orange-500/20">
-          <AlertTriangle className="h-5 w-5 text-orange-400" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-bold text-orange-400 uppercase tracking-wider">
-              Escalated to Senior Admin
-            </h3>
-          </div>
-
-          <div className="space-y-2 text-sm">
+    <div className={cn('rounded-lg bg-warning-bg p-4 sm:p-5', className)}>
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[color-mix(in_srgb,var(--color-warning)_16%,transparent)] text-warning">
+          <WarningOctagon aria-hidden weight="bold" className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[15px] font-semibold text-warning">Escalated to Senior Admin</h3>
+          <p className="mt-1 text-[12.5px] text-text-secondary">
             {escalatedBy && (
-              <div className="flex items-center gap-2 text-text-secondary">
-                <User className="h-3.5 w-3.5 text-orange-400/60" />
-                <span className="text-xs text-text-tertiary">Escalated by:</span>
-                <span className="font-medium">{escalatedBy.full_name || escalatedBy.username}</span>
-              </div>
+              <>
+                By <span className="font-semibold text-text-primary">{escalatedBy.full_name || escalatedBy.username}</span> ·{' '}
+              </>
             )}
-
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Calendar className="h-3.5 w-3.5 text-orange-400/60" />
-              <span className="text-xs text-text-tertiary">Escalated on:</span>
-              <span className="font-medium">{formatDate(escalatedAt)}</span>
-            </div>
-
-            {escalationReason && (
-              <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.05] p-3">
-                <p className="text-xs text-text-tertiary font-semibold mb-1.5">Escalation Reason:</p>
-                <p className="text-sm text-text-secondary leading-relaxed">{escalationReason}</p>
-              </div>
-            )}
-
-            <div className="mt-4 pt-4 border-t border-orange-500/20">
-              <p className="text-xs text-text-secondary leading-relaxed">
-                This dispute has been flagged for senior admin review. Senior admins have full authority to review and make final decisions.
-              </p>
-            </div>
-          </div>
+            {formatDate(escalatedAt)}
+          </p>
+          {escalationReason && (
+            <p className="mt-3 rounded-md bg-black/[0.18] px-3.5 py-2.5 text-[13px] leading-relaxed text-text-secondary">
+              {escalationReason}
+            </p>
+          )}
+          <p className="mt-3 text-[12.5px] leading-relaxed text-text-tertiary">
+            Flagged for senior admin review. Senior admins have full authority to review and make the final decision.
+          </p>
         </div>
       </div>
     </div>

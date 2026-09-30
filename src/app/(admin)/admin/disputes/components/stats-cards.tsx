@@ -1,5 +1,5 @@
-import { AlertTriangle, Clock, CheckCircle, AlertOctagon } from 'lucide-react'
-import { StatCard } from '../../components/kit'
+import { StatStrip } from '@/components/account/AccountSurface'
+import { SkAdminStrip } from '../../components/AdminSkeletons'
 
 interface StatsCardsProps {
   stats: {
@@ -13,15 +13,18 @@ interface StatsCardsProps {
   } | null
 }
 
+/** The four dispute numbers as one panel with hairlines. */
 export function StatsCards({ stats }: StatsCardsProps) {
-  if (!stats) return null
+  if (!stats) return <SkAdminStrip count={4} />
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-      <StatCard label="Open" value={stats.open} icon={AlertTriangle} tone="warning" />
-      <StatCard label="Under Review" value={stats.underReview} icon={Clock} tone="info" />
-      <StatCard label="Escalated" value={stats.escalated} icon={AlertOctagon} tone="error" />
-      <StatCard label="Resolved (7d)" value={stats.resolvedThisWeek} icon={CheckCircle} tone="success" />
-    </div>
+    <StatStrip
+      stats={[
+        { label: 'Open', value: <span className={stats.open > 0 ? 'text-warning' : undefined}>{stats.open}</span> },
+        { label: 'Under Review', value: stats.underReview },
+        { label: 'Escalated', value: <span className={stats.escalated > 0 ? 'text-error' : undefined}>{stats.escalated}</span> },
+        { label: 'Resolved (7d)', value: stats.resolvedThisWeek },
+      ]}
+    />
   )
 }

@@ -4,22 +4,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { resolveDispute } from '@/lib/actions/admin-disputes'
-import { CheckCircle, DollarSign, XCircle, Loader2 } from 'lucide-react'
+import {
+  ArrowsSplit,
+  CheckCircle,
+  CircleNotch,
+  CurrencyDollar,
+  XCircle,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { adminBtn } from '@/app/(admin)/admin/components/kit'
 
 interface ResolveDisputeModalProps {
   isOpen: boolean
@@ -129,183 +127,103 @@ export default function ResolveDisputeModal({
     }
   }
 
+  const options: { value: ResolutionDecision; title: string; sub: string; icon: PhosphorIcon }[] = [
+    { value: 'buyer_favor', title: 'Favor Buyer', sub: 'Full refund · seller $0', icon: CurrencyDollar },
+    { value: 'seller_favor', title: 'Favor Seller', sub: 'Seller paid out · no refund', icon: CheckCircle },
+    { value: 'partial', title: 'Partial Refund', sub: 'Split the amount', icon: ArrowsSplit },
+    { value: 'dismiss', title: 'Dismiss', sub: 'Close without action', icon: XCircle },
+  ]
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px] max-h-[85dvh] rounded-xl border-border-default bg-bg-raised">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-text-primary">
-            Resolve Dispute
-          </DialogTitle>
-          <DialogDescription className="text-sm text-text-secondary">
+      <DialogContent className="max-w-[480px] border-0 p-5 sm:p-6">
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold">Resolve Dispute</DialogTitle>
+          <DialogDescription className="mt-1.5">
             ${dispute.disputed_amount.toFixed(2)} · {dispute.buyer_username} vs {dispute.seller_username}
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <div className="space-y-4 py-3">
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-[13px] font-medium text-text-secondary">Resolution Decision</p>
+            <RadioGroup value={decision} onValueChange={(value) => setDecision(value as ResolutionDecision)} className="gap-2">
+              {options.map((o) => {
+                const selected = decision === o.value
+                const Icon = o.icon
+                return (
+                  <div
+                    key={o.value}
+                    className={cn(
+                      'rounded-md transition-colors',
+                      selected ? 'bg-white/[0.09] ring-1 ring-inset ring-white/[0.12]' : 'bg-bg-overlay hover:bg-bg-overlay-2',
+                    )}
+                  >
+                    <label htmlFor={o.value} className="flex cursor-pointer items-center gap-3 p-3">
+                      <RadioGroupItem value={o.value} id={o.value} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-medium text-text-primary">{o.title}</span>
+                        <span className="block text-[12.5px] text-text-tertiary">{o.sub}</span>
+                      </span>
+                      <Icon aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
+                    </label>
 
-          {/* Resolution Decision */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-text-secondary">Resolution Decision</Label>
-            <RadioGroup value={decision} onValueChange={(value) => setDecision(value as ResolutionDecision)}>
-              {/* Favor Buyer */}
-              <div
-                className={cn(
-                  'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
-                  decision === 'buyer_favor'
-                    ? 'bg-green-500/10 border-green-500/30 shadow-sm'
-                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
-                )}
-                onClick={() => setDecision('buyer_favor')}
-              >
-                <RadioGroupItem value="buyer_favor" id="buyer_favor" />
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor="buyer_favor" className="text-sm font-medium text-text-primary cursor-pointer">
-                    Favor Buyer
-                  </Label>
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    Full refund · Seller $0
-                  </p>
-                </div>
-                <DollarSign className="h-4 w-4 text-green-400 flex-shrink-0" />
-              </div>
-
-              {/* Favor Seller */}
-              <div
-                className={cn(
-                  'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
-                  decision === 'seller_favor'
-                    ? 'bg-lime-tint-bg border-lime-tint-border shadow-sm'
-                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
-                )}
-                onClick={() => setDecision('seller_favor')}
-              >
-                <RadioGroupItem value="seller_favor" id="seller_favor" />
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor="seller_favor" className="text-sm font-medium text-text-primary cursor-pointer">
-                    Favor Seller
-                  </Label>
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    Seller paid out · No refund
-                  </p>
-                </div>
-                <CheckCircle className="h-4 w-4 text-lime-text flex-shrink-0" />
-              </div>
-
-              {/* Partial Refund */}
-              <div
-                className={cn(
-                  'border rounded-lg cursor-pointer transition-all',
-                  decision === 'partial'
-                    ? 'bg-blue-500/10 border-blue-500/30 shadow-sm'
-                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
-                )}
-                onClick={() => setDecision('partial')}
-              >
-                <div className="flex items-center gap-3 p-3">
-                  <RadioGroupItem value="partial" id="partial" />
-                  <div className="flex-1 min-w-0">
-                    <Label htmlFor="partial" className="text-sm font-medium text-text-primary cursor-pointer">
-                      Partial Refund
-                    </Label>
-                    <p className="text-xs text-text-tertiary mt-0.5">
-                      Split amount
-                    </p>
-                  </div>
-                  <DollarSign className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                </div>
-
-                {/* Partial Amount Input */}
-                {decision === 'partial' && (
-                  <div className="px-3 pb-3 pt-1 border-t border-border-subtle">
-                    <div className="relative mt-2">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">$</span>
-                      <Input
-                        id="partialAmount"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        max={dispute.disputed_amount}
-                        value={partialAmount}
-                        onChange={(e) => setPartialAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="pl-6 h-8 text-sm rounded-lg bg-bg-base border-border-default text-text-primary focus:border-focus-border focus:outline-none"
-                      />
-                    </div>
-                    {partialAmount && parseFloat(partialAmount) > 0 && (
-                      <p className="text-xs text-text-tertiary mt-1.5">
-                        Seller gets ${(dispute.disputed_amount - parseFloat(partialAmount || '0')).toFixed(2)}
-                      </p>
+                    {o.value === 'partial' && selected && (
+                      <div className="border-t border-white/[0.06] px-3 pb-3 pt-3">
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary">$</span>
+                          <input
+                            id="partialAmount"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0.01"
+                            max={dispute.disputed_amount}
+                            value={partialAmount}
+                            onChange={(e) => setPartialAmount(e.target.value)}
+                            placeholder="0.00"
+                            aria-label="Partial refund amount"
+                            className={cn(accountInputCls, 'pl-7')}
+                          />
+                        </div>
+                        {partialAmount && parseFloat(partialAmount) > 0 && (
+                          <p className="mt-1.5 text-[12.5px] text-text-tertiary">
+                            Seller gets ${(dispute.disputed_amount - parseFloat(partialAmount || '0')).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-
-              {/* Dismiss */}
-              <div
-                className={cn(
-                  'flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all',
-                  decision === 'dismiss'
-                    ? 'bg-bg-overlay-2 border-border-strong shadow-sm'
-                    : 'bg-bg-overlay border-border-subtle hover:border-border-default'
-                )}
-                onClick={() => setDecision('dismiss')}
-              >
-                <RadioGroupItem value="dismiss" id="dismiss" />
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor="dismiss" className="text-sm font-medium text-text-primary cursor-pointer">
-                    Dismiss
-                  </Label>
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    Close without action
-                  </p>
-                </div>
-                <XCircle className="h-4 w-4 text-text-secondary flex-shrink-0" />
-              </div>
+                )
+              })}
             </RadioGroup>
           </div>
 
-          {/* Resolution Notes */}
-          <div className="space-y-1.5">
-            <Label htmlFor="notes" className="text-xs font-medium text-text-secondary">
-              Resolution Notes <span className="text-red-400">*</span>
-            </Label>
-            <Textarea
+          <div>
+            <label htmlFor="notes" className="mb-1.5 block text-[13px] font-medium text-text-secondary">
+              Resolution Notes <span className="text-error">*</span>
+            </label>
+            <textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Explain your decision. Both parties will see this."
-              className="min-h-[80px] text-sm rounded-lg bg-bg-base border-border-default text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
+              rows={3}
+              className={cn(accountInputCls, 'resize-none')}
               required
             />
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="h-9 border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary text-sm"
-          >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={handleClose} disabled={isSubmitting} className={adminBtn.secondary}>
             Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting || !notes.trim()}
-            className="h-9 bg-lime-pressed hover:bg-lime text-text-inverse font-bold text-sm"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                Resolving...
-              </>
-            ) : (
-              'Resolve Dispute'
-            )}
-          </Button>
-        </DialogFooter>
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={isSubmitting || !notes.trim()} className={adminBtn.primary}>
+            {isSubmitting && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? 'Resolving…' : 'Resolve Dispute'}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )
