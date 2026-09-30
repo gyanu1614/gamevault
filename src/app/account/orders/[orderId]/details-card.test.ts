@@ -33,10 +33,10 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 describe('buyer fees', () => {
   const summary = { itemPrice: 4.99, marketplaceFee: 0.1, paymentFee: 0.25, promoDiscount: 0, total: 5.34, paidWith: 'Crypto' }
 
-  it('one Fees row with the combined amount and a breakdown button', () => {
+  it('one Service Fee row with the combined amount and a breakdown button', () => {
     const html = render({ role: 'buyer', orderStatus: 'paid', paymentSummary: summary })
     const t = text(html)
-    expect(t).toMatch(/Fees \$0\.35/)
+    expect(t).toMatch(/Service Fee \$0\.35/)
     expect(t).not.toMatch(/Marketplace Fee/)
     expect(t).not.toMatch(/Payment Fee/)
     expect(html).toMatch(/aria-label="Fee breakdown"/)

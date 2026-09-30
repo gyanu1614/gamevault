@@ -21,7 +21,7 @@
  * preselects.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -61,7 +61,7 @@ import CurrencyExchangeRoundedIcon from '@mui/icons-material/CurrencyExchangeRou
 import GppGoodRoundedIcon from '@mui/icons-material/GppGoodRounded'
 import HttpsRoundedIcon from '@mui/icons-material/HttpsRounded'
 import PublicRoundedIcon from '@mui/icons-material/PublicRounded'
-import { createCheckout } from '@/lib/actions/checkout'
+import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
 import { clampCheckoutQty } from './qty'
@@ -69,7 +69,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { cn } from '@/lib/utils'
-import { buyerFee, MARKETPLACE_FEE_LABEL, PROCESSING_FEE_LABEL } from '@/lib/fees'
+import { SERVICE_FEE_LABEL } from '@/lib/fees'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
@@ -571,11 +571,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // region comes from the geo country; a chip row lets the buyer switch.
   // Rows derive from the provider registry, so new methods surface
   // automatically.
-  const allLocalRows = methods.filter((m) => m.kind === 'local').map(toRow)
+  // The quotes start as the page's (promo 0, store credit 0) and are
+  // re-quoted by quoteCheckoutMethods when the promo, the store-credit
+  // toggle or the quantity changes — the SQL quote is the only fee math.
+  const [quotedMethods, setQuotedMethods] = useState<ClientMethod[]>(methods)
+  const allLocalRows = quotedMethods.filter((m) => m.kind === 'local').map(toRow)
   // The crypto row for the env-active provider; absent = crypto is not
   // payable for this order (no fee row / hidden) and its row is not shown.
-  const cryptoMethod = methods.find((m) => m.kind === 'crypto') ?? null
-  const walletQuote = methods.find((m) => m.kind === 'wallet')?.quote ?? null
+  const cryptoMethod = quotedMethods.find((m) => m.kind === 'crypto') ?? null
+  const walletQuote = quotedMethods.find((m) => m.kind === 'wallet')?.quote ?? null
   const geoCc = (buyerCountry ?? '').trim().toUpperCase()
   const geo = /^[A-Z]{2}$/.test(geoCc) ? geoCc : null
   const [region, setRegion] = useState<RegionId>(() => regionForCountry(geo))
@@ -613,23 +617,46 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [useWallet, setUseWallet] = useState(false)
 
   const subtotal = listing.price * quantity
-  const fee = buyerFee(subtotal) // marketplace fee only (lib/fees)
-  // Processing fee = the database's quote for the picked method (checkout
-  // B3). When store credit covers the whole order at the wallet row's quote,
-  // the order is a 'wallet' order and that quote applies — exactly the
-  // routing createCheckout performs, so page and snapshot agree to the cent.
+  // The service fee (marketplace + processing) is the database's quote for
+  // the picked method, promo and store credit. When store credit covers the
+  // whole order at the wallet row's quote (zero fee), the order is a 'wallet'
+  // order and that quote applies — exactly the routing createCheckout
+  // performs, so page and snapshot agree to the cent.
   const methodQuote =
     payMethod == null ? null : payMethod === 'crypto' ? cryptoMethod?.quote ?? null : allLocalRows.find((r) => r.id === payMethod)?.quote ?? null
-  const baseBeforeMethodFeeCents = Math.round(subtotal * 100) + Math.round(fee.marketplaceAmount * 100) - Math.round(promoDiscount * 100)
   const walletBalanceCents = Math.round(walletBalance * 100)
-  const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= baseBeforeMethodFeeCents + walletQuote.feeMinor
+  const walletCoversAll = useWallet && walletQuote != null && walletBalanceCents >= walletQuote.totalMinor
   const activeQuote = walletCoversAll ? walletQuote : methodQuote
-  const processingFee = (activeQuote?.feeMinor ?? 0) / 100
-  const quotedPct = activeQuote?.pctEffective ?? null
-  const totalBeforeWalletCents = Math.max(baseBeforeMethodFeeCents + (activeQuote?.feeMinor ?? 0), 0)
-  const walletAmountCents = useWallet ? Math.min(walletBalanceCents, totalBeforeWalletCents) : 0
+  const serviceFee = (activeQuote?.serviceFeeMinor ?? 0) / 100
+  const walletAmountCents = useWallet && activeQuote ? Math.max(activeQuote.totalMinor - activeQuote.chargeMinor, 0) : 0
   const walletAmount = walletAmountCents / 100
-  const total = Math.max(totalBeforeWalletCents - walletAmountCents, 0) / 100
+  const total = activeQuote
+    ? Math.max(activeQuote.totalMinor - walletAmountCents, 0) / 100
+    : Math.max(subtotal - promoDiscount, 0)
+
+  // Re-quote when an input that changes the fee changes (the first render
+  // already holds the page's quote). Debounced; a stale answer is dropped.
+  const promoCodeForQuote = promoResult?.valid ? promoResult.code : undefined
+  const quoteSeq = useRef(0)
+  const firstQuote = useRef(true)
+  useEffect(() => {
+    if (firstQuote.current) {
+      firstQuote.current = false
+      return
+    }
+    const seq = ++quoteSeq.current
+    const t = setTimeout(async () => {
+      const r = await quoteCheckoutMethods({
+        listingId: listing.id,
+        quantity,
+        promoCode: promoCodeForQuote,
+        walletMinor: useWallet ? Math.round(walletBalance * 100) : 0,
+      })
+      if (seq !== quoteSeq.current) return
+      if (r.success) setQuotedMethods(r.methods)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [listing.id, quantity, promoCodeForQuote, useWallet, walletBalance])
 
   useEffect(() => {
     if (!user) return
@@ -1120,18 +1147,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
       <div className="mt-4 flex flex-col gap-2 border-t pt-3.5 text-[14px]" style={{ borderColor: T.line }}>
         <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} />
         <Row
-          label={MARKETPLACE_FEE_LABEL}
-          value={`+$${fee.marketplaceAmount.toFixed(2)}`}
-          infoTitle="Marketplace Fee"
-          infoBadge={`${fee.marketplacePct}%`}
-          info="Platform & SafeDrop Protection."
-        />
-        <Row
-          label={PROCESSING_FEE_LABEL}
-          value={`+$${processingFee.toFixed(2)}`}
-          infoTitle="Processing Fee"
-          infoBadge={quotedPct == null ? undefined : `${Number(quotedPct).toFixed(2).replace(/\.?0+$/, '')}%`}
-          info="Covers payment processing for the method you picked."
+          label={SERVICE_FEE_LABEL}
+          value={`+$${serviceFee.toFixed(2)}`}
+          infoTitle="Service Fee"
+          info={
+            walletCoversAll
+              ? 'No service fee when you pay with store credit.'
+              : 'Covers payment processing and keeps SafeDrop Protection running.'
+          }
         />
         {promoDiscount > 0 && (
           <Row label="Discount" value={`−$${promoDiscount.toFixed(2)}`} valueColor={T.success} />

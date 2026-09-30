@@ -194,7 +194,7 @@ function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; payme
   return (
     <div className="flex items-center justify-between border-t border-white/[0.07] py-3 text-[13px] first:border-t-0">
       <span className="inline-flex items-center gap-1.5 text-text-secondary">
-        Fees
+        Service Fee
         <Popover>
           <PopoverTrigger asChild>
             <button

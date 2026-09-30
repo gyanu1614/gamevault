@@ -29,9 +29,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
-import { buyerFee, round2 } from '@/lib/fees'
+import { round2 } from '@/lib/fees'
 import { resolveSellerFee, FeeResolutionError } from '@/lib/fees/resolver'
-import { buyerFeeRefusalMessage, eligibleMethods, type EligibleMethod } from '@/lib/payments/eligibility'
+import { buyerFeeRefusalMessage, eligibleMethods, toClientMethods, type ClientMethod, type EligibleMethod } from '@/lib/payments/eligibility'
 import { classifyUniqueViolation, uniqueViolationConstraint, OrderInsertConflictError } from '@/lib/checkout/order-insert'
 import { getProvider, activePaymentProviderName, providerNameForMethod } from '@/lib/payments/registry'
 import {
@@ -164,13 +164,11 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: `This offer has a minimum order of ${minQuantity}` }
     }
 
-    // Server-computed amounts (promo clamped, no client money trusted). Fee
-    // spec: the buyer pays the flat marketplace fee (lib/fees buyerFee, 2%)
-    // plus the PROCESSING fee of the method they picked (quoted below from
-    // payment_method_fees); the seller pays a commission on the item price
-    // only — never both fees.
+    // Server-computed amounts (promo clamped, no client money trusted). The
+    // buyer's WHOLE fee (marketplace + the picked method's processing fee) is
+    // the database's quote below — nothing here computes any part of it; the
+    // seller pays a commission on the item price only.
     const subtotal = round2(listing.price * quantity)
-    const fee = buyerFee(subtotal)
     // Seller commission: ONE resolve_seller_fee call (fee engine PR 3). The
     // database decides the rate from fee_rules + the seller's rank/founding
     // state and returns the trace that explains it; both are snapshotted on
@@ -200,13 +198,13 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     const providerName = providerNameForMethod(input.paymentMethodId)
     const pmId = providerName === 'payssion' && input.paymentMethodId ? input.paymentMethodId : null
 
-    // ── Buyer processing fee: ONE eligibility source (checkout B3) ──────────
-    // The same function the checkout page rendered its tiles from. A method
-    // that is hidden, over its provider cap, or has no fee row was never on
-    // the page — refuse it here with the same reason. The fee itself is the
-    // database's quote; the RPC below re-quotes and snapshots it in the
-    // transaction, so this number only decides the wallet routing and the
-    // reuse comparison.
+    // ── Buyer fee: ONE eligibility source (checkout B3 / service fee) ───────
+    // The same function the checkout page rendered its tiles from, quoted for
+    // THIS promo and THIS store-credit request. A method that is hidden, over
+    // its provider cap, under its provider minimum, or has no fee row was
+    // never on the page — refuse it here with the same reason. The RPC below
+    // re-quotes and snapshots the fee in the transaction, so these numbers
+    // only decide the wallet routing and the reuse comparison.
     const walletReqMinor =
       (input.walletAmount ?? 0) > 0
         ? fromDecimal(Math.max(0, input.walletAmount ?? 0).toFixed(2), ORDER_CURRENCY).amountMinor
@@ -216,22 +214,19 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       currency: ORDER_CURRENCY,
       country: null,
       subtotalMinor: fromDecimal(subtotal.toFixed(2), ORDER_CURRENCY).amountMinor,
+      promoMinor: fromDecimal(promoDiscount.toFixed(2), ORDER_CURRENCY).amountMinor,
+      walletMinor: walletReqMinor,
     })
     const requestedMethod = pmId ?? providerName
     const requested = pickMethod(eligibility, requestedMethod)
     if (!requested.ok) return { success: false, error: requested.error }
-    // Store credit covering the whole total (at the wallet row's quote) is a
-    // 'wallet' order: no provider charge, the wallet row's fee. Otherwise the
+    // Store credit covering the whole order at the wallet row's quote (zero
+    // service fee) is a 'wallet' order: no provider charge. Otherwise the
     // picked method's quote applies and the wallet only reduces the charge.
     let chosen: EligibleMethod = requested.method
     const walletRow = eligibility.methods.find((m) => m.kind === 'wallet')
-    if (walletRow && walletReqMinor > 0n) {
-      const walletTotalMinor = totalMinorFor(subtotal, fee.marketplaceAmount, promoDiscount, walletRow.quote.feeMinor)
-      if (walletReqMinor >= walletTotalMinor) chosen = walletRow
-    }
-    const totalAmount = totalMinorFor(subtotal, fee.marketplaceAmount, promoDiscount, chosen.quote.feeMinor)
-      .toString()
-    const totalAmountMajor = Number(totalAmount) / 100
+    if (walletRow && walletReqMinor > 0n && walletReqMinor >= BigInt(walletRow.quote.totalMinor)) chosen = walletRow
+    const totalAmountMajor = chosen.quote.totalMinor / 100
 
     // ── Duplicate-order guard ────────────────────────────────────────────────
     // Before minting a new pending order, look for one this buyer already has
@@ -318,8 +313,10 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       quantity,
       unitPrice: listing.price,
       subtotal,
-      platformFeeRate: fee.marketplacePct,
-      platformFee: fee.marketplaceAmount,
+      // Ignored by the RPC since buyer-service-fee (2026-09-30): the quote's
+      // marketplace part is the marketplace fee. Kept for the 19-arg shape.
+      platformFeeRate: 0,
+      platformFee: 0,
       sellerPayout,
       // Guarded columns (42501 on any later non-service UPDATE): the rate this
       // order was priced at and why. Written once, here, never recomputed.
@@ -786,13 +783,53 @@ function toRelativePayUrl(url: string): string {
 // ─── Checkout B3 helpers ─────────────────────────────────────────────────────
 
 /** subtotal + marketplace fee + method fee − promo, in minor units (never below 0). */
-function totalMinorFor(subtotal: number, marketplaceFee: number, promoDiscount: number, methodFeeMinor: number): bigint {
-  const minor =
-    fromDecimal(subtotal.toFixed(2), ORDER_CURRENCY).amountMinor +
-    fromDecimal(marketplaceFee.toFixed(2), ORDER_CURRENCY).amountMinor +
-    BigInt(methodFeeMinor) -
-    fromDecimal(promoDiscount.toFixed(2), ORDER_CURRENCY).amountMinor
-  return minor < 0n ? 0n : minor
+/**
+ * quoteCheckoutMethods — the checkout page's re-quote when the promo, the
+ * store-credit toggle or the quantity changes. Same eligibleMethods call
+ * createCheckout refuses against, same clamps (promo validated server-side,
+ * store credit clamped to the balance), so the summary the buyer reads is
+ * the number the order will snapshot. Never trusts a client amount.
+ */
+export async function quoteCheckoutMethods(input: {
+  listingId: string
+  quantity: number
+  promoCode?: string
+  /** Store credit the buyer wants to apply, minor units; clamped to their balance. */
+  walletMinor: number
+}): Promise<{ success: true; methods: ClientMethod[] } | { success: false; error: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: listing } = await supabase
+      .from('listings')
+      .select('id, price, min_quantity, status')
+      .eq('id', input.listingId)
+      .maybeSingle()
+    if (!listing) return { success: false, error: 'Listing not found' }
+    const quantity = Math.max(1, Math.floor(Number(input.quantity) || 1))
+    const subtotal = round2(Number((listing as any).price) * quantity)
+    const promo = await resolveCheckoutPromo(input.promoCode, subtotal, validatePromoCode)
+    const promoDiscount = promo.ok ? promo.discount : 0
+    let walletMinor = 0n
+    const requested = BigInt(Math.max(0, Math.floor(Number(input.walletMinor) || 0)))
+    if (user && requested > 0n) {
+      const { getMyWalletBalance } = await import('@/lib/actions/wallet-ledger')
+      const bal = await getMyWalletBalance()
+      const have = BigInt(Math.round((bal.balance?.available_balance ?? 0) * 100))
+      walletMinor = requested < have ? requested : have
+    }
+    const eligibility = await eligibleMethods({
+      buyerId: user?.id ?? null,
+      currency: ORDER_CURRENCY,
+      country: null,
+      subtotalMinor: fromDecimal(subtotal.toFixed(2), ORDER_CURRENCY).amountMinor,
+      promoMinor: fromDecimal(promoDiscount.toFixed(2), ORDER_CURRENCY).amountMinor,
+      walletMinor,
+    })
+    return { success: true, methods: toClientMethods(eligibility.methods) }
+  } catch (e: any) {
+    return { success: false, error: String(e?.message ?? e) }
+  }
 }
 
 /** The requested method must be one the page would have shown; otherwise the refusal names why. */
