@@ -25,6 +25,7 @@ export default async function AdminReviewsPage() {
     <ReviewsPageClient
       initialReviews={reviewsResult.success ? reviewsResult.reviews ?? [] : []}
       initialStats={statsResult.success ? statsResult.stats ?? null : null}
+      initialPagination={reviewsResult.success ? reviewsResult.pagination ?? null : null}
     />
   )
 }
