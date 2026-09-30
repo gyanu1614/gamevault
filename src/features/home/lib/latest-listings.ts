@@ -10,8 +10,8 @@ export interface LatestListing {
   image: string | null
   gameSlug: string
   gameName: string
-  /** categories.metadata.type — item / account / currency / top_up / service. */
-  categoryType: string | null
+  /** game_categories.type — items / account / currency / top_up / service / gift_card. */
+  categoryType: string
   categoryLabel: string
   href: string
   listedAt: string
@@ -38,7 +38,7 @@ export interface LatestListing {
  */
 export type ListingCardType = 'item' | 'currency' | 'account'
 
-function cardTypeFor(categoryType: string | null): ListingCardType {
+function cardTypeFor(categoryType: string): ListingCardType {
   if (categoryType === 'account') return 'account'
   if (categoryType === 'currency' || categoryType === 'top_up') return 'currency'
   return 'item'
@@ -71,7 +71,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     .select(
       `id, title, price, images, slug, created_at, quantity, delivery_time,
        game:games!inner(id, slug, name, is_active, image_url),
-       category:categories!inner(slug, name, metadata),
+       category:game_categories!listings_game_category_id_fkey!inner(slug, name, type),
        seller:public_profiles!listings_seller_id_fkey!inner(is_test)`,
     )
     .eq('status', 'active')
@@ -90,7 +90,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     quantity: number | null
     delivery_time: string | null
     game: { id: string; slug: string; name: string; image_url: string | null }
-    category: { slug: string; name: string | null; metadata: { type?: string; label?: string } | null }
+    category: { slug: string; name: string; type: string }
   }
 
   const rows = (data ?? []) as unknown as Row[]
@@ -98,7 +98,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
   // Currency icons (the logo beside each currency page title) for the games
   // that have a currency listing here. One small read of two JSON fields.
   const currencyGameIds = Array.from(
-    new Set(rows.filter((r) => r.category.metadata?.type === 'currency').map((r) => r.game.id)),
+    new Set(rows.filter((r) => r.category.type === 'currency').map((r) => r.game.id)),
   )
   const currencyIcon = new Map<string, string>()
   if (currencyGameIds.length > 0) {
@@ -117,7 +117,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
       // Item cards are art-led, so an item listing with no real art (or with
       // the game's own logo standing in) has nothing to show and is dropped.
       // Currency and account cards carry no art by design, so they stay.
-      if (cardTypeFor(row.category.metadata?.type ?? null) !== 'item') return true
+      if (cardTypeFor(row.category.type) !== 'item') return true
       const image = row.images?.[0]
       return Boolean(image) && !image!.startsWith('/games/')
     })
@@ -128,17 +128,17 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     image: row.images?.[0] ?? null,
     gameSlug: row.game.slug,
     gameName: row.game.name,
-    categoryType: row.category.metadata?.type ?? null,
-    categoryLabel: row.category.name || row.category.metadata?.label || row.category.slug,
+    categoryType: row.category.type,
+    categoryLabel: row.category.name || row.category.slug,
     // Listing detail route: /{game}/{category}/{listing}
     href: `/${row.game.slug}/${row.category.slug}/${row.slug ?? row.id}`,
     listedAt: row.created_at,
-    cardType: cardTypeFor(row.category.metadata?.type ?? null),
+    cardType: cardTypeFor(row.category.type),
     quantity: row.quantity ?? null,
     deliveryTime: row.delivery_time ?? null,
     bgImage:
-      (row.category.metadata?.type === 'currency' ? currencyIcon.get(row.game.id) : undefined) ??
-      (cardTypeFor(row.category.metadata?.type ?? null) === 'item' ? row.images?.[0] : undefined) ??
+      (row.category.type === 'currency' ? currencyIcon.get(row.game.id) : undefined) ??
+      (cardTypeFor(row.category.type) === 'item' ? row.images?.[0] : undefined) ??
       row.game.image_url ??
       null,
   }))
