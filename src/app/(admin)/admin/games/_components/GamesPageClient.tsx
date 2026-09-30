@@ -1,18 +1,12 @@
 'use client'
 
 /**
- * Admin Game Management v2 — /admin/games  (Phase B, parallel route)
+ * /admin/games — every game with its enabled categories, listing count,
+ * review / live state and row actions (popular, spotlight, pause, edit,
+ * delete). Trend-radar games (pending | declining) open a review card
+ * under their row.
  *
- * Sits alongside the original /admin/games. Reads game metadata via the
- * existing fetchAdminGames() action (unchanged) and category enablement
- * via the new fetchAdminGameCategoryBadges() action that hits
- * game_categories + global_categories.
- *
- * This page:
- *   - Lists games with category badges sourced from the new schema
- *   - Opens a wizard at /admin/games/new and /admin/games/[id]/edit
- *     (wizard added in a follow-up commit — links present here, pages stubbed)
- *   - Does NOT touch the live /admin/games. Old route keeps working as-is.
+ * One responsive row: a card below xl, a table row from xl.
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -21,18 +15,18 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Search, Pencil, Eye, EyeOff, ChevronRight, ChevronDown, Pause, Play, Trash2, Star, Sparkles, Radar,
-} from 'lucide-react'
+  CaretDown, GameController, MagnifyingGlass, Pause, PencilSimple, Play, Sparkle, Star, Trash, X,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
-import { GlassCard } from '@/components/ui/glass-card'
 import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular, toggleGameSpotlight } from '@/lib/actions/admin-games'
 import {
   fetchAdminGameCategoryBadges,
   type AdminGameCategoryBadge,
 } from '@/lib/actions/admin-game-categories'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { AdminEmpty, AdminLoadingRows, PageHeader, StatusBadge, adminBtn, adminFieldCls } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 import { AddGameDialog } from './AddGameDialog'
 import { TrendReviewCard } from './TrendReviewCard'
 
@@ -59,12 +53,6 @@ interface Game {
 
 type StatusFilter = 'all' | 'pending' | 'declining'
 
-const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'declining', label: 'Declining' },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function groupBadges(badges: AdminGameCategoryBadge[]) {
@@ -83,6 +71,41 @@ function groupBadges(badges: AdminGameCategoryBadge[]) {
   return m
 }
 
+/** Square icon button for row actions; `on` = the flag is set. */
+function IconAction({
+  label, onClick, disabled, on, danger, children,
+}: {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  on?: boolean
+  danger?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={on}
+      title={label}
+      className={cn(
+        'grid h-9 w-9 shrink-0 place-items-center rounded-md transition-colors disabled:opacity-50',
+        danger
+          ? 'text-text-secondary hover:bg-error-bg hover:text-error'
+          : on
+            ? 'bg-white/[0.06] text-lime-text hover:bg-white/[0.10]'
+            : 'text-text-secondary hover:bg-white/[0.08] hover:text-text-primary',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+const ROW_GRID = 'xl:grid xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.5fr)_64px_132px_188px] xl:items-center xl:gap-4'
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function GamesPageClient({
@@ -94,7 +117,7 @@ export default function GamesPageClient({
 }) {
   const [filter, setFilter] = useState('')
   // Step 2 — the Discord alert links to /admin/games?status=pending#<slug>:
-  // the chip comes from the query string, the open card from the hash.
+  // the tab comes from the query string, the open card from the hash.
   const searchParams = useSearchParams()
   const initialStatus = searchParams?.get('status')
   const [status, setStatus] = useState<StatusFilter>(
@@ -221,305 +244,244 @@ export default function GamesPageClient({
   const isLoading = gamesQuery.isLoading || badgesQuery.isLoading
 
   return (
-    <div className="space-y-6">
-      {/* ── Header ── */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-semibold tracking-tight text-text-primary">Games</h1>
-          <p className="mt-1.5 text-[13.5px] text-text-secondary">
-            {gamesQuery.data
-              ? <>{activeCount} active · {gamesQuery.data.length} total</>
-              : 'Loading…'}
-          </p>
-        </div>
+    <div className="space-y-5 pb-10">
+      <PageHeader
+        title="Games"
+        description={gamesQuery.data ? `${activeCount} active · ${gamesQuery.data.length} total` : 'Loading…'}
+        className="mb-0 sm:mb-0"
+        actions={<AddGameDialog />}
+      />
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-            <input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter games…"
-              className="h-10 w-64 rounded-xl border border-border-default bg-bg-raised pl-10 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
-            />
-          </div>
-          <AddGameDialog />
-        </div>
-      </header>
-
-      {/* ── Status chips (Step 2: trend-radar review queue) ── */}
-      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Review status">
-        {STATUS_FILTERS.map((s) => {
-          const count = s.key === 'pending' ? reviewCounts.pending : s.key === 'declining' ? reviewCounts.declining : null
-          const active = status === s.key
-          return (
+      {/* Review tabs (Step 2: trend-radar queue) + filter */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SegmentedTabs<StatusFilter>
+          tabs={[
+            { id: 'all', label: 'All Games' },
+            { id: 'pending', label: <>Pending Review <TabCount n={reviewCounts.pending} /></> },
+            { id: 'declining', label: <>Declining <TabCount n={reviewCounts.declining} /></> },
+          ]}
+          value={status}
+          onChange={setStatus}
+          layoutId="games-status"
+          ariaLabel="Review status"
+        />
+        <div className="relative w-full lg:max-w-[320px]">
+          <MagnifyingGlass
+            aria-hidden
+            weight="bold"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+          />
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            aria-label="Filter games"
+            placeholder="Filter by name or slug…"
+            className={cn(adminFieldCls, 'pl-10 pr-9')}
+          />
+          {filter && (
             <button
-              key={s.key}
               type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setStatus(s.key)}
-              className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors',
-                active
-                  ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                  : 'border-border-default bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-              )}
+              aria-label="Clear filter"
+              onClick={() => setFilter('')}
+              className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
             >
-              {s.key !== 'all' && <Radar className="h-3.5 w-3.5" />}
-              {s.label}
-              {count !== null && (
-                <span className={cn('rounded-full px-1.5 text-[11px] font-semibold', active ? 'bg-[rgba(86,184,127,0.20)]' : 'bg-bg-base text-text-tertiary')}>
-                  {count}
-                </span>
-              )}
+              <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
             </button>
-          )
-        })}
-        {status !== 'all' && filtered.length === 0 && !isLoading && (
-          <span className="text-[13px] text-text-tertiary">Nothing {status} — the radar has no games waiting.</span>
+          )}
+        </div>
+      </div>
+
+      <div role="tabpanel" id={`games-status-panel-${status}`} aria-labelledby={`games-status-tab-${status}`}>
+        {isLoading ? (
+          <AdminLoadingRows rows={8} />
+        ) : filtered.length === 0 ? (
+          <AdminEmpty
+            icon={GameController}
+            title={filter ? 'No Matching Games' : status === 'all' ? 'No Games Yet' : `Nothing ${status === 'pending' ? 'Pending' : 'Declining'}`}
+            hint={
+              filter
+                ? `No games match "${filter}".`
+                : status === 'all'
+                  ? 'Add a game to get started.'
+                  : 'The trend radar has no games waiting.'
+            }
+          />
+        ) : (
+          <div className="overflow-hidden rounded-lg bg-bg-raised">
+            {/* Column headings (lg+) */}
+            <div className={cn('hidden border-b border-white/[0.06] px-4 py-3 text-[12px] font-medium text-text-tertiary xl:grid', ROW_GRID)}>
+              <span>Game</span>
+              <span>Categories Enabled</span>
+              <span>Listings</span>
+              <span>Status</span>
+              <span className="text-right">Actions</span>
+            </div>
+
+            <div className="divide-y divide-white/[0.06]">
+              {filtered.map((game) => {
+                const badges = badgesByGame.get(game.id) ?? []
+                const inReview = game.review_status === 'pending' || game.review_status === 'declining'
+                const reviewOpen = inReview && openReview.has(game.slug)
+                const muted = !game.is_active && !inReview
+
+                const statusBadges = (
+                  <div className="flex flex-wrap items-center gap-1.5 xl:flex-col xl:items-start xl:gap-1">
+                    {game.review_status === 'pending' ? (
+                      <StatusBadge status="Pending Review" tone="lime" />
+                    ) : game.review_status === 'declining' ? (
+                      <StatusBadge status="Declining" tone="warning" />
+                    ) : null}
+                    {game.review_status !== 'pending' && (
+                      <StatusBadge
+                        status={game.is_active ? 'Active' : game.review_status === 'rejected' ? 'Rejected' : 'Paused'}
+                        tone={game.is_active ? 'success' : 'error'}
+                      />
+                    )}
+                  </div>
+                )
+
+                // Below xl it sits with the row actions; from xl under the status
+                // badge, so the fixed-width Actions column lines up on every row.
+                const reviewButton = inReview ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleReview(game.slug)}
+                    aria-expanded={reviewOpen}
+                    className={cn(
+                      'inline-flex h-9 items-center gap-1 rounded-md px-2.5 text-[12.5px] font-semibold transition-colors xl:h-8',
+                      reviewOpen ? 'bg-white/[0.10] text-text-primary' : 'bg-white/[0.06] text-text-secondary hover:bg-white/[0.10] hover:text-text-primary',
+                    )}
+                  >
+                    Review
+                    <CaretDown aria-hidden weight="bold" className={cn('h-3.5 w-3.5 transition-transform', reviewOpen && 'rotate-180')} />
+                  </button>
+                ) : null
+
+                return (
+                  <div key={game.id} id={game.slug} className="scroll-mt-24">
+                    <div className={cn('px-4 py-3.5 transition-colors hover:bg-white/[0.02]', ROW_GRID)}>
+                      {/* Game */}
+                      <div className="flex min-w-0 items-center gap-3 xl:order-1">
+                        <GameTile src={game.image_url} name={game.name} className={cn('h-10 w-10', muted && 'opacity-60')} />
+                        <div className={cn('min-w-0 flex-1', muted && 'opacity-60')}>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-[14px] font-semibold text-text-primary">{game.name}</span>
+                            {game.seo_indexable === false ? (
+                              <span title="Forced noindex (SEO tab)" className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-[11px] font-semibold text-warning">
+                                Noindex
+                              </span>
+                            ) : game.seo_indexable === true ? (
+                              <span title="Forced index (SEO tab)" className="shrink-0 rounded-full bg-lime-tint-bg px-1.5 py-px text-[11px] font-semibold text-lime-text">
+                                Index
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="truncate text-[12px] text-text-tertiary">
+                            <span className="font-mono">{game.slug}</span>
+                            <span className="tabular-nums xl:hidden">
+                              {' · '}{game.listing_count ?? 0} listing{game.listing_count === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 xl:hidden">{statusBadges}</div>
+                      </div>
+
+                      {/* Listings (xl) */}
+                      <div className={cn('hidden text-[13px] font-semibold tabular-nums text-text-secondary xl:order-3 xl:block', muted && 'opacity-60')}>
+                        {game.listing_count ?? 0}
+                      </div>
+
+                      {/* Status (xl) */}
+                      <div className="hidden xl:order-4 xl:flex xl:flex-col xl:items-start xl:gap-1.5">
+                        {statusBadges}
+                        {reviewButton}
+                      </div>
+
+                      <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4 xl:contents">
+                        {/* Category badges — one sideways-scrolling row on phones */}
+                        <div className="-mx-4 flex min-w-0 gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-1 sm:px-0 xl:order-2 xl:flex-wrap xl:overflow-visible [&::-webkit-scrollbar]:hidden">
+                          {badges.length === 0 ? (
+                            <span className="text-[12.5px] text-text-disabled">None enabled</span>
+                          ) : (
+                            badges.map((b) => (
+                              <span
+                                key={b.game_category_id}
+                                title={!b.is_active_global ? `${b.category_name} (disabled at launch)` : b.category_name}
+                                className={cn(
+                                  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-medium',
+                                  b.is_active_global ? 'bg-white/[0.06] text-text-secondary' : 'bg-warning-bg text-warning',
+                                )}
+                              >
+                                {b.icon_emoji && <span aria-hidden>{b.icon_emoji}</span>}
+                                {b.category_name}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                        {/* Actions */}
+                        <div className="flex shrink-0 items-center justify-end xl:order-5">
+                          <div className="flex items-center gap-0.5">
+                            {reviewButton && <div className="mr-1 xl:hidden">{reviewButton}</div>}
+                            <IconAction
+                              label={game.is_popular ? 'Remove from Popular Games' : 'Mark as popular'}
+                              on={!!game.is_popular}
+                              disabled={popularMutation.isPending}
+                              onClick={() => popularMutation.mutate({ id: game.id, isPopular: !!game.is_popular })}
+                            >
+                              <Star aria-hidden weight={game.is_popular ? 'fill' : 'bold'} className="h-4 w-4" />
+                            </IconAction>
+                            <IconAction
+                              label={game.is_spotlight ? 'Remove from mobile Spotlight grid' : 'Feature in mobile Spotlight grid'}
+                              on={!!game.is_spotlight}
+                              disabled={spotlightMutation.isPending}
+                              onClick={() => spotlightMutation.mutate({ id: game.id, isSpotlight: !!game.is_spotlight })}
+                            >
+                              <Sparkle aria-hidden weight={game.is_spotlight ? 'fill' : 'bold'} className="h-4 w-4" />
+                            </IconAction>
+                            <IconAction
+                              label={game.is_active ? 'Pause' : 'Activate'}
+                              disabled={toggleMutation.isPending}
+                              onClick={() => toggleMutation.mutate({ id: game.id, isActive: game.is_active })}
+                            >
+                              {game.is_active ? (
+                                <Pause aria-hidden weight="bold" className="h-4 w-4" />
+                              ) : (
+                                <Play aria-hidden weight="bold" className="h-4 w-4" />
+                              )}
+                            </IconAction>
+                            <Link
+                              href={`/admin/games/${game.id}/edit`}
+                              aria-label={`Edit ${game.name}`}
+                              title="Edit"
+                              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
+                            >
+                              <PencilSimple aria-hidden weight="bold" className="h-4 w-4" />
+                            </Link>
+                            <IconAction label="Delete" danger onClick={() => setPendingDelete(game)}>
+                              <Trash aria-hidden weight="bold" className="h-4 w-4" />
+                            </IconAction>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {reviewOpen && <TrendReviewCard gameId={game.id} slug={game.slug} />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* ── List ── */}
-      <GlassCard intensity="light" noPadding rounded="2xl">
-        {/* Column headings */}
-        <div className="grid grid-cols-[60px_1.4fr_1.4fr_100px_110px_156px] items-center gap-3 border-b border-border-subtle px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
-          <span>Logo</span>
-          <span>Name</span>
-          <span>Categories enabled</span>
-          <span>Listings</span>
-          <span>Status</span>
-          <span className="text-right">Actions</span>
-        </div>
-
-        {/* Rows */}
-        <div>
-          {isLoading ? (
-            <div className="px-5 py-16 text-center text-sm text-text-tertiary">Loading games…</div>
-          ) : filtered.length === 0 ? (
-            <div className="px-5 py-16 text-center text-sm text-text-tertiary">
-              {filter ? <>No games match &quot;{filter}&quot;</> : <>No {status === 'all' ? '' : `${status} `}games</>}
-            </div>
-          ) : (
-            filtered.map((game) => {
-              const badges = badgesByGame.get(game.id) ?? []
-              const inReview = game.review_status === 'pending' || game.review_status === 'declining'
-              const reviewOpen = inReview && openReview.has(game.slug)
-              return (
-                <React.Fragment key={game.id}>
-                <div
-                  id={game.slug}
-                  className={cn(
-                    'grid grid-cols-[60px_1.4fr_1.4fr_100px_110px_156px] items-center gap-3 border-b border-border-subtle px-5 py-4 text-sm transition-colors hover:bg-bg-base scroll-mt-24',
-                    !game.is_active && !inReview && 'bg-red-500/[0.025]',
-                    game.review_status === 'pending' && 'bg-[rgba(86,184,127,0.03)]',
-                    reviewOpen && 'border-b-0'
-                  )}
-                >
-                  {/* Logo */}
-                  <div className={cn('flex items-center', !game.is_active && 'opacity-60')}>
-                    {game.image_url ? (
-                      // Using <img> intentionally — Next/Image not needed at this density
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={game.image_url}
-                        alt={game.name}
-                        className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10"
-                      />
-                    ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-bg-raised text-xl ring-1 ring-white/10">
-                        {game.emoji ?? '🎮'}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name + slug + SEO index state */}
-                  <div className={cn(!game.is_active && 'opacity-60')}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[14px] font-semibold text-text-primary">{game.name}</span>
-                      {game.seo_indexable === false ? (
-                        <span
-                          title="Forced noindex (SEO tab)"
-                          className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-1.5 py-0.5 text-[10px] font-bold text-warning"
-                        >
-                          <span className="h-1 w-1 rounded-full bg-warning" /> Noindex
-                        </span>
-                      ) : game.seo_indexable === true ? (
-                        <span
-                          title="Forced index (SEO tab)"
-                          className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-1.5 py-0.5 text-[10px] font-bold text-lime-text"
-                        >
-                          <span className="h-1 w-1 rounded-full bg-lime" /> Index
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-0.5 font-mono text-[12px] text-text-tertiary">{game.slug}</div>
-                  </div>
-
-                  {/* Category badges */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {badges.length === 0 ? (
-                      <span className="text-[12.5px] text-text-disabled">— none enabled</span>
-                    ) : (
-                      badges.map((b) => (
-                        <span
-                          key={b.game_category_id}
-                          title={!b.is_active_global ? `${b.category_name} (disabled at launch)` : b.category_name}
-                          className={cn(
-                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px]',
-                            b.is_active_global
-                              ? 'border-border-default bg-bg-raised text-text-secondary'
-                              : 'border-warning bg-warning-bg text-warning'
-                          )}
-                        >
-                          <span aria-hidden>{b.icon_emoji ?? '•'}</span>
-                          {b.category_name}
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Listings */}
-                  <div className={cn(!game.is_active && 'opacity-60')}>
-                    <span className="inline-flex h-6 items-center rounded-full bg-bg-raised px-2.5 text-[12px] font-semibold text-text-secondary ring-1 ring-inset ring-white/[0.06]">
-                      {game.listing_count ?? 0}
-                    </span>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex flex-col items-start gap-1">
-                    {game.review_status === 'pending' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[12px] font-medium text-lime-text">
-                        <Radar className="h-3 w-3" /> Pending Review
-                      </span>
-                    ) : game.review_status === 'declining' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-warning bg-warning-bg px-2 py-0.5 text-[12px] font-medium text-warning">
-                        <Radar className="h-3 w-3" /> Declining
-                      </span>
-                    ) : null}
-                    {game.review_status !== 'pending' && (
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium',
-                          game.is_active
-                            ? 'bg-success-bg text-success'
-                            : 'bg-red-500/15 text-red-400'
-                        )}
-                      >
-                        {game.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        {game.is_active ? 'Active' : game.review_status === 'rejected' ? 'Rejected' : 'Paused'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* V17l/V17s — Row actions: popular star, pause/resume,
-                      edit, delete. The star flips games.is_popular so the
-                      homepage Popular Games shelf surfaces this game. */}
-                  <div className="flex items-center justify-end gap-0.5">
-                    {inReview && (
-                      <button
-                        type="button"
-                        onClick={() => toggleReview(game.slug)}
-                        aria-expanded={reviewOpen}
-                        className={cn(
-                          'mr-1 inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[12px] font-medium transition-colors',
-                          reviewOpen
-                            ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                            : 'border-border-default text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                        )}
-                      >
-                        Review {reviewOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => popularMutation.mutate({ id: game.id, isPopular: !!game.is_popular })}
-                      disabled={popularMutation.isPending}
-                      title={game.is_popular ? 'Remove from Popular Games' : 'Mark as popular'}
-                      className={cn(
-                        'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50',
-                        game.is_popular
-                          ? 'text-lime hover:bg-lime-tint-bg'
-                          : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                      )}
-                    >
-                      <Star
-                        className={cn(
-                          'h-3.5 w-3.5',
-                          game.is_popular && 'fill-current',
-                        )}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => spotlightMutation.mutate({ id: game.id, isSpotlight: !!game.is_spotlight })}
-                      disabled={spotlightMutation.isPending}
-                      title={game.is_spotlight ? 'Remove from mobile Spotlight grid' : 'Feature in mobile Spotlight grid'}
-                      className={cn(
-                        'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-50',
-                        game.is_spotlight
-                          ? 'text-lime hover:bg-lime-tint-bg'
-                          : 'text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
-                      )}
-                    >
-                      <Sparkles
-                        className={cn(
-                          'h-3.5 w-3.5',
-                          game.is_spotlight && 'fill-current',
-                        )}
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleMutation.mutate({ id: game.id, isActive: game.is_active })}
-                      disabled={toggleMutation.isPending}
-                      title={game.is_active ? 'Pause' : 'Activate'}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary disabled:opacity-50"
-                    >
-                      {game.is_active
-                        ? <Pause className="h-3.5 w-3.5" />
-                        : <Play className="h-3.5 w-3.5" />
-                      }
-                    </button>
-                    <Link
-                      href={`/admin/games/${game.id}/edit`}
-                      title="Edit"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setPendingDelete(game)}
-                      title="Delete"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-error-bg hover:text-error"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                {reviewOpen && <TrendReviewCard gameId={game.id} slug={game.slug} />}
-                </React.Fragment>
-              )
-            })
-          )}
-        </div>
-      </GlassCard>
-
-      {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-1 text-[12px] text-text-tertiary">
-        <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-success" />
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12px] text-text-tertiary">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-success" />
           Active games are visible in the marketplace
         </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-warning" />
-          Amber category badges = the global category is disabled at launch (Boosting)
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <ChevronRight className="h-3 w-3 text-lime-text" />
-          Click <span className="font-semibold text-text-secondary">Edit</span> to open the wizard
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-warning" />
+          Amber categories are disabled globally at launch (Boosting)
         </span>
       </div>
 
@@ -527,31 +489,28 @@ export default function GamesPageClient({
           drop a game with a single mis-click; the action cascades to
           listings via FK so it's not reversible. */}
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete {pendingDelete?.name}?</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Delete {pendingDelete?.name}?</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
               This permanently removes the game and unlinks its categories. Active listings
               will be cascaded to deleted state. There&apos;s no undo.
             </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setPendingDelete(null)}
-              className="rounded-lg border border-border-default bg-bg-raised px-4 py-2 text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
-            >
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setPendingDelete(null)} className={adminBtn.secondary}>
               Cancel
             </button>
             <button
               type="button"
               onClick={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
               disabled={deleteMutation.isPending}
-              className="rounded-lg bg-error px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_90%,transparent)] disabled:opacity-60"
+              className={adminBtn.danger}
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete game'}
+              <Trash aria-hidden weight="bold" className="h-4 w-4" />
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete Game'}
             </button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

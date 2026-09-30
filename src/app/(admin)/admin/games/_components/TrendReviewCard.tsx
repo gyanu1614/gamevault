@@ -11,13 +11,11 @@
 import React, { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, X, Clock, ExternalLink, AlertTriangle } from 'lucide-react'
+import { ArrowSquareOut, Check, Clock, Warning, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { adminBtn, adminBtnSm } from '../../components/kit'
 import {
   fetchTrendReview, approveTrendGame, rejectTrendGame, snoozeTrendGame, type ReviewData,
 } from '@/lib/actions/admin-trend-review'
@@ -51,7 +49,7 @@ function Sparkline({ points }: { points: { captured_at: string; playing: number 
   return (
     <div className="flex items-end gap-3">
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible" aria-label="Players over the last 7 days">
-        <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-lime" />
+        <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-success" />
       </svg>
       <div className="text-[12px] leading-tight text-text-tertiary">
         <div>max <span className="font-mono text-text-secondary">{fmt(max)}</span></div>
@@ -64,7 +62,7 @@ function Sparkline({ points }: { points: { captured_at: string; playing: number 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">{label}</div>
+      <div className="text-[12px] font-medium text-text-tertiary">{label}</div>
       <div className="mt-1 text-[13px] text-text-secondary">{children}</div>
     </div>
   )
@@ -74,13 +72,19 @@ function Step({ ok, label }: { ok: boolean | 'warn'; label: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px]',
-        ok === true && 'border-lime-tint-border bg-lime-tint-bg text-lime-text',
-        ok === 'warn' && 'border-warning bg-warning-bg text-warning',
-        ok === false && 'border-border-default bg-bg-raised text-text-tertiary',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-medium',
+        ok === true && 'bg-success-bg text-success',
+        ok === 'warn' && 'bg-warning-bg text-warning',
+        ok === false && 'bg-white/[0.06] text-text-tertiary',
       )}
     >
-      {ok === true ? <Check className="h-3 w-3" /> : ok === 'warn' ? <AlertTriangle className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      {ok === true ? (
+        <Check aria-hidden weight="bold" className="h-3 w-3" />
+      ) : ok === 'warn' ? (
+        <Warning aria-hidden weight="bold" className="h-3 w-3" />
+      ) : (
+        <X aria-hidden weight="bold" className="h-3 w-3" />
+      )}
       {label}
     </span>
   )
@@ -122,9 +126,9 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
   })
   const busy = approve.isPending || reject.isPending || snooze.isPending
 
-  if (q.isLoading) return <div className="px-5 py-4 text-[13px] text-text-tertiary">Loading review…</div>
+  if (q.isLoading) return <div className="border-t border-white/[0.06] px-4 py-4 text-[13px] text-text-tertiary">Loading review…</div>
   const r = q.data
-  if (!r) return <div className="px-5 py-4 text-[13px] text-text-tertiary">No review data for this game.</div>
+  if (!r) return <div className="border-t border-white/[0.06] px-4 py-4 text-[13px] text-text-tertiary">No review data for this game.</div>
 
   const g = r.game
   const primary = r.events.find((e) => e.signal === 'top30_entry') ?? r.events[0]
@@ -141,7 +145,7 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
   if (g.review_status === 'declining' && g.review_note) warnings.push(g.review_note)
 
   return (
-    <div className="border-b border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-base)_60%,transparent)] px-5 py-5">
+    <div className="border-t border-white/[0.06] bg-white/[0.02] px-4 py-5">
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr_1fr]">
         {/* Evidence */}
         <div className="space-y-4">
@@ -190,7 +194,7 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
               <div className="space-y-1.5">
                 <div className="text-[12px] text-text-tertiary">
                   <a href={draft.wiki?.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
-                    {draft.wiki?.sitename} <ExternalLink className="h-3 w-3" />
+                    {draft.wiki?.sitename} <ArrowSquareOut aria-hidden weight="bold" className="h-3 w-3" />
                   </a>{' '}· {fmt(draft.wiki?.articles)} articles
                 </div>
                 {draft.categories.map((c) => (
@@ -214,30 +218,30 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
         {/* Decide */}
         <div className="space-y-4">
           {warnings.length > 0 && (
-            <div className="rounded-xl border border-warning bg-warning-bg px-3 py-2 text-[12.5px] text-warning">
+            <div className="rounded-md bg-warning-bg px-3.5 py-2.5 text-[12.5px] text-warning">
               <ul className="list-disc space-y-0.5 pl-4">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
             </div>
           )}
           <Field label="Links">
             <div className="flex flex-wrap gap-3 text-[12.5px]">
-              {robloxUrl && <a href={robloxUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">Roblox page <ExternalLink className="h-3 w-3" /></a>}
+              {robloxUrl && <a href={robloxUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">Roblox page <ArrowSquareOut aria-hidden weight="bold" className="h-3 w-3" /></a>}
               <a href={`/admin/games/${g.id}/edit`} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">Edit game</a>
               {r.externalId && <span className="font-mono text-text-tertiary">universe {r.externalId}</span>}
             </div>
           </Field>
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button size="sm" onClick={() => approve.mutate()} disabled={busy} className="bg-lime text-black hover:bg-lime-hover">
-              <Check className="mr-1.5 h-4 w-4" /> Approve &amp; Go Live
-            </Button>
+            <button type="button" onClick={() => approve.mutate()} disabled={busy} className={adminBtnSm.primary}>
+              <Check aria-hidden weight="bold" className="h-3.5 w-3.5" /> Approve &amp; Go Live
+            </button>
             {g.review_status !== 'rejected' && (
-              <Button size="sm" variant="outline" onClick={() => setRejectOpen(true)} disabled={busy}>
-                <X className="mr-1.5 h-4 w-4" /> Reject
-              </Button>
+              <button type="button" onClick={() => setRejectOpen(true)} disabled={busy} className={adminBtnSm.danger}>
+                <X aria-hidden weight="bold" className="h-3.5 w-3.5" /> Reject
+              </button>
             )}
             {g.review_status === 'pending' && (
-              <Button size="sm" variant="ghost" onClick={() => snooze.mutate()} disabled={busy}>
-                <Clock className="mr-1.5 h-4 w-4" /> Snooze 7 Days
-              </Button>
+              <button type="button" onClick={() => snooze.mutate()} disabled={busy} className={adminBtnSm.secondary}>
+                <Clock aria-hidden weight="bold" className="h-3.5 w-3.5" /> Snooze 7 Days
+              </button>
             )}
           </div>
           {g.review_snoozed_until && new Date(g.review_snoozed_until) > new Date() && (
@@ -250,24 +254,30 @@ export function TrendReviewCard({ gameId, slug, onChanged }: { gameId: string; s
       </div>
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject {g.name}?</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Reject {g.name}?</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
               The game stays hidden and the radar will not alert on it again for 90 days. The note is kept on the game for later.
             </DialogDescription>
-          </DialogHeader>
-          <Textarea
+          </div>
+          <textarea
+            aria-label="Reason for rejecting"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Why not — e.g. no tradeable items, already covered by another game, knock-off…"
             rows={3}
             maxLength={500}
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={reject.isPending}>Cancel</Button>
-            <Button variant="destructive" onClick={() => reject.mutate()} disabled={reject.isPending || !note.trim()}>Reject</Button>
-          </DialogFooter>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setRejectOpen(false)} disabled={reject.isPending} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button type="button" onClick={() => reject.mutate()} disabled={reject.isPending || !note.trim()} className={adminBtn.danger}>
+              Reject
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
