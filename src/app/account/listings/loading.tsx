@@ -22,9 +22,9 @@ export default function ListingsLoading() {
 
         <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2.5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-[42px] w-[132px] rounded-md bg-bg-raised" />
+            <div key={i} className="h-10 w-[132px] rounded-md bg-bg-raised sm:h-[42px]" />
           ))}
-          <div className="h-[42px] min-w-0 flex-1 rounded-md bg-bg-raised sm:min-w-[220px] sm:max-w-[320px]" />
+          <div className="h-10 min-w-0 flex-1 rounded-md bg-bg-raised sm:h-[42px] sm:min-w-[220px] sm:max-w-[320px]" />
           <Sk className="h-4 w-24 sm:ml-auto" />
         </div>
 

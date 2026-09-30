@@ -398,18 +398,20 @@ export default function ItemsPageClient({
           {/* Filter bar (owner, 2026-09-28): the filters on one full-width
               row, the search on its own full-width row below.
 
-              Filters: sm+ they share the row (each grows to fill it, wrapping
-              when there are many); phones scroll them sideways, and
-              ScrollRow puts a blur + ‹ › button on whichever edge has more.
+              Filters: sm+ they sit in one row at their natural width (wrapping
+              when there are many); phones scroll them sideways, and ScrollRow
+              fades the clipped edge with a ‹ / › chevron.
 
-              Control height is raised HERE, not in tokens.css: the two
-              height vars are overridden on this block and cascade to every
-              control in it, so search, chips and sort stay one height and
-              nothing else on the site changes. */}
-          <div style={{ ['--h-input' as string]: '42px', ['--h-btn-secondary' as string]: '42px' }}>
+              Control height is set HERE, not in tokens.css: the two height
+              vars are overridden on this block and cascade to every control
+              in it, so search, chips and sort stay one height and nothing
+              else on the site changes. */}
+          {/* GameBoost sizing (measured 2026-09-29): 40px controls on phones,
+              42px from sm; buttons as wide as their label, not stretched. */}
+          <div className="[--h-btn-secondary:40px] [--h-input:40px] sm:[--h-btn-secondary:42px] sm:[--h-input:42px]">
           <ScrollRow
             wrapperClassName="-mx-4 sm:mx-0"
-            className="flex items-center gap-2.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 sm:[&>*]:flex-1 [&::-webkit-scrollbar]:hidden"
+            className="flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
           >
             {/* Attribute filters (admin-defined per game), then Price and
                 Delivery Time. All multi-select except Price (a range). */}
@@ -437,7 +439,7 @@ export default function ItemsPageClient({
             )}
 
             {/* Sort */}
-            <div className="shrink-0 sm:[&>button]:w-full">
+            <div className="shrink-0">
               <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
             </div>
           </ScrollRow>

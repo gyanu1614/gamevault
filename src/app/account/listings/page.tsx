@@ -74,6 +74,7 @@ import { cn } from '@/lib/utils'
 
 import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
 import { accountInputCls } from '@/components/account/AccountSurface'
+import { ScrollRow } from '@/components/ui/scroll-row'
 import { listingUnits, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 
 const OFFER_META: Record<OfferType, { title: string }> = {
@@ -246,7 +247,9 @@ const FilterTrigger = React.forwardRef<
       // same as the orders filters). Hover brightens in place, no lift
       // (owner, 2026-09-28). Active (filter applied) holds the lighter
       // fill — no lime.
-      'relative flex h-[42px] min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md px-4 text-[13.5px] font-semibold transition-colors duration-200',
+      // GameBoost sizing (measured 2026-09-29): 40px on phones, 42px from sm,
+      // 14px medium labels.
+      'relative flex h-10 min-w-[132px] items-center justify-between gap-2.5 overflow-hidden whitespace-nowrap rounded-md px-4 text-sm font-medium transition-colors duration-200 sm:h-[42px]',
       active
         ? 'bg-bg-raised-hover text-text-primary'
         : 'bg-bg-raised text-text-secondary',
@@ -684,7 +687,11 @@ function OffersContent() {
         {/* Below sm the three triggers share one row (grid); at sm+ the
             wrapper dissolves (contents) into the original flex-wrap row. */}
         <div className="flex w-full items-center gap-2 sm:contents">
-        <div className="flex min-w-0 flex-1 flex-nowrap gap-2.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents">
+        {/* Phones: the triggers scroll under a faded edge + chevron (ScrollRow). */}
+        <ScrollRow
+          wrapperClassName="min-w-0 flex-1 sm:contents"
+          className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>button]:whitespace-nowrap sm:contents"
+        >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <FilterTrigger
@@ -795,7 +802,7 @@ function OffersContent() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        </div>
+        </ScrollRow>
         {/* Phones: Add New Offer pinned at the row's RIGHT edge — the chips
             scroll underneath it. */}
         <Link
@@ -814,7 +821,7 @@ function OffersContent() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search offers…"
             aria-label="Search offers"
-            className={cn(accountInputCls, 'h-[42px] bg-bg-raised py-0 pl-9 pr-3 font-medium')}
+            className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-3 font-medium sm:h-[42px]')}
           />
         </div>
 

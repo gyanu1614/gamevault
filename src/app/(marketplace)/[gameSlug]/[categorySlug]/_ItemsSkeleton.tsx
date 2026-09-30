@@ -133,18 +133,18 @@ export default function ItemsSkeleton() {
             </div>
           </div>
 
-          {/* Filters row (slides on mobile, fills the row on sm+), then the
-              full-width search row, 42px each, like the real bar. */}
-          <div className="-mx-4 flex items-center gap-2.5 overflow-hidden px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0 sm:[&>*]:flex-1">
+          {/* Filters row (slides on mobile, natural widths on sm+), then the
+              full-width search row: 40px on phones, 42px from sm. */}
+          <div className="-mx-4 flex items-center gap-2 overflow-hidden px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0">
             {/* Content-width filter buttons (measured off the live Adopt Me
                 row: Item Type, Trait, Price, Delivery Time), then sort. */}
-            <Block className="h-[42px] w-[145px] shrink-0 rounded" />
-            <Block className="h-[42px] w-[109px] shrink-0 rounded" />
-            <Block className="h-[42px] w-[113px] shrink-0 rounded" />
-            <Block className="h-[42px] w-[171px] shrink-0 rounded" />
-            <Block className="h-[42px] w-[180px] shrink-0 rounded" />
+            <Block className="h-10 w-[145px] shrink-0 rounded sm:h-[42px]" />
+            <Block className="h-10 w-[109px] shrink-0 rounded sm:h-[42px]" />
+            <Block className="h-10 w-[113px] shrink-0 rounded sm:h-[42px]" />
+            <Block className="h-10 w-[171px] shrink-0 rounded sm:h-[42px]" />
+            <Block className="h-10 w-[180px] shrink-0 rounded sm:h-[42px]" />
           </div>
-          <Block className="mt-2.5 h-[42px] w-full rounded" />
+          <Block className="mt-2.5 h-10 w-full rounded sm:h-[42px]" />
         </div>
       </section>
 

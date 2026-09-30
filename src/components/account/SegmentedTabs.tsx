@@ -78,12 +78,14 @@ export function SegmentedTabs<T extends string>({
   return (
     // The bar is a fixed frame; only the tabs scroll inside it, and the
     // clipped edge fades into the bar's own fill with a ‹ / › chevron.
-    <div className={cn('w-fit max-w-full overflow-hidden rounded-md border border-white/[0.08] bg-bg-well', className)}>
+    // GameBoost sizing (measured 2026-09-29): a ~40px bar, 14px labels, 2px
+    // inset, the selected tab a lighter fill with a hairline ring.
+    <div className={cn('w-fit max-w-full overflow-hidden rounded-lg border border-white/[0.08] bg-bg-well', className)}>
     <ScrollRow
       edgeColor="var(--color-bg-well)"
       className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div role="tablist" aria-label={ariaLabel} className="flex w-max items-center gap-1 p-1">
+      <div role="tablist" aria-label={ariaLabel} className="flex w-max items-center gap-0.5 p-0.5">
         {tabs.map((tab, index) => {
           const active = tab.id === value
           return (
@@ -102,7 +104,7 @@ export function SegmentedTabs<T extends string>({
               onClick={() => onChange(tab.id)}
               onKeyDown={(event) => onKeyDown(event, index)}
               className={cn(
-                'relative flex h-8 shrink-0 items-center whitespace-nowrap rounded-[5px] px-3 text-[13px] font-semibold transition-colors',
+                'relative flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-md px-3.5 text-sm font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring',
                 active ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary',
               )}
@@ -111,7 +113,7 @@ export function SegmentedTabs<T extends string>({
                 <motion.span
                   layoutId={layoutId}
                   aria-hidden
-                  className="absolute inset-0 rounded-[5px] bg-white/[0.09]"
+                  className="absolute inset-0 rounded-md bg-white/[0.08] ring-1 ring-inset ring-white/[0.08]"
                   transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42, mass: 0.8 }}
                 />
               )}

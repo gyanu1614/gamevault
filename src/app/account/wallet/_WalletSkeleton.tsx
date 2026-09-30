@@ -58,9 +58,9 @@ export function WalletSkeleton({ isSeller }: { isSeller: boolean }) {
         </div>
 
         {/* Tabs: SegmentedTabs, first tab selected (Sales for sellers, Purchases for buyers) */}
-        <div className="mb-3 flex w-fit gap-1 rounded-md border border-white/[0.08] bg-bg-well p-1">
+        <div className="mb-3 flex w-fit gap-0.5 rounded-lg border border-white/[0.08] bg-bg-well p-0.5">
           {(isSeller ? [78, 104, 92] : [104]).map((w, i) => (
-            <div key={i} className={`h-8 rounded-[5px] ${i === 0 ? 'bg-white/[0.09]' : 'animate-pulse bg-white/[0.07] opacity-40'}`} style={{ width: w }} />
+            <div key={i} className={`h-[34px] rounded-md ${i === 0 ? 'bg-white/[0.09]' : 'animate-pulse bg-white/[0.07] opacity-40'}`} style={{ width: w }} />
           ))}
         </div>
 

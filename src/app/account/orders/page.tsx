@@ -408,13 +408,15 @@ function OrdersContent() {
 
         {/* Advanced Filter Bar */}
         <div ref={filterBarRef} className="mb-4 shrink-0 space-y-3">
-          <ScrollRow className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-sm:[&>div]:shrink-0 max-sm:[&_button]:whitespace-nowrap sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
+          {/* GameBoost sizing (measured 2026-09-29): 40px buttons on phones,
+              42px from sm, each as wide as its label (was a stretched grid). */}
+          <ScrollRow className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>div]:shrink-0 [&_button]:whitespace-nowrap sm:flex-wrap sm:overflow-visible sm:pb-0">
             {/* Status Filter */}
             <div className="relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
+                  "flex h-10 w-full items-center justify-between gap-2 rounded-md px-4 text-sm font-medium transition-colors sm:h-[42px]",
                   openDropdown === 'status'
                     ? "bg-bg-raised-hover text-text-primary"
                     : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
@@ -463,7 +465,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'game' ? null : 'game')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
+                  "flex h-10 w-full items-center justify-between gap-2 rounded-md px-4 text-sm font-medium transition-colors sm:h-[42px]",
                   openDropdown === 'game'
                     ? "bg-bg-raised-hover text-text-primary"
                     : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
@@ -524,7 +526,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
+                  "flex h-10 w-full items-center justify-between gap-2 rounded-md px-4 text-sm font-medium transition-colors sm:h-[42px]",
                   openDropdown === 'category'
                     ? "bg-bg-raised-hover text-text-primary"
                     : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
@@ -587,7 +589,7 @@ function OrdersContent() {
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
                 className={cn(
-                  "w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-md text-sm transition-colors",
+                  "flex h-10 w-full items-center justify-between gap-2 rounded-md px-4 text-sm font-medium transition-colors sm:h-[42px]",
                   openDropdown === 'date'
                     ? "bg-bg-raised-hover text-text-primary"
                     : "bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
@@ -654,7 +656,7 @@ function OrdersContent() {
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
               aria-label="Search orders"
-              className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-10')}
+              className={cn(accountInputCls, 'h-10 bg-bg-raised py-0 pl-9 pr-10 sm:h-[42px]')}
             />
             {filters.searchQuery && (
               <button

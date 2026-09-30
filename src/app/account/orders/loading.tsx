@@ -21,12 +21,12 @@ export default function OrdersLoading() {
         </div>
 
         <div className="mb-4 shrink-0 space-y-3">
-          <div className="flex gap-2 overflow-hidden sm:grid sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-[42px] w-36 shrink-0 rounded-md bg-bg-raised sm:w-auto" />
+          <div className="flex gap-2 overflow-hidden sm:flex-wrap">
+            {[128, 124, 150, 118].map((w, i) => (
+              <div key={i} className="h-10 shrink-0 rounded-md bg-bg-raised sm:h-[42px]" style={{ width: w }} />
             ))}
           </div>
-          <div className="h-10 rounded-md bg-bg-raised" />
+          <div className="h-10 rounded-md bg-bg-raised sm:h-[42px]" />
         </div>
 
         <div className="mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-bg-raised">
