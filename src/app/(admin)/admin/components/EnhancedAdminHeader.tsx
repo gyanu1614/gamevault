@@ -78,7 +78,6 @@ const PAGES: Array<{ label: string; href: string; keywords?: string }> = [
   { label: 'Promo Codes', href: '/admin/promos', keywords: 'discount coupon' },
   { label: 'Notifications', href: '/admin/notifications' },
   { label: 'Activities', href: '/admin/activities', keywords: 'log audit' },
-  { label: 'Utilities', href: '/admin/utils', keywords: 'tools' },
   { label: 'Profile', href: '/admin/profile', keywords: 'settings account' },
   { label: 'GDPR Requests', href: '/admin/gdpr', keywords: 'privacy export deletion' },
   { label: 'INFORM Act', href: '/admin/inform', keywords: 'compliance disclosure' },

@@ -32,9 +32,6 @@ const EXEMPT: Record<string, string> = {
   'src/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page.tsx': 'views counter only',
   'src/lib/actions/listing-views.ts': 'views counter only',
   'src/lib/api/listings.ts': 'browser module, views counter only',
-  // Dev tooling: creates/deletes listings for test sellers, which every public
-  // query already excludes (seller.is_test = false).
-  'src/lib/actions/test-data.ts': 'test-seller listings are never rendered',
 }
 
 const SEAM = '@/lib/revalidation/listings'
@@ -129,7 +126,6 @@ describe('listing mutations revalidate the category surfaces', () => {
       // live path is createCheckout → transition(), pinned below.
       'src/lib/actions/sell-wizard.ts',
       'src/lib/actions/seller-presence.ts',
-      'src/lib/actions/test-data.ts',
       'src/lib/api/listings.ts',
       'src/lib/api/seller-compatible.ts',
       'src/lib/escrow/transition.ts',

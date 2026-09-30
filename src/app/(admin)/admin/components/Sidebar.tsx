@@ -39,7 +39,6 @@ import {
   Target,
   Ticket,
   UserPlus,
-  Wrench,
   X,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
@@ -108,9 +107,8 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
     ],
   },
   {
-    title: 'System',
+    title: 'Account',
     links: [
-      { label: 'Utilities', href: '/admin/utils', icon: Wrench, roles: ['admin', 'super_admin'] },
       { label: 'Profile', href: '/admin/profile', icon: UserCircle, roles: ALL },
     ],
   },
