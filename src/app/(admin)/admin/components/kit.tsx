@@ -15,7 +15,7 @@
  */
 
 import Link from 'next/link'
-import { ArrowDownRight, ArrowUpRight } from '@phosphor-icons/react'
+import { ArrowDownRight, ArrowUpRight, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 /* ── Page header ──────────────────────────────────────────────────
@@ -269,5 +269,185 @@ export function SectionLabel({
     >
       {children}
     </div>
+  )
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────
+   The account buttons (40px) plus a compact 32px size for table rows. */
+export { accountBtn as adminBtn } from '@/components/account/AccountSurface'
+
+const SM_BASE =
+  'inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[12.5px] font-semibold ' +
+  'transition-[background-color,transform,opacity] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100'
+
+export const adminBtnSm = {
+  primary: `${SM_BASE} bg-lime text-text-inverse hover:bg-lime-hover`,
+  secondary: `${SM_BASE} bg-white/[0.06] text-text-primary hover:bg-white/[0.10]`,
+  danger: `${SM_BASE} bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] text-error hover:bg-[color-mix(in_srgb,var(--color-error)_22%,transparent)]`,
+} as const
+
+/** Text field on the page canvas (search boxes above tables). 16px below sm (no iOS zoom). */
+export const adminFieldCls =
+  'h-10 w-full rounded-md border border-transparent bg-bg-raised px-3.5 text-base text-text-primary placeholder:text-text-disabled ' +
+  'transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-[13.5px]'
+
+/* ── Empty state ──────────────────────────────────────────────────
+   Inside a panel: a neutral icon tile, one line, an optional hint/action. */
+export function AdminEmpty({
+  icon: Icon,
+  title,
+  hint,
+  action,
+  tone = 'neutral',
+  className,
+}: {
+  icon: AdminIcon
+  title: string
+  hint?: React.ReactNode
+  action?: React.ReactNode
+  tone?: ChipTone
+  className?: string
+}) {
+  return (
+    <div className={cn('flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-12 text-center', className)}>
+      <IconChip icon={Icon} tone={tone} size="lg" className="mb-3.5" />
+      <p className="text-[14px] font-semibold text-text-primary">{title}</p>
+      {hint && <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-text-tertiary">{hint}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  )
+}
+
+/* ── Loading rows ─────────────────────────────────────────────────
+   Skeleton rows in a panel, instead of a spinner and "Loading…". */
+export function AdminLoadingRows({ rows = 6, className }: { rows?: number; className?: string }) {
+  return (
+    <div className={cn('divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised', className)} aria-busy aria-label="Loading">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+          <div className="skeleton h-9 w-9 shrink-0 rounded-md" />
+          <div className="min-w-0 flex-1">
+            <div className="skeleton h-3.5 w-40 max-w-[70%] rounded" />
+            <div className="skeleton mt-2 h-3 w-56 max-w-[85%] rounded" />
+          </div>
+          <div className="skeleton h-5 w-16 shrink-0 rounded-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ── Pagination ───────────────────────────────────────────────────
+   "Showing 1–20 of 240" + prev / five page numbers / next. */
+export function AdminPagination({
+  page,
+  totalPages,
+  total,
+  limit,
+  onPage,
+  noun = 'results',
+}: {
+  page: number
+  totalPages: number
+  total: number
+  limit: number
+  onPage: (page: number) => void
+  noun?: string
+}) {
+  if (totalPages <= 1) return null
+  const first = Math.max(1, Math.min(page - 2, totalPages - 4))
+  const pages = Array.from({ length: Math.min(5, totalPages) }, (_, i) => first + i)
+  const btn =
+    'grid h-9 min-w-9 place-items-center rounded-md px-2 text-[13px] font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40'
+  return (
+    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+      <p className="text-[13px] text-text-tertiary">
+        Showing{' '}
+        <span className="font-semibold tabular-nums text-text-secondary">
+          {(page - 1) * limit + 1}–{Math.min(page * limit, total)}
+        </span>{' '}
+        of <span className="font-semibold tabular-nums text-text-secondary">{total.toLocaleString()}</span> {noun}
+      </p>
+      <nav aria-label="Pagination" className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          aria-label="Previous page"
+          className={cn(btn, 'bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary')}
+        >
+          <CaretLeft aria-hidden weight="bold" className="h-4 w-4" />
+        </button>
+        {pages.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onPage(n)}
+            aria-current={n === page ? 'page' : undefined}
+            className={cn(
+              btn,
+              n === page
+                ? 'bg-white/[0.10] text-text-primary'
+                : 'bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+            )}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => onPage(page + 1)}
+          disabled={page === totalPages}
+          aria-label="Next page"
+          className={cn(btn, 'bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary')}
+        >
+          <CaretRight aria-hidden weight="bold" className="h-4 w-4" />
+        </button>
+      </nav>
+    </div>
+  )
+}
+
+/* ── Filter chips ─────────────────────────────────────────────────
+   A labelled row of toggle chips. On phones the row scrolls sideways
+   (never wraps into a pile); from sm it wraps. Selected = lighter fill. */
+export function FilterRow({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn('flex min-w-0 items-center gap-2', className)}>
+      <span className="shrink-0 text-[12.5px] font-medium text-text-tertiary">{label}</span>
+      <div
+        role="group"
+        aria-label={label}
+        className="-mr-4 flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:flex-wrap sm:overflow-visible sm:pr-0 [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function FilterChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        'h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-colors',
+        selected
+          ? 'bg-white/[0.12] text-text-primary'
+          : 'bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary',
+      )}
+    >
+      {children}
+    </button>
   )
 }

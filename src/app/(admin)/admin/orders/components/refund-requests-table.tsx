@@ -9,13 +9,16 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { ArrowUUpLeft, CheckCircle, CircleNotch, XCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { approveRefundToSource, rejectRefundToSource, type RefundToSourceRequest } from '@/lib/actions/refund-to-source'
 import { cn } from '@/lib/utils'
-import { TABLE } from '../../components/kit'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { AdminEmpty, AdminLoadingRows, adminBtn, adminBtnSm, StatusBadge, TABLE, type ChipTone } from '../../components/kit'
 
 type Row = RefundToSourceRequest & {
   order?: { id: string; order_number: string | null; total_amount: number | null; status: string } | null
@@ -27,13 +30,17 @@ interface RefundRequestsTableProps {
   isLoading?: boolean
 }
 
-const STATUS_TONE: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-400',
-  approved: 'bg-blue-500/10 text-blue-400',
-  sent: 'bg-green-500/10 text-green-400',
-  failed: 'bg-red-500/10 text-red-400',
-  rejected: 'bg-white/[0.06] text-text-tertiary',
+const STATUS_TONE: Record<string, ChipTone> = {
+  pending: 'warning',
+  approved: 'info',
+  sent: 'success',
+  failed: 'error',
+  rejected: 'neutral',
 }
+
+const orderRef = (r: Row) => `#${r.order?.order_number || r.order_id.substring(0, 8)}`
+const amount = (r: Row) => `$${(Number(r.amount_minor) / 100).toFixed(2)} ${r.currency}`
+const ago = (iso: string) => formatDistanceToNow(new Date(iso), { addSuffix: true })
 
 export function RefundRequestsTable({ requests, isLoading }: RefundRequestsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -71,34 +78,88 @@ export function RefundRequestsTable({ requests, isLoading }: RefundRequestsTable
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-        <div className="flex flex-col items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-border-default border-t-lime"></div>
-          <p className="mt-3 text-sm text-text-tertiary">Loading refund requests...</p>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return <AdminLoadingRows rows={4} />
 
   if (!requests || requests.length === 0) {
     return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-            <CheckCircle className="h-6 w-6 text-green-400" />
-          </div>
-          <h3 className="mb-1 text-lg font-semibold text-text-primary">All Clear!</h3>
-          <p className="text-sm text-text-tertiary">No refund-to-payment-method requests</p>
-        </div>
-      </div>
+      <AdminEmpty
+        icon={ArrowUUpLeft}
+        tone="success"
+        title="All clear"
+        hint="No buyer has asked for store credit back to their payment method."
+      />
     )
   }
 
+  const statusCell = (r: Row) => (
+    <>
+      <StatusBadge status={r.status} tone={STATUS_TONE[r.status]} />
+      {r.status === 'failed' && r.failure_reason && (
+        <p className="mt-1 max-w-[240px] text-[12px] text-text-tertiary">{r.failure_reason}</p>
+      )}
+      {r.status === 'rejected' && r.admin_notes && (
+        <p className="mt-1 max-w-[240px] text-[12px] text-text-tertiary">{r.admin_notes}</p>
+      )}
+    </>
+  )
+
+  const actions = (r: Row, full?: boolean) =>
+    r.status === 'pending' ? (
+      <div className={cn('flex items-center gap-2', full ? 'w-full' : 'justify-end')}>
+        <button
+          type="button"
+          onClick={() => setRejecting(r)}
+          disabled={processingId === r.id}
+          className={cn(adminBtnSm.danger, full && 'flex-1')}
+        >
+          Reject
+        </button>
+        <button
+          type="button"
+          onClick={() => approve(r.id)}
+          disabled={processingId === r.id}
+          className={cn(adminBtnSm.primary, full && 'flex-1')}
+        >
+          {processingId === r.id ? (
+            <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          )}
+          Approve
+        </button>
+      </div>
+    ) : null
+
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
+      {/* Phones: cards */}
+      <ul className="space-y-2 md:hidden">
+        {requests.map((r) => (
+          <li key={r.id} className="rounded-lg bg-bg-raised p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link href={`/admin/orders/${r.order_id}`} className="text-[14px] font-semibold text-text-primary">
+                  {orderRef(r)}
+                </Link>
+                <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">
+                  {r.buyer?.username || 'Unknown'} · {ago(r.created_at)}
+                </p>
+              </div>
+              <p className="shrink-0 text-[14px] font-semibold tabular-nums text-text-primary">{amount(r)}</p>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-[12.5px] text-text-secondary">
+                {r.provider} <span className="font-mono text-[11.5px] text-text-tertiary">{r.provider_charge_id}</span>
+              </p>
+              <div className="shrink-0 text-right">{statusCell(r)}</div>
+            </div>
+            {r.status === 'pending' && <div className="mt-3">{actions(r, true)}</div>}
+          </li>
+        ))}
+      </ul>
+
+      {/* md+: table */}
+      <div className="hidden overflow-hidden rounded-lg bg-bg-raised md:block">
         <div className={TABLE.wrap}>
           <table className={TABLE.table}>
             <thead>
@@ -116,61 +177,27 @@ export function RefundRequestsTable({ requests, isLoading }: RefundRequestsTable
               {requests.map((r) => (
                 <tr key={r.id} className={TABLE.row}>
                   <td className={TABLE.tdPrimary}>
-                    <a href={`/admin/orders/${r.order_id}`} className="text-sm font-medium text-text-primary hover:underline">
-                      #{r.order?.order_number || r.order_id.substring(0, 8)}
-                    </a>
+                    <Link href={`/admin/orders/${r.order_id}`} className="underline-offset-4 hover:underline">
+                      {orderRef(r)}
+                    </Link>
                   </td>
                   <td className={TABLE.td}>
                     <div className="flex flex-col">
-                      <span className="text-sm text-text-primary">{r.buyer?.username || 'Unknown'}</span>
-                      <span className="text-xs text-text-tertiary">{r.buyer?.email || '—'}</span>
+                      <span className="text-[13.5px] text-text-primary">{r.buyer?.username || 'Unknown'}</span>
+                      <span className="text-[12px] text-text-tertiary">{r.buyer?.email || '—'}</span>
                     </div>
                   </td>
-                  <td className={cn(TABLE.td, 'tabular-nums')}>
-                    ${(Number(r.amount_minor) / 100).toFixed(2)} {r.currency}
-                  </td>
+                  <td className={cn(TABLE.td, 'whitespace-nowrap tabular-nums text-text-primary')}>{amount(r)}</td>
                   <td className={TABLE.td}>
                     <div className="flex flex-col">
-                      <span className="text-sm text-text-primary">{r.provider}</span>
-                      <span className="font-mono text-[11px] text-text-tertiary">{r.provider_charge_id}</span>
+                      <span className="text-[13.5px] text-text-primary">{r.provider}</span>
+                      <span className="font-mono text-[11.5px] text-text-tertiary">{r.provider_charge_id}</span>
                     </div>
                   </td>
-                  <td className={TABLE.td}>
-                    <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[11.5px] font-semibold capitalize', STATUS_TONE[r.status])}>
-                      {r.status}
-                    </span>
-                    {r.status === 'failed' && r.failure_reason && (
-                      <p className="mt-1 max-w-[220px] text-[11px] text-text-tertiary">{r.failure_reason}</p>
-                    )}
-                    {r.status === 'rejected' && r.admin_notes && (
-                      <p className="mt-1 max-w-[220px] text-[11px] text-text-tertiary">{r.admin_notes}</p>
-                    )}
-                  </td>
-                  <td className={cn(TABLE.td, 'text-text-tertiary')}>
-                    {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                  </td>
+                  <td className={TABLE.td}>{statusCell(r)}</td>
+                  <td className={cn(TABLE.td, 'whitespace-nowrap text-[12.5px] text-text-tertiary')}>{ago(r.created_at)}</td>
                   <td className={cn(TABLE.td, 'text-right')}>
-                    {r.status === 'pending' ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setRejecting(r)}
-                          disabled={processingId === r.id}
-                          className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => approve(r.id)}
-                          disabled={processingId === r.id}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-green-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
-                        >
-                          {processingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                          Approve
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-text-tertiary">—</span>
-                    )}
+                    {actions(r) ?? <span className="text-[12px] text-text-tertiary">—</span>}
                   </td>
                 </tr>
               ))}
@@ -179,44 +206,50 @@ export function RefundRequestsTable({ requests, isLoading }: RefundRequestsTable
         </div>
       </div>
 
-      {rejecting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setRejecting(null)}>
-          <div className="w-full max-w-md rounded-xl border border-border-default bg-bg-raised p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-text-primary">Decline Refund Request</h3>
-            <p className="mt-1 text-sm text-text-tertiary">
-              Order #{rejecting.order?.order_number || rejecting.order_id.substring(0, 8)} — the store credit stays in the buyer&apos;s Store Balance.
-            </p>
-            <label htmlFor="refund-reject-notes" className="mt-4 block text-xs font-medium text-text-secondary">
-              Reason shown to the buyer (optional)
-            </label>
-            <textarea
-              id="refund-reject-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              maxLength={500}
-              className="mt-2 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
-              placeholder="e.g. This payment method cannot receive refunds."
-            />
-            <div className="mt-4 flex gap-3">
-              <button
-                onClick={() => setRejecting(null)}
-                className="flex-1 rounded-lg border border-border-default bg-bg-overlay py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-raised-hover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => reject(rejecting.id)}
-                disabled={processingId === rejecting.id}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-              >
-                {processingId === rejecting.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                Decline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={!!rejecting} onOpenChange={(open) => !open && setRejecting(null)}>
+        <DialogContent className="max-w-[440px] border-0 p-5 sm:p-6">
+          {rejecting && (
+            <>
+              <DialogTitle className="text-[18px] font-bold">Decline Refund Request</DialogTitle>
+              <DialogDescription>
+                Order {orderRef(rejecting)}: the store credit stays in the buyer&apos;s Store Balance.
+              </DialogDescription>
+              <div>
+                <label htmlFor="refund-reject-notes" className="mb-1.5 block text-[13px] font-medium text-text-secondary">
+                  Reason Shown to the Buyer (Optional)
+                </label>
+                <textarea
+                  id="refund-reject-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  className={cn(accountInputCls, 'resize-none')}
+                  placeholder="e.g. This payment method cannot receive refunds."
+                />
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <button type="button" onClick={() => setRejecting(null)} className={cn(adminBtn.secondary, 'sm:flex-1')}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => reject(rejecting.id)}
+                  disabled={processingId === rejecting.id}
+                  className={cn(adminBtn.danger, 'sm:flex-1')}
+                >
+                  {processingId === rejecting.id ? (
+                    <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle aria-hidden weight="bold" className="h-4 w-4" />
+                  )}
+                  Decline
+                </button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

@@ -9,12 +9,14 @@
 
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { CheckCircle, XCircle, Loader2, Eye } from 'lucide-react'
+import { CheckCircle, CircleNotch, Eye, XCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { processCancellationRequest } from '@/lib/actions/order-cancellation'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
-import { TABLE } from '../../components/kit'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { AdminEmpty, AdminLoadingRows, adminBtn, adminBtnSm, TABLE } from '../../components/kit'
 
 interface CancellationRequest {
   id: string
@@ -30,6 +32,9 @@ interface CancellationRequestsTableProps {
   requests: CancellationRequest[]
   isLoading?: boolean
 }
+
+const orderRef = (r: CancellationRequest) => `#${r.order?.order_number || r.order_id.substring(0, 8)}`
+const ago = (iso: string) => formatDistanceToNow(new Date(iso), { addSuffix: true })
 
 export function CancellationRequestsTable({ requests, isLoading }: CancellationRequestsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -64,53 +69,84 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-        <div className="flex flex-col items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-border-default border-t-lime"></div>
-          <p className="text-sm text-text-tertiary mt-3">Loading cancellation requests...</p>
-        </div>
-      </div>
-    )
+  const closeModal = () => {
+    setShowReasonModal(null)
+    setAdminNotes('')
   }
 
+  if (isLoading) return <AdminLoadingRows rows={4} />
+
   if (!requests || requests.length === 0) {
-    return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
-            <CheckCircle className="h-6 w-6 text-green-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-text-primary mb-1">All Clear!</h3>
-          <p className="text-sm text-text-tertiary">No pending cancellation requests</p>
-        </div>
-      </div>
-    )
+    return <AdminEmpty icon={CheckCircle} tone="success" title="All clear" hint="No buyer is waiting on a cancellation." />
   }
+
+  const actions = (request: CancellationRequest, full?: boolean) => (
+    <div className={cn('flex items-center gap-2', full ? 'w-full' : 'justify-end')}>
+      <button
+        type="button"
+        onClick={() => setShowReasonModal(request)}
+        disabled={processingId === request.id}
+        className={cn(adminBtnSm.danger, full && 'flex-1')}
+      >
+        <XCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
+        Reject
+      </button>
+      <button
+        type="button"
+        onClick={() => handleProcess(request.id, 'approve')}
+        disabled={processingId === request.id}
+        className={cn(adminBtnSm.primary, full && 'flex-1')}
+      >
+        {processingId === request.id ? (
+          <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
+        )}
+        Approve
+      </button>
+    </div>
+  )
 
   return (
     <>
-      <div className="rounded-xl border border-border-default bg-bg-raised overflow-hidden">
+      {/* Phones: cards */}
+      <ul className="space-y-2 md:hidden">
+        {requests.map((request) => (
+          <li key={request.id} className="rounded-lg bg-bg-raised p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-text-primary">{orderRef(request)}</p>
+                <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">
+                  {request.order?.buyer?.username || 'Unknown'} · {ago(request.created_at)}
+                </p>
+              </div>
+              <p className="shrink-0 text-[14px] font-semibold tabular-nums text-text-primary">
+                ${request.order?.total_amount?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowReasonModal(request)}
+              className="mt-3 block w-full rounded-md bg-bg-overlay px-3 py-2.5 text-left text-[13px] leading-relaxed text-text-secondary"
+            >
+              <span className="line-clamp-3">{request.reason}</span>
+            </button>
+            <div className="mt-3">{actions(request, true)}</div>
+          </li>
+        ))}
+      </ul>
+
+      {/* md+: table */}
+      <div className="hidden overflow-hidden rounded-lg bg-bg-raised md:block">
         <div className={TABLE.wrap}>
           <table className={TABLE.table}>
             <thead>
               <tr>
-                <th className={TABLE.th}>
-                  Order
-                </th>
-                <th className={TABLE.th}>
-                  Buyer
-                </th>
-                <th className={TABLE.th}>
-                  Reason
-                </th>
-                <th className={TABLE.th}>
-                  Requested
-                </th>
-                <th className={cn(TABLE.th, 'text-right')}>
-                  Actions
-                </th>
+                <th className={TABLE.th}>Order</th>
+                <th className={TABLE.th}>Buyer</th>
+                <th className={TABLE.th}>Reason</th>
+                <th className={TABLE.th}>Requested</th>
+                <th className={cn(TABLE.th, 'text-right')}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -118,69 +154,33 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                 <tr key={request.id} className={TABLE.row}>
                   <td className={TABLE.tdPrimary}>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-text-primary">
-                        #{request.order?.order_number || request.order_id.substring(0, 8)}
-                      </span>
-                      <span className="text-xs text-text-tertiary">
+                      <span className="text-[13.5px] font-semibold text-text-primary">{orderRef(request)}</span>
+                      <span className="text-[12px] tabular-nums text-text-tertiary">
                         ${request.order?.total_amount?.toFixed(2) || '0.00'}
                       </span>
                     </div>
                   </td>
                   <td className={TABLE.td}>
                     <div className="flex flex-col">
-                      <span className="text-sm text-text-primary">
-                        {request.order?.buyer?.username || 'Unknown'}
-                      </span>
-                      <span className="text-xs text-text-tertiary">
-                        {request.order?.buyer?.email || '—'}
-                      </span>
+                      <span className="text-[13.5px] text-text-primary">{request.order?.buyer?.username || 'Unknown'}</span>
+                      <span className="text-[12px] text-text-tertiary">{request.order?.buyer?.email || '—'}</span>
                     </div>
                   </td>
                   <td className={cn(TABLE.td, 'max-w-xs')}>
                     <div className="flex items-start gap-2">
-                      <p className="text-sm text-text-secondary line-clamp-2">
-                        {request.reason}
-                      </p>
+                      <p className="line-clamp-2 text-[13px] text-text-secondary">{request.reason}</p>
                       <button
+                        type="button"
                         onClick={() => setShowReasonModal(request)}
-                        className="flex-shrink-0 p-1 rounded hover:bg-bg-overlay text-text-tertiary hover:text-text-secondary"
-                        title="View full reason"
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+                        aria-label="View full reason"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye aria-hidden weight="bold" className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </td>
-                  <td className={TABLE.td}>
-                    <span className="text-xs text-text-tertiary">
-                      {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-                    </span>
-                  </td>
-                  <td className={TABLE.td}>
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleProcess(request.id, 'approve')}
-                        disabled={processingId === request.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processingId === request.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle className="w-3.5 h-3.5" />
-                        )}
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowReasonModal(request)
-                        }}
-                        disabled={processingId === request.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        Reject
-                      </button>
-                    </div>
-                  </td>
+                  <td className={cn(TABLE.td, 'whitespace-nowrap text-[12.5px] text-text-tertiary')}>{ago(request.created_at)}</td>
+                  <td className={TABLE.td}>{actions(request)}</td>
                 </tr>
               ))}
             </tbody>
@@ -188,134 +188,103 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
         </div>
       </div>
 
-      {/* Reason Modal with Approve/Reject */}
-      {showReasonModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => {
-            setShowReasonModal(null)
-            setAdminNotes('')
-          }}
-        >
-          <div
-            className="bg-bg-raised border border-border-default rounded-xl shadow-2xl max-w-lg w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold text-text-primary mb-4">Cancellation Request</h3>
+      {/* Reason + decision */}
+      <Dialog open={!!showReasonModal} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent className="max-w-[480px] border-0 p-5 sm:p-6">
+          {showReasonModal && (
+            <>
+              <DialogTitle className="text-[18px] font-bold">Cancellation Request</DialogTitle>
+              <DialogDescription>
+                {orderRef(showReasonModal)} · {showReasonModal.order?.buyer?.username || 'Unknown'}
+              </DialogDescription>
 
-            <div className="space-y-4">
-              {/* Order Info */}
-              <div className="p-3 bg-bg-overlay border border-border-subtle rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-text-tertiary">Order</span>
-                  <span className="text-sm font-medium text-text-primary">
-                    #{showReasonModal.order?.order_number || showReasonModal.order_id.substring(0, 8)}
-                  </span>
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-1.5 text-[13px] font-medium text-text-secondary">Buyer’s Reason</p>
+                  <p className="whitespace-pre-wrap rounded-md bg-bg-overlay px-3.5 py-3 text-[13.5px] leading-relaxed text-text-primary">
+                    {showReasonModal.reason}
+                  </p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text-tertiary">Buyer</span>
-                  <span className="text-sm text-text-primary">
-                    {showReasonModal.order?.buyer?.username || 'Unknown'}
-                  </span>
-                </div>
-              </div>
 
-              {/* Buyer's Reason */}
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-2">
-                  Buyer&apos;s Reason:
+                {/* Fault → refund amount (refund policy) */}
+                <label className="flex cursor-pointer items-start gap-3 rounded-md bg-bg-overlay p-3.5">
+                  <input
+                    type="checkbox"
+                    checked={sellerFault}
+                    onChange={(e) => setSellerFault(e.target.checked)}
+                    disabled={processingId === showReasonModal.id}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-lime"
+                  />
+                  <span>
+                    <span className="block text-[13.5px] font-semibold text-text-primary">Seller At Fault</span>
+                    <span className="mt-0.5 block text-[12.5px] leading-relaxed text-text-tertiary">
+                      On approve: the buyer gets everything back including the service fee, and this counts against the
+                      seller&apos;s non-delivery record. Leave off when the buyer simply changed their mind (item price back,
+                      service fee kept).
+                    </span>
+                  </span>
                 </label>
-                <div className="p-3 bg-bg-overlay border border-border-subtle rounded-lg">
-                  <p className="text-sm text-text-secondary whitespace-pre-wrap">{showReasonModal.reason}</p>
+
+                <div>
+                  <div className="mb-1.5 flex items-baseline justify-between">
+                    <label htmlFor="admin-notes" className="text-[13px] font-medium text-text-secondary">
+                      Admin Notes (Optional)
+                    </label>
+                    <span className="text-[12px] tabular-nums text-text-tertiary">{adminNotes.length}/500</span>
+                  </div>
+                  <textarea
+                    id="admin-notes"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Add notes about your decision…"
+                    className={cn(accountInputCls, 'resize-none')}
+                    rows={3}
+                    maxLength={500}
+                    disabled={processingId === showReasonModal.id}
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={processingId === showReasonModal.id}
+                    className={cn(adminBtn.secondary, 'sm:flex-1')}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleProcess(showReasonModal.id, 'reject')}
+                    disabled={processingId === showReasonModal.id}
+                    className={cn(adminBtn.danger, 'sm:flex-1')}
+                  >
+                    {processingId === showReasonModal.id ? (
+                      <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle aria-hidden weight="bold" className="h-4 w-4" />
+                    )}
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleProcess(showReasonModal.id, 'approve')}
+                    disabled={processingId === showReasonModal.id}
+                    className={cn(adminBtn.primary, 'sm:flex-[1.4]')}
+                  >
+                    {processingId === showReasonModal.id ? (
+                      <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+                    )}
+                    Approve & Cancel Order
+                  </button>
                 </div>
               </div>
-
-              {/* Fault → refund amount (refund policy) */}
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-default bg-bg-overlay p-3">
-                <input
-                  type="checkbox"
-                  checked={sellerFault}
-                  onChange={(e) => setSellerFault(e.target.checked)}
-                  disabled={processingId === showReasonModal.id}
-                  className="mt-0.5 h-4 w-4 accent-lime"
-                />
-                <span className="text-sm">
-                  <span className="block font-medium text-text-primary">Seller At Fault</span>
-                  <span className="block text-xs text-text-tertiary">
-                    On approve: the buyer gets everything back including the service fee, and this counts against the seller&apos;s non-delivery record. Leave off when the buyer simply changed their mind (item price back, service fee kept).
-                  </span>
-                </span>
-              </label>
-
-              {/* Admin Notes */}
-              <div>
-                <label htmlFor="admin-notes" className="block text-xs font-medium text-text-secondary mb-2">
-                  Admin Notes (optional):
-                </label>
-                <textarea
-                  id="admin-notes"
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Add notes about your decision..."
-                  className="w-full px-3 py-2 bg-bg-base border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:border-focus-border focus:outline-none"
-                  rows={3}
-                  maxLength={500}
-                  disabled={processingId === showReasonModal.id}
-                />
-                <div className="text-xs text-text-tertiary mt-1 text-right">{adminNotes.length}/500</div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    setShowReasonModal(null)
-                    setAdminNotes('')
-                  }}
-                  disabled={processingId === showReasonModal.id}
-                  className="flex-1 py-2.5 border border-border-default bg-bg-overlay hover:bg-bg-raised-hover text-text-secondary rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleProcess(showReasonModal.id, 'reject')}
-                  disabled={processingId === showReasonModal.id}
-                  className="flex-1 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {processingId === showReasonModal.id ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4" />
-                      Reject
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleProcess(showReasonModal.id, 'approve')}
-                  disabled={processingId === showReasonModal.id}
-                  className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {processingId === showReasonModal.id ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      Approve & Cancel Order
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

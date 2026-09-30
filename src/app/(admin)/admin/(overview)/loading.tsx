@@ -24,7 +24,7 @@ export default function Loading() {
 
       <section>
         <SkSectionLabel />
-        <SkAdminStrip count={6} lgCols="md:grid-cols-3 lg:grid-cols-6" />
+        <SkAdminStrip count={6} lgCols="md:grid-cols-3 xl:grid-cols-6" />
       </section>
 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-5 lg:gap-6">

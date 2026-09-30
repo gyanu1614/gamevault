@@ -12,6 +12,7 @@
 
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeBackground } from '@/lib/utils/safe-background'
@@ -30,9 +31,11 @@ export default function RecentPurchaseToast() {
   const [isEnabled, setIsEnabled] = useState(true)
   const lastToastTime = useRef<number>(0)
   const THROTTLE_MS = 30000 // 30 seconds
+  // Marketplace social proof: never inside the admin console.
+  const isAdmin = usePathname()?.startsWith('/admin') ?? false
 
   useEffect(() => {
-    if (!isEnabled) return
+    if (!isEnabled || isAdmin) return
 
     const supabase = createClient()
 
@@ -92,7 +95,7 @@ export default function RecentPurchaseToast() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isEnabled])
+  }, [isEnabled, isAdmin])
 
   const showPurchaseToast = (purchase: RecentPurchase) => {
     const timeAgo = 'just now'
@@ -236,9 +239,11 @@ function getRandomLocation(): string {
 export function DailyStatsToast() {
   const [isEnabled, setIsEnabled] = useState(true)
   const hasShownToday = useRef(false)
+  // Marketplace social proof: never inside the admin console.
+  const isAdmin = usePathname()?.startsWith('/admin') ?? false
 
   useEffect(() => {
-    if (!isEnabled || hasShownToday.current) return
+    if (!isEnabled || isAdmin || hasShownToday.current) return
 
     const supabase = createClient()
 
@@ -267,7 +272,7 @@ export function DailyStatsToast() {
     }, 5000)
 
     return () => clearTimeout(timeout)
-  }, [isEnabled])
+  }, [isEnabled, isAdmin])
 
   // One compact row in the house toast style (owner, 2026-09-28: the old
   // two-line card inside the toast frame read as big and fake).

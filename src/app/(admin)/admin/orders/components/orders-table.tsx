@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ArrowRight, Receipt } from '@phosphor-icons/react'
 import { AdminOrder } from '@/lib/actions/admin-orders'
 import { cn } from '@/lib/utils'
-import { IconChevronLeft, IconChevronRight, IconExternalLink } from '@tabler/icons-react'
 import { getAvatarUrl } from '@/lib/utils/avatar'
-import { StatusBadge, TABLE } from '../../components/kit'
+import { AdminEmpty, AdminPagination, StatusBadge, TABLE } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 
 // Model C display labels for the escrow_status DB values (identifiers stay).
 // The badge tone is keyed on the DB value, the text on the label.
@@ -35,6 +36,34 @@ interface OrdersTableProps {
   } | null
 }
 
+const money = (n: number) => `$${n.toFixed(2)}`
+const date = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+
+function PayoutBadge({ status }: { status: string | null }) {
+  return <StatusBadge status={ESCROW_DISPLAY[status ?? ''] ?? status ?? '—'} tone={ESCROW_TONE[status ?? '']} />
+}
+
+function Person({ avatar, name, sub }: { avatar: string; name: string; sub: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+      {/* Emails only on very wide screens; the order page shows them. */}
+      <div className="min-w-0 max-w-[150px] min-[1680px]:max-w-[210px]">
+        <p className="truncate text-[13.5px] font-medium text-text-primary">{name}</p>
+        {sub && <p className="hidden truncate text-[12px] text-text-tertiary min-[1680px]:block">{sub}</p>}
+      </div>
+    </div>
+  )
+}
+
+function GameThumb({ game }: { game: NonNullable<AdminOrder['listing']>['game'] | null | undefined }) {
+  if (!game) return null
+  return <GameTile src={game.image_url || `/games/${game.slug}.png`} name={game.name} />
+}
+
 export function OrdersTable({ orders, pagination }: OrdersTableProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -46,23 +75,60 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
   }
 
   if (!orders || orders.length === 0) {
-    return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center mb-3">
-            <IconExternalLink className="h-6 w-6 text-text-tertiary" />
-          </div>
-          <p className="text-sm font-medium text-text-secondary">No orders found</p>
-          <p className="text-xs text-text-tertiary mt-1">Try adjusting your search or filters</p>
-        </div>
-      </div>
-    )
+    return <AdminEmpty icon={Receipt} title="No orders found" hint="Try another search or clear the filters." />
   }
 
   return (
-    <div className="space-y-3">
-      {/* Table */}
-      <div className="rounded-xl border border-border-default bg-bg-raised overflow-hidden">
+    <div className="space-y-4">
+      {/* Below xl: cards (two across from md). Six columns + the sidebar need ~960px. */}
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 xl:hidden">
+        {orders.map((order) => (
+          <li key={order.id}>
+            <Link
+              href={`/admin/orders/${order.id}`}
+              className="block rounded-lg bg-bg-raised p-4 transition-colors active:bg-bg-raised-hover"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[14px] font-semibold text-text-primary">{order.order_number}</p>
+                  <p className="mt-0.5 text-[12px] text-text-tertiary">
+                    {date(order.created_at)} · {time(order.created_at)}
+                  </p>
+                </div>
+                <StatusBadge status={order.status} />
+              </div>
+
+              <div className="mt-3 flex items-center gap-2.5">
+                <GameThumb game={order.listing?.game} />
+                <div className="min-w-0">
+                  <p className="truncate text-[13.5px] text-text-primary">{order.listing?.title || 'N/A'}</p>
+                  {order.listing?.game && (
+                    <p className="truncate text-[12px] text-text-tertiary">{order.listing.game.name}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                <p className="min-w-0 truncate text-[12.5px] text-text-secondary">
+                  {order.buyer?.username || 'Unknown'}
+                  <ArrowRight aria-hidden weight="bold" className="mx-1.5 inline h-3 w-3 text-text-tertiary" />
+                  {order.seller?.shop_name || order.seller?.username || 'Unknown'}
+                </p>
+                <p className="shrink-0 text-[14px] font-semibold tabular-nums text-text-primary">
+                  {money(order.total_amount)}
+                </p>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-[12px] text-text-tertiary">Fee {money(order.platform_fee)}</span>
+                <PayoutBadge status={order.escrow_status} />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {/* xl+: the table */}
+      <div className="hidden overflow-hidden rounded-lg bg-bg-raised xl:block">
         <div className={TABLE.wrap}>
           <table className={TABLE.table}>
             <thead>
@@ -72,9 +138,7 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
                 <th className={TABLE.th}>Seller</th>
                 <th className={TABLE.th}>Listing</th>
                 <th className={cn(TABLE.th, 'text-right')}>Amount</th>
-                <th className={cn(TABLE.th, 'text-center')}>Status</th>
-                <th className={cn(TABLE.th, 'text-center')}>Payout</th>
-                <th className={cn(TABLE.th, 'text-right')}>Date</th>
+                <th className={cn(TABLE.th, 'text-right')}>Status · Payout</th>
               </tr>
             </thead>
             <tbody>
@@ -83,87 +147,47 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
                   <td className={TABLE.tdPrimary}>
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="flex items-center gap-2 transition-colors"
+                      className="whitespace-nowrap text-text-primary underline-offset-4 group-hover:underline"
                     >
-                      <span className="text-sm font-semibold text-text-primary group-hover:text-lime-text transition-colors">{order.order_number}</span>
-                      <IconExternalLink className="h-3.5 w-3.5 text-lime-text opacity-0 group-hover:opacity-100 transition-all" />
+                      {order.order_number}
                     </Link>
+                    <p className="mt-0.5 whitespace-nowrap text-[12px] font-normal text-text-tertiary">
+                      {date(order.created_at)} · {time(order.created_at)}
+                    </p>
                   </td>
                   <td className={TABLE.td}>
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={getAvatarUrl(order.buyer?.avatar_url, order.buyer?.username || 'buyer')}
-                        alt={order.buyer?.username || 'Buyer'}
-                        className="h-7 w-7 rounded-full border border-border-default"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{order.buyer?.username || 'Unknown'}</p>
-                        <p className="text-[10px] text-text-tertiary truncate">{order.buyer?.email || ''}</p>
-                      </div>
-                    </div>
+                    <Person
+                      avatar={getAvatarUrl(order.buyer?.avatar_url, order.buyer?.username || 'buyer')}
+                      name={order.buyer?.username || 'Unknown'}
+                      sub={order.buyer?.email || ''}
+                    />
                   </td>
                   <td className={TABLE.td}>
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={getAvatarUrl(order.seller?.avatar_url, order.seller?.username || 'seller')}
-                        alt={order.seller?.username || 'Seller'}
-                        className="h-7 w-7 rounded-full border border-border-default"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{order.seller?.shop_name || order.seller?.username || 'Unknown'}</p>
-                        <p className="text-[10px] text-text-tertiary truncate">{order.seller?.email || ''}</p>
-                      </div>
-                    </div>
+                    <Person
+                      avatar={getAvatarUrl(order.seller?.avatar_url, order.seller?.username || 'seller')}
+                      name={order.seller?.shop_name || order.seller?.username || 'Unknown'}
+                      sub={order.seller?.email || ''}
+                    />
                   </td>
                   <td className={TABLE.td}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      {order.listing?.game && (
-                        <img
-                          src={order.listing.game.image_url || `/games/${order.listing.game.slug}.png`}
-                          alt={order.listing.game.name}
-                          className="h-8 w-8 rounded object-cover flex-shrink-0"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                          }}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm text-text-primary truncate max-w-xs">{order.listing?.title || 'N/A'}</p>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <GameThumb game={order.listing?.game} />
+                      <div className="min-w-0 max-w-[200px] min-[1680px]:max-w-[280px]">
+                        <p className="truncate text-[13.5px] text-text-primary">{order.listing?.title || 'N/A'}</p>
                         {order.listing?.game && (
-                          <p className="text-[10px] text-text-tertiary truncate">
-                            {order.listing.game.name}
-                          </p>
+                          <p className="truncate text-[12px] text-text-tertiary">{order.listing.game.name}</p>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className={cn(TABLE.td, 'text-right')}>
-                    <div className="text-sm font-semibold tabular-nums text-text-primary">${order.total_amount.toFixed(2)}</div>
-                    <div className="text-[10px] text-text-tertiary">Fee: ${order.platform_fee.toFixed(2)}</div>
-                  </td>
-                  <td className={cn(TABLE.td, 'text-center')}>
-                    <StatusBadge status={order.status} />
-                  </td>
-                  <td className={cn(TABLE.td, 'text-center')}>
-                    <StatusBadge
-                      status={ESCROW_DISPLAY[order.escrow_status ?? ''] ?? order.escrow_status}
-                      tone={ESCROW_TONE[order.escrow_status ?? '']}
-                    />
+                  <td className={cn(TABLE.td, 'whitespace-nowrap text-right')}>
+                    <div className="text-[13.5px] font-semibold tabular-nums text-text-primary">{money(order.total_amount)}</div>
+                    <div className="text-[12px] tabular-nums text-text-tertiary">Fee {money(order.platform_fee)}</div>
                   </td>
                   <td className={cn(TABLE.td, 'text-right')}>
-                    <div className="text-sm text-text-secondary">
-                      {new Date(order.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </div>
-                    <div className="text-[10px] text-text-tertiary">
-                      {new Date(order.created_at).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <div className="flex flex-col items-end gap-1">
+                      <StatusBadge status={order.status} />
+                      <PayoutBadge status={order.escrow_status} />
                     </div>
                   </td>
                 </tr>
@@ -173,60 +197,15 @@ export function OrdersTable({ orders, pagination }: OrdersTableProps) {
         </div>
       </div>
 
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-border-default bg-bg-raised">
-          <div className="text-sm text-text-tertiary">
-            Showing <span className="font-medium text-text-primary">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
-            <span className="font-medium text-text-primary">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{' '}
-            <span className="font-medium text-text-primary">{pagination.total}</span> orders
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="p-2 rounded-lg border border-border-default bg-bg-overlay hover:bg-bg-raised-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <IconChevronLeft className="h-4 w-4 text-text-secondary" />
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                let pageNum
-                if (pagination.totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (pagination.page <= 3) {
-                  pageNum = i + 1
-                } else if (pagination.page >= pagination.totalPages - 2) {
-                  pageNum = pagination.totalPages - 4 + i
-                } else {
-                  pageNum = pagination.page - 2 + i
-                }
-
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={cn(
-                      'min-w-[2rem] h-8 rounded-lg text-sm font-medium transition-colors',
-                      pageNum === pagination.page
-                        ? 'border border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                        : 'border border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary'
-                    )}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-              className="p-2 rounded-lg border border-border-default bg-bg-overlay hover:bg-bg-raised-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <IconChevronRight className="h-4 w-4 text-text-secondary" />
-            </button>
-          </div>
-        </div>
+      {pagination && (
+        <AdminPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPage={handlePageChange}
+          noun="orders"
+        />
       )}
     </div>
   )

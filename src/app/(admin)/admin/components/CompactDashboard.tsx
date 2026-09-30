@@ -217,7 +217,7 @@ export default function CompactDashboard({ stats, activities, activityFailed, ad
       {/* Key Metrics — one panel, hairlines between cells */}
       <section>
         <SectionLabel>Key Metrics</SectionLabel>
-        <StatStrip stats={keyMetrics} className="md:grid-cols-3 lg:grid-cols-6" />
+        <StatStrip stats={keyMetrics} className="md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6" />
       </section>
 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-5 lg:gap-6">

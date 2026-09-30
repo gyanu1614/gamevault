@@ -1,28 +1,29 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { IconSearch, IconX } from '@tabler/icons-react'
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { adminBtn, adminFieldCls, FilterChip, FilterRow } from '../../components/kit'
 
 // Values are the orders_status_check / orders_escrow_status_check keys.
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'blue' },
-  { value: 'paid', label: 'Paid', color: 'green' },
-  { value: 'delivering', label: 'Delivering', color: 'amber' },
-  { value: 'delivered', label: 'Delivered', color: 'amber' },
-  { value: 'disputed', label: 'Disputed', color: 'red' },
-  { value: 'completed', label: 'Completed', color: 'green' },
-  { value: 'cancelled', label: 'Cancelled', color: 'red' },
-  { value: 'refunded', label: 'Refunded', color: 'orange' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'delivering', label: 'Delivering' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'disputed', label: 'Disputed' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'refunded', label: 'Refunded' },
 ]
 
 const ESCROW_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'blue' },
-  { value: 'held', label: 'Payout Pending', color: 'amber' },
-  { value: 'frozen', label: 'Frozen', color: 'red' },
-  { value: 'released', label: 'Seller Paid Out', color: 'green' },
-  { value: 'refunded', label: 'Refunded', color: 'red' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'held', label: 'Payout Pending' },
+  { value: 'frozen', label: 'Frozen' },
+  { value: 'released', label: 'Seller Paid Out' },
+  { value: 'refunded', label: 'Refunded' },
 ]
 
 export function OrderFilters() {
@@ -74,16 +75,20 @@ export function OrderFilters() {
 
   return (
     <div className="space-y-3">
-      {/* Search Bar */}
       <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1">
-          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+        <div className="relative min-w-0 flex-1">
+          <MagnifyingGlass
+            aria-hidden
+            weight="bold"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+          />
           <input
-            type="text"
+            type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by order number, buyer, seller, or listing..."
-            className="w-full rounded-lg border border-border-default bg-bg-base py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none"
+            placeholder="Order number, buyer, seller or listing"
+            aria-label="Search orders"
+            className={cn(adminFieldCls, 'pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden')}
           />
           {searchInput && (
             <button
@@ -92,81 +97,58 @@ export function OrderFilters() {
                 setSearchInput('')
                 updateFilters({ search: null })
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-bg-overlay rounded transition-colors"
+              aria-label="Clear search"
+              className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
             >
-              <IconX className="h-3.5 w-3.5 text-text-tertiary" />
+              <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-lime-pressed hover:bg-lime text-text-inverse rounded-lg text-sm font-bold transition-colors"
-        >
+        <button type="submit" className={adminBtn.primary}>
           Search
         </button>
         {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="px-4 py-2 bg-bg-overlay hover:bg-bg-raised-hover text-text-secondary hover:text-text-primary rounded-lg text-sm font-medium border border-border-default transition-colors"
-          >
+          <button type="button" onClick={clearAllFilters} className={cn(adminBtn.secondary, 'hidden sm:inline-flex')}>
             Clear All
           </button>
         )}
       </form>
 
-      {/* Filter Pills */}
-      <div className="flex flex-wrap gap-2">
-        {/* Status Filters */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-tertiary font-medium">Status:</span>
-          {STATUS_OPTIONS.map((option) => {
-            const isSelected = selectedStatuses.includes(option.value)
-            return (
-              <button
-                key={option.value}
-                onClick={() => toggleFilter('status', option.value)}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-medium border transition-all',
-                  isSelected
-                    ? option.color === 'green' ? 'bg-green-500/15 text-green-400 border-green-500/30'
-                    : option.color === 'amber' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    : option.color === 'blue' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                    : option.color === 'red' ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                    : 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                    : 'bg-bg-overlay text-text-tertiary border-border-default hover:bg-bg-raised-hover hover:text-text-secondary'
-                )}
-              >
-                {option.label}
-              </button>
-            )
-          })}
-        </div>
+      <div className="space-y-2 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-2 lg:space-y-0">
+        <FilterRow label="Status">
+          {STATUS_OPTIONS.map((option) => (
+            <FilterChip
+              key={option.value}
+              selected={selectedStatuses.includes(option.value)}
+              onClick={() => toggleFilter('status', option.value)}
+            >
+              {option.label}
+            </FilterChip>
+          ))}
+        </FilterRow>
 
-        {/* Payout Filters (escrowStatus param/values stay — DB keys) */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-tertiary font-medium">Payout:</span>
-          {ESCROW_OPTIONS.map((option) => {
-            const isSelected = selectedEscrow.includes(option.value)
-            return (
-              <button
-                key={option.value}
-                onClick={() => toggleFilter('escrowStatus', option.value)}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-medium border transition-all',
-                  isSelected
-                    ? option.color === 'green' ? 'bg-green-500/15 text-green-400 border-green-500/30'
-                    : option.color === 'amber' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    : option.color === 'blue' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                    : 'bg-red-500/15 text-red-400 border-red-500/30'
-                    : 'bg-bg-overlay text-text-tertiary border-border-default hover:bg-bg-raised-hover hover:text-text-secondary'
-                )}
-              >
-                {option.label}
-              </button>
-            )
-          })}
-        </div>
+        {/* escrowStatus param/values stay — DB keys */}
+        <FilterRow label="Payout">
+          {ESCROW_OPTIONS.map((option) => (
+            <FilterChip
+              key={option.value}
+              selected={selectedEscrow.includes(option.value)}
+              onClick={() => toggleFilter('escrowStatus', option.value)}
+            >
+              {option.label}
+            </FilterChip>
+          ))}
+        </FilterRow>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="text-[12.5px] font-semibold text-text-secondary underline-offset-4 hover:text-text-primary hover:underline sm:hidden"
+          >
+            Clear All Filters
+          </button>
+        )}
       </div>
     </div>
   )
