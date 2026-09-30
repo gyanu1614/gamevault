@@ -154,7 +154,6 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
         { label: 'Currency', href: '/account/listings?type=currency' },
         { label: 'Items',    href: '/account/listings?type=items' },
         { label: 'Accounts', href: '/account/listings?type=accounts' },
-        { label: 'Top Ups',  href: '/account/listings?type=top-up' },
       ] },
     { label: 'Messages',    href: '/account/messages',   icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, requiresSeller: true, showForBuyer: false, showForSeller: true },
     { label: 'Wallet',      href: '/account/wallet',     icon: Wallet,          requiresSeller: true, showForBuyer: false, showForSeller: true },

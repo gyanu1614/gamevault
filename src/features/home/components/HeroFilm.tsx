@@ -98,7 +98,6 @@ const CATEGORIES = [
   { id: 'currency', label: 'Currency', icon: 'currency' },
   { id: 'accounts', label: 'Accounts', icon: 'accounts' },
   { id: 'items', label: 'Items', icon: 'items' },
-  { id: 'top-up', label: 'Top Ups', icon: 'top-up' },
 ] as const
 
 function HeroCategory({

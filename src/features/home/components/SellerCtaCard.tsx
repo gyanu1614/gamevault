@@ -207,7 +207,6 @@ const CARD1_CATEGORIES = [
   { label: 'Currency', offset: 0, opacity: 1 },
   { label: 'Accounts', offset: 28, opacity: 0.9 },
   { label: 'Items', offset: 12, opacity: 0.78 },
-  { label: 'Top-Ups', offset: 40, opacity: 0.62 },
   { label: 'Boosting', offset: 6, opacity: 0.45 },
   { label: 'Gift Cards', offset: 22, opacity: 0.3 },
 ] as const
