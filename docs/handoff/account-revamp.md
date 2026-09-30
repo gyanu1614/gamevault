@@ -104,6 +104,13 @@ Local commits only (NOT pushed, no PR yet): 01ffea51, 12b3d6ff, 0bcc7e99, 26266a
   category's listings tag; revalidate 86400. SAB landing now uses OfferRail too. Popular Games tiles still
   link to the hub (now a real landing page).
 
+- No-outline sweep (47892c66): /sell/fees, shop (banner + storefront), /browse, /notifications, legal shell,
+  SAB feature cards, currency/listing skeletons, item cards (hairline dropped). Shared `MARKET_CARD` /
+  `MARKET_CARD_HOVER` in `src/lib/ui/surfaces.ts` — use it for any new marketplace card. GameSubNav:
+  text-only tabs, white underline (no glow), desktop gap to navbar 47px → 15px (`md:-mt-3 md:pt-0`).
+  Still old-look (not touched): sell wizard + bulk upload (big flows), FoundingSellerBadge chip.
+  Note: /sell/fees still lists a "Top-ups" category rate (fee schedule reads fee_rules types).
+
 ## Checks
 tsc clean; eslint 0 errors (pre-existing img warnings); unit suite 196 files / 1,589 green; security review: no findings;
 web-design-guidelines pass applied. Visual checks done in the Browser pane on public pages (items, menu, currency);
