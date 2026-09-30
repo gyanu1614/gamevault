@@ -4,24 +4,15 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getOrder } from '@/lib/actions/orders'
-import {
-  ArrowLeft,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Shield,
-  Package,
-  XCircle,
-  RefreshCw,
-  Truck,
-  User,
-  Store,
-  Calendar,
-  ExternalLink,
-} from 'lucide-react'
+import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'
+import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
+import { Scales } from '@phosphor-icons/react/dist/ssr/Scales'
 import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { AdminOrderActions } from './_AdminOrderActions'
+import { AdminPanel, StatusBadge } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
+import { PAYOUT_LABEL, PAYOUT_TONE } from '../payout'
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -35,51 +26,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-const STATUS_CONFIG: Record<string, { label: string; pill: string; dot: string; pulse: boolean; icon: React.ElementType }> = {
-  pending:    { label: 'Pending',     pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',    pulse: true,  icon: Clock },
-  processing: { label: 'Processing',  pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',   dot: 'bg-amber-400',  pulse: true,  icon: Clock },
-  paid:       { label: 'Paid',        pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  delivering: { label: 'Delivering',  pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: true,  icon: Truck },
-  delivered:  { label: 'Delivered',   pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',       dot: 'bg-blue-400',   pulse: false, icon: Package },
-  completed:  { label: 'Completed',   pill: 'bg-green-500/10 text-green-400 border-green-500/20',    dot: 'bg-green-400',  pulse: false, icon: CheckCircle2 },
-  disputed:   { label: 'Disputed',    pill: 'bg-red-500/10 text-red-400 border-red-500/20',          dot: 'bg-red-400',    pulse: true,  icon: AlertTriangle },
-  refunded:   { label: 'Refunded',    pill: 'border-border-default bg-bg-overlay text-text-secondary', dot: 'bg-gray-400',   pulse: false, icon: RefreshCw },
-  cancelled:  { label: 'Cancelled',   pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400', pulse: false, icon: XCircle },
-}
-
-function StatusPill({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending
-  const Icon = cfg.icon
-  return (
-    <div className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold', cfg.pill)}>
-      <span className="relative flex h-2 w-2 flex-shrink-0">
-        {cfg.pulse && <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-60', cfg.dot)} />}
-        <span className={cn('relative inline-flex rounded-full h-2 w-2', cfg.dot)} />
-      </span>
-      <Icon className="h-3.5 w-3.5" />
-      {cfg.label}
-    </div>
-  )
-}
-
-function EscrowPill({ escrowStatus }: { escrowStatus: string }) {
-  const cfg: Record<string, { label: string; pill: string }> = {
-    pending:  { label: 'Pending',         pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    held:     { label: 'Payout Pending',  pill: 'bg-amber-500/10 text-amber-400/80 border-amber-500/15' },
-    released: { label: 'Seller Paid Out', pill: 'bg-blue-500/10 text-blue-400/80 border-blue-500/15' },
-    refunded: { label: 'Refunded',        pill: 'border-border-default bg-bg-overlay text-text-tertiary' },
-    frozen:   { label: 'Under Review',    pill: 'bg-red-500/10 text-red-400/80 border-red-500/15' },
-  }
-  const c = cfg[escrowStatus] ?? cfg.pending
-  return (
-    <div className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium', c.pill)}>
-      <Shield className="h-3 w-3" />
-      {c.label}
-    </div>
-  )
-}
-
 const usd = (n: number) => `$${n.toFixed(2)}`
+const when = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 /** " (8%)" for a percent snapshot; empty when the order has none. */
 function pctLabel(rate: unknown): string {
@@ -156,237 +105,136 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     | null
   const category = (categoryRes as any).data as { id: string; name: string; slug: string } | null
 
+  const timeline = [
+    { label: 'Order Created', at: order.created_at as string | null },
+    { label: 'Delivered', at: order.delivered_at as string | null },
+    { label: 'Completed', at: order.completed_at as string | null },
+  ].filter((t) => t.at)
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/admin/orders"
-            className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Orders
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusPill status={order.status} />
-          <EscrowPill escrowStatus={order.escrow_status} />
+      <div>
+        <Link
+          href="/admin/orders"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Orders
+        </Link>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
+              {order.order_number}
+            </h1>
+            <p className="mt-1 break-all font-mono text-[12px] text-text-tertiary">{order.id}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge status={order.status} className="px-2.5 py-1 text-[12.5px]" />
+            <StatusBadge
+              status={PAYOUT_LABEL[order.escrow_status] ?? order.escrow_status}
+              tone={PAYOUT_TONE[order.escrow_status]}
+              className="px-2.5 py-1 text-[12.5px]"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Order Info Card */}
-          <div className="rounded-xl border border-border-default bg-bg-raised p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-text-primary mb-1">{order.order_number}</h1>
-                <p className="text-sm text-text-tertiary">Order ID: {order.id}</p>
-              </div>
-            </div>
-
-            {/* Listing Details */}
-            {order.listing && (
-              <div className="flex gap-4 p-4 rounded-xl bg-bg-overlay border border-border-subtle mb-6">
-                {game && (
-                  game.image_url ? (
-                    <img
-                      src={game.image_url}
-                      alt={game.name}
-                      className="h-16 w-16 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-lg bg-bg-overlay-2 flex items-center justify-center text-2xl">
-                      {game.emoji}
-                    </div>
-                  )
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-text-primary mb-1">{order.listing.title}</h3>
-                  {game && (
-                    <p className="text-xs text-text-tertiary flex items-center gap-1.5">
-                      <span>{game.emoji}</span>
-                      <span>{game.name}</span>
-                      {category && (
-                        <>
-                          <span className="text-text-disabled">•</span>
-                          <span>{category.name}</span>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  <p className="text-xs text-text-tertiary mt-1">Quantity: {order.quantity}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Financial Breakdown */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-text-primary">Financial Details</h3>
-              <div className="space-y-2">
-                {/* platform_fee is the BUYER's marketplace fee (on top of the
-                    price); the seller's fee is subtotal − seller_payout at
-                    the snapshotted seller_commission_pct. Rates are percents. */}
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Item Price</span>
-                  <span className="tabular-nums text-text-primary">{usd(money.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Buyer Fee{pctLabel(order.platform_fee_rate)}</span>
-                  <span className="tabular-nums text-text-primary">+{usd(money.buyerFee)}</span>
-                </div>
-                {money.processingFee > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Processing Fee{pctLabel(order.payment_processing_fee_rate)}</span>
-                    <span className="tabular-nums text-text-primary">+{usd(money.processingFee)}</span>
-                  </div>
-                )}
-                {money.promoDiscount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Promo Discount</span>
-                    <span className="tabular-nums text-text-primary">-{usd(money.promoDiscount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm pt-2 border-t border-border-subtle">
-                  <span className="text-text-secondary">Buyer Paid</span>
-                  <span className="font-semibold tabular-nums text-text-primary">{usd(money.total)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Seller Fee{pctLabel(order.seller_commission_pct)}</span>
-                  <span className="tabular-nums text-amber-400">-{usd(money.sellerFee)}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-border-subtle">
-                  <span className="text-text-secondary">Seller Payout</span>
-                  <span className="font-bold tabular-nums text-green-400">{usd(money.sellerPayout)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="rounded-xl border border-border-default bg-bg-raised p-6">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Order Timeline</h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-4 w-4 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">Order Created</p>
-                  <p className="text-xs text-text-tertiary">
-                    {new Date(order.created_at).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Main */}
+        <div className="min-w-0 space-y-5 lg:col-span-2">
+          {order.listing && (
+            <AdminPanel>
+              <div className="flex items-center gap-4">
+                <GameTile src={game?.image_url} name={game?.name} className="h-14 w-14 text-[18px]" />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-[16px] font-semibold leading-snug text-text-primary">{order.listing.title}</h2>
+                  <p className="mt-1 text-[13px] text-text-tertiary">
+                    {[game?.name, category?.name].filter(Boolean).join(' · ')}
+                    {game || category ? ' · ' : ''}Quantity {order.quantity}
                   </p>
                 </div>
               </div>
-
-              {order.delivered_at && (
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <Package className="h-4 w-4 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">Delivered</p>
-                    <p className="text-xs text-text-tertiary">
-                      {new Date(order.delivered_at).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {order.completed_at && (
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">Completed</p>
-                    <p className="text-xs text-text-tertiary">
-                      {new Date(order.completed_at).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-5">
-          {/* Buyer Info */}
-          {buyer && (
-            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-                <User className="h-4 w-4 text-lime-text" />
-                Buyer
-              </h3>
-              <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={getAvatarUrl(buyer.avatar_url, buyer.username)}
-                  alt={buyer.username}
-                  className="h-10 w-10 rounded-full border border-border-default"
-                />
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{buyer.username}</p>
-                  <p className="text-xs text-text-tertiary">{buyer.email}</p>
-                </div>
-              </div>
-              {/* No admin user page exists; the orders search matches usernames. */}
-              <Link
-                href={`/admin/orders?search=${encodeURIComponent(buyer.username ?? '')}`}
-                className="text-xs text-lime-text hover:text-lime transition-colors flex items-center gap-1"
-              >
-                View Buyer&apos;s Orders
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
+            </AdminPanel>
           )}
 
-          {/* Seller Info */}
-          {seller && (
-            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-                <Store className="h-4 w-4 text-lime-text" />
-                Seller
-              </h3>
-              <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={getAvatarUrl(seller.avatar_url, seller.username)}
-                  alt={seller.username}
-                  className="h-10 w-10 rounded-full border border-border-default"
-                />
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{seller.shop_name || seller.username}</p>
-                  <p className="text-xs text-text-tertiary">{seller.email}</p>
-                </div>
+          {/* platform_fee is the BUYER's marketplace fee (on top of the
+              price); the seller's fee is subtotal − seller_payout at the
+              snapshotted seller_commission_pct. Rates are percents. */}
+          <AdminPanel pad={false}>
+            <h2 className="px-5 pb-2 pt-5 text-[15px] font-semibold text-text-primary sm:px-6">Money</h2>
+            <dl className="divide-y divide-white/[0.06] px-5 pb-2 sm:px-6">
+              <MoneyRow label="Item Price" value={usd(money.subtotal)} />
+              <MoneyRow label={`Buyer Fee${pctLabel(order.platform_fee_rate)}`} value={`+${usd(money.buyerFee)}`} />
+              {money.processingFee > 0 && (
+                <MoneyRow label={`Processing Fee${pctLabel(order.payment_processing_fee_rate)}`} value={`+${usd(money.processingFee)}`} />
+              )}
+              {money.promoDiscount > 0 && <MoneyRow label="Promo Discount" value={`-${usd(money.promoDiscount)}`} />}
+              <MoneyRow label="Buyer Paid" value={usd(money.total)} strong />
+              <MoneyRow
+                label={`Seller Fee${pctLabel(order.seller_commission_pct)}`}
+                value={`-${usd(money.sellerFee)}`}
+                valueClass="text-warning"
+              />
+              <MoneyRow label="Seller Payout" value={usd(money.sellerPayout)} strong valueClass="text-success" />
+            </dl>
+          </AdminPanel>
+
+          <AdminPanel>
+            <h2 className="mb-4 text-[15px] font-semibold text-text-primary">Timeline</h2>
+            <ol
+              className={cn(
+                'relative space-y-4',
+                timeline.length > 1 &&
+                  'before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-white/[0.08]',
+              )}
+            >
+              {timeline.map((t, i) => (
+                <li key={t.label} className="relative flex items-start gap-3 pl-6">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute left-0 top-1 h-[11px] w-[11px] rounded-full ring-4 ring-bg-raised',
+                      i === timeline.length - 1 ? 'bg-text-primary' : 'bg-white/[0.25]',
+                    )}
+                  />
+                  <div>
+                    <p className="text-[13.5px] font-medium text-text-primary">{t.label}</p>
+                    <p className="text-[12.5px] text-text-tertiary">{when(t.at!)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </AdminPanel>
+        </div>
+
+        {/* Side */}
+        <div className="min-w-0 space-y-5">
+          {(buyer || seller) && (
+            <AdminPanel pad={false}>
+              <div className="divide-y divide-white/[0.06]">
+                {buyer && (
+                  <Party
+                    role="Buyer"
+                    avatar={getAvatarUrl(buyer.avatar_url, buyer.username)}
+                    name={buyer.username}
+                    email={buyer.email}
+                    // No admin user page exists; the orders search matches usernames.
+                    href={`/admin/orders?search=${encodeURIComponent(buyer.username ?? '')}`}
+                    linkLabel="Buyer’s Orders"
+                  />
+                )}
+                {seller && (
+                  <Party
+                    role="Seller"
+                    avatar={getAvatarUrl(seller.avatar_url, seller.username)}
+                    name={seller.shop_name || seller.username}
+                    email={seller.email}
+                    href={`/admin/active-sellers/${seller.id}`}
+                    linkLabel="Seller Profile"
+                  />
+                )}
               </div>
-              <Link
-                href={`/admin/active-sellers?seller=${seller.id}`}
-                className="text-xs text-lime-text hover:text-lime transition-colors flex items-center gap-1"
-              >
-                View Seller Profile
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
+            </AdminPanel>
           )}
 
           {/* PR 7 — Money controls: mark disputed / resolve */}
@@ -398,23 +246,77 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             openDisputeId={(openDispute as any)?.id ?? null}
           />
 
-          {/* Quick Actions (orders has no dispute_id column: the open
-              dispute is read above by transaction_id). */}
+          {/* orders has no dispute_id column: the open dispute is read above by transaction_id. */}
           {(openDispute as any)?.id && (
-            <div className="rounded-xl border border-border-default bg-bg-raised p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <Link
-                  href={`/admin/disputes/${(openDispute as any).id}`}
-                  className="block w-full px-3 py-2 text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors text-center"
-                >
-                  View Dispute
-                </Link>
-              </div>
-            </div>
+            <Link
+              href={`/admin/disputes/${(openDispute as any).id}`}
+              className="flex items-center justify-between gap-3 rounded-lg bg-error-bg px-4 py-3.5 text-[13.5px] font-semibold text-error transition-[filter] hover:brightness-125"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Scales aria-hidden weight="bold" className="h-4 w-4" />
+                Open Dispute
+              </span>
+              <CaretRight aria-hidden weight="bold" className="h-4 w-4" />
+            </Link>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function MoneyRow({
+  label,
+  value,
+  strong,
+  valueClass,
+}: {
+  label: string
+  value: string
+  strong?: boolean
+  valueClass?: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <dt className={cn('text-[13.5px]', strong ? 'font-semibold text-text-primary' : 'text-text-secondary')}>{label}</dt>
+      <dd className={cn('text-[13.5px] tabular-nums text-text-primary', strong && 'text-[15px] font-bold', valueClass)}>{value}</dd>
+    </div>
+  )
+}
+
+function Party({
+  role,
+  avatar,
+  name,
+  email,
+  href,
+  linkLabel,
+}: {
+  role: string
+  avatar: string
+  name: string
+  email: string | null
+  href: string
+  linkLabel: string
+}) {
+  return (
+    <div className="p-5">
+      <p className="mb-3 text-[12.5px] font-medium text-text-tertiary">{role}</p>
+      <div className="flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={avatar} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+        <div className="min-w-0">
+          <p className="truncate text-[14px] font-semibold text-text-primary">{name}</p>
+          {email && <p className="truncate text-[12.5px] text-text-tertiary">{email}</p>}
+        </div>
+      </div>
+      <Link
+        href={href}
+        className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
+      >
+        {linkLabel}
+        <CaretRight aria-hidden weight="bold" className="h-3.5 w-3.5" />
+      </Link>
     </div>
   )
 }

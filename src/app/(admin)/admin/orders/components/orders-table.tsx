@@ -8,23 +8,7 @@ import { cn } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { AdminEmpty, AdminPagination, StatusBadge, TABLE } from '../../components/kit'
 import { GameTile } from '../../components/GameTile'
-
-// Model C display labels for the escrow_status DB values (identifiers stay).
-// The badge tone is keyed on the DB value, the text on the label.
-const ESCROW_DISPLAY: Record<string, string> = {
-  pending: 'Pending',
-  held: 'Payout Pending',
-  frozen: 'Frozen',
-  released: 'Seller Paid Out',
-  refunded: 'Refunded',
-}
-const ESCROW_TONE: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
-  pending: 'neutral',
-  held: 'warning',
-  frozen: 'error',
-  released: 'success',
-  refunded: 'error',
-}
+import { PAYOUT_LABEL, PAYOUT_TONE } from '../payout'
 
 interface OrdersTableProps {
   orders: AdminOrder[]
@@ -42,7 +26,7 @@ const date = (iso: string) =>
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
 function PayoutBadge({ status }: { status: string | null }) {
-  return <StatusBadge status={ESCROW_DISPLAY[status ?? ''] ?? status ?? '—'} tone={ESCROW_TONE[status ?? '']} />
+  return <StatusBadge status={PAYOUT_LABEL[status ?? ''] ?? status ?? '—'} tone={PAYOUT_TONE[status ?? '']} />
 }
 
 function Person({ avatar, name, sub }: { avatar: string; name: string; sub: string }) {

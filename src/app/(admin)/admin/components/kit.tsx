@@ -15,7 +15,10 @@
  */
 
 import Link from 'next/link'
-import { ArrowDownRight, ArrowUpRight, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import { ArrowDownRight } from '@phosphor-icons/react/dist/ssr/ArrowDownRight'
+import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr/ArrowUpRight'
+import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'
+import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { cn } from '@/lib/utils'
 
 /* ── Page header ──────────────────────────────────────────────────
