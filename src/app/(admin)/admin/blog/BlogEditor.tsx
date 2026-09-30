@@ -3,6 +3,12 @@
 import { slugify } from '@/lib/utils'
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast as notify } from 'sonner'
+import { CircleNotch, Eye, FloppyDisk, UploadSimple } from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { StatusBadge, adminBtn, type ChipTone } from '../components/kit'
 import {
   type AdminBlogPost,
   type BlogPostInput,
@@ -35,9 +41,17 @@ function fileToPayload(
 
 type GameOption = { slug: string; name: string }
 
-const label = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-400'
-const field =
-  'w-full rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition focus:border-focus-border'
+const label = 'mb-1.5 block text-[13px] font-medium text-text-secondary'
+const field = accountInputCls
+const selectField = cn(accountInputCls, 'h-10 cursor-pointer py-0')
+const hintCls = 'mt-1.5 text-[12px] text-text-tertiary'
+const card = 'rounded-lg bg-bg-raised p-4 sm:p-5'
+
+const STATUS_TONE: Record<BlogStatus, ChipTone> = {
+  draft: 'warning',
+  published: 'success',
+  archived: 'neutral',
+}
 
 export function BlogEditor({
   post,
@@ -53,9 +67,7 @@ export function BlogEditor({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
-  const toastTimer = useRef<number>(0)
 
   const [title, setTitle] = useState(post?.title ?? '')
   const [slug, setSlug] = useState(post?.slug ?? '')
@@ -157,10 +169,8 @@ export function BlogEditor({
       }
       // Stay on the editor and confirm with a toast (no jarring redirect to the
       // list). refresh() re-runs the server component so the saved data is fresh.
-      setToast(post ? 'Blog updated' : 'Blog created')
+      notify.success(post ? 'Blog updated' : 'Blog created')
       router.refresh()
-      window.clearTimeout(toastTimer.current)
-      toastTimer.current = window.setTimeout(() => setToast(null), 3000)
     })
   }
 
@@ -170,84 +180,40 @@ export function BlogEditor({
     { id: 'seo', label: 'SEO' },
     { id: 'settings', label: 'Settings' },
   ]
-  const statusTone =
-    status === 'published'
-      ? { dot: 'bg-lime', text: 'text-lime-text' }
-      : status === 'archived'
-        ? { dot: 'bg-gray-500', text: 'text-gray-400' }
-        : { dot: 'bg-amber-400', text: 'text-amber-300' }
-
   return (
-    <div className="pb-24">
-      {/* ── Sticky action bar: tabs (left) · status + actions (right) ── */}
-      <div className="sticky top-0 z-30 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#0B0F0C]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`rounded-md px-3.5 py-1.5 text-[13px] font-semibold transition ${
-                tab === t.id ? 'bg-lime text-black' : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold capitalize ${statusTone.text}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${statusTone.dot}`} />
-            {status}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="rounded-lg border border-white/15 px-3.5 py-2 text-[13px] font-semibold text-gray-200 transition hover:border-white/30"
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/admin/blog')}
-            className="rounded-lg border border-white/15 px-3.5 py-2 text-[13px] font-semibold text-gray-300 transition hover:border-white/30"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="rounded-lg bg-lime px-4 py-2 text-[13px] font-bold text-black transition hover:opacity-90 disabled:opacity-50"
-          >
-            {pending ? 'Saving…' : post ? 'Save changes' : 'Create post'}
-          </button>
-        </div>
+    <div className="space-y-4 pb-6">
+      {/* Tabs (left) · status (right) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SegmentedTabs<Tab> tabs={TABS} value={tab} onChange={setTab} layoutId="blog-editor-tabs" ariaLabel="Post sections" />
+        <StatusBadge status={status} tone={STATUS_TONE[status] ?? 'neutral'} className="px-2.5 py-1 text-[12px]" />
       </div>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <p role="alert" className="rounded-md bg-error-bg px-3.5 py-2.5 text-[13px] text-error">
           {error}
-        </div>
+        </p>
       )}
 
+      <div role="tabpanel" id={`blog-editor-tabs-panel-${tab}`} aria-labelledby={`blog-editor-tabs-tab-${tab}`}>
       {/* ── CONTENT tab: title + slug always visible, then full-width body ── */}
       {tab === 'content' && (
-        <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <div className={cn(card, 'grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]')}>
             <div>
-              <label className={label}>Title</label>
+              <label htmlFor="blog-title" className={label}>Title</label>
               <input
+                id="blog-title"
                 className={field}
                 value={title}
                 onChange={(e) => onTitle(e.target.value)}
                 placeholder="Steal a Brainrot Value List (July 2026)"
               />
             </div>
-            <div>
-              <label className={label}>Slug (URL)</label>
+            <div className="min-w-0">
+              <label htmlFor="blog-slug" className={label}>Slug (URL)</label>
               <input
-                className={field}
+                id="blog-slug"
+                className={cn(field, 'font-mono')}
                 value={slug}
                 onChange={(e) => {
                   setSlugTouched(true)
@@ -255,13 +221,13 @@ export function BlogEditor({
                 }}
                 placeholder="value-list"
               />
-              <p className="mt-1 truncate text-xs text-gray-500">
+              <p className={cn(hintCls, 'truncate font-mono')}>
                 {primaryGame ? `/${primaryGame}/blog/${slug || '…'}` : `/blog/${slug || '…'}`}
               </p>
             </div>
           </div>
-          <div>
-            <label className={label}>Body</label>
+          <div className={card}>
+            <p className="mb-3 text-[15px] font-semibold text-text-primary">Body</p>
             <BlogBodyEditor
               body={body}
               setBody={setBody}
@@ -275,22 +241,24 @@ export function BlogEditor({
 
       {/* ── COVER tab: excerpt + cover image ── */}
       {tab === 'cover' && (
-        <div className="max-w-2xl space-y-5">
+        <div className={cn(card, 'max-w-3xl space-y-5')}>
           <div>
-            <label className={label}>Excerpt</label>
+            <label htmlFor="blog-excerpt" className={label}>Excerpt</label>
             <textarea
-              className={field}
+              id="blog-excerpt"
+              className={cn(field, 'resize-none')}
               rows={3}
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
               placeholder="One-sentence summary shown on cards and in search."
             />
-            <p className="mt-1 text-xs text-gray-500">Shown on the blog cards and in search results.</p>
+            <p className={hintCls}>Shown on the blog cards and in search results.</p>
           </div>
           <div>
-            <label className={label}>Cover image</label>
+            <label htmlFor="blog-cover" className={label}>Cover Image</label>
             <div className="flex items-center gap-2">
               <input
+                id="blog-cover"
                 className={field}
                 value={coverUrl}
                 onChange={(e) => setCoverUrl(e.target.value)}
@@ -311,8 +279,13 @@ export function BlogEditor({
                 type="button"
                 onClick={() => coverInputRef.current?.click()}
                 disabled={uploading !== null}
-                className="shrink-0 rounded-lg border border-[rgba(86,184,127,0.50)] px-3 py-2 text-xs font-semibold text-lime-text transition hover:bg-lime-tint-bg disabled:opacity-50"
+                className={cn(adminBtn.secondary, 'shrink-0')}
               >
+                {uploading === 'cover' ? (
+                  <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />
+                )}
                 {uploading === 'cover' ? 'Uploading…' : 'Upload'}
               </button>
             </div>
@@ -321,7 +294,7 @@ export function BlogEditor({
               <img
                 src={coverUrl}
                 alt="Cover preview"
-                className="mt-3 aspect-[16/9] w-full max-w-md rounded-lg border border-white/10 object-cover"
+                className="mt-3 aspect-[16/9] w-full max-w-md rounded-md object-cover"
               />
             )}
           </div>
@@ -330,55 +303,56 @@ export function BlogEditor({
 
       {/* ── SEO tab ── */}
       {tab === 'seo' && (
-        <div className="max-w-2xl space-y-5">
+        <div className={cn(card, 'max-w-3xl space-y-5')}>
           <div>
-            <label className={label}>SEO title (optional)</label>
-            <input className={field} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Falls back to the post title" />
+            <label htmlFor="blog-seo-title" className={label}>SEO Title (Optional)</label>
+            <input id="blog-seo-title" className={field} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Falls back to the post title" />
           </div>
           <div>
-            <label className={label}>SEO description (optional)</label>
-            <textarea className={field} rows={3} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Falls back to the excerpt" />
+            <label htmlFor="blog-seo-description" className={label}>SEO Description (Optional)</label>
+            <textarea id="blog-seo-description" className={cn(field, 'resize-none')} rows={3} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Falls back to the excerpt" />
           </div>
         </div>
       )}
 
       {/* ── SETTINGS tab ── */}
       {tab === 'settings' && (
-        <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
+        <div className={cn(card, 'grid max-w-3xl gap-5 sm:grid-cols-2')}>
           <div>
-            <label className={label}>Status</label>
-            <select className={field} value={status} onChange={(e) => setStatus(e.target.value as BlogStatus)}>
+            <label htmlFor="blog-status" className={label}>Status</label>
+            <select id="blog-status" className={selectField} value={status} onChange={(e) => setStatus(e.target.value as BlogStatus)}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
           </div>
           <div>
-            <label className={label}>Post type</label>
-            <select className={field} value={postType} onChange={(e) => setPostType(e.target.value as BlogPostType)}>
-              <option value="value">Value list</option>
-              <option value="seller">Seller guide</option>
-              <option value="guide">General guide</option>
+            <label htmlFor="blog-type" className={label}>Post Type</label>
+            <select id="blog-type" className={selectField} value={postType} onChange={(e) => setPostType(e.target.value as BlogPostType)}>
+              <option value="value">Value List</option>
+              <option value="seller">Seller Guide</option>
+              <option value="guide">General Guide</option>
             </select>
           </div>
           <div>
-            <label className={label}>Game</label>
-            <select className={field} value={primaryGame} onChange={(e) => setPrimaryGame(e.target.value)}>
-              <option value="">General (no game)</option>
+            <label htmlFor="blog-game" className={label}>Game</label>
+            <select id="blog-game" className={selectField} value={primaryGame} onChange={(e) => setPrimaryGame(e.target.value)}>
+              <option value="">General (No Game)</option>
               {games.map((g) => (
                 <option key={g.slug} value={g.slug}>{g.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Author</label>
-            <input className={field} value={author} onChange={(e) => setAuthor(e.target.value)} />
+            <label htmlFor="blog-author" className={label}>Author</label>
+            <input id="blog-author" className={field} value={author} onChange={(e) => setAuthor(e.target.value)} />
           </div>
           <div>
-            <label className={label}>Read minutes</label>
+            <label htmlFor="blog-read-minutes" className={label}>Read Minutes</label>
             <input
+              id="blog-read-minutes"
               type="number"
-              className={field}
+              className={cn(field, 'tabular-nums')}
               value={readMinutes}
               onChange={(e) => setReadMinutes(Number(e.target.value))}
               min={1}
@@ -386,14 +360,28 @@ export function BlogEditor({
           </div>
         </div>
       )}
+      </div>
 
-      {/* Save confirmation toast — stays on the editor, no redirect. */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-[rgba(86,184,127,0.40)] bg-[#0E1211] px-4 py-3 text-sm font-semibold text-lime-text shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-lime" />
-          {toast}
-        </div>
-      )}
+      {/* Sticky action bar: preview · cancel · save */}
+      <div className="pointer-events-none sticky bottom-4 z-10 flex justify-end">
+      <div className="pointer-events-auto flex w-full items-center gap-2 rounded-lg bg-bg-overlay-2 p-2 sm:w-auto">
+        <button type="button" onClick={() => setPreviewOpen(true)} className={cn(adminBtn.secondary, 'mr-auto sm:mr-0')}>
+          <Eye aria-hidden weight="bold" className="h-4 w-4" />
+          Preview
+        </button>
+        <button type="button" onClick={() => router.push('/admin/blog')} className={adminBtn.secondary}>
+          Cancel
+        </button>
+        <button type="button" onClick={save} disabled={pending} className={adminBtn.primary}>
+          {pending ? (
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+          ) : (
+            <FloppyDisk aria-hidden weight="bold" className="h-4 w-4" />
+          )}
+          {pending ? 'Saving…' : post ? 'Save Changes' : 'Create Post'}
+        </button>
+      </div>
+      </div>
 
       {/* Live preview — renders from current editor state, no save needed. */}
       <BlogPreview
