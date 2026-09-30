@@ -15,15 +15,17 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getOrders, getOrderStats, type OrderStatus, type EscrowStatus } from '@/lib/actions/admin-orders'
 import { getPendingCancellationRequests } from '@/lib/actions/order-cancellation'
+import { listRefundToSourceRequests } from '@/lib/actions/refund-to-source'
 import { OrdersTable } from './orders-table'
 import { OrderFilters } from './order-filters'
 import { StatsCards } from './stats-cards'
 import { CancellationRequestsTable } from './cancellation-requests-table'
+import { RefundRequestsTable } from './refund-requests-table'
 import { DisputesTable } from './disputes-table'
-import { Package, Ban, AlertTriangle } from 'lucide-react'
+import { Package, Ban, AlertTriangle, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type TabType = 'orders' | 'cancellations' | 'disputes'
+type TabType = 'orders' | 'cancellations' | 'refunds' | 'disputes'
 
 type OrdersResult = Awaited<ReturnType<typeof getOrders>>
 type OrderStatsResult = Awaited<ReturnType<typeof getOrderStats>>
@@ -83,6 +85,14 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
     enabled: activeTab === 'cancellations',
   })
 
+  // Refund-to-payment-method requests (refund policy): pending ones need a
+  // decision, so the badge counts them from any tab.
+  const { data: refundsData, isLoading: refundsLoading } = useQuery({
+    queryKey: ['admin-refund-requests'],
+    queryFn: async () => await listRefundToSourceRequests(),
+  })
+  const pendingRefundCount = (refundsData?.data ?? []).filter((r) => r.status === 'pending').length
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -128,6 +138,23 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
           )}
         </button>
         <button
+          onClick={() => setActiveTab('refunds')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors relative',
+            activeTab === 'refunds'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-text-tertiary hover:text-text-secondary'
+          )}
+        >
+          <Undo2 className="w-4 h-4" />
+          Refund Requests
+          {pendingRefundCount > 0 && (
+            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
+              {pendingRefundCount}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('disputes')}
           className={cn(
             'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
@@ -165,6 +192,13 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
         <CancellationRequestsTable
           requests={cancellationsData?.data || []}
           isLoading={cancellationsLoading}
+        />
+      )}
+
+      {activeTab === 'refunds' && (
+        <RefundRequestsTable
+          requests={(refundsData?.data as any) || []}
+          isLoading={refundsLoading}
         />
       )}
 

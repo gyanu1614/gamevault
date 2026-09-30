@@ -4236,6 +4236,97 @@ export type Database = {
           },
         ]
       }
+      order_seller_faults: {
+        Row: {
+          fee_charged_minor: number
+          fee_txn_id: string | null
+          occurred_at: string
+          order_id: string
+          seller_id: string
+          source: string
+        }
+        Insert: {
+          fee_charged_minor?: number
+          fee_txn_id?: string | null
+          occurred_at?: string
+          order_id: string
+          seller_id: string
+          source: string
+        }
+        Update: {
+          fee_charged_minor?: number
+          fee_txn_id?: string | null
+          occurred_at?: string
+          order_id?: string
+          seller_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_seller_faults_fee_txn_id_fkey"
+            columns: ["fee_txn_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_seller_faults_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           auto_release_at: string | null
@@ -4870,6 +4961,9 @@ export type Database = {
       platform_fee_settings: {
         Row: {
           base_change_notice_days: number
+          buyer_marketplace_min_minor: number
+          buyer_marketplace_pct: number
+          buyer_min_order_total_minor: number
           completion_hold_hours: number
           dispute_window_days: number
           founding_discount_pct: number
@@ -4877,12 +4971,17 @@ export type Database = {
           id: boolean
           payout_details_freeze_hours: number
           rank_floor_pct: number
+          seller_fault_fee_threshold: number
+          seller_fault_fee_window_days: number
           updated_at: string
           updated_by: string | null
           withdrawal_min_account_age_days: number
         }
         Insert: {
           base_change_notice_days?: number
+          buyer_marketplace_min_minor?: number
+          buyer_marketplace_pct?: number
+          buyer_min_order_total_minor?: number
           completion_hold_hours?: number
           dispute_window_days?: number
           founding_discount_pct?: number
@@ -4890,12 +4989,17 @@ export type Database = {
           id?: boolean
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
+          seller_fault_fee_threshold?: number
+          seller_fault_fee_window_days?: number
           updated_at?: string
           updated_by?: string | null
           withdrawal_min_account_age_days?: number
         }
         Update: {
           base_change_notice_days?: number
+          buyer_marketplace_min_minor?: number
+          buyer_marketplace_pct?: number
+          buyer_min_order_total_minor?: number
           completion_hold_hours?: number
           dispute_window_days?: number
           founding_discount_pct?: number
@@ -4903,6 +5007,8 @@ export type Database = {
           id?: boolean
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
+          seller_fault_fee_threshold?: number
+          seller_fault_fee_window_days?: number
           updated_at?: string
           updated_by?: string | null
           withdrawal_min_account_age_days?: number
@@ -5509,11 +5615,14 @@ export type Database = {
       }
       provider_cancel_outbox: {
         Row: {
+          amount_minor: number | null
           attempt_id: string | null
           attempts: number
           created_at: string
+          currency: string | null
           done_at: string | null
           id: string
+          kind: string
           last_error: string | null
           next_attempt_at: string
           order_id: string | null
@@ -5521,15 +5630,19 @@ export type Database = {
           provider: string
           provider_charge_id: string
           reason: string | null
+          request_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          amount_minor?: number | null
           attempt_id?: string | null
           attempts?: number
           created_at?: string
+          currency?: string | null
           done_at?: string | null
           id?: string
+          kind?: string
           last_error?: string | null
           next_attempt_at?: string
           order_id?: string | null
@@ -5537,15 +5650,19 @@ export type Database = {
           provider: string
           provider_charge_id: string
           reason?: string | null
+          request_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          amount_minor?: number | null
           attempt_id?: string | null
           attempts?: number
           created_at?: string
+          currency?: string | null
           done_at?: string | null
           id?: string
+          kind?: string
           last_error?: string | null
           next_attempt_at?: string
           order_id?: string | null
@@ -5553,6 +5670,7 @@ export type Database = {
           provider?: string
           provider_charge_id?: string
           reason?: string | null
+          request_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -5576,6 +5694,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_cancel_outbox_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "refund_to_source_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -5757,6 +5882,165 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      refund_to_source_requests: {
+        Row: {
+          admin_id: string | null
+          admin_notes: string | null
+          amount_minor: number
+          buyer_id: string
+          created_at: string
+          currency: string
+          decided_at: string | null
+          failure_reason: string | null
+          id: string
+          order_id: string
+          outbox_id: string | null
+          provider: string
+          provider_charge_id: string
+          provider_refund_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          admin_notes?: string | null
+          amount_minor: number
+          buyer_id: string
+          created_at?: string
+          currency: string
+          decided_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          order_id: string
+          outbox_id?: string | null
+          provider: string
+          provider_charge_id: string
+          provider_refund_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          admin_notes?: string | null
+          amount_minor?: number
+          buyer_id?: string
+          created_at?: string
+          currency?: string
+          decided_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          order_id?: string
+          outbox_id?: string | null
+          provider?: string
+          provider_charge_id?: string
+          provider_refund_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_to_source_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -12236,14 +12520,22 @@ export type Database = {
       auth_p0_guards_version: { Args: never; Returns: number }
       auth_p1_guards_version: { Args: never; Returns: number }
       buyer_fee_quote: {
-        Args: { p_currency: string; p_method: string; p_subtotal_minor: number }
+        Args: {
+          p_currency: string
+          p_method: string
+          p_promo_minor?: number
+          p_subtotal_minor: number
+          p_wallet_minor?: number
+        }
         Returns: Json
       }
       buyer_fee_quote_many: {
         Args: {
           p_currency: string
           p_methods: string[]
+          p_promo_minor?: number
           p_subtotal_minor: number
+          p_wallet_minor?: number
         }
         Returns: Json[]
       }
@@ -12499,6 +12791,7 @@ export type Database = {
           p_allow_paid?: boolean
           p_attempt_close?: string
           p_dedupe_key?: string
+          p_fault?: string
           p_order_id: string
           p_provider?: string
           p_provider_charge_id?: string
@@ -12667,6 +12960,10 @@ export type Database = {
         }
         Returns: Json
       }
+      order_dispute_buyer_confirm: {
+        Args: { p_buyer_id: string; p_order_id: string }
+        Returns: Json
+      }
       order_dispute_open: {
         Args: {
           p_actor_id: string
@@ -12688,8 +12985,13 @@ export type Database = {
         }
         Returns: Json
       }
+      order_dispute_self_resolve_version: { Args: never; Returns: number }
       order_disputes_version: { Args: never; Returns: number }
       order_mark_delivered: {
+        Args: { p_order_id: string; p_seller_id: string }
+        Returns: Json
+      }
+      order_mark_delivered_in_dispute: {
         Args: { p_order_id: string; p_seller_id: string }
         Returns: Json
       }
@@ -12697,13 +12999,51 @@ export type Database = {
         Args: { p_order_id: string; p_seller_id: string }
         Returns: Json
       }
+      order_refund_buyer_credit: {
+        Args: {
+          p_amount_minor: number
+          p_dedupe_key?: string
+          p_fault: string
+          p_order_id: string
+        }
+        Returns: Json
+      }
       order_refund_to_wallet: {
         Args: {
           p_amount_minor?: number
           p_dedupe_key?: string
+          p_fault?: string
           p_order_id: string
         }
         Returns: Json
+      }
+      order_seller_fault_record: {
+        Args: { p_order_id: string; p_source: string }
+        Returns: Json
+      }
+      orders_buyer_private: {
+        Args: { p_order_ids: string[] }
+        Returns: {
+          buyer_fee_amount: number
+          buyer_fee_method: string
+          buyer_fee_pct: number
+          checkout_url: string
+          id: string
+          payment_processing_fee: number
+          payment_provider: string
+          promo_discount: number
+          wallet_amount_used: number
+        }[]
+      }
+      orders_seller_private: {
+        Args: { p_order_ids: string[] }
+        Returns: {
+          id: string
+          platform_fee: number
+          platform_fee_rate: number
+          seller_commission_pct: number
+          seller_payout: number
+        }[]
       }
       payment_attempt_activate: {
         Args: {
@@ -12762,11 +13102,14 @@ export type Database = {
       provider_cancel_outbox_claim: {
         Args: { p_limit?: number; p_order_id?: string }
         Returns: {
+          amount_minor: number | null
           attempt_id: string | null
           attempts: number
           created_at: string
+          currency: string | null
           done_at: string | null
           id: string
+          kind: string
           last_error: string | null
           next_attempt_at: string
           order_id: string | null
@@ -12774,6 +13117,7 @@ export type Database = {
           provider: string
           provider_charge_id: string
           reason: string | null
+          request_id: string | null
           status: string
           updated_at: string
         }[]
@@ -12805,6 +13149,17 @@ export type Database = {
         Returns: Json
       }
       provider_cancel_outbox_version: { Args: never; Returns: number }
+      provider_refund_outbox_enqueue: {
+        Args: {
+          p_amount_minor: number
+          p_currency: string
+          p_order_id: string
+          p_provider: string
+          p_provider_charge_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       public_profiles_revoked_version: { Args: never; Returns: number }
       public_profiles_version: { Args: never; Returns: number }
       public_table_posture: {
@@ -12828,6 +13183,22 @@ export type Database = {
         Returns: number
       }
       rate_limits_version: { Args: never; Returns: number }
+      refund_to_source_approve: {
+        Args: { p_admin_id: string; p_request_id: string }
+        Returns: Json
+      }
+      refund_to_source_fail: {
+        Args: { p_error: string; p_request_id: string }
+        Returns: Json
+      }
+      refund_to_source_reject: {
+        Args: { p_admin_id: string; p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
+      refund_to_source_request: {
+        Args: { p_buyer_id: string; p_order_id: string }
+        Returns: Json
+      }
       reject_listing: {
         Args: { admin_id: string; listing_id: string; reason: string }
         Returns: undefined
@@ -12999,6 +13370,10 @@ export type Database = {
       sell_security_version: { Args: never; Returns: number }
       seller_available_balance: {
         Args: { p_currency: string; p_seller_id: string }
+        Returns: number
+      }
+      seller_completed_payout_sum: {
+        Args: { p_seller_id: string; p_since: string }
         Returns: number
       }
       seller_frozen_balance: {

@@ -24,36 +24,15 @@ export function round2(n: number): number {
 
 // ─── §2 Buyer fee (added on top of item price) ───────────────────────────────
 //
-// Checkout B3: the PROCESSING fee is quoted per payment method by the database
-// (payment_method_fees → buyer_fee_quote, reached through
-// lib/payments/eligibility) and snapshotted on the order inside
-// order_create_pending. No TypeScript computes it any more — the processing
-// constant and the max(5%, PSP) flag that used to live here were deleted.
-// Only the flat MARKETPLACE fee (buyer protection) stays here.
-
-export const BUYER_MARKETPLACE_FEE_PCT = 2
-/** Display labels — the buyer fee is shown as two itemised lines
- *  (marketplace 2% + the method's processing fee), both always in the
- *  displayed total. Never "passthrough", never hidden. */
-export const MARKETPLACE_FEE_LABEL = 'Marketplace fee'
-export const PROCESSING_FEE_LABEL = 'Processing fee'
-
-export interface BuyerFee {
-  marketplacePct: number
-  marketplaceAmount: number
-  /** The marketplace component only — the method fee is added from the quote. */
-  amount: number
-}
-
-/** Marketplace (buyer protection) fee on a subtotal. */
-export function buyerFee(subtotal: number): BuyerFee {
-  const marketplaceAmount = round2((subtotal * BUYER_MARKETPLACE_FEE_PCT) / 100)
-  return {
-    marketplacePct: BUYER_MARKETPLACE_FEE_PCT,
-    marketplaceAmount,
-    amount: marketplaceAmount,
-  }
-}
+// NOT HERE (buyer-service-fee, 2026-09-30). The whole buyer fee is quoted by
+// ONE SQL function, buyer_fee_quote (lib/payments/eligibility reaches it):
+//   marketplace = max($0.30, 2% × subtotal)   (platform_fee_settings)
+//   processing  = the method's provider cost on what the provider is charged
+//   $1.00 minimum order total; zero for store credit.
+// order_create_pending snapshots both parts (orders.platform_fee +
+// orders.payment_processing_fee). No TypeScript computes any of it; the page
+// shows the sum as ONE line under this label, never a percentage.
+export const SERVICE_FEE_LABEL = 'Service fee'
 
 // ─── §1 Seller commission ────────────────────────────────────────────────────
 // NOT HERE. The seller commission rate is DATA (fee_rules, seller_tier_config
@@ -108,17 +87,11 @@ export const WARRANTY_ACCOUNTS = {
 } as const
 
 // ─── §5 / §6 Refund + chargeback financial rules ────────────────────────────
+//
+// Refund amounts are decided in SQL (order_refund_buyer_credit, reached
+// through order_refund_to_wallet / order_cancel_return_wallet with a fault):
+// buyer fault = item price, fees kept; seller / platform fault = full. Nothing
+// in TypeScript computes a refund amount.
 
-export const CASH_REFUND_DEDUCT_PROCESSING = true
 /** ADJUSTABLE to actual PSP fee once contracts sign. */
 export const CHARGEBACK_FEE_USD = 20
-
-/** Store-credit refund: 100% of what the buyer paid, instantly. */
-export function storeCreditRefundAmount(totalPaid: number): number {
-  return round2(totalPaid)
-}
-
-/** Cash refund via support: amount paid minus processing fee actually incurred. */
-export function cashRefundAmount(totalPaid: number, processingFeeIncurred: number): number {
-  return round2(totalPaid - (CASH_REFUND_DEDUCT_PROCESSING ? processingFeeIncurred : 0))
-}

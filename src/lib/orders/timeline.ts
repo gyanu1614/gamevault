@@ -122,7 +122,7 @@ export function buildOrderTimeline(o: TimelineInput): TimelineStep[] {
   if (status === 'completed' && o.completed_at) {
     done.push({ key: 'completed', icon: 'completed', title: 'Order Completed', detail: 'The seller has been paid', at: o.completed_at, state: 'done', tone: 'lime' })
   } else if (status === 'refunded') {
-    done.push({ key: 'refunded', icon: 'refunded', title: 'Order Refunded', detail: 'Refunded to the buyer’s DropMarket wallet', at: d?.resolvedAt ?? o.completed_at ?? o.updated_at ?? null, state: 'done', tone: 'blue' })
+    done.push({ key: 'refunded', icon: 'refunded', title: 'Order Refunded', detail: 'Refunded to the buyer’s Store Balance', at: d?.resolvedAt ?? o.completed_at ?? o.updated_at ?? null, state: 'done', tone: 'blue' })
   } else if (status === 'cancelled') {
     done.push({ key: 'cancelled', icon: 'cancelled', title: 'Order Cancelled', detail: 'The payment was returned to the buyer', at: o.cancelled_at ?? o.updated_at ?? null, state: 'done', tone: 'red' })
   }

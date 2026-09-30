@@ -125,7 +125,7 @@ const COPY: Record<string, StatusCopy> = {
     tone: 'blue',
     title: 'Order Refunded',
     message: {
-      buyer: 'Your refund is in your DropMarket wallet.',
+      buyer: 'Your refund is in your Store Balance.',
       seller: 'The buyer was refunded. No payout for this order.',
       all: 'The buyer was refunded.',
     },
@@ -202,7 +202,7 @@ export function OrderStatusCard({
   const message =
     effective === 'cancelled' && escrowStatus === 'refunded'
       ? role === 'buyer'
-        ? 'The order was cancelled and your payment was returned to your DropMarket wallet.'
+        ? 'The order was cancelled and your refund was returned to your Store Balance.'
         : "The order was cancelled and the buyer's payment was returned to them."
       : copy.message[role] ?? copy.message.all
 

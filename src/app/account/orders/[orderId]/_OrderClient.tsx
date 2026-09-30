@@ -17,7 +17,7 @@ import { sellerDisplayName, sellerRatingPercent, sellerShopHref } from '@/lib/se
 import { OrderHeader } from './_OrderHeader'
 import { DeliveryProgressBar } from './_DeliveryProgressBar'
 import { OrderCard } from './_OrderCard'
-import { OrderDetailsCard } from './_OrderDetailsCard'
+import { OrderDetailsCard, type RefundToSourceState } from './_OrderDetailsCard'
 import { StatusStrip } from './_StatusStrip'
 import { AwaitingPaymentPanel } from './_AwaitingPaymentPanel'
 import { MarkDeliveredModal } from './_MarkDeliveredModal'
@@ -54,6 +54,11 @@ interface OrderClientProps {
     paidWith: string | null
   } | null
   itemTitle: string
+  /** Buyer / admin: what came back as store credit and whether the service
+   *  fee was kept (buyer-fault cancel). null before any refund. */
+  buyerRefund?: { credited: number; feeKept: boolean } | null
+  /** Buyer: refund-to-original-method request state (refund policy). */
+  refundToSource?: RefundToSourceState | null
   /** Buyer: Request Cancellation eligibility, and an already pending request. */
   cancelRequest?: { eligible: boolean; pending: boolean } | null
   gameName: string | null
@@ -89,6 +94,8 @@ export function OrderClient(props: OrderClientProps) {
     disputeUntil = null,
     itemImageUrl,
     paymentSummary = null,
+    buyerRefund = null,
+    refundToSource = null,
     cancelRequest = null,
     itemTitle,
     gameName,
@@ -548,6 +555,8 @@ export function OrderClient(props: OrderClientProps) {
               orderId={order.id}
               placedAtLabel={placedAtFull}
               paymentSummary={paymentSummary}
+              buyerRefund={buyerRefund}
+              refundToSource={refundToSource}
               subtotal={subtotal}
               fee={sellerFeeAmount}
               totalPaid={totalPaid}

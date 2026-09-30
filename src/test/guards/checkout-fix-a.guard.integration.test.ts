@@ -428,7 +428,7 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       await fx!.svc.rpc('ledger_test_cleanup', { p_prefix: `test:ledger:fix-a:fund:${orderId}` } as any)
     }, 60_000)
 
-    it('paid order: cancelled + full total credited to the wallet in one RPC', async () => {
+    it('paid order: cancelled + the item price credited to the wallet in one RPC (buyer fault: the fees are kept)', async () => {
       const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', total_amount: 4, seller_payout: 3, order_number: `GT-P8-paid-${tag()}` })
       const before = await walletMinor(fx!.buyer.id)
       sessionClient = fx!.buyer.client
@@ -438,8 +438,13 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       const row = await orderRow(orderId)
       expect(row.status).toBe('cancelled')
       expect(row.escrow_status).toBe('refunded')
-      expect(await walletMinor(fx!.buyer.id)).toBe(before + 400n)
+      // Refund policy (2026-09-30): the buyer's own cancel credits
+      // subtotal − promo; total − that moves refunds → platform_commission.
+      const item = BigInt(Math.round((Number(row.subtotal) - Number(row.promo_discount ?? 0)) * 100))
+      const total = BigInt(Math.round(Number(row.total_amount) * 100))
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + (item < total ? item : total))
       expect(await txnByKey(`wallet_refund:${orderId}`)).not.toBeNull()
+      if (item < total) expect(await txnByKey(`fee_kept:${orderId}`)).not.toBeNull()
     }, 60_000)
 
     it('delivering order: refused, nothing moves; another buyer: unauthorized', async () => {

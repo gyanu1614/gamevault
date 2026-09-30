@@ -156,7 +156,7 @@ describe.skipIf(!hasEnv)('admin resolveDispute — emails + chat card (integrati
     expect(r).toEqual({ success: true })
     expect(mail.refunded).not.toHaveBeenCalled()
     const buyerCall = (mail.resolved.mock.calls as any[]).find((c) => c[0].resolution === 'resolved_partial')
-    expect(buyerCall?.[0]).toMatchObject({ amount: 0.3, note: expect.stringMatching(/wallet/) })
+    expect(buyerCall?.[0]).toMatchObject({ amount: 0.3, note: expect.stringMatching(/Store Balance/) })
     const { data: msgs } = await fx!.svc.from('messages').select('sender_id, content').eq('conversation_id', convo)
     const card = ((msgs ?? []) as any[]).find((m) => m.sender_id === null)
     expect(JSON.parse(card.content)).toMatchObject({ type: 'dispute_resolved', resolution: 'partial', resolvedBy: 'admin' })

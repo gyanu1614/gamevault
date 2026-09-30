@@ -56,6 +56,16 @@ describe('fee engine — checkout is the only order path and reads only the reso
     expect(offenders).toEqual([])
   })
 
+  it('no TypeScript computes the buyer fee (buyer-service-fee: buyerFee / BUYER_MARKETPLACE_FEE_PCT / the two-line labels are gone)', () => {
+    const retired = /\bbuyerFee\s*\(|\bBUYER_MARKETPLACE_FEE_PCT\b|\bMARKETPLACE_FEE_LABEL\b|\bPROCESSING_FEE_LABEL\b|\bstoreCreditRefundAmount\b|\bcashRefundAmount\b/
+    const offenders = walk(join(ROOT, 'src'))
+      .filter((p) => !p.endsWith('fee-checkout-single-path.guard.test.ts'))
+      .filter((p) => retired.test(readFileSync(p, 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')))
+      .map((p) => p.slice(ROOT.length + 1))
+    expect(offenders).toEqual([])
+    expect(read('src/app/checkout/[id]/CheckoutForm.tsx')).toMatch(/SERVICE_FEE_LABEL/)
+  })
+
   it('createOrder is deleted from orders.ts', () => {
     expect(read('src/lib/actions/orders.ts')).not.toMatch(/export async function createOrder\b/)
   })

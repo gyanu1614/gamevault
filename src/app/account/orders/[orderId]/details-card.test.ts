@@ -6,9 +6,14 @@
  *    "Payout After Delivery Is Confirmed";
  *  · cards carry no outline (only their fill; lines separate rows inside).
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import React, { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+
+// The card imports the refund-to-source server action (a 'use server'
+// module that reaches the cookie client); static rendering never calls it.
+vi.mock('@/lib/actions/refund-to-source', () => ({ requestRefundToSource: async () => ({ success: true }) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: () => undefined, push: () => undefined }) }))
 
 ;(globalThis as any).React = React
 import { OrderDetailsCard } from './_OrderDetailsCard'
@@ -33,10 +38,10 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 describe('buyer fees', () => {
   const summary = { itemPrice: 4.99, marketplaceFee: 0.1, paymentFee: 0.25, promoDiscount: 0, total: 5.34, paidWith: 'Crypto' }
 
-  it('one Fees row with the combined amount and a breakdown button', () => {
+  it('one Service Fee row with the combined amount and a breakdown button', () => {
     const html = render({ role: 'buyer', orderStatus: 'paid', paymentSummary: summary })
     const t = text(html)
-    expect(t).toMatch(/Fees \$0\.35/)
+    expect(t).toMatch(/Service Fee \$0\.35/)
     expect(t).not.toMatch(/Marketplace Fee/)
     expect(t).not.toMatch(/Payment Fee/)
     expect(html).toMatch(/aria-label="Fee breakdown"/)

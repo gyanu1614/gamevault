@@ -309,6 +309,53 @@ export default async function OrderDetailPage({ params }: PageProps) {
   // (platform_fee is not in the buyer's column grant).
   const round2 = (n: number) => Math.round(n * 100) / 100
   const PAID_STATUSES = ['paid', 'delivering', 'delivered', 'disputed', 'completed', 'refunded']
+  // Refund policy (2026-09-30): what actually came back to the buyer. A
+  // buyer-fault cancel credits the item price and keeps the service fee
+  // (ledger key fee_kept:<order>); every other refund credits the total.
+  // Read once here (service role: the ledger is not in the buyer's grant)
+  // so the SafeDrop card can show the right amount and say why.
+  const buyerRefund =
+    userRole !== 'seller' &&
+    ((order as any).status === 'refunded' || ((order as any).status === 'cancelled' && (order as any).escrow_status === 'refunded'))
+      ? await (async () => {
+          const { data: keys } = await (createServiceRoleClient() as any)
+            .from('ledger_transactions')
+            .select('idempotency_key')
+            .in('idempotency_key', [`wallet_refund:${order.id}`, `fee_kept:${order.id}`])
+            .limit(2)
+          const found = new Set(((keys ?? []) as Array<{ idempotency_key: string }>).map((k) => k.idempotency_key))
+          if (!found.has(`wallet_refund:${order.id}`)) return null
+          const feeKept = found.has(`fee_kept:${order.id}`)
+          const itemPrice = Number((order as any).subtotal ?? 0)
+          const promoDiscount = Number((order as any).promo_discount ?? 0)
+          const total = Number((order as any).total_amount ?? 0)
+          return { credited: round2(feeKept ? Math.max(0, itemPrice - promoDiscount) : total), feeKept }
+        })()
+      : null
+  // Refund to the original payment method: the buyer's existing request, and
+  // whether one can be made (a provider charge was paid; the RPC re-checks
+  // the rail and the unspent credit when they click).
+  const refundToSource =
+    buyerRefund && userRole === 'buyer'
+      ? await (async () => {
+          const { getMyRefundToSourceRequest } = await import('@/lib/actions/refund-to-source')
+          const [request, { data: paidAttempt }] = await Promise.all([
+            getMyRefundToSourceRequest(order.id),
+            (createServiceRoleClient() as any)
+              .from('payment_attempts')
+              .select('id')
+              .eq('order_id', order.id)
+              .eq('status', 'paid')
+              .not('provider_charge_id', 'is', null)
+              .limit(1)
+              .maybeSingle(),
+          ])
+          return {
+            request: request ? { status: request.status, adminNotes: request.admin_notes, amount: Number(request.amount_minor) / 100 } : null,
+            canRequest: !request && !!paidAttempt,
+          }
+        })()
+      : null
   const paymentSummary =
     userRole !== 'seller' && PAID_STATUSES.includes(order.status)
       ? await (async () => {
@@ -475,6 +522,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
         disputeResolution={disputeResolution}
         itemImageUrl={itemImageUrl}
         paymentSummary={paymentSummary}
+        buyerRefund={buyerRefund}
+        refundToSource={refundToSource}
         cancelRequest={cancelRequest}
         itemTitle={listingTitle ?? 'Order Details'}
         gameName={gameName ?? null}
