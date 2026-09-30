@@ -12,15 +12,16 @@
  * Default empty state: if no row exists yet, we hydrate from
  * DEFAULT_CURRENCY_CONFIG. The admin can edit and the first save
  * creates the row.
+ *
+ * Look: the flat admin kit — solid cards (bg-bg-raised) with a PanelHead,
+ * fields one step lighter, repeated rows as bg-bg-overlay boxes, no
+ * outlines or glows.
  */
 
 import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { CircleNotch, Plus, Trash, UploadSimple, X } from '@phosphor-icons/react'
 import {
   Select,
   SelectContent,
@@ -28,6 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
+import { PanelHead, adminBtnSm } from '../../components/kit'
+import { SaveBar } from './form-bits'
 import {
   fetchCategoryConfigAdmin,
   upsertCategoryConfig,
@@ -39,6 +44,15 @@ import {
 import { PlatformFieldsSection } from './PlatformFieldsSection'
 import { CurrencyBundlesSection } from './CurrencyBundlesSection'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+
+/** A titled card on the page canvas. */
+const CARD = 'rounded-lg bg-bg-raised p-4 sm:p-5'
+/** A field inside a repeated-row box (bg-bg-overlay): one step lighter again. */
+const ROW_INPUT = cn(accountInputCls, 'bg-white/[0.06]')
+/** Icon-only row action (remove). 36px tap target. */
+const ICON_BTN_DANGER =
+  'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors ' +
+  'hover:bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] hover:text-error'
 
 export function CurrencyConfigForm({ gameId }: { gameId: string }) {
   const qc = useQueryClient()
@@ -53,6 +67,9 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
       return cfg
     },
     staleTime: 30_000,
+    // The queryFn seeds the editable draft, so a background refetch (tab refocus)
+    // would wipe unsaved edits. Refetch only after a save (invalidate).
+    refetchOnWindowFocus: false,
   })
 
   const mutation = useMutation({
@@ -79,8 +96,17 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
 
   if (query.isLoading || !draft) {
     return (
-      <div className="flex items-center gap-2 p-6 text-text-secondary">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading currency settings…
+      <div className="space-y-4" aria-busy aria-label="Loading currency settings">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className={CARD}>
+            <div className="skeleton h-4 w-40 rounded" />
+            <div className="skeleton mt-2 h-3 w-64 max-w-full rounded" />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="skeleton h-16 rounded-md" />
+              <div className="skeleton h-16 rounded-md" />
+            </div>
+          </div>
+        ))}
       </div>
     )
   }
@@ -121,23 +147,23 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         if (!draft) return
         mutation.mutate(draft)
       }}
-      className="space-y-7"
+      className="space-y-4"
     >
       {/* ── Identity ──
           V19/P24/P7.b — Compact two-column layout: icon tile on the
           left, all text fields stacked on the right. No more giant
           empty band under the icon. */}
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Identity</h3>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+      <section className={CARD}>
+        <PanelHead title="Identity" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
           {/* Icon tile — fixed size, on the left */}
-          <div className="flex flex-col items-start gap-2 sm:w-[88px]">
-            <Label className="text-[12px] text-text-secondary">Icon</Label>
+          <div className="flex flex-col items-start sm:w-[88px]">
+            <span className="mb-1.5 block text-[13px] font-medium text-text-secondary">Icon</span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => iconFileRef.current?.click()}
-                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-default bg-bg-overlay transition-colors hover:border-lime-tint-border"
+                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg-overlay transition-colors hover:bg-bg-overlay-2"
                 aria-label="Upload currency icon"
               >
                 {draft.currency_icon_url ? (
@@ -148,9 +174,9 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
                     className="h-full w-full object-cover"
                   />
                 ) : iconUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-text-tertiary" />
+                  <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-tertiary" />
                 ) : (
-                  <Upload className="h-5 w-5 text-text-tertiary" />
+                  <UploadSimple aria-hidden weight="bold" className="h-5 w-5 text-text-tertiary" />
                 )}
                 <input
                   ref={iconFileRef}
@@ -164,39 +190,44 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
                 <button
                   type="button"
                   onClick={() => patch({ currency_icon_url: null })}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+                  className="grid h-9 w-9 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
                   aria-label="Remove icon"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X aria-hidden weight="bold" className="h-4 w-4" />
                 </button>
               )}
             </div>
           </div>
 
           {/* Right side — Unit label / Glyph / Tagline stacked */}
-          <div className="flex-1 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
-              <Field label="Unit label" hint="What the currency is called">
-                <Input
+          <div className="min-w-0 flex-1 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_120px]">
+              <Field label="Unit Label" hint="What the currency is called" htmlFor="cc-unit-label">
+                <input
+                  id="cc-unit-label"
                   value={draft.unit_label}
                   onChange={(e) => patch({ unit_label: e.target.value })}
                   placeholder="Robux"
+                  className={accountInputCls}
                 />
               </Field>
-              <Field label="Glyph" hint="Short symbol">
-                <Input
+              <Field label="Glyph" hint="Short symbol" htmlFor="cc-glyph">
+                <input
+                  id="cc-glyph"
                   value={draft.glyph}
                   onChange={(e) => patch({ glyph: e.target.value.slice(0, 6) })}
                   placeholder="R$"
-                  className="text-center"
+                  className={cn(accountInputCls, 'text-center')}
                 />
               </Field>
             </div>
-            <Field label="Tagline" hint="Shown above the hero">
-              <Input
+            <Field label="Tagline" hint="Shown above the hero" htmlFor="cc-tagline">
+              <input
+                id="cc-tagline"
                 value={draft.tagline}
                 onChange={(e) => patch({ tagline: e.target.value })}
                 placeholder="In-game currency for ..."
+                className={accountInputCls}
               />
             </Field>
           </div>
@@ -213,73 +244,82 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         // bundle mode are setting "$ per bundle".
         const isBundleMode = (draft.bundles?.length ?? 0) > 0
         return (
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Pricing rules</h3>
+      <section className={CARD}>
+        <PanelHead
+          title="Pricing Rules"
+          subtitle="The seller wizard rejects per-unit prices below this minimum. The buyer page automatically surfaces the cheapest active listing as the recommended offer."
+        />
         {isBundleMode && (
-          <div className="rounded-xl border border-lime-tint-border bg-[rgba(86,184,127,0.05)] px-3 py-2 text-[12.5px] text-text-secondary">
-            <span className="font-semibold text-lime-text">Bundle mode.</span>{' '}
+          <div className="mb-4 rounded-md bg-info-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-text-secondary">
+            <span className="font-semibold text-info">Bundle mode.</span>{' '}
             Each bundle is its own quantity unit, so granularity, minimum quantity,
             and quantity step don’t apply. The price floor below still gates the
             cheapest $ a seller can list per bundle.
           </div>
         )}
-        <p className="text-[12.5px] text-text-secondary">
-          The seller wizard rejects per-unit prices below this minimum. The buyer page automatically
-          surfaces the cheapest active listing as the recommended offer.
-        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label={
               isBundleMode
-                ? 'Minimum listing price ($)'
-                : `Minimum price per ${formatGranularityLabel(draft)}`
+                ? 'Minimum Listing Price ($)'
+                : `Minimum Price per ${formatGranularityLabel(draft)}`
             }
             hint={
               isBundleMode
                 ? 'Sellers can’t list below this price'
                 : 'Cheapest accepted $ per unit of granularity'
             }
+            htmlFor="cc-price-floor"
           >
-            <Input
+            <input
+              id="cc-price-floor"
               type="number"
               step="0.0001"
               min="0"
               value={draft.price_floor}
               onChange={(e) => patch({ price_floor: parseFloat(e.target.value) || 0 })}
+              className={cn(accountInputCls, 'tabular-nums')}
             />
           </Field>
         </div>
         {!isBundleMode && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Minimum quantity" hint="Lowest order size buyers can pick">
-              <Input
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Minimum Quantity" hint="Lowest order size buyers can pick" htmlFor="cc-min-quantity">
+              <input
+                id="cc-min-quantity"
                 type="number"
                 step="1"
                 min="1"
                 value={draft.min_quantity}
                 onChange={(e) => patch({ min_quantity: parseInt(e.target.value || '0', 10) })}
+                className={cn(accountInputCls, 'tabular-nums')}
               />
             </Field>
-            <Field label="Quantity step" hint="Increment used by the +/- buttons">
-              <Input
+            <Field label="Quantity Step" hint="Increment used by the +/- buttons" htmlFor="cc-quantity-step">
+              <input
+                id="cc-quantity-step"
                 type="number"
                 step="1"
                 min="1"
                 value={draft.quantity_step}
                 onChange={(e) => patch({ quantity_step: parseInt(e.target.value || '0', 10) })}
+                className={cn(accountInputCls, 'tabular-nums')}
               />
             </Field>
             {/* V19/P2.b — Granularity controls the suffix everywhere a
                 quantity is displayed. "Unit" = absolute count, "Thousand"
                 = a 1 in qty means 1,000 actual units, "Million" likewise. */}
-            <Field label="Granularity" hint="What 1 unit of quantity equals">
+            <Field label="Granularity" hint="What 1 unit of quantity equals" htmlFor="cc-granularity">
               <Select
                 value={draft.quantity_granularity ?? 'unit'}
                 onValueChange={(v) =>
                   patch({ quantity_granularity: v as 'unit' | 'thousand' | 'million' })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id="cc-granularity"
+                  className="h-10 rounded-md border-0 bg-bg-overlay px-3.5 hover:bg-bg-overlay-2 data-[state=open]:ring-focus-soft"
+                >
                   <SelectValue placeholder="Unit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -296,17 +336,20 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
       })()}
 
       {/* ── Seller-side instructions ── */}
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Seller instructions</h3>
+      <section className={CARD}>
+        <PanelHead title="Seller Instructions" />
         <Field
-          label="Placeholder text"
+          label="Placeholder Text"
           hint="Shown to sellers as a hint while filling out their listing"
+          htmlFor="cc-seller-placeholder"
         >
-          <Textarea
+          <textarea
+            id="cc-seller-placeholder"
             value={draft.seller_instructions_placeholder}
             onChange={(e) => patch({ seller_instructions_placeholder: e.target.value })}
             rows={3}
             placeholder="e.g. Send us gamepass or in-game item details ..."
+            className={cn(accountInputCls, 'resize-none')}
           />
         </Field>
       </section>
@@ -337,16 +380,7 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         onChange={(faq) => patch({ faq })}
       />
 
-      <div className="sticky bottom-4 z-10 flex justify-end gap-2 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)] p-3 backdrop-blur-md shadow-elevated">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-4 py-2 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-60"
-        >
-          {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Save currency settings
-        </button>
-      </div>
+      <SaveBar label="Save Currency Settings" pending={mutation.isPending} />
     </form>
   )
 }
@@ -372,10 +406,12 @@ function formatGranularityLabel(draft: CurrencyConfig): string {
 function Field({
   label,
   hint,
+  htmlFor,
   children,
 }: {
   label: string
   hint?: string
+  htmlFor?: string
   children: React.ReactNode
 }) {
   // V19/P24/P5 — Label and hint stacked vertically. Previously they
@@ -383,13 +419,17 @@ function Field({
   // letter-soup whenever the surrounding grid column got narrow
   // (the Identity section is the canonical victim). Stacking gives
   // each its own line and the hint sits as a quiet caption below.
+  // The control sits at the bottom (mt-auto) so side-by-side fields
+  // line up even when one hint wraps to two lines.
   return (
-    <div className="space-y-1.5">
-      <div className="space-y-0.5">
-        <Label>{label}</Label>
-        {hint && <p className="text-[11px] leading-snug text-text-tertiary">{hint}</p>}
+    <div className="flex min-w-0 flex-col">
+      <div className="mb-1.5">
+        <label htmlFor={htmlFor} className="block text-[13px] font-medium text-text-secondary">
+          {label}
+        </label>
+        {hint && <p className="mt-0.5 text-[12px] leading-snug text-text-tertiary">{hint}</p>}
       </div>
-      {children}
+      <div className="mt-auto">{children}</div>
     </div>
   )
 }
@@ -412,52 +452,54 @@ function StepsEditor({
     ])
 
   return (
-    <section className="space-y-3 rounded-2xl border border-border-default bg-bg-raised p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold text-text-primary">How it works</h3>
-        <button
-          type="button"
-          onClick={add}
-          className="inline-flex items-center gap-1 rounded-md border border-border-default px-2 py-1 text-[12px] font-semibold text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-        >
-          <Plus className="h-3 w-3" /> Step
-        </button>
-      </div>
-      <p className="text-[12.5px] text-text-secondary">
-        Three short steps shown on the buyer page below the sellers list.
-      </p>
-      <div className="space-y-2.5">
+    <section className={CARD}>
+      <PanelHead
+        title="How It Works"
+        subtitle="Three short steps shown on the buyer page below the sellers list."
+        aside={
+          <button type="button" onClick={add} className={adminBtnSm.secondary}>
+            <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" /> Add Step
+          </button>
+        }
+      />
+      <div className="space-y-2">
         {steps.map((s, i) => (
           <div
             key={i}
-            className="grid gap-2 rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 sm:grid-cols-[64px_1fr_auto]"
+            className="grid grid-cols-[64px_minmax(0,1fr)_auto] gap-2 rounded-md bg-bg-overlay p-3"
           >
-            <Input
+            <input
               type="number"
               value={s.n}
               onChange={(e) => update(i, { n: parseInt(e.target.value || '0', 10) })}
-              className="text-center"
+              aria-label={`Step ${i + 1} number`}
+              className={cn(ROW_INPUT, 'col-start-1 row-start-1 self-start px-2 text-center tabular-nums')}
             />
-            <div className="space-y-2">
-              <Input
+            <div className="col-span-3 row-start-2 min-w-0 space-y-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
+              <input
                 value={s.title}
                 onChange={(e) => update(i, { title: e.target.value })}
                 placeholder="Step title"
+                aria-label={`Step ${i + 1} title`}
+                className={ROW_INPUT}
               />
-              <Textarea
+              <textarea
                 value={s.body}
                 onChange={(e) => update(i, { body: e.target.value })}
                 rows={2}
                 placeholder="Step description"
+                aria-label={`Step ${i + 1} description`}
+                className={cn(ROW_INPUT, 'resize-none')}
               />
             </div>
             <button
               type="button"
               onClick={() => remove(i)}
-              className="h-8 w-8 self-start rounded-lg text-text-tertiary transition-colors hover:bg-error-bg hover:text-error"
+              className={cn(ICON_BTN_DANGER, 'col-start-3 row-start-1 self-start justify-self-end')}
               title="Remove step"
+              aria-label="Remove step"
             >
-              <Trash2 className="mx-auto h-3.5 w-3.5" />
+              <Trash aria-hidden weight="bold" className="h-4 w-4" />
             </button>
           </div>
         ))}
@@ -480,46 +522,47 @@ function FaqEditor({
   const add = () => onChange([...faq, { q: '', a: '' }])
 
   return (
-    <section className="space-y-3 rounded-2xl border border-border-default bg-bg-raised p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold text-text-primary">FAQ</h3>
-        <button
-          type="button"
-          onClick={add}
-          className="inline-flex items-center gap-1 rounded-md border border-border-default px-2 py-1 text-[12px] font-semibold text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-        >
-          <Plus className="h-3 w-3" /> Question
-        </button>
-      </div>
-      <p className="text-[12.5px] text-text-secondary">
-        Shown as an accordion near the bottom of the buyer page. Keep answers short.
-      </p>
-      <div className="space-y-2.5">
+    <section className={CARD}>
+      <PanelHead
+        title="FAQ"
+        subtitle="Shown as an accordion near the bottom of the buyer page. Keep answers short."
+        aside={
+          <button type="button" onClick={add} className={adminBtnSm.secondary}>
+            <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" /> Add Question
+          </button>
+        }
+      />
+      <div className="space-y-2">
         {faq.map((f, i) => (
           <div
             key={i}
-            className="grid gap-2 rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 sm:grid-cols-[1fr_auto]"
+            className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-md bg-bg-overlay p-3"
           >
-            <div className="space-y-2">
-              <Input
+            <div className="min-w-0 space-y-2">
+              <input
                 value={f.q}
                 onChange={(e) => update(i, { q: e.target.value })}
                 placeholder="Question"
+                aria-label={`Question ${i + 1}`}
+                className={ROW_INPUT}
               />
-              <Textarea
+              <textarea
                 value={f.a}
                 onChange={(e) => update(i, { a: e.target.value })}
                 rows={3}
                 placeholder="Answer"
+                aria-label={`Answer ${i + 1}`}
+                className={cn(ROW_INPUT, 'resize-none')}
               />
             </div>
             <button
               type="button"
               onClick={() => remove(i)}
-              className="h-8 w-8 self-start rounded-lg text-text-tertiary transition-colors hover:bg-error-bg hover:text-error"
+              className={cn(ICON_BTN_DANGER, 'self-start')}
               title="Remove"
+              aria-label="Remove question"
             >
-              <Trash2 className="mx-auto h-3.5 w-3.5" />
+              <Trash aria-hidden weight="bold" className="h-4 w-4" />
             </button>
           </div>
         ))}

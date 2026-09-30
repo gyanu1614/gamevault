@@ -21,8 +21,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { ArrowSquareOut, CaretLeft } from '@phosphor-icons/react'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { AdminEmpty, adminBtn } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 import GameWizard from './GameWizard'
 import { CurrencyConfigForm } from './CurrencyConfigForm'
 import { AccountConfigForm } from './AccountConfigForm'
@@ -62,107 +64,85 @@ export default function GameDetailTabs({
   const hasAccounts = enabledSlugs.has('accounts')
   const hasBoosting = enabledSlugs.has('boosting')
 
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'setup', label: 'Setup' },
+    ...(hasCurrency ? [{ id: 'currency' as Tab, label: 'Currency' }] : []),
+    ...(hasItems ? [{ id: 'items' as Tab, label: 'Items' }] : []),
+    ...(hasAccounts ? [{ id: 'accounts' as Tab, label: 'Accounts' }] : []),
+    ...(hasBoosting ? [{ id: 'boosting' as Tab, label: 'Boosting' }] : []),
+    { id: 'fees', label: 'Fees' },
+    { id: 'seo', label: 'SEO' },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-10">
       {/* Header */}
       <header>
         <Link
           href="/admin/games"
-          className="inline-flex items-center gap-1.5 text-[12.5px] text-text-tertiary transition-colors hover:text-text-primary"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
         >
-          ← Back to games
+          <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Games
         </Link>
-        <h1 className="mt-3 text-[26px] font-semibold tracking-tight text-text-primary">
-          {game?.name ?? 'Game'}
-        </h1>
-        <p className="mt-1.5 text-[13.5px] text-text-secondary">
-          Configure identity, branding, and per-category settings.
-        </p>
+        <div className="mt-3 flex items-center gap-3.5">
+          <GameTile src={game?.image_url} name={game?.name} className="h-12 w-12 text-[16px]" />
+          <div className="min-w-0">
+            <h1 className="truncate text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
+              {game?.name ?? 'Game'}
+            </h1>
+            <p className="mt-0.5 text-[13.5px] text-text-secondary">
+              Configure identity, branding, and per-category settings.
+            </p>
+          </div>
+        </div>
       </header>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-        <TabsList className="flex w-full flex-wrap gap-1 rounded-xl bg-bg-raised p-1">
-          <TabsTrigger value="setup" className="data-[state=active]:bg-bg-overlay">
-            Setup
-          </TabsTrigger>
-          {hasCurrency && (
-            <TabsTrigger value="currency" className="data-[state=active]:bg-bg-overlay">
-              Currency
-            </TabsTrigger>
-          )}
-          {hasItems && (
-            <TabsTrigger value="items" className="data-[state=active]:bg-bg-overlay">
-              Items
-            </TabsTrigger>
-          )}
-          {hasAccounts && (
-            <TabsTrigger value="accounts" className="data-[state=active]:bg-bg-overlay">
-              Accounts
-            </TabsTrigger>
-          )}
-          {hasBoosting && (
-            <TabsTrigger value="boosting" className="data-[state=active]:bg-bg-overlay">
-              Boosting
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="fees" className="data-[state=active]:bg-bg-overlay">
-            Fees
-          </TabsTrigger>
-          <TabsTrigger value="seo" className="data-[state=active]:bg-bg-overlay">
-            SEO
-          </TabsTrigger>
-        </TabsList>
+      <SegmentedTabs<Tab>
+        tabs={tabs}
+        value={tab}
+        onChange={setTab}
+        layoutId="game-detail-tabs"
+        ariaLabel="Game settings"
+      />
 
+      <div role="tabpanel" id={`game-detail-tabs-panel-${tab}`} aria-labelledby={`game-detail-tabs-tab-${tab}`}>
         {/* Setup — runs the existing 4-step wizard (Identity, Branding,
             Categories, Review). Editing here is what flips category
             enablement, which in turn shows/hides the other tabs. */}
-        <TabsContent value="setup" className="mt-6">
+        {tab === 'setup' && (
           <GameWizard
             mode="edit"
             game={game}
             globalCategories={globalCategories}
             initialGameCategories={initialGameCategories}
           />
-        </TabsContent>
-
-        {hasCurrency && (
-          <TabsContent value="currency" className="mt-6">
-            <CategoryEmptyHint enabled={hasCurrency} type="Currency">
-              <CurrencyConfigForm gameId={game.id} />
-            </CategoryEmptyHint>
-          </TabsContent>
         )}
 
-        {hasItems && (
-          <TabsContent value="items" className="mt-6">
-            <ItemsTabLink gameId={game.id} />
-          </TabsContent>
+        {tab === 'currency' && hasCurrency && (
+          <CategoryEmptyHint enabled={hasCurrency} type="Currency">
+            <CurrencyConfigForm gameId={game.id} />
+          </CategoryEmptyHint>
         )}
 
-        {hasAccounts && (
-          <TabsContent value="accounts" className="mt-6">
-            <CategoryEmptyHint enabled={hasAccounts} type="Accounts">
-              <AccountConfigForm gameId={game.id} />
-            </CategoryEmptyHint>
-          </TabsContent>
+        {tab === 'items' && hasItems && <ItemsTabLink gameId={game.id} />}
+
+        {tab === 'accounts' && hasAccounts && (
+          <CategoryEmptyHint enabled={hasAccounts} type="Accounts">
+            <AccountConfigForm gameId={game.id} />
+          </CategoryEmptyHint>
         )}
 
-        {hasBoosting && (
-          <TabsContent value="boosting" className="mt-6">
-            <CategoryEmptyHint enabled={hasBoosting} type="Boosting">
-              <BoostingConfigForm gameId={game.id} />
-            </CategoryEmptyHint>
-          </TabsContent>
+        {tab === 'boosting' && hasBoosting && (
+          <CategoryEmptyHint enabled={hasBoosting} type="Boosting">
+            <BoostingConfigForm gameId={game.id} />
+          </CategoryEmptyHint>
         )}
 
-        <TabsContent value="fees" className="mt-6">
-          <FeesTab rows={initialGameCategories} gameName={game.name} />
-        </TabsContent>
+        {tab === 'fees' && <FeesTab rows={initialGameCategories} gameName={game.name} />}
 
-        <TabsContent value="seo" className="mt-6">
-          <SeoOverrideForm gameId={game.id} gameName={game.name} />
-        </TabsContent>
-      </Tabs>
+        {tab === 'seo' && <SeoOverrideForm gameId={game.id} gameName={game.name} />}
+      </div>
     </div>
   )
 }
@@ -178,14 +158,11 @@ function CategoryEmptyHint({
 }) {
   if (!enabled) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-8 text-center">
-        <p className="text-[14px] font-semibold text-text-primary">
-          {type} isn&apos;t enabled for this game.
-        </p>
-        <p className="mt-1.5 text-[12.5px] text-text-secondary">
-          Enable it in the Setup tab&apos;s Categories step, then come back here to configure.
-        </p>
-      </div>
+      <AdminEmpty
+        icon={ArrowSquareOut}
+        title={`${type} Isn't Enabled for This Game`}
+        hint="Enable it in the Setup tab's Categories step, then come back here to configure."
+      />
     )
   }
   return <>{children}</>
@@ -196,19 +173,16 @@ function ItemsTabLink({ gameId }: { gameId: string }) {
   // routes per (game, category). Show a friendly pointer rather than
   // duplicating that surface here.
   return (
-    <div className="rounded-2xl border border-border-default bg-bg-raised p-6">
-      <h3 className="text-[15px] font-semibold text-text-primary">Item templates</h3>
-      <p className="mt-1.5 text-[13px] text-text-secondary">
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <h2 className="text-[15px] font-semibold text-text-primary">Item Templates</h2>
+      <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-text-secondary">
         Item-listing attributes (rarity, level, dropdowns, conditional sub-fields, …)
         are managed in the dedicated template builder.
       </p>
-      <Link
-        href={`/admin/games/${gameId}/templates/items`}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-lime px-4 py-2 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover"
-      >
-        Open template builder
-        <ExternalLink className="h-3.5 w-3.5" />
+      <Link href={`/admin/games/${gameId}/templates/items`} className={`${adminBtn.primary} mt-4`}>
+        Open Template Builder
+        <ArrowSquareOut aria-hidden weight="bold" className="h-4 w-4" />
       </Link>
-    </div>
+    </section>
   )
 }

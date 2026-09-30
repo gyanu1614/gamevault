@@ -13,7 +13,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { AlertTriangle, CalendarClock, Loader2, Tag, X } from 'lucide-react'
+import { CalendarBlank, Tag, Warning, X } from '@phosphor-icons/react'
+import { adminBtn, adminBtnSm } from '../../components/kit'
 
 import {
   cancelScheduledBaseRule,
@@ -29,11 +30,14 @@ import { ACCOUNT_RISK_BAND_PCT, fmtUtcDate, type AccountRiskBandKey } from '@/li
 
 type PairRow = { id: string; slug: string; name: string; type: string; is_enabled: boolean }
 
+// Inputs sit on a bg-bg-overlay form box, so one step lighter; 16px on phones (no iOS zoom).
 const INPUT =
-  'h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border'
-const LABEL = 'block text-[12px] font-semibold uppercase tracking-wider text-text-secondary'
-const BTN = 'inline-flex h-10 items-center justify-center rounded-lg bg-lime px-4 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50'
-const BTN_GHOST = 'inline-flex h-8 items-center gap-1 rounded-md border border-border-default px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-error hover:text-error disabled:opacity-50'
+  'h-10 w-full rounded-md border border-transparent bg-bg-overlay-2 px-3 text-base text-text-primary placeholder:text-text-disabled ' +
+  'transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-sm'
+const LABEL = 'mb-1.5 block text-[12.5px] font-medium text-text-secondary'
+const BTN = `${adminBtn.primary} w-full`
+const BTN_GHOST = adminBtnSm.secondary
+const FORM_BOX = 'space-y-3 rounded-md bg-bg-overlay p-4'
 
 const TYPE_LABEL: Record<string, string> = {
   currency: 'Currency', items: 'Items', account: 'Accounts', top_up: 'Top-Ups', service: 'Boosting / Services', gift_card: 'Gift Cards',
@@ -45,15 +49,15 @@ export function FeesTab({ rows, gameName }: { rows: PairRow[]; gameName: string 
   const pairs = rows.filter((r) => r.is_enabled)
   if (pairs.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-8 text-center">
+      <div className="rounded-lg bg-bg-raised px-6 py-10 text-center">
         <p className="text-[14px] font-semibold text-text-primary">No categories are enabled for {gameName}.</p>
         <p className="mt-1.5 text-[12.5px] text-text-secondary">Enable one in the Setup tab&apos;s Categories step, then set its fee here.</p>
       </div>
     )
   }
   return (
-    <div className="space-y-5">
-      <p className="text-[13px] text-text-secondary">
+    <div className="space-y-4">
+      <p className="text-[13px] leading-relaxed text-text-secondary">
         Seller commission per category, read from the live fee table. A new base rate needs the notice period before it
         starts; promotions can start today but must end. Every change is audited and republishes the public fee pages.
       </p>
@@ -73,14 +77,25 @@ function PairFeePanel({ pair }: { pair: PairRow }) {
 
   if (query.isLoading) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-border-default bg-bg-raised p-5 text-text-secondary">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading {pair.name || pair.slug}…
+      <div className="rounded-lg bg-bg-raised p-4 sm:p-5" aria-busy aria-label={`Loading ${pair.name || pair.slug}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="skeleton h-4 w-40 rounded" />
+            <div className="skeleton mt-2 h-3 w-72 max-w-full rounded" />
+          </div>
+          <div className="skeleton h-8 w-16 rounded" />
+        </div>
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <div className="skeleton h-56 rounded-md" />
+          <div className="skeleton h-56 rounded-md" />
+          <div className="skeleton h-56 rounded-md" />
+        </div>
       </div>
     )
   }
   if (!state) {
     return (
-      <div className="rounded-2xl border border-border-default bg-bg-raised p-5 text-[13px] text-error">
+      <div className="rounded-lg bg-error-bg p-4 text-[13px] text-error">
         Could not load the fee state for {pair.name || pair.slug}.
       </div>
     )
@@ -94,12 +109,12 @@ function PairFeePanel({ pair }: { pair: PairRow }) {
         : 'no rule'
 
   return (
-    <section className="rounded-2xl border border-border-default bg-bg-raised p-5 sm:p-6">
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-[15px] font-semibold text-text-primary">{state.pair.name || pair.slug}</h3>
-            <span className="rounded-md border border-border-subtle bg-bg-overlay px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+            <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] font-semibold text-text-secondary">
               {TYPE_LABEL[state.pair.type] ?? state.pair.type}
             </span>
           </div>
@@ -114,12 +129,12 @@ function PairFeePanel({ pair }: { pair: PairRow }) {
           )}
           {state.resolved.fallback && (
             <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-semibold text-warning">
-              <AlertTriangle className="h-3.5 w-3.5" /> This pair resolves through the fallback — add a rule.
+              <Warning aria-hidden weight="bold" className="h-3.5 w-3.5" /> This pair resolves through the fallback — add a rule.
             </p>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">Sellers pay</p>
+        <div className="sm:text-right">
+          <p className="text-[12px] font-medium text-text-tertiary">Sellers Pay</p>
           <p className="text-[30px] font-extrabold leading-none tabular-nums text-text-primary">{pct(state.resolved.pct)}</p>
           {state.pair.type === 'account' && (
             <p className="mt-1 text-[11.5px] text-text-secondary">
@@ -131,13 +146,13 @@ function PairFeePanel({ pair }: { pair: PairRow }) {
 
       <Timeline state={state} onChanged={refresh} />
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="mt-5 grid gap-3 lg:grid-cols-3">
         <BaseRateForm state={state} onChanged={refresh} />
         <PromoForm state={state} onChanged={refresh} />
         {state.pair.type === 'account' ? (
           <RiskBandForm state={state} onChanged={refresh} />
         ) : (
-          <div className="rounded-xl border border-dashed border-border-subtle p-4 text-[12px] text-text-tertiary">
+          <div className="rounded-md bg-bg-overlay p-4 text-[12.5px] leading-relaxed text-text-tertiary">
             Rank discounts and the founding programme apply on top of this rate per seller; they are platform settings,
             not per-category.
           </div>
@@ -178,16 +193,20 @@ function Timeline({ state, onChanged }: { state: PairFeeState; onChanged: () => 
     return <p className="mt-4 text-[12px] text-text-tertiary">Nothing scheduled — the rate above stays until a new rule is added.</p>
   }
   return (
-    <ul className="mt-4 divide-y divide-border-subtle rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)]">
+    <ul className="mt-4 divide-y divide-white/[0.06] rounded-md bg-bg-overlay">
       {items.map(({ rule, label, action }) => (
-        <li key={rule.id} className="flex items-center justify-between gap-3 px-3 py-2 text-[12.5px] text-text-secondary">
-          <span className="inline-flex items-center gap-2">
-            {rule.kind === 'promo' ? <Tag className="h-3.5 w-3.5 text-lime-text" /> : <CalendarClock className="h-3.5 w-3.5 text-text-tertiary" />}
+        <li key={rule.id} className="flex flex-col gap-2 px-3.5 py-2.5 text-[12.5px] text-text-secondary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <span className="inline-flex items-start gap-2">
+            {rule.kind === 'promo' ? (
+              <Tag aria-hidden weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-lime-text" />
+            ) : (
+              <CalendarBlank aria-hidden weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+            )}
             {label}
           </span>
           {action && (
-            <button type="button" className={BTN_GHOST} disabled={action.busy} onClick={action.run}>
-              <X className="h-3 w-3" /> {action.text}
+            <button type="button" className={`${BTN_GHOST} self-start sm:self-auto`} disabled={action.busy} onClick={action.run}>
+              <X aria-hidden weight="bold" className="h-3.5 w-3.5" /> {action.text}
             </button>
           )}
         </li>
@@ -211,8 +230,8 @@ function BaseRateForm({ state, onChanged }: { state: PairFeeState; onChanged: ()
     onError: (e: any) => toast.error(e?.message ?? 'Failed'),
   })
   return (
-    <form className="space-y-3 rounded-xl border border-border-subtle p-4" onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
-      <p className="text-[13px] font-semibold text-text-primary">New base rate</p>
+    <form className={FORM_BOX} onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
+      <p className="text-[13.5px] font-semibold text-text-primary">New Base Rate</p>
       <div>
         <label className={LABEL}>Rate %</label>
         <input className={INPUT} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 10" />
@@ -220,14 +239,14 @@ function BaseRateForm({ state, onChanged }: { state: PairFeeState; onChanged: ()
       <div>
         <label className={LABEL}>Starts (UTC)</label>
         <input className={INPUT} type="date" min={earliest} value={date} onChange={(e) => setDate(e.target.value)} />
-        <p className="mt-1 text-[11.5px] text-text-tertiary">Needs {state.notice_days} days&apos; notice — earliest {earliest}.</p>
+        <p className="mt-1 text-[12px] text-text-tertiary">Needs {state.notice_days} days&apos; notice — earliest {earliest}.</p>
       </div>
       <div>
         <label className={LABEL}>Note</label>
         <input className={INPUT} value={note} onChange={(e) => setNote(e.target.value)} placeholder="why (optional)" maxLength={200} />
       </div>
       <button type="submit" className={BTN} disabled={m.isPending || !rate || !date}>
-        {m.isPending ? 'Scheduling…' : 'Schedule base rate'}
+        {m.isPending ? 'Scheduling…' : 'Schedule Base Rate'}
       </button>
     </form>
   )
@@ -248,8 +267,8 @@ function PromoForm({ state, onChanged }: { state: PairFeeState; onChanged: () =>
     onError: (e: any) => toast.error(e?.message ?? 'Failed'),
   })
   return (
-    <form className="space-y-3 rounded-xl border border-border-subtle p-4" onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
-      <p className="text-[13px] font-semibold text-text-primary">Promotion</p>
+    <form className={FORM_BOX} onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
+      <p className="text-[13.5px] font-semibold text-text-primary">Promotion</p>
       <div>
         <label className={LABEL}>Rate %</label>
         <input className={INPUT} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="0" />
@@ -268,9 +287,9 @@ function PromoForm({ state, onChanged }: { state: PairFeeState; onChanged: () =>
         <label className={LABEL}>Note</label>
         <input className={INPUT} value={note} onChange={(e) => setNote(e.target.value)} placeholder="campaign (optional)" maxLength={200} />
       </div>
-      <p className="text-[11.5px] text-text-tertiary">Blank start = now. No notice period; the end date is required.</p>
+      <p className="text-[12px] text-text-tertiary">Blank start = now. No notice period; the end date is required.</p>
       <button type="submit" className={BTN} disabled={m.isPending || !end}>
-        {m.isPending ? 'Adding…' : 'Add promotion'}
+        {m.isPending ? 'Adding…' : 'Add Promotion'}
       </button>
     </form>
   )
@@ -291,11 +310,11 @@ function RiskBandForm({ state, onChanged }: { state: PairFeeState; onChanged: ()
     onError: (e: any) => toast.error(e?.message ?? 'Failed'),
   })
   return (
-    <form className="space-y-3 rounded-xl border border-border-subtle p-4" onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
-      <p className="text-[13px] font-semibold text-text-primary">Account risk band</p>
+    <form className={FORM_BOX} onSubmit={(e) => { e.preventDefault(); m.mutate() }}>
+      <p className="text-[13.5px] font-semibold text-text-primary">Account Risk Band</p>
       <div>
         <label className={LABEL}>Band</label>
-        <select className={INPUT} value={band} onChange={(e) => setBand(e.target.value as AccountRiskBandKey)}>
+        <select className={`${INPUT} cursor-pointer`} value={band} onChange={(e) => setBand(e.target.value as AccountRiskBandKey)}>
           {(Object.keys(ACCOUNT_RISK_BAND_PCT) as AccountRiskBandKey[]).map((b) => (
             <option key={b} value={b}>{b} — {ACCOUNT_RISK_BAND_PCT[b]}%</option>
           ))}
@@ -305,11 +324,11 @@ function RiskBandForm({ state, onChanged }: { state: PairFeeState; onChanged: ()
         <label className={LABEL}>Starts (UTC)</label>
         <input className={INPUT} type="date" min={earliest} value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
-      <p className="text-[11.5px] text-text-tertiary">
+      <p className="text-[12px] text-text-tertiary">
         A band is a base rate for this game&apos;s accounts — same {state.notice_days}-day notice.
       </p>
       <button type="submit" className={BTN} disabled={m.isPending || !date}>
-        {m.isPending ? 'Saving…' : 'Set risk band'}
+        {m.isPending ? 'Saving…' : 'Set Risk Band'}
       </button>
     </form>
   )

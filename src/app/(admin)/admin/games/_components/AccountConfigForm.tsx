@@ -11,9 +11,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { FIELD_LABEL, FormLoading, FormSection, SaveBar, SwitchRow } from './form-bits'
 import {
   fetchCategoryConfigAdmin,
   upsertCategoryConfig,
@@ -29,9 +29,9 @@ const ACCOUNT_FIELDS: Array<{ value: AccountField; label: string; hint: string }
   { value: 'rank', label: 'Rank', hint: 'Competitive tier (e.g. Diamond)' },
   { value: 'region', label: 'Region', hint: 'Server region of the account' },
   { value: 'platform', label: 'Platform', hint: 'PC / PS / Xbox / Mobile' },
-  { value: 'skins_count', label: 'Skins count', hint: 'Number of skins/cosmetics' },
-  { value: 'hours_played', label: 'Hours played', hint: 'Time invested in the account' },
-  { value: 'email_changeable', label: 'Email changeable', hint: 'Whether the buyer can swap the email' },
+  { value: 'skins_count', label: 'Skins Count', hint: 'Number of skins/cosmetics' },
+  { value: 'hours_played', label: 'Hours Played', hint: 'Time invested in the account' },
+  { value: 'email_changeable', label: 'Email Changeable', hint: 'Whether the buyer can swap the email' },
 ]
 
 export function AccountConfigForm({ gameId }: { gameId: string }) {
@@ -46,6 +46,9 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
       return cfg
     },
     staleTime: 30_000,
+    // The queryFn seeds the editable draft, so a background refetch (tab refocus)
+    // would wipe unsaved edits. Refetch only after a save (invalidate).
+    refetchOnWindowFocus: false,
   })
 
   const mutation = useMutation({
@@ -63,11 +66,7 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
   })
 
   if (query.isLoading || !draft) {
-    return (
-      <div className="flex items-center gap-2 p-6 text-text-secondary">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading account settings…
-      </div>
-    )
+    return <FormLoading cards={4} />
   }
 
   const patch = (p: Partial<AccountConfig>) =>
@@ -99,132 +98,67 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
         if (!draft) return
         mutation.mutate(draft)
       }}
-      className="space-y-7"
+      className="space-y-4"
     >
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Required listing fields</h3>
-        <p className="text-[12.5px] text-text-secondary">
-          Sellers must fill these in when listing an account for this game.
-        </p>
+      <FormSection
+        title="Required Listing Fields"
+        subtitle="Sellers must fill these in when listing an account for this game."
+      >
         <div className="grid gap-2 sm:grid-cols-2">
-          {ACCOUNT_FIELDS.map((f) => {
-            const checked = draft.required_fields.includes(f.value)
-            return (
-              <label
-                key={f.value}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleField(f.value)}
-                  className="mt-1 h-4 w-4 rounded border-border-default accent-lime"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-semibold text-text-primary">{f.label}</div>
-                  <div className="text-[12px] text-text-tertiary">{f.hint}</div>
-                </div>
-              </label>
-            )
-          })}
+          {ACCOUNT_FIELDS.map((f) => (
+            <SwitchRow
+              key={f.value}
+              label={f.label}
+              hint={f.hint}
+              checked={draft.required_fields.includes(f.value)}
+              onCheckedChange={() => toggleField(f.value)}
+            />
+          ))}
         </div>
-      </section>
+      </FormSection>
 
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Delivery methods</h3>
-        <p className="text-[12.5px] text-text-secondary">
-          Which delivery types sellers can pick from when creating a listing.
-        </p>
+      <FormSection
+        title="Delivery Methods"
+        subtitle="Which delivery types sellers can pick from when creating a listing. At least one stays on."
+      >
         <div className="grid gap-2 sm:grid-cols-2">
-          <DeliveryToggle
+          <SwitchRow
             label="Manual"
             hint="Seller hands over credentials in chat after sale"
             checked={draft.delivery_methods.includes('manual')}
-            onToggle={() => toggleDelivery('manual')}
+            onCheckedChange={() => toggleDelivery('manual')}
           />
-          <DeliveryToggle
+          <SwitchRow
             label="Instant"
             hint="Pre-stored credentials released to the buyer automatically"
             checked={draft.delivery_methods.includes('instant')}
-            onToggle={() => toggleDelivery('instant')}
+            onCheckedChange={() => toggleDelivery('instant')}
           />
         </div>
-      </section>
+      </FormSection>
 
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Policy</h3>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]">
-          <input
-            type="checkbox"
-            checked={draft.allow_2fa_accounts}
-            onChange={(e) => patch({ allow_2fa_accounts: e.target.checked })}
-            className="mt-1 h-4 w-4 rounded border-border-default accent-lime"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-semibold text-text-primary">Allow 2FA-protected accounts</div>
-            <div className="text-[12px] text-text-tertiary">
-              When off, listings must indicate 2FA is removed. Keeps support cost down for buyers.
-            </div>
-          </div>
-        </label>
-      </section>
+      <FormSection title="Policy">
+        <SwitchRow
+          label="Allow 2FA-Protected Accounts"
+          hint="When off, listings must indicate 2FA is removed. Keeps support cost down for buyers."
+          checked={draft.allow_2fa_accounts}
+          onCheckedChange={(checked) => patch({ allow_2fa_accounts: checked })}
+        />
+      </FormSection>
 
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Seller instructions</h3>
-        <div className="space-y-1.5">
-          <Label>Placeholder text</Label>
-          <Textarea
-            value={draft.seller_instructions_placeholder}
-            onChange={(e) => patch({ seller_instructions_placeholder: e.target.value })}
-            rows={3}
-            placeholder="What sellers should write in their description"
-          />
-        </div>
-      </section>
+      <FormSection title="Seller Instructions">
+        <label htmlFor="account-instructions" className={FIELD_LABEL}>Placeholder Text</label>
+        <textarea
+          id="account-instructions"
+          value={draft.seller_instructions_placeholder}
+          onChange={(e) => patch({ seller_instructions_placeholder: e.target.value })}
+          rows={3}
+          placeholder="What sellers should write in their description"
+          className={cn(accountInputCls, 'resize-none')}
+        />
+      </FormSection>
 
-      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)] p-3 backdrop-blur-md shadow-elevated">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-4 py-2 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-60"
-        >
-          {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Save account settings
-        </button>
-      </div>
+      <SaveBar label="Save Account Settings" pending={mutation.isPending} />
     </form>
-  )
-}
-
-function DeliveryToggle({
-  label,
-  hint,
-  checked,
-  onToggle,
-}: {
-  label: string
-  hint: string
-  checked: boolean
-  onToggle: () => void
-}) {
-  return (
-    <label
-      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-        checked
-          ? 'border-lime-tint-border bg-[rgba(86,184,127,0.05)]'
-          : 'border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-bg-overlay)_70%,transparent)]'
-      }`}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onToggle}
-        className="mt-1 h-4 w-4 rounded border-border-default accent-lime"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-semibold text-text-primary">{label}</div>
-        <div className="text-[12px] text-text-tertiary">{hint}</div>
-      </div>
-    </label>
   )
 }

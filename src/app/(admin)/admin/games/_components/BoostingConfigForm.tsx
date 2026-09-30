@@ -12,10 +12,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, Plus, GripVertical, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { ArrowDown, ArrowUp, Plus, Trash } from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { adminBtnSm } from '../../components/kit'
+import { FIELD_LABEL, FormLoading, FormSection, SaveBar } from './form-bits'
 import {
   fetchCategoryConfigAdmin,
   upsertCategoryConfig,
@@ -24,6 +25,9 @@ import {
   DEFAULT_BOOSTING_CONFIG,
   type BoostingConfig,
 } from '@/lib/types/category-configs'
+
+const ICON =
+  'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary disabled:opacity-40'
 
 export function BoostingConfigForm({ gameId }: { gameId: string }) {
   const qc = useQueryClient()
@@ -37,6 +41,9 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
       return cfg
     },
     staleTime: 30_000,
+    // The queryFn seeds the editable draft, so a background refetch (tab refocus)
+    // would wipe unsaved edits. Refetch only after a save (invalidate).
+    refetchOnWindowFocus: false,
   })
 
   const mutation = useMutation({
@@ -54,11 +61,7 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
   })
 
   if (query.isLoading || !draft) {
-    return (
-      <div className="flex items-center gap-2 p-6 text-text-secondary">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading boosting settings…
-      </div>
-    )
+    return <FormLoading cards={3} />
   }
 
   const patch = (p: Partial<BoostingConfig>) =>
@@ -90,112 +93,86 @@ export function BoostingConfigForm({ gameId }: { gameId: string }) {
         }
         mutation.mutate(cleaned)
       }}
-      className="space-y-7"
+      className="space-y-4"
     >
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[15px] font-semibold text-text-primary">Tier ladder</h3>
-          <button
-            type="button"
-            onClick={addTier}
-            className="inline-flex items-center gap-1 rounded-md border border-border-default px-2 py-1 text-[12px] font-semibold text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary"
-          >
-            <Plus className="h-3 w-3" /> Tier
+      <FormSection
+        title="Tier Ladder"
+        subtitle={<>Ordered low → high. Sellers pick a &quot;from&quot; and &quot;to&quot; tier when listing.</>}
+        aside={
+          <button type="button" onClick={addTier} className={adminBtnSm.secondary}>
+            <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" /> Add Tier
           </button>
-        </div>
-        <p className="text-[12.5px] text-text-secondary">
-          Ordered low → high. Sellers pick a &quot;from&quot; and &quot;to&quot; tier when listing.
-        </p>
-        <div className="space-y-2">
+        }
+      >
+        <div className="space-y-1.5">
           {draft.tiers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-6 text-center text-[12.5px] text-text-tertiary">
+            <p className="rounded-md bg-bg-overlay px-4 py-6 text-center text-[12.5px] text-text-tertiary">
               No tiers yet. Add the lowest rank first, then work up to the highest.
-            </div>
+            </p>
           ) : (
             draft.tiers.map((t, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-[20px_1fr_auto_auto_auto] items-center gap-2 rounded-xl border border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-2.5"
-              >
-                <GripVertical className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-                <Input
+              <div key={i} className="flex items-center gap-1.5 rounded-md bg-bg-overlay p-1.5 pl-3">
+                <span className="w-5 shrink-0 text-[12px] font-semibold tabular-nums text-text-tertiary">{i + 1}</span>
+                <input
                   value={t}
                   onChange={(e) => updateTier(i, e.target.value)}
                   placeholder={i === 0 ? 'Lowest rank' : `Tier ${i + 1}`}
+                  aria-label={`Tier ${i + 1}`}
+                  className={cn(accountInputCls, 'h-9 min-w-0 flex-1 bg-bg-overlay-2 py-0')}
                 />
-                <button
-                  type="button"
-                  onClick={() => moveTier(i, -1)}
-                  disabled={i === 0}
-                  className="h-8 w-8 rounded-lg text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary disabled:opacity-40"
-                  title="Move up"
-                >
-                  <ArrowUp className="mx-auto h-3.5 w-3.5" />
+                <button type="button" onClick={() => moveTier(i, -1)} disabled={i === 0} className={ICON} aria-label="Move up" title="Move up">
+                  <ArrowUp aria-hidden weight="bold" className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveTier(i, 1)}
                   disabled={i === draft.tiers.length - 1}
-                  className="h-8 w-8 rounded-lg text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary disabled:opacity-40"
+                  className={ICON}
+                  aria-label="Move down"
                   title="Move down"
                 >
-                  <ArrowDown className="mx-auto h-3.5 w-3.5" />
+                  <ArrowDown aria-hidden weight="bold" className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => removeTier(i)}
-                  className="h-8 w-8 rounded-lg text-text-tertiary transition-colors hover:bg-error-bg hover:text-error"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-error-bg hover:text-error"
+                  aria-label="Remove tier"
                   title="Remove"
                 >
-                  <Trash2 className="mx-auto h-3.5 w-3.5" />
+                  <Trash aria-hidden weight="bold" className="h-4 w-4" />
                 </button>
               </div>
             ))
           )}
         </div>
-      </section>
+      </FormSection>
 
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Delivery benchmark</h3>
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between">
-            <Label>Average delivery (hours)</Label>
-            <span className="text-[11px] text-text-tertiary">
-              Surfaced as a benchmark on the buyer page
-            </span>
-          </div>
-          <Input
-            type="number"
-            min="0"
-            step="1"
-            value={draft.avg_delivery_hours}
-            onChange={(e) => patch({ avg_delivery_hours: parseInt(e.target.value || '0', 10) })}
-          />
-        </div>
-      </section>
+      <FormSection title="Delivery Benchmark" subtitle="Surfaced as a benchmark on the buyer page.">
+        <label htmlFor="boosting-avg-hours" className={FIELD_LABEL}>Average Delivery (Hours)</label>
+        <input
+          id="boosting-avg-hours"
+          type="number"
+          min="0"
+          step="1"
+          value={draft.avg_delivery_hours}
+          onChange={(e) => patch({ avg_delivery_hours: parseInt(e.target.value || '0', 10) })}
+          className={cn(accountInputCls, 'max-w-[200px] tabular-nums')}
+        />
+      </FormSection>
 
-      <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-        <h3 className="text-[15px] font-semibold text-text-primary">Seller instructions</h3>
-        <div className="space-y-1.5">
-          <Label>Placeholder text</Label>
-          <Textarea
-            value={draft.seller_instructions_placeholder}
-            onChange={(e) => patch({ seller_instructions_placeholder: e.target.value })}
-            rows={3}
-          />
-        </div>
-      </section>
+      <FormSection title="Seller Instructions">
+        <label htmlFor="boosting-instructions" className={FIELD_LABEL}>Placeholder Text</label>
+        <textarea
+          id="boosting-instructions"
+          value={draft.seller_instructions_placeholder}
+          onChange={(e) => patch({ seller_instructions_placeholder: e.target.value })}
+          rows={3}
+          className={cn(accountInputCls, 'resize-none')}
+        />
+      </FormSection>
 
-      <div className="sticky bottom-4 z-10 flex justify-end rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-raised)_95%,transparent)] p-3 backdrop-blur-md shadow-elevated">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-4 py-2 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-60"
-        >
-          {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Save boosting settings
-        </button>
-      </div>
+      <SaveBar label="Save Boosting Settings" pending={mutation.isPending} />
     </form>
   )
 }

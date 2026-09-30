@@ -17,11 +17,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Loader2,
-  Sparkles, GitBranch, Hash, Type, ToggleLeft, List, AlignLeft, Image as ImageIcon,
-  CheckSquare, AlertCircle, Save, X, GripVertical, ChevronRight, ChevronDown,
-  ClipboardPaste,
-} from 'lucide-react'
+  ArrowLeft, Plus, PencilSimple, Trash, CircleNotch,
+  Sparkle, GitBranch, Hash, TextT, ToggleLeft, List, TextAlignLeft, Image as ImageIcon,
+  CheckSquare, WarningCircle, FloppyDisk, X, DotsSixVertical, CaretRight, CaretDown,
+  ClipboardText,
+} from '@phosphor-icons/react'
 import {
   DndContext,
   type DragEndEvent,
@@ -40,7 +40,9 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
-import { GlassCard } from '@/components/ui/glass-card'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { Switch } from '@/components/ui/switch'
+import { AdminEmpty, PanelHead, adminBtn, adminBtnSm, type AdminIcon } from '../../components/kit'
 import {
   createAttribute, updateAttribute, deleteAttribute,
   createOption, updateOption, deleteOption, uploadOptionIcon, reorderOptions,
@@ -55,14 +57,14 @@ import {
 
 // ─── Icons per attribute type ────────────────────────────────────────────────
 
-const TYPE_META: Record<AttrType, { label: string; icon: React.ComponentType<{ className?: string }>; supportsOptions: boolean }> = {
-  text:         { label: 'Short text',  icon: Type,         supportsOptions: false },
-  number:       { label: 'Number',      icon: Hash,         supportsOptions: false },
-  textarea:     { label: 'Long text',   icon: AlignLeft,    supportsOptions: false },
-  select:       { label: 'Dropdown',    icon: List,         supportsOptions: true },
-  multiselect:  { label: 'Multi-select', icon: CheckSquare,  supportsOptions: true },
-  boolean:      { label: 'Yes/No',      icon: ToggleLeft,   supportsOptions: false },
-  image_select: { label: 'Image picker', icon: ImageIcon,    supportsOptions: true },
+const TYPE_META: Record<AttrType, { label: string; icon: AdminIcon; supportsOptions: boolean }> = {
+  text:         { label: 'Short Text',   icon: TextT,         supportsOptions: false },
+  number:       { label: 'Number',       icon: Hash,          supportsOptions: false },
+  textarea:     { label: 'Long Text',    icon: TextAlignLeft, supportsOptions: false },
+  select:       { label: 'Dropdown',     icon: List,          supportsOptions: true },
+  multiselect:  { label: 'Multi-Select', icon: CheckSquare,   supportsOptions: true },
+  boolean:      { label: 'Yes/No',       icon: ToggleLeft,    supportsOptions: false },
+  image_select: { label: 'Image Picker', icon: ImageIcon,     supportsOptions: true },
 }
 
 const TYPE_ORDER: AttrType[] = ['text', 'number', 'textarea', 'select', 'multiselect', 'image_select', 'boolean']
@@ -128,41 +130,41 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
   return (
     <div className="space-y-5">
       {/* ── Breadcrumb / header ── */}
-      <header className="space-y-2">
+      <header>
         <Link
           href={`/admin/games/${state.header.game_id}/edit`}
-          className="inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary"
+          className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[13px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
         >
-          <ArrowLeft className="h-3 w-3" />
+          <ArrowLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
           Back to {state.header.game_name}
         </Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              <h1 className="min-w-0 break-words text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
                 {state.header.game_name} <span className="text-text-tertiary">·</span>{' '}
-                <span className="text-lime-text">{state.header.global_category_name}</span>
+                <span className="text-text-secondary">{state.header.global_category_name}</span>
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-full border border-lime-tint-border bg-lime-tint-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
-                <Sparkles className="h-3 w-3" />
-                attribute template
+              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-lime-tint-bg px-2 py-0.5 text-[11.5px] font-semibold text-lime-text">
+                <Sparkle aria-hidden weight="bold" className="h-3 w-3" />
+                Attribute Template
               </span>
             </div>
-            <p className="mt-1 text-sm text-text-secondary">
+            <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-text-secondary">
               Define the fields sellers fill in when listing in this category.
               Sub-fields appear only when another field has a specific value.
             </p>
           </div>
           {state.template && (
-            <div className="text-[11px] text-text-tertiary">
-              version {state.template.version} · {state.attributes.length} attributes
+            <div className="text-[12.5px] tabular-nums text-text-tertiary">
+              Version {state.template.version} · {state.attributes.length} attributes
             </div>
           )}
         </div>
       </header>
 
       {/* ── Main grid ── */}
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* ── Left: field tree ── */}
         <FieldTree
           state={state}
@@ -192,12 +194,12 @@ export default function TemplateBuilder({ initial }: { initial: BuilderState }) 
             onChange={refresh}
           />
         ) : (
-          <GlassCard intensity="light" rounded="2xl" className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <Pencil className="mx-auto mb-3 h-6 w-6 text-text-disabled" />
-              <p className="text-sm text-text-tertiary">Pick a field on the left to edit it, or add a new one.</p>
-            </div>
-          </GlassCard>
+          <AdminEmpty
+            icon={PencilSimple}
+            title="No Field Selected"
+            hint="Pick a field on the left to edit it, or add a new one."
+            className="py-16 lg:py-20"
+          />
         )}
       </div>
 
@@ -278,71 +280,83 @@ function FieldTree(props: FieldTreeProps) {
   )
 
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
+    <section className="min-w-0 rounded-lg bg-bg-raised p-4 sm:p-5">
       {/* Header + explainer */}
-      <div className="border-b border-border-subtle px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Fields</div>
+      <PanelHead
+        title="Fields"
+        className="mb-1.5 items-center"
+        aside={
           <button
             type="button"
             onClick={props.onAddTopLevel}
-            className="inline-flex h-7 items-center gap-1 rounded-lg bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover"
+            aria-expanded={props.addingTopLevel}
+            className={adminBtnSm.primary}
           >
-            <Plus className="h-3 w-3" />
-            Add field
+            <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            Add Field
           </button>
-        </div>
-        <p className="mt-1 text-[11px] leading-snug text-text-tertiary">
-          Fields are what sellers fill in. Add a top-level field, then for choice-type fields
-          you can add <span className="text-text-secondary">sub-fields</span> that only appear when a
-          specific choice is picked.
-        </p>
-      </div>
+        }
+      />
+      <p className="text-[12.5px] leading-relaxed text-text-tertiary">
+        Fields are what sellers fill in. Add a top-level field, then for choice-type fields
+        you can add <span className="text-text-secondary">sub-fields</span> that only appear when a
+        specific choice is picked.
+      </p>
 
       {/* Inline "add top-level" form */}
       {props.addingTopLevel && (
-        <div className="space-y-2 border-b border-border-subtle bg-bg-base px-4 py-3">
-          <input
-            value={props.draftName}
-            onChange={(e) => props.setDraftName(e.target.value)}
-            placeholder="e.g. Item Type"
-            autoFocus
-            className="h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
-          />
-          <select
-            value={props.draftType}
-            onChange={(e) => props.setDraftType(e.target.value as AttrType)}
-            className="h-9 w-full rounded-lg border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
-          >
-            {TYPE_ORDER.map((t) => (
-              <option key={t} value={t}>{TYPE_META[t].label}</option>
-            ))}
-          </select>
+        <div className="mt-4 space-y-3 rounded-md bg-bg-overlay p-3">
+          <label className="block">
+            <span className="mb-1.5 block text-[13px] font-medium text-text-secondary">Field Name</span>
+            <input
+              value={props.draftName}
+              onChange={(e) => props.setDraftName(e.target.value)}
+              placeholder="e.g. Item Type"
+              autoFocus
+              className={cn(accountInputCls, 'h-10 bg-bg-overlay-2 py-0')}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[13px] font-medium text-text-secondary">Field Type</span>
+            <select
+              value={props.draftType}
+              onChange={(e) => props.setDraftType(e.target.value as AttrType)}
+              className={cn(accountInputCls, 'h-10 cursor-pointer bg-bg-overlay-2 py-0 [&>option]:bg-bg-raised')}
+            >
+              {TYPE_ORDER.map((t) => (
+                <option key={t} value={t}>{TYPE_META[t].label}</option>
+              ))}
+            </select>
+          </label>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={props.onCreateTopLevel}
               disabled={props.busy || !props.draftName.trim()}
-              className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-lime px-2 text-xs font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
+              className={cn(adminBtn.primary, 'flex-1 px-3')}
             >
-              {props.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              Create field
+              {props.busy
+                ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+              Create Field
             </button>
             <button
               type="button"
               onClick={props.onCancelTopLevel}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-border-default bg-bg-raised px-2 text-xs font-medium text-text-secondary hover:bg-bg-raised-hover"
+              aria-label="Cancel"
+              title="Cancel"
+              className={cn(adminBtn.secondary, 'w-10 px-0')}
             >
-              <X className="h-3 w-3" />
+              <X aria-hidden weight="bold" className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
 
-      <div className="max-h-[70vh] overflow-y-auto py-2">
+      <div className="-mx-1.5 mt-3 max-h-[70vh] overflow-y-auto px-1.5">
         {topLevel.length === 0 && !props.addingTopLevel ? (
-          <div className="px-4 py-10 text-center text-xs text-text-tertiary">
-            No fields yet. Click <span className="font-semibold text-text-secondary">Add field</span> to start —
+          <div className="rounded-md bg-bg-overlay px-4 py-8 text-center text-[13px] leading-relaxed text-text-tertiary">
+            No fields yet. Click <span className="font-semibold text-text-secondary">Add Field</span> to start —
             e.g. a <em>Dropdown</em> called &quot;Item Type&quot;.
           </div>
         ) : (
@@ -363,7 +377,7 @@ function FieldTree(props: FieldTreeProps) {
           </ul>
         )}
       </div>
-    </GlassCard>
+    </section>
   )
 }
 
@@ -411,8 +425,8 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
     <li>
       <div
         className={cn(
-          'group flex items-center gap-1.5 rounded-md py-1.5 pr-2 transition-colors',
-          selected ? 'bg-lime-tint-bg text-text-primary' : 'hover:bg-bg-raised text-text-secondary'
+          'group flex min-h-9 items-center gap-1 rounded-md pr-1 transition-colors',
+          selected ? 'bg-white/[0.08] text-text-primary' : 'text-text-secondary hover:bg-white/[0.04] hover:text-text-primary'
         )}
         style={{ paddingLeft: 6 + indentPx }}
       >
@@ -423,26 +437,28 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-bg-overlay hover:text-text-primary"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
             title={collapsed ? 'Expand sub-fields' : 'Collapse sub-fields'}
+            aria-label={collapsed ? 'Expand sub-fields' : 'Collapse sub-fields'}
             aria-expanded={!collapsed}
           >
             {collapsed
-              ? <ChevronRight className="h-3 w-3" />
-              : <ChevronDown className="h-3 w-3" />
+              ? <CaretRight aria-hidden weight="bold" className="h-3.5 w-3.5" />
+              : <CaretDown aria-hidden weight="bold" className="h-3.5 w-3.5" />
             }
           </button>
         ) : (
-          <span className="inline-block h-4 w-4" aria-hidden />
+          <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
         )}
-        <Icon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+        <Icon aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
         <button
           type="button"
           onClick={() => onSelect(attribute.id)}
-          className="min-w-0 flex-1 truncate text-left text-sm"
+          aria-current={selected ? 'true' : undefined}
+          className="min-w-0 flex-1 self-stretch truncate py-2 pl-1 text-left text-[13.5px]"
         >
           <span className="font-medium">{attribute.name}</span>
-          <span className="ml-2 text-[10px] text-text-tertiary">
+          <span className="ml-2 text-[11.5px] text-text-tertiary">
             {TYPE_META[attribute.type].label}
             {attribute.is_required && <span className="ml-1 text-error">*</span>}
           </span>
@@ -450,10 +466,11 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
         <button
           type="button"
           onClick={() => onDelete(attribute.id)}
-          className="rounded p-1 text-text-tertiary opacity-0 transition-opacity hover:bg-error-bg hover:text-error group-hover:opacity-100"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-tertiary transition-[opacity,background-color,color] hover:bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] hover:text-error focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
           title="Delete field"
+          aria-label={`Delete field ${attribute.name}`}
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash aria-hidden weight="bold" className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -465,16 +482,16 @@ function FieldNode({ attribute, depth, childrenOf, selectedId, onSelect, onDelet
             return (
               <li key={b.key}>
                 <div
-                  className="flex items-center gap-1.5 py-0.5 text-[10px] uppercase tracking-wider text-text-disabled"
+                  className="flex min-w-0 items-center gap-1.5 pb-0.5 pt-1.5 text-[12px] font-medium text-text-tertiary"
                   style={{ paddingLeft: 12 + indentPx + 14 }}
                 >
                   {b.iconUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={b.iconUrl} alt="" className="h-3 w-3 rounded object-cover" />
+                    <img src={b.iconUrl} alt="" className="h-3.5 w-3.5 shrink-0 rounded-sm object-cover" />
                   ) : (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-bg-overlay-2" />
+                    <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-white/[0.18]" />
                   )}
-                  {b.label}
+                  <span className="truncate">{b.label}</span>
                 </div>
                 <ul className="space-y-0.5">
                   {children.map((child) => (
@@ -554,11 +571,11 @@ function AddSubFieldRow({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="group inline-flex items-center gap-1 py-0.5 text-[11px] text-text-tertiary hover:text-lime-text"
+          className="group inline-flex max-w-full items-start gap-1.5 rounded-md py-1.5 pr-2 text-left text-[12.5px] leading-snug text-text-tertiary transition-colors hover:text-text-primary"
           style={{ paddingLeft: 12 + indentPx + 14 }}
         >
-          <Plus className="h-3 w-3" />
-          Add sub-field shown when {triggerLabel} is chosen
+          <Plus aria-hidden weight="bold" className="mt-px h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0">Add sub-field shown when {triggerLabel} is chosen</span>
         </button>
       </li>
     )
@@ -567,45 +584,51 @@ function AddSubFieldRow({
   return (
     <li>
       <div
-        className="rounded-lg border border-lime-tint-border bg-[rgba(86,184,127,0.06)] p-2"
+        className="my-1 rounded-md bg-bg-overlay p-3"
         style={{ marginLeft: 12 + indentPx + 14, marginRight: 8 }}
       >
-        <div className="mb-1.5 text-[10px] uppercase tracking-wider text-lime-text">
-          New sub-field — appears when “{triggerLabel}” is chosen
+        <div className="mb-2.5 text-[12.5px] leading-snug text-text-tertiary">
+          <span className="font-semibold text-text-primary">New Sub-Field</span> — appears when “{triggerLabel}” is chosen
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Rarity"
-            className="h-8 w-full rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+            aria-label="Sub-field name"
+            className={cn(accountInputCls, 'h-10 bg-bg-overlay-2 py-0')}
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AttrType)}
-            className="h-8 w-full rounded-md border border-border-default bg-bg-overlay px-2 text-xs text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+            aria-label="Sub-field type"
+            className={cn(accountInputCls, 'h-10 cursor-pointer bg-bg-overlay-2 py-0 [&>option]:bg-bg-raised')}
           >
             {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>{TYPE_META[t].label}</option>
             ))}
           </select>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={handleCreate}
               disabled={busy || !name.trim()}
-              className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md bg-success px-2 text-[11px] font-semibold text-text-inverse hover:bg-success disabled:opacity-40"
+              className={cn(adminBtn.primary, 'min-w-0 flex-1 px-3')}
             >
-              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              Create sub-field
+              {busy
+                ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+              Create Sub-Field
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); setName('') }}
-              className="inline-flex h-7 items-center justify-center rounded-md border border-border-default bg-bg-raised px-2 text-[11px] text-text-secondary hover:bg-bg-raised-hover"
+              aria-label="Cancel"
+              title="Cancel"
+              className={cn(adminBtn.secondary, 'w-10 shrink-0 px-0')}
             >
-              <X className="h-3 w-3" />
+              <X aria-hidden weight="bold" className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -678,13 +701,13 @@ function AttributeDetail({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {/* ── Step-by-step explainer ── */}
-      <div className="rounded-2xl border border-lime-tint-border bg-lime-tint-bg p-4">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-lime-text">
-          Editing a field
-        </div>
-        <ol className="space-y-1 text-xs text-text-secondary">
+      <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+        <h2 className="mb-2 text-[14px] font-semibold text-text-primary">
+          Editing a Field
+        </h2>
+        <ol className="space-y-1.5 text-[13px] leading-relaxed text-text-secondary">
           <li><span className="font-semibold text-text-primary">1.</span> Set a <span className="text-text-primary">Name</span> and pick a <span className="text-text-primary">Type</span>.</li>
           {supportsOptions && (
             <li><span className="font-semibold text-text-primary">2.</span> Add the <span className="text-text-primary">Choices</span> below (e.g. Pet, Egg, Cash).</li>
@@ -696,55 +719,57 @@ function AttributeDetail({
               : <>Use <span className="text-text-primary">Advanced</span> below for placeholder, help text, and validation.</>}
           </li>
         </ol>
-      </div>
+      </section>
 
       {/* ── Essentials ── */}
-      <GlassCard intensity="light" rounded="2xl" className="p-0">
-        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Field</div>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!dirty || saving}
-            className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors',
-              dirty ? 'bg-lime text-text-inverse hover:bg-lime-hover' : 'bg-bg-raised text-text-disabled'
-            )}
-          >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-            {dirty ? 'Save' : 'Saved'}
-          </button>
-        </div>
-        <div className="grid gap-3 p-5 sm:grid-cols-2">
+      <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+        <PanelHead
+          title="Field"
+          className="items-center"
+          aside={
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!dirty || saving}
+              className={dirty ? adminBtnSm.primary : adminBtnSm.secondary}
+            >
+              {saving
+                ? <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                : <FloppyDisk aria-hidden weight="bold" className="h-3.5 w-3.5" />}
+              {dirty ? 'Save' : 'Saved'}
+            </button>
+          }
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Name" required className="sm:col-span-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </Field>
           <Field label="Type">
-            <select value={type} onChange={(e) => setType(e.target.value as AttrType)} className={cn(inputCls, 'bg-bg-overlay')}>
+            <select value={type} onChange={(e) => setType(e.target.value as AttrType)} className={selectCls}>
               {TYPE_ORDER.map((t) => (
                 <option key={t} value={t}>{TYPE_META[t].label}</option>
               ))}
             </select>
           </Field>
-          <ToggleField label="Required" hint="seller must fill in" value={isRequired} onChange={setIsRequired} />
+          <ToggleField label="Required" hint="Seller must fill in" value={isRequired} onChange={setIsRequired} />
 
           {isNumeric && (
             <>
-              <Field label="Min value">
+              <Field label="Min Value">
                 <input type="number" value={minValue} onChange={(e) => setMinValue(e.target.value)} className={inputCls} />
               </Field>
-              <Field label="Max value">
+              <Field label="Max Value">
                 <input type="number" value={maxValue} onChange={(e) => setMaxValue(e.target.value)} className={inputCls} />
               </Field>
             </>
           )}
           {isTextish && (
-            <Field label="Max length" className="sm:col-span-2">
+            <Field label="Max Length" className="sm:col-span-2">
               <input type="number" value={maxLength} onChange={(e) => setMaxLength(e.target.value)} className={inputCls} />
             </Field>
           )}
         </div>
-      </GlassCard>
+      </section>
 
       {/* ── Choices (visible right under Type, before Advanced) ── */}
       {supportsOptions && (
@@ -782,43 +807,54 @@ function AdvancedFieldSettings({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
+    <section className="rounded-lg bg-bg-raised">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-3 text-left"
+        aria-expanded={open}
+        className={cn(
+          'flex w-full items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors hover:bg-white/[0.02] sm:px-5',
+          open && 'rounded-b-none',
+        )}
       >
-        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Advanced
-          <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-text-disabled">
-            slug, placeholder, help text, description, search
-          </span>
+        <div className="min-w-0">
+          <div className="text-[15px] font-semibold text-text-primary">Advanced</div>
+          <div className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">
+            Slug, placeholder, help text, description, search
+          </div>
         </div>
-        <span className="text-xs text-text-tertiary">{open ? 'Hide' : 'Show'}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-medium text-text-secondary">
+          {open ? 'Hide' : 'Show'}
+          <CaretDown
+            aria-hidden
+            weight="bold"
+            className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
+          />
+        </span>
       </button>
       {open && (
-        <div className="grid gap-3 border-t border-border-subtle p-5 sm:grid-cols-2">
-          <Field label="Slug" hint="used in URLs · lowercase, dashes only" className="sm:col-span-2">
-            <input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(inputCls, 'font-mono text-xs')} />
+        <div className="grid grid-cols-1 gap-4 border-t border-white/[0.06] p-4 sm:grid-cols-2 sm:p-5">
+          <Field label="Slug" hint="Used in URLs · lowercase, dashes only" className="sm:col-span-2">
+            <input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(inputCls, 'font-mono sm:text-[13px]')} />
           </Field>
-          <Field label="Placeholder" hint="grey hint inside the input" className="sm:col-span-2">
+          <Field label="Placeholder" hint="Grey hint inside the input" className="sm:col-span-2">
             <input value={placeholder} onChange={(e) => setPlaceholder(e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Help text" hint="small explainer next to the field label" className="sm:col-span-2">
-            <textarea value={helpText} onChange={(e) => setHelpText(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
+          <Field label="Help Text" hint="Small explainer next to the field label" className="sm:col-span-2">
+            <textarea value={helpText} onChange={(e) => setHelpText(e.target.value)} rows={2} className={textareaCls} />
           </Field>
-          <Field label="Description" hint="admin-only note · sellers don't see this" className="sm:col-span-2">
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cn(inputCls, 'h-auto py-2')} />
+          <Field label="Description" hint="Admin-only note · sellers don't see this" className="sm:col-span-2">
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={textareaCls} />
           </Field>
           <ToggleField
-            label="Facet indexed"
-            hint="future · include this field in search filters"
+            label="Facet Indexed"
+            hint="Future · include this field in search filters"
             value={facetIndexed}
             onChange={setFacetIndexed}
           />
         </div>
       )}
-    </GlassCard>
+    </section>
   )
 }
 
@@ -912,11 +948,12 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
   }
 
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Choices <span className="text-text-disabled">({localOptions.length})</span>
-        </div>
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-[15px] font-semibold text-text-primary">
+          Choices{' '}
+          <span className="ml-0.5 text-[13px] font-medium tabular-nums text-text-tertiary">{localOptions.length}</span>
+        </h2>
         {/* V15 — Bulk add. Opens an inline panel below where the admin
             pastes a newline- or comma-separated list. Idempotent — pasting
             again only adds new rows. Designed for onboarding large
@@ -928,36 +965,34 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
               onClick={handleDeleteAll}
               disabled={purging}
               title="Remove every choice on this attribute"
-              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border-default bg-bg-base px-2.5 text-[11px] font-semibold text-text-secondary transition-colors hover:border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] hover:bg-error-bg hover:text-error disabled:opacity-50"
+              className={adminBtnSm.danger}
             >
-              {purging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-              Delete all
+              {purging
+                ? <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                : <Trash aria-hidden weight="bold" className="h-3.5 w-3.5" />}
+              Delete All
             </button>
           )}
           <button
             type="button"
             onClick={() => setBulkOpen((v) => !v)}
-            className={cn(
-              'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold transition-colors',
-              bulkOpen
-                ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                : 'border-border-default bg-bg-base text-text-secondary hover:border-border-strong hover:text-text-primary',
-            )}
+            aria-expanded={bulkOpen}
+            className={cn(adminBtnSm.secondary, bulkOpen && 'bg-white/[0.12]')}
           >
-            <ClipboardPaste className="h-3 w-3" />
-            {bulkOpen ? 'Close bulk add' : 'Bulk add'}
+            <ClipboardText aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            {bulkOpen ? 'Close Bulk Add' : 'Bulk Add'}
           </button>
         </div>
       </div>
 
       {/* Bulk-add panel */}
       {bulkOpen && (
-        <div className="space-y-2 border-b border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-base)_50%,transparent)] p-4">
-          <div className="flex items-baseline justify-between">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-              Paste choices — one per line or comma-separated
+        <div className="mb-4 space-y-3 rounded-md bg-bg-overlay p-3 sm:p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <label className="text-[13px] font-medium text-text-secondary">
+              Paste Choices — one per line or comma-separated
             </label>
-            <span className="text-[10.5px] text-text-tertiary">
+            <span className="text-[12px] tabular-nums text-text-tertiary">
               {bulkText.split(/[\n,]+/g).filter((s) => s.trim()).length} detected
             </span>
           </div>
@@ -966,18 +1001,19 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
             onChange={(e) => setBulkText(e.target.value)}
             placeholder={'Garama and Madundung\nLa Vacca Saturno Saturnita\nTralalero Tralala\n…'}
             rows={8}
-            className="w-full resize-y rounded-lg border border-border-default bg-bg-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+            aria-label="Paste choices"
+            className={cn(accountInputCls, 'resize-y bg-bg-overlay-2')}
           />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10.5px] text-text-tertiary">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-[12px] leading-relaxed text-text-tertiary">
               Duplicates and wiki noise (File:/User:/Category:/(Disambiguation)) are skipped automatically.
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setBulkText('')}
                 disabled={bulkBusy}
-                className="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[11.5px] font-semibold text-text-secondary hover:text-text-primary disabled:opacity-50"
+                className={adminBtn.secondary}
               >
                 Clear
               </button>
@@ -985,18 +1021,20 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
                 type="button"
                 onClick={handleBulk}
                 disabled={bulkBusy || !bulkText.trim()}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-lime px-3 text-[11.5px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
+                className={adminBtn.primary}
               >
-                {bulkBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                Add all
+                {bulkBusy
+                  ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                  : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+                Add All
               </button>
             </div>
           </div>
         </div>
       )}
-      <div className="space-y-2 p-4">
+      <div className="space-y-2">
         {localOptions.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
+          <p className="rounded-md bg-bg-overlay px-3.5 py-4 text-center text-[13px] text-text-tertiary">
             No choices yet — add one below.
           </p>
         ) : (
@@ -1014,26 +1052,29 @@ function OptionsEditor({ attribute, onChange }: { attribute: BuilderAttribute; o
           </DndContext>
         )}
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-2">
           <input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Add a choice (e.g. Pet, Egg, Cash)…"
+            aria-label="New choice"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-            className="h-9 flex-1 rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+            className={cn(inputCls, 'min-w-0 flex-1')}
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={busy || !newLabel.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-lime px-3 text-xs font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
+            className={cn(adminBtn.primary, 'shrink-0 px-3.5')}
           >
-            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            Add choice
+            {busy
+              ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+            Add Choice
           </button>
         </div>
       </div>
-    </GlassCard>
+    </section>
   )
 }
 
@@ -1054,18 +1095,18 @@ function SortableOptionRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('flex items-stretch gap-1', isDragging && 'opacity-60')}
+      className={cn('flex items-stretch gap-1', isDragging && 'relative z-10 opacity-60')}
     >
       <button
         type="button"
         {...dragAttrs}
         {...listeners}
         aria-label="Drag to reorder"
-        className="flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md px-1 text-text-disabled hover:text-text-secondary active:cursor-grabbing"
+        className="grid w-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary active:cursor-grabbing"
       >
-        <GripVertical className="h-3.5 w-3.5" />
+        <DotsSixVertical aria-hidden weight="bold" className="h-4 w-4" />
       </button>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <OptionRow option={option} parentType={parentType} onChange={onChange} />
       </div>
     </div>
@@ -1133,18 +1174,23 @@ function OptionRow({
 
   return (
     <div className={cn(
-      'grid items-center gap-2 rounded-lg border border-border-default bg-bg-base p-2',
-      showIcon ? 'grid-cols-[36px_1fr_140px_120px]' : 'grid-cols-[1fr_140px_80px]'
+      'grid items-center gap-2 rounded-md bg-bg-overlay p-2',
+      showIcon
+        ? 'grid-cols-[36px_minmax(0,1fr)_auto] sm:grid-cols-[36px_minmax(0,1fr)_140px_116px]'
+        : 'grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_140px_76px]'
     )}>
       {showIcon && (
-        <label className="relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-border-default bg-bg-raised hover:bg-bg-raised-hover">
+        <label
+          title="Upload icon"
+          className="relative grid h-9 w-9 cursor-pointer place-items-center overflow-hidden rounded-md bg-bg-overlay-2 transition-colors hover:bg-white/[0.10]"
+        >
           {option.icon_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
           ) : uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-secondary" />
           ) : (
-            <ImageIcon className="h-4 w-4 text-text-tertiary" />
+            <ImageIcon aria-hidden weight="bold" className="h-4 w-4 text-text-tertiary" />
           )}
           <input
             type="file"
@@ -1158,13 +1204,15 @@ function OptionRow({
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 text-sm text-text-primary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+        aria-label="Choice label"
+        className={cn(rowInputCls, 'col-span-2 sm:col-span-1')}
       />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="stored value"
-        className="h-8 rounded-md border border-border-default bg-bg-raised px-2 font-mono text-xs text-text-secondary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft"
+        aria-label="Stored value"
+        className={cn(rowInputCls, 'font-mono text-text-secondary sm:text-[12.5px]', showIcon && 'col-span-2 sm:col-span-1')}
       />
       <div className="flex justify-end gap-1">
         {dirty && (
@@ -1172,10 +1220,13 @@ function OptionRow({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex h-7 items-center gap-1 rounded-md bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-50"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-lime text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
             title="Save"
+            aria-label="Save choice"
           >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            {saving
+              ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              : <FloppyDisk aria-hidden weight="bold" className="h-4 w-4" />}
           </button>
         )}
         {showIcon && option.icon_url && (
@@ -1183,19 +1234,21 @@ function OptionRow({
             type="button"
             onClick={handleIconClear}
             disabled={uploading}
-            className="inline-flex h-7 items-center rounded-md px-1.5 text-text-tertiary hover:bg-bg-raised-hover hover:text-text-primary"
+            className={iconBtnCls}
             title="Clear icon"
+            aria-label="Clear icon"
           >
-            <X className="h-3 w-3" />
+            <X aria-hidden weight="bold" className="h-4 w-4" />
           </button>
         )}
         <button
           type="button"
           onClick={handleDelete}
-          className="inline-flex h-7 items-center rounded-md px-1.5 text-text-tertiary hover:bg-error-bg hover:text-error"
+          className={iconBtnDangerCls}
           title="Delete choice"
+          aria-label="Delete choice"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash aria-hidden weight="bold" className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -1248,29 +1301,30 @@ function RulesEditor({
   }
 
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          <GitBranch className="h-3.5 w-3.5" />
-          When this field is shown
-          <span className="ml-1 rounded-full bg-bg-raised-hover px-1.5 py-0.5 text-[9px] font-normal normal-case tracking-normal text-text-tertiary">
-            advanced
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <GitBranch aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
+          <h2 className="text-[15px] font-semibold text-text-primary">When This Field Is Shown</h2>
+          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] font-semibold text-text-secondary">
+            Advanced
           </span>
         </div>
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
           disabled={triggerableSiblings.length === 0}
-          className="inline-flex h-7 items-center gap-1 rounded-lg bg-text-primary px-2 text-[11px] font-semibold text-text-inverse hover:bg-lime-hover disabled:opacity-40"
+          aria-expanded={adding}
+          className={adminBtnSm.secondary}
           title={triggerableSiblings.length === 0 ? 'Need at least one dropdown / yes-no field above to drive a rule' : ''}
         >
-          <Plus className="h-3 w-3" />
-          Add rule
+          <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Add Rule
         </button>
       </div>
-      <div className="space-y-2 p-4">
+      <div className="space-y-2">
         {attribute.rules.length === 0 && !adding ? (
-          <p className="rounded-lg border border-dashed border-border-default bg-bg-base px-3 py-4 text-center text-xs text-text-tertiary">
+          <p className="rounded-md bg-bg-overlay px-3.5 py-4 text-center text-[13px] leading-relaxed text-text-tertiary">
             This field is always shown. Tip: easier way to make a sub-field is via the
             &quot;+ Add sub-field shown when X is chosen&quot; link in the tree on the left.
           </p>
@@ -1278,15 +1332,15 @@ function RulesEditor({
           attribute.rules.map((r) => {
             const trig = siblings.find((s) => s.id === r.trigger_attribute_id)
             return (
-              <div key={r.id} className="flex items-center justify-between rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-2 text-xs">
-                <div className="text-text-secondary">
+              <div key={r.id} className="flex items-start justify-between gap-2 rounded-md bg-bg-overlay py-1.5 pl-3.5 pr-1.5 text-[13px]">
+                <div className="min-w-0 break-words py-1.5 leading-relaxed text-text-secondary">
                   Show when{' '}
                   <span className="font-semibold text-text-primary">{trig?.name ?? '?'}</span>{' '}
-                  <span className="font-mono text-lime-text">{r.operator}</span>{' '}
+                  <span className="font-mono text-[12px] text-text-tertiary">{r.operator}</span>{' '}
                   {r.trigger_values.map((v, i) => {
                     const label = trig?.options.find((o) => o.value === v)?.label ?? v
                     return (
-                      <span key={i} className="ml-1 inline-flex rounded-md bg-bg-raised-hover px-1.5 py-0.5 text-[10px] text-text-primary">
+                      <span key={i} className="ml-1 inline-flex rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] font-semibold text-text-primary">
                         {label}
                       </span>
                     )
@@ -1295,9 +1349,11 @@ function RulesEditor({
                 <button
                   type="button"
                   onClick={() => handleDelete(r.id)}
-                  className="rounded p-1 text-text-tertiary hover:bg-error-bg hover:text-error"
+                  className={iconBtnDangerCls}
+                  title="Delete rule"
+                  aria-label="Delete rule"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash aria-hidden weight="bold" className="h-4 w-4" />
                 </button>
               </div>
             )
@@ -1305,30 +1361,31 @@ function RulesEditor({
         )}
 
         {adding && (
-          <div className="space-y-2 rounded-lg border border-border-default bg-bg-base p-3">
-            <div className="grid grid-cols-[1fr_120px] gap-2">
+          <div className="space-y-3 rounded-md bg-bg-overlay p-3 sm:p-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
               <select
                 value={triggerId}
                 onChange={(e) => { setTriggerId(e.target.value); setVals([]) }}
-                className={cn(inputCls, 'bg-bg-overlay h-9')}
+                aria-label="Field to watch"
+                className={cn(selectCls, 'bg-bg-overlay-2')}
               >
                 {triggerableSiblings.map((s) => (
                   <option key={s.id} value={s.id}>{s.name} ({TYPE_META[s.type].label})</option>
                 ))}
               </select>
-              <select value={op} onChange={(e) => setOp(e.target.value as any)} className={cn(inputCls, 'bg-bg-overlay h-9')}>
-                <option value="equals">equals</option>
-                <option value="not_equals">not equals</option>
-                <option value="in">in</option>
-                <option value="not_in">not in</option>
+              <select value={op} onChange={(e) => setOp(e.target.value as any)} aria-label="Operator" className={cn(selectCls, 'bg-bg-overlay-2')}>
+                <option value="equals">Equals</option>
+                <option value="not_equals">Not Equals</option>
+                <option value="in">In</option>
+                <option value="not_in">Not In</option>
               </select>
             </div>
 
             {/* Value picker */}
-            <div className="space-y-1">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">Values</div>
+            <div className="space-y-1.5">
+              <div className="text-[12px] font-medium text-text-tertiary">Values</div>
               {triggerAttr?.type === 'boolean' ? (
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {['true', 'false'].map((v) => {
                     const on = vals.includes(v)
                     return (
@@ -1336,10 +1393,8 @@ function RulesEditor({
                         key={v}
                         type="button"
                         onClick={() => setVals((cur) => on ? cur.filter((x) => x !== v) : [...cur, v])}
-                        className={cn(
-                          'h-7 rounded-md border px-2 text-xs',
-                          on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary'
-                        )}
+                        aria-pressed={on}
+                        className={chipCls(on)}
                       >
                         {v}
                       </button>
@@ -1347,8 +1402,8 @@ function RulesEditor({
                   })}
                 </div>
               ) : (triggerAttr?.options ?? []).length === 0 ? (
-                <p className="text-[11px] text-warning">
-                  <AlertCircle className="mr-1 inline h-3 w-3" />
+                <p className="flex items-start gap-2 rounded-md bg-warning-bg px-3.5 py-2.5 text-[13px] text-text-secondary">
+                  <WarningCircle aria-hidden weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   This attribute has no options yet — add some first.
                 </p>
               ) : (
@@ -1360,10 +1415,8 @@ function RulesEditor({
                         key={opt.id}
                         type="button"
                         onClick={() => setVals((cur) => on ? cur.filter((x) => x !== opt.value) : [...cur, opt.value])}
-                        className={cn(
-                          'h-7 rounded-full border px-2.5 text-xs',
-                          on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
-                        )}
+                        aria-pressed={on}
+                        className={chipCls(on)}
                       >
                         {opt.label}
                       </button>
@@ -1373,11 +1426,11 @@ function RulesEditor({
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => { setAdding(false); setVals([]) }}
-                className="inline-flex h-7 items-center rounded-md border border-border-default bg-bg-raised px-2 text-[11px] text-text-secondary hover:bg-bg-raised-hover"
+                className={adminBtn.secondary}
               >
                 Cancel
               </button>
@@ -1385,16 +1438,18 @@ function RulesEditor({
                 type="button"
                 onClick={handleAdd}
                 disabled={busy || vals.length === 0}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-success px-2 text-[11px] font-semibold text-text-inverse hover:bg-success disabled:opacity-40"
+                className={adminBtn.primary}
               >
-                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                Save rule
+                {busy
+                  ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                  : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+                Save Rule
               </button>
             </div>
           </div>
         )}
       </div>
-    </GlassCard>
+    </section>
   )
 }
 
@@ -1474,29 +1529,25 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
     })
 
   return (
-    <GlassCard intensity="light" rounded="2xl" className="p-0">
-      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Live preview
-        </div>
-        <div className="text-[10px] text-text-tertiary">
-          Try selecting values to see conditional fields appear
-        </div>
-      </div>
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <PanelHead
+        title="Live Preview"
+        subtitle="Try selecting values to see conditional fields appear"
+      />
 
-      <div className="space-y-4 p-5">
+      <div className="space-y-4">
         {attributes.length === 0 ? (
-          <p className="text-center text-xs text-text-tertiary">No attributes yet.</p>
+          <p className="rounded-md bg-bg-overlay px-3.5 py-6 text-center text-[13px] text-text-tertiary">No attributes yet.</p>
         ) : (
           attributes.map((a) => {
             if (!isVisible(a)) return null
             return (
-              <div key={a.id}>
-                <label className="mb-1.5 block text-xs font-medium text-text-secondary">
+              <div key={a.id} className="min-w-0">
+                <label className="mb-1.5 block text-[13px] font-medium text-text-secondary">
                   {a.name}
                   {a.is_required && <span className="ml-1 text-error">*</span>}
                   {a.help_text && (
-                    <span className="ml-2 text-[10px] font-normal text-text-tertiary">{a.help_text}</span>
+                    <span className="ml-2 text-[12px] font-normal text-text-tertiary">{a.help_text}</span>
                   )}
                 </label>
                 {a.type === 'text' && (
@@ -1524,16 +1575,17 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                     onChange={(e) => set(a.id, e.target.value)}
                     placeholder={a.placeholder ?? ''}
                     rows={3}
-                    className={cn(inputCls, 'h-auto py-2')}
+                    className={textareaCls}
                   />
                 )}
                 {a.type === 'boolean' && (
                   <button
                     type="button"
                     onClick={() => set(a.id, values[a.id] === 'true' ? 'false' : 'true')}
+                    aria-pressed={values[a.id] === 'true'}
                     className={cn(
-                      'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm',
-                      values[a.id] === 'true' ? 'border-success bg-success-bg text-success' : 'border-border-default bg-bg-raised text-text-secondary'
+                      'inline-flex h-10 min-w-[72px] items-center justify-center gap-2 rounded-md px-4 text-[13px] font-semibold transition-colors',
+                      values[a.id] === 'true' ? 'bg-success-bg text-success' : 'bg-bg-overlay text-text-secondary hover:text-text-primary'
                     )}
                   >
                     {values[a.id] === 'true' ? 'Yes' : 'No'}
@@ -1543,7 +1595,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                   <select
                     value={(values[a.id] as string) ?? ''}
                     onChange={(e) => set(a.id, e.target.value)}
-                    className={cn(inputCls, 'bg-bg-overlay')}
+                    className={selectCls}
                   >
                     <option value="">Select…</option>
                     {a.options.map((o) => (
@@ -1554,7 +1606,7 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                 {a.type === 'image_select' && (
                   <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
                     {a.options.length === 0 ? (
-                      <p className="col-span-full text-[11px] text-text-tertiary">No options yet.</p>
+                      <p className="col-span-full text-[12.5px] text-text-tertiary">No options yet.</p>
                     ) : a.options.map((o) => {
                       const on = values[a.id] === o.value
                       return (
@@ -1562,22 +1614,23 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                           key={o.id}
                           type="button"
                           onClick={() => set(a.id, on ? '' : o.value)}
+                          aria-pressed={on}
                           className={cn(
-                            'flex flex-col items-center gap-1 rounded-lg border p-2 text-[10px] transition-colors',
+                            'flex min-w-0 flex-col items-center gap-1 rounded-md p-1.5 text-[11.5px] font-medium transition-colors sm:p-2',
                             on
-                              ? 'border-lime bg-lime-tint-bg text-lime-text'
-                              : 'border-border-default bg-bg-base text-text-secondary hover:bg-bg-raised'
+                              ? 'bg-lime-tint-bg text-lime-text'
+                              : 'bg-bg-overlay text-text-secondary hover:bg-bg-overlay-2 hover:text-text-primary'
                           )}
                         >
-                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-bg-raised">
+                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-white/[0.05]">
                             {o.icon_url ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img src={o.icon_url} alt="" className="h-full w-full object-cover" />
                             ) : (
-                              <ImageIcon className="h-4 w-4 text-text-disabled" />
+                              <ImageIcon aria-hidden weight="bold" className="h-4 w-4 text-text-disabled" />
                             )}
                           </div>
-                          <span className="line-clamp-1">{o.label}</span>
+                          <span className="line-clamp-1 max-w-full break-all">{o.label}</span>
                         </button>
                       )
                     })}
@@ -1593,10 +1646,8 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
                           key={o.id}
                           type="button"
                           onClick={() => set(a.id, on ? arr.filter((x) => x !== o.value) : [...arr, o.value])}
-                          className={cn(
-                            'h-7 rounded-full border px-2.5 text-xs',
-                            on ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text' : 'border-border-default bg-bg-raised text-text-secondary'
-                          )}
+                          aria-pressed={on}
+                          className={chipCls(on)}
                         >
                           {o.label}
                         </button>
@@ -1609,14 +1660,35 @@ function LivePreview({ attributes }: { attributes: BuilderAttribute[] }) {
           })
         )}
       </div>
-    </GlassCard>
+    </section>
   )
 }
 
 // ─── Small field primitives ──────────────────────────────────────────────────
 
-const inputCls =
-  'h-9 w-full rounded-lg border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft'
+/** Text / number input on a card (40px, flat, 16px on phones). */
+const inputCls = cn(accountInputCls, 'h-10 py-0')
+/** Native select on a card. */
+const selectCls = cn(accountInputCls, 'h-10 cursor-pointer py-0 [&>option]:bg-bg-raised')
+/** Textarea on a card. */
+const textareaCls = cn(accountInputCls, 'resize-none')
+/** Compact input inside a lighter inner row (choice label / stored value). */
+const rowInputCls = cn(accountInputCls, 'h-9 min-w-0 bg-bg-overlay-2 px-2.5 py-0')
+
+/** Icon-only button inside a row. */
+const iconBtnCls =
+  'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50'
+const iconBtnDangerCls =
+  'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] hover:text-error'
+
+/** Toggle chip on a card (selected = lighter fill). */
+const chipCls = (on: boolean) =>
+  cn(
+    'h-8 max-w-full truncate rounded-full px-3 text-[12.5px] font-medium transition-colors',
+    on
+      ? 'bg-white/[0.14] text-text-primary'
+      : 'bg-white/[0.05] text-text-secondary hover:bg-white/[0.08] hover:text-text-primary'
+  )
 
 function Field({
   label, required, hint, children, className,
@@ -1628,16 +1700,16 @@ function Field({
   className?: string
 }) {
   return (
-    <div className={className}>
-      <div className="mb-1 flex items-baseline justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary">
+    <label className={cn('block min-w-0', className)}>
+      <span className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <span className="text-[13px] font-medium text-text-secondary">
           {label}
           {required && <span className="ml-1 text-error">*</span>}
-        </label>
-        {hint && <span className="text-[10px] text-text-disabled">{hint}</span>}
-      </div>
+        </span>
+        {hint && <span className="text-[12px] text-text-tertiary">{hint}</span>}
+      </span>
       {children}
-    </div>
+    </label>
   )
 }
 
@@ -1650,27 +1722,16 @@ function ToggleField({
   onChange: (v: boolean) => void
 }) {
   return (
-    <label className="flex flex-1 items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
-      <div>
-        <div className="text-xs font-medium text-text-primary">{label}</div>
-        {hint && <div className="text-[10px] text-text-tertiary">{hint}</div>}
-      </div>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={cn(
-          'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-          value ? 'bg-lime' : 'bg-bg-raised'
-        )}
-        aria-pressed={value}
-      >
-        <span
-          className={cn(
-            'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
-            value ? 'translate-x-5' : 'translate-x-1'
-          )}
-        />
-      </button>
+    <label className="flex min-w-0 cursor-pointer items-center justify-between gap-3 self-end rounded-md bg-bg-overlay px-3.5 py-2.5">
+      <span className="min-w-0">
+        <span className="block text-[13px] font-medium text-text-primary">{label}</span>
+        {hint && <span className="block text-[12px] text-text-tertiary">{hint}</span>}
+      </span>
+      <Switch
+        checked={value}
+        onCheckedChange={() => onChange(!value)}
+        aria-label={label}
+      />
     </label>
   )
 }
