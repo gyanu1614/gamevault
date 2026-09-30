@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { fixApprovedSellers } from '@/lib/actions/fix-approved-sellers'
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { CheckCircle, CircleNotch, WarningCircle } from '@phosphor-icons/react'
+import { adminBtn } from '../components/kit'
 import { useRouter } from 'next/navigation'
 
 interface Props {
@@ -50,19 +51,15 @@ export default function FixApprovedSellersButton({ needsUpdate }: Props) {
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={handleFix}
-        disabled={isLoading || needsUpdate === 0}
-        className="px-4 py-2 bg-lime-pressed hover:bg-lime disabled:bg-bg-overlay disabled:text-text-disabled disabled:cursor-not-allowed text-text-inverse rounded-lg font-bold transition-colors flex items-center gap-2"
-      >
+      <button type="button" onClick={handleFix} disabled={isLoading || needsUpdate === 0} className={adminBtn.primary}>
         {isLoading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
             <span>Fixing...</span>
           </>
         ) : (
           <>
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
             <span>
               {needsUpdate === 0 ? 'All Up to Date' : `Fix ${needsUpdate} Seller${needsUpdate > 1 ? 's' : ''}`}
             </span>
@@ -72,17 +69,13 @@ export default function FixApprovedSellersButton({ needsUpdate }: Props) {
 
       {result && (
         <div
-          className={`rounded-lg p-4 ${
-            result.success
-              ? 'bg-success-bg border border-[rgba(63,217,134,0.25)]'
-              : 'bg-error-bg border border-[rgba(255,92,92,0.25)]'
-          }`}
+          className={`rounded-md p-4 ${result.success ? 'bg-success-bg' : 'bg-error-bg'}`}
         >
           <div className="flex items-start gap-2">
             {result.success ? (
-              <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+              <CheckCircle aria-hidden weight="fill" className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             ) : (
-              <AlertCircle className="h-5 w-5 text-error flex-shrink-0 mt-0.5" />
+              <WarningCircle aria-hidden weight="fill" className="mt-0.5 h-5 w-5 shrink-0 text-error" />
             )}
             <div className="flex-1">
               <p

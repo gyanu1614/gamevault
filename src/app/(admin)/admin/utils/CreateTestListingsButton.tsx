@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { createTestListings, deleteTestListings } from '@/lib/actions/test-data'
 import { debugListings } from '@/lib/actions/debug-listings'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2, Bug } from 'lucide-react'
+import { Bug, CircleNotch, Plus, Trash } from '@phosphor-icons/react'
+import { adminBtn } from '../components/kit'
 
 export default function CreateTestListingsButton() {
   const [isCreating, setIsCreating] = useState(false)
@@ -62,56 +63,44 @@ export default function CreateTestListingsButton() {
   }
 
   return (
-    <div className="flex gap-3">
-      <button
-        onClick={handleCreate}
-        disabled={isCreating}
-        className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2 text-sm font-bold text-text-inverse transition-colors hover:bg-lime disabled:cursor-not-allowed disabled:opacity-50"
-      >
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <button type="button" onClick={handleCreate} disabled={isCreating} className={adminBtn.primary}>
         {isCreating ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
             Creating...
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4" />
+            <Plus aria-hidden weight="bold" className="h-4 w-4" />
             Create Test Listings
           </>
         )}
       </button>
 
-      <button
-        onClick={handleDelete}
-        disabled={isDeleting}
-        className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <button type="button" onClick={handleDelete} disabled={isDeleting} className={adminBtn.danger}>
         {isDeleting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
             Deleting...
           </>
         ) : (
           <>
-            <Trash2 className="h-4 w-4" />
+            <Trash aria-hidden weight="bold" className="h-4 w-4" />
             Delete Test Listings
           </>
         )}
       </button>
 
-      <button
-        onClick={handleDebug}
-        disabled={isDebugging}
-        className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <button type="button" onClick={handleDebug} disabled={isDebugging} className={adminBtn.secondary}>
         {isDebugging ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
             Debugging...
           </>
         ) : (
           <>
-            <Bug className="h-4 w-4" />
+            <Bug aria-hidden weight="bold" className="h-4 w-4" />
             Debug Database
           </>
         )}
