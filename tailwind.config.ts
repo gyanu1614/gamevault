@@ -247,6 +247,11 @@ const config: Config = {
 
       // ── Keyframes ───────────────────────────────────────────────
       keyframes: {
+        // CodeInput (src/components/ui/code-input.tsx) fake caret.
+        'caret-blink': {
+          '0%,70%,100%': { opacity: '1' },
+          '20%,50%':     { opacity: '0' },
+        },
         // Existing
         'accordion-down': {
           from: { height: '0' },
@@ -338,6 +343,7 @@ const config: Config = {
 
       // ── Animations ──────────────────────────────────────────────
       animation: {
+        'caret-blink':     'caret-blink 1.2s ease-out infinite',
         // Existing
         'accordion-down':  'accordion-down 0.2s ease-out',
         'accordion-up':    'accordion-up 0.2s ease-out',
