@@ -10,8 +10,8 @@
  * actions inline — a status dropdown and a "send Founding HQ invite" button.
  * Status-filter tabs, a batch "invite all New", and CSV export sit up top.
  *
- * Built on the admin kit (PageHeader / StatCard / StatusBadge) to match the
- * other admin surfaces (dark neutral, lime accent, semantic status colors).
+ * Built on the admin kit (PageHeader / StatStrip / SegmentedTabs /
+ * StatusBadge): fill-only cards, Title Case labels, Phosphor icons.
  */
 
 import Image from 'next/image'
@@ -19,16 +19,19 @@ import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  Users, UserCheck, UserPlus, MailCheck, Copy, Download, Loader2, Inbox, Send,
-  MessageCircle, Gamepad2, TrendingUp, Sparkles, Clock,
-} from 'lucide-react'
+  ChatCircleText, CircleNotch, Clock, Copy, DownloadSimple, EnvelopeSimple, Tray, PaperPlaneTilt, Sparkle, TrendUp,
+} from '@phosphor-icons/react'
+import { StatStrip } from '@/components/account/AccountSurface'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import {
   updateEarlySellerStatus,
   type EarlySellerSignup,
   type EarlySellerStatus,
 } from '@/lib/actions/early-seller'
 import { sendFoundingInvite, sendFoundingInvitesToNew } from '@/lib/actions/founding-invite'
-import { PageHeader, StatCard, StatusBadge } from '../components/kit'
+import { AdminEmpty, PageHeader, StatusBadge, adminBtn, adminBtnSm } from '../components/kit'
 
 export interface GameMeta {
   name: string
@@ -99,6 +102,7 @@ export default function EarlySellersClient({
   const [busyId, setBusyId] = useState<string | null>(null)
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const [batchBusy, setBatchBusy] = useState(false)
+  const [confirmBatch, setConfirmBatch] = useState(false)
 
   const counts = useMemo(() => ({
     all: signups.length,
@@ -139,16 +143,19 @@ export default function EarlySellersClient({
     }
   }
 
-  async function inviteAllNew() {
-    const newCount = signups.filter((s) => s.status === 'new').length
-    if (newCount === 0) {
+  function askInviteAllNew() {
+    if (signups.filter((s) => s.status === 'new').length === 0) {
       toast.info('No applicants are still marked New.')
       return
     }
-    if (!confirm(`Send the Founding HQ invite to all ${newCount} applicants marked New?`)) return
+    setConfirmBatch(true)
+  }
+
+  async function inviteAllNew() {
     setBatchBusy(true)
     const res = await sendFoundingInvitesToNew()
     setBatchBusy(false)
+    setConfirmBatch(false)
     if (res.ok) {
       toast.success(`Sent ${res.sent ?? 0} invite${res.sent === 1 ? '' : 's'}`)
       setSignups((cur) => cur.map((s) => (s.status === 'new' ? { ...s, status: 'contacted' } : s)))
@@ -184,74 +191,70 @@ export default function EarlySellersClient({
   ]
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5">
       <PageHeader
         title="Founding Sellers"
         description="Beta waitlist — early sellers who registered for the first-100 program."
-        className="mb-0"
+        className="mb-0 sm:mb-0"
         actions={
           <>
             <button
-              onClick={inviteAllNew}
+              type="button"
+              onClick={askInviteAllNew}
               disabled={batchBusy || counts.new === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-3 py-2 text-[13px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+              className={adminBtn.primary}
               title="Email every applicant still marked New their Founding HQ magic link"
             >
-              {batchBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {batchBusy ? (
+                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              ) : (
+                <PaperPlaneTilt aria-hidden weight="bold" className="h-4 w-4" />
+              )}
               Invite New ({counts.new})
             </button>
-            <button
-              onClick={exportCsv}
-              disabled={visible.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-40"
-            >
-              <Download className="h-4 w-4" />
+            <button type="button" onClick={exportCsv} disabled={visible.length === 0} className={adminBtn.secondary}>
+              <DownloadSimple aria-hidden weight="bold" className="h-4 w-4" />
               Export CSV
             </button>
           </>
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total" value={counts.all} icon={Users} tone="neutral" />
-        <StatCard label="New" value={counts.new} icon={UserPlus} tone="info" />
-        <StatCard label="Contacted" value={counts.contacted} icon={MailCheck} tone="warning" />
-        <StatCard label="Approved" value={counts.approved} icon={UserCheck} tone="success" />
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Total', value: counts.all },
+          { label: 'New', value: counts.new },
+          { label: 'Contacted', value: counts.contacted },
+          { label: 'Approved', value: counts.approved },
+        ]}
+      />
 
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-border-subtle">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-3 text-sm font-semibold transition-colors ${
-              tab === t.key
-                ? 'border-b-2 border-lime text-text-primary'
-                : 'text-text-tertiary hover:text-text-secondary'
-            }`}
-          >
-            {t.label}
-            <span className="ml-1.5 text-[11px] text-text-tertiary">{counts[t.key]}</span>
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        tabs={TABS.map((t) => ({
+          id: t.key,
+          label: (
+            <>
+              {t.label}
+              {counts[t.key] > 0 && <TabCount n={counts[t.key]} />}
+            </>
+          ),
+        }))}
+        value={tab}
+        onChange={setTab}
+        layoutId="admin-founding-tabs"
+        ariaLabel="Signup status"
+      />
 
       {fetchError && (
-        <div className="rounded-lg border border-[color-mix(in_srgb,var(--color-error)_30%,transparent)] bg-error-bg p-4 text-sm text-error">{fetchError}</div>
+        <p role="alert" className="rounded-lg bg-error-bg px-4 py-3 text-[13.5px] text-error">
+          {fetchError}
+        </p>
       )}
 
-      {/* Card grid */}
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center rounded-xl border border-border-default bg-bg-raised py-16 text-center">
-          <Inbox className="mb-2 h-8 w-8 text-text-tertiary" />
-          <p className="text-sm text-text-tertiary">
-            {tab === 'all' ? 'No signups yet.' : `No ${tab} signups.`}
-          </p>
-        </div>
+        <AdminEmpty icon={Tray} title={tab === 'all' ? 'No signups yet' : `No ${tab} signups`} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {visible.map((s) => (
               <SellerCard
@@ -268,6 +271,30 @@ export default function EarlySellersClient({
           </AnimatePresence>
         </div>
       )}
+
+      <Dialog open={confirmBatch} onOpenChange={(o) => !o && !batchBusy && setConfirmBatch(false)}>
+        <DialogContent className="max-w-[440px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold">Invite All New Applicants?</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
+              Emails the Founding HQ magic link to all {counts.new} applicants marked New and moves them to Contacted.
+            </DialogDescription>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <button type="button" onClick={() => setConfirmBatch(false)} disabled={batchBusy} className={cn(adminBtn.secondary, 'sm:flex-1')}>
+              Cancel
+            </button>
+            <button type="button" onClick={inviteAllNew} disabled={batchBusy} className={cn(adminBtn.primary, 'sm:flex-1')}>
+              {batchBusy ? (
+                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              ) : (
+                <PaperPlaneTilt aria-hidden weight="bold" className="h-4 w-4" />
+              )}
+              Send {counts.new} Invite{counts.new === 1 ? '' : 's'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -302,18 +329,18 @@ function SellerCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col rounded-xl border border-border-default bg-bg-raised p-4 transition-colors hover:border-border-strong"
+      className="flex flex-col rounded-lg bg-bg-raised p-4 sm:p-5"
     >
       {/* Header: identity + status */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg-overlay text-[15px] font-bold text-text-primary ring-1 ring-border-subtle">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.07] text-[15px] font-bold text-text-primary">
             {initial}
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-bold text-text-primary">@{s.username}</div>
-            <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-text-tertiary">
-              <Clock className="h-3 w-3" />
+            <div className="truncate text-[15px] font-semibold text-text-primary">@{s.username}</div>
+            <div className="mt-0.5 flex items-center gap-1 text-[12px] text-text-tertiary">
+              <Clock aria-hidden weight="bold" className="h-3 w-3" />
               {fmtDate(s.created_at)}
             </div>
           </div>
@@ -322,34 +349,34 @@ function SellerCard({
       </div>
 
       {/* Contact — click to copy */}
-      <div className="mt-3.5 space-y-1">
+      <div className="mt-3.5 space-y-0.5">
         <button
+          type="button"
           onClick={() => onCopy(s.email, 'Email')}
-          className="group flex w-full items-center gap-1.5 text-left text-[13px] text-text-secondary hover:text-text-primary"
-          title="Copy email"
+          className="group -mx-1.5 flex w-[calc(100%+12px)] items-center gap-2 rounded-md px-1.5 py-1 text-left text-[13px] text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary"
+          aria-label={`Copy email ${s.email}`}
         >
-          <MailCheck className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+          <EnvelopeSimple aria-hidden weight="bold" className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
           <span className="truncate">{s.email}</span>
-          <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+          <Copy aria-hidden weight="bold" className="ml-auto h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
         </button>
         {s.discord && (
           <button
+            type="button"
             onClick={() => onCopy(s.discord!, 'Discord')}
-            className="group flex w-full items-center gap-1.5 text-left text-[12.5px] text-text-tertiary hover:text-text-secondary"
-            title="Copy Discord"
+            className="group -mx-1.5 flex w-[calc(100%+12px)] items-center gap-2 rounded-md px-1.5 py-1 text-left text-[13px] text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary"
+            aria-label={`Copy Discord ${s.discord}`}
           >
-            <MessageCircle className="h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
+            <ChatCircleText aria-hidden weight="bold" className="h-3.5 w-3.5 shrink-0 text-[#8B93F8]" />
             <span className="truncate">{s.discord}</span>
-            <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+            <Copy aria-hidden weight="bold" className="ml-auto h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
           </button>
         )}
       </div>
 
       {/* Games */}
       <div className="mt-3.5">
-        <div className="mb-1.5 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
-          <Gamepad2 className="h-3.5 w-3.5" /> Games
-        </div>
+        <p className="mb-1.5 text-[12px] font-medium text-text-tertiary">Games</p>
         {games.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {games.map((g, i) => {
@@ -357,17 +384,17 @@ function SellerCard({
               return (
                 <span
                   key={`${g}-${i}`}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-overlay py-1 pl-1 pr-2 text-[12px] font-medium text-text-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1 pr-2.5 text-[12px] font-medium text-text-secondary"
                 >
                   {icon ? (
-                    <Image src={icon} alt="" width={16} height={16} className="h-4 w-4 rounded object-contain" />
+                    <Image src={icon} alt="" width={16} height={16} className="h-4 w-4 rounded-full object-contain" />
                   ) : (
-                    <span className="flex h-4 w-4 items-center justify-center rounded bg-bg-overlay-2">
-                      <Sparkles className="h-2.5 w-2.5 text-lime-text" />
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-white/[0.08]">
+                      <Sparkle aria-hidden weight="fill" className="h-2.5 w-2.5 text-text-secondary" />
                     </span>
                   )}
                   {label}
-                  {custom && <span className="text-[9px] uppercase tracking-wide text-text-tertiary">custom</span>}
+                  {custom && <span className="text-[10.5px] text-text-tertiary">Custom</span>}
                 </span>
               )
             })}
@@ -379,20 +406,18 @@ function SellerCard({
 
       {/* Volume + experience/note */}
       <div className="mt-3.5 grid grid-cols-1 gap-2">
-        <div className="flex items-center gap-2 rounded-lg bg-bg-overlay px-3 py-2">
-          <TrendingUp className="h-4 w-4 shrink-0 text-success" />
+        <div className="flex items-center gap-2.5 rounded-md bg-bg-overlay px-3 py-2">
+          <TrendUp aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-success" />
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Monthly Volume</div>
-            <div className="text-[13px] font-semibold text-text-primary">{volume ?? 'Not shared'}</div>
+            <div className="text-[12px] text-text-tertiary">Monthly Volume</div>
+            <div className="text-[13.5px] font-semibold text-text-primary">{volume ?? 'Not shared'}</div>
           </div>
         </div>
         {(s.sells || s.note) && (
-          <div className="rounded-lg bg-bg-overlay px-3 py-2">
-            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
-              Experience / Note
-            </div>
-            {s.sells && <p className="text-[12.5px] leading-snug text-text-secondary">{s.sells}</p>}
-            {s.note && <p className="mt-0.5 text-[12px] leading-snug text-text-tertiary">{s.note}</p>}
+          <div className="rounded-md bg-bg-overlay px-3 py-2">
+            <div className="mb-0.5 text-[12px] text-text-tertiary">Experience / Note</div>
+            {s.sells && <p className="text-[13px] leading-snug text-text-secondary">{s.sells}</p>}
+            {s.note && <p className="mt-0.5 text-[12.5px] leading-snug text-text-tertiary">{s.note}</p>}
           </div>
         )}
       </div>
@@ -403,20 +428,26 @@ function SellerCard({
           value={s.status}
           disabled={busy}
           onChange={(e) => onChangeStatus(s.id, e.target.value as EarlySellerStatus)}
-          className="flex-1 rounded-lg border border-border-default bg-bg-overlay px-2.5 py-2 text-[12.5px] font-medium text-text-primary focus:border-focus-border focus:outline-none disabled:opacity-40"
+          aria-label={`Status for @${s.username}`}
+          className="h-9 min-w-0 flex-1 cursor-pointer rounded-md border border-transparent bg-bg-overlay px-2.5 text-base font-medium text-text-primary transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft disabled:opacity-40 sm:text-[13px] [&>option]:bg-bg-raised"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>{STATUS_LABEL[opt]}</option>
           ))}
         </select>
-        {busy && <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />}
+        {busy && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-tertiary" />}
         <button
+          type="button"
           onClick={() => onInvite(s.id)}
           disabled={inviting}
           title="Send Founding HQ magic-link invite"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-lime-text disabled:opacity-40"
+          className={cn(adminBtnSm.secondary, 'h-9')}
         >
-          {inviting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          {inviting ? (
+            <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <PaperPlaneTilt aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          )}
           Invite
         </button>
       </div>
