@@ -6,8 +6,9 @@
  * (2026-09-28), with the selection sliding between tabs instead of jumping.
  *
  * - `role="tablist"` + roving tabindex: ←/→/Home/End move and select.
- * - The row scrolls sideways on narrow screens with ScrollRow's edge cues,
- *   and keeps the selected tab in view.
+ * - The bar stays put; on narrow screens the tabs scroll inside it and the
+ *   clipped edge fades into the bar with a chevron (ScrollRow), keeping the
+ *   selected tab in view.
  * - Reduced motion: the pill moves without animating.
  */
 
@@ -46,9 +47,17 @@ export function SegmentedTabs<T extends string>({
   const reduce = useReducedMotion()
   const refs = useRef(new Map<T, HTMLButtonElement>())
 
-  // Keep the selected tab visible when the row scrolls (phones, 7 tabs).
+  // Keep the selected tab fully visible when the row scrolls (phones, 7
+  // tabs), clear of the edge fade rather than tucked under it.
   useEffect(() => {
-    refs.current.get(value)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+    const tab = refs.current.get(value)
+    const row = tab?.closest<HTMLElement>('[data-scrollrow]')
+    if (!tab || !row) return
+    const pad = 44
+    const left = tab.offsetLeft - pad
+    const right = tab.offsetLeft + tab.offsetWidth + pad - row.clientWidth
+    const target = row.scrollLeft > left ? left : row.scrollLeft < right ? right : null
+    if (target != null) row.scrollTo({ left: Math.max(0, target), behavior: reduce ? 'auto' : 'smooth' })
   }, [value, reduce])
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -67,15 +76,14 @@ export function SegmentedTabs<T extends string>({
   }
 
   return (
+    // The bar is a fixed frame; only the tabs scroll inside it, and the
+    // clipped edge fades into the bar's own fill with a ‹ / › chevron.
+    <div className={cn('w-fit max-w-full overflow-hidden rounded-md border border-white/[0.08] bg-bg-well', className)}>
     <ScrollRow
-      wrapperClassName={cn('w-fit max-w-full', className)}
+      edgeColor="var(--color-bg-well)"
       className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div
-        role="tablist"
-        aria-label={ariaLabel}
-        className="flex w-max items-center gap-1 rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1"
-      >
+      <div role="tablist" aria-label={ariaLabel} className="flex w-max items-center gap-1 p-1">
         {tabs.map((tab, index) => {
           const active = tab.id === value
           return (
@@ -113,6 +121,7 @@ export function SegmentedTabs<T extends string>({
         })}
       </div>
     </ScrollRow>
+    </div>
   )
 }
 

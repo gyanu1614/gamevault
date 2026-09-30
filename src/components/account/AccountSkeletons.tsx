@@ -43,7 +43,7 @@ export function SkPage({
 /** SegmentedTabs placeholder: the bar with the first tab selected. */
 export function SkTabs({ widths }: { widths: number[] }) {
   return (
-    <div className="flex w-fit max-w-full gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1" aria-hidden>
+    <div className="flex w-fit max-w-full gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-bg-well p-1" aria-hidden>
       {widths.map((w, i) => (
         <div key={i} className={cn('h-8 shrink-0 rounded-[5px]', i === 0 ? 'bg-white/[0.09]' : 'skeleton opacity-40')} style={{ width: w }} />
       ))}

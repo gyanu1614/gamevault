@@ -23,7 +23,7 @@ export function MessagesSkeleton() {
         {/* Title + tabs: stacked on phones, one row on desktop. */}
         <div className="shrink-0 lg:flex lg:items-center lg:gap-5">
           <Block className="ml-1 h-7 w-20" />
-          <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1 lg:mt-0">
+          <div className="mt-3.5 flex w-fit max-w-full shrink-0 items-center gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-bg-well p-1 lg:mt-0">
             {[36, 64, 88, 50, 76, 70, 124].map((w, i) => (
               <div key={i} className={`h-8 shrink-0 rounded-[5px] ${i === 0 ? 'bg-white/[0.09]' : 'animate-pulse bg-white/[0.07] opacity-40'}`} style={{ width: w }} />
             ))}

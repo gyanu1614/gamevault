@@ -53,7 +53,7 @@ export function SettingsSkeleton({ isSeller = true }: { isSeller?: boolean }) {
         <Bar className="mt-1.5 h-4 w-80 max-w-full" />
 
         <div className="mt-5 w-full max-w-4xl">
-          <div className="flex w-fit max-w-full gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-[rgba(20,20,27,0.56)] p-1">
+          <div className="flex w-fit max-w-full gap-1 overflow-hidden rounded-md border border-white/[0.08] bg-bg-well p-1">
             {tabs.map((w, i) => (
               <div key={i} className={cn('h-8 shrink-0 rounded-[5px]', i === 0 ? 'bg-white/[0.09]' : 'skeleton opacity-40')} style={{ width: w }} />
             ))}
