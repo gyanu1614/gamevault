@@ -44,7 +44,7 @@ import {
   SELLER_TYPE_LABELS,
   DOCUMENT_TYPE_LABELS,
 } from '@/lib/seller-application/labels'
-import { forestStatusChip } from '../../_theme/forest'
+import { applicationStatusLabel } from '../_status'
 import { toast } from 'sonner'
 import {
   ArrowRight,
@@ -405,7 +405,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   const diditSessionId = application.didit_session_id ?? null
   const shopName = application.shop_name || application.display_name
   const submittedAt = application.submitted_at || application.created_at
-  const statusChip = forestStatusChip(application.status)
+  const statusLabel = applicationStatusLabel(application.status)
   const isActionable = ['pending', 'under_review', 'info_requested'].includes(
     application.status
   )
@@ -623,7 +623,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                 <h1 className="min-w-0 break-words text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
                   {shopName}
                 </h1>
-                <StatusBadge status={statusChip.label} tone={STATUS_TONE[application.status] ?? 'neutral'} />
+                <StatusBadge status={statusLabel} tone={STATUS_TONE[application.status] ?? 'neutral'} />
                 {diditSessionId && <StatusBadge status="Didit Video Verified" tone="success" />}
               </div>
               <p className="mt-1 break-words text-[13px] text-text-secondary">

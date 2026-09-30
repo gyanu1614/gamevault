@@ -23,7 +23,7 @@ import type { SellerApplication } from '@/lib/actions/admin-sellers'
 import type { GameLookupEntry } from '@/lib/admin/seller-application-enrichment'
 import { countryFlag } from '../_theme/flags'
 import { calculateVerificationStatus } from '@/lib/utils/seller-verification'
-import { forestStatusChip } from '../_theme/forest'
+import { applicationStatusLabel } from './_status'
 
 interface ApplicationsTableProps {
   applications: SellerApplication[]
@@ -132,8 +132,7 @@ function RowStatusChip({ app }: { app: SellerApplication }) {
   const sellerStatus = app.seller_status || app.user?.seller_status
   if (app.status === 'approved' && sellerStatus === 'restricted') return <StatusBadge status="Restricted" tone="warning" />
   if (app.status === 'approved' && sellerStatus === 'banned') return <StatusBadge status="Banned" tone="error" />
-  const chip = forestStatusChip(app.status)
-  return <StatusBadge status={chip.label} tone={STATUS_TONE[app.status] ?? 'neutral'} />
+  return <StatusBadge status={applicationStatusLabel(app.status)} tone={STATUS_TONE[app.status] ?? 'neutral'} />
 }
 
 /** A game icon (or its initial) in the row's stack. */
