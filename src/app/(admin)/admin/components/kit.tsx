@@ -506,3 +506,9 @@ export function PanelHead({
     </div>
   )
 }
+
+/** A native select on the page canvas (filters, sort). 16px below sm (no iOS zoom). */
+export const adminSelectCls =
+  'h-10 shrink-0 cursor-pointer rounded-md border border-transparent bg-bg-raised px-3 text-base font-medium text-text-primary ' +
+  'transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft ' +
+  'sm:text-[13px] [&>option]:bg-bg-raised'

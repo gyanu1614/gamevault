@@ -19,6 +19,11 @@ import React from 'react'
 import { renderToString } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+// Vitest compiles JSX classically (React.createElement); shared components in
+// the tree (admin kit, account surfaces, TierIcon) don't import React, so put
+// it in scope the way the repo's other render tests do.
+;(globalThis as any).React = React
+
 // `React.cache` is a server-runtime API that a transitive Supabase import
 // reaches for; it does not exist in the plain node test environment.
 vi.mock('react', async () => {
