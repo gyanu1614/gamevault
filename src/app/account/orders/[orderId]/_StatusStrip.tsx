@@ -140,8 +140,8 @@ const STRIPS: Record<
     },
     refunded: {
       Icon: Wallet,
-      title: 'Money In Your Wallet',
-      caption: 'Your refund landed in your DropMarket wallet as store credit. Spend it instantly or withdraw it from your wallet.',
+      title: 'Refund In Your Store Balance',
+      caption: 'Your refund was added to your Store Balance as store credit. Spend it at checkout on any listing with no service fee.',
       tone: 'lime',
     },
     // 'cancelled' only ever means a NEVER-PAID order (checkout timed out or
@@ -335,7 +335,7 @@ export function StatusStrip({
         : status === 'cancelled' && escrowStatus === 'refunded'
           ? // Cancelled AFTER payment: the money was returned, not "never charged".
             role === 'buyer'
-            ? { ...baseCfg, Icon: Wallet, tone: 'lime' as const, title: 'Order Cancelled, Refunded', caption: 'Your payment was returned to your DropMarket wallet as store credit.' }
+            ? { ...baseCfg, Icon: Wallet, tone: 'lime' as const, title: 'Order Cancelled, Refunded', caption: 'Your refund was returned to your Store Balance as store credit. Spend it at checkout with no service fee.' }
             : { ...baseCfg, title: 'Order Cancelled', caption: "The order was cancelled and the buyer's payment was returned to them." }
           : baseCfg
   const { Icon, title, caption, tone } = cfg

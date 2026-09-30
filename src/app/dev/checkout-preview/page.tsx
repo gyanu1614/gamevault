@@ -43,14 +43,23 @@ const MOCK_REVIEWS = [
 const MOCK_USER = { id: 'u1', email: 'buyer@dropmarket.gg', created_at: '2025-11-02T00:00:00Z' }
 
 // Checkout B3: the page normally quotes these from payment_method_fees via
-// eligibleMethods(); the preview hands in fixed quotes for 2 × $2.39.
-const q = (feeMinor: number, pctEffective: number) => ({ feeMinor, totalMinor: 478 + feeMinor, pctEffective })
+// eligibleMethods(); the preview hands in fixed quotes for 2 × $2.39
+// (marketplace $0.30 floor + the method's processing fee; wallet = zero).
+const q = (feeMinor: number, pctEffective: number, marketplaceMinor = 30) => ({
+  marketplaceMinor,
+  feeMinor,
+  serviceFeeMinor: marketplaceMinor + feeMinor,
+  totalMinor: 478 + marketplaceMinor + feeMinor,
+  chargeMinor: 478 + marketplaceMinor + feeMinor,
+  walletAppliedMinor: 0,
+  pctEffective,
+})
 const MOCK_METHODS: ClientMethod[] = [
   { method: 'btcpay', pmId: null, kind: 'crypto', label: 'Crypto', countries: [], coverage: 'Worldwide', countryMatch: true, refundable: true, instantClearing: true, quote: q(24, 5) },
   { method: 'pix_br', pmId: 'pix_br', kind: 'local', label: 'Pix', countries: ['BR'], coverage: 'Brazil', countryMatch: false, refundable: true, instantClearing: true, quote: q(67, 14.02) },
   { method: 'gcash_ph', pmId: 'gcash_ph', kind: 'local', label: 'GCash', countries: ['PH'], coverage: 'Philippines', countryMatch: false, refundable: true, instantClearing: true, quote: q(69, 14.44) },
   { method: 'qr_ph', pmId: 'qr_ph', kind: 'local', label: 'QR Ph', countries: ['PH'], coverage: 'Philippines', countryMatch: false, refundable: false, instantClearing: true, quote: q(62, 12.97) },
-  { method: 'wallet', pmId: null, kind: 'wallet', label: 'Store credit', countries: [], coverage: '', countryMatch: true, refundable: true, instantClearing: true, quote: q(24, 5) },
+  { method: 'wallet', pmId: null, kind: 'wallet', label: 'Store credit', countries: [], coverage: '', countryMatch: true, refundable: true, instantClearing: true, quote: q(0, 0, 0) },
 ]
 
 export default function CheckoutPreviewPage() {

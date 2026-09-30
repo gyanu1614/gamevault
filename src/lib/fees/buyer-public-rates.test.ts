@@ -17,17 +17,17 @@ const row = (over: Partial<PublicMethodFee>): PublicMethodFee => ({
 
 describe('describeMethodFee — one honest line per method', () => {
   it('states the provider rate, FX markup, buffer and the floor', () => {
-    expect(describeMethodFee(row({}))).toBe('3.75% + 7.5% currency conversion + 1% buffer, at least 5% of the item price, minimum $0.35')
+    expect(describeMethodFee(row({}))).toBe('3.75% + 7.5% currency conversion + 1% buffer, at least 5% of the amount charged, minimum $0.35')
   })
   it('includes a fixed amount in the fee currency and a cap when present', () => {
     expect(describeMethodFee(row({ method: 'gcash_ph', label: 'GCash', feeCurrency: 'PHP', providerPct: 5, providerFixedMinor: 1000, fxMarkupPct: 3.4, minFeeMinor: 0 })))
-      .toBe('5% + PHP 10.00 + 3.4% currency conversion + 1% buffer, at least 5% of the item price')
+      .toBe('5% + PHP 10.00 + 3.4% currency conversion + 1% buffer, at least 5% of the amount charged')
     expect(describeMethodFee(row({ method: 'paysafecard', label: 'paysafecard', feeCurrency: 'EUR', providerPct: 12.5, fxMarkupPct: 0, minFeeMinor: 0, maxTotalMinor: 25000 })))
-      .toBe('12.5% + 1% buffer, at least 5% of the item price, orders up to EUR 250.00')
+      .toBe('12.5% + 1% buffer, at least 5% of the amount charged, orders up to EUR 250.00')
   })
   it('crypto / wallet read as the floor only', () => {
     expect(describeMethodFee(row({ method: 'btcpay', label: 'Crypto', providerPct: 0, fxMarkupPct: 0, minFeeMinor: 0 })))
-      .toBe('1% buffer, at least 5% of the item price')
+      .toBe('1% buffer, at least 5% of the amount charged')
   })
 })
 

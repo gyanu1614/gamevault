@@ -177,7 +177,10 @@ describe.skipIf(!hasEnv)('checkout B3 — buyer method fees (integration)', () =
     const { methods, refused } = await eligible()
     const crypto = methods.find((m) => m.kind === 'crypto')
     expect(crypto?.method).toBe('fake')
-    expect(crypto?.quote.feeMinor).toBe(100) // 5% floor on 19.99 → 99.95 → 100
+    // buyer-service-fee: marketplace max($0.30, 2% of 19.99 = 40¢) = 40¢;
+    // processing 5% floor on the charged 20.39 → 101.95 → 102.
+    expect(crypto?.quote.marketplaceMinor).toBe(40)
+    expect(crypto?.quote.feeMinor).toBe(102)
     expect(methods.find((m) => m.kind === 'wallet')?.method).toBe('wallet')
     const locals = methods.filter((m) => m.kind === 'local').map((m) => m.method)
     expect(locals).toEqual(expect.arrayContaining(['pix_br', 'gcash_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl']))
@@ -186,8 +189,17 @@ describe.skipIf(!hasEnv)('checkout B3 — buyer method fees (integration)', () =
     expect(locals).not.toContain('boleto_br')
     expect(refused.map((r) => [r.method, r.reason])).toEqual(expect.arrayContaining([['maya_ph', 'not_selectable'], ['oxxo_mx', 'not_selectable'], ['boleto_br', 'not_selectable']]))
     for (const m of methods) {
+      if (m.kind === 'wallet') {
+        // store credit: zero service fee, total = subtotal
+        expect(m.quote.serviceFeeMinor).toBe(0)
+        expect(m.quote.totalMinor).toBe(cents(PRICE))
+        continue
+      }
       expect(m.quote.feeMinor).toBeGreaterThan(0)
-      expect(m.quote.totalMinor).toBe(cents(PRICE) + m.quote.feeMinor)
+      expect(m.quote.marketplaceMinor).toBeGreaterThanOrEqual(30)
+      expect(m.quote.serviceFeeMinor).toBe(m.quote.marketplaceMinor + m.quote.feeMinor)
+      expect(m.quote.totalMinor).toBe(cents(PRICE) + m.quote.marketplaceMinor + m.quote.feeMinor)
+      expect(m.quote.chargeMinor).toBe(m.quote.totalMinor)
     }
   })
 
@@ -203,10 +215,10 @@ describe.skipIf(!hasEnv)('checkout B3 — buyer method fees (integration)', () =
     for (const currency of ['USD', 'EUR', 'GBP']) {
       const { methods } = await eligible({ currency, subtotalMinor: 10000n })
       const crypto = methods.find((m) => m.kind === 'crypto')
-      expect(crypto?.quote.feeMinor, currency).toBe(500)
+      expect(crypto?.quote.feeMinor, currency).toBe(510) // 5% of the charged 102.00 (100 + 2% marketplace)
       // LATAM/PH rails are USD-only → refused in EUR/GBP, offered in USD
       const pix = methods.find((m) => m.method === 'pix_br')
-      if (currency === 'USD') expect(pix?.quote.feeMinor).toBe(1396) // 10000/0.8775 − 10000 = 1396.01
+      if (currency === 'USD') expect(pix?.quote.feeMinor).toBe(1424) // 10200/0.8775 − 10200 = 1423.93
       else expect(pix).toBeUndefined()
     }
   })
@@ -240,7 +252,9 @@ describe.skipIf(!hasEnv)('checkout B3 — buyer method fees (integration)', () =
     await parkPendingOrders()
     const { methods } = await eligible()
     const wallet = methods.find((m) => m.kind === 'wallet')!
-    const total = cents(PRICE) + cents(PRICE * 0.02) + wallet.quote.feeMinor
+    // Store credit pays no service fee: the wallet row's total IS the subtotal.
+    const total = wallet.quote.totalMinor
+    expect(total).toBe(cents(PRICE))
     await fundWallet(fx!.buyer.id, BigInt(total))
     const r = await checkout({ walletAmount: total / 100 })
     expect(r.success, r.error).toBe(true)

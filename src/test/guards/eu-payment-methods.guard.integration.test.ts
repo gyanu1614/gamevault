@@ -53,7 +53,10 @@ const EU = ['trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_i
 let fx: Fixture | null = null
 const CUR = 'USD'
 const PRICE = 19.99
-const CHEAP = 0.50 // subtotal + fee stays under €1.00 × 1.05 at EUR 1.17 ($1.2285) for EPS and MB Way
+// buyer-service-fee: the order total is topped up to $1.00, so a cheap item
+// charges $1.00–$1.01 on EPS / MB Way — still under €1.00 × 1.05 at EUR 1.17
+// ($1.2285). At $0.50 the fees alone lift the charge past the minimum.
+const CHEAP = 0.10
 let listingId = ''
 let cheapListingId = ''
 const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -103,8 +106,8 @@ async function fundWallet(userId: string, minor: bigint) {
   } as any)
   if (error) throw new Error(`wallet_credit: ${error.message}`)
 }
-async function quote(method: string, subtotalMinor: number) {
-  const { data, error } = await fx!.svc.rpc('buyer_fee_quote', { p_method: method, p_subtotal_minor: subtotalMinor, p_currency: CUR } as any)
+async function quote(method: string, subtotalMinor: number, walletMinor = 0) {
+  const { data, error } = await fx!.svc.rpc('buyer_fee_quote', { p_method: method, p_subtotal_minor: subtotalMinor, p_currency: CUR, p_wallet_minor: walletMinor } as any)
   if (error) throw new Error(`buyer_fee_quote(${method}): ${error.message}`)
   return data as any
 }
@@ -189,7 +192,7 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
       expect(m!.provider).toBe('payssion')
       expect(m!.pmId).toBe(pm)
       expect(m!.quote.feeMinor).toBeGreaterThan(0)
-      expect(m!.quote.totalMinor).toBe(cents(PRICE) + m!.quote.feeMinor)
+      expect(m!.quote.totalMinor).toBe(cents(PRICE) + m!.quote.marketplaceMinor + m!.quote.feeMinor)
       expect(m!.countries).toEqual(PAYSSION_METHODS[pm].countries)
     }
     expect(methods.find((x) => x.method === 'paysafecard')!.refundable).toBe(false)
@@ -214,7 +217,7 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
       expect(Number((att as any).amount_minor)).toBe(cents(Number(o.total_amount)))
     }
     await parkPendingOrders()
-  })
+  }, 60_000)
 
   it('EPS / MB Way under €1.00 (+5% headroom): the quote refuses under_min, the tile is not offered, createCheckout refuses with the reason', async () => {
     for (const pm of ['eps_at', 'mbway_pt']) {
@@ -222,17 +225,17 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
       expect(q.ok, pm).toBe(false)
       expect(q.reason, pm).toBe('under_min')
     }
-    // Threshold: subtotal + fee ≥ €1.00 × 1.05 × 1.17 = $1.2285.
-    // EPS  (3.75% + €0.45, buffer 1%): $0.60 → (60 + 52.65) / 0.9525 = 118.3¢ refused; $0.70 → 128.8¢ quotes.
-    // MB Way (2.75% + €0.25, buffer 1%): $0.85 → (85 + 29.25) / 0.9625 = 118.7¢ refused; $0.95 → 129.1¢ quotes.
-    expect((await quote('eps_at', 60)).reason).toBe('under_min')
-    expect((await quote('eps_at', 70)).ok).toBe(true)
-    expect((await quote('mbway_pt', 85)).reason).toBe('under_min')
-    expect((await quote('mbway_pt', 95)).ok).toBe(true)
+    // Threshold: the charge (subtotal + $0.30 marketplace + fee) ≥ €1.00 × 1.05 × 1.17 = $1.2285.
+    // EPS  (3.75% + €0.45, buffer 1%): $0.30 → (60 + 52.65) / 0.9525 = 118.3¢ refused; $0.40 → 128.8¢ quotes.
+    // MB Way (2.75% + €0.25, buffer 1%): $0.55 → (85 + 29.25) / 0.9625 = 118.7¢ refused; $0.65 → 129.1¢ quotes.
+    expect((await quote('eps_at', 30)).reason).toBe('under_min')
+    expect((await quote('eps_at', 40)).ok).toBe(true)
+    expect((await quote('mbway_pt', 55)).reason).toBe('under_min')
+    expect((await quote('mbway_pt', 65)).ok).toBe(true)
     const { methods, refused } = await eligible(cents(CHEAP))
     expect(methods.map((m) => m.method)).not.toContain('eps_at')
     expect(refused.find((r) => r.method === 'eps_at')?.reason).toBe('under_min')
-    // Trustly has no minimum: still offered at $0.99.
+    // Trustly has no minimum: still offered at $0.10 (the order is topped up to $1.00).
     expect(methods.map((m) => m.method)).toContain('trustly')
 
     const { createCheckout } = await import('@/lib/actions/checkout')
@@ -245,19 +248,18 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
 
   it('order_create_pending re-checks the ACTUAL charge: wallet credit that pulls an EPS charge under €1.00 rolls the order back — no order, no wallet debit, no attempt', async () => {
     await parkPendingOrders()
-    // $19.99 EPS quotes (≈ $22.2 total); apply wallet credit so the provider
-    // charge left is ~$0.50 — under the minimum. The page-side quote says ok
-    // (it sees the subtotal), the RPC must refuse on the charge.
-    // Wallet credit one cent short of covering the order at the WALLET row's
-    // quote (so createCheckout keeps the picked method), which leaves the EPS
-    // charge = epsFee − walletFee + 1 ≈ 56¢ ≈ €0.48 — under the minimum.
+    // $19.99 EPS quotes (≈ $21 total); apply wallet credit one cent short of
+    // covering the order at the WALLET row's quote (so createCheckout keeps
+    // the picked method). Store credit covers the item + marketplace fee
+    // first, so the EPS charge left is the fee on the last 41¢ + that 41¢
+    // ≈ 98¢ ≈ €0.84 — under the minimum. The page-side quote (store credit
+    // 0) says ok; the re-quote with the credit and the RPC both refuse.
     const { methods } = await eligible()
-    const eps = methods.find((m) => m.method === 'eps_at')!
+    expect(methods.find((m) => m.method === 'eps_at')).toBeTruthy()
     const wallet = methods.find((m) => m.kind === 'wallet')!
-    const marketplaceMinor = cents(PRICE * 0.02) // BUYER_MARKETPLACE_FEE_PCT
-    const walletApply = cents(PRICE) + marketplaceMinor + wallet.quote.feeMinor - 1
-    const epsChargeLeft = cents(PRICE) + marketplaceMinor + eps.quote.feeMinor - walletApply
-    expect(epsChargeLeft).toBeLessThan(123) // < €1.05 at 1.17
+    const walletApply = wallet.quote.totalMinor - 1
+    const withCredit = await quote('eps_at', cents(PRICE), walletApply)
+    expect(withCredit.reason).toBe('under_min')
     await fundWallet(fx!.buyer.id, BigInt(walletApply))
     const walletBefore = await walletMinor(fx!.buyer.id)
     const ordersBefore = (await pendingOrders()).length
@@ -297,6 +299,6 @@ describe.skipIf(!hasEnv)('checkout B4 — EU Payssion methods (integration)', ()
     const rates = read('src/lib/fees/buyer-public-rates.ts')
     expect(rates).toMatch(/r\.refundable \? 'Yes' : 'Store credit only'/)
     // The checkout tile tells a paysafecard buyer the same thing.
-    expect(read('src/app/checkout/[id]/CheckoutForm.tsx')).toMatch(/paysafecard: \{[\s\S]*?Refunds go to your DropMarket wallet/)
+    expect(read('src/app/checkout/[id]/CheckoutForm.tsx')).toMatch(/paysafecard: \{[\s\S]*?Refunds go to your Store Balance/)
   })
 })

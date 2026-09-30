@@ -28,6 +28,12 @@ export interface OutboxRow {
   status: 'pending' | 'done' | 'failed'
   attempts: number
   next_attempt_at: string
+  /** Refund policy: 'void' closes a live charge; 'refund' sends money back
+   *  for a refund_to_source_requests row (amount + currency + request_id). */
+  kind: 'void' | 'refund'
+  amount_minor: number | string | null
+  currency: string | null
+  request_id: string | null
 }
 
 export interface OutboxDrainSummary {
@@ -60,13 +66,29 @@ export async function drainProviderCancelOutbox(opts?: {
     let outcome: string | null = null
     let detail: string | null = null
     try {
-      const result = await getProvider(row.provider).voidCharge(row.provider_charge_id)
-      ok = true
-      outcome = result.outcome
-      if (result.outcome === 'paid') summary.paid++
+      if (row.kind === 'refund') {
+        // refund_to_source: the request's credit already left the buyer's
+        // wallet (refund_to_source_approve); send the cash back. A provider
+        // without refund() fails every attempt and the mark reverses the
+        // credit at the cap (refund_to_source_fail).
+        const provider = getProvider(row.provider)
+        if (!provider.refund) throw new Error(`${row.provider}: refunds are not supported`)
+        const result = await provider.refund(
+          row.provider_charge_id,
+          { amountMinor: BigInt(row.amount_minor ?? 0), currency: (row.currency ?? 'USD').toUpperCase() },
+          `rts:${row.request_id ?? row.id}`,
+        )
+        ok = true
+        outcome = result.refundId
+      } else {
+        const result = await getProvider(row.provider).voidCharge(row.provider_charge_id)
+        ok = true
+        outcome = result.outcome
+        if (result.outcome === 'paid') summary.paid++
+      }
     } catch (e: any) {
       detail = String(e?.message ?? e).slice(0, 500)
-      console.error(`[CancelOutbox] void of ${row.provider}/${row.provider_charge_id} failed (attempt ${row.attempts}):`, detail)
+      console.error(`[CancelOutbox] ${row.kind} of ${row.provider}/${row.provider_charge_id} failed (attempt ${row.attempts}):`, detail)
     }
     const { data: marked, error: markErr } = await (svc.rpc as any)('provider_cancel_outbox_mark', {
       p_id: row.id,

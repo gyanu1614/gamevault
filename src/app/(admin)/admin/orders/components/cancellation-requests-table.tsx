@@ -35,18 +35,24 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [showReasonModal, setShowReasonModal] = useState<CancellationRequest | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
+  // Refund policy: who is at fault decides the refund. Off = the buyer
+  // changed their mind (item price back, service fee kept). On = the seller
+  // went quiet / could not deliver (everything back, counts against the
+  // seller's non-delivery record).
+  const [sellerFault, setSellerFault] = useState(false)
   const queryClient = useQueryClient()
 
   const handleProcess = async (requestId: string, action: 'approve' | 'reject') => {
     setProcessingId(requestId)
     try {
-      const { data, error } = await processCancellationRequest(requestId, action, adminNotes || undefined)
+      const { data, error } = await processCancellationRequest(requestId, action, adminNotes || undefined, sellerFault ? 'seller' : 'buyer')
 
       if (error) {
         toast.error(error.message)
       } else {
         toast.success(`Cancellation request ${action}d successfully`)
         setAdminNotes('')
+        setSellerFault(false)
         setShowReasonModal(null)
         // Refetch requests
         queryClient.invalidateQueries({ queryKey: ['admin-cancellation-requests'] })
@@ -223,6 +229,23 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   <p className="text-sm text-text-secondary whitespace-pre-wrap">{showReasonModal.reason}</p>
                 </div>
               </div>
+
+              {/* Fault → refund amount (refund policy) */}
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-default bg-bg-overlay p-3">
+                <input
+                  type="checkbox"
+                  checked={sellerFault}
+                  onChange={(e) => setSellerFault(e.target.checked)}
+                  disabled={processingId === showReasonModal.id}
+                  className="mt-0.5 h-4 w-4 accent-lime"
+                />
+                <span className="text-sm">
+                  <span className="block font-medium text-text-primary">Seller At Fault</span>
+                  <span className="block text-xs text-text-tertiary">
+                    On approve: the buyer gets everything back including the service fee, and this counts against the seller&apos;s non-delivery record. Leave off when the buyer simply changed their mind (item price back, service fee kept).
+                  </span>
+                </span>
+              </label>
 
               {/* Admin Notes */}
               <div>

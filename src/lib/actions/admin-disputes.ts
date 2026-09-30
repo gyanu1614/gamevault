@@ -466,7 +466,7 @@ export async function resolveDispute(
           orderId: (dispute as any).transaction_id,
           resolution: 'resolved_partial',
           amount: refundAmount,
-          note: 'The refund was added to your DropMarket wallet as store credit. The rest of the order stands.',
+          note: 'The refund was added to your Store Balance as store credit. The rest of the order stands.',
         })
       : isRefund && refundAmount > 0
       ? sendOrderRefundedEmail({
@@ -475,7 +475,7 @@ export async function resolveDispute(
           orderNumber: orderRef,
           listingTitle: await orderItemTitleFor((dispute as any).transaction_id, (order as any).listing?.title || 'your item'),
           amount: refundAmount,
-          destination: 'your DropMarket wallet',
+          destination: 'your Store Balance',
           pending: false,
         })
       : sendDisputeResolvedEmail({

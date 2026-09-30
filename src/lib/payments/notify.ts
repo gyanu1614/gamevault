@@ -231,7 +231,7 @@ export async function notifyOrderTransition(
             listingTitle: order.listingTitle,
             gameSlug: order.gameSlug,
             amount: refundedAmount,
-            destination: 'your DropMarket wallet',
+            destination: 'your Store Balance',
           })
         : Promise.resolve(),
       insertNotification({

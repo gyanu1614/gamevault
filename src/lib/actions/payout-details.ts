@@ -74,6 +74,12 @@ export async function savePayoutDetails(input: SavePayoutDetailsInput): Promise<
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
+    // Refund policy: payout details are a seller thing. A buyer's store
+    // credit is spent at checkout; withdrawals go through support.
+    const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if ((me as { role?: string } | null)?.role !== 'seller') {
+      return { success: false, error: 'Payout details are for seller accounts. To withdraw store credit, contact support@dropmarket.gg.' }
+    }
 
     let args: Record<string, unknown>
     if (input.kind === 'crypto') {

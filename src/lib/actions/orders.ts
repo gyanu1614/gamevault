@@ -19,7 +19,7 @@ import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
-import { sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
+import { sellerCancelFault, sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
 
 // Joined rows the order page renders (no emails — see getOrder).
 const ORDER_DETAIL_EMBEDS = `
@@ -545,7 +545,10 @@ export async function cancelOrder(orderId: string): Promise<{
     try {
       // Round B: a pending order's live charge is closed as 'void' and
       // queued in provider_cancel_outbox inside the same RPC transaction.
-      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true, closeAttemptAs: 'void' })
+      // Refund policy: the buyer's own cancel of a PAID order is a buyer
+      // fault — the item price comes back as store credit, the service fee
+      // stays. A pending order returns its wallet hold in full regardless.
+      cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true, closeAttemptAs: 'void', fault: 'buyer' })
     } catch (cancelError: any) {
       console.error('Failed to cancel order:', cancelError)
       return { success: false, error: 'Cancellation failed — please contact support' }
@@ -561,9 +564,12 @@ export async function cancelOrder(orderId: string): Promise<{
     // Money is back in the wallet exactly when the RPC posted the wallet leg
     // (a pending order with no wallet hold has nothing to return).
     const refundIssued = cancelResult.walletTxnId !== null
+    // Paid: what the RPC credited — the item price (buyer fault), not the total.
     const refundAmount = wasUnpaid
       ? Number(await heldMinorFor(supabase, orderId)) / 100
-      : (order.total_amount ?? 0)
+      : cancelResult.creditedMinor != null
+        ? Number(cancelResult.creditedMinor) / 100
+        : (order.total_amount ?? 0)
 
     if (wasUnpaid) {
       // The "Order Incomplete" navbar nudge for this order is moot now —
@@ -590,6 +596,7 @@ export async function cancelOrder(orderId: string): Promise<{
       reason: 'buyer_cancelled',
       refund_issued: refundIssued,
       refund_destination: 'wallet',
+      fault: wasUnpaid ? null : 'buyer',
     })
 
     // Refund comms: buyer email + both parties in-app. HONESTY GATE: only
@@ -615,9 +622,9 @@ export async function cancelOrder(orderId: string): Promise<{
         createNotification({
           userId: order.buyer_id,
           type: 'order_refunded',
-          title: refundIssued ? 'Money In Your Wallet' : 'Order Cancelled',
+          title: refundIssued ? 'Refund In Your Store Balance' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your DropMarket wallet as store credit. Spend it instantly or withdraw it.`
+            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.${wasUnpaid ? '' : ' The service fee is not refunded when you cancel a paid order.'}`
             : `Order #${orderRef} was cancelled — nothing had been charged.`,
           link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),
@@ -637,7 +644,7 @@ export async function cancelOrder(orderId: string): Promise<{
           orderNumber: orderRef,
           listingTitle: await orderItemTitleFor(orderId, cancelledListing?.title || 'your item'),
           amount: refundAmount,
-          destination: 'your DropMarket wallet',
+          destination: 'your Store Balance',
           pending: false,
         })
       }
@@ -692,12 +699,16 @@ export async function sellerCancelOrder(
     }
 
     const dedupe = `seller_cancel:${orderId}`
+    // Refund policy: a seller cancel is the SELLER's fault (full credit, a
+    // fault on their record, the 5-in-7-days fee) unless the reason says the
+    // buyer asked for it or went quiet — then it is the buyer's (item price).
+    const fault = sellerCancelFault(reason)
     let result
     try {
       result =
         order.status === 'paid'
-          ? await cancelOrderReturnWallet(orderId, dedupe, { allowPaid: true, closeAttemptAs: 'void' })
-          : await refundOrderToWallet(orderId, dedupe)
+          ? await cancelOrderReturnWallet(orderId, dedupe, { allowPaid: true, closeAttemptAs: 'void', fault })
+          : await refundOrderToWallet(orderId, dedupe, undefined, fault)
     } catch (moneyError: any) {
       console.error('[SellerCancel] refund failed:', moneyError)
       return { success: false, error: 'Cancelling failed. Nothing was changed, please try again.' }
@@ -715,13 +726,16 @@ export async function sellerCancelOrder(
       seller_reason: reason,
       note: cleanNote ?? null,
       refund_destination: 'wallet',
+      fault,
     })
     await postOrderSystemNotice(orderId, { type: 'order_cancelled', by: 'seller', reason: reasonLabel, note: cleanNote })
 
     // Buyer comms: in-app + email. A comms failure never undoes the refund.
     await (async () => {
       const orderRef = order.order_number || orderId.slice(0, 8).toUpperCase()
-      const amount = Number(order.total_amount ?? 0)
+      // What the RPC actually credited (the item price when the buyer asked
+      // for the cancel, the total when the seller could not deliver).
+      const amount = result.creditedMinor != null ? Number(result.creditedMinor) / 100 : Number(order.total_amount ?? 0)
       const service = createServiceRoleClient()
       const { data: buyer } = await (service
         .from('profiles')
@@ -733,7 +747,7 @@ export async function sellerCancelOrder(
         userId: order.buyer_id,
         type: 'order_refunded',
         title: 'Order Cancelled By The Seller',
-        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your DropMarket wallet as store credit.`,
+        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your Store Balance as store credit.`,
         link: '/account/wallet',
       })
       if (buyer?.email) {
@@ -744,7 +758,7 @@ export async function sellerCancelOrder(
           orderNumber: orderRef,
           listingTitle: await orderItemTitleFor(orderId),
           amount,
-          destination: 'your DropMarket wallet',
+          destination: 'your Store Balance',
           pending: false,
         })
       }

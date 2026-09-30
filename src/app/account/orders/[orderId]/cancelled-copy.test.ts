@@ -21,12 +21,15 @@ const card = (p: Record<string, unknown>) => renderToStaticMarkup(h(OrderStatusC
 describe('cancelled order copy', () => {
   it('paid then cancelled: the buyer is told the money is in their wallet', () => {
     const s = strip({ role: 'buyer', status: 'cancelled', escrowStatus: 'refunded' })
-    expect(s).toMatch(/returned to your DropMarket wallet/)
+    expect(s).toMatch(/returned to your Store Balance/)
     expect(s).toMatch(/Go To Wallet/)
     expect(s).not.toMatch(/Nothing was charged/)
+    // Refund policy: store credit is spent, never withdrawn by a buyer.
+    expect(s).not.toMatch(/withdraw it/i)
     const c = card({ role: 'buyer', status: 'cancelled', escrowStatus: 'refunded' })
-    expect(c).toMatch(/payment was returned to your DropMarket wallet/)
+    expect(c).toMatch(/returned to your Store Balance/)
     expect(c).not.toMatch(/nothing was charged/i)
+    expect(c).not.toMatch(/withdraw it/i)
   })
 
   it('never paid: still says nothing was charged, no wallet link', () => {

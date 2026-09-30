@@ -55,7 +55,7 @@ export function RequestCancelModal({
       icon={Ban}
       tone="warning"
       title="Request Cancellation"
-      description="Tell us why. DropMarket reviews it, and if approved you get a full refund to your DropMarket wallet."
+      description="Tell us why. DropMarket reviews it; if approved, your refund goes to your Store Balance as store credit. The service fee is only refunded when the seller is at fault."
       footer={
         <>
           <button type="button" onClick={() => close(false)} disabled={submitting} className={modalButton('ghost')}>

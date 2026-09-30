@@ -387,3 +387,23 @@ alerted on rather than left to accumulate:
     new interior steps sit behind a `money_fault_hook` point.
 11. Every pending order carries a `payment_expires_at` from the moment it is
     inserted; every provider call carries a deadline.
+12. **The whole buyer fee is `buyer_fee_quote`** (buyer-service-fee,
+    2026-09-30): marketplace max($0.30, 2%) + the method's processing fee on
+    the amount the provider is charged (subtotal + marketplace − promo − store
+    credit), total topped up to $1.00, zero for store credit. No TypeScript
+    computes any part (`fee-checkout-single-path` guard); the page shows ONE
+    "Service fee" line, never a percentage, and re-quotes through
+    `quoteCheckoutMethods` when the promo / store-credit toggle / quantity
+    changes. `order_create_pending` snapshots marketplace → `platform_fee`,
+    processing → `payment_processing_fee`.
+13. **Refunds are fault-aware** (`order_refund_to_wallet` /
+    `order_cancel_return_wallet` `p_fault`): `buyer` = item price credited,
+    fees kept (`fee_kept:<order>` → platform_commission); `seller` = full +
+    `order_seller_faults` row (5th in 7 days charges that order's buyer fees
+    to the seller); `platform` (default) = full. Every refund is store credit.
+14. **Refund to the original payment method is never automatic**
+    (`refund_to_source_requests`): the buyer asks from the order page, an
+    admin approves (ONE RPC: wallet debit + outbox row `kind='refund'`), the
+    outbox drain calls `provider.refund()`; the cap reverses the debit and
+    alerts. The provider's later "refunded" webhook is a no-op on an
+    already-refunded order.

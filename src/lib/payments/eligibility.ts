@@ -31,11 +31,19 @@ import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/metho
 export type MethodKind = 'crypto' | 'local' | 'wallet'
 
 export interface MethodQuote {
-  /** Buyer processing fee, minor units of the order currency. */
+  /** Marketplace fee (max($0.30, 2%), raised for the $1 minimum order; 0 for store credit). */
+  marketplaceMinor: number
+  /** Buyer processing fee on the amount the provider is charged, minor units of the order currency. */
   feeMinor: number
-  /** subtotal + fee, minor units (before the marketplace fee / promo / wallet). */
+  /** marketplace + processing — the ONE "Service fee" line the buyer sees. */
+  serviceFeeMinor: number
+  /** ORDER total before store credit: subtotal + marketplace + processing − promo. */
   totalMinor: number
-  /** fee ÷ subtotal × 100, 2 dp; null on a zero subtotal. */
+  /** What the provider is asked for: total − store credit applied. */
+  chargeMinor: number
+  /** Store credit the quote applied (≤ the request, ≤ subtotal + marketplace − promo). */
+  walletAppliedMinor: number
+  /** processing ÷ subtotal × 100, 2 dp; null on a zero subtotal. */
   pctEffective: number | null
 }
 
@@ -72,6 +80,10 @@ export interface EligibilityInput {
   /** Buyer country hint (geo header); null = unknown → everything matches. */
   country: string | null
   subtotalMinor: bigint
+  /** Promo discount already validated server-side (minor units); default 0. */
+  promoMinor?: bigint
+  /** Store credit the buyer asked to apply, clamped to their balance; default 0. */
+  walletMinor?: bigint
 }
 
 export interface Eligibility {
@@ -93,7 +105,11 @@ type SqlQuote = {
   label?: string
   provider?: string
   fee_minor: number | string | null
+  marketplace_minor: number | string | null
+  service_fee_minor: number | string | null
   total_minor: number | string | null
+  charge_minor: number | string | null
+  wallet_applied_minor: number | string | null
   pct_effective: number | string | null
   refundable: boolean | null
   instant_clearing: boolean | null
@@ -137,6 +153,8 @@ export async function eligibleMethods(input: EligibilityInput): Promise<Eligibil
     p_methods: cands.map((c) => c.method),
     p_subtotal_minor: input.subtotalMinor.toString(),
     p_currency: currency,
+    p_promo_minor: (input.promoMinor ?? 0n).toString(),
+    p_wallet_minor: (input.walletMinor ?? 0n).toString(),
   })
   if (error) throw new Error(`buyer_fee_quote_many failed: ${error.message}`)
   const quotes = (data ?? []) as SqlQuote[]
@@ -163,8 +181,12 @@ export async function eligibleMethods(input: EligibilityInput): Promise<Eligibil
       refundable: q.refundable ?? true,
       instantClearing: q.instant_clearing ?? true,
       quote: {
+        marketplaceMinor: Number(q.marketplace_minor ?? 0),
         feeMinor: Number(q.fee_minor),
+        serviceFeeMinor: Number(q.service_fee_minor ?? Number(q.marketplace_minor ?? 0) + Number(q.fee_minor)),
         totalMinor: Number(q.total_minor),
+        chargeMinor: Number(q.charge_minor ?? q.total_minor),
+        walletAppliedMinor: Number(q.wallet_applied_minor ?? 0),
         pctEffective: q.pct_effective == null ? null : Number(q.pct_effective),
       },
     })

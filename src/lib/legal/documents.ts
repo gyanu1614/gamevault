@@ -251,7 +251,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '9.3. **Seller Balance and payouts.** After the Protection Window closes (or the dispute resolves in the Seller’s favour), the net sale proceeds are credited to the Seller Balance. The Seller may request a payout from their Account at any time; payouts are made to the Seller’s verified payout method. A minimum payout amount and payout fees apply (see Fees & Charges). We may delay payouts pending verification, dispute resolution, chargeback exposure, or as required by law. Seller Balances do not accrue interest.',
           ),
           p(
-            '9.4. **Refunds.** Approved refunds are issued as store credit by default, with cash refunds to the original payment method available via Customer Support, per the Refund & Dispute Policy. Store credit is a non-transferable credit against future purchases on the Platform and is not redeemable for cash except as set out in that Policy; it is not e-money and no interest accrues.',
+            '9.4. **Refunds.** Approved refunds are issued as store credit to your Store Balance by default (in full where the Seller or the Platform is at fault; the item price where you cancel a paid Order yourself), with refunds to the original payment method available on request from the order page, per the Refund & Dispute Policy. Store credit is a non-transferable credit against future purchases on the Platform, spendable with no service fee, and is not redeemable for cash except as set out in that Policy; it is not e-money and no interest accrues.',
           ),
           p(
             '9.5. **Crypto payments.** Where crypto/stablecoin payment is offered, payments are processed and converted to fiat by our licensed crypto payment processor before settlement; DropMarket does not itself custody cryptoassets. **Crypto transactions are irreversible once broadcast**; send exactly the displayed amount on the displayed network within the displayed time. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the processor’s rules and the Refund & Dispute Policy; recovery may be impossible and reasonable recovery costs may be deducted where recovery is attempted.',
@@ -501,6 +501,9 @@ export const LEGAL_DOCS: LegalDoc[] = [
             'for accounts, it will fully transfer ownership, **unbind all personal identifiers** (phone, linked socials, recovery email) and provide original registration details before delivery;',
             'it will communicate with Buyers only via Platform chat, and will comply with the Prohibited Items & Conduct Policy, the Acceptable Use Policy and the AML / KYC Policy.',
           ]),
+          p(
+            '2.2. **Cancellations the Seller causes.** Where an Order is cancelled because the Seller cannot or does not deliver (including a cancellation the Seller makes for stock, timing or pricing reasons, a cancellation approved because the Seller was unresponsive, and a dispute decided in the Buyer’s favour), the Buyer is refunded in full and the cancellation is recorded against the Seller. From the **fifth** such cancellation within any rolling **7-day** period, the Buyer’s fees on that Order are charged to the Seller’s Store Balance, which may go below zero until later sales cover it. A cancellation the Buyer asks for is not counted.',
+          ),
         ],
       },
       {
@@ -643,7 +646,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '2. What SafeDrop covers',
         blocks: [
           p(
-            '2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time (maximum 24 hours). The Order cancels automatically and you are refunded — instantly and in full as store credit, or to your original payment method on request to Customer Support (see the Refund & Dispute Policy, Section 7).',
+            '2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time (maximum 24 hours). The Order cancels automatically and you are refunded — instantly and in full, service fee included, as store credit to your Store Balance, or to your original payment method on request from the order page (see the Refund & Dispute Policy, Section 7).',
           ),
           p(
             '2.2. **Not as described.** The item or service you receive materially differs from the Listing (wrong item, missing described features, incorrect account attributes, undisclosed defects). Raise a dispute within your Protection Window and, if upheld, you receive a full refund or redelivery.',
@@ -666,7 +669,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '2.4. If you take no action before your Protection Window closes, the Order completes automatically. This does not affect your statutory rights (Section 6).',
           ),
           p(
-            '2.5. **Dispute window.** Whether or not the Order has completed, you can open a dispute for **7 days from delivery**. Disputes opened after the Order completed set the Seller’s amount aside while we review; a refund decided in your favour is credited to your DropMarket wallet.',
+            '2.5. **Dispute window.** Whether or not the Order has completed, you can open a dispute for **7 days from delivery**. Disputes opened after the Order completed set the Seller’s amount aside while we review; a refund decided in your favour is credited in full to your Store Balance.',
           ),
         ],
       },
@@ -863,10 +866,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '7. How refunds are paid',
         blocks: [
           p(
-            '7.1. **Store credit by default.** Approved refunds are issued in full as **DropMarket store credit** (including the item price and buyer fees), credited instantly and usable on any purchase on the Platform. Store credit is a non-transferable credit note against future purchases: it is not e-money, accrues no interest, and cannot be exchanged for cash except as set out in 7.2.',
+            '7.1. **Store credit by default.** Approved refunds are issued as **DropMarket store credit** to your Store Balance, credited instantly and usable on any purchase on the Platform with no service fee. Where the Seller is at fault (non-delivery, an item not as described, a dispute decided in your favour) or the Platform is (an item sold out before your payment landed), the refund is **in full, including the service fee**. Where you cancel a paid Order at your own request, the **item price** is refunded and the service fee is not. Store credit is a non-transferable credit note against future purchases: it is not e-money, accrues no interest, and cannot be exchanged for cash except as set out in 7.2.',
           ),
           p(
-            '7.2. **Cash refund to source.** If you prefer a refund to your original payment method, contact Customer Support: cash refunds are issued for the amount paid **less the payment-processing fee** actually incurred on the original transaction, and are processed within **5–10 business days** depending on your payment method. Nothing in this clause limits refunds you are entitled to under the Consumer Rights Act 2015, which are always available in full to your original payment method. DropMarket does not hold buyer cash balances.',
+            '7.2. **Refund to your original payment method.** Once a refund sits in your Store Balance you may ask, from the order page, for it to be sent back to the payment method you used. We review each request within 24 to 48 hours; approved refunds are sent for the amount credited and usually arrive within **5–10 business days** depending on your payment method. A request can only be made while the credited amount is still unspent, and only for payment methods whose provider supports refunds (a method that does not is marked “Store credit only” on the Fees & Charges page). Nothing in this clause limits refunds you are entitled to under the Consumer Rights Act 2015, which are always available in full to your original payment method. DropMarket does not hold buyer cash balances.',
           ),
           p(
             '7.3. **Partial refunds.** Where only part of an Order is affected, a proportionate partial refund may be issued.',
@@ -933,7 +936,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '12.1. A Buyer may request cancellation before the Seller has begun preparing/delivering the Order. Once the Seller has begun delivery, cancellation is subject to the Seller’s acceptance or the outcome of a Dispute.',
           ),
           p(
-            '12.2. **Automatic cancellation for non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within the stated delivery time — and in any event within a maximum of **24 hours** of Order acceptance — the Order is cancelled automatically. The Buyer is notified on screen and refunded **instantly in full as store credit** (see Section 7). A refund to the original payment method is available instead on request to Customer Support, per Section 7.',
+            '12.2. **Automatic cancellation for non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within the stated delivery time — and in any event within a maximum of **24 hours** of Order acceptance — the Order is cancelled automatically. The Buyer is notified on screen and refunded **instantly in full as store credit**, service fee included (see Section 7). A refund to the original payment method is available instead on request from the order page, per Section 7.',
           ),
         ],
       },
@@ -1214,7 +1217,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Buyer fee',
         blocks: [
           p(
-            'Buyers pay two itemised fees at checkout: a **marketplace fee of 2%**, which keeps every order covered by SafeDrop Protection, and a **processing fee** that depends on the payment method you choose. The processing fee covers the payment provider’s charge on the full amount, currency conversion where the provider applies it, and a small buffer for rate movement; every method also has a minimum share of the item price. The exact fee for your order is quoted on every payment tile before you pay, and both fees are always included in the displayed total, so the price you see at checkout is the price you pay.',
+            'Buyers pay one **service fee** at checkout, shown as a single line and always included in the displayed total, so the price you see at checkout is the price you pay. It has two parts. The **marketplace part** is **2%** of the item price with a $0.30 minimum; it keeps every order covered by SafeDrop Protection. The **processing part** depends on the payment method you choose: it covers the payment provider’s charge on the amount actually charged, currency conversion where the provider applies it, and a small buffer for rate movement, and every method has a minimum share of that amount. Orders whose total would fall under $1.00 are raised to $1.00. **Orders paid entirely with store credit carry no service fee.** The exact fee for your order is quoted before you pay.',
           ),
           p(
             'The current terms per payment method are listed below, read live from the same table checkout quotes from. A method that is hidden or over its provider’s limit for your order is not offered.',

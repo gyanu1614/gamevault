@@ -589,20 +589,25 @@ export default function WalletClient({ userId, isSeller }: Props) {
           />
 
           {/* Balances — ONE panel, no outline (owner, 2026-09-28: the page
-              was five boxes of numbers). Sellers: Available (+ Withdraw),
-              Store Credit, Pending; buyers: their store-credit balance.
-              A thin line underneath carries the running totals. */}
+              was five boxes of numbers). ONE customer-facing number (owner,
+              2026-09-29): Store Balance = released sales + store credit.
+              Everyone spends it at checkout (no service fee); sellers
+              withdraw it (withdrawal_quote draws on both); buyers contact
+              support. Sellers also see Pending Sales. A thin line underneath
+              carries the running totals. */}
           <div className="overflow-hidden rounded-lg bg-bg-raised">
             {isSeller ? (
-              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="grid divide-y divide-white/[0.07] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
                 <div className="flex items-start justify-between gap-3 p-5">
-                  <BalanceCell label="Available Balance" value={earningsStats.available_balance} caption="Ready to withdraw." />
+                  <BalanceCell
+                    label="Store Balance"
+                    value={earningsStats.available_balance + walletBalance.available_balance}
+                    caption="Released sales and store credit. Spend it at checkout with no service fee, or withdraw it."
+                  />
                   <Link
                     href="/account/wallet/withdraw"
                     className={cn(
                       'inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-md bg-lime px-3.5 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
-                      // Withdrawals draw on sales AND store credit (withdrawal_quote:
-                      // matured + wallet), as the withdraw page shows.
                       earningsStats.available_balance + walletBalance.available_balance <= 0 &&
                         'pointer-events-none opacity-50',
                     )}
@@ -611,18 +616,17 @@ export default function WalletClient({ userId, isSeller }: Props) {
                     Withdraw
                   </Link>
                 </div>
-                {/* Refunds and cashback land in the buyer wallet, not in sales
-                    earnings; withdrawals can draw on it too. */}
-                <div className="p-5">
-                  <BalanceCell label="Store Credit" value={walletBalance.available_balance} caption="Refunds. Spend it at checkout or withdraw it." />
-                </div>
                 <div className="p-5">
                   <BalanceCell label="Pending Sales" value={earningsStats.pending_balance} caption="Credited once the buyer confirms delivery." />
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap items-start justify-between gap-4 p-5">
-                <BalanceCell label="Balance" value={walletBalance.available_balance} caption="Refunds and credit. Spend it at checkout." />
+                <BalanceCell
+                  label="Store Balance"
+                  value={walletBalance.available_balance}
+                  caption="Refunds and credit. Spend it at checkout with no service fee. To withdraw it, contact support."
+                />
                 {/* Top-up stays gated behind its own flag even after
                     purchases open (compliance — lib/config/purchases). */}
                 {WALLET_TOPUP_ENABLED && (
