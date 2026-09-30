@@ -11,7 +11,7 @@
  *
  * Text size comes from `className` so it sits in each surface's scale.
  */
-import { ThumbsUpIcon } from '@phosphor-icons/react'
+import { ThumbsUpIcon } from '@phosphor-icons/react/dist/ssr'
 import { cn } from '@/lib/utils'
 import { sellerStatLine, sellerStatText, type SellerStatInput } from '@/lib/seller/stat-line'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'

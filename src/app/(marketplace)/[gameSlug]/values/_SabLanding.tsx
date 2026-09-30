@@ -2,18 +2,14 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useCallback, useEffect, useState } from 'react'
-import useEmblaCarousel from 'embla-carousel-react'
 import {
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   Search,
   Store,
   TrendingUp,
   User,
 } from 'lucide-react'
-import ItemCard from '../[categorySlug]/_ItemCard'
+import { OfferRail } from '@/components/marketplace/OfferRail'
 import type { ItemOffer } from '../[categorySlug]/_itemsTypes'
 import type { SabTopValue } from '../page'
 import { SwooshLink } from './_SwooshLink'
@@ -76,7 +72,7 @@ export function SabLanding({
       </div>
 
       {/* ── Top Selling Items ────────────────────────────────────────── */}
-      <CarouselSection
+      <OfferRail
         title="Top Selling Items"
         seeAllHref="/steal-a-brainrot/buy-items"
         offers={itemOffers}
@@ -90,7 +86,7 @@ export function SabLanding({
       />
 
       {/* ── Top Selling Accounts ─────────────────────────────────────── */}
-      <CarouselSection
+      <OfferRail
         title="Top Selling Accounts"
         seeAllHref="/steal-a-brainrot/accounts"
         offers={accountOffers}
@@ -113,146 +109,6 @@ export function SabLanding({
   )
 }
 
-/* ─── Carousel section (embla + < > arrows beside See all) ─────────────── */
-
-function CarouselSection({
-  title,
-  seeAllHref,
-  offers,
-  gameSlug,
-  gameName,
-  empty,
-}: {
-  title: string
-  seeAllHref: string
-  offers: ItemOffer[]
-  gameSlug: string
-  gameName: string
-  empty: {
-    icon: React.ReactNode
-    title: string
-    body: string
-    cta?: { label: string; href: string }
-  }
-}) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    dragFree: true,
-    containScroll: 'trimSnaps',
-  })
-  const [canPrev, setCanPrev] = useState(false)
-  const [canNext, setCanNext] = useState(false)
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return
-    setCanPrev(emblaApi.canScrollPrev())
-    setCanNext(emblaApi.canScrollNext())
-  }, [emblaApi])
-
-  useEffect(() => {
-    if (!emblaApi) return
-    onSelect()
-    emblaApi.on('select', onSelect).on('reInit', onSelect)
-    return () => {
-      emblaApi.off('select', onSelect).off('reInit', onSelect)
-    }
-  }, [emblaApi, onSelect])
-
-  const hasOffers = offers.length > 0
-
-  return (
-    <section className="mt-12">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold text-text-primary sm:text-2xl">{title}</h2>
-
-        <div className="flex items-center gap-2">
-          {hasOffers && (
-            <div className="hidden items-center gap-1.5 sm:flex">
-              <CarouselArrow
-                dir="prev"
-                disabled={!canPrev}
-                onClick={() => emblaApi?.scrollPrev()}
-              />
-              <CarouselArrow
-                dir="next"
-                disabled={!canNext}
-                onClick={() => emblaApi?.scrollNext()}
-              />
-            </div>
-          )}
-          <Link
-            href={seeAllHref}
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-lime-text transition-opacity hover:opacity-80"
-          >
-            See all
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </div>
-
-      {hasOffers ? (
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-5">
-            {offers.map((offer) => (
-              <div
-                key={offer.id}
-                className="min-w-0 shrink-0 grow-0 basis-[300px] sm:basis-[360px]"
-              >
-                <ItemCard offer={offer} gameSlug={gameSlug} gameName={gameName} />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-default bg-bg-raised px-6 py-14 text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-border-default bg-bg-overlay text-text-secondary">
-            {empty.icon}
-          </div>
-          <h3 className="text-[17px] font-bold text-text-primary">{empty.title}</h3>
-          <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-text-secondary">
-            {empty.body}
-          </p>
-          {empty.cta && (
-            <Link
-              href={empty.cta.href}
-              className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-lg bg-lime px-4 text-[13.5px] font-bold text-text-inverse transition-opacity hover:opacity-90"
-            >
-              {empty.cta.label}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function CarouselArrow({
-  dir,
-  disabled,
-  onClick,
-}: {
-  dir: 'prev' | 'next'
-  disabled: boolean
-  onClick: () => void
-}) {
-  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight
-  return (
-    <button
-      type="button"
-      aria-label={dir === 'prev' ? 'Previous' : 'Next'}
-      onClick={onClick}
-      disabled={disabled}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-default bg-bg-overlay text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-35"
-    >
-      <Icon className="h-4.5 w-4.5" />
-    </button>
-  )
-}
-
-/* ─── Feature preview cards ────────────────────────────────────────────── */
-
-/** Values card — mini live top-values table preview + CTA. */
 function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-raised transition-colors hover:border-lime-tint-border">

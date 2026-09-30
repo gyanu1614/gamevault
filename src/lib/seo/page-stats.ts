@@ -39,19 +39,9 @@ const EMPTY_STATS: CategoryStats = {
   avgDeliveryLabel: null,
 }
 
-/**
- * Format a USD price for titles/descriptions. Whole dollars drop the
- * cents; sub-dollar prices (per-unit currency rates) keep up to four
- * decimals with trailing zeros trimmed so "$0.0045" reads correctly
- * instead of rounding to "$0.00".
- */
-export function formatStatPrice(price: number): string {
-  if (!Number.isFinite(price) || price <= 0) return '0'
-  if (price >= 1) {
-    return Number.isInteger(price) ? price.toFixed(0) : price.toFixed(2)
-  }
-  return price.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
-}
+// formatStatPrice lives in a pure module (no server imports) so client-safe
+// models can share it; re-exported here for existing callers.
+export { formatStatPrice } from './page-stats-format'
 
 /** "15 minutes" / "1 hour" / "3 hours" from an average minute count. */
 function formatAvgDelivery(avgMinutes: number): string {

@@ -252,7 +252,7 @@ export default function ItemCard({
       <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
-        <div className="flex min-w-0 items-baseline gap-1.5">
+        <div className="flex min-w-0 shrink-0 items-baseline gap-1.5 whitespace-nowrap">
           <span className="tabular-nums leading-none text-text-primary" style={{ fontSize: 'var(--fs-price)', fontWeight: 'var(--fw-heading)', fontVariantNumeric: 'tabular-nums' }}>
             {fmtPrice(offer.pricePerUnit)}
           </span>

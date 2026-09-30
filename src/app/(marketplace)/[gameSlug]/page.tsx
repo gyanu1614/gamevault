@@ -1,20 +1,19 @@
 /**
- * Game Browse Page
+ * Game hub: /fortnite, /roblox, … (clean URL, no /marketplace prefix).
  *
- * Shows all categories for a specific game
- * SEO-friendly URL: /fortnite (clean URL, no /marketplace prefix)
+ * Steal a Brainrot keeps its values landing (SabLanding); every other game
+ * renders the hub template (_GameHub): header, currency Buy card, category
+ * cards with live prices, best-offer rows, sell prompt, how it works, about,
+ * FAQ. ISR: every read is cookie-free, and the page binds each category's
+ * listings tag so a listing change anywhere in the game refreshes it (the
+ * 24h window is only the safety net), like the category pages.
  */
 
-import { sellerDisplayName } from '@/lib/seller/identity'
-import { tierByKey } from '@/lib/seller/tiers'
 import React from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { isGameHubIndexable } from '@/lib/games/indexability'
-import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { ArrowRight, Calculator, Package, TrendingUp } from 'lucide-react'
-import Image from 'next/image'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
 import { SITE_URL } from '@/config/site'
@@ -24,6 +23,11 @@ import { SabNavExtras } from './values/_SabNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
 import { cache } from 'react'
+import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
+import { BlogRail } from '@/components/blog/BlogRail'
+import { GameHub } from './_GameHub'
+import { getHubCategoryStats, getHubCurrency, getHubOffers } from './_hubData'
+import { buildHubCards, hubPitch, pickRail, splitCards, type HubCategory } from './_hubModel'
 
 interface PageProps {
   params: Promise<{
@@ -32,11 +36,10 @@ interface PageProps {
 }
 
 /**
- * Game storefront. Carries listing counts + featured listings, so it wants a
- * shorter window than the content hub; 15 min balances freshness against
- * rendering this route dynamically on every request.
+ * 24h safety net only: listing changes refresh the hub through the category
+ * listings tags it binds (see the page body), same as the category pages.
  */
-export const revalidate = 900
+export const revalidate = 86400
 
 /**
  * Prerender every active game's storefront. Cookie-free read; games added
@@ -160,48 +163,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 
-async function getCategoryListingCounts(gameId: string) {
-  const supabase = createAnonClient()
-
-  const { data: counts, error } = await supabase
-    .from('listings')
-    .select('game_category_id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
-    .eq('game_id', gameId)
-    .eq('status', 'active')
-    .eq('seller.is_test', false) as any
-
-  if (error) {
-    console.error('Error fetching listing counts:', error)
-    return {}
-  }
-
-  const countMap: Record<string, number> = {}
-  counts?.forEach((item: any) => {
-    countMap[item.game_category_id] = (countMap[item.game_category_id] || 0) + 1
-  })
-
-  return countMap
-}
-
-async function getFeaturedListings(gameId: string, limit: number = 6) {
-  const supabase = createAnonClient()
-
-  const { data: listings } = await supabase
-    .from('listings')
-    .select(`
-      *,
-      seller:public_profiles!listings_seller_id_fkey!inner(username, seller_tier, is_test),
-      category:game_categories!listings_game_category_id_fkey(name, slug)
-    `)
-    .eq('game_id', gameId)
-    .eq('status', 'active')
-    .eq('seller.is_test', false)
-    .order('created_at', { ascending: false })
-    .limit(limit) as any
-
-  return listings || []
-}
-
 export type SabTopValue = {
   slug: string
   name: string
@@ -300,13 +261,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
     notFound()
   }
 
-  // STATE-007 — both take only game.id and neither consumes the other, so they
-  // fan out together (matching the Promise.all in the very next block).
-  const [listingCounts, featuredListings] = await Promise.all([
-    getCategoryListingCounts(game.id),
-    getFeaturedListings(game.id),
-  ])
-  const categories = game.categories || []
+  const categories = (game.categories || []) as (HubCategory & { icon_emoji?: string | null })[]
 
   // Top brainrot values for the SAB landing carousel (marketplace inventory is
   // thin pre-launch, so we lead with our rich value data).
@@ -369,8 +324,24 @@ export default async function GameBrowsePage({ params }: PageProps) {
     )
   }
 
+  // ── Hub (every other game) ────────────────────────────────────────────────
+  const hasCurrency = categories.some((c) => c.type === 'currency')
+  const [stats, currency, offers] = await Promise.all([
+    getHubCategoryStats(game.id, categories),
+    hasCurrency ? getHubCurrency(gameSlug) : Promise.resolve({ iconUrl: null, unitSuffix: null }),
+    getHubOffers(game.id, categories),
+    // Anchor this render to every category's listings tag (no-op reads), so
+    // revalidateListingSurfaces refreshes the hub with its category pages.
+    Promise.all(categories.map((c) => bindCategoryListingsTag(c.id))),
+  ])
+
+  const cards = buildHubCards(gameSlug, categories, stats, currency.unitSuffix)
+  const { spotlight, grid } = splitCards(cards)
+  const itemsCard = cards.find((c) => c.type === 'items') ?? null
+  const accountsCard = cards.find((c) => c.type === 'account') ?? null
+
   return (
-    <div className="min-h-screen bg-bg-base">
+    <div className="min-h-screen">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -378,333 +349,32 @@ export default async function GameBrowsePage({ params }: PageProps) {
         ])}
       />
       <JsonLd data={faqPage(seo.faq.map((f) => ({ q: f.q, a: f.a })))} />
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(198,255,61,0.05)] via-transparent to-transparent" />
 
-        <div className="max-w-7xl mx-auto relative">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-text-secondary mb-8">
-            <Link href="/" className="hover:text-text-primary transition-colors">
-              Marketplace
-            </Link>
-            <ArrowRight className="w-4 h-4" />
-            <span className="text-text-primary">{game.name}</span>
-          </nav>
+      <GameSubNav
+        gameSlug={gameSlug}
+        gameName={game.name}
+        gameImageUrl={game.image_url}
+        currentCategorySlug=""
+        categories={categories as any}
+      />
 
-          {/* Game Header */}
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center mb-12">
-            {game.image_url && (
-              <div className="relative w-32 h-32 rounded-2xl overflow-hidden border-2 border-white/[0.1] flex-shrink-0">
-                <Image
-                  src={game.image_url}
-                  alt={game.name}
-                  fill
-                  // Rendered in a fixed 128px box (w-32 h-32). Without `sizes`,
-                  // `fill` assumes 100vw and Next generates the whole device
-                  // ladder up to 3840px for a thumbnail — one of the sources of
-                  // the 4K/5K transformations in the 2026-09-22 build audit.
-                  sizes="128px"
-                  className="object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-4">
-                {seo.h1}
-              </h1>
-              <p className="text-lg text-text-secondary mb-6 max-w-3xl leading-relaxed">
-                {seo.intro}
-              </p>
-
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
-                  <Package className="w-5 h-5 text-lime-text" />
-                  <span className="text-text-primary font-medium">
-                    {Object.values(listingCounts).reduce((a: number, b: number) => a + b, 0).toLocaleString()} Active Listings
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-bg-overlay rounded-lg border border-white/[0.1]">
-                  <TrendingUp className="w-5 h-5 text-success" />
-                  <span className="text-text-primary font-medium">
-                    {categories.length} Categories
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {gameSlug === 'steal-a-brainrot' && (
-        <section className="px-4 pb-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <h2 className="mb-6 text-3xl font-bold text-text-primary">
-              Steal a Brainrot Tools
-            </h2>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <Link
-                href="/steal-a-brainrot/values"
-                className="group rounded-xl border border-border-subtle bg-bg-overlay p-6 transition hover:-translate-y-0.5 hover:border-lime"
-              >
-                <TrendingUp className="h-7 w-7 text-lime-text" />
-                <h3 className="mt-4 text-xl font-semibold text-text-primary">
-                  Brainrot Values
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-text-secondary">
-                  Browse every Brainrot, rarity, income, mutation values, and marketplace availability.
-                </p>
-                <span className="mt-5 flex items-center gap-2 text-sm font-medium text-lime-text">
-                  Browse all values
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-
-              <Link
-                href="/steal-a-brainrot/calculator"
-                className="group rounded-xl border border-border-subtle bg-bg-overlay p-6 transition hover:-translate-y-0.5 hover:border-lime"
-              >
-                <Calculator className="h-7 w-7 text-lime-text" />
-                <h3 className="mt-4 text-xl font-semibold text-text-primary">
-                  Value Calculator
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-text-secondary">
-                  Select a Brainrot and mutation to calculate its income and compare variants.
-                </p>
-                <span className="mt-5 flex items-center gap-2 text-sm font-medium text-lime-text">
-                  Open calculator
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Categories */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-text-primary mb-8">Browse by Category</h2>
-
-          {categories.length === 0 ? (
-            /* Phase 1 · Step 1 — a `listed` game with no categories yet must
-               not read as broken. Point at the two things that ARE available:
-               selling into it, and asking for a category. */
-            <div className="rounded-xl border border-border-subtle bg-bg-overlay px-6 py-12 text-center">
-              <p className="text-text-primary font-semibold">
-                Categories For {game.name} Are Opening Soon
-              </p>
-              <p className="mx-auto mt-2 max-w-xl text-body-sm text-text-secondary">
-                No one has listed {game.name} yet. Sellers can start here first
-                — every order is covered by SafeDrop, item guaranteed or a full
-                refund.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href={`/${gameSlug}/sell`}
-                  className="inline-flex items-center justify-center rounded-lg bg-lime px-5 py-2.5 text-body-sm font-semibold text-black transition-opacity hover:opacity-90"
-                >
-                  Sell {game.name}
-                </Link>
-                <Link
-                  href={`mailto:support@dropmarket.gg?subject=${encodeURIComponent(`Category request: ${game.name}`)}`}
-                  className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-5 py-2.5 text-body-sm font-semibold text-text-primary transition-colors hover:bg-bg-overlay"
-                >
-                  Request A Category
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((category: any) => (
-                <CategoryCard
-                  key={category.id}
-                  gameSlug={gameSlug}
-                  categorySlug={category.slug}
-                  name={category.name}
-                  description={category.description}
-                  icon={category.icon_emoji}
-                  listingCount={listingCounts[category.id] || 0}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Featured Listings */}
-      {featuredListings.length > 0 && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-bg-overlay">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold text-text-primary">Recent Listings</h2>
-              <Link
-                href="/browse"
-                className="text-lime-text font-medium flex items-center gap-2 transition-opacity hover:opacity-80"
-              >
-                View All
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredListings.slice(0, 6).map((listing: any) => (
-                <ListingPreviewCard
-                  key={listing.id}
-                  gameSlug={gameSlug}
-                  categorySlug={listing.category.slug}
-                  listingSlug={listing.slug}
-                  title={listing.title}
-                  price={listing.price}
-                  imageUrl={listing.images?.[0]}
-                  sellerName={sellerDisplayName(listing.seller)}
-                  sellerTier={listing.seller.seller_tier}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* SEO FAQ — visible + matches the FAQPage JSON-LD above. Auto-generated
-          per game; helps the hub clear the content floor. */}
-      <section aria-labelledby="game-faq" className="py-16 px-4 sm:px-6 lg:px-8 border-t border-border-subtle">
-        <div className="mx-auto max-w-3xl">
-          <h2 id="game-faq" className="text-2xl font-bold text-text-primary mb-6">
-            Frequently Asked Questions
-          </h2>
-          <dl className="space-y-5">
-            {seo.faq.map((f) => (
-              <div key={f.q} className="rounded-xl border border-border-subtle bg-bg-overlay p-5">
-                <dt className="text-[15px] font-semibold text-text-primary">{f.q}</dt>
-                <dd className="mt-1.5 text-[14px] leading-relaxed text-text-secondary">{f.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
+      <GameHub
+        gameSlug={gameSlug}
+        gameName={game.name}
+        gameImageUrl={game.image_url}
+        pitch={hubPitch(game.name, cards)}
+        spotlight={spotlight}
+        currencyIconUrl={currency.iconUrl}
+        grid={grid}
+        itemOffers={pickRail(offers.items, 12)}
+        accountOffers={pickRail(offers.accounts, 12)}
+        itemsHref={itemsCard?.href ?? null}
+        accountsHref={accountsCard?.href ?? null}
+        totalOffers={cards.reduce((n, c) => n + c.count, 0)}
+        about={{ title: seo.h1, body: seo.intro }}
+        faq={seo.faq}
+        blogRail={<BlogRail gameSlug={gameSlug} gameName={game.name} />}
+      />
     </div>
-  )
-}
-
-// Component: Category Card
-interface CategoryCardProps {
-  gameSlug: string
-  categorySlug: string
-  name: string
-  description: string
-  icon: string
-  listingCount: number
-}
-
-function CategoryCard({
-  gameSlug,
-  categorySlug,
-  name,
-  description,
-  icon,
-  listingCount
-}: CategoryCardProps) {
-  return (
-    <Link href={`/${gameSlug}/${categorySlug}`}>
-      {/* Mobile-audit — site-standard -translate-y lift instead of scale-105:
-          scale on a full-width card pushes past the viewport edges after a
-          tap (sticky hover) and causes transient horizontal scroll. */}
-      <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl p-6 transition-all duration-300 hover:-translate-y-0.5">
-        <div className="flex items-start justify-between mb-4">
-          <div className="p-3 bg-lime-tint-bg border border-lime-tint-border rounded-lg">
-            <span className="text-2xl">{icon || '📦'}</span>
-          </div>
-          <span className="text-sm text-text-secondary">
-            {listingCount.toLocaleString()} listings
-          </span>
-        </div>
-
-        <h3 className="text-xl font-semibold text-text-primary mb-2 group-hover:text-lime-text transition-colors">
-          {name}
-        </h3>
-        <p className="text-sm text-text-secondary mb-4 line-clamp-2">
-          {description}
-        </p>
-
-        <div className="flex items-center text-lime-text text-sm font-medium">
-          Browse {name.toLowerCase()}
-          <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-        </div>
-      </div>
-    </Link>
-  )
-}
-
-// Component: Listing Preview Card
-interface ListingPreviewCardProps {
-  gameSlug: string
-  categorySlug: string
-  listingSlug: string
-  title: string
-  price: number
-  imageUrl?: string
-  sellerName: string
-  sellerTier: string
-}
-
-function ListingPreviewCard({
-  gameSlug,
-  categorySlug,
-  listingSlug,
-  title,
-  price,
-  imageUrl,
-  sellerName,
-  sellerTier
-}: ListingPreviewCardProps) {
-  const tierColors = tierByKey(sellerTier).colors
-
-  return (
-    <Link href={`/${gameSlug}/${categorySlug}/${listingSlug}`}>
-      {/* Mobile-audit — same swap as CategoryCard: lift, not scale. */}
-      <div className="group bg-bg-overlay border border-border-subtle hover:border-lime rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
-        {/* Image */}
-        <div className="relative h-48 bg-gradient-to-br from-[rgba(198,255,61,0.12)] to-[rgba(255,255,255,0.05)]">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={title}
-              fill
-              // Card image in a 192px-tall tile; the grid is 1/2/3 up. Without
-              // `sizes`, `fill` assumes 100vw and bills the full ladder up to
-              // 3840px — 6 of these render per game landing page × 264 pages
-              // (build audit 2026-09-22, §6).
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl">
-              🎮
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-          <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-lime rounded-lg">
-            <span className="text-text-inverse font-bold">${price.toFixed(2)}</span>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-4">
-          <h3 className="text-base font-semibold text-text-primary mb-2 line-clamp-2 group-hover:text-lime-text transition-colors">
-            {title}
-          </h3>
-
-          <div className="flex items-center justify-between text-sm">
-            <span className={`font-medium ${tierColors.text}`}>
-              {sellerName}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
   )
 }
