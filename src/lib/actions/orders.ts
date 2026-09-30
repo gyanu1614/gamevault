@@ -624,7 +624,7 @@ export async function cancelOrder(orderId: string): Promise<{
           type: 'order_refunded',
           title: refundIssued ? 'Refund In Your Store Balance' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} (the item price) was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.`
+            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.${wasUnpaid ? '' : ' The service fee is not refunded when you cancel a paid order.'}`
             : `Order #${orderRef} was cancelled — nothing had been charged.`,
           link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),

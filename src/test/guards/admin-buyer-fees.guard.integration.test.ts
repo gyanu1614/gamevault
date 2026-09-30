@@ -122,10 +122,10 @@ describe.skipIf(!hasEnv)('admin buyer fees (integration)', () => {
     expect(audit[0].actor).toBe(fx!.admin.id)
     expect(Number(audit[0].old_value.provider_pct)).toBe(Number(ORIGINAL.qris_id.provider_pct))
     expect(Number(audit[0].new_value.provider_pct)).toBe(4)
-    // 2000 / (1 − 0.04 − 0.02 − 0.01) = 2150.54 → 151 (> floor 100, > min 50)
+    // charged 2040 (2% marketplace on top): 2040 / (1 − 0.04 − 0.02 − 0.01) = 2193.55 → 154 (> floor 102, > min 50)
     const q = await quote('qris_id', 2000)
     expect(q.ok).toBe(true)
-    expect(q.fee_minor).toBe(151)
+    expect(q.fee_minor).toBe(154)
   })
 
   it('hiding a method (selectable=false) makes the quote refuse it', async () => {
@@ -145,8 +145,8 @@ describe.skipIf(!hasEnv)('admin buyer fees (integration)', () => {
     const ok = await updateCurrencyRate({ currency: 'PHP', usdPerUnit: '0.02' })
     expect(ok.success, (ok as any).error).toBe(true)
     expect((await auditRows('currency_rate', 'PHP')).length).toBe(1)
-    // GCash's 10 PHP fixed now converts at 0.02: (2000 + 20) / 0.906 = 2229.58 → 230
-    expect((await quote('gcash_ph', 2000)).fee_minor).toBe(230)
+    // GCash's 10 PHP fixed now converts at 0.02, on the charged 2040: (2040 + 20) / 0.906 = 2273.73 → 234
+    expect((await quote('gcash_ph', 2000)).fee_minor).toBe(234)
     const added = await updateCurrencyRate({ currency: 'zzz', usdPerUnit: '2' })
     expect(added.success).toBe(true)
     if (added.success) expect(added.row.currency).toBe('ZZZ')

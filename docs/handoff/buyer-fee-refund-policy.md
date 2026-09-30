@@ -77,7 +77,7 @@ No data backfill. `platform_fee_settings` gets its new columns with defaults; th
 
 ## Gate
 
-`pnpm type-check` clean. Guards added: `buyer-service-fee` (9), `refund-policy` (11), `refund-to-source` (8). Updated: `buyer-fee-quote`, `buyer-method-fees`, `eu-payment-methods`, `checkout-fix-b`, `fee-checkout-single-path`, `fee-copy`, `details-card`, `cancelled-copy`, `buyer-public-rates`, `fees.test`. `src/types/database.ts` regenerated from the worktree stack. Full `pnpm test:full` result: see the PR description.
+`pnpm type-check` clean. Guards added: `buyer-service-fee` (9), `refund-policy` (11), `refund-to-source` (8). Updated: `buyer-fee-quote`, `buyer-method-fees`, `eu-payment-methods`, `checkout-fix-b`, `fee-checkout-single-path`, `fee-copy`, `details-card`, `cancelled-copy`, `buyer-public-rates`, `fees.test`. `src/types/database.ts` regenerated from the worktree stack. Full suite on the freshly reset worktree stack: **282 files, 2275 passed, 2 skipped, 0 failed** (five expectations updated to the policy: `admin-buyer-fees` quote numbers, `checkout-fix-a` buyer-cancel credit + copy, `dispute-resolve-action` note). Note: `pnpm test:full` reset flaked three times on the storage health-wait with two other worktree stacks up; `pnpm db:down && pnpm db:up && pnpm test:reset` then `pnpm vitest run` is what passed.
 
 ## Not done / next
 
