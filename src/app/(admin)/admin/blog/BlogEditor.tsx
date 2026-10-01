@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { StatusBadge, adminBtn, type ChipTone } from '../components/kit'
+import { imageTooLargeMessage, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   type AdminBlogPost,
   type BlogPostInput,
@@ -88,6 +89,8 @@ export function BlogEditor({
 
   const handleUpload = async (file: File, target: 'cover' | 'body') => {
     setError(null)
+    const tooLarge = imageTooLargeMessage(file)
+    if (tooLarge) return setError(tooLarge)
     setUploading(target)
     try {
       const payload = await fileToPayload(file)
@@ -98,7 +101,7 @@ export function BlogEditor({
       }
       if (target === 'cover') setCoverUrl(res.url)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      setError(uploadErrorMessage(e))
     } finally {
       setUploading(null)
     }
@@ -108,6 +111,11 @@ export function BlogEditor({
    * cursor (with alignment), rather than appending to the end. */
   const uploadBodyImage = async (file: File): Promise<string | null> => {
     setError(null)
+    const tooLarge = imageTooLargeMessage(file)
+    if (tooLarge) {
+      setError(tooLarge)
+      return null
+    }
     setUploading('body')
     try {
       const payload = await fileToPayload(file)
@@ -118,7 +126,7 @@ export function BlogEditor({
       }
       return res.url
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      setError(uploadErrorMessage(e))
       return null
     } finally {
       setUploading(null)

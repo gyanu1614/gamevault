@@ -43,6 +43,8 @@ import { cn } from '@/lib/utils'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { Switch } from '@/components/ui/switch'
 import { AdminEmpty, PanelHead, adminBtn, adminBtnSm, type AdminIcon } from '../../components/kit'
+import { useFilePicker } from '../../components/useFilePicker'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   createAttribute, updateAttribute, deleteAttribute,
   createOption, updateOption, deleteOption, uploadOptionIcon, reorderOptions,
@@ -1145,20 +1147,18 @@ function OptionRow({
   }
 
   const handleIconUpload = async (file: File) => {
-    if (file.size > 1_048_576) { toast.error('Icon must be 1 MB or smaller'); return }
+    const tooLarge = imageTooLargeMessage(file, 1_048_576, 'Icon')
+    if (tooLarge) { toast.error(tooLarge); return }
     setUploading(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadOptionIcon(option.id, {
         name: file.name, type: file.type, size: file.size, base64,
       })
       if (!res.success) { toast.error(res.error); return }
       onChange()
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setUploading(false)
     }
@@ -1172,6 +1172,8 @@ function OptionRow({
     onChange()
   }
 
+  const iconPicker = useFilePicker(handleIconUpload, 'image/png,image/jpeg,image/jpg,image/svg+xml,image/webp')
+
   return (
     <div className={cn(
       'grid items-center gap-2 rounded-md bg-bg-overlay p-2',
@@ -1180,26 +1182,30 @@ function OptionRow({
         : 'grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_140px_76px]'
     )}>
       {showIcon && (
-        <label
-          title="Upload icon"
-          className="relative grid h-9 w-9 cursor-pointer place-items-center overflow-hidden rounded-md bg-bg-overlay-2 transition-colors hover:bg-white/[0.10]"
-        >
-          {option.icon_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
-          ) : uploading ? (
-            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-secondary" />
-          ) : (
-            <ImageIcon aria-hidden weight="bold" className="h-4 w-4 text-text-tertiary" />
-          )}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleIconUpload(f); e.currentTarget.value = '' }}
+        <>
+          <button
+            type="button"
+            onClick={iconPicker.open}
             disabled={uploading}
-            className="hidden"
-          />
-        </label>
+            aria-busy={uploading}
+            aria-label={option.icon_url ? `Replace icon for ${option.label}` : `Upload icon for ${option.label}`}
+            title="Upload icon"
+            className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-bg-overlay-2 transition-colors hover:bg-white/[0.10] disabled:cursor-wait"
+          >
+            {option.icon_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={option.icon_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <ImageIcon aria-hidden weight="bold" className="h-4 w-4 text-text-tertiary" />
+            )}
+            {uploading && (
+              <span className="absolute inset-0 grid place-items-center bg-black/55">
+                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-primary" />
+              </span>
+            )}
+          </button>
+          {iconPicker.input}
+        </>
       )}
       <input
         value={label}

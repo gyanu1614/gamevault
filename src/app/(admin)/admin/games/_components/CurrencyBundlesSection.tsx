@@ -33,6 +33,7 @@ import { accountInputCls } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 import { LabeledField, PanelHead, adminBtnSm } from '../../components/kit'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import type { CurrencyBundle } from '@/lib/types/category-configs'
 
 type Props = {
@@ -168,26 +169,32 @@ function BundleRow({
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
+  // The read and the upload are awaited INSIDE the try, so `finally` clears
+  // the spinner only once the upload has finished (it used to run as soon as
+  // the FileReader started, so the spinner never showed).
   const onPickFile = async (file: File | null | undefined) => {
     if (!file) return
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Icon')
+    if (tooLarge) {
+      toast.error(tooLarge)
+      return
+    }
     setUploading(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = String(reader.result ?? '')
-        const res = await uploadCurrencyImage(gameId, {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          base64,
-        })
-        if (!res.success) {
-          toast.error(res.error)
-          return
-        }
-        onChange({ icon_url: res.data.url })
+      const base64 = await readFileAsDataUrl(file)
+      const res = await uploadCurrencyImage(gameId, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        base64,
+      })
+      if (!res.success) {
+        toast.error(res.error)
+        return
       }
-      reader.readAsDataURL(file)
+      onChange({ icon_url: res.data.url })
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setUploading(false)
     }
@@ -202,8 +209,10 @@ function BundleRow({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10] sm:h-20 sm:w-20"
-        aria-label="Upload bundle icon"
+        disabled={uploading}
+        aria-busy={uploading}
+        className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10] disabled:cursor-wait sm:h-20 sm:w-20"
+        aria-label={bundle.icon_url ? 'Replace bundle icon' : 'Upload bundle icon'}
       >
         {bundle.icon_url ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -212,19 +221,28 @@ function BundleRow({
             alt=""
             className="h-full w-full object-cover"
           />
-        ) : uploading ? (
-          <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-tertiary" />
         ) : (
           <UploadSimple aria-hidden weight="bold" className="h-5 w-5 text-text-tertiary" />
         )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          className="hidden"
-          onChange={(e) => onPickFile(e.target.files?.[0])}
-        />
+        {uploading && (
+          <span className="absolute inset-0 grid place-items-center bg-black/55">
+            <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-primary" />
+          </span>
+        )}
       </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        tabIndex={-1}
+        aria-hidden
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.currentTarget.value = ''
+          onPickFile(file)
+        }}
+      />
 
       {/* Phones: name on its own line, then amount + actions.
           From sm: name | amount | actions on one line. */}

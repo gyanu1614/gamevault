@@ -52,18 +52,27 @@ Reachable but not in the sidebar: `/activities`, `/reviews`, `/notifications`,
 7. ✅ Disputes → detail; Fraud; Moderation; Reviews (+ paging)
 8. ✅ Analytics, Activities, Notifications, GDPR (+ Delete Account confirm), INFORM
 9. ✅ Games → edit → templates; Blog (list/new/edit); Promos
-10. ✅ Profile (Settings merged into it; `/admin/settings` redirects), Utils (restyled — **owner to decide removal**)
+10. ✅ Profile (Settings merged into it; `/admin/settings` redirects); Utils removed (owner)
 11. ✅ Dead code removed (89c24d25): redesign, categories, categories-v2 (+ actions),
     promo-codes redirect, forest.ts, SectionIcons, ui/glass-*, ui/pagination-controls.
     Final sweep: no lucide/tabler, no `border-border-*`, no palette colours in admin.
     Kept on purpose: promo code input caps, Founding Notices + blog previews (they mimic
     the public pages), Discord tint on founding sellers.
 
+## Fixed after the overhaul (owner asked 2026-09-30)
+- `/admin/utils` removed with `test-data.ts`, `debug-listings.ts`, `fix-approved-sellers.ts`.
+- Image uploads: every admin image goes to a server action as base64. Next's default
+  `serverActions.bodySizeLimit` is 1 MB, so files over ~750 KB died with a 413 before the
+  action ran — and most handlers had no catch (spinner stuck / no toast). Now:
+  `experimental.serverActions.bodySizeLimit: '4mb'` (under Vercel's 4.5 MB cap);
+  `src/lib/uploads/image-upload.ts` (2.5 MB cap, readable 413 message, data-URL reader,
+  pinned by `image-upload.test.ts`); every handler awaits read + upload inside
+  try/catch/finally; spinner overlays an existing image; inputs reset after each pick;
+  upload triggers are real buttons (`components/useFilePicker.tsx`), inputs never nested
+  in a button. Cover/banner copy now says Max 2.5 MB (server still allows 4 MB).
+
 ## Open (pre-existing, not fixed)
-- Currency bundle upload spinner never shows (`setUploading(false)` runs before upload);
-  upload handlers have no try/catch; wizard file inputs aren't keyboard-reachable;
-  `GameWizard mode="create"` looks dead.
-- `/admin/utils` "Debug Database" logs listing data to the browser console in prod.
+- `GameWizard mode="create"` looks dead (only caller passes "edit").
 - RLS on withdrawal_requests / withdrawal_methods / reviews checks `profiles.role='admin'`
   (task chip spawned).
 

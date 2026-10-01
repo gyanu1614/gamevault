@@ -44,6 +44,7 @@ import {
 import { PlatformFieldsSection } from './PlatformFieldsSection'
 import { CurrencyBundlesSection } from './CurrencyBundlesSection'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 
 /** A titled card on the page canvas. */
 const CARD = 'rounded-lg bg-bg-raised p-4 sm:p-5'
@@ -118,26 +119,32 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
   // which writes to the existing category-icons bucket under a
   // currency/ prefix. The URL gets persisted into the config blob
   // when the admin clicks Save (we don't auto-save the upload).
-  const onUploadIcon = (file: File | null | undefined) => {
+  const onUploadIcon = async (file: File | null | undefined) => {
     if (!file) return
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Icon')
+    if (tooLarge) {
+      toast.error(tooLarge)
+      return
+    }
     setIconUploading(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const base64 = String(reader.result ?? '')
+    try {
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadCurrencyImage(gameId, {
         name: file.name,
         type: file.type,
         size: file.size,
         base64,
       })
-      setIconUploading(false)
       if (!res.success) {
         toast.error(res.error)
         return
       }
       patch({ currency_icon_url: res.data.url })
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
+    } finally {
+      setIconUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   return (
@@ -163,8 +170,10 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
               <button
                 type="button"
                 onClick={() => iconFileRef.current?.click()}
-                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg-overlay transition-colors hover:bg-bg-overlay-2"
-                aria-label="Upload currency icon"
+                disabled={iconUploading}
+                aria-busy={iconUploading}
+                className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg-overlay transition-colors hover:bg-bg-overlay-2 disabled:cursor-wait"
+                aria-label={draft.currency_icon_url ? 'Replace currency icon' : 'Upload currency icon'}
               >
                 {draft.currency_icon_url ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -173,19 +182,28 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
                     alt=""
                     className="h-full w-full object-cover"
                   />
-                ) : iconUploading ? (
-                  <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-tertiary" />
                 ) : (
                   <UploadSimple aria-hidden weight="bold" className="h-5 w-5 text-text-tertiary" />
                 )}
-                <input
-                  ref={iconFileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                  className="hidden"
-                  onChange={(e) => onUploadIcon(e.target.files?.[0])}
-                />
+                {iconUploading && (
+                  <span className="absolute inset-0 grid place-items-center bg-black/55">
+                    <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-primary" />
+                  </span>
+                )}
               </button>
+              <input
+                ref={iconFileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                tabIndex={-1}
+                aria-hidden
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.currentTarget.value = ''
+                  onUploadIcon(file)
+                }}
+              />
               {draft.currency_icon_url && (
                 <button
                   type="button"

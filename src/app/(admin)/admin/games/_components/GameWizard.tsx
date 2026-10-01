@@ -31,6 +31,8 @@ import { cn, slugify } from '@/lib/utils'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { Switch } from '@/components/ui/switch'
 import { PanelHead, adminBtn, adminBtnSm } from '../../components/kit'
+import { useFilePicker } from '../../components/useFilePicker'
+import { MAX_IMAGE_UPLOAD_BYTES, imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   saveGameIdentity,
   upsertGameCategory,
@@ -361,15 +363,11 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   // ── Step 2: logo upload ────────────────────────────────────────────────────
   const handleLogoFile = async (file: File) => {
     if (!gameId) { toast.error('Save identity step first'); return }
-    if (file.size > 2_097_152) { toast.error('Logo must be 2 MB or smaller'); return }
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Logo')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploading(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameLogoV2(gameId, {
         name: file.name,
         type: file.type,
@@ -379,6 +377,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       if (!res.success) { toast.error(res.error); return }
       setLogoUrl(res.data.url)
       toast.success('Logo uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploading(false)
     }
@@ -400,43 +400,41 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   // ── Step 2: cover upload ───────────────────────────────────────────────────
   const handleCoverFile = async (file: File) => {
     if (!gameId) { toast.error('Save identity step first'); return }
-    if (file.size > 4_194_304) { toast.error('Cover must be 4 MB or smaller'); return }
+    // The server allows 4 MB, but a file only gets through a server action
+    // (base64, ×4/3) up to MAX_IMAGE_UPLOAD_BYTES.
+    const tooLarge = imageTooLargeMessage(file, MAX_IMAGE_UPLOAD_BYTES, 'Cover')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploadingCover(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameCoverV2(gameId, {
         name: file.name, type: file.type, size: file.size, base64,
       })
       if (!res.success) { toast.error(res.error); return }
       setCoverUrl(res.data.url)
       toast.success('Cover uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploadingCover(false)
     }
   }
 
   const handleBlogCtaFile = async (file: File) => {
-    if (!gameId) return
-    if (file.size > 4_194_304) { toast.error('Banner must be 4 MB or smaller'); return }
+    if (!gameId) { toast.error('Save identity step first'); return }
+    const tooLarge = imageTooLargeMessage(file, MAX_IMAGE_UPLOAD_BYTES, 'Banner')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploadingBlogCta(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameBlogCtaImage(gameId, {
         name: file.name, type: file.type, size: file.size, base64,
       })
       if (!res.success) { toast.error(res.error); return }
       setBlogCtaUrl(res.data.url)
       toast.success('Blog banner uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploadingBlogCta(false)
     }
@@ -508,6 +506,12 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   }, [step, name, slug, gameId])
 
   const enabledCount = categories.filter((c) => c.is_enabled).length
+
+  // Real buttons open these pickers (keyboard-reachable; a <label> around a
+  // display:none input isn't). Each clears itself so re-picking a file works.
+  const logoPicker = useFilePicker(handleLogoFile, 'image/png,image/jpeg,image/jpg,image/svg+xml,image/webp')
+  const coverPicker = useFilePicker(handleCoverFile, 'image/png,image/jpeg,image/jpg,image/webp')
+  const blogCtaPicker = useFilePicker(handleBlogCtaFile, 'image/png,image/jpeg,image/jpg,image/webp')
 
   return (
     // V17l — Wizard now uses the full admin content width (same as the
@@ -681,23 +685,13 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </div>
 
                 <div className="flex min-w-0 flex-col gap-2">
-                  <label className={cn(
-                    adminBtn.secondary,
-                    'cursor-pointer',
-                    isUploading && 'pointer-events-none opacity-60'
-                  )}>
+                  <button type="button" onClick={logoPicker.open} disabled={isUploading} className={adminBtn.secondary}>
                     {isUploading
                       ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
                       : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
-                    {logoUrl ? 'Replace Logo' : 'Upload Logo'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); e.currentTarget.value = '' }}
-                      disabled={isUploading}
-                    />
-                  </label>
+                    {isUploading ? 'Uploading…' : logoUrl ? 'Replace Logo' : 'Upload Logo'}
+                  </button>
+                  {logoPicker.input}
                   {logoUrl && (
                     <button
                       type="button"
@@ -716,7 +710,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
               <div>
                 <div className="text-[13.5px] font-semibold text-text-primary">Cover Art</div>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 4 MB.</p>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 2.5 MB.</p>
               </div>
 
               <div className="flex items-center gap-4 sm:gap-5">
@@ -730,23 +724,13 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </div>
 
                 <div className="flex min-w-0 flex-col gap-2">
-                  <label className={cn(
-                    adminBtn.secondary,
-                    'cursor-pointer',
-                    isUploadingCover && 'pointer-events-none opacity-60'
-                  )}>
+                  <button type="button" onClick={coverPicker.open} disabled={isUploadingCover} className={adminBtn.secondary}>
                     {isUploadingCover
                       ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
                       : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
-                    {coverUrl ? 'Replace Cover' : 'Upload Cover'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f); e.currentTarget.value = '' }}
-                      disabled={isUploadingCover}
-                    />
-                  </label>
+                    {isUploadingCover ? 'Uploading…' : coverUrl ? 'Replace Cover' : 'Upload Cover'}
+                  </button>
+                  {coverPicker.input}
                   {coverUrl && (
                     <button
                       type="button"
@@ -771,7 +755,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                   Wide JPG/PNG/WebP, <strong className="font-semibold text-text-secondary">2560×640 (4:1)</strong> recommended, under 400 KB.
                   Sits behind the &ldquo;Skip the grind&rdquo; block at the end of every guide for
                   this game. Keep the focal point off-centre-left — the copy covers the left third
-                  under a dark scrim. Falls back to the cover art if left empty. Max 4 MB.
+                  under a dark scrim. Falls back to the cover art if left empty. Max 2.5 MB.
                 </p>
               </div>
 
@@ -785,23 +769,18 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                   )}
                 </div>
 
-                <label className={cn(
-                  adminBtn.secondary,
-                  'shrink-0 cursor-pointer',
-                  isUploadingBlogCta && 'pointer-events-none opacity-60'
-                )}>
+                <button
+                  type="button"
+                  onClick={blogCtaPicker.open}
+                  disabled={isUploadingBlogCta}
+                  className={cn(adminBtn.secondary, 'shrink-0')}
+                >
                   {isUploadingBlogCta
                     ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
                     : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
-                  {blogCtaUrl ? 'Replace Banner' : 'Upload Banner'}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBlogCtaFile(f); e.currentTarget.value = '' }}
-                    disabled={isUploadingBlogCta}
-                  />
-                </label>
+                  {isUploadingBlogCta ? 'Uploading…' : blogCtaUrl ? 'Replace Banner' : 'Upload Banner'}
+                </button>
+                {blogCtaPicker.input}
               </div>
             </div>
           )}

@@ -26,6 +26,7 @@ import { accountInputCls } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 import { PanelHead, adminBtn } from '../../components/kit'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   type PlatformFields,
   type PlatformFieldKind,
@@ -365,26 +366,32 @@ function PlatformOptionRow({
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const onPickFile = (file: File | null | undefined) => {
+  const onPickFile = async (file: File | null | undefined) => {
     if (!file) return
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Icon')
+    if (tooLarge) {
+      toast.error(tooLarge)
+      return
+    }
     setUploading(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const base64 = String(reader.result ?? '')
+    try {
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadCurrencyImage(gameId, {
         name: file.name,
         type: file.type,
         size: file.size,
         base64,
       })
-      setUploading(false)
       if (!res.success) {
         toast.error(res.error)
         return
       }
       onChange({ icon_url: res.data.url })
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
+    } finally {
+      setUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   return (
@@ -393,25 +400,36 @@ function PlatformOptionRow({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10]"
+        disabled={uploading}
+        aria-busy={uploading}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10] disabled:cursor-wait"
         aria-label={`Upload icon for ${option.value}`}
       >
         {option.icon_url || presetIcon ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={option.icon_url ?? presetIcon ?? ''} alt="" className="h-full w-full object-contain" />
-        ) : uploading ? (
-          <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-tertiary" />
         ) : (
           <UploadSimple aria-hidden weight="bold" className="h-4 w-4 text-text-tertiary" />
         )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          className="hidden"
-          onChange={(e) => onPickFile(e.target.files?.[0])}
-        />
+        {uploading && (
+          <span className="absolute inset-0 grid place-items-center bg-black/55">
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-primary" />
+          </span>
+        )}
       </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        tabIndex={-1}
+        aria-hidden
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.currentTarget.value = ''
+          onPickFile(file)
+        }}
+      />
 
       {/* Label (read-only; renaming would orphan listings) */}
       <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text-primary">{option.value}</span>
