@@ -249,6 +249,122 @@ export function urlPort(url) {
   }
 }
 
+// ── health: waiting out a slow container restart ──────────────────────────
+
+/** How long db:up / test:reset wait for a slow container to turn healthy. */
+export const HEALTH_WAIT_MS = 180_000
+export const HEALTH_POLL_MS = 3_000
+
+/**
+ * The project id the Supabase CLI actually runs under (and labels containers
+ * with): it replaces invalid characters and cuts the id to 40 chars, since
+ * docker hostnames cap at 63 (CLI 2.109, config.go sanitizeProjectId).
+ * @param {string} projectId
+ */
+export function cliProjectId(projectId) {
+  return String(projectId).replace(/[^a-zA-Z0-9_.-]+/g, '_').replace(/^[_.-]+/, '').slice(0, 40)
+}
+
+/**
+ * `docker ps --format '{{.Names}}\t{{.State}}\t{{.Status}}'` → rows. Health
+ * comes from the Status suffix: "(healthy)", "(unhealthy)", "(health: starting)";
+ * null when the container has no healthcheck (rest) or is not running.
+ * @param {string} text
+ * @returns {{ name: string, state: string, health: 'healthy' | 'unhealthy' | 'starting' | null }[]}
+ */
+export function parseContainerRows(text) {
+  return String(text ?? '').split('\n').filter((l) => l.trim()).map((line) => {
+    const [name, state, status = ''] = line.split('\t')
+    const m = /\((healthy|unhealthy|health: starting)\)/.exec(status)
+    const health = m ? (m[1] === 'health: starting' ? 'starting' : /** @type {'healthy' | 'unhealthy'} */ (m[1])) : null
+    return { name, state, health }
+  })
+}
+
+/**
+ * Is the stack ready? `waiting` on a container that is starting, unhealthy or
+ * restarting (it may still come good); `failed` on one that exited, died or
+ * was paused, or when no container exists at all.
+ * @param {ReturnType<typeof parseContainerRows>} containers
+ * @returns {{ state: 'ready' | 'waiting' | 'failed', pending: string[], failed: string[] }}
+ */
+export function stackReadiness(containers) {
+  if (!containers.length) return { state: 'failed', pending: [], failed: ['no containers for this project'] }
+  const pending = []
+  const failed = []
+  for (const c of containers) {
+    if (c.state === 'running') {
+      if (c.health === 'starting' || c.health === 'unhealthy') pending.push(`${c.name} (${c.health})`)
+    } else if (c.state === 'restarting' || c.state === 'created') {
+      pending.push(`${c.name} (${c.state})`)
+    } else {
+      failed.push(`${c.name} (${c.state})`)
+    }
+  }
+  return { state: failed.length ? 'failed' : pending.length ? 'waiting' : 'ready', pending, failed }
+}
+
+/**
+ * Migration files (`<version>_<name>.sql`, the CLI's pattern) whose version
+ * is not in `supabase_migrations.schema_migrations`.
+ * @param {string[]} files
+ * @param {string[]} appliedVersions
+ */
+export function pendingMigrations(files, appliedVersions) {
+  const applied = new Set(appliedVersions)
+  return files.map((f) => /^(\d+)_.*\.sql$/.exec(f)?.[1]).filter((v) => v !== undefined && !applied.has(v))
+}
+
+/**
+ * `supabase db reset` exited non-zero: is it only the CLI's post-restart
+ * health wait that gave up (wait it out), or a real failure (throw)?
+ * Waits only when ALL hold: the CLI got as far as "Restarting containers"
+ * (schema, migrations and seed are done by then), its error is a container
+ * "not ready: starting|unhealthy", and every migration file is applied.
+ * @param {{ output: string, migrationFiles: string[], appliedVersions: string[] | null }} input
+ * @returns {{ action: 'wait' } | { action: 'fail', reason: string }}
+ */
+export function classifyResetFailure({ output, migrationFiles, appliedVersions }) {
+  if (!/Restarting containers/.test(output)) return { action: 'fail', reason: 'it stopped before restarting the containers (a schema, migration or seed error — see the output above)' }
+  if (!/container is not ready: (starting|unhealthy)/.test(output)) return { action: 'fail', reason: 'the error after the restart is not a container health timeout' }
+  if (!appliedVersions) return { action: 'fail', reason: 'could not read supabase_migrations.schema_migrations' }
+  const pending = pendingMigrations(migrationFiles, appliedVersions)
+  if (pending.length) return { action: 'fail', reason: `migration(s) not applied: ${pending.join(', ')}` }
+  return { action: 'wait' }
+}
+
+/**
+ * Poll `probe()` until the stack is ready. Rejects when a container has
+ * failed or when `timeoutMs` passes with something still not ready.
+ * @param {{
+ *   probe: () => ReturnType<typeof stackReadiness>,
+ *   timeoutMs?: number,
+ *   intervalMs?: number,
+ *   now?: () => number,
+ *   sleep?: (ms: number) => Promise<void>,
+ *   onWait?: (r: ReturnType<typeof stackReadiness>, elapsedMs: number) => void,
+ * }} deps
+ */
+export async function waitForStack({
+  probe,
+  timeoutMs = HEALTH_WAIT_MS,
+  intervalMs = HEALTH_POLL_MS,
+  now = Date.now,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  onWait = () => {},
+}) {
+  const start = now()
+  for (;;) {
+    const r = probe()
+    const elapsed = now() - start
+    if (r.state === 'ready') return r
+    if (r.state === 'failed') throw new Error(`stack failed: ${r.failed.join(', ')}`)
+    if (elapsed >= timeoutMs) throw new Error(`stack still not healthy after ${Math.round(elapsed / 1000)}s: ${r.pending.join(', ')}`)
+    onWait(r, elapsed)
+    await sleep(intervalMs)
+  }
+}
+
 /**
  * What `test:reset` step [4/4] refuses, given the counts it read from the DB.
  * `offPairs` counts enabled game_categories under a switched-off global
