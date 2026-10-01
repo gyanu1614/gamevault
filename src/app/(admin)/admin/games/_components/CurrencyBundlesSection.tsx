@@ -21,13 +21,19 @@
  *
  * Image upload reuses the existing uploadCurrencyImage server action;
  * we render an avatar-style preview tile with a file input behind it.
+ *
+ * Look: flat admin kit — a bg-bg-raised card, one bg-bg-overlay box per
+ * bundle, fields one step lighter inside the box, icon-only row actions.
  */
 
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowDown, ArrowUp, Loader2, Plus, Trash2, Upload } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { ArrowDown, ArrowUp, CircleNotch, Plus, Trash, UploadSimple } from '@phosphor-icons/react'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
+import { LabeledField, PanelHead, adminBtnSm } from '../../components/kit'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import type { CurrencyBundle } from '@/lib/types/category-configs'
 
 type Props = {
@@ -42,6 +48,9 @@ type Props = {
  * 10+ bundles and the editor gets unwieldy.
  */
 const COLLAPSE_AFTER = 3
+
+/** A field inside a bundle box (bg-bg-overlay): one step lighter again. */
+const ROW_INPUT = cn(accountInputCls, 'bg-white/[0.06]')
 
 export function CurrencyBundlesSection({ gameId, value, onChange }: Props) {
   const bundles = value ?? []
@@ -84,18 +93,14 @@ export function CurrencyBundlesSection({ gameId, value, onChange }: Props) {
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-      <header className="space-y-1">
-        <h3 className="text-[15px] font-semibold text-text-primary">Bundles</h3>
-        <p className="text-[12.5px] text-text-secondary">
-          Define a fixed list of bundles when this currency sells in pre-set sizes
-          (Fortnite V-Bucks, Apex Coins). Leave empty for flexible-quantity currencies
-          like Robux. Sellers will be required to pick one of these bundles when listing.
-        </p>
-      </header>
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <PanelHead
+        title="Bundles"
+        subtitle="Define a fixed list of bundles when this currency sells in pre-set sizes (Fortnite V-Bucks, Apex Coins). Leave empty for flexible-quantity currencies like Robux. Sellers will be required to pick one of these bundles when listing."
+      />
 
       {bundles.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_30%,transparent)] p-4 text-[12.5px] text-text-tertiary">
+        <div className="rounded-md bg-bg-overlay px-3.5 py-3 text-[13px] leading-relaxed text-text-tertiary">
           No bundles defined &mdash; this currency stays in flexible mode (Robux-style stepper).
         </div>
       )}
@@ -117,25 +122,27 @@ export function CurrencyBundlesSection({ gameId, value, onChange }: Props) {
         </ul>
       )}
 
-      {bundles.length > COLLAPSE_AFTER && (
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {bundles.length > COLLAPSE_AFTER && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className={adminBtnSm.secondary}
+          >
+            {expanded
+              ? 'Show Fewer'
+              : `Show ${hiddenCount} More Bundle${hiddenCount === 1 ? '' : 's'}`}
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] px-3 py-1.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+          onClick={addBundle}
+          className={adminBtnSm.secondary}
         >
-          {expanded
-            ? 'Show fewer'
-            : `Show ${hiddenCount} more bundle${hiddenCount === 1 ? '' : 's'}`}
+          <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" /> Add Bundle
         </button>
-      )}
-
-      <button
-        type="button"
-        onClick={addBundle}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
-      >
-        <Plus className="h-3.5 w-3.5" /> Add bundle
-      </button>
+      </div>
     </section>
   )
 }
@@ -162,39 +169,50 @@ function BundleRow({
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
+  // The read and the upload are awaited INSIDE the try, so `finally` clears
+  // the spinner only once the upload has finished (it used to run as soon as
+  // the FileReader started, so the spinner never showed).
   const onPickFile = async (file: File | null | undefined) => {
     if (!file) return
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Icon')
+    if (tooLarge) {
+      toast.error(tooLarge)
+      return
+    }
     setUploading(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = String(reader.result ?? '')
-        const res = await uploadCurrencyImage(gameId, {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          base64,
-        })
-        if (!res.success) {
-          toast.error(res.error)
-          return
-        }
-        onChange({ icon_url: res.data.url })
+      const base64 = await readFileAsDataUrl(file)
+      const res = await uploadCurrencyImage(gameId, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        base64,
+      })
+      if (!res.success) {
+        toast.error(res.error)
+        return
       }
-      reader.readAsDataURL(file)
+      onChange({ icon_url: res.data.url })
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setUploading(false)
     }
   }
 
+  const nameId = `bundle-${bundle.id}-name`
+  const amountId = `bundle-${bundle.id}-amount`
+
   return (
-    <li className="grid grid-cols-[64px_1fr_120px_auto] items-center gap-3 rounded-xl border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)] p-3 sm:grid-cols-[80px_1fr_140px_auto]">
+    <li className="flex gap-3 rounded-md bg-bg-overlay p-3">
       {/* Image tile */}
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-border-default bg-bg-base transition-colors hover:border-lime-tint-border"
-        aria-label="Upload bundle icon"
+        disabled={uploading}
+        aria-busy={uploading}
+        className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10] disabled:cursor-wait sm:h-20 sm:w-20"
+        aria-label={bundle.icon_url ? 'Replace bundle icon' : 'Upload bundle icon'}
       >
         {bundle.icon_url ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -203,65 +221,80 @@ function BundleRow({
             alt=""
             className="h-full w-full object-cover"
           />
-        ) : uploading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-text-tertiary" />
         ) : (
-          <Upload className="h-5 w-5 text-text-tertiary" />
+          <UploadSimple aria-hidden weight="bold" className="h-5 w-5 text-text-tertiary" />
         )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          className="hidden"
-          onChange={(e) => onPickFile(e.target.files?.[0])}
-        />
+        {uploading && (
+          <span className="absolute inset-0 grid place-items-center bg-black/55">
+            <CircleNotch aria-hidden weight="bold" className="h-5 w-5 animate-spin text-text-primary" />
+          </span>
+        )}
       </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        tabIndex={-1}
+        aria-hidden
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.currentTarget.value = ''
+          onPickFile(file)
+        }}
+      />
 
-      {/* Name + amount inputs */}
-      <div className="min-w-0 space-y-1.5">
-        <label className="block text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
-          Bundle name
-        </label>
-        <Input
-          value={bundle.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="800 V-Bucks"
-        />
-      </div>
+      {/* Phones: name on its own line, then amount + actions.
+          From sm: name | amount | actions on one line. */}
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_140px_auto] sm:gap-3">
+        {/* Name + amount inputs */}
+        <LabeledField label="Bundle Name" htmlFor={nameId} className="col-span-2 sm:col-span-1">
+          <input
+            id={nameId}
+            value={bundle.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="800 V-Bucks"
+            className={ROW_INPUT}
+          />
+        </LabeledField>
 
-      <div className="space-y-1.5">
-        <label className="block text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
-          Amount
-        </label>
-        <Input
-          type="number"
-          min="0"
-          step="1"
-          value={bundle.amount}
-          onChange={(e) => onChange({ amount: parseInt(e.target.value || '0', 10) })}
-          placeholder="800"
-        />
-      </div>
+        <LabeledField label="Amount" htmlFor={amountId}>
+          <input
+            id={amountId}
+            type="number"
+            min="0"
+            step="1"
+            value={bundle.amount}
+            onChange={(e) => onChange({ amount: parseInt(e.target.value || '0', 10) })}
+            placeholder="800"
+            className={cn(ROW_INPUT, 'tabular-nums')}
+          />
+        </LabeledField>
 
-      {/* Reorder + delete controls */}
-      <div className="flex items-center gap-1">
-        <IconButton
-          aria-label="Move up"
-          disabled={isFirst}
-          onClick={() => onMove(-1)}
-        >
-          <ArrowUp className="h-3.5 w-3.5" />
-        </IconButton>
-        <IconButton
-          aria-label="Move down"
-          disabled={isLast}
-          onClick={() => onMove(1)}
-        >
-          <ArrowDown className="h-3.5 w-3.5" />
-        </IconButton>
-        <IconButton aria-label="Remove bundle" onClick={onRemove}>
-          <Trash2 className="h-3.5 w-3.5 text-error" />
-        </IconButton>
+        {/* Reorder + delete controls */}
+        <div className="flex items-center gap-0.5 pb-1">
+          <IconButton
+            aria-label="Move up"
+            disabled={isFirst}
+            onClick={() => onMove(-1)}
+          >
+            <ArrowUp aria-hidden weight="bold" className="h-4 w-4" />
+          </IconButton>
+          <IconButton
+            aria-label="Move down"
+            disabled={isLast}
+            onClick={() => onMove(1)}
+          >
+            <ArrowDown aria-hidden weight="bold" className="h-4 w-4" />
+          </IconButton>
+          <IconButton
+            aria-label="Remove bundle"
+            onClick={onRemove}
+            className="hover:bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] hover:text-error"
+          >
+            <Trash aria-hidden weight="bold" className="h-4 w-4" />
+          </IconButton>
+        </div>
       </div>
     </li>
   )
@@ -276,10 +309,10 @@ function IconButton({
     <button
       type="button"
       {...rest}
-      className={
-        'inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-text-primary transition-colors hover:bg-bg-raised-hover disabled:cursor-not-allowed disabled:opacity-40 ' +
-        (className ?? '')
-      }
+      className={cn(
+        'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary',
+        className,
+      )}
     >
       {children}
     </button>

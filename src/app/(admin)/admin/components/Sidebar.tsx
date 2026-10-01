@@ -1,318 +1,293 @@
 'use client'
 
 /**
- * V55 — Admin sidebar.
+ * Admin sidebar (account-section design, 2026-09-30 overhaul).
  *
- * - Collapsible to an icon rail: the toggle sits beside the logo; the
- *   rail width is animated by AdminChrome (CSS), while labels and the
- *   wordmark slide-fade out with framer-motion.
- * - Nav trimmed to the working set: compliance pages (GDPR / INFORM
- *   Act) stay routable but no longer occupy the rail.
- * - DropMarket branding (DM mark + wordmark).
+ * - Desktop (lg+): a floating fill-only card (no outline, no gradient), the
+ *   same surface as the account sidebar. Collapses to a 64px icon rail; the
+ *   rail width is animated by AdminChrome, labels fade with framer-motion and
+ *   show as tooltips while collapsed.
+ * - Phones/tablets (<lg): the same nav in a left drawer (vaul: swipe or tap
+ *   outside to close, focus kept inside while open), opened from the header's
+ *   menu button.
+ * - Links are grouped by job; GDPR / INFORM Act / Reviews / Activities stay
+ *   routable (header search, dashboard) without taking rail space.
  */
 
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
+import { usePathname, useRouter } from 'next/navigation'
+import { Drawer } from 'vaul'
 import {
-  IconLayoutDashboard,
-  IconFileText,
-  IconBuildingStore,
-  IconMessage2,
-  IconChartBar,
-  IconSettings,
-  IconLogout,
-  IconMenu2,
-  IconX,
-  IconShieldX,
-  IconTool,
-  IconClipboardCheck,
-  IconDeviceGamepad2,
-  IconShoppingCart,
-  IconTicket,
-  IconCash,
-  IconRocket,
-  IconTargetArrow,
-  IconSpeakerphone,
-  IconArticle,
-  IconLayoutSidebarLeftCollapse,
-  IconLayoutSidebarLeftExpand,
-} from '@tabler/icons-react'
+  Article,
+  ChartLineUp,
+  GameController,
+  UserCircle,
+  HandCoins,
+  ListChecks,
+  Megaphone,
+  Percent,
+  Receipt,
+  RocketLaunch,
+  Scales,
+  ShieldWarning,
+  SidebarSimple,
+  SignOut,
+  SquaresFour,
+  Storefront,
+  Target,
+  Ticket,
+  UserPlus,
+  X,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { FOREST_BG } from '../_theme/forest'
+import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface SidebarProps {
   role: string
-  user: {
-    id: string
-    email?: string
-  }
   collapsed?: boolean
   onToggle?: () => void
+  mobileOpen: boolean
+  onMobileOpenChange: (open: boolean) => void
 }
 
-// The working set. GDPR + INFORM Act intentionally removed from the
-// rail (routes still exist at /admin/gdpr and /admin/inform).
-const LINKS = [
-  { label: 'Dashboard',           href: '/admin',                icon: IconLayoutDashboard, roles: ['admin', 'moderator', 'support', 'super_admin'] },
-  { label: 'Orders',              href: '/admin/orders',         icon: IconShoppingCart,    roles: ['admin', 'support', 'super_admin'] },
-  { label: 'Withdrawals',         href: '/admin/withdrawals',    icon: IconCash,            roles: ['admin', 'super_admin'] },
-  { label: 'Fees & Payouts',      href: '/admin/fees',           icon: IconCash,            roles: ['admin', 'super_admin'] },
-  { label: 'Seller Applications', href: '/admin/sellers',        icon: IconFileText,        roles: ['admin', 'moderator', 'super_admin'] },
-  { label: 'Active Sellers',      href: '/admin/active-sellers', icon: IconBuildingStore,   roles: ['admin', 'moderator', 'support', 'super_admin'] },
-  { label: 'Founding Sellers',    href: '/admin/early-sellers',  icon: IconRocket,          roles: ['admin', 'super_admin'] },
-  { label: 'Seller Leads',        href: '/admin/seller-leads',   icon: IconTargetArrow,     roles: ['admin', 'super_admin'] },
-  { label: 'Founding Notices',    href: '/admin/founding-notices', icon: IconSpeakerphone,  roles: ['admin', 'super_admin'] },
-  { label: 'Disputes',            href: '/admin/disputes',       icon: IconMessage2,        roles: ['admin', 'support', 'super_admin'] },
-  { label: 'Analytics',           href: '/admin/analytics',      icon: IconChartBar,        roles: ['admin', 'super_admin'] },
-  { label: 'Fraud',               href: '/admin/fraud',          icon: IconShieldX,         roles: ['admin', 'super_admin'] },
-  { label: 'Games',               href: '/admin/games',          icon: IconDeviceGamepad2,  roles: ['admin', 'super_admin'] },
-  { label: 'Blog & Content',      href: '/admin/blog',           icon: IconArticle,         roles: ['admin', 'super_admin'] },
-  { label: 'Moderation',          href: '/admin/moderation',     icon: IconClipboardCheck,  roles: ['admin', 'moderator', 'super_admin'] },
-  { label: 'Promo Codes',         href: '/admin/promos',         icon: IconTicket,          roles: ['admin', 'super_admin'] },
-  { label: 'Utilities',           href: '/admin/utils',          icon: IconTool,            roles: ['admin', 'super_admin'] },
-  { label: 'Settings',            href: '/admin/settings',       icon: IconSettings,        roles: ['super_admin'] },
+type Role = 'admin' | 'moderator' | 'support' | 'super_admin'
+interface NavLink {
+  label: string
+  href: string
+  icon: PhosphorIcon
+  roles: Role[]
+}
+
+const ALL: Role[] = ['admin', 'moderator', 'support', 'super_admin']
+
+const GROUPS: { title: string | null; links: NavLink[] }[] = [
+  {
+    title: null,
+    links: [
+      { label: 'Dashboard', href: '/admin', icon: SquaresFour, roles: ALL },
+      { label: 'Analytics', href: '/admin/analytics', icon: ChartLineUp, roles: ['admin', 'super_admin'] },
+    ],
+  },
+  {
+    title: 'Orders & Money',
+    links: [
+      { label: 'Orders', href: '/admin/orders', icon: Receipt, roles: ['admin', 'support', 'super_admin'] },
+      { label: 'Withdrawals', href: '/admin/withdrawals', icon: HandCoins, roles: ['admin', 'super_admin'] },
+      { label: 'Fees & Payouts', href: '/admin/fees', icon: Percent, roles: ['admin', 'super_admin'] },
+    ],
+  },
+  {
+    title: 'Sellers',
+    links: [
+      { label: 'Seller Applications', href: '/admin/sellers', icon: UserPlus, roles: ['admin', 'moderator', 'super_admin'] },
+      { label: 'Active Sellers', href: '/admin/active-sellers', icon: Storefront, roles: ALL },
+      { label: 'Founding Sellers', href: '/admin/early-sellers', icon: RocketLaunch, roles: ['admin', 'super_admin'] },
+      { label: 'Seller Leads', href: '/admin/seller-leads', icon: Target, roles: ['admin', 'super_admin'] },
+      { label: 'Founding Notices', href: '/admin/founding-notices', icon: Megaphone, roles: ['admin', 'super_admin'] },
+    ],
+  },
+  {
+    title: 'Trust & Safety',
+    links: [
+      { label: 'Disputes', href: '/admin/disputes', icon: Scales, roles: ['admin', 'support', 'super_admin'] },
+      { label: 'Fraud', href: '/admin/fraud', icon: ShieldWarning, roles: ['admin', 'super_admin'] },
+      { label: 'Moderation', href: '/admin/moderation', icon: ListChecks, roles: ['admin', 'moderator', 'super_admin'] },
+    ],
+  },
+  {
+    title: 'Catalogue',
+    links: [
+      { label: 'Games', href: '/admin/games', icon: GameController, roles: ['admin', 'super_admin'] },
+      { label: 'Blog & Content', href: '/admin/blog', icon: Article, roles: ['admin', 'super_admin'] },
+      { label: 'Promo Codes', href: '/admin/promos', icon: Ticket, roles: ['admin', 'super_admin'] },
+    ],
+  },
+  {
+    title: 'Account',
+    links: [
+      { label: 'Profile', href: '/admin/profile', icon: UserCircle, roles: ALL },
+    ],
+  },
 ]
 
-/** Slide-fade for labels when the rail collapses/expands. */
-const labelMotion = {
-  initial: { opacity: 0, x: -8 },
+const fade = {
+  initial: { opacity: 0, x: -6 },
   animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -8 },
-  transition: { duration: 0.18 },
+  exit: { opacity: 0, x: -6 },
+  transition: { duration: 0.16 },
 }
 
-export function Sidebar({ role, user, collapsed = false, onToggle }: SidebarProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+export function Sidebar({ role, collapsed = false, onToggle, mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await createClient().auth.signOut()
     router.push('/login')
   }
 
-  const filteredLinks = LINKS.filter((link) => link.roles.includes(role))
+  const groups = GROUPS.map((g) => ({ ...g, links: g.links.filter((l) => l.roles.includes(role as Role)) })).filter(
+    (g) => g.links.length > 0,
+  )
 
-  const isLinkActive = (href: string) =>
-    pathname === href || (href !== '/admin' && pathname.startsWith(href))
+  const isActive = (href: string) => pathname === href || (href !== '/admin' && pathname.startsWith(href))
 
-  return (
-    <>
-      {/* Mobile menu toggle */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#0A1810]/80 backdrop-blur-xl border border-white/[0.1]"
-      >
-        {isMobileMenuOpen ? (
-          <IconX className="h-5 w-5 text-white" />
-        ) : (
-          <IconMenu2 className="h-5 w-5 text-white" />
-        )}
-      </button>
-
-      {/* Desktop sidebar — width animated via the collapsed class. */}
-      <div
-        className={cn(
-          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40',
-          'border-r border-white/[0.09]',
-          'transition-[width] duration-300 ease-out',
-          collapsed ? 'lg:w-[4.5rem]' : 'lg:w-[14.3rem]',
-        )}
-        style={{ background: FOREST_BG.sidebar }}
-      >
-        <div className="flex flex-col h-full overflow-hidden">
-          {/* Logo row + collapse toggle */}
-          <div
-            className={cn(
-              'h-[3.85rem] flex items-center border-b border-white/[0.06] flex-shrink-0',
-              collapsed ? 'justify-center px-0' : 'justify-between px-3',
-            )}
-          >
-            <AnimatePresence initial={false}>
-              {!collapsed && (
-                <motion.div {...labelMotion} className="min-w-0">
-                  <Link href="/admin" className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-lg bg-lime flex items-center justify-center flex-shrink-0">
-                      <span className="text-text-inverse text-sm font-bold">DM</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-white whitespace-nowrap">
-                        DropMarket
-                      </span>
-                      <span className="text-[11px] text-[rgba(86,184,127,0.80)] font-medium">Admin</span>
-                    </div>
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <motion.button
-              type="button"
-              onClick={onToggle}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              whileTap={{ scale: 0.92 }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white"
-            >
-              {collapsed ? (
-                <IconLayoutSidebarLeftExpand className="h-5 w-5" />
-              ) : (
-                <IconLayoutSidebarLeftCollapse className="h-5 w-5" />
-              )}
-            </motion.button>
-          </div>
-
-          {/* Navigation — bumped size (py-3, 14.5px labels, 22px icons). */}
-          <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto overflow-x-hidden">
-            {filteredLinks.map((link) => {
+  /** The nav list, shared by the desktop card and the phone drawer. */
+  const navList = (rail: boolean, onNavigate?: () => void) => (
+    <nav aria-label="Admin" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3">
+      {groups.map((group, gi) => (
+        <div key={group.title ?? 'top'} className={cn(gi > 0 && 'mt-4')}>
+          {group.title &&
+            (rail ? (
+              <div className="mx-auto mb-2 h-px w-6 bg-white/[0.08]" aria-hidden />
+            ) : (
+              <p className="mb-1 px-3 text-[12px] font-medium text-text-tertiary">{group.title}</p>
+            ))}
+          <ul className="space-y-0.5">
+            {group.links.map((link) => {
+              const active = isActive(link.href)
               const Icon = link.icon
-              const isActive = isLinkActive(link.href)
-              return (
+              const row = (
                 <Link
-                  key={link.href}
                   href={link.href}
-                  title={collapsed ? link.label : undefined}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  aria-label={rail ? link.label : undefined}
                   className={cn(
-                    'relative flex items-center gap-3 rounded-lg py-3',
-                    'text-[14.5px] font-medium transition-all duration-150',
-                    collapsed ? 'justify-center px-0' : 'px-3',
-                    isActive
-                      ? 'bg-[#A3E635]/[0.12] text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.05]',
+                    'group flex h-10 items-center gap-3 rounded-md text-[14px] font-medium transition-colors duration-150',
+                    rail ? 'justify-center px-0' : 'px-3',
+                    active
+                      ? 'bg-[rgba(198,255,61,0.13)] text-lime-text'
+                      : 'text-text-secondary hover:bg-white/[0.05] hover:text-text-primary',
                   )}
                 >
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-lime rounded-r-full" />
-                  )}
                   <Icon
+                    aria-hidden
+                    weight={active ? 'fill' : 'bold'}
                     className={cn(
-                      'h-[22px] w-[22px] transition-colors flex-shrink-0',
-                      isActive ? 'text-[#A3E635]' : 'text-white/40',
+                      'h-[19px] w-[19px] shrink-0 transition-colors',
+                      !active && 'text-text-tertiary group-hover:text-text-primary',
                     )}
                   />
                   <AnimatePresence initial={false}>
-                    {!collapsed && (
-                      <motion.span {...labelMotion} className="whitespace-nowrap">
+                    {!rail && (
+                      <motion.span {...fade} className="truncate whitespace-nowrap">
                         {link.label}
                       </motion.span>
                     )}
                   </AnimatePresence>
                 </Link>
               )
+              return (
+                <li key={link.href}>
+                  {rail ? (
+                    <Tooltip delayDuration={120}>
+                      <TooltipTrigger asChild>{row}</TooltipTrigger>
+                      <TooltipContent side="right" className="border-0 bg-bg-overlay-2 text-[12.5px] font-medium">
+                        {link.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    row
+                  )}
+                </li>
+              )
             })}
-          </nav>
-
-          {/* Logout */}
-          <div className="border-t border-white/[0.06] px-2 py-2.5 flex-shrink-0">
-            <button
-              onClick={handleLogout}
-              title={collapsed ? 'Logout' : undefined}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 rounded-lg py-2.5',
-                'text-[13px] font-medium transition-all duration-150',
-                'text-white/45 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20',
-              )}
-            >
-              <IconLogout className="h-[18px] w-[18px] flex-shrink-0" />
-              <AnimatePresence initial={false}>
-                {!collapsed && (
-                  <motion.span {...labelMotion} className="whitespace-nowrap">
-                    Logout
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
-          </div>
+          </ul>
         </div>
-      </div>
+      ))}
+    </nav>
+  )
 
-      {/* Mobile sidebar */}
-      <AnimatePresence mode="wait">
-        {isMobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 border-r border-white/[0.09]"
-              style={{ background: FOREST_BG.sidebar }}
-            >
-              <div className="flex flex-col h-full">
-                <div className="h-[3.85rem] flex items-center px-3 border-b border-white/[0.06]">
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5"
-                  >
-                    <div className="h-9 w-9 rounded-lg bg-lime flex items-center justify-center">
-                      <span className="text-text-inverse text-sm font-bold">DM</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-white">DropMarket</span>
-                      <span className="text-[11px] text-[rgba(86,184,127,0.80)] font-medium">Admin</span>
-                    </div>
-                  </Link>
-                </div>
-
-                <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto">
-                  {filteredLinks.map((link) => {
-                    const Icon = link.icon
-                    const isActive = isLinkActive(link.href)
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={cn(
-                          'relative flex items-center gap-3 px-3 py-3 rounded-lg',
-                          'text-[14.5px] font-medium transition-all duration-150',
-                          isActive
-                            ? 'bg-[#A3E635]/[0.12] text-white'
-                            : 'text-white/60 hover:text-white hover:bg-white/[0.05]',
-                        )}
-                      >
-                        {isActive && (
-                          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-lime rounded-r-full" />
-                        )}
-                        <Icon
-                          className={cn(
-                            'h-[22px] w-[22px]',
-                            isActive ? 'text-[#A3E635]' : 'text-white/40',
-                          )}
-                        />
-                        <span>{link.label}</span>
-                      </Link>
-                    )
-                  })}
-                </nav>
-
-                <div className="border-t border-white/[0.06] px-3 py-2.5">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-[13px] font-medium text-white/45 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-150"
-                  >
-                    <IconLogout className="h-[18px] w-[18px]" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
+  const logoutRow = (rail: boolean) => (
+    <div className="shrink-0 border-t border-white/[0.06] p-2">
+      <button
+        type="button"
+        onClick={handleLogout}
+        aria-label={rail ? 'Log Out' : undefined}
+        className={cn(
+          'group flex h-10 w-full items-center gap-3 rounded-md text-[14px] font-medium text-text-secondary transition-colors hover:bg-[color-mix(in_srgb,var(--color-error)_10%,transparent)] hover:text-error',
+          rail ? 'justify-center px-0' : 'px-3',
         )}
-      </AnimatePresence>
+      >
+        <SignOut aria-hidden weight="bold" className="h-[19px] w-[19px] shrink-0" />
+        {!rail && <span>Log Out</span>}
+      </button>
+    </div>
+  )
+
+  const brand = (
+    <Link href="/admin" className="flex min-w-0 items-center gap-2.5">
+      <Image src="/brand/logo-mark-white.png" alt="" width={26} height={26} priority className="shrink-0" />
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[15px] font-bold leading-tight tracking-tight text-text-primary">DropMarket</span>
+        <span className="text-[11.5px] font-medium leading-tight text-text-tertiary">Admin</span>
+      </span>
+    </Link>
+  )
+
+  return (
+    <>
+      {/* ── Desktop: floating card, collapsible to an icon rail ── */}
+      <aside
+        className={cn(
+          'fixed bottom-3 left-3 top-3 z-40 hidden flex-col overflow-hidden rounded-lg bg-bg-raised lg:flex',
+          'transition-[width] duration-300 ease-out',
+          collapsed ? 'w-16' : 'w-[232px]',
+        )}
+      >
+        <div className={cn('flex h-16 shrink-0 items-center', collapsed ? 'justify-center' : 'justify-between pl-4 pr-2')}>
+          <AnimatePresence initial={false}>
+            {!collapsed && (
+              <motion.div {...fade} className="min-w-0">
+                {brand}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+          >
+            <SidebarSimple aria-hidden weight="bold" className="h-[19px] w-[19px]" />
+          </button>
+        </div>
+        {navList(collapsed)}
+        {logoutRow(collapsed)}
+      </aside>
+
+      {/* ── Phones / tablets: left drawer ── */}
+      <Drawer.Root direction="left" open={mobileOpen} onOpenChange={onMobileOpenChange}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60 lg:hidden" />
+          <Drawer.Content
+            aria-describedby={undefined}
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(84vw,300px)] flex-col bg-bg-raised outline-none lg:hidden"
+          >
+            <Drawer.Title className="sr-only">Admin Navigation</Drawer.Title>
+            <div className="flex h-16 shrink-0 items-center justify-between pl-4 pr-2">
+              <div onClick={() => onMobileOpenChange(false)} className="min-w-0">
+                {brand}
+              </div>
+              <button
+                type="button"
+                onClick={() => onMobileOpenChange(false)}
+                aria-label="Close menu"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+              >
+                <X aria-hidden weight="bold" className="h-5 w-5" />
+              </button>
+            </div>
+            {navList(false, () => onMobileOpenChange(false))}
+            <div className="pb-[env(safe-area-inset-bottom)]">{logoutRow(false)}</div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </>
   )
 }

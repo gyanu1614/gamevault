@@ -1,8 +1,7 @@
 'use client'
 
-import { CheckCircle, DollarSign, User, Calendar, FileText } from 'lucide-react'
+import { CheckCircle } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
 
 interface DisputeResolutionCardProps {
   status: string
@@ -47,7 +46,7 @@ export default function DisputeResolutionCard({
 }: DisputeResolutionCardProps) {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
@@ -65,192 +64,107 @@ export default function DisputeResolutionCard({
   // Determine resolution details based on status
   let resolutionTitle = ''
   let resolutionDescription = ''
-  let resolutionColor = 'green'
   let winner = ''
 
   if (status === 'resolved_buyer_favor') {
-    resolutionTitle = 'Resolved in Buyer Favor'
-    resolutionDescription = 'The dispute has been resolved in favor of the buyer. Full refund has been processed.'
-    resolutionColor = 'blue'
+    resolutionTitle = 'Resolved in Buyer’s Favor'
+    resolutionDescription = 'Resolved for the buyer. The full refund has been processed.'
     winner = buyerUsername || 'Buyer'
   } else if (status === 'resolved_seller_favor') {
-    resolutionTitle = 'Resolved in Seller Favor'
-    resolutionDescription = 'The dispute has been resolved in favor of the seller. Payment has been released.'
-    resolutionColor = 'lime'
+    resolutionTitle = 'Resolved in Seller’s Favor'
+    resolutionDescription = 'Resolved for the seller. The payment has been released.'
     winner = sellerUsername || 'Seller'
   } else if (status === 'resolved_partial') {
-    resolutionTitle = 'Resolved - Partial Refund'
-    resolutionDescription = 'The dispute has been resolved with a partial refund to the buyer.'
-    resolutionColor = 'green'
+    resolutionTitle = 'Resolved – Partial Refund'
+    resolutionDescription = 'Resolved with a partial refund to the buyer.'
     winner = 'Both Parties'
+  } else if (status === 'closed') {
+    resolutionTitle = 'Closed'
+    resolutionDescription = 'This dispute was closed.'
+    winner = '—'
   }
 
-  const colorClasses = {
-    blue: {
-      border: 'border-blue-500/30',
-      glyph: 'text-blue-400',
-      text: 'text-blue-400',
-      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-    },
-    lime: {
-      border: 'border-lime-tint-border',
-      glyph: 'text-lime-text',
-      text: 'text-lime-text',
-      badge: 'bg-lime-tint-bg text-lime-text border-lime-tint-border'
-    },
-    green: {
-      border: 'border-green-500/30',
-      glyph: 'text-green-400',
-      text: 'text-green-400',
-      badge: 'bg-green-500/10 text-green-400 border-green-500/30'
-    }
-  }
-
-  const colors = colorClasses[resolutionColor as keyof typeof colorClasses]
+  const tile = 'rounded-md bg-bg-overlay px-3.5 py-3'
+  const tileLabel = 'text-[12px] text-text-tertiary'
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        'rounded-xl border bg-bg-raised p-4',
-        colors.border
-      )}
+      className="rounded-lg bg-bg-raised p-4 sm:p-6"
     >
       {/* Header */}
-      <div className="flex items-start gap-3 mb-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
-          <CheckCircle className={cn('h-5 w-5', colors.glyph)} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h2 className={cn('text-base font-bold mb-0.5', colors.text)}>
-            {resolutionTitle}
-          </h2>
-          <p className="text-xs text-text-secondary">
-            {resolutionDescription}
-          </p>
-        </div>
-
-        <span className={cn(
-          'inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider',
-          colors.badge
-        )}>
-          Completed
+      <div className="mb-4 flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-success-bg text-success">
+          <CheckCircle aria-hidden weight="fill" className="h-5 w-5" />
         </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[16px] font-bold text-text-primary">{resolutionTitle}</h2>
+          <p className="mt-0.5 text-[13px] text-text-secondary">{resolutionDescription}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-success-bg px-2.5 py-0.5 text-[11.5px] font-semibold text-success">Completed</span>
       </div>
 
-      {/* Order Details Section (if provided) */}
+      {/* Order details (if provided) */}
       {(listingTitle || orderNumber || disputeReason) && (
-        <div className="mb-4">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-bg-overlay border border-border-subtle">
-            {/* Listing Image */}
+        <div className="mb-4 space-y-2">
+          <div className="flex items-start gap-3 rounded-md bg-bg-overlay p-3">
             {listingImage && (
-              <img
-                src={listingImage}
-                alt={listingTitle || 'Order item'}
-                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-              />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={listingImage} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" />
             )}
-
-            {/* Order Info */}
-            <div className="flex-1 min-w-0">
-              {listingTitle && (
-                <h3 className="text-xs font-semibold text-text-primary mb-0.5 line-clamp-2">
-                  {listingTitle}
-                </h3>
-              )}
-              {orderNumber && (
-                <p className="text-[10px] text-text-tertiary mb-1.5">Order #{orderNumber}</p>
-              )}
-
-              {/* Dispute Reason Badge */}
+            <div className="min-w-0 flex-1">
+              {listingTitle && <h3 className="line-clamp-2 text-[13.5px] font-semibold text-text-primary">{listingTitle}</h3>}
+              {orderNumber && <p className="mt-0.5 text-[12px] text-text-tertiary">Order #{orderNumber}</p>}
               {disputeReason && (
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/10 border border-red-500/20">
-                  <span className="text-[10px] font-medium text-red-400 capitalize">
-                    {disputeReason.replace(/_/g, ' ')}
-                  </span>
-                </div>
+                <span className="mt-1.5 inline-flex rounded-full bg-error-bg px-2 py-0.5 text-[11.5px] font-semibold capitalize text-error">
+                  {disputeReason.replace(/_/g, ' ')}
+                </span>
               )}
             </div>
-
-            {/* Status Badge */}
-            <span className={cn(
-              'inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider flex-shrink-0',
-              colors.badge
-            )}>
-              Resolved
-            </span>
           </div>
-
-          {/* Dispute Description (if provided) */}
           {disputeDescription && (
-            <div className="mt-2 p-2.5 rounded-lg bg-bg-overlay border border-border-subtle">
-              <p className="text-[10px] text-text-tertiary mb-0.5 font-medium">Dispute Details:</p>
-              <p className="text-xs text-text-secondary">{disputeDescription}</p>
+            <div className={tile}>
+              <p className={tileLabel}>Dispute Details</p>
+              <p className="mt-0.5 text-[13px] text-text-secondary">{disputeDescription}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Resolution Details Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        {/* Winner */}
-        <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <User className="h-3.5 w-3.5 text-text-tertiary" />
-            <span className="text-[10px] text-text-tertiary font-medium">Favored Party</span>
-          </div>
-          <p className="text-xs font-semibold text-text-primary">{winner}</p>
+      {/* Resolution details */}
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className={tile}>
+          <p className={tileLabel}>Favored Party</p>
+          <p className="mt-0.5 text-[13.5px] font-semibold text-text-primary">{winner}</p>
         </div>
-
-        {/* Amount */}
         {resolvedAmount !== undefined && (
-          <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <DollarSign className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-[10px] text-text-tertiary font-medium">
-                {status === 'resolved_buyer_favor' ? 'Refund Amount' :
-                 status === 'resolved_partial' ? 'Partial Refund' :
-                 'Seller Payout'}
-              </span>
-            </div>
-            <p className="text-xs font-semibold tabular-nums text-text-primary">{formatAmount(resolvedAmount)}</p>
+          <div className={tile}>
+            <p className={tileLabel}>
+              {status === 'resolved_buyer_favor' ? 'Refund Amount' : status === 'resolved_partial' ? 'Partial Refund' : 'Seller Payout'}
+            </p>
+            <p className="mt-0.5 text-[13.5px] font-semibold tabular-nums text-text-primary">{formatAmount(resolvedAmount)}</p>
           </div>
         )}
-
-        {/* Resolved Date */}
         {resolvedAt && (
-          <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
-              <span className="text-[10px] text-text-tertiary font-medium">Resolved On</span>
-            </div>
-            <p className="text-[10px] font-medium text-text-primary">{formatDate(resolvedAt)}</p>
+          <div className={tile}>
+            <p className={tileLabel}>Resolved On</p>
+            <p className="mt-0.5 text-[13px] font-medium text-text-primary">{formatDate(resolvedAt)}</p>
           </div>
         )}
       </div>
 
-      {/* Resolution Notes */}
       {resolutionNotes && (
-        <div className="rounded-lg bg-bg-overlay border border-border-subtle p-3">
-          <div className="flex items-center gap-1.5 mb-2">
-            <FileText className="h-3.5 w-3.5 text-text-tertiary" />
-            <span className="text-[11px] text-text-tertiary font-semibold uppercase tracking-wider">Admin Resolution Notes</span>
-          </div>
-          <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-            {resolutionNotes}
-          </p>
+        <div className={tile}>
+          <p className={tileLabel}>Admin Resolution Notes</p>
+          <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-text-secondary">{resolutionNotes}</p>
         </div>
       )}
 
-      {/* Resolved By */}
       {resolvedBy && (
-        <div className="mt-3 pt-3 border-t border-border-subtle">
-          <p className="text-[10px] text-text-tertiary">
-            Resolved by <span className="text-text-secondary font-medium">{resolvedBy.full_name || resolvedBy.username || 'Admin'}</span>
-          </p>
-        </div>
+        <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12.5px] text-text-tertiary">
+          Resolved by <span className="font-medium text-text-secondary">{resolvedBy.full_name || resolvedBy.username || 'Admin'}</span>
+        </p>
       )}
     </motion.div>
   )

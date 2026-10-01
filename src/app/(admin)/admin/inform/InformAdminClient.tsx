@@ -3,33 +3,33 @@
 /**
  * P6.4 — Admin INFORM Act Client
  *
- * V53 restyle — rebuilt on the admin kit (PageHeader / StatCard /
- * StatusBadge / TABLE). Entrance animations removed so content is
- * visible straight from the server HTML; only user-triggered
- * transitions (modal, expand/collapse) remain.
+ * Built on the admin kit. Content is visible straight from the server
+ * HTML; only user-triggered transitions (dialog, expand/collapse) animate.
  *
  * Sections:
- *  1. Pending sellers tab — sellers who need to submit but haven't
- *  2. Submissions tab — submitted disclosures awaiting review
- *  3. All tab — all disclosures with status filter
- *  4. Certify / Reject actions with rejection reason modal
+ *  1. Pending Review tab — submitted disclosures awaiting review
+ *  2. Required Sellers tab — sellers who need to submit but haven't
+ *  3. All tab — every disclosure
+ *  4. Certify / Reject actions with a rejection-reason dialog
  */
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import {
-  FileText, CheckCircle2, Clock, AlertTriangle,
-  Loader2, X, ChevronDown, ChevronUp, RefreshCw, UserX,
-} from 'lucide-react'
+import { ArrowsClockwise, CaretDown, CheckCircle, CircleNotch, FileText, X } from '@phosphor-icons/react'
 import {
   certifyInformDisclosure,
   getInformDisclosures,
   runInformThresholdCheck,
 } from '@/lib/actions/inform-act'
 import type { InformDisclosure } from '@/lib/actions/inform-act'
+import { StatStrip, accountInputCls } from '@/components/account/AccountSurface'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import {
-  PageHeader, StatCard, StatusBadge, TABLE, type ChipTone,
+  AdminEmpty, AdminLoadingRows, PageHeader, StatusBadge, adminBtn, adminBtnSm, type ChipTone,
 } from '../components/kit'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -38,6 +38,8 @@ type RequiredSeller = {
   id: string; username: string | null; email: string | null
   total_sales: number; lifetime_earnings: number; inform_status: string
 }
+
+type Disc = InformDisclosure & { username?: string | null; email?: string | null; total_sales?: number; lifetime_earnings?: number }
 
 // ── Status badge (INFORM-specific tone mapping over the kit badge) ─────────
 
@@ -54,53 +56,63 @@ function InformStatusBadge({ status }: { status: string }) {
   return <StatusBadge status={status} tone={INFORM_TONE[status] ?? 'neutral'} />
 }
 
-// ── Disclosure detail panel (expandable) ───────────────────────────────────
+// ── Disclosure row (expandable) ────────────────────────────────────────────
 
 function DisclosureRow({
   disc, onCertify, onReject, loading,
 }: {
-  disc: InformDisclosure & { username?: string | null; email?: string | null; total_sales?: number; lifetime_earnings?: number }
+  disc: Disc
   onCertify: (id: string) => void
   onReject:  (id: string) => void
   loading:   string | null
 }) {
   const [expanded, setExpanded] = useState(false)
   const busy = loading === disc.id
+  const panelId = `inform-disc-${disc.id}`
 
   return (
-    <div className="border-b border-border-subtle last:border-0">
-      {/* Row header */}
-      <div
-        className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-bg-overlay"
+    <li>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={panelId}
         onClick={() => setExpanded(v => !v)}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03]"
       >
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-semibold text-text-primary">
+          <p className="truncate text-[13.5px] font-semibold text-text-primary">
             {disc.username ? `@${disc.username}` : disc.seller_id}
           </p>
-          <p className="text-xs text-text-tertiary">{disc.email}</p>
+          <p className="truncate text-[12px] text-text-tertiary">
+            {disc.email}
+            <span className="sm:hidden"> · {disc.total_sales ?? 0} sales</span>
+          </p>
         </div>
-        <div className="hidden text-xs tabular-nums text-text-tertiary sm:block">
+        <span className="hidden shrink-0 text-[12.5px] tabular-nums text-text-tertiary sm:block">
           {disc.total_sales ?? 0} sales · ${(disc.lifetime_earnings ?? 0).toFixed(0)}
-        </div>
-        <InformStatusBadge status={disc.status} />
-        <p className="hidden text-xs text-text-tertiary md:block">
+        </span>
+        <span className="hidden w-24 shrink-0 text-right text-[12.5px] text-text-tertiary md:block">
           {disc.submitted_at ? new Date(disc.submitted_at).toLocaleDateString() : '—'}
-        </p>
-        {expanded ? <ChevronUp className="h-4 w-4 text-text-tertiary" /> : <ChevronDown className="h-4 w-4 text-text-tertiary" />}
-      </div>
+        </span>
+        <InformStatusBadge status={disc.status} />
+        <CaretDown
+          aria-hidden
+          weight="bold"
+          className={cn('h-4 w-4 shrink-0 text-text-tertiary transition-transform', expanded && 'rotate-180')}
+        />
+      </button>
 
-      {/* Expanded detail */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
+            id={panelId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
             <div className="space-y-3 px-4 pb-4">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg border border-border-subtle bg-bg-overlay p-4 text-sm sm:grid-cols-2">
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-2 rounded-md bg-bg-overlay p-4 text-[13px] sm:grid-cols-2">
                 {[
                   ['Legal Name',    disc.legal_name],
                   ['Address',       `${disc.address_line1}${disc.address_line2 ? ', ' + disc.address_line2 : ''}`],
@@ -113,37 +125,32 @@ function DisclosureRow({
                   ['Version',       `v${disc.version}`],
                   ['Consented At',  new Date(disc.consented_at).toLocaleString()],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between">
-                    <span className="text-text-tertiary">{k}</span>
-                    <span className="font-semibold text-text-primary">{v}</span>
+                  <div key={k} className="flex min-w-0 justify-between gap-3">
+                    <dt className="shrink-0 text-text-tertiary">{k}</dt>
+                    <dd className="min-w-0 truncate text-right font-medium text-text-primary">{v}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
 
               {disc.rejection_reason && (
-                <p className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg p-2 text-xs text-error">
-                  Rejection reason: {disc.rejection_reason}
+                <p className="rounded-md bg-error-bg px-3.5 py-2.5 text-[13px] text-text-secondary">
+                  <span className="font-semibold text-error">Rejection reason: </span>
+                  {disc.rejection_reason}
                 </p>
               )}
 
               {disc.status === 'submitted' && (
-                <div className="flex gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={() => onCertify(disc.id)}
-                    className="flex items-center gap-1.5 rounded-lg border border-[rgba(63,217,134,0.25)] bg-success-bg px-3 py-1.5
-                               text-xs font-semibold text-success transition-colors hover:bg-[rgba(63,217,134,0.22)] disabled:opacity-40"
-                  >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                <div className="flex gap-1.5">
+                  <button type="button" disabled={busy} onClick={() => onCertify(disc.id)} className={adminBtnSm.primary}>
+                    {busy ? (
+                      <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                    )}
                     Certify
                   </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => onReject(disc.id)}
-                    className="flex items-center gap-1.5 rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-3 py-1.5
-                               text-xs font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
-                  >
-                    <X className="h-3.5 w-3.5" />
+                  <button type="button" disabled={busy} onClick={() => onReject(disc.id)} className={adminBtnSm.danger}>
+                    <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
                     Reject
                   </button>
                 </div>
@@ -152,7 +159,7 @@ function DisclosureRow({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </li>
   )
 }
 
@@ -167,7 +174,10 @@ interface Props {
 }
 
 export default function InformAdminClient({ initialDisclosures, requiredSellers, fetchError }: Props) {
+  const router = useRouter()
   const [disclosures,     setDisclosures]     = useState<InformDisclosure[]>(initialDisclosures)
+  /** Submitted-and-unreviewed count, kept apart from whichever list is showing. */
+  const [submittedCount,  setSubmittedCount]  = useState(initialDisclosures.length)
   const [activeTab,       setActiveTab]       = useState<Tab>('submitted')
   const [loading,         setLoading]         = useState<string | null>(null)
   const [tabLoading,      setTabLoading]      = useState(false)
@@ -183,6 +193,8 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
     setScanning(false)
     if (result.success) {
       toast.success(`${result.marked} seller${result.marked !== 1 ? 's' : ''} newly marked as required`)
+      // The required-sellers list comes from the server page.
+      router.refresh()
     } else {
       toast.error(result.error ?? 'Scan failed')
     }
@@ -197,19 +209,25 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
     const filter = tab === 'submitted' ? 'submitted' : 'all'
     const result = await getInformDisclosures(filter)
     setTabLoading(false)
-    if (result.success) setDisclosures(result.disclosures ?? [])
-    else toast.error('Failed to load disclosures')
+    if (result.success) {
+      setDisclosures(result.disclosures ?? [])
+      if (tab === 'submitted') setSubmittedCount((result.disclosures ?? []).length)
+    } else toast.error('Failed to load disclosures')
   }
+
+  const wasSubmitted = (discId: string) => disclosures.find(d => d.id === discId)?.status === 'submitted'
 
   // ── Certify ──────────────────────────────────────────────────────────────
 
   const handleCertify = async (discId: string) => {
     setLoading(discId)
+    const submitted = wasSubmitted(discId)
     const result = await certifyInformDisclosure(discId, 'certified')
     setLoading(null)
     if (result.success) {
       toast.success('Disclosure certified')
       setDisclosures(prev => prev.filter(d => d.id !== discId))
+      if (submitted) setSubmittedCount(n => Math.max(0, n - 1))
     } else {
       toast.error(result.error ?? 'Certification failed')
     }
@@ -222,176 +240,147 @@ export default function InformAdminClient({ initialDisclosures, requiredSellers,
   const handleReject = async () => {
     if (!rejectTarget) return
     setLoading(rejectTarget)
+    const submitted = wasSubmitted(rejectTarget)
     const result = await certifyInformDisclosure(rejectTarget, 'rejected', rejectReason)
     setLoading(null)
     setRejectTarget(null)
     if (result.success) {
       toast.success('Disclosure rejected')
       setDisclosures(prev => prev.filter(d => d.id !== rejectTarget))
+      if (submitted) setSubmittedCount(n => Math.max(0, n - 1))
     } else {
       toast.error(result.error ?? 'Rejection failed')
     }
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'submitted', label: `Pending Review (${disclosures.length})` },
-    { key: 'pending',   label: `Required Sellers (${requiredSellers.length})` },
-    { key: 'all',       label: 'All Disclosures' },
-  ]
-
   return (
-    <>
-      {/* Reject reason modal */}
-      <AnimatePresence>
-        {rejectTarget && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md rounded-xl border border-border-default bg-bg-raised p-6"
-            >
-              <h3 className="mb-3 font-semibold text-text-primary">Rejection Reason</h3>
-              <textarea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="Explain why this disclosure is being rejected…"
-                rows={4}
-                className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
-                           text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
-              />
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setRejectTarget(null)}
-                  className="rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleReject}
-                  disabled={!rejectReason.trim()}
-                  className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-2 text-sm font-semibold text-error
-                             transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
-                >
-                  Reject Disclosure
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="space-y-6 pb-10">
-        {/* Header */}
-        <PageHeader
-          title="INFORM Act"
-          description="Review and certify high-volume seller identity disclosures."
-          className="mb-0"
-          actions={
-            <button
-              onClick={handleThresholdScan}
-              disabled={scanning}
-              className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2 text-sm font-bold text-text-inverse
-                         transition-colors hover:bg-lime disabled:opacity-50"
-            >
-              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              {scanning ? 'Scanning…' : 'Run Threshold Check'}
-            </button>
-          }
-        />
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatCard label="Pending Review" value={disclosures.length}     icon={Clock}         tone="warning" />
-          <StatCard label="Non-Compliant"  value={requiredSellers.length} icon={UserX}         tone="error" />
-          <StatCard label="Info"           value={0}                      icon={AlertTriangle} tone="info" />
-        </div>
-
-        {/* Table */}
-        <section className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
-          {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-border-subtle">
-            {tabs.map(t => (
-              <button key={t.key} onClick={() => handleTabChange(t.key)}
-                className={`whitespace-nowrap px-4 py-3 text-sm font-semibold transition-colors ${
-                  activeTab === t.key
-                    ? 'border-b-2 border-lime text-text-primary'
-                    : 'text-text-tertiary hover:text-text-secondary'
-                }`}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {fetchError && (
-            <div className="bg-error-bg p-4 text-sm text-error">Error: {fetchError}</div>
-          )}
-
-          {/* Pending sellers tab */}
-          {activeTab === 'pending' && (
-            <div>
-              {requiredSellers.length === 0 ? (
-                <div className="py-12 text-center">
-                  <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success" />
-                  <p className="text-sm text-text-tertiary">All required sellers have submitted their disclosures.</p>
-                </div>
-              ) : (
-                <div className={TABLE.wrap}>
-                  <table className={TABLE.table}>
-                    <thead>
-                      <tr>
-                        {['Seller', 'Sales', 'Lifetime Revenue', 'Status'].map(h => (
-                          <th key={h} className={TABLE.th}>
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {requiredSellers.map(s => (
-                        <tr key={s.id} className={TABLE.row}>
-                          <td className={TABLE.td}>
-                            <p className="text-[13.5px] font-semibold text-text-primary">{s.username ? `@${s.username}` : s.id}</p>
-                            <p className="text-xs text-text-tertiary">{s.email}</p>
-                          </td>
-                          <td className={`${TABLE.td} tabular-nums`}>{s.total_sales}</td>
-                          <td className={`${TABLE.td} tabular-nums`}>${s.lifetime_earnings.toFixed(2)}</td>
-                          <td className={TABLE.td}><InformStatusBadge status={s.inform_status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Disclosures tabs */}
-          {(activeTab === 'submitted' || activeTab === 'all') && (
-            tabLoading ? (
-              <div className="py-12 text-center">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin text-text-tertiary" />
-              </div>
-            ) : disclosures.length === 0 ? (
-              <div className="py-12 text-center">
-                <FileText className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
-                <p className="text-sm text-text-tertiary">No disclosures to review.</p>
-              </div>
+    <div className="space-y-5 pb-10">
+      <PageHeader
+        title="INFORM Act"
+        description="Review and certify high-volume seller identity disclosures."
+        className="mb-0 sm:mb-0"
+        actions={
+          <button type="button" onClick={handleThresholdScan} disabled={scanning} className={adminBtn.primary}>
+            {scanning ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
             ) : (
-              <div>
-                {disclosures.map(disc => (
-                  <DisclosureRow
-                    key={disc.id}
-                    disc={disc as any}
-                    onCertify={handleCertify}
-                    onReject={openReject}
-                    loading={loading}
-                  />
-                ))}
-              </div>
-            )
-          )}
-        </section>
+              <ArrowsClockwise aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            {scanning ? 'Scanning…' : 'Run Threshold Check'}
+          </button>
+        }
+      />
+
+      <StatStrip
+        stats={[
+          {
+            label: 'Pending Review',
+            value: <span className={submittedCount > 0 ? 'text-warning' : undefined}>{submittedCount}</span>,
+            hint: 'Not yet certified',
+          },
+          {
+            label: 'Required Sellers',
+            value: <span className={requiredSellers.length > 0 ? 'text-error' : undefined}>{requiredSellers.length}</span>,
+            hint: 'Not submitted yet',
+          },
+        ]}
+      />
+
+      <SegmentedTabs<Tab>
+        tabs={[
+          { id: 'submitted', label: <>Pending Review <TabCount n={submittedCount} /></> },
+          { id: 'pending', label: <>Required Sellers <TabCount n={requiredSellers.length} /></> },
+          { id: 'all', label: 'All Disclosures' },
+        ]}
+        value={activeTab}
+        onChange={handleTabChange}
+        layoutId="inform-tabs"
+        ariaLabel="INFORM disclosures"
+      />
+
+      <div role="tabpanel" id={`inform-tabs-panel-${activeTab}`} aria-labelledby={`inform-tabs-tab-${activeTab}`} className="space-y-3">
+        {fetchError && <p className="rounded-lg bg-error-bg px-4 py-3 text-[13px] text-error">Error: {fetchError}</p>}
+
+        {/* Required sellers tab */}
+        {activeTab === 'pending' &&
+          (requiredSellers.length === 0 ? (
+            <AdminEmpty
+              icon={CheckCircle}
+              tone="success"
+              title="Everyone's Compliant"
+              hint="All required sellers have submitted their disclosures."
+            />
+          ) : (
+            <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
+              {requiredSellers.map(s => (
+                <li key={s.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13.5px] font-semibold text-text-primary">{s.username ? `@${s.username}` : s.id}</p>
+                    <p className="truncate text-[12px] text-text-tertiary">{s.email}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[13px] font-semibold tabular-nums text-text-primary">${s.lifetime_earnings.toFixed(2)}</p>
+                    <p className="text-[12px] tabular-nums text-text-tertiary">{s.total_sales} sales</p>
+                  </div>
+                  <InformStatusBadge status={s.inform_status} />
+                </li>
+              ))}
+            </ul>
+          ))}
+
+        {/* Disclosures tabs */}
+        {(activeTab === 'submitted' || activeTab === 'all') &&
+          (tabLoading ? (
+            <AdminLoadingRows rows={4} />
+          ) : disclosures.length === 0 ? (
+            <AdminEmpty icon={FileText} title="No Disclosures to Review" hint="Submitted seller disclosures show up here." />
+          ) : (
+            <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
+              {disclosures.map(disc => (
+                <DisclosureRow
+                  key={disc.id}
+                  disc={disc as Disc}
+                  onCertify={handleCertify}
+                  onReject={openReject}
+                  loading={loading}
+                />
+              ))}
+            </ul>
+          ))}
       </div>
-    </>
+
+      {/* Reject reason dialog */}
+      <Dialog open={!!rejectTarget} onOpenChange={o => !o && setRejectTarget(null)}>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Reject Disclosure</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
+              The seller sees your reason and resubmits.
+            </DialogDescription>
+          </div>
+          <div>
+            <label htmlFor="inform-reject-reason" className="mb-1.5 block text-[13px] font-medium text-text-secondary">
+              Rejection Reason <span className="text-error">*</span>
+            </label>
+            <textarea
+              id="inform-reject-reason"
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Explain why this disclosure is being rejected…"
+              rows={4}
+              className={cn(accountInputCls, 'resize-none')}
+            />
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setRejectTarget(null)} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button type="button" onClick={handleReject} disabled={!rejectReason.trim()} className={adminBtn.danger}>
+              Reject Disclosure
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

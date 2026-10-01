@@ -4,63 +4,58 @@
  * P6.3 — Admin Fraud Detection Client
  *
  * Sections:
- *  1. Stat cards — open/high/medium/low counts + resolved today
- *  2. "Run Scan" button — triggers runFraudScan() server action
- *  3. Status tab filter (open / resolved / dismissed)
- *  4. Flags table — username, rule, severity badge, description, age, resolve/dismiss actions
+ *  1. Header with "Run Scan" — triggers runFraudScan() server action
+ *  2. Numbers strip — open / high / medium / low + resolved today
+ *  3. Status tabs (open / resolved / dismissed) + flags: cards below xl, table from xl
+ *  4. Active rules reference
  */
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  ShieldAlert, AlertTriangle, CheckCircle2,
-  Loader2, RefreshCw, UserX, Tag, Zap, TrendingDown,
-  BarChart3, X, CircleDot,
-} from 'lucide-react'
+  ArrowsClockwise, ArrowUUpLeft, ChartBar, CheckCircle, Circle, CircleNotch, Lightning, Scales, ShieldCheck, Tag, UserMinus, X,
+} from '@phosphor-icons/react'
 import {
   runFraudScan,
   getFraudFlags,
   resolveFraudFlag,
 } from '@/lib/actions/fraud-detection'
 import type { FraudFlag, FraudSeverity, FraudStatus } from '@/lib/actions/fraud-detection'
+import { StatStrip } from '@/components/account/AccountSurface'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
 import { cn } from '@/lib/utils'
-import { IconChip, StatCard, SectionLabel, TABLE } from '../components/kit'
-
-// ── Animation variants ─────────────────────────────────────────────────────
-
-const container = {
-  hidden: { opacity: 0 },
-  show:   { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }
+import {
+  AdminEmpty, AdminLoadingRows, PageHeader, PanelHead, StatusBadge, TABLE, adminBtn, adminBtnSm,
+  type AdminIcon, type ChipTone,
+} from '../components/kit'
 
 // ── Rule metadata ──────────────────────────────────────────────────────────
 
-const RULE_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  high_order_velocity:    { label: 'High Order Velocity',     icon: <Zap         className="w-3.5 h-3.5" /> },
-  high_dispute_rate:      { label: 'High Dispute Rate',       icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  new_account_high_value: { label: 'New Acct High Value',     icon: <UserX        className="w-3.5 h-3.5" /> },
-  multiple_refunds:       { label: 'Multiple Refunds',        icon: <TrendingDown className="w-3.5 h-3.5" /> },
-  promo_abuse:            { label: 'Promo Abuse',             icon: <Tag          className="w-3.5 h-3.5" /> },
-  seller_balance_anomaly: { label: 'Seller Balance Anomaly',  icon: <BarChart3    className="w-3.5 h-3.5" /> },
+const RULE_META: Record<string, { label: string; icon: AdminIcon; rule: string; severity: FraudSeverity }> = {
+  high_order_velocity:    { label: 'High Order Velocity',    icon: Lightning,    rule: 'More than 5 orders in 24 hours',          severity: 'high' },
+  high_dispute_rate:      { label: 'High Dispute Rate',      icon: Scales,       rule: 'More than 2 disputes',                    severity: 'medium' },
+  new_account_high_value: { label: 'New Account High Value', icon: UserMinus,    rule: 'Account under 7 days, order over $100',   severity: 'medium' },
+  multiple_refunds:       { label: 'Multiple Refunds',       icon: ArrowUUpLeft, rule: 'More than 2 refunded orders',             severity: 'medium' },
+  promo_abuse:            { label: 'Promo Abuse',            icon: Tag,          rule: 'More than 5 promo codes used',            severity: 'low' },
+  seller_balance_anomaly: { label: 'Seller Balance Anomaly', icon: ChartBar,     rule: 'No sales but over $50 pending',           severity: 'high' },
 }
 
-// ── Severity badge ─────────────────────────────────────────────────────────
+const SEVERITY: Record<FraudSeverity, { label: string; tone: ChipTone }> = {
+  high:   { label: 'High',   tone: 'error' },
+  medium: { label: 'Medium', tone: 'warning' },
+  low:    { label: 'Low',    tone: 'info' },
+}
 
 function SeverityBadge({ severity }: { severity: FraudSeverity }) {
-  const config: Record<FraudSeverity, { label: string; cls: string }> = {
-    high:   { label: 'HIGH',   cls: 'bg-red-500/15 text-red-400 border border-red-500/20' },
-    medium: { label: 'MEDIUM', cls: 'bg-amber-500/15 text-amber-400 border border-amber-500/20' },
-    low:    { label: 'LOW',    cls: 'bg-blue-500/15 text-blue-400 border border-blue-500/20' },
-  }
-  const { label, cls } = config[severity]
-  return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cls}`}>{label}</span>
-  )
+  const s = SEVERITY[severity] ?? SEVERITY.low
+  return <StatusBadge status={s.label} tone={s.tone} />
 }
 
-// ── Flag row ───────────────────────────────────────────────────────────────
+function ruleOf(flag: FraudFlag) {
+  return RULE_META[flag.rule_id] ?? { label: flag.rule_id, icon: Circle, rule: '', severity: flag.severity }
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -72,86 +67,96 @@ function timeAgo(iso: string): string {
   return `${mins}m ago`
 }
 
-interface FlagRowProps {
+// ── Flag pieces ────────────────────────────────────────────────────────────
+
+interface FlagProps {
   flag:      FraudFlag
   onResolve: (id: string, action: 'resolved' | 'dismissed') => void
   resolving: string | null
 }
 
-function FlagRow({ flag, onResolve, resolving }: FlagRowProps) {
-  const rule = RULE_META[flag.rule_id] ?? { label: flag.rule_id, icon: <CircleDot className="w-3.5 h-3.5" /> }
-  const busy = resolving === flag.id
-
+function FlagUser({ flag }: { flag: FraudFlag }) {
   return (
-    <motion.tr
-      layout
-      initial={false}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className={TABLE.row}
-    >
-      {/* User */}
-      <td className={TABLE.tdPrimary}>
-        <div>
-          <p className="text-sm text-text-primary font-medium">
-            {flag.username ? `@${flag.username}` : <span className="text-text-tertiary italic">unknown</span>}
-          </p>
-          <p className="text-xs text-text-tertiary">{flag.email ?? ''}</p>
-          {flag.role && (
-            <span className="text-[10px] text-text-tertiary capitalize">{flag.role}</span>
-          )}
-        </div>
-      </td>
+    <div className="min-w-0">
+      <p className="truncate text-[13.5px] font-semibold text-text-primary">
+        {flag.username ? `@${flag.username}` : <span className="font-medium italic text-text-tertiary">Unknown</span>}
+      </p>
+      <p className="truncate text-[12px] text-text-tertiary">
+        {flag.email ?? ''}
+        {flag.role && <span className="capitalize">{flag.email ? ' · ' : ''}{flag.role}</span>}
+      </p>
+    </div>
+  )
+}
 
-      {/* Rule */}
-      <td className={TABLE.td}>
-        <div className="flex items-center gap-1.5 text-text-secondary">
-          {rule.icon}
-          <span className="text-xs">{rule.label}</span>
-        </div>
-      </td>
+function FlagRule({ flag }: { flag: FraudFlag }) {
+  const rule = ruleOf(flag)
+  const Icon = rule.icon
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12.5px] text-text-secondary">
+      <Icon aria-hidden weight="bold" className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+      {rule.label}
+    </span>
+  )
+}
 
-      {/* Severity */}
-      <td className={TABLE.td}>
-        <SeverityBadge severity={flag.severity as FraudSeverity} />
-      </td>
+function FlagActions({ flag, onResolve, resolving }: FlagProps) {
+  const busy = resolving === flag.id
+  if (flag.status !== 'open') {
+    return <StatusBadge status={flag.status} tone={flag.status === 'resolved' ? 'success' : 'neutral'} />
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <button type="button" disabled={busy} onClick={() => onResolve(flag.id, 'resolved')} className={adminBtnSm.primary}>
+        {busy ? <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />}
+        Resolve
+      </button>
+      <button type="button" disabled={busy} onClick={() => onResolve(flag.id, 'dismissed')} className={adminBtnSm.secondary}>
+        <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
+        Dismiss
+      </button>
+    </div>
+  )
+}
 
-      {/* Description */}
-      <td className={cn(TABLE.td, 'max-w-xs')}>
-        <p className="text-xs text-text-tertiary leading-relaxed">{flag.description}</p>
-      </td>
+const rowMotion = {
+  layout: true,
+  initial: false as const,
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+}
 
-      {/* Age */}
-      <td className={cn(TABLE.td, 'text-xs text-text-tertiary whitespace-nowrap')}>
-        {timeAgo(flag.created_at)}
-      </td>
+function FlagCard(props: FlagProps) {
+  const { flag } = props
+  return (
+    <motion.li {...rowMotion} className="rounded-lg bg-bg-raised p-4">
+      <div className="flex items-start justify-between gap-3">
+        <FlagUser flag={flag} />
+        <SeverityBadge severity={flag.severity} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <FlagRule flag={flag} />
+        <span className="text-[12px] text-text-tertiary">{timeAgo(flag.created_at)}</span>
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-text-secondary">{flag.description}</p>
+      <div className="mt-3.5 border-t border-white/[0.06] pt-3.5">
+        <FlagActions {...props} />
+      </div>
+    </motion.li>
+  )
+}
 
-      {/* Actions */}
-      <td className={TABLE.td}>
-        {flag.status === 'open' ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              disabled={busy}
-              onClick={() => onResolve(flag.id, 'resolved')}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-40"
-            >
-              {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-              Resolve
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onResolve(flag.id, 'dismissed')}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] border border-border-default bg-bg-overlay text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary transition-colors disabled:opacity-40"
-            >
-              <X className="w-3 h-3" />
-              Dismiss
-            </button>
-          </div>
-        ) : (
-          <span className={`text-xs capitalize ${flag.status === 'resolved' ? 'text-green-400' : 'text-text-tertiary'}`}>
-            {flag.status}
-          </span>
-        )}
+function FlagRow(props: FlagProps) {
+  const { flag } = props
+  return (
+    <motion.tr {...rowMotion} className={TABLE.row}>
+      <td className={cn(TABLE.td, 'max-w-[240px]')}><FlagUser flag={flag} /></td>
+      <td className={cn(TABLE.td, 'whitespace-nowrap')}><FlagRule flag={flag} /></td>
+      <td className={TABLE.td}><SeverityBadge severity={flag.severity} /></td>
+      <td className={cn(TABLE.td, 'min-w-[260px] text-[13px] leading-relaxed')}>{flag.description}</td>
+      <td className={cn(TABLE.td, 'whitespace-nowrap text-[12.5px] text-text-tertiary')}>{timeAgo(flag.created_at)}</td>
+      <td className={cn(TABLE.td, 'text-right')}>
+        <div className="flex justify-end"><FlagActions {...props} /></div>
       </td>
     </motion.tr>
   )
@@ -170,7 +175,7 @@ interface Props {
   fetchError?:  string
 }
 
-type Tab = 'open' | 'resolved' | 'dismissed'
+type Tab = FraudStatus
 
 export default function FraudClient({ initialFlags, stats, fetchError }: Props) {
   const [flags,        setFlags]        = useState<FraudFlag[]>(initialFlags)
@@ -178,7 +183,8 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
   const [resolving,    setResolving]    = useState<string | null>(null)
   const [scanning,     setScanning]     = useState(false)
   const [tabLoading,   setTabLoading]   = useState(false)
-  const [, startTransition]            = useTransition()
+  // The numbers come from the server page; refresh them after a scan or a verdict.
+  const router = useRouter()
 
   // ── Run scan ─────────────────────────────────────────────────────────────
 
@@ -190,6 +196,7 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
       toast.success(`Scan complete — ${result.newFlags} new flag${result.newFlags !== 1 ? 's' : ''} found`)
       // Refresh open flags
       handleTabChange('open')
+      router.refresh()
     } else {
       toast.error(result.error ?? 'Scan failed')
     }
@@ -218,160 +225,119 @@ export default function FraudClient({ initialFlags, stats, fetchError }: Props) 
     if (result.success) {
       toast.success(action === 'resolved' ? 'Flag resolved' : 'Flag dismissed')
       setFlags(prev => prev.filter(f => f.id !== flagId))
+      router.refresh()
     } else {
       toast.error(result.error ?? 'Action failed')
     }
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'open',      label: 'Open'      },
-    { key: 'resolved',  label: 'Resolved'  },
-    { key: 'dismissed', label: 'Dismissed' },
+  const tabs: { id: Tab; label: React.ReactNode }[] = [
+    { id: 'open',      label: <>Open <TabCount n={stats.open} /></> },
+    { id: 'resolved',  label: 'Resolved'  },
+    { id: 'dismissed', label: 'Dismissed' },
   ]
 
+  const tint = (n: number, cls: string) => <span className={n > 0 ? cls : undefined}>{n}</span>
+
   return (
-    // initial={false}: no opacity-0 SSR gate — the hidden→show entrance
-    // animation can silently never fire under the heavy admin tree,
-    // leaving the whole page invisible (same root cause as analytics).
-    <motion.div
-      variants={container}
-      initial={false}
-      animate="show"
-      className="space-y-6 pb-10"
-    >
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <motion.div variants={item} className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <IconChip icon={ShieldAlert} tone="error" size="sm" />
-            <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Fraud Detection</h1>
-          </div>
-          <p className="text-text-secondary text-sm">
-            Rules-based engine scanning orders, users, and payment patterns.
-          </p>
-        </div>
+    <div className="space-y-5 pb-10">
+      <PageHeader
+        title="Fraud Detection"
+        description="Rules that scan orders, accounts and payment patterns for risk."
+        className="mb-0 sm:mb-0"
+        actions={
+          <button type="button" onClick={handleScan} disabled={scanning} className={adminBtn.primary}>
+            {scanning
+              ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              : <ArrowsClockwise aria-hidden weight="bold" className="h-4 w-4" />}
+            {scanning ? 'Scanning…' : 'Run Scan'}
+          </button>
+        }
+      />
 
-        <button
-          onClick={handleScan}
-          disabled={scanning}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-lime-pressed hover:bg-lime
-                     text-text-inverse transition-colors disabled:opacity-50 text-sm font-bold"
-        >
-          {scanning
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <RefreshCw className="w-4 h-4" />}
-          {scanning ? 'Scanning…' : 'Run Scan'}
-        </button>
-      </motion.div>
+      <StatStrip
+        className="md:grid-cols-5 lg:grid-cols-5 [&>div:first-child]:col-span-2 md:[&>div:first-child]:col-span-1"
+        stats={[
+          { label: 'Open Flags', value: stats.open },
+          { label: 'High', value: tint(stats.high, 'text-error') },
+          { label: 'Medium', value: tint(stats.medium, 'text-warning') },
+          { label: 'Low', value: stats.low },
+          { label: 'Resolved Today', value: stats.resolvedToday },
+        ]}
+      />
 
-      {/* ── Stat cards ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-        <motion.div variants={item}>
-          <StatCard label="Open Flags" value={stats.open} icon={ShieldAlert} tone="error" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="High Severity" value={stats.high} icon={AlertTriangle} tone="error" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Medium Severity" value={stats.medium} icon={AlertTriangle} tone="warning" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Low Severity" value={stats.low} icon={CircleDot} tone="info" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Resolved Today" value={stats.resolvedToday} icon={CheckCircle2} tone="success" />
-        </motion.div>
+      <SegmentedTabs tabs={tabs} value={activeTab} onChange={handleTabChange} layoutId="fraud-tabs" ariaLabel="Flag status" />
+
+      <div role="tabpanel" id={`fraud-tabs-panel-${activeTab}`} aria-labelledby={`fraud-tabs-tab-${activeTab}`} className="space-y-3">
+        {fetchError && (
+          <p className="rounded-lg bg-error-bg px-4 py-3 text-[13px] text-error">Error loading flags: {fetchError}</p>
+        )}
+
+        {tabLoading ? (
+          <AdminLoadingRows rows={4} />
+        ) : flags.length === 0 ? (
+          <AdminEmpty
+            icon={ShieldCheck}
+            title={activeTab === 'open' ? 'No Open Flags' : `No ${activeTab === 'resolved' ? 'Resolved' : 'Dismissed'} Flags`}
+            hint={activeTab === 'open' ? 'Run a scan to check for new risk.' : undefined}
+          />
+        ) : (
+          <>
+            {/* Phones and tablets: one card per flag */}
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:hidden">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {flags.map(flag => (
+                  <FlagCard key={flag.id} flag={flag} onResolve={handleResolve} resolving={resolving} />
+                ))}
+              </AnimatePresence>
+            </ul>
+
+            {/* Wide screens: table */}
+            <div className="hidden overflow-hidden rounded-lg bg-bg-raised xl:block">
+              <div className={TABLE.wrap}>
+                <table className={TABLE.table}>
+                  <thead>
+                    <tr>
+                      {['User', 'Rule', 'Severity', 'Description', 'Age'].map(h => (
+                        <th key={h} className={TABLE.th}>{h}</th>
+                      ))}
+                      <th className={cn(TABLE.th, 'text-right')}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:last-child>td]:border-b-0">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {flags.map(flag => (
+                        <FlagRow key={flag.id} flag={flag} onResolve={handleResolve} resolving={resolving} />
+                      ))}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Rules reference ─────────────────────────────────────────────── */}
-      <motion.div
-        variants={item}
-        className="rounded-xl border border-border-default bg-bg-raised p-4"
-      >
-        <SectionLabel>Active Rules</SectionLabel>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(RULE_META).map(([ruleId, { label, icon }]) => (
-            <div
-              key={ruleId}
-              className="flex items-center gap-1.5 text-xs text-text-secondary border border-border-default bg-bg-overlay px-2.5 py-1 rounded-full"
-            >
-              {icon}
-              {label}
-            </div>
+      <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+        <PanelHead title="Active Rules" subtitle="What each scan checks. A user gets one open flag per rule." />
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {Object.entries(RULE_META).map(([ruleId, { label, icon: Icon, rule, severity }]) => (
+            <li key={ruleId} className="flex items-start gap-3 rounded-md bg-bg-overlay px-3.5 py-3">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white/[0.05] text-text-secondary">
+                <Icon aria-hidden weight="bold" className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-[13px] font-semibold text-text-primary">{label}</p>
+                  <SeverityBadge severity={severity} />
+                </div>
+                <p className="mt-0.5 text-[12px] text-text-tertiary">{rule}</p>
+              </div>
+            </li>
           ))}
-        </div>
-      </motion.div>
-
-      {/* ── Flags table ─────────────────────────────────────────────────── */}
-      <motion.div variants={item} className="rounded-xl border border-border-default bg-bg-raised overflow-hidden">
-        {/* Tab bar */}
-        <div className="flex border-b border-border-default">
-          {tabs.map(t => (
-            <button
-              key={t.key}
-              onClick={() => handleTabChange(t.key)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                activeTab === t.key
-                  ? 'border-lime text-text-primary'
-                  : 'border-transparent text-text-tertiary hover:text-text-secondary'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Error banner */}
-        {fetchError && (
-          <div className="p-4 text-sm text-red-400 bg-red-500/5">
-            Error loading flags: {fetchError}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className={TABLE.wrap}>
-          <table className={TABLE.table}>
-            <thead>
-              <tr>
-                {['User', 'Rule', 'Severity', 'Description', 'Age', 'Actions'].map(h => (
-                  <th key={h} className={TABLE.th}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence mode="popLayout">
-                {tabLoading ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin text-lime mx-auto" />
-                    </td>
-                  </tr>
-                ) : flags.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12">
-                      <CheckCircle2 className="w-8 h-8 text-green-400/50 mx-auto mb-2" />
-                      <p className="text-sm text-text-tertiary">
-                        {activeTab === 'open' ? 'No open fraud flags — run a scan to check.' : `No ${activeTab} flags.`}
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  flags.map(flag => (
-                    <FlagRow
-                      key={flag.id}
-                      flag={flag}
-                      onResolve={handleResolve}
-                      resolving={resolving}
-                    />
-                  ))
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
-    </motion.div>
+        </ul>
+      </section>
+    </div>
   )
 }

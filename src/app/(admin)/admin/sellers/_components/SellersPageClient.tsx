@@ -1,15 +1,12 @@
 'use client'
 
 /**
- * Forest Ledger — /admin/sellers page client (approved mockup ②).
+ * /admin/sellers page client (account-section design, 2026-09-30).
  *
- * The list lives in a single forest frame: a forest-gradient header band
- * (title + segmented status tabs with live counts) over forest-glass
- * rows on the deep-forest canvas. Filtering, react-query caching and
- * pagination are unchanged from V54 — this is a restyle:
- *   - stat cards → segmented tabs (All / Pending / Changes / Approved /
- *     Rejected / Restricted), counts from the same stats query
- *   - table → store-first forest-glass rows (ApplicationsTable)
+ * Page header, status tabs with live counts (SegmentedTabs: All / Pending /
+ * Changes / Approved / Rejected / Restricted — URL-driven as before), then
+ * fill-only store rows (ApplicationsTable) and pagination. Filtering,
+ * react-query caching and server seeding are unchanged from V54.
  */
 
 import { useState } from 'react'
@@ -17,9 +14,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSellerApplications } from '@/lib/actions/admin-seller-review'
 import ApplicationsTable from '../ApplicationsTable'
-import { PaginationControls } from '@/components/ui/pagination-controls'
-import { cn } from '@/lib/utils'
-import { FOREST_BG } from '../../_theme/forest'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { AdminLoadingRows, AdminPagination, PageHeader } from '../../components/kit'
 
 type StatusFilter =
   | 'pending'
@@ -153,83 +149,44 @@ export default function SellersPageClient({
     { key: 'restricted', label: 'Restricted', count: statsData?.restricted },
   ]
 
+  const activeKey = tabs.find((t) => t.key === statusFilter)?.label ?? 'All'
+
   return (
-    <div
-      className="overflow-hidden rounded-2xl border border-white/[0.09]"
-      style={{ background: FOREST_BG.canvas }}
-    >
-      {/* Forest header band — top-lit gradient + pill filter tabs */}
-      <div
-        className="flex flex-wrap items-end gap-x-4 gap-y-4 px-6 pb-4 pt-5"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 42%), linear-gradient(105deg, #0F3320 0%, #14432A 60%, #17492E 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
-        }}
-      >
-        <div className="min-w-0">
-          <h2 className="text-[18px] font-extrabold tracking-[-0.01em] text-white">
-            Seller Applications
-          </h2>
-          <p className="mt-1 text-[11.5px] text-white/50">
-            Click a row to review the application and decide
-          </p>
-        </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Seller Applications"
+        description="Open an application to review it and decide."
+        className="mb-0 sm:mb-0"
+      />
 
-        <div className="ml-auto max-w-full overflow-x-auto pb-0.5">
-          <div className="flex items-center gap-1.5">
-            {tabs.map((tab) => {
-              const active =
-                statusFilter === tab.key || (!statusFilter && tab.key === null)
-              return (
-                <button
-                  key={tab.label}
-                  type="button"
-                  onClick={() => handleStatusFilter(tab.key)}
-                  className={cn(
-                    'group flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-[7px] text-[11.5px] font-bold transition-all',
-                    active
-                      ? 'bg-[#A3E635] text-[#0F3320] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-2px_0_rgba(0,0,0,0.12),0_6px_14px_-6px_rgba(163,230,53,0.45)]'
-                      : 'border border-white/[0.12] text-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] hover:border-white/25 hover:text-white',
-                  )}
-                >
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span
-                      className={cn(
-                        'grid min-w-[20px] place-items-center rounded-full px-1.5 py-px text-[10px] font-black tabular-nums',
-                        active ? 'bg-[#0F3320]/15 text-[#0F3320]' : 'bg-white/[0.1] text-white/55',
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+      <SegmentedTabs
+        tabs={tabs.map((tab) => ({
+          id: tab.label,
+          label: (
+            <>
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && <TabCount n={tab.count} />}
+            </>
+          ),
+        }))}
+        value={activeKey}
+        onChange={(label) => handleStatusFilter(tabs.find((t) => t.label === label)?.key ?? null)}
+        layoutId="admin-applications-tabs"
+        ariaLabel="Application status"
+      />
 
-      {/* Rows */}
       {isLoading ? (
-        <div className="px-6 py-14 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#A3E635] border-r-transparent" />
-          <p className="mt-4 text-[13px] text-white/60">Loading applications…</p>
-        </div>
+        <AdminLoadingRows rows={8} />
       ) : (
         <>
-          <div className="px-3.5 pb-3.5 pt-2.5">
-            <ApplicationsTable applications={applications} />
-          </div>
-          <PaginationControls
-            currentPage={pagination.page}
+          <ApplicationsTable applications={applications} />
+          <AdminPagination
+            page={pagination.page}
             totalPages={pagination.totalPages}
-            hasNextPage={pagination.hasNextPage}
-            hasPrevPage={pagination.hasPrevPage}
-            onPageChange={setCurrentPage}
-            totalItems={pagination.total}
-            itemsPerPage={pagination.limit}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPage={setCurrentPage}
+            noun="applications"
           />
         </>
       )}

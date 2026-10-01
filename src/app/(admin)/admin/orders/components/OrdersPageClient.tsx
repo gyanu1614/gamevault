@@ -21,11 +21,14 @@ import { OrderFilters } from './order-filters'
 import { StatsCards } from './stats-cards'
 import { CancellationRequestsTable } from './cancellation-requests-table'
 import { RefundRequestsTable } from './refund-requests-table'
-import { DisputesTable } from './disputes-table'
-import { Package, Ban, AlertTriangle, Undo2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { AdminLoadingRows, PageHeader } from '../../components/kit'
+import { SkAdminStrip } from '../../components/AdminSkeletons'
 
-type TabType = 'orders' | 'cancellations' | 'refunds' | 'disputes'
+// The old fourth "Disputes" tab was a placeholder card linking to
+// /admin/disputes (the sidebar already does); it is gone.
+type TabType = 'orders' | 'cancellations' | 'refunds'
+const TABS: TabType[] = ['orders', 'cancellations', 'refunds']
 
 type OrdersResult = Awaited<ReturnType<typeof getOrders>>
 type OrderStatsResult = Awaited<ReturnType<typeof getOrderStats>>
@@ -39,7 +42,7 @@ interface OrdersPageClientProps {
 function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab') as TabType | null
-  const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'orders')
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam && TABS.includes(tabParam) ? tabParam : 'orders')
 
   const filters = {
     status: searchParams.getAll('status') as OrderStatus[],
@@ -82,7 +85,6 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
   const { data: cancellationsData, isLoading: cancellationsLoading } = useQuery({
     queryKey: ['admin-cancellation-requests'],
     queryFn: async () => await getPendingCancellationRequests(),
-    enabled: activeTab === 'cancellations',
   })
 
   // Refund-to-payment-method requests (refund policy): pending ones need a
@@ -93,117 +95,50 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
   })
   const pendingRefundCount = (refundsData?.data ?? []).filter((r) => r.status === 'pending').length
 
+  const cancelCount = cancellationsData?.data?.length ?? 0
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Orders Management</h1>
-          <p className="text-[13.5px] text-text-secondary mt-0.5">Manage orders, cancellations, and disputes</p>
-        </div>
-      </div>
+      <PageHeader title="Orders" description="Every order, plus buyer cancellation and refund requests." className="mb-0 sm:mb-0" />
 
-      {/* Stats Cards */}
       <StatsCards stats={(statsData?.success ? statsData.stats : null) || null} />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border-subtle">
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={cn(
-            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-            activeTab === 'orders'
-              ? 'border-lime text-text-primary'
-              : 'border-transparent text-text-tertiary hover:text-text-secondary'
-          )}
-        >
-          <Package className="w-4 h-4" />
-          Orders
-        </button>
-        <button
-          onClick={() => setActiveTab('cancellations')}
-          className={cn(
-            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors relative',
-            activeTab === 'cancellations'
-              ? 'border-amber-500 text-amber-400'
-              : 'border-transparent text-text-tertiary hover:text-text-secondary'
-          )}
-        >
-          <Ban className="w-4 h-4" />
-          Cancel Requests
-          {cancellationsData?.data && cancellationsData.data.length > 0 && (
-            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-warning text-[10px] font-bold text-text-inverse">
-              {cancellationsData.data.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('refunds')}
-          className={cn(
-            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors relative',
-            activeTab === 'refunds'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-text-tertiary hover:text-text-secondary'
-          )}
-        >
-          <Undo2 className="w-4 h-4" />
-          Refund Requests
-          {pendingRefundCount > 0 && (
-            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
-              {pendingRefundCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('disputes')}
-          className={cn(
-            'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-            activeTab === 'disputes'
-              ? 'border-red-500 text-red-400'
-              : 'border-transparent text-text-tertiary hover:text-text-secondary'
-          )}
-        >
-          <AlertTriangle className="w-4 h-4" />
-          Disputes
-        </button>
-      </div>
+      <SegmentedTabs
+        tabs={[
+          { id: 'orders', label: 'Orders' },
+          { id: 'cancellations', label: <>Cancel Requests{cancelCount > 0 && <TabCount n={cancelCount} />}</> },
+          { id: 'refunds', label: <>Refund Requests{pendingRefundCount > 0 && <TabCount n={pendingRefundCount} />}</> },
+        ]}
+        value={activeTab}
+        onChange={setActiveTab}
+        layoutId="admin-orders-tabs"
+        ariaLabel="Order views"
+      />
 
-      {/* Tab Content */}
       {activeTab === 'orders' && (
-        <>
+        <div role="tabpanel" id="admin-orders-tabs-panel-orders" aria-labelledby="admin-orders-tabs-tab-orders" className="space-y-4">
           <OrderFilters />
           {ordersLoading ? (
-            <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-              <div className="flex flex-col items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-lime border-r-transparent"></div>
-                <p className="text-sm text-text-tertiary mt-3">Loading orders...</p>
-              </div>
-            </div>
+            <AdminLoadingRows rows={8} />
           ) : (
             <OrdersTable
               orders={(ordersData?.success ? ordersData.orders : []) || []}
               pagination={(ordersData?.success ? ordersData.pagination : null) || null}
             />
           )}
-        </>
+        </div>
       )}
 
       {activeTab === 'cancellations' && (
-        <CancellationRequestsTable
-          requests={cancellationsData?.data || []}
-          isLoading={cancellationsLoading}
-        />
+        <div role="tabpanel" id="admin-orders-tabs-panel-cancellations" aria-labelledby="admin-orders-tabs-tab-cancellations">
+          <CancellationRequestsTable requests={cancellationsData?.data || []} isLoading={cancellationsLoading} />
+        </div>
       )}
 
       {activeTab === 'refunds' && (
-        <RefundRequestsTable
-          requests={(refundsData?.data as any) || []}
-          isLoading={refundsLoading}
-        />
-      )}
-
-      {activeTab === 'disputes' && (
-        <DisputesTable />
+        <div role="tabpanel" id="admin-orders-tabs-panel-refunds" aria-labelledby="admin-orders-tabs-tab-refunds">
+          <RefundRequestsTable requests={(refundsData?.data as any) || []} isLoading={refundsLoading} />
+        </div>
       )}
     </div>
   )
@@ -211,22 +146,15 @@ function OrdersContent({ initialOrders, initialStats }: OrdersPageClientProps) {
 
 export default function OrdersPageClient(props: OrdersPageClientProps) {
   return (
-    <Suspense fallback={
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Orders</h1>
-            <p className="text-[13.5px] text-text-secondary mt-0.5">View and manage all platform orders</p>
-          </div>
+    <Suspense
+      fallback={
+        <div className="space-y-5">
+          <PageHeader title="Orders" description="Every order, plus buyer cancellation and refund requests." className="mb-0 sm:mb-0" />
+          <SkAdminStrip count={6} lgCols="md:grid-cols-3 xl:grid-cols-6" />
+          <AdminLoadingRows rows={8} />
         </div>
-        <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-          <div className="flex flex-col items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-lime border-r-transparent"></div>
-            <p className="text-sm text-text-tertiary mt-3">Loading...</p>
-          </div>
-        </div>
-      </div>
-    }>
+      }
+    >
       <OrdersContent {...props} />
     </Suspense>
   )

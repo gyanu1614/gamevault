@@ -1,14 +1,13 @@
 'use client'
 
 /**
- * Forest Ledger — /admin/active-sellers client.
+ * /admin/active-sellers client (account-section design, 2026-09-30).
  *
- * ONE compact forest frame (mirrors the moderation page): gradient header
- * band with the title + inline stat chips (real numbers), a toolbar row
- * (search / tier / status / paused / sort), then glass seller rows. The
- * ENTIRE row clicks through to /admin/active-sellers/{profile id} — the
- * seller-management detail. Founding star stays as the one per-row action;
- * Export downloads the filtered rows as CSV.
+ * Page header (+ Export CSV), the four numbers as a StatStrip, a toolbar
+ * (search / tier / status / paused / sort — a swipe row on phones), then one
+ * fill-only panel of seller rows. The ENTIRE row clicks through to
+ * /admin/active-sellers/{profile id} — the seller-management detail. The
+ * founding star stays as the one per-row action.
  *
  * Data via react-query seeded with the server wrapper's initialData;
  * relative times gate on useNow() (hydration-safe).
@@ -18,18 +17,18 @@ import React, { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  Search,
-  Download,
-  Store,
-  Loader2,
-  Award,
-  AlertTriangle,
-  RefreshCcw,
-  ChevronRight,
+  ArrowClockwise,
+  CaretRight,
+  CircleNotch,
+  DownloadSimple,
+  MagnifyingGlass,
+  SortAscending,
+  SortDescending,
+  Star,
+  Storefront,
+  Warning,
   X,
-  ArrowDownWideNarrow,
-  ArrowUpNarrowWide,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { finiteOrNull, money } from '@/lib/seller/format-amount'
 import { useNow } from '@/hooks/use-now'
@@ -37,51 +36,16 @@ import { useActiveSellers, useSellerStats, type SellerStatsSummary } from '@/hoo
 import type { ActiveSeller, ActiveSellerSort } from '@/lib/actions/admin-active-sellers'
 import { setFoundingSeller } from '@/lib/actions/admin-sellers'
 import { TIERS, TIER_KEYS, type SellerTier } from '@/lib/seller/tiers'
-import { FOREST_BG, FOREST_MOTION, forestStagger } from '../../_theme/forest'
+import { StatStrip } from '@/components/account/AccountSurface'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AdminEmpty, AdminLoadingRows, FilterChip, PageHeader, adminBtn, adminFieldCls, adminSelectCls } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
+import { TierChip } from '../../components/TierChip'
 
 // ─── Types + constants ───────────────────────────────────────────────────────
 
 type FilterStatus = 'all' | 'active' | 'restricted' | 'banned'
 type FilterTier = 'all' | SellerTier
-
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A3E635] focus-visible:ring-offset-0'
-
-const CHIP =
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-bold'
-
-const SELECT_CLASSES =
-  'h-9 rounded-[10px] border border-white/[0.12] bg-white/[0.05] px-3 text-[12.5px] font-semibold text-white transition-colors hover:border-white/25 focus:border-[#A3E635] focus:outline-none [&>option]:bg-[#0F2419]'
-
-/** Header-band gradient (top-lit) shared with the moderation frame. */
-const BAND_STYLE: React.CSSProperties = {
-  background:
-    'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 42%), ' +
-    FOREST_BG.listHeader,
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3)',
-}
-
-/** seller_tier_config badge_color → dark-surface chip classes (rank tokens). */
-export const TIER_CHIP_CLASSES: Record<string, string> = {
-  zinc: 'bg-white/[0.1] text-white/85',
-  violet: 'bg-violet-500/[0.16] text-violet-300',
-  red: 'bg-red-500/[0.16] text-red-300',
-  blue: 'bg-blue-500/[0.16] text-blue-300',
-  lime: 'bg-lime-500/[0.16] text-lime-300',
-}
-
-const TIER_BADGE_COLOR: Record<string, string> = Object.fromEntries(
-  TIERS.map((t) => [t.key, t.colors.badgeColor]),
-)
-
-export function tierChipClass(tier: string, badgeColor?: string | null): string {
-  const color = badgeColor || TIER_BADGE_COLOR[tier] || 'zinc'
-  return cn(CHIP, TIER_CHIP_CLASSES[color] ?? TIER_CHIP_CLASSES.zinc)
-}
-
-function tierLabel(tier: string): string {
-  return tier.charAt(0).toUpperCase() + tier.slice(1)
-}
 
 function relativeTime(iso: string | null | undefined, now: number | null): string {
   if (!iso || now == null) return ''
@@ -252,292 +216,205 @@ export default function ActiveSellersPageClient({
   }
 
   const stats = statsData
-
-  const statChips: { label: string; value: React.ReactNode; amber?: boolean }[] = [
-    { label: 'Sellers', value: stats?.totalSellers ?? '—' },
-    { label: 'Active Listings', value: stats?.totalActiveListings ?? '—' },
-    {
-      label: 'Revenue',
-      value: stats ? money(stats.totalRevenue) : '—',
-    },
-    {
-      label: 'Pending Withdrawals',
-      value: stats?.pendingWithdrawals ?? '—',
-      amber: (stats?.pendingWithdrawals ?? 0) > 0,
-    },
-  ]
+  const filtered = searchQuery || filterStatus !== 'all' || filterTier !== 'all' || pausedOnly
 
   return (
-    <div>
-      <div className="mx-auto max-w-7xl">
-        {/* ── The single forest frame ── */}
-        <div
-          className="overflow-hidden rounded-2xl border border-white/[0.09]"
-          style={{ background: FOREST_BG.canvas }}
-        >
-          {/* Header band */}
-          <div className="px-6 py-5" style={BAND_STYLE}>
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-              <div className="min-w-0">
-                <h1 className="text-[24px] font-extrabold leading-tight tracking-tight text-white">
-                  Active Sellers
-                </h1>
-                <p className="mt-0.5 text-[12px] text-white/85">
-                  Every seller account — open one to manage tier, wallet, payouts and restrictions
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExport}
-                className={cn(
-                  'ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] px-4 py-2 text-[12px] font-bold text-white/70',
-                  'transition-[transform,border-color,color] duration-150 hover:-translate-y-px hover:border-[#A3E635]/50 hover:text-white',
-                  FOCUS_RING,
-                )}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export
-              </button>
-            </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Active Sellers"
+        description="Every seller account. Open one to manage tier, wallet, payouts and restrictions."
+        actions={
+          <button type="button" onClick={handleExport} className={adminBtn.secondary}>
+            <DownloadSimple aria-hidden weight="bold" className="h-4 w-4" />
+            Export CSV
+          </button>
+        }
+        className="mb-0 sm:mb-0"
+      />
 
-            {/* Slim stat strip */}
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              {statChips.map((chip) => (
-                <span
-                  key={chip.label}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold',
-                    chip.amber
-                      ? 'border-[#F59E0B]/40 bg-[#F59E0B]/[0.14] text-[#FCD34D]'
-                      : 'border-white/[0.1] bg-white/[0.05] text-white/85',
-                  )}
-                >
-                  {chip.label}
-                  <span
-                    className={cn(
-                      'font-extrabold tabular-nums',
-                      chip.amber ? 'text-[#FCD34D]' : 'text-white/90',
-                    )}
-                  >
-                    {chip.value}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
+      <StatStrip
+        stats={[
+          { label: 'Sellers', value: stats?.totalSellers ?? '—' },
+          { label: 'Active Listings', value: stats?.totalActiveListings ?? '—' },
+          { label: 'Revenue', value: stats ? money(stats.totalRevenue) : '—' },
+          {
+            label: 'Pending Withdrawals',
+            value: (
+              <span className={(stats?.pendingWithdrawals ?? 0) > 0 ? 'text-warning' : undefined}>
+                {stats?.pendingWithdrawals ?? '—'}
+              </span>
+            ),
+          },
+        ]}
+      />
 
-          {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2.5 border-b border-white/[0.08] px-6 py-3">
-            <div className="relative min-w-[200px] flex-1 sm:max-w-[280px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
-              <input
-                type="text"
-                placeholder="Search name, email, shop…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn(
-                  'h-9 w-full rounded-[10px] border border-white/[0.12] bg-white/[0.05] pl-9 pr-8 text-[13px] text-white placeholder:text-white/70',
-                  'transition-colors hover:border-white/25 focus:border-[#A3E635] focus:outline-none focus:ring-1 focus:ring-[#A3E635]/40',
-                )}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setSearchQuery('')}
-                  className={cn(
-                    'absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white',
-                    FOCUS_RING,
-                  )}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <select
-              value={filterTier}
-              onChange={(e) => {
-                const v = e.target.value
-                setFilterTier(
-                  v === 'all' || TIER_KEYS.includes(v as SellerTier) ? (v as FilterTier) : 'all',
-                )
-              }}
-              className={cn(SELECT_CLASSES, FOCUS_RING)}
-              aria-label="Filter By Tier"
+      {/* Toolbar: search, then filters + sort (a swipe row on phones) */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="relative lg:w-[300px]">
+          <MagnifyingGlass
+            aria-hidden
+            weight="bold"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+          />
+          <input
+            type="search"
+            placeholder="Search name, email, shop…"
+            aria-label="Search sellers"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={cn(adminFieldCls, 'pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden')}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
             >
-              <option value="all">All Tiers</option>
-              {TIERS.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
+              <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:px-0 lg:flex-1 [&::-webkit-scrollbar]:hidden">
+          <select
+            value={filterTier}
+            onChange={(e) => {
+              const v = e.target.value
+              setFilterTier(v === 'all' || TIER_KEYS.includes(v as SellerTier) ? (v as FilterTier) : 'all')
+            }}
+            className={adminSelectCls}
+            aria-label="Filter by tier"
+          >
+            <option value="all">All Tiers</option>
+            {TIERS.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+            className={adminSelectCls}
+            aria-label="Filter by status"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="restricted">Restricted</option>
+            <option value="banned">Banned</option>
+          </select>
+
+          <FilterChip selected={pausedOnly} onClick={() => setPausedOnly((v) => !v)}>
+            Paused Only
+          </FilterChip>
+
+          <div className="flex shrink-0 items-center gap-1.5 lg:ml-auto">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as ActiveSellerSort)}
+              className={adminSelectCls}
+              aria-label="Sort by"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  Sort: {o.label}
                 </option>
               ))}
             </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-              className={cn(SELECT_CLASSES, FOCUS_RING)}
-              aria-label="Filter By Status"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="restricted">Restricted</option>
-              <option value="banned">Banned</option>
-            </select>
-
             <button
               type="button"
-              onClick={() => setPausedOnly((v) => !v)}
-              aria-pressed={pausedOnly}
-              className={cn(
-                'h-9 whitespace-nowrap rounded-[10px] border px-3 text-[12.5px] font-bold transition-colors',
-                FOCUS_RING,
-                pausedOnly
-                  ? 'border-[#F59E0B]/50 bg-[#F59E0B]/[0.16] text-[#FCD34D]'
-                  : 'border-white/[0.12] text-white/85 hover:border-white/25 hover:text-white',
-              )}
+              onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
+              aria-label={sortOrder === 'desc' ? 'Sorted descending' : 'Sorted ascending'}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-bg-raised text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
             >
-              Paused Only
+              {sortOrder === 'desc' ? (
+                <SortDescending aria-hidden weight="bold" className="h-4 w-4" />
+              ) : (
+                <SortAscending aria-hidden weight="bold" className="h-4 w-4" />
+              )}
             </button>
-
-            <div className="ml-auto flex items-center gap-1.5">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as ActiveSellerSort)}
-                className={cn(SELECT_CLASSES, FOCUS_RING)}
-                aria-label="Sort By"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    Sort: {o.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
-                aria-label={sortOrder === 'desc' ? 'Sorted Descending' : 'Sorted Ascending'}
-                className={cn(
-                  'grid h-9 w-9 place-items-center rounded-[10px] border border-white/[0.12] text-white/85 transition-colors hover:border-white/25 hover:text-white',
-                  FOCUS_RING,
-                )}
-              >
-                {sortOrder === 'desc' ? (
-                  <ArrowDownWideNarrow className="h-4 w-4" />
-                ) : (
-                  <ArrowUpNarrowWide className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="px-6 pb-5 pt-3">
-            {sellersQuery.isError ? (
-              <div
-                className={cn(
-                  'flex flex-col items-center rounded-[11px] border border-white/[0.08] bg-white/[0.04] px-6 py-10 text-center',
-                  FOREST_MOTION.fadeIn,
-                )}
-              >
-                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-[#F59E0B]/[0.14] ring-1 ring-[#F59E0B]/30">
-                  <AlertTriangle className="h-6 w-6 text-[#FCD34D]" />
-                </div>
-                <p className="mt-3 text-[15px] font-extrabold text-white/95">
-                  Couldn&apos;t Load Sellers
-                </p>
-                <p className="mx-auto mt-1 max-w-md text-[12.5px] text-white/85">
-                  {(sellersQuery.error as Error)?.message || 'Something went wrong fetching sellers.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => sellersQuery.refetch()}
-                  disabled={sellersQuery.isFetching}
-                  className={cn(
-                    'mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] px-4 py-2 text-[12px] font-bold text-white/70',
-                    'transition-colors hover:border-[#A3E635]/50 hover:text-white disabled:opacity-50',
-                    FOCUS_RING,
-                  )}
-                >
-                  {sellersQuery.isFetching ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCcw className="h-3.5 w-3.5" />
-                  )}
-                  Retry
-                </button>
-              </div>
-            ) : sellersQuery.isPending ? (
-              <div className="px-6 py-10 text-center">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#A3E635] border-r-transparent" />
-                <p className="mt-4 text-[13px] text-white/85">Loading active sellers…</p>
-              </div>
-            ) : filteredSellers.length === 0 ? (
-              <div
-                className={cn(
-                  'flex flex-col items-center rounded-[11px] border border-white/[0.08] bg-white/[0.04] px-6 py-10 text-center',
-                  FOREST_MOTION.fadeIn,
-                )}
-              >
-                <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-[#A3E635]/[0.12] ring-1 ring-[#A3E635]/25">
-                  <Store className="h-6 w-6 text-[#A3E635]" />
-                </div>
-                <p className="mt-3 text-[15px] font-extrabold text-white/95">No Sellers Found</p>
-                <p className="mt-1 text-[12.5px] text-white/85">
-                  {searchQuery || filterStatus !== 'all' || filterTier !== 'all' || pausedOnly
-                    ? 'Try adjusting your search or filters'
-                    : 'No seller accounts yet'}
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <p className="px-1 text-[11px] font-semibold text-white/70">
-                  Showing {filteredSellers.length} of {sellers.length} sellers
-                </p>
-                {filteredSellers.map((seller, index) => (
-                  <SellerRow
-                    key={seller.id}
-                    seller={seller}
-                    index={index}
-                    now={now}
-                    foundingBusy={pendingFounding === seller.id}
-                    onToggleFounding={() => handleToggleFounding(seller)}
-                    onOpen={() => router.push(`/admin/active-sellers/${seller.id}`)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Body */}
+      {sellersQuery.isError ? (
+        <AdminEmpty
+          icon={Warning}
+          tone="warning"
+          title="Couldn’t load sellers"
+          hint={(sellersQuery.error as Error)?.message || 'Something went wrong fetching sellers.'}
+          action={
+            <button
+              type="button"
+              onClick={() => sellersQuery.refetch()}
+              disabled={sellersQuery.isFetching}
+              className={adminBtn.secondary}
+            >
+              {sellersQuery.isFetching ? (
+                <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowClockwise aria-hidden weight="bold" className="h-4 w-4" />
+              )}
+              Retry
+            </button>
+          }
+        />
+      ) : sellersQuery.isPending ? (
+        <AdminLoadingRows rows={8} />
+      ) : filteredSellers.length === 0 ? (
+        <AdminEmpty
+          icon={Storefront}
+          title="No sellers found"
+          hint={filtered ? 'Try another search or clear the filters.' : 'No seller accounts yet.'}
+        />
+      ) : (
+        <div className="space-y-2">
+          <p className="px-1 text-[12.5px] text-text-tertiary">
+            Showing {filteredSellers.length} of {sellers.length} sellers
+          </p>
+          <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
+            {filteredSellers.map((seller) => (
+              <SellerRow
+                key={seller.id}
+                seller={seller}
+                now={now}
+                foundingBusy={pendingFounding === seller.id}
+                onToggleFounding={() => handleToggleFounding(seller)}
+                onOpen={() => router.push(`/admin/active-sellers/${seller.id}`)}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Seller row ──────────────────────────────────────────────────────────────
 
+const FLAG = 'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-semibold'
+
 function SellerRow({
   seller,
-  index,
   now,
   foundingBusy,
   onToggleFounding,
   onOpen,
 }: {
   seller: ActiveSeller
-  index: number
   now: number | null
   foundingBusy: boolean
   onToggleFounding: () => void
   onOpen: () => void
 }) {
   const name = seller.shop_name || seller.username
-  const initial = (name.trim()[0] || 'S').toUpperCase()
   const lastActive = relativeTime(seller.last_active_at, now)
 
   return (
-    <div
+    <li
       role="link"
       tabIndex={0}
       aria-label={`Open seller ${name}`}
@@ -548,117 +425,89 @@ function SellerRow({
           onOpen()
         }
       }}
-      className={cn(
-        'flex cursor-pointer flex-wrap items-center gap-3 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-3.5 py-2.5 backdrop-blur-sm',
-        'transition-[transform,box-shadow,background-color,border-color] duration-150 hover:-translate-y-[1px]',
-        'hover:border-white/[0.14] hover:bg-white/[0.08] hover:shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)]',
-        FOCUS_RING,
-        FOREST_MOTION.fadeUp,
-      )}
-      style={forestStagger(Math.min(index, 10), 45)}
+      className="group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03] focus-visible:bg-white/[0.04] focus-visible:outline-none"
     >
-      {/* Avatar / initial tile */}
-      {seller.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={seller.avatar_url}
-          alt={name}
-          className="h-10 w-10 shrink-0 rounded-[10px] object-cover ring-1 ring-white/10"
-        />
-      ) : (
-        <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[14px] font-black text-[#A3E635]"
-          style={{ background: FOREST_BG.storeTile }}
-        >
-          {initial}
-        </div>
-      )}
+      <GameTile src={seller.avatar_url} name={name} className="h-10 w-10 rounded-md text-[14px]" />
 
       {/* Identity */}
-      <div className="min-w-[150px] flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-[13.5px] font-extrabold text-white/95">{name}</p>
-          <span className={tierChipClass(seller.seller_tier)}>{tierLabel(seller.seller_tier)}</span>
-          {seller.seller_status === 'restricted' && (
-            <span className={cn(CHIP, 'bg-[#B42318]/20 text-[#FCA5A5]')}>Restricted</span>
-          )}
-          {seller.seller_status === 'banned' && (
-            <span className={cn(CHIP, 'bg-[#B42318]/25 text-[#FCA5A5]')}>Banned</span>
-          )}
-          {seller.store_paused && (
-            <span className={cn(CHIP, 'bg-[#F59E0B]/[0.16] text-[#FCD34D]')}>Paused</span>
-          )}
-          {seller.founding_seller && (
-            <span className={cn(CHIP, 'bg-[#A3E635]/[0.15] text-[#D9F99D]')}>Founding</span>
-          )}
-          {seller.is_test && (
-            <span className={cn(CHIP, 'bg-white/[0.1] text-white/85')}>Test</span>
-          )}
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <p className="min-w-0 truncate text-[14px] font-semibold text-text-primary">{name}</p>
+          <TierChip tier={seller.seller_tier} />
+          {seller.seller_status === 'restricted' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Restricted</span>}
+          {seller.seller_status === 'banned' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Banned</span>}
+          {seller.store_paused && <span className={cn(FLAG, 'bg-warning-bg text-warning')}>Paused</span>}
+          {seller.founding_seller && <span className={cn(FLAG, 'bg-success-bg text-success')}>Founding</span>}
+          {seller.is_test && <span className={cn(FLAG, 'bg-white/[0.07] text-text-secondary')}>Test</span>}
         </div>
-        <p className="mt-0.5 truncate text-[11.5px] text-white/70">
+        <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">
           @{seller.username} · {seller.email}
+        </p>
+        {/* Phones: the numbers under the name */}
+        <p className="mt-0.5 text-[12.5px] tabular-nums text-text-secondary sm:hidden">
+          {seller.stats.active_listings} active · {money(seller.stats.revenue)} · {seller.stats.completed_sales}{' '}
+          {seller.stats.completed_sales === 1 ? 'sale' : 'sales'}
         </p>
       </div>
 
       {/* Listings */}
-      <div className="hidden w-[120px] shrink-0 sm:block">
-        <p className="text-[13px] font-bold tabular-nums text-white/90">
-          {seller.stats.active_listings}{' '}
-          <span className="text-[11px] font-semibold text-white/70">active</span>
+      <div className="hidden w-[110px] shrink-0 sm:block">
+        <p className="text-[13.5px] font-semibold tabular-nums text-text-primary">
+          {seller.stats.active_listings} <span className="text-[12px] font-normal text-text-tertiary">active</span>
         </p>
         {seller.stats.pending_listings > 0 && (
-          <p className="text-[11px] font-semibold tabular-nums text-[#FCD34D]">
-            · {seller.stats.pending_listings} pending
-          </p>
+          <p className="text-[12px] tabular-nums text-warning">{seller.stats.pending_listings} pending</p>
         )}
       </div>
 
-      {/* Sales + revenue */}
-      <div className="hidden w-[130px] shrink-0 md:block">
-        <p className="text-[13px] font-bold tabular-nums text-white/90">
-          {money(seller.stats.revenue)}
-        </p>
-        <p className="text-[11px] font-semibold tabular-nums text-white/70">
+      {/* Revenue + sales */}
+      <div className="hidden w-[120px] shrink-0 md:block">
+        <p className="text-[13.5px] font-semibold tabular-nums text-text-primary">{money(seller.stats.revenue)}</p>
+        <p className="text-[12px] tabular-nums text-text-tertiary">
           {seller.stats.completed_sales} {seller.stats.completed_sales === 1 ? 'sale' : 'sales'}
         </p>
       </div>
 
       {/* Last active */}
-      <div className="hidden w-[90px] shrink-0 lg:block">
-        <p className="truncate text-[11.5px] text-white/70">{lastActive || '—'}</p>
-      </div>
+      <p className="hidden w-[84px] shrink-0 truncate text-[12.5px] text-text-tertiary lg:block">{lastActive || '—'}</p>
 
       {/* Founding toggle (the one per-row action) */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onToggleFounding()
-        }}
-        onKeyDown={(e) => e.stopPropagation()}
-        disabled={foundingBusy}
-        title={
-          seller.founding_seller
-            ? 'Revoke founding-seller status'
-            : 'Grant founding-seller status (locks a reduced commission for life)'
-        }
-        aria-pressed={seller.founding_seller}
-        className={cn(
-          'shrink-0 rounded-lg p-1.5 transition-colors disabled:opacity-50',
-          FOCUS_RING,
-          seller.founding_seller
-            ? 'text-[#F5C451] hover:bg-[#F5C451]/10'
-            : 'text-white/70 hover:bg-white/[0.08] hover:text-white',
-        )}
-      >
-        {foundingBusy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Award className="h-3.5 w-3.5" />
-        )}
-      </button>
+      <Tooltip delayDuration={150}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleFounding()
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+            disabled={foundingBusy}
+            aria-label={seller.founding_seller ? 'Revoke founding-seller status' : 'Grant founding-seller status'}
+            aria-pressed={seller.founding_seller}
+            className={cn(
+              'grid h-9 w-9 shrink-0 place-items-center rounded-md transition-colors disabled:opacity-50',
+              seller.founding_seller
+                ? 'text-warning hover:bg-warning-bg'
+                : 'text-text-tertiary hover:bg-white/[0.06] hover:text-text-primary',
+            )}
+          >
+            {foundingBusy ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+            ) : (
+              <Star aria-hidden weight={seller.founding_seller ? 'fill' : 'bold'} className="h-4 w-4" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="border-0 bg-bg-overlay-2 text-[12px]">
+          {seller.founding_seller ? 'Revoke founding status' : 'Grant founding status (locks a reduced commission)'}
+        </TooltipContent>
+      </Tooltip>
 
-      <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
-    </div>
+      <CaretRight
+        aria-hidden
+        weight="bold"
+        className="h-4 w-4 shrink-0 text-text-disabled transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-text-secondary"
+      />
+    </li>
   )
 }

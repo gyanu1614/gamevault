@@ -1,5 +1,6 @@
 'use client'
 
+import { lockScroll } from '@/lib/scroll-lock'
 import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
@@ -168,11 +169,7 @@ function OrdersContent() {
 
   // Route-scoped scroll lock — the shell is the viewport; the list scrolls.
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [])
 
   // Redirect to login if not authenticated

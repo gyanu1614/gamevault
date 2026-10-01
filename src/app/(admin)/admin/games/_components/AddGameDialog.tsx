@@ -23,13 +23,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, Plus } from 'lucide-react'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { CircleNotch, Plus } from '@phosphor-icons/react'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
+import { adminBtn } from '../../components/kit'
 import { saveGameIdentity } from '@/lib/actions/admin-game-wizard'
+
+const LABEL = 'mb-1.5 block text-[13px] font-medium text-text-secondary'
 
 export function AddGameDialog() {
   const [open, setOpen] = useState(false)
@@ -87,21 +88,17 @@ export function AddGameDialog() {
         if (!next) reset()
       }}
     >
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-lime-hover"
-      >
-        <Plus className="h-4 w-4" />
-        Add game
+      <button type="button" onClick={() => setOpen(true)} className={adminBtn.primary}>
+        <Plus aria-hidden weight="bold" className="h-4 w-4" />
+        Add Game
       </button>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle>Add game</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold leading-tight">Add Game</DialogTitle>
+          <DialogDescription className="mt-1.5 leading-relaxed">
             Start with the basics. You&apos;ll set categories, branding, and pricing on the next screen.
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
         <form
           onSubmit={(e) => {
@@ -109,11 +106,11 @@ export function AddGameDialog() {
             if (!canSubmit || createMutation.isPending) return
             createMutation.mutate()
           }}
-          className="space-y-4 py-2"
+          className="space-y-4"
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="add-game-name">Name</Label>
-            <Input
+          <div>
+            <label htmlFor="add-game-name" className={LABEL}>Name</label>
+            <input
               id="add-game-name"
               type="text"
               value={name}
@@ -121,18 +118,17 @@ export function AddGameDialog() {
               placeholder="e.g. Honkai Star Rail"
               autoFocus
               autoComplete="off"
+              className={accountInputCls}
             />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1fr_84px]">
-            <div className="space-y-1.5">
+            <div>
               <div className="flex items-baseline justify-between">
-                <Label htmlFor="add-game-slug">Slug</Label>
-                <span className="text-[11px] text-text-tertiary">
-                  used in URLs
-                </span>
+                <label htmlFor="add-game-slug" className={LABEL}>Slug</label>
+                <span className="text-[12px] text-text-tertiary">Used in URLs</span>
               </div>
-              <Input
+              <input
                 id="add-game-slug"
                 type="text"
                 value={slug}
@@ -142,12 +138,12 @@ export function AddGameDialog() {
                 }}
                 placeholder="honkai-star-rail"
                 autoComplete="off"
-                className="font-mono"
+                className={cn(accountInputCls, 'font-mono')}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="add-game-emoji">Emoji</Label>
-              <Input
+            <div>
+              <label htmlFor="add-game-emoji" className={LABEL}>Emoji</label>
+              <input
                 id="add-game-emoji"
                 type="text"
                 value={emoji}
@@ -155,28 +151,20 @@ export function AddGameDialog() {
                 placeholder="🎮"
                 maxLength={2}
                 autoComplete="off"
-                className="text-center text-lg"
+                className={cn(accountInputCls, 'text-center text-lg sm:text-lg')}
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-lg border border-border-default bg-bg-raised px-4 py-2 text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
-            >
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setOpen(false)} className={adminBtn.secondary}>
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={!canSubmit || createMutation.isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-lime px-4 py-2 text-[13px] font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-60"
-            >
-              {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Create & configure
+            <button type="submit" disabled={!canSubmit || createMutation.isPending} className={adminBtn.primary}>
+              {createMutation.isPending && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
+              Create &amp; Configure
             </button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

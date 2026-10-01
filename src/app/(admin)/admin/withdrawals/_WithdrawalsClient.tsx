@@ -15,22 +15,19 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Clock, Send, CheckCircle2, Landmark, Copy } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Copy, HandCoins } from '@phosphor-icons/react'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { StatStrip, accountInputCls } from '@/components/account/AccountSurface'
+import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
+import { cn } from '@/lib/utils'
 import {
   PageHeader,
   AdminPanel,
-  StatCard,
+  AdminEmpty,
   StatusBadge,
   TABLE,
+  adminBtn,
+  adminBtnSm,
 } from '../components/kit'
 import {
   getAllWithdrawalRequests,
@@ -78,6 +75,10 @@ const usd = (n: number | string | null | undefined) =>
   `$${(Number(n) || 0).toFixed(2)}`
 
 const OPEN_STATUSES = ['pending', 'approved', 'processing']
+
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+const DIALOG_CLS = 'max-w-[480px] border-0 p-5 sm:p-6'
 
 export default function WithdrawalsClient({
   initialRequests,
@@ -140,178 +141,214 @@ export default function WithdrawalsClient({
     toast.success('Copied.')
   }
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: requests.length }
+    for (const f of FILTERS) if (f !== 'all') c[f] = requests.filter((r) => r.status === f).length
+    return c
+  }, [requests])
+
+  const actions = (row: RequestRow, full?: boolean) => {
+    if (row.status === 'pending') {
+      return (
+        <div className={cn('flex gap-2', full && 'w-full')}>
+          <button
+            type="button"
+            className={cn(adminBtnSm.danger, full && 'flex-1')}
+            disabled={busy}
+            onClick={() => setDialog({ kind: 'reject', row })}
+          >
+            Reject
+          </button>
+          <button
+            type="button"
+            className={cn(adminBtnSm.secondary, full && 'flex-1')}
+            disabled={busy}
+            onClick={() => setDialog({ kind: 'approve', row })}
+          >
+            Approve
+          </button>
+        </div>
+      )
+    }
+    if (row.status === 'approved' || row.status === 'processing') {
+      return (
+        <button
+          type="button"
+          className={cn(adminBtnSm.primary, full && 'w-full')}
+          disabled={busy}
+          onClick={() => setDialog({ kind: 'paid', row })}
+        >
+          Mark Paid
+        </button>
+      )
+    }
+    return null
+  }
+
+  const reference = (row: RequestRow) =>
+    (row.payment_reference || row.transaction_hash) && (
+      <div
+        className="mt-1 max-w-[160px] truncate font-mono text-[11.5px] text-text-tertiary"
+        title={row.payment_reference || row.transaction_hash || ''}
+      >
+        {row.payment_reference || row.transaction_hash}
+      </div>
+    )
+
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Withdrawals"
-        description="Approve requests, then Mark Paid once the money is actually sent — that settles the ledger."
+        description="Approve requests, then Mark Paid once the money is actually sent. That settles the ledger."
+        className="mb-0 sm:mb-0"
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Pending Review" value={stats.pending} icon={Clock} tone="warning" />
-        <StatCard
-          label="Awaiting Payout"
-          value={stats.approved}
-          sub={`${usd(stats.approvedSum)} to send`}
-          icon={Send}
-          tone="lime"
-        />
-        <StatCard label="Paid Out" value={usd(stats.paidSum)} icon={CheckCircle2} tone="success" />
-        <StatCard
-          label="In Clearing"
-          value={usd(stats.clearingSum)}
-          sub="open requests holding funds"
-          icon={Landmark}
-          tone="info"
-        />
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Pending Review', value: stats.pending },
+          { label: 'Awaiting Payout', value: stats.approved, hint: `${usd(stats.approvedSum)} to send` },
+          { label: 'Paid Out', value: usd(stats.paidSum) },
+          { label: 'In Clearing', value: usd(stats.clearingSum), hint: 'Open requests holding funds' },
+        ]}
+      />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={
-              filter === f
-                ? 'rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold capitalize text-lime-text'
-                : 'rounded-lg border border-border-default bg-bg-raised px-3 py-1.5 text-[12.5px] font-semibold capitalize text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary'
-            }
-          >
-            {f}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        tabs={FILTERS.map((f) => ({
+          id: f,
+          label: (
+            <>
+              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+              {counts[f] > 0 && <TabCount n={counts[f]} />}
+            </>
+          ),
+        }))}
+        value={filter}
+        onChange={setFilter}
+        layoutId="admin-withdrawals-filter"
+        ariaLabel="Withdrawal status"
+      />
 
-      <AdminPanel pad={false}>
-        {visible.length === 0 ? (
-          <p className="px-5 py-10 text-center text-[13.5px] text-text-tertiary">
-            No withdrawal requests{filter === 'all' ? ' yet' : ` with status “${filter}”`}.
-          </p>
-        ) : (
-          <div className={TABLE.wrap}>
-            <table className={TABLE.table}>
-              <thead>
-                <tr>
-                  <th className={TABLE.th}>Requested</th>
-                  <th className={TABLE.th}>Seller</th>
-                  <th className={TABLE.th}>Method</th>
-                  <th className={TABLE.th}>Destination</th>
-                  <th className={TABLE.th}>Amount</th>
-                  <th className={TABLE.th}>Net</th>
-                  <th className={TABLE.th}>Risk</th>
-                  <th className={TABLE.th}>Status</th>
-                  <th className={TABLE.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((row) => (
-                  <tr key={row.id} className={TABLE.row}>
-                    <td className={TABLE.td}>
-                      {new Date(row.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className={TABLE.tdPrimary}>
-                      <div>{row.user?.username || '—'}</div>
-                      <div className="text-[11.5px] font-normal text-text-tertiary">
-                        {row.user?.email}
-                      </div>
-                    </td>
-                    <td className={TABLE.td}>{row.method?.display_name || row.method_name}</td>
-                    <td className={TABLE.td}>
-                      <Destination details={row.payment_details} onCopy={copy} />
-                    </td>
-                    <td className={`${TABLE.td} tabular-nums`}>
-                      <div>{usd(row.amount)}</div>
-                      <div className="text-[11.5px] text-text-tertiary">
-                        fee {usd(row.fee_amount)}
-                      </div>
-                    </td>
-                    <td className={`${TABLE.tdPrimary} tabular-nums`}>{usd(row.net_amount)}</td>
-                    <td className={TABLE.td}>
-                      <RiskCell risk={row.risk} />
-                    </td>
-                    <td className={TABLE.td}>
-                      <StatusBadge status={row.status} />
-                      {(row.payment_reference || row.transaction_hash) && (
-                        <div
-                          className="mt-1 max-w-[140px] truncate font-mono text-[10.5px] text-text-tertiary"
-                          title={row.payment_reference || row.transaction_hash || ''}
-                        >
-                          {row.payment_reference || row.transaction_hash}
-                        </div>
-                      )}
-                    </td>
-                    <td className={TABLE.td}>
-                      <div className="flex gap-1.5">
-                        {row.status === 'pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={busy}
-                              onClick={() => setDialog({ kind: 'approve', row })}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-error"
-                              disabled={busy}
-                              onClick={() => setDialog({ kind: 'reject', row })}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {(row.status === 'approved' || row.status === 'processing') && (
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => setDialog({ kind: 'paid', row })}
-                          >
-                            Mark Paid
-                          </Button>
-                        )}
-                      </div>
-                    </td>
+      {visible.length === 0 ? (
+        <AdminEmpty
+          icon={HandCoins}
+          title={filter === 'all' ? 'No withdrawal requests yet' : `No ${filter} withdrawals`}
+          hint="Sellers’ payout requests show up here."
+        />
+      ) : (
+        <>
+          {/* Below xl: cards */}
+          <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 xl:hidden">
+            {visible.map((row) => (
+              <li key={row.id} className="flex flex-col rounded-lg bg-bg-raised p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold text-text-primary">{row.user?.username || '—'}</p>
+                    <p className="truncate text-[12.5px] text-text-tertiary">
+                      {row.method?.display_name || row.method_name} · {shortDate(row.created_at)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[15px] font-bold tabular-nums text-text-primary">{usd(row.net_amount)}</p>
+                    <p className="text-[12px] tabular-nums text-text-tertiary">
+                      {usd(row.amount)} − {usd(row.fee_amount)} fee
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 rounded-md bg-bg-overlay px-3 py-2.5">
+                  <Destination details={row.payment_details} onCopy={copy} />
+                </div>
+                <div className="mt-3">
+                  <RiskCell risk={row.risk} />
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                  <div className="min-w-0">
+                    <StatusBadge status={row.status} />
+                    {reference(row)}
+                  </div>
+                  {actions(row)}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* xl+: table */}
+          <AdminPanel pad={false} className="hidden overflow-hidden xl:block">
+            <div className={TABLE.wrap}>
+              <table className={TABLE.table}>
+                <thead>
+                  <tr>
+                    <th className={TABLE.th}>Seller</th>
+                    <th className={TABLE.th}>Method</th>
+                    <th className={TABLE.th}>Destination</th>
+                    <th className={cn(TABLE.th, 'text-right')}>Net</th>
+                    <th className={TABLE.th}>Risk</th>
+                    <th className={TABLE.th}>Status</th>
+                    <th className={cn(TABLE.th, 'text-right')}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </AdminPanel>
+                </thead>
+                <tbody>
+                  {visible.map((row) => (
+                    <tr key={row.id} className={TABLE.row}>
+                      <td className={TABLE.tdPrimary}>
+                        <div className="max-w-[180px] truncate">{row.user?.username || '—'}</div>
+                        <div className="text-[12px] font-normal text-text-tertiary">{shortDate(row.created_at)}</div>
+                      </td>
+                      <td className={cn(TABLE.td, 'whitespace-nowrap')}>{row.method?.display_name || row.method_name}</td>
+                      <td className={TABLE.td}>
+                        <Destination details={row.payment_details} onCopy={copy} />
+                      </td>
+                      <td className={cn(TABLE.td, 'whitespace-nowrap text-right tabular-nums')}>
+                        <div className="font-semibold text-text-primary">{usd(row.net_amount)}</div>
+                        <div className="text-[12px] text-text-tertiary">
+                          {usd(row.amount)} − {usd(row.fee_amount)}
+                        </div>
+                      </td>
+                      <td className={TABLE.td}>
+                        <RiskCell risk={row.risk} />
+                      </td>
+                      <td className={TABLE.td}>
+                        <StatusBadge status={row.status} />
+                        {reference(row)}
+                      </td>
+                      <td className={TABLE.td}>
+                        <div className="flex justify-end">{actions(row)}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </AdminPanel>
+        </>
+      )}
 
       {/* Approve */}
       <Dialog open={dialog?.kind === 'approve'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve Withdrawal</DialogTitle>
-            <DialogDescription>
-              {dialog && (
-                <>
-                  {usd(dialog.row.amount)} for {dialog.row.user?.username || 'seller'} — the funds
-                  are already held. Approving queues it for sending; the ledger settles when you
-                  Mark Paid.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className={DIALOG_CLS}>
+          <DialogTitle className="text-[18px] font-bold">Approve Withdrawal</DialogTitle>
+          <DialogDescription>
+            {dialog && (
+              <>
+                {usd(dialog.row.amount)} for {dialog.row.user?.username || 'seller'}. The funds are already held.
+                Approving queues it for sending; the ledger settles when you Mark Paid.
+              </>
+            )}
+          </DialogDescription>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Internal notes (optional)"
+            aria-label="Internal notes"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog} disabled={busy}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" className={adminBtn.secondary} onClick={closeDialog} disabled={busy}>
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
+              type="button"
+              className={adminBtn.primary}
               disabled={busy}
               onClick={() =>
                 dialog &&
@@ -326,91 +363,92 @@ export default function WithdrawalsClient({
               }
             >
               {busy ? 'Approving…' : 'Approve'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Reject */}
       <Dialog open={dialog?.kind === 'reject'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Withdrawal</DialogTitle>
-            <DialogDescription>
-              {dialog && (
-                <>
-                  {usd(dialog.row.amount)} for {dialog.row.user?.username || 'seller'} — the held
-                  funds go back to their balance and the seller is told why.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className={DIALOG_CLS}>
+          <DialogTitle className="text-[18px] font-bold">Reject Withdrawal</DialogTitle>
+          <DialogDescription>
+            {dialog && (
+              <>
+                {usd(dialog.row.amount)} for {dialog.row.user?.username || 'seller'}. The held funds go back to their
+                balance and the seller is told why.
+              </>
+            )}
+          </DialogDescription>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason (shown to the seller)"
+            aria-label="Reason shown to the seller"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog} disabled={busy}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" className={adminBtn.secondary} onClick={closeDialog} disabled={busy}>
               Cancel
-            </Button>
-            <Button
-              variant="destructive"
+            </button>
+            <button
+              type="button"
+              className={adminBtn.danger}
               disabled={busy || !reason.trim()}
               onClick={() =>
                 dialog &&
                 run(
-                  () =>
-                    rejectWithdrawalRequest({ requestId: dialog.row.id, reason: reason.trim() }),
+                  () => rejectWithdrawalRequest({ requestId: dialog.row.id, reason: reason.trim() }),
                   'Withdrawal rejected — funds released back to the seller.',
                 )
               }
             >
               {busy ? 'Rejecting…' : 'Reject'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Mark Paid */}
       <Dialog open={dialog?.kind === 'paid'} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mark Paid</DialogTitle>
-            <DialogDescription>
-              {dialog && (
-                <>
-                  Confirms you sent {usd(dialog.row.net_amount)} (net of fees) to the destination
-                  below. This settles the ledger — only do it after the money has actually left.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className={DIALOG_CLS}>
+          <DialogTitle className="text-[18px] font-bold">Mark Paid</DialogTitle>
+          <DialogDescription>
+            {dialog && (
+              <>
+                Confirms you sent {usd(dialog.row.net_amount)} (net of fees) to the destination below. This settles the
+                ledger, so only do it after the money has actually left.
+              </>
+            )}
+          </DialogDescription>
           {dialog?.kind === 'paid' && (
-            <div className="rounded-lg border border-border-subtle bg-bg-overlay px-3 py-2.5 text-[12.5px]">
-              <Destination details={dialog.row.payment_details} onCopy={copy} />
+            <div className="rounded-md bg-bg-overlay px-3.5 py-3">
+              <Destination details={dialog.row.payment_details} onCopy={copy} full />
             </div>
           )}
           <input
             value={txRef}
             onChange={(e) => setTxRef(e.target.value)}
-            placeholder="Tx hash / Payoneer payment reference (required — sent to the seller)"
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 font-mono text-[12.5px] text-text-primary placeholder:font-sans placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+            placeholder="Tx hash or Payoneer payment reference (sent to the seller)"
+            aria-label="Payment reference"
+            className={cn(accountInputCls, 'font-mono placeholder:font-sans')}
           />
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Internal notes (optional)"
+            aria-label="Internal notes"
             rows={2}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog} disabled={busy}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" className={adminBtn.secondary} onClick={closeDialog} disabled={busy}>
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
+              type="button"
+              className={adminBtn.primary}
               disabled={busy}
               onClick={() =>
                 dialog &&
@@ -426,8 +464,8 @@ export default function WithdrawalsClient({
               }
             >
               {busy ? 'Settling…' : 'Money Sent — Mark Paid'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -439,41 +477,48 @@ export default function WithdrawalsClient({
 function Destination({
   details,
   onCopy,
+  full,
 }: {
   details: Record<string, any> | null
   onCopy: (text: string) => void
+  /** Mark Paid dialog: show every value whole (it is what gets paid to). */
+  full?: boolean
 }) {
   if (!details || Object.keys(details).length === 0) {
     return <span className="text-text-tertiary">—</span>
   }
   if (details.wallet_address) {
     return (
-      <div className="flex items-center gap-1.5">
-        <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
           <div
-            className="max-w-[180px] truncate font-mono text-[12px] text-text-primary"
+            className={cn(
+              'font-mono text-[12px] text-text-primary',
+              full ? 'break-all' : 'max-w-full truncate xl:max-w-[180px]',
+            )}
             title={details.wallet_address}
           >
             {details.wallet_address}
           </div>
-          <div className="text-[11px] uppercase text-text-tertiary">
+          <div className="text-[11.5px] uppercase text-text-tertiary">
             {[details.coin, details.network].filter(Boolean).join(' · ')}
           </div>
         </div>
         <button
+          type="button"
           onClick={() => onCopy(details.wallet_address)}
-          className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"
-          title="Copy address"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+          aria-label="Copy address"
         >
-          <Copy className="h-3.5 w-3.5" />
+          <Copy aria-hidden weight="bold" className="h-3.5 w-3.5" />
         </button>
       </div>
     )
   }
   return (
-    <div className="max-w-[220px] text-[12px]">
+    <div className={cn('max-w-full text-[12.5px]', !full && 'xl:max-w-[220px]')}>
       {Object.entries(details).map(([k, v]) => (
-        <div key={k} className="truncate" title={`${k}: ${String(v)}`}>
+        <div key={k} className={full ? 'break-all' : 'truncate'} title={`${k}: ${String(v)}`}>
           <span className="text-text-tertiary">{k.replace(/_/g, ' ')}:</span>{' '}
           <span className="text-text-primary">{String(v)}</span>
         </div>
@@ -485,7 +530,7 @@ function Destination({
 
 /** PR 7 — compact risk snapshot: age · sales · disputes · refund rate · recent detail change. */
 function RiskCell({ risk }: { risk: RequestRow['risk'] }) {
-  if (!risk) return <span className="text-text-tertiary">—</span>
+  if (!risk) return <span className="text-[12.5px] text-text-tertiary">No risk data</span>
   const age = risk.account_age_days ?? null
   const flags: string[] = []
   if (age != null && age < 30) flags.push('new')
@@ -494,14 +539,14 @@ function RiskCell({ risk }: { risk: RequestRow['risk'] }) {
   if (risk.payout_details_changed_recently) flags.push('payout details changed <7d')
   if ((risk.matured_minor ?? 0) < 0) flags.push('negative balance')
   return (
-    <div className="min-w-[150px] text-[11.5px] leading-snug">
+    <div className="min-w-[150px] text-[12px] leading-snug">
       <div className="text-text-secondary">
         {age == null ? 'age —' : `${age}d old`} · {risk.completed_sales ?? 0} sales ({usd(risk.completed_sales_total ?? 0)})
       </div>
       {flags.length ? (
-        <div className="mt-0.5 font-medium text-amber-400">{flags.join(' · ')}</div>
+        <div className="mt-0.5 font-medium text-warning">{flags.join(' · ')}</div>
       ) : (
-        <div className="mt-0.5 text-text-tertiary">no flags</div>
+        <div className="mt-0.5 text-text-tertiary">No flags</div>
       )}
     </div>
   )

@@ -3,114 +3,109 @@
 /**
  * P6.5 — Admin GDPR Request Management Client
  *
- * V53 restyle — rebuilt on the admin kit (PageHeader / StatCard /
- * AdminPanel / StatusBadge / TABLE). Entrance animations removed so
- * content is visible straight from the server HTML; only user-triggered
- * transitions (modal, row exit) remain.
+ * Built on the admin kit. Content is visible straight from the server
+ * HTML; only user-triggered transitions (dialogs, row exit) animate.
  *
  * Sections:
- *  1. Request list with status tabs (pending / all)
- *  2. Per-request detail: type, user, date
- *  3. Complete / Reject actions
- *  4. Warning banner for deletion requests
+ *  1. Warning banner for deletion requests
+ *  2. Numbers strip + status tabs (pending / all)
+ *  3. Requests: cards below lg, table from lg
+ *  4. Complete / Reject actions — "Delete Account" asks for confirmation
+ *     first (it permanently deletes the auth user).
  */
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import {
-  Download, Trash2, CheckCircle2, Loader2, AlertTriangle, X,
-} from 'lucide-react'
+import { CheckCircle, CircleNotch, DownloadSimple, Trash, WarningOctagon, X } from '@phosphor-icons/react'
 import { processGdprRequest, getGdprRequests } from '@/lib/actions/gdpr'
 import type { GdprRequest } from '@/lib/actions/gdpr'
-import { PageHeader, StatCard, StatusBadge, TABLE } from '../components/kit'
+import { StatStrip, accountInputCls } from '@/components/account/AccountSurface'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+import {
+  AdminEmpty,
+  AdminLoadingRows,
+  PageHeader,
+  StatusBadge,
+  TABLE,
+  adminBtn,
+  adminBtnSm,
+} from '../components/kit'
 
-// ── Request row ────────────────────────────────────────────────────────────
+type Req = GdprRequest & { username?: string | null; email?: string | null }
 
-function RequestRow({ req, onComplete, onReject, loading }: {
-  req:        GdprRequest & { username?: string | null; email?: string | null }
-  onComplete: (id: string) => void
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+// ── Request pieces ─────────────────────────────────────────────────────────
+
+function TypeChip({ req }: { req: Req }) {
+  const isDel = req.type === 'deletion'
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-semibold',
+        isDel ? 'bg-error-bg text-error' : 'bg-info-bg text-info',
+      )}
+    >
+      {isDel ? <Trash aria-hidden weight="bold" className="h-3 w-3" /> : <DownloadSimple aria-hidden weight="bold" className="h-3 w-3" />}
+      {isDel ? 'Deletion' : 'Export'}
+    </span>
+  )
+}
+
+function RequestActions({ req, onComplete, onReject, loading }: {
+  req:        Req
+  onComplete: (req: Req) => void
   onReject:   (id: string) => void
   loading:    string | null
 }) {
   const busy  = loading === req.id
   const isDel = req.type === 'deletion'
-
+  if (req.status !== 'pending' && req.status !== 'processing') {
+    return (
+      <span className="text-[12.5px] text-text-tertiary">
+        {req.completed_at ? `Done ${fmtDate(req.completed_at)}` : '—'}
+      </span>
+    )
+  }
   return (
-    <motion.tr
-      layout
-      initial={false}
-      exit={{ opacity: 0 }}
-      className={TABLE.row}
-    >
-      {/* Type */}
-      <td className={TABLE.td}>
-        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
-          isDel
-            ? 'border-[rgba(255,92,92,0.25)] bg-error-bg text-error'
-            : 'border-[rgba(88,155,255,0.25)] bg-info-bg text-info'
-        }`}>
-          {isDel ? <Trash2 className="h-3 w-3" /> : <Download className="h-3 w-3" />}
-          {isDel ? 'Deletion' : 'Export'}
-        </span>
-      </td>
-
-      {/* User */}
-      <td className={TABLE.td}>
-        <p className="text-[13.5px] font-semibold text-text-primary">{req.username ? `@${req.username}` : '—'}</p>
-        <p className="text-[12px] text-text-tertiary">{req.email}</p>
-      </td>
-
-      {/* Date */}
-      <td className={`${TABLE.td} text-[12px] text-text-tertiary`}>
-        {new Date(req.requested_at).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })}
-      </td>
-
-      {/* Status */}
-      <td className={TABLE.td}>
-        <StatusBadge status={req.status} />
-        {req.rejection_reason && (
-          <p className="mt-0.5 max-w-[160px] truncate text-[10px] text-error">{req.rejection_reason}</p>
-        )}
-      </td>
-
-      {/* Actions */}
-      <td className={TABLE.td}>
-        {req.status === 'pending' || req.status === 'processing' ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              disabled={busy}
-              onClick={() => onComplete(req.id)}
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-40
-                ${isDel
-                  ? 'border-[rgba(255,92,92,0.25)] bg-error-bg text-error hover:bg-[rgba(255,92,92,0.22)]'
-                  : 'border-[rgba(63,217,134,0.25)] bg-success-bg text-success hover:bg-[rgba(63,217,134,0.22)]'
-                }`}
-            >
-              {busy
-                ? <Loader2 className="h-3 w-3 animate-spin" />
-                : isDel ? <Trash2 className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />
-              }
-              {isDel ? 'Delete Account' : 'Mark Done'}
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onReject(req.id)}
-              className="flex items-center gap-1 rounded-md border border-border-default bg-bg-overlay px-2 py-1 text-[11px] font-semibold text-text-secondary transition-colors hover:bg-bg-overlay-2 hover:text-text-primary disabled:opacity-40"
-            >
-              <X className="h-3 w-3" />
-              Reject
-            </button>
-          </div>
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onComplete(req)}
+        className={isDel ? adminBtnSm.danger : adminBtnSm.primary}
+      >
+        {busy ? (
+          <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />
+        ) : isDel ? (
+          <Trash aria-hidden weight="bold" className="h-3.5 w-3.5" />
         ) : (
-          <span className="text-[12px] text-text-tertiary">
-            {req.completed_at ? new Date(req.completed_at).toLocaleDateString() : '—'}
-          </span>
+          <CheckCircle aria-hidden weight="bold" className="h-3.5 w-3.5" />
         )}
-      </td>
-    </motion.tr>
+        {isDel ? 'Delete Account' : 'Mark Done'}
+      </button>
+      <button type="button" disabled={busy} onClick={() => onReject(req.id)} className={adminBtnSm.secondary}>
+        <X aria-hidden weight="bold" className="h-3.5 w-3.5" />
+        Reject
+      </button>
+    </div>
+  )
+}
+
+function StatusCell({ req }: { req: Req }) {
+  return (
+    <div className="min-w-0">
+      <StatusBadge status={req.status} />
+      {req.rejection_reason && (
+        <p className="mt-1 max-w-[220px] truncate text-[12px] text-text-tertiary" title={req.rejection_reason}>
+          {req.rejection_reason}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -130,6 +125,8 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
   const [tabLoading,   setTabLoading]   = useState(false)
   const [rejectTarget, setRejectTarget] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  /** A deletion request waiting for the admin to confirm. */
+  const [deleteTarget, setDeleteTarget] = useState<Req | null>(null)
 
   // ── Tab change ────────────────────────────────────────────────────────────
 
@@ -156,6 +153,12 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
     }
   }
 
+  /** Exports complete straight away; deletions go through the confirm dialog. */
+  const requestComplete = (req: Req) => {
+    if (req.type === 'deletion') setDeleteTarget(req)
+    else handleComplete(req.id)
+  }
+
   // ── Reject ────────────────────────────────────────────────────────────────
 
   const handleReject = async () => {
@@ -173,133 +176,207 @@ export default function GdprAdminClient({ initialRequests, fetchError }: Props) 
   }
 
   const deletionCount = requests.filter(r => r.type === 'deletion').length
+  const pendingCount = requests.filter(r => r.status === 'pending').length
+  const rows = requests as Req[]
 
   return (
-    <>
-      {/* Reject modal */}
-      <AnimatePresence>
-        {rejectTarget && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="w-full max-w-md rounded-xl border border-border-default bg-bg-raised p-6"
-            >
-              <h3 className="mb-3 font-semibold text-text-primary">Rejection Reason</h3>
-              <textarea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="Reason for rejection (e.g., active orders pending, outstanding seller balance)…"
-                rows={4}
-                className="mb-4 w-full resize-none rounded-lg border border-border-default bg-bg-base px-3 py-2.5 text-sm
-                           text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
-              />
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setRejectTarget(null)} className="px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleReject}
-                  disabled={!rejectReason.trim()}
-                  className="rounded-lg border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-[rgba(255,92,92,0.22)] disabled:opacity-40"
-                >
-                  Reject Request
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="space-y-5 pb-10">
+      <PageHeader
+        title="GDPR Requests"
+        description="Data export and account deletion requests."
+        className="mb-0 sm:mb-0"
+      />
 
-      <div className="space-y-6 pb-10">
-        {/* Header */}
-        <PageHeader
-          title="GDPR Requests"
-          description="Data export and account deletion requests."
-          className="mb-0"
-        />
-
-        {/* Deletion warning */}
-        {deletionCount > 0 && (
-          <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,92,92,0.25)] bg-error-bg p-4">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-error" />
-            <div>
-              <p className="text-sm font-semibold text-error">{deletionCount} Account Deletion Request{deletionCount !== 1 ? 's' : ''}</p>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                Completing a deletion request is irreversible. Verify: no active orders, seller balance = 0,
-                no pending payouts. The auth user will be permanently deleted.
-              </p>
-            </div>
+      {deletionCount > 0 && (
+        <div className="flex items-start gap-3 rounded-lg bg-error-bg p-4">
+          <WarningOctagon aria-hidden weight="bold" className="mt-0.5 h-5 w-5 shrink-0 text-error" />
+          <div>
+            <p className="text-[13.5px] font-semibold text-error">
+              {deletionCount} Account Deletion Request{deletionCount !== 1 ? 's' : ''}
+            </p>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-secondary">
+              Completing a deletion request is irreversible. Verify: no active orders, seller balance = 0,
+              no pending payouts. The auth user will be permanently deleted.
+            </p>
           </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="Pending"    value={requests.filter(r => r.status === 'pending').length}    tone="warning" />
-          <StatCard label="Deletions"  value={deletionCount}                                          tone="error" />
-          <StatCard label="Exports"    value={requests.filter(r => r.type === 'export').length}       tone="info" />
-          <StatCard label="Processing" value={requests.filter(r => r.status === 'processing').length} tone="lime" />
         </div>
+      )}
 
-        {/* Table */}
-        <section className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
-          {/* Tabs */}
-          <div className="flex border-b border-border-subtle">
-            {(['pending', 'all'] as Tab[]).map(t => (
-              <button key={t} onClick={() => handleTabChange(t)}
-                className={`px-4 py-3 text-sm font-semibold capitalize transition-colors ${
-                  activeTab === t
-                    ? 'border-b-2 border-lime text-text-primary'
-                    : 'text-text-tertiary hover:text-text-secondary'
-                }`}>
-                {t === 'pending' ? 'Pending' : 'All Requests'}
-              </button>
-            ))}
-          </div>
+      <StatStrip
+        stats={[
+          { label: 'Pending', value: <span className={pendingCount > 0 ? 'text-warning' : undefined}>{pendingCount}</span> },
+          { label: 'Deletions', value: <span className={deletionCount > 0 ? 'text-error' : undefined}>{deletionCount}</span> },
+          { label: 'Exports', value: requests.filter(r => r.type === 'export').length },
+          { label: 'Processing', value: requests.filter(r => r.status === 'processing').length },
+        ]}
+      />
 
-          {fetchError && <div className="p-4 text-sm text-error">{fetchError}</div>}
+      <SegmentedTabs<Tab>
+        tabs={[
+          { id: 'pending', label: 'Pending' },
+          { id: 'all', label: 'All Requests' },
+        ]}
+        value={activeTab}
+        onChange={handleTabChange}
+        layoutId="gdpr-tabs"
+        ariaLabel="GDPR requests"
+      />
 
-          <div className={TABLE.wrap}>
-            <table className={TABLE.table}>
-              <thead>
-                <tr>
-                  {['Type', 'User', 'Date', 'Status', 'Actions'].map(h => (
-                    <th key={h} className={TABLE.th}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence mode="popLayout">
-                  {tabLoading ? (
-                    <tr><td colSpan={5} className="py-12 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-text-tertiary" />
-                    </td></tr>
-                  ) : requests.length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center">
-                      <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success" />
-                      <p className="text-sm text-text-tertiary">No {activeTab} GDPR requests.</p>
-                    </td></tr>
-                  ) : (
-                    requests.map(req => (
-                      <RequestRow
-                        key={req.id}
-                        req={req as any}
-                        onComplete={handleComplete}
+      <div role="tabpanel" id={`gdpr-tabs-panel-${activeTab}`} aria-labelledby={`gdpr-tabs-tab-${activeTab}`} className="space-y-3">
+        {fetchError && <p className="rounded-lg bg-error-bg px-4 py-3 text-[13px] text-error">{fetchError}</p>}
+
+        {tabLoading ? (
+          <AdminLoadingRows rows={4} />
+        ) : rows.length === 0 ? (
+          <AdminEmpty
+            icon={CheckCircle}
+            tone="success"
+            title={activeTab === 'pending' ? 'No Pending Requests' : 'No GDPR Requests'}
+            hint="Export and deletion requests from users show up here."
+          />
+        ) : (
+          <>
+            {/* Phones and tablets: cards */}
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+              <AnimatePresence initial={false}>
+                {rows.map(req => (
+                  <motion.li key={req.id} layout initial={false} exit={{ opacity: 0 }} className="rounded-lg bg-bg-raised p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13.5px] font-semibold text-text-primary">{req.username ? `@${req.username}` : '—'}</p>
+                        <p className="truncate text-[12px] text-text-tertiary">{req.email}</p>
+                      </div>
+                      <TypeChip req={req} />
+                    </div>
+                    <div className="mt-3 flex items-start justify-between gap-3">
+                      <StatusCell req={req} />
+                      <span className="shrink-0 text-[12px] text-text-tertiary">{fmtDate(req.requested_at)}</span>
+                    </div>
+                    <div className="mt-3.5 border-t border-white/[0.06] pt-3.5">
+                      <RequestActions
+                        req={req}
+                        onComplete={requestComplete}
                         onReject={id => { setRejectTarget(id); setRejectReason('') }}
                         loading={loading}
                       />
-                    ))
-                  )}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                    </div>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+
+            {/* Wide screens: table */}
+            <div className="hidden overflow-hidden rounded-lg bg-bg-raised lg:block">
+              <div className={TABLE.wrap}>
+                <table className={TABLE.table}>
+                  <thead>
+                    <tr>
+                      {['Type', 'User', 'Requested', 'Status'].map(h => (
+                        <th key={h} className={TABLE.th}>{h}</th>
+                      ))}
+                      <th className={cn(TABLE.th, 'text-right')}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:last-child>td]:border-b-0">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {rows.map(req => (
+                        <motion.tr key={req.id} layout initial={false} exit={{ opacity: 0 }} className={TABLE.row}>
+                          <td className={TABLE.td}><TypeChip req={req} /></td>
+                          <td className={TABLE.td}>
+                            <p className="text-[13.5px] font-semibold text-text-primary">{req.username ? `@${req.username}` : '—'}</p>
+                            <p className="text-[12px] text-text-tertiary">{req.email}</p>
+                          </td>
+                          <td className={cn(TABLE.td, 'whitespace-nowrap text-[12.5px] text-text-tertiary')}>{fmtDate(req.requested_at)}</td>
+                          <td className={TABLE.td}><StatusCell req={req} /></td>
+                          <td className={TABLE.td}>
+                            <div className="flex justify-end">
+                              <RequestActions
+                                req={req}
+                                onComplete={requestComplete}
+                                onReject={id => { setRejectTarget(id); setRejectReason('') }}
+                                loading={loading}
+                              />
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-    </>
+
+      {/* Reject dialog */}
+      <Dialog open={!!rejectTarget} onOpenChange={o => !o && setRejectTarget(null)}>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Reject Request</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
+              Tell the user why the request can&apos;t be completed yet.
+            </DialogDescription>
+          </div>
+          <div>
+            <label htmlFor="gdpr-reject-reason" className="mb-1.5 block text-[13px] font-medium text-text-secondary">
+              Rejection Reason <span className="text-error">*</span>
+            </label>
+            <textarea
+              id="gdpr-reject-reason"
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="e.g. Active orders pending, outstanding seller balance…"
+              rows={4}
+              className={cn(accountInputCls, 'resize-none')}
+            />
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setRejectTarget(null)} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button type="button" onClick={handleReject} disabled={!rejectReason.trim()} className={adminBtn.danger}>
+              Reject Request
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete-account confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Delete This Account?</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
+              {deleteTarget?.username ? `@${deleteTarget.username}` : 'This user'}
+              {deleteTarget?.email ? ` (${deleteTarget.email})` : ''} is permanently deleted. This cannot be undone.
+            </DialogDescription>
+          </div>
+          <ul className="space-y-1.5 rounded-md bg-bg-overlay px-4 py-3 text-[13px] text-text-secondary">
+            <li>No active orders</li>
+            <li>Seller balance is $0</li>
+            <li>No pending payouts</li>
+          </ul>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setDeleteTarget(null)} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!deleteTarget) return
+                const id = deleteTarget.id
+                setDeleteTarget(null)
+                handleComplete(id)
+              }}
+              className={adminBtn.danger}
+            >
+              <Trash aria-hidden weight="bold" className="h-4 w-4" />
+              Delete Account
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

@@ -13,6 +13,8 @@
  */
 
 import { useState } from 'react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { GuideCard } from '../../../(marketplace)/[gameSlug]/blog/_ArticleGrid'
 import { ArticleBody } from '../../../(marketplace)/[gameSlug]/blog/[slug]/_articleBody'
 
@@ -64,46 +66,26 @@ export function BlogPreview({
     .filter(Boolean)
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-8"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="w-full max-w-4xl border border-[#263026] bg-[#0B0F0C]">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[92dvh] max-w-4xl gap-0 overflow-y-auto border-0 p-0">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-[#1A211A] px-5 py-4">
-          <div className="flex items-center gap-2">
-            {(['card', 'article'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`px-3.5 py-2 text-[13px] font-semibold transition ${
-                  tab === t
-                    ? 'bg-[#3FA35C] text-[#08110B]'
-                    : 'border border-[#263026] text-[#9BA8A0] hover:text-[#F1F3F1]'
-                }`}
-              >
-                {t === 'card' ? 'Card' : 'Article'}
-              </button>
-            ))}
-            <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
-              Live preview · unsaved
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close preview"
-            className="flex h-8 w-8 items-center justify-center border border-[#263026] text-[#9BA8A0] transition hover:text-[#F1F3F1]"
-          >
-            ✕
-          </button>
+        <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] px-4 py-3 pr-12 sm:px-5">
+          <DialogTitle className="sr-only">Post Preview</DialogTitle>
+          <SegmentedTabs
+            tabs={[
+              { id: 'card', label: 'Card' },
+              { id: 'article', label: 'Article' },
+            ]}
+            value={tab}
+            onChange={setTab}
+            layoutId="blog-preview-tabs"
+            ariaLabel="Preview"
+          />
+          <span className="text-[12px] text-text-tertiary">Live preview · unsaved</span>
         </div>
 
         {/* Body */}
-        <div className="p-5 sm:p-8">
+        <div className="bg-bg-base p-5 sm:p-8">
           {tab === 'card' ? (
             <div className="flex justify-center">
               <GuideCard
@@ -163,7 +145,7 @@ export function BlogPreview({
             </article>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

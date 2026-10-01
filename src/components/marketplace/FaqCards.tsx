@@ -20,11 +20,16 @@
  * read as chunks rather than a list. The chevron rotates instead of a +/-
  * swap. Added as a variant rather than a second component so the open/close
  * behaviour stays in ONE place.
+ *
+ * Answers open and close with the shared framer-motion Expand (height +
+ * fade, like the account sidebar). They stay mounted while closed, so every
+ * answer is in the server HTML.
  */
 
 import { useState } from 'react'
 import { ChevronDown, Plus, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Expand } from '@/components/ui/expand'
 
 export interface FaqItem {
   q: string
@@ -132,53 +137,26 @@ export function FaqCards({
                 </span>
               </button>
             </h3>
-            {/* Glass variant keeps the answer mounted and animates it with a
-                grid-template-rows 0fr -> 1fr transition, which interpolates to
-                the content's intrinsic height without measuring it in JS (the
-                trick a max-height guess always gets wrong). The row collapses
-                to zero, so the inner element needs min-h-0 + overflow-hidden
-                or its content refuses to shrink below its intrinsic height.
-                The other variants keep the original mount/unmount untouched. */}
-            {(glass || open) && (
-              <div
-                className={cn(
-                  glass && 'faq-glass__reveal',
-                  glass && open && 'faq-glass__reveal--open',
-                )}
-                // Hidden-but-mounted content must leave the a11y tree and the
-                // tab order, or the closed answers' links stay focusable.
-                // React 18 has no boolean `inert`: `true` warns and is dropped.
-                // The empty string renders the attribute (inert="").
-                {...(glass && !open ? { inert: '' as unknown as boolean } : {})}
-              >
-                <div className={cn(glass && 'min-h-0 overflow-hidden')}>
-                  <div
-                    className={cn(
-                      glass
-                        ? '-mt-1 px-5 pb-4 sm:px-6 sm:pb-5'
-                        : '-mt-2 px-6 pb-6 sm:px-9 sm:pb-8',
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'max-w-[640px] space-y-3 text-text-secondary',
-                        glass
-                          ? 'text-[14.5px] leading-[1.55] sm:text-[15px]'
-                          : 'text-[15px] leading-[1.6] sm:text-[16px]',
-                      )}
-                    >
-                      {item.a
-                        .split(/\n{2,}/)
-                        .map((p) => p.trim())
-                        .filter(Boolean)
-                        .map((p, j) => (
-                          <p key={j}>{p}</p>
-                        ))}
-                    </div>
-                  </div>
+            <Expand open={open} pullUp={glass ? 4 : 8}>
+              <div className={glass ? 'px-5 pb-4 sm:px-6 sm:pb-5' : 'px-6 pb-6 sm:px-9 sm:pb-8'}>
+                <div
+                  className={cn(
+                    'max-w-[640px] space-y-3 text-text-secondary',
+                    glass
+                      ? 'text-[14.5px] leading-[1.55] sm:text-[15px]'
+                      : 'text-[15px] leading-[1.6] sm:text-[16px]',
+                  )}
+                >
+                  {item.a
+                    .split(/\n{2,}/)
+                    .map((p) => p.trim())
+                    .filter(Boolean)
+                    .map((p, j) => (
+                      <p key={j}>{p}</p>
+                    ))}
                 </div>
               </div>
-            )}
+            </Expand>
           </div>
         )
       })}

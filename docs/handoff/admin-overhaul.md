@@ -1,0 +1,92 @@
+# Admin overhaul (branch `feat/admin-overhaul`, from 2026-09-30)
+
+Owner ask: move every `/admin` page to the new design (the account section from
+PR #126), fix mobile, keep every function working, and delete what is unused.
+Section by section, starting with the 2FA screen.
+
+## Design rules (same as the account section)
+- Cards: solid `bg-bg-raised`, `rounded-lg`, **no outline, gradient or glow**
+  (`AccountCard` / `SettingsCard` in `src/components/account/AccountSurface.tsx`).
+  Controls inside a card sit one step lighter (`bg-bg-overlay`), `rounded-md`.
+- Buttons: `accountBtn.primary | secondary | danger`. Inputs: `accountInputCls`.
+- Tab and filter rows: `SegmentedTabs` (scrolls sideways on phones through
+  `@/components/ui/scroll-row`), never `flex-wrap`.
+- Headline numbers: `StatStrip` (one panel, hairlines), not boxed stat cards.
+- Icons: Phosphor (`weight="bold"`), no lucide or tabler in admin.
+- Neutral focus ring (`ring-focus-soft`), never lime. Title Case labels.
+- Every page gets a `loading.tsx` that matches it (`AccountSkeletons`).
+- `MARKET_CARD` is the marketplace card (gradient); admin uses the flat card.
+
+## Inventory (2026-09-30)
+- 36 pages under `src/app/(admin)/admin`, plus `/admin/mfa` in `(admin-auth)`.
+  None has a `loading.tsx` or `error.tsx`.
+- Shell: `AdminChrome` + `Sidebar` (tabler icons, forest glass, mobile drawer
+  below `lg`) + `EnhancedAdminHeader` (lucide; 384px notification panel overflows
+  a 375px phone; the menu button overlaps the search box) + the forest gradient
+  canvas in `layout.tsx` (`_theme/forest.ts`).
+- `kit.tsx` `AdminPanel` / `StatCard` bake in `border border-border-default`
+  (13 and 15 files inherit it), so restyling the kit fixes many pages at once.
+
+### Unused / dead (remove when their section comes up)
+| What | Why dead |
+|---|---|
+| `/admin/redesign`, `/admin/categories`, `/admin/categories-v2` | only link to each other; not in sidebar/header/dashboard. Redesign links to a 404 (`/admin/games/new`). Actions `admin-categories.ts`, `admin-global-categories.ts` only used by them. |
+| `/admin/promo-codes` | a bare `redirect('/admin/promos')`; nothing links to it |
+| `/admin/profile` | duplicate of the Profile tab in `/admin/settings` (keep `ProfileSettings.tsx`) |
+| `_theme/forest.ts` exports `GAME_TILE_GRADIENTS`, `FOREST_STATUS_CHIPS`, `ForestChipStatus`, `AdminForestToken`; `_theme/SectionIcons.tsx` `IconBank`, `IconBriefcase` | not imported |
+| `orders/components/disputes-table.tsx` | 30-line "Go to Disputes" placeholder inside Orders |
+| `src/components/ui/glass-card` | admin-only; dead once games/templates move off it |
+| `/admin/utils` (sidebar) | dev tooling (test listings, debug listings) — **ask the owner before removing** |
+
+Reachable but not in the sidebar: `/activities`, `/reviews`, `/notifications`,
+`/gdpr`, `/inform` (dashboard tiles, header search, bell).
+
+## Order of work (all ✅ on feat/admin-overhaul, not pushed)
+1. ✅ `/admin/mfa` 2FA screen
+2. ✅ Shell: layout canvas, `AdminChrome`, `Sidebar`, `EnhancedAdminHeader`, `kit.tsx`
+3. ✅ Dashboard (`CompactDashboard`)
+4. ✅ Orders → order detail
+5. ✅ Withdrawals, Fees & Payouts
+6. ✅ Seller Applications → detail; Active Sellers → detail; Founding Sellers;
+   Seller Leads; Founding Notices
+7. ✅ Disputes → detail; Fraud; Moderation; Reviews (+ paging)
+8. ✅ Analytics, Activities, Notifications, GDPR (+ Delete Account confirm), INFORM
+9. ✅ Games → edit → templates; Blog (list/new/edit); Promos
+10. ✅ Profile (Settings merged into it; `/admin/settings` redirects); Utils removed (owner)
+11. ✅ Dead code removed (89c24d25): redesign, categories, categories-v2 (+ actions),
+    promo-codes redirect, forest.ts, SectionIcons, ui/glass-*, ui/pagination-controls.
+    Final sweep: no lucide/tabler, no `border-border-*`, no palette colours in admin.
+    Kept on purpose: promo code input caps, Founding Notices + blog previews (they mimic
+    the public pages), Discord tint on founding sellers.
+
+## Fixed after the overhaul (owner asked 2026-09-30)
+- `/admin/utils` removed with `test-data.ts`, `debug-listings.ts`, `fix-approved-sellers.ts`.
+- Image uploads: every admin image goes to a server action as base64. Next's default
+  `serverActions.bodySizeLimit` is 1 MB, so files over ~750 KB died with a 413 before the
+  action ran — and most handlers had no catch (spinner stuck / no toast). Now:
+  `experimental.serverActions.bodySizeLimit: '4mb'` (under Vercel's 4.5 MB cap);
+  `src/lib/uploads/image-upload.ts` (2.5 MB cap, readable 413 message, data-URL reader,
+  pinned by `image-upload.test.ts`); every handler awaits read + upload inside
+  try/catch/finally; spinner overlays an existing image; inputs reset after each pick;
+  upload triggers are real buttons (`components/useFilePicker.tsx`), inputs never nested
+  in a button. Cover/banner copy now says Max 2.5 MB (server still allows 4 MB).
+- Site-wide, same branch:
+  - Scroll lock: one counted `src/lib/scroll-lock.ts`. Overlapping save/restore overflow
+    locks released out of order could leave the page frozen until a refresh.
+  - Phone purchase sheet on currency pages: a vaul drawer. It used to drop and re-grow
+    when the keyboard closed. `useKeyboardInset` is gone.
+  - Expanders: `src/components/ui/expand.tsx` (framer-motion height + fade, the account
+    sidebar's timing). Used by FaqCards, the seller row, `ui/collapsible`,
+    CollapsibleText, the footer Show All and the /buy FAQ. Still on CSS: the
+    listing-detail description Show More (left for the listing-detail revamp).
+
+## Open (pre-existing, not fixed)
+- `GameWizard mode="create"` looks dead (only caller passes "edit").
+- RLS on withdrawal_requests / withdrawal_methods / reviews checks `profiles.role='admin'`
+  (task chip spawned).
+
+## Verifying
+- Local-only server on :3005 against this worktree's Supabase stack
+  (`admin-overhaul-local` in `~/gamevault/.claude/launch.json`; live keys
+  blanked; TOTP turned on through the gitignored `supabase/.env`).
+- Owner reviews on :3004 (real data, own login + 2FA).

@@ -12,12 +12,21 @@
  * `string[]` data via `normalizePlatformOptions`.
  *
  * Shape lives in src/lib/types/category-configs.ts (PlatformFields).
+ *
+ * Look: flat admin kit — one bg-bg-raised card, the three kinds split by
+ * hairlines, a Switch per kind, preset chips (selected = lighter fill),
+ * option rows as bg-bg-overlay boxes.
  */
 
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Plus, Upload, X } from 'lucide-react'
+import { CircleNotch, Plus, Trash, UploadSimple, X } from '@phosphor-icons/react'
+import { Switch } from '@/components/ui/switch'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
+import { PanelHead, adminBtn } from '../../components/kit'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
+import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   type PlatformFields,
   type PlatformFieldKind,
@@ -76,6 +85,10 @@ const KINDS: Array<{
   },
 ]
 
+/** Icon-only row action. 36px tap target. */
+const ICON_BTN =
+  'grid h-9 w-9 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary'
+
 export function PlatformFieldsSection({ gameId, value, onChange }: Props) {
   // Merge missing kinds onto defaults so the toggle UI is always
   // complete even for older config rows that pre-date this field.
@@ -93,17 +106,19 @@ export function PlatformFieldsSection({ gameId, value, onChange }: Props) {
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-border-default bg-bg-raised p-5">
-      <header className="space-y-1">
-        <h3 className="text-[15px] font-semibold text-text-primary">Platform fields</h3>
-        <p className="text-[12.5px] text-text-secondary">
-          Required dropdowns the seller must pick from when listing for this game. Leave a field off
-          when the game doesn&rsquo;t care (e.g. Roblox is platform-agnostic, Path of Exile needs
-          Region + League).
-        </p>
-      </header>
+    <section className="rounded-lg bg-bg-raised p-4 sm:p-5">
+      <PanelHead
+        title="Platform Fields"
+        subtitle={
+          <>
+            Required dropdowns the seller must pick from when listing for this game. Leave a field off
+            when the game doesn&rsquo;t care (e.g. Roblox is platform-agnostic, Path of Exile needs
+            Region + League).
+          </>
+        }
+      />
 
-      <div className="space-y-3">
+      <div className="divide-y divide-white/[0.06]">
         {KINDS.map((k) => {
           const raw = merged[k.key] ?? { enabled: false, options: [] }
           // V19/P24/P7 — Normalize at read-time so old string[] data
@@ -197,37 +212,34 @@ function PlatformKindCard({
   }
 
   return (
-    <div
-      className={
-        'rounded-xl border p-3 transition-colors ' +
-        (field.enabled
-          ? 'border-lime-tint-border bg-[rgba(86,184,127,0.04)]'
-          : 'border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_40%,transparent)]')
-      }
-    >
-      <label className="flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
+    <div className="py-4 first:pt-0 last:pb-0">
+      <label className="flex cursor-pointer items-center gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold text-text-primary">{label}</span>
+          <span className="mt-0.5 block text-[12.5px] leading-relaxed text-text-tertiary">{hint}</span>
+        </span>
+        <Switch
           checked={field.enabled}
-          onChange={onToggle}
-          className="mt-1 h-4 w-4 rounded border-border-default accent-lime"
+          onCheckedChange={() => onToggle()}
+          aria-label={`${label} field`}
         />
-        <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-semibold text-text-primary">{label}</div>
-          <div className="text-[12px] text-text-tertiary">{hint}</div>
-        </div>
       </label>
 
       {field.enabled && (
-        <div className="mt-3 space-y-2 pl-7">
+        <div className="mt-3 space-y-3">
           {/* V51 — Preset quick-add: curated options with bundled
               icons. Lit = already added; click again to remove. */}
           {presets.length > 0 && (
             <div>
-              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+              <div className="mb-1.5 text-[12px] font-medium text-text-tertiary">
                 Presets
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              {/* Phones: one sideways-scrolling row. From sm: wraps. */}
+              <div
+                role="group"
+                aria-label={`${label} presets`}
+                className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+              >
                 {presets.map((preset) => {
                   const picked = isPicked(preset)
                   return (
@@ -236,17 +248,17 @@ function PlatformKindCard({
                       type="button"
                       onClick={() => togglePreset(preset)}
                       aria-pressed={picked}
-                      className={
-                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors ' +
-                        (picked
-                          ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                          : 'border-border-default bg-bg-overlay text-text-secondary hover:border-border-strong hover:text-text-primary')
-                      }
+                      className={cn(
+                        'inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-colors',
+                        picked
+                          ? 'bg-white/[0.14] text-text-primary'
+                          : 'bg-bg-overlay text-text-secondary hover:bg-bg-overlay-2 hover:text-text-primary',
+                      )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={preset.icon_url} alt="" className="h-4 w-4 shrink-0 object-contain" />
                       {preset.value}
-                      {picked && <X className="h-3 w-3" />}
+                      {picked && <X aria-hidden weight="bold" className="h-3 w-3 text-text-tertiary" />}
                     </button>
                   )
                 })}
@@ -281,16 +293,16 @@ function PlatformKindCard({
                 {field.options.map((opt) => (
                   <li
                     key={opt.value}
-                    className="inline-flex items-center gap-1 rounded-full border border-border-default bg-bg-overlay px-2.5 py-1 text-[12px] text-text-primary"
+                    className="inline-flex h-8 items-center gap-1 rounded-full bg-bg-overlay pl-3 pr-1 text-[12.5px] font-medium text-text-primary"
                   >
                     <span>{opt.value}</span>
                     <button
                       type="button"
                       aria-label={`Remove ${opt.value}`}
                       onClick={() => onRemoveOption(opt.value)}
-                      className="rounded-full p-0.5 text-text-tertiary transition-colors hover:bg-bg-raised hover:text-text-primary"
+                      className="grid h-6 w-6 place-items-center rounded-full text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary"
                     >
-                      <X className="h-3 w-3" />
+                      <X aria-hidden weight="bold" className="h-3 w-3" />
                     </button>
                   </li>
                 ))}
@@ -310,20 +322,21 @@ function PlatformKindCard({
                 }
               }}
               placeholder={placeholder}
-              className="flex-1 rounded-lg border border-border-default bg-bg-base px-3 py-1.5 text-[13px] text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none"
+              aria-label={placeholder}
+              className={cn(accountInputCls, 'h-10 min-w-0 flex-1 py-0')}
             />
             <button
               type="button"
               onClick={submit}
               disabled={!draft.trim()}
-              className="inline-flex items-center gap-1 rounded-lg border border-border-default bg-bg-overlay px-3 py-1.5 text-[12.5px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-50"
+              className={cn(adminBtn.secondary, 'shrink-0 px-3.5')}
             >
-              <Plus className="h-3.5 w-3.5" /> Add
+              <Plus aria-hidden weight="bold" className="h-4 w-4" /> Add
             </button>
           </div>
 
           {field.options.length === 0 && (
-            <p className="text-[11.5px] text-text-tertiary">
+            <p className="text-[12.5px] text-text-tertiary">
               Field is enabled but has no options yet &mdash; the seller wizard will skip it.
             </p>
           )}
@@ -353,56 +366,73 @@ function PlatformOptionRow({
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const onPickFile = (file: File | null | undefined) => {
+  const onPickFile = async (file: File | null | undefined) => {
     if (!file) return
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Icon')
+    if (tooLarge) {
+      toast.error(tooLarge)
+      return
+    }
     setUploading(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const base64 = String(reader.result ?? '')
+    try {
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadCurrencyImage(gameId, {
         name: file.name,
         type: file.type,
         size: file.size,
         base64,
       })
-      setUploading(false)
       if (!res.success) {
         toast.error(res.error)
         return
       }
       onChange({ icon_url: res.data.url })
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
+    } finally {
+      setUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-border-default bg-[color-mix(in_srgb,var(--color-bg-overlay)_60%,transparent)] p-2">
+    <li className="flex items-center gap-2 rounded-md bg-bg-overlay p-1.5 pr-1">
       {/* Image tile */}
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border-default bg-bg-base transition-colors hover:border-lime-tint-border"
+        disabled={uploading}
+        aria-busy={uploading}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.06] transition-colors hover:bg-white/[0.10] disabled:cursor-wait"
         aria-label={`Upload icon for ${option.value}`}
       >
         {option.icon_url || presetIcon ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={option.icon_url ?? presetIcon ?? ''} alt="" className="h-full w-full object-contain" />
-        ) : uploading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
         ) : (
-          <Upload className="h-3.5 w-3.5 text-text-tertiary" />
+          <UploadSimple aria-hidden weight="bold" className="h-4 w-4 text-text-tertiary" />
         )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          className="hidden"
-          onChange={(e) => onPickFile(e.target.files?.[0])}
-        />
+        {uploading && (
+          <span className="absolute inset-0 grid place-items-center bg-black/55">
+            <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin text-text-primary" />
+          </span>
+        )}
       </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        tabIndex={-1}
+        aria-hidden
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.currentTarget.value = ''
+          onPickFile(file)
+        }}
+      />
 
       {/* Label (read-only; renaming would orphan listings) */}
-      <span className="flex-1 truncate text-[13px] text-text-primary">{option.value}</span>
+      <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text-primary">{option.value}</span>
 
       {/* Optional remove-icon button when one's set */}
       {option.icon_url && (
@@ -410,9 +440,10 @@ function PlatformOptionRow({
           type="button"
           onClick={() => onChange({ icon_url: null })}
           aria-label="Remove icon"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary"
+          title="Remove icon"
+          className={ICON_BTN}
         >
-          <X className="h-3 w-3" />
+          <X aria-hidden weight="bold" className="h-4 w-4" />
         </button>
       )}
 
@@ -420,9 +451,13 @@ function PlatformOptionRow({
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${option.value}`}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-default bg-bg-overlay text-error transition-colors hover:bg-[color-mix(in_srgb,var(--color-error-bg)_30%,transparent)]"
+        title={`Remove ${option.value}`}
+        className={cn(
+          ICON_BTN,
+          'text-text-tertiary hover:bg-[color-mix(in_srgb,var(--color-error)_14%,transparent)] hover:text-error',
+        )}
       >
-        <X className="h-3.5 w-3.5" />
+        <Trash aria-hidden weight="bold" className="h-4 w-4" />
       </button>
     </li>
   )

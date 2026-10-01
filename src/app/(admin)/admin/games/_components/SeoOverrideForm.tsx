@@ -11,6 +11,9 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { fetchGameSeo, updateGameSeo, type GameSeoData } from '@/lib/actions/admin-games'
 import { resolveGameSeo } from '@/lib/seo/templates'
+import { cn } from '@/lib/utils'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { FIELD_LABEL, FormLoading, FormSection, SaveBar } from './form-bits'
 
 const ECOSYSTEMS = ['', 'roblox', 'pc', 'console', 'mobile', 'mmo', 'sports', 'other'] as const
 
@@ -60,15 +63,27 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
   }
 
   if (!loaded) {
-    return <div className="h-64 animate-pulse rounded-xl bg-bg-raised" />
+    return <FormLoading cards={2} />
   }
 
   return (
-    <div className="space-y-5">
-      <p className="text-[13px] text-text-secondary">
-        Leave a field blank to use the auto-generated value (shown as the placeholder).
-        Fill it in to override for <span className="font-semibold text-text-primary">{gameName}</span>.
-      </p>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        save()
+      }}
+      className="space-y-4"
+    >
+      <FormSection
+        title="Search Listing"
+        subtitle={
+          <>
+            Leave a field blank to use the auto-generated value (shown as the placeholder). Fill it in to override
+            for <span className="font-semibold text-text-primary">{gameName}</span>.
+          </>
+        }
+      >
+      <div className="space-y-4">
 
       <Field
         label="Title"
@@ -79,7 +94,7 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
         max={60}
       />
       <Field
-        label="Meta description"
+        label="Meta Description"
         hint="≤ 160 chars. The snippet under the title in Google."
         value={form.seo_description ?? ''}
         placeholder={generated.description}
@@ -95,7 +110,7 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
         onChange={(v) => set('seo_h1', v)}
       />
       <Field
-        label="Intro paragraph"
+        label="Intro Paragraph"
         hint="Visible SSR copy under the H1 — helps the page rank."
         value={form.seo_intro ?? ''}
         placeholder={generated.intro}
@@ -103,16 +118,18 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
         textarea
         rows={4}
       />
+      </div>
+      </FormSection>
 
+      <FormSection title="Classification & Indexing">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="block text-[12px] font-semibold uppercase tracking-wider text-text-secondary">
-            Ecosystem
-          </label>
+        <div>
+          <label htmlFor="seo-ecosystem" className={FIELD_LABEL}>Ecosystem</label>
           <select
+            id="seo-ecosystem"
             value={form.ecosystem ?? ''}
             onChange={(e) => set('ecosystem', e.target.value)}
-            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-focus-border"
+            className={cn(accountInputCls, 'h-10 cursor-pointer py-0 capitalize')}
           >
             {ECOSYSTEMS.map((e) => (
               <option key={e} value={e}>{e === '' ? '— none —' : e}</option>
@@ -120,43 +137,36 @@ export function SeoOverrideForm({ gameId, gameName }: { gameId: string; gameName
           </select>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-[12px] font-semibold uppercase tracking-wider text-text-secondary">
-            Indexing
-          </label>
+        <div>
+          <label htmlFor="seo-indexing" className={FIELD_LABEL}>Indexing</label>
           <select
+            id="seo-indexing"
             value={indexMode}
             onChange={(e) => setIndexMode(e.target.value as IndexMode)}
-            className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none focus:border-focus-border"
+            className={cn(accountInputCls, 'h-10 cursor-pointer py-0')}
           >
-            <option value="auto">Auto (by listings + content)</option>
-            <option value="index">Force index</option>
-            <option value="noindex">Force noindex</option>
+            <option value="auto">Auto (By Listings + Content)</option>
+            <option value="index">Force Index</option>
+            <option value="noindex">Force Noindex</option>
           </select>
         </div>
       </div>
 
       {indexMode === 'noindex' && (
+        <div className="mt-4">
         <Field
-          label="Noindex reason"
+          label="Noindex Reason"
           hint="Shown in the admin SEO badge tooltip (e.g. 'prelaunch')."
           value={form.seo_noindex_reason ?? ''}
           placeholder="e.g. prelaunch, awaiting content"
           onChange={(v) => set('seo_noindex_reason', v)}
         />
+        </div>
       )}
+      </FormSection>
 
-      <div className="flex justify-end pt-2">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="inline-flex h-10 items-center rounded-lg bg-lime px-5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
-        >
-          {saving ? 'Saving…' : 'Save SEO'}
-        </button>
-      </div>
-    </div>
+      <SaveBar label={saving ? 'Saving…' : 'Save SEO'} pending={saving} />
+    </form>
   )
 }
 
@@ -167,36 +177,39 @@ function Field({
   onChange: (v: string) => void; textarea?: boolean; rows?: number; max?: number
 }) {
   const over = max != null && value.length > max
+  const id = `seo-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   return (
-    <div className="space-y-1.5">
+    <div>
       <div className="flex items-baseline justify-between gap-2">
-        <label className="block text-[12px] font-semibold uppercase tracking-wider text-text-secondary">
+        <label htmlFor={id} className={FIELD_LABEL}>
           {label}
         </label>
         {max != null && value.length > 0 && (
-          <span className={`text-[11px] tabular-nums ${over ? 'text-error' : 'text-text-tertiary'}`}>
+          <span className={`text-[12px] tabular-nums ${over ? 'text-error' : 'text-text-tertiary'}`}>
             {value.length}/{max}
           </span>
         )}
       </div>
       {textarea ? (
         <textarea
+          id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border"
+          className={cn(accountInputCls, 'resize-none')}
         />
       ) : (
         <input
+          id={id}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-10 w-full rounded-lg border border-border-default bg-bg-overlay px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-focus-border"
+          className={accountInputCls}
         />
       )}
-      {hint && <p className="text-[11.5px] text-text-tertiary">{hint}</p>}
+      {hint && <p className="mt-1 text-[12px] text-text-tertiary">{hint}</p>}
     </div>
   )
 }

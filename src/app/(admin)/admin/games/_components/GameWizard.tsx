@@ -3,7 +3,8 @@
 /**
  * GameWizard — shared client component for /admin/games/new and
  * /admin/games/[id]/edit. Single source of truth for the redesigned
- * add/edit flow. Apple-feel using existing glass-* primitives.
+ * add/edit flow. Flat admin kit (../../components/kit): solid fills,
+ * no outlines, Phosphor icons, Title Case labels.
  *
  * Steps:
  *   1. Identity   — name, slug, display_name, emoji, sort_order,
@@ -23,11 +24,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, ArrowRight, Check, Loader2, Upload, Image as ImageIcon,
-  Trash2, AlertCircle, Globe2, Monitor, Zap, Clock, Sparkles, Save,
-} from 'lucide-react'
+  ArrowLeft, ArrowRight, CaretLeft, Check, CircleNotch, Clock, FloppyDisk,
+  Globe, ImageSquare, Info, Lightning, Monitor, SlidersHorizontal, Trash, UploadSimple,
+} from '@phosphor-icons/react'
 import { cn, slugify } from '@/lib/utils'
-import { GlassCard } from '@/components/ui/glass-card'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { Switch } from '@/components/ui/switch'
+import { PanelHead, adminBtn, adminBtnSm } from '../../components/kit'
+import { useFilePicker } from '../../components/useFilePicker'
+import { MAX_IMAGE_UPLOAD_BYTES, imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   saveGameIdentity,
   upsertGameCategory,
@@ -114,66 +119,91 @@ function Stepper({
    */
   onJump?: (id: number) => void
 }) {
+  // Flat stepper: one progress segment per step (done = success, current =
+  // lime, ahead = neutral) over a numbered circle + label. Four equal
+  // columns at every width; below sm the label sits under the circle so
+  // "Categories" fits a 375px screen without truncating or scrolling.
   return (
-    <ol className="flex items-center gap-0">
-      {STEPS.map((s, i) => {
-        const done = completed.has(s.id) || current > s.id
-        const active = current === s.id
-        const clickable = !!onJump
-        const Item = clickable ? 'button' : 'div'
-        return (
-          <li key={s.id} className="flex items-center">
-            <Item
-              type={clickable ? 'button' : undefined}
-              onClick={clickable ? () => onJump!(s.id) : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-lg',
-                clickable && 'cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--color-bg-raised)_60%,transparent)] p-1 -m-1',
-              )}
-              aria-current={active ? 'step' : undefined}
-            >
-              <span
+    <nav aria-label="Setup Steps">
+      <ol className="grid grid-cols-4 gap-3">
+        {STEPS.map((s) => {
+          const done = completed.has(s.id) || current > s.id
+          const active = current === s.id
+          const clickable = !!onJump
+          const Item = clickable ? 'button' : 'div'
+          return (
+            <li key={s.id} className="min-w-0">
+              <Item
+                type={clickable ? 'button' : undefined}
+                onClick={clickable ? () => onJump!(s.id) : undefined}
                 className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition-colors',
-                  done
-                    ? 'border-success bg-success-bg text-success'
-                    : active
-                      ? 'border-lime bg-lime-tint-bg text-lime-text'
-                      : 'border-border-default bg-bg-raised text-text-tertiary',
-                  clickable && !active && 'group-hover:border-lime',
+                  'flex w-full min-w-0 flex-col gap-2.5 rounded-md text-left',
+                  clickable &&
+                    '-m-1.5 w-[calc(100%+12px)] cursor-pointer p-1.5 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring',
                 )}
+                aria-current={active ? 'step' : undefined}
               >
-                {done ? <Check className="h-3.5 w-3.5" /> : s.id}
-              </span>
-              <div className="hidden text-left sm:block">
-                <div className={cn('text-xs font-semibold', active ? 'text-text-primary' : done ? 'text-success' : 'text-text-tertiary')}>
-                  {s.label}
-                </div>
-                <div className="text-[10px] text-text-disabled">{s.description}</div>
-              </div>
-            </Item>
-            {i < STEPS.length - 1 && (
-              <div className="mx-4 h-px w-10 bg-bg-raised sm:w-16">
-                <div className={cn('h-px transition-all', done ? 'w-full bg-success' : 'w-0')} />
-              </div>
-            )}
-          </li>
-        )
-      })}
-    </ol>
+                <span
+                  aria-hidden
+                  className={cn(
+                    'h-1 w-full rounded-full transition-colors',
+                    done ? 'bg-success' : active ? 'bg-lime' : 'bg-white/[0.08]',
+                  )}
+                />
+                <span className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
+                  <span
+                    className={cn(
+                      'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11.5px] font-semibold tabular-nums transition-colors sm:h-7 sm:w-7 sm:text-[12px]',
+                      done
+                        ? 'bg-success-bg text-success'
+                        : active
+                          ? 'bg-lime text-text-inverse'
+                          : 'bg-white/[0.06] text-text-tertiary',
+                    )}
+                  >
+                    {done ? <Check aria-hidden weight="bold" className="h-3.5 w-3.5" /> : s.id}
+                  </span>
+                  <span className="block w-full min-w-0">
+                    <span
+                      className={cn(
+                        'block truncate text-[12px] font-semibold sm:text-[13px]',
+                        active ? 'text-text-primary' : done ? 'text-text-secondary' : 'text-text-tertiary',
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                    <span className="hidden truncate text-[11.5px] text-text-tertiary md:block">{s.description}</span>
+                  </span>
+                </span>
+              </Item>
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
   )
 }
 
 // ─── Field primitives ─────────────────────────────────────────────────────────
 
-function Label({ children, hint, required }: { children: React.ReactNode; hint?: string; required?: boolean }) {
+function Label({
+  children,
+  hint,
+  required,
+  htmlFor,
+}: {
+  children: React.ReactNode
+  hint?: string
+  required?: boolean
+  htmlFor?: string
+}) {
   return (
-    <div className="mb-1.5 flex items-baseline justify-between">
-      <label className="text-xs font-medium text-text-secondary">
+    <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-medium text-text-secondary">
         {children}
         {required && <span className="ml-1 text-error">*</span>}
       </label>
-      {hint && <span className="text-[10px] text-text-disabled">{hint}</span>}
+      {hint && <span className="text-[12px] text-text-tertiary">{hint}</span>}
     </div>
   )
 }
@@ -182,14 +212,13 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={cn(
-        'h-10 w-full rounded-xl border border-border-default bg-bg-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary',
-        'focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft transition-colors',
-        props.className
-      )}
+      className={cn(accountInputCls, props.className)}
     />
   )
 }
+
+/** Native select on the step card: the card input look, 40px tall. */
+const selectCls = cn(accountInputCls, 'h-10 cursor-pointer py-0 [&>option]:bg-bg-raised')
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -334,15 +363,11 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   // ── Step 2: logo upload ────────────────────────────────────────────────────
   const handleLogoFile = async (file: File) => {
     if (!gameId) { toast.error('Save identity step first'); return }
-    if (file.size > 2_097_152) { toast.error('Logo must be 2 MB or smaller'); return }
+    const tooLarge = imageTooLargeMessage(file, 2_097_152, 'Logo')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploading(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameLogoV2(gameId, {
         name: file.name,
         type: file.type,
@@ -352,6 +377,8 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
       if (!res.success) { toast.error(res.error); return }
       setLogoUrl(res.data.url)
       toast.success('Logo uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploading(false)
     }
@@ -373,43 +400,41 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   // ── Step 2: cover upload ───────────────────────────────────────────────────
   const handleCoverFile = async (file: File) => {
     if (!gameId) { toast.error('Save identity step first'); return }
-    if (file.size > 4_194_304) { toast.error('Cover must be 4 MB or smaller'); return }
+    // The server allows 4 MB, but a file only gets through a server action
+    // (base64, ×4/3) up to MAX_IMAGE_UPLOAD_BYTES.
+    const tooLarge = imageTooLargeMessage(file, MAX_IMAGE_UPLOAD_BYTES, 'Cover')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploadingCover(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameCoverV2(gameId, {
         name: file.name, type: file.type, size: file.size, base64,
       })
       if (!res.success) { toast.error(res.error); return }
       setCoverUrl(res.data.url)
       toast.success('Cover uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploadingCover(false)
     }
   }
 
   const handleBlogCtaFile = async (file: File) => {
-    if (!gameId) return
-    if (file.size > 4_194_304) { toast.error('Banner must be 4 MB or smaller'); return }
+    if (!gameId) { toast.error('Save identity step first'); return }
+    const tooLarge = imageTooLargeMessage(file, MAX_IMAGE_UPLOAD_BYTES, 'Banner')
+    if (tooLarge) { toast.error(tooLarge); return }
     setIsUploadingBlogCta(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result as string)
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
+      const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameBlogCtaImage(gameId, {
         name: file.name, type: file.type, size: file.size, base64,
       })
       if (!res.success) { toast.error(res.error); return }
       setBlogCtaUrl(res.data.url)
       toast.success('Blog banner uploaded')
+    } catch (error) {
+      toast.error(uploadErrorMessage(error))
     } finally {
       setIsUploadingBlogCta(false)
     }
@@ -482,51 +507,61 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
   const enabledCount = categories.filter((c) => c.is_enabled).length
 
+  // Real buttons open these pickers (keyboard-reachable; a <label> around a
+  // display:none input isn't). Each clears itself so re-picking a file works.
+  const logoPicker = useFilePicker(handleLogoFile, 'image/png,image/jpeg,image/jpg,image/svg+xml,image/webp')
+  const coverPicker = useFilePicker(handleCoverFile, 'image/png,image/jpeg,image/jpg,image/webp')
+  const blogCtaPicker = useFilePicker(handleBlogCtaFile, 'image/png,image/jpeg,image/jpg,image/webp')
+
   return (
     // V17l — Wizard now uses the full admin content width (same as the
     // games list) so the page geometry doesn't jump when you click Edit
     // or New. Was max-w-4xl which made forms feel cramped + visually
     // off-center against the list.
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── Header ── */}
-      <header className="space-y-3">
-        <Link
-          href="/admin/games"
-          className="inline-flex items-center gap-1.5 text-[12.5px] text-text-tertiary transition-colors hover:text-text-primary"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Back to games
-        </Link>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-semibold tracking-tight text-text-primary">
-              {mode === 'create' ? 'New game' : `Edit ${game?.name ?? 'game'}`}
-            </h1>
-            <p className="mt-1.5 text-[13.5px] text-text-secondary">
-              {mode === 'create'
-                ? 'Fill in identity, upload branding, choose which categories the game supports.'
-                : 'Update game details and per-category settings.'}
-            </p>
-          </div>
-          <Stepper
-            current={step}
-            completed={completed}
-            // V17n — Clickable steps in edit mode. The game already exists,
-            // every step is safe to land on. In create mode we keep the
-            // linear flow so admins can't skip past required setup.
-            onJump={mode === 'edit' ? (id) => setStep(id) : undefined}
-          />
+      <header className="space-y-5">
+        {/* In edit mode the wizard sits inside GameDetailTabs' Setup tab, which
+            already has the back link and the game's h1. */}
+        {mode === 'create' && (
+        <div className="min-w-0">
+          <Link
+            href="/admin/games"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+          >
+            <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            Back to Games
+          </Link>
+          <h1 className="mt-2 break-words text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
+            {mode === 'create' ? 'New Game' : `Edit ${game?.name ?? 'game'}`}
+          </h1>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-text-secondary">
+            {mode === 'create'
+              ? 'Fill in identity, upload branding, choose which categories the game supports.'
+              : 'Update game details and per-category settings.'}
+          </p>
         </div>
+        )}
+        <Stepper
+          current={step}
+          completed={completed}
+          // V17n — Clickable steps in edit mode. The game already exists,
+          // every step is safe to land on. In create mode we keep the
+          // linear flow so admins can't skip past required setup.
+          onJump={mode === 'edit' ? (id) => setStep(id) : undefined}
+        />
       </header>
 
       {/* ── Step body ── */}
-      <GlassCard intensity="light" rounded="2xl" className="p-0">
-        <div className="p-6">
+      <section className="rounded-lg bg-bg-raised">
+        <div className="p-4 sm:p-6">
           {step === 1 && (
             <div className="grid gap-4 sm:grid-cols-2">
+              <PanelHead title="Identity" className="mb-0 sm:col-span-2" />
               <div className="sm:col-span-2">
-                <Label required>Name</Label>
+                <Label required htmlFor="gw-name">Name</Label>
                 <TextInput
+                  id="gw-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Steal a Brainrot"
@@ -535,17 +570,20 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
               </div>
 
               <div>
-                <Label required hint="lowercase, dashes only — used in URLs">Slug</Label>
+                <Label required htmlFor="gw-slug" hint="Lowercase, dashes only — used in URLs">Slug</Label>
                 <TextInput
+                  id="gw-slug"
                   value={slug}
                   onChange={(e) => { setSlug(slugify(e.target.value)); setSlugDirty(true) }}
                   placeholder="steal-a-brainrot"
+                  className="font-mono"
                 />
               </div>
 
               <div>
-                <Label hint="short label for navbar">Display name</Label>
+                <Label htmlFor="gw-display-name" hint="Short label for the navbar">Display Name</Label>
                 <TextInput
+                  id="gw-display-name"
                   value={displayName ?? ''}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Brainrot"
@@ -553,8 +591,9 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
               </div>
 
               <div>
-                <Label hint="fallback if no logo">Emoji</Label>
+                <Label htmlFor="gw-emoji" hint="Fallback if no logo">Emoji</Label>
                 <TextInput
+                  id="gw-emoji"
                   value={emoji ?? ''}
                   onChange={(e) => setEmoji(e.target.value)}
                   placeholder="🎮"
@@ -563,22 +602,25 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
               </div>
 
               <div>
-                <Label hint="lower = shown first">Sort order</Label>
+                <Label htmlFor="gw-sort-order" hint="Lower = shown first">Sort Order</Label>
                 <TextInput
+                  id="gw-sort-order"
                   type="number"
                   value={sortOrder}
                   onChange={(e) => setSortOrder(parseInt(e.target.value || '99', 10))}
                   min={0}
                   max={9999}
+                  className="tabular-nums"
                 />
               </div>
 
               <div>
-                <Label hint="listed = marketplace only; data = has a values hub">
-                  Content tier
+                <Label htmlFor="gw-content-tier" hint="Listed = marketplace only; data = has a values hub">
+                  Content Tier
                 </Label>
                 <select
-                  className="w-full rounded-xl border border-border-default bg-bg-base px-3 py-2 text-body-sm text-text-primary"
+                  id="gw-content-tier"
+                  className={selectCls}
                   value={contentTier}
                   onChange={(e) => setContentTier(e.target.value as GameContentTier)}
                 >
@@ -591,9 +633,10 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
               </div>
 
               <div>
-                <Label hint="drives SEO copy and category defaults">Platform</Label>
+                <Label htmlFor="gw-ecosystem" hint="Drives SEO copy and category defaults">Platform</Label>
                 <select
-                  className="w-full rounded-xl border border-border-default bg-bg-base px-3 py-2 text-body-sm text-text-primary"
+                  id="gw-ecosystem"
+                  className={selectCls}
                   value={ecosystem}
                   onChange={(e) => setEcosystem(e.target.value as GameEcosystem | '')}
                 >
@@ -606,174 +649,153 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </select>
               </div>
 
-              <div className="sm:col-span-2 flex items-center justify-between rounded-xl border border-border-default bg-bg-base px-4 py-3">
-                <div>
-                  <div className="text-sm font-medium text-text-primary">Active</div>
-                  <div className="text-xs text-text-tertiary">Inactive games are hidden from the marketplace.</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsActive((v) => !v)}
-                  className={cn(
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    isActive ? 'bg-success' : 'bg-bg-raised'
-                  )}
-                  aria-pressed={isActive}
-                >
-                  <span
-                    className={cn(
-                      'inline-block h-4 w-4 transform rounded-full bg-text-primary shadow transition-transform',
-                      isActive ? 'translate-x-6' : 'translate-x-1'
-                    )}
-                  />
-                </button>
-              </div>
+              <label className="flex cursor-pointer items-center gap-3 rounded-md bg-bg-overlay px-3.5 py-3 transition-colors hover:bg-bg-overlay-2 sm:col-span-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] font-semibold text-text-primary">Active</span>
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-text-tertiary">
+                    Inactive games are hidden from the marketplace.
+                  </span>
+                </span>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={() => setIsActive((v) => !v)}
+                  aria-label="Active"
+                  className="data-[state=unchecked]:bg-white/[0.12]"
+                />
+              </label>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-5">
+              <PanelHead title="Branding" className="mb-0" />
               <div>
-                <div className="text-sm font-medium text-text-primary">Logo</div>
-                <p className="text-xs text-text-tertiary">Square PNG/WebP, 256×256 recommended. Max 2 MB.</p>
+                <div className="text-[13.5px] font-semibold text-text-primary">Logo</div>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">Square PNG/WebP, 256×256 recommended. Max 2 MB.</p>
               </div>
 
-              <div className="flex items-center gap-5">
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-border-default bg-bg-raised">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg-overlay">
                   {logoUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={logoUrl} alt="Logo" className="h-full w-full rounded-2xl object-cover" />
+                    <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-text-disabled" />
+                    <ImageSquare aria-hidden weight="bold" className="h-8 w-8 text-text-disabled" />
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className={cn(
-                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
-                    isUploading && 'pointer-events-none opacity-60'
-                  )}>
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {logoUrl ? 'Replace logo' : 'Upload logo'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); e.currentTarget.value = '' }}
-                      disabled={isUploading}
-                    />
-                  </label>
+                <div className="flex min-w-0 flex-col gap-2">
+                  <button type="button" onClick={logoPicker.open} disabled={isUploading} className={adminBtn.secondary}>
+                    {isUploading
+                      ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                      : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
+                    {isUploading ? 'Uploading…' : logoUrl ? 'Replace Logo' : 'Upload Logo'}
+                  </button>
+                  {logoPicker.input}
                   {logoUrl && (
                     <button
                       type="button"
                       onClick={handleDeleteLogo}
                       disabled={isUploading}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-error bg-error-bg px-3 text-xs font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-50"
+                      className={adminBtn.danger}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove logo
+                      <Trash aria-hidden weight="bold" className="h-4 w-4" />
+                      Remove Logo
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="h-px bg-bg-raised-hover" />
+              <div className="h-px bg-white/[0.06]" />
 
               <div>
-                <div className="text-sm font-medium text-text-primary">Cover art</div>
-                <p className="text-xs text-text-tertiary">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 4 MB.</p>
+                <div className="text-[13.5px] font-semibold text-text-primary">Cover Art</div>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">Portrait JPG/PNG/WebP, 600×800 recommended. Used on the Popular Games shelf. Max 2.5 MB.</p>
               </div>
 
-              <div className="flex items-center gap-5">
-                <div className="flex h-32 w-24 items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg-overlay">
                   {coverUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={coverUrl} alt="Cover" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-text-disabled" />
+                    <ImageSquare aria-hidden weight="bold" className="h-8 w-8 text-text-disabled" />
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className={cn(
-                    'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
-                    isUploadingCover && 'pointer-events-none opacity-60'
-                  )}>
-                    {isUploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {coverUrl ? 'Replace cover' : 'Upload cover'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f); e.currentTarget.value = '' }}
-                      disabled={isUploadingCover}
-                    />
-                  </label>
+                <div className="flex min-w-0 flex-col gap-2">
+                  <button type="button" onClick={coverPicker.open} disabled={isUploadingCover} className={adminBtn.secondary}>
+                    {isUploadingCover
+                      ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                      : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
+                    {isUploadingCover ? 'Uploading…' : coverUrl ? 'Replace Cover' : 'Upload Cover'}
+                  </button>
+                  {coverPicker.input}
                   {coverUrl && (
                     <button
                       type="button"
                       onClick={handleDeleteCover}
                       disabled={isUploadingCover}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-error bg-error-bg px-3 text-xs font-medium text-error transition-colors hover:bg-error-bg disabled:opacity-50"
+                      className={adminBtn.danger}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove cover
+                      <Trash aria-hidden weight="bold" className="h-4 w-4" />
+                      Remove Cover
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="h-px bg-bg-raised-hover" />
+              <div className="h-px bg-white/[0.06]" />
 
               {/* Blog CTA banner — separate from cover art on purpose: this one
                   is wide and has copy sitting on top of it. */}
               <div>
-                <div className="text-sm font-medium text-text-primary">Blog CTA banner</div>
-                <p className="text-xs text-text-tertiary">
-                  Wide JPG/PNG/WebP, <strong>2560×640 (4:1)</strong> recommended, under 400 KB.
+                <div className="text-[13.5px] font-semibold text-text-primary">Blog CTA Banner</div>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">
+                  Wide JPG/PNG/WebP, <strong className="font-semibold text-text-secondary">2560×640 (4:1)</strong> recommended, under 400 KB.
                   Sits behind the &ldquo;Skip the grind&rdquo; block at the end of every guide for
                   this game. Keep the focal point off-centre-left — the copy covers the left third
-                  under a dark scrim. Falls back to the cover art if left empty. Max 4 MB.
+                  under a dark scrim. Falls back to the cover art if left empty. Max 2.5 MB.
                 </p>
               </div>
 
-              <div className="flex items-center gap-5">
-                <div className="flex h-24 w-full max-w-[384px] items-center justify-center overflow-hidden rounded-2xl border border-border-default bg-bg-raised">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
+                <div className="flex h-24 w-full max-w-[384px] items-center justify-center overflow-hidden rounded-md bg-bg-overlay">
                   {blogCtaUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={blogCtaUrl} alt="Blog CTA banner" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-text-disabled" />
+                    <ImageSquare aria-hidden weight="bold" className="h-8 w-8 text-text-disabled" />
                   )}
                 </div>
 
-                <label className={cn(
-                  'inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover',
-                  isUploadingBlogCta && 'pointer-events-none opacity-60'
-                )}>
-                  {isUploadingBlogCta ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {blogCtaUrl ? 'Replace banner' : 'Upload banner'}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBlogCtaFile(f); e.currentTarget.value = '' }}
-                    disabled={isUploadingBlogCta}
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={blogCtaPicker.open}
+                  disabled={isUploadingBlogCta}
+                  className={cn(adminBtn.secondary, 'shrink-0')}
+                >
+                  {isUploadingBlogCta
+                    ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                    : <UploadSimple aria-hidden weight="bold" className="h-4 w-4" />}
+                  {isUploadingBlogCta ? 'Uploading…' : blogCtaUrl ? 'Replace Banner' : 'Upload Banner'}
+                </button>
+                {blogCtaPicker.input}
               </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-text-primary">Categories</div>
-                  <p className="text-xs text-text-tertiary">Toggle which categories this game supports. Boosting is disabled at launch.</p>
-                </div>
-                <div className="text-xs text-text-tertiary">{enabledCount} of {categories.length} enabled</div>
-              </div>
+            <div>
+              <PanelHead
+                title="Categories"
+                subtitle="Toggle which categories this game supports. Boosting is disabled at launch."
+                aside={
+                  <span className="shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-text-secondary">
+                    {enabledCount} of {categories.length} enabled
+                  </span>
+                }
+              />
 
               <div className="space-y-2">
                 {categories.map((c) => {
@@ -782,51 +804,55 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                     <div
                       key={c.global_category_id}
                       className={cn(
-                        'rounded-xl border bg-bg-base transition-colors',
-                        c.is_enabled
-                          ? 'border-success bg-[color-mix(in_srgb,var(--color-success)_4%,transparent)]'
-                          : 'border-border-default',
-                        disabledGlobally && 'opacity-70'
+                        'rounded-md transition-colors',
+                        c.is_enabled ? 'bg-white/[0.07]' : 'bg-white/[0.03]',
+                        disabledGlobally && 'opacity-60'
                       )}
                     >
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl" aria-hidden>{c.icon_emoji ?? '•'}</span>
-                          <div>
-                            <div className="text-sm font-medium text-text-primary">{c.name}</div>
-                            <div className="text-[11px] text-text-tertiary">
-                              {disabledGlobally ? 'Disabled at launch' : `Slug: ${c.slug}`}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => updateCategory(c.global_category_id, { is_enabled: !c.is_enabled })}
-                          disabled={disabledGlobally}
-                          className={cn(
-                            'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                            c.is_enabled ? 'bg-success' : 'bg-bg-raised',
-                            disabledGlobally && 'cursor-not-allowed opacity-50'
-                          )}
-                          aria-pressed={c.is_enabled}
-                          title={disabledGlobally ? 'This category is disabled at launch' : ''}
+                      {/* The whole row is the on/off control: lighter fill + check when on. */}
+                      <button
+                        type="button"
+                        onClick={() => updateCategory(c.global_category_id, { is_enabled: !c.is_enabled })}
+                        disabled={disabledGlobally}
+                        className={cn(
+                          'flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors sm:px-4',
+                          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring',
+                          c.is_enabled ? 'rounded-t-md' : 'rounded-md',
+                          disabledGlobally ? 'cursor-not-allowed' : 'hover:bg-white/[0.03]'
+                        )}
+                        aria-pressed={c.is_enabled}
+                        title={disabledGlobally ? 'This category is disabled at launch' : ''}
+                      >
+                        <span
+                          aria-hidden
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/[0.05] text-[18px] leading-none"
                         >
-                          <span
-                            className={cn(
-                              'inline-block h-4 w-4 transform rounded-full bg-text-primary shadow transition-transform',
-                              c.is_enabled ? 'translate-x-6' : 'translate-x-1'
-                            )}
-                          />
-                        </button>
-                      </div>
+                          {c.icon_emoji ?? '•'}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[14px] font-semibold text-text-primary">{c.name}</span>
+                          <span className="block truncate text-[12px] text-text-tertiary">
+                            {disabledGlobally ? 'Disabled at launch' : `Slug: ${c.slug}`}
+                          </span>
+                        </span>
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors',
+                            c.is_enabled ? 'bg-success text-text-inverse' : 'bg-white/[0.08] text-transparent'
+                          )}
+                        >
+                          <Check weight="bold" className="h-3.5 w-3.5" />
+                        </span>
+                      </button>
 
                       {/* Per-category settings — only show when enabled */}
                       {c.is_enabled && (
-                        <div className="space-y-3 border-t border-border-subtle px-4 py-3">
+                        <div className="divide-y divide-white/[0.06] border-t border-white/[0.06] px-3.5 sm:px-4">
                           {/* Delivery modes */}
-                          <div>
-                            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">Delivery modes</div>
-                            <div className="flex gap-2">
+                          <div className="py-3">
+                            <div className="mb-2 text-[12px] font-medium text-text-tertiary">Delivery Modes</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {(['manual', 'instant'] as const).map((mode) => {
                                 const on = c.delivery_modes.includes(mode)
                                 return (
@@ -844,14 +870,17 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                                       }
                                       updateCategory(c.global_category_id, { delivery_modes: next })
                                     }}
+                                    aria-pressed={on}
                                     className={cn(
-                                      'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors',
+                                      'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors',
                                       on
-                                        ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
-                                        : 'border-border-default bg-bg-base text-text-secondary hover:text-text-primary'
+                                        ? 'bg-white/[0.14] text-text-primary'
+                                        : 'bg-white/[0.05] text-text-secondary hover:bg-white/[0.08] hover:text-text-primary'
                                     )}
                                   >
-                                    {mode === 'manual' ? <Clock className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
+                                    {mode === 'manual'
+                                      ? <Clock aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                                      : <Lightning aria-hidden weight={on ? 'fill' : 'bold'} className="h-3.5 w-3.5" />}
                                     {mode === 'manual' ? 'Manual' : 'Instant'}
                                   </button>
                                 )
@@ -860,69 +889,51 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                           </div>
 
                           {/* Region toggle */}
-                          <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <Globe2 className="h-3.5 w-3.5 text-text-secondary" />
-                              <span className="text-text-secondary">Requires region</span>
-                              <span className="text-text-disabled">— buyer must pick a region</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => updateCategory(c.global_category_id, { requires_region: !c.requires_region })}
-                              className={cn(
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                                c.requires_region ? 'bg-lime' : 'bg-bg-raised'
-                              )}
-                              aria-pressed={c.requires_region}
-                            >
-                              <span
-                                className={cn(
-                                  'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
-                                  c.requires_region ? 'translate-x-5' : 'translate-x-1'
-                                )}
-                              />
-                            </button>
-                          </div>
+                          <label className="flex cursor-pointer items-center gap-3 py-3">
+                            <Globe aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[13px] font-medium text-text-primary">Requires Region</span>
+                              <span className="block text-[12px] text-text-tertiary">Buyer must pick a region</span>
+                            </span>
+                            <Switch
+                              checked={c.requires_region}
+                              onCheckedChange={() => updateCategory(c.global_category_id, { requires_region: !c.requires_region })}
+                              aria-label={`${c.name}: requires region`}
+                              className="data-[state=unchecked]:bg-white/[0.12]"
+                            />
+                          </label>
 
                           {/* Platform toggle */}
-                          <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-base px-3 py-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <Monitor className="h-3.5 w-3.5 text-text-secondary" />
-                              <span className="text-text-secondary">Requires platform</span>
-                              <span className="text-text-disabled">— e.g. PC / PlayStation / Xbox</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => updateCategory(c.global_category_id, { requires_platform: !c.requires_platform })}
-                              className={cn(
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                                c.requires_platform ? 'bg-lime' : 'bg-bg-raised'
-                              )}
-                              aria-pressed={c.requires_platform}
-                            >
-                              <span
-                                className={cn(
-                                  'inline-block h-3 w-3 transform rounded-full bg-text-primary transition-transform',
-                                  c.requires_platform ? 'translate-x-5' : 'translate-x-1'
-                                )}
-                              />
-                            </button>
-                          </div>
+                          <label className="flex cursor-pointer items-center gap-3 py-3">
+                            <Monitor aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[13px] font-medium text-text-primary">Requires Platform</span>
+                              <span className="block text-[12px] text-text-tertiary">E.g. PC / PlayStation / Xbox</span>
+                            </span>
+                            <Switch
+                              checked={c.requires_platform}
+                              onCheckedChange={() => updateCategory(c.global_category_id, { requires_platform: !c.requires_platform })}
+                              aria-label={`${c.name}: requires platform`}
+                              className="data-[state=unchecked]:bg-white/[0.12]"
+                            />
+                          </label>
 
-                          {gameId && (
-                            <Link
-                              href={`/admin/games/${gameId}/templates/${c.slug}`}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 text-[11px] font-semibold text-lime-text transition-colors hover:bg-lime-tint-bg"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              Edit attribute template
-                            </Link>
-                          )}
-                          {!gameId && (
-                            <p className="text-[10px] text-text-disabled">
-                              Save identity step first, then come back here to edit this category&apos;s attribute template.
-                            </p>
-                          )}
+                          <div className="py-3">
+                            {gameId && (
+                              <Link
+                                href={`/admin/games/${gameId}/templates/${c.slug}`}
+                                className={adminBtnSm.secondary}
+                              >
+                                <SlidersHorizontal aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                                Edit Attribute Template
+                              </Link>
+                            )}
+                            {!gameId && (
+                              <p className="text-[12px] leading-relaxed text-text-tertiary">
+                                Save identity step first, then come back here to edit this category&apos;s attribute template.
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -934,38 +945,41 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
 
           {step === 4 && (
             <div className="space-y-4">
-              <div className="text-sm font-medium text-text-primary">Review</div>
+              <PanelHead title="Review" className="mb-0" />
               <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <ReviewRow label="Name" value={name} />
                 <ReviewRow label="Slug" value={slug} mono />
-                <ReviewRow label="Display name" value={displayName || '—'} />
+                <ReviewRow label="Display Name" value={displayName || '—'} />
                 <ReviewRow label="Emoji" value={emoji || '—'} />
-                <ReviewRow label="Sort order" value={String(sortOrder)} />
-                <ReviewRow label="Content tier" value={contentTier} />
+                <ReviewRow label="Sort Order" value={String(sortOrder)} />
+                <ReviewRow label="Content Tier" value={contentTier} />
                 <ReviewRow label="Platform" value={ecosystem || '— not set —'} />
                 <ReviewRow label="Status" value={isActive ? 'Active' : 'Paused'} />
                 <ReviewRow label="Logo" value={logoUrl ? 'Uploaded' : 'Emoji fallback'} />
-                <ReviewRow label="Cover art" value={coverUrl ? 'Uploaded' : 'None yet'} />
-                <ReviewRow label="Categories enabled" value={`${enabledCount} of ${categories.length}`} />
+                <ReviewRow label="Cover Art" value={coverUrl ? 'Uploaded' : 'None yet'} />
+                <ReviewRow label="Categories Enabled" value={`${enabledCount} of ${categories.length}`} />
               </dl>
 
-              <div className="rounded-xl border border-border-default bg-bg-base p-3 text-[11px] text-text-tertiary">
-                Identity and logo are saved as you go. Hitting <span className="font-semibold text-text-secondary">Save game</span> persists the
-                per-category toggles and returns to the games list.
+              <div className="flex gap-2.5 rounded-md bg-info-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-text-secondary">
+                <Info aria-hidden weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+                <p>
+                  Identity and logo are saved as you go. Hitting <span className="font-semibold text-text-primary">Save Game</span> persists the
+                  per-category toggles and returns to the games list.
+                </p>
               </div>
             </div>
           )}
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between border-t border-border-subtle px-6 py-4">
+        <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-4 py-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
             disabled={step === 1 || isSaving}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-default bg-bg-raised px-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-raised-hover disabled:opacity-40"
+            className={adminBtn.secondary}
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft aria-hidden weight="bold" className="h-4 w-4" />
             Back
           </button>
 
@@ -983,10 +997,12 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                   }
                 }}
                 disabled={!canGoNext || isSaving}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-lime px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-lime-hover disabled:opacity-50"
+                className={adminBtn.primary}
               >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                {step === 1 ? 'Save and continue' : 'Continue'}
+                {isSaving
+                  ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                  : <ArrowRight aria-hidden weight="bold" className="h-4 w-4" />}
+                {step === 1 ? 'Save and Continue' : 'Continue'}
               </button>
             )}
             {step === 4 && (
@@ -994,24 +1010,34 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 type="button"
                 onClick={handleFinalSave}
                 disabled={isSaving || pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-success px-4 text-sm font-semibold text-text-inverse transition-colors hover:bg-success disabled:opacity-50"
+                className={adminBtn.primary}
               >
-                {isSaving || pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save game
+                {isSaving || pending
+                  ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                  : <FloppyDisk aria-hidden weight="bold" className="h-4 w-4" />}
+                Save Game
               </button>
             )}
           </div>
         </div>
-      </GlassCard>
+      </section>
     </div>
   )
 }
 
 function ReviewRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border-default bg-bg-base px-3 py-2">
-      <dt className="text-[11px] uppercase tracking-wider text-text-tertiary">{label}</dt>
-      <dd className={cn('text-sm text-text-primary', mono && 'font-mono text-xs')}>{value}</dd>
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-md bg-bg-overlay px-3.5 py-2.5">
+      <dt className="shrink-0 text-[12.5px] text-text-tertiary">{label}</dt>
+      <dd
+        className={cn(
+          'min-w-0 truncate text-right text-[13.5px] font-medium text-text-primary',
+          mono && 'font-mono text-[12.5px]'
+        )}
+        title={value}
+      >
+        {value}
+      </dd>
     </div>
   )
 }

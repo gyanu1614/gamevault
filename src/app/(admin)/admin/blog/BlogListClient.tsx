@@ -3,22 +3,27 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { CaretDown, CaretLeft, CircleNotch, Image as ImageIcon, Newspaper, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import {
   type AdminBlogPost,
   setBlogPostStatus,
   deleteBlogPost,
 } from '@/lib/actions/admin-blog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+import { AdminEmpty, StatusBadge, adminBtn, adminBtnSm, type ChipTone } from '../components/kit'
+import { GameTile } from '../components/GameTile'
 
 const TYPE_LABEL: Record<string, string> = {
   guide: 'Guide',
-  value: 'Value list',
+  value: 'Value List',
   seller: 'Seller',
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  published: 'bg-green-500/15 text-green-400 border-green-500/30',
-  draft: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  archived: 'bg-white/10 text-gray-400 border-white/15',
+const STATUS_TONE: Record<string, ChipTone> = {
+  published: 'success',
+  draft: 'warning',
+  archived: 'neutral',
 }
 
 export interface BlogGameOption {
@@ -26,6 +31,9 @@ export interface BlogGameOption {
   slug: string
   imageUrl: string | null
 }
+
+const TILE =
+  'flex min-w-0 items-center gap-3 rounded-lg bg-bg-raised p-3.5 text-left transition-colors hover:bg-bg-raised-hover'
 
 export function BlogListClient({
   posts,
@@ -43,6 +51,8 @@ export function BlogListClient({
   const [selected, setSelected] = useState<string | null>(null)
   // Empty (0-post) games are collapsed by default so games WITH content lead.
   const [showEmpty, setShowEmpty] = useState(false)
+  /** Post waiting for the delete confirmation. */
+  const [confirmDelete, setConfirmDelete] = useState<AdminBlogPost | null>(null)
 
   const countBySlug = posts.reduce<Record<string, number>>((acc, p) => {
     const key = p.primary_game_slug || 'general'
@@ -68,7 +78,7 @@ export function BlogListClient({
   }
 
   const remove = (post: AdminBlogPost) => {
-    if (!confirm(`Delete "${post.title}"? This cannot be undone.`)) return
+    setConfirmDelete(null)
     setBusyId(post.id)
     startTransition(async () => {
       await deleteBlogPost(post.id)
@@ -77,85 +87,92 @@ export function BlogListClient({
     })
   }
 
+  const deleteDialog = (
+    <Dialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+      <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold leading-tight">Delete This Post?</DialogTitle>
+          <DialogDescription className="mt-1.5 leading-relaxed">
+            &ldquo;{confirmDelete?.title || 'Untitled'}&rdquo; is removed for good. This cannot be undone.
+          </DialogDescription>
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={() => setConfirmDelete(null)} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button type="button" onClick={() => confirmDelete && remove(confirmDelete)} className={adminBtn.danger}>
+            <Trash aria-hidden weight="bold" className="h-4 w-4" />
+            Delete Post
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+
   // ── Games overview — the landing view. Games WITH posts lead; empty games
   //    (0 posts) collapse behind a toggle so the page isn't 20 dead tiles. ──
   if (selected === null) {
     const gamesWithPosts = games.filter((g) => (countBySlug[g.slug] ?? 0) > 0)
     const emptyGames = games.filter((g) => (countBySlug[g.slug] ?? 0) === 0)
 
-    const GameCard = ({ g }: { g: BlogGameOption }) => {
-      const count = countBySlug[g.slug] ?? 0
-      return (
-        <button
-          type="button"
-          onClick={() => setSelected(g.slug)}
-          className="group flex items-center gap-3 border border-white/10 bg-white/[0.02] p-3 text-left transition hover:border-[rgba(86,184,127,0.50)] hover:bg-white/[0.04]"
-        >
-          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-sm font-bold text-gray-500">
-            {g.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={g.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              g.name.charAt(0).toUpperCase()
-            )}
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold text-white transition-colors group-hover:text-lime-text">
-              {g.name}
-            </span>
-            <span className="text-xs text-gray-500">
-              {count} {count === 1 ? 'post' : 'posts'}
-            </span>
-          </span>
-        </button>
-      )
-    }
-
     return (
       <div className="space-y-6">
         {/* Quick access: All + General. */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <button
-            type="button"
-            onClick={() => setSelected('all')}
-            className="flex flex-col items-start gap-1 rounded-lg border-2 border-[rgba(86,184,127,0.40)] bg-[rgba(86,184,127,0.06)] p-4 text-left transition hover:border-[rgba(86,184,127,0.70)]"
-          >
-            <span className="text-sm font-bold text-white">All posts</span>
-            <span className="text-xs text-gray-400">{posts.length} total</span>
+          <button type="button" onClick={() => setSelected('all')} className={TILE}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-lime-tint-bg text-lime-text">
+              <Newspaper aria-hidden weight="bold" className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[14px] font-semibold text-text-primary">All Posts</span>
+              <span className="block text-[12px] text-text-tertiary">{posts.length} total</span>
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setSelected('general')}
-            className="flex flex-col items-start gap-1 rounded-lg border border-white/15 bg-white/[0.03] p-4 text-left transition hover:border-[rgba(86,184,127,0.50)]"
-          >
-            <span className="text-sm font-semibold text-white">General</span>
-            <span className="text-xs text-gray-500">{countBySlug.general ?? 0} posts · no game</span>
+          <button type="button" onClick={() => setSelected('general')} className={TILE}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-secondary">
+              <Newspaper aria-hidden weight="bold" className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[14px] font-semibold text-text-primary">General</span>
+              <span className="block text-[12px] text-text-tertiary">{countBySlug.general ?? 0} posts · no game</span>
+            </span>
           </button>
         </div>
 
         {/* Games with content — the ones you actually manage. */}
         {gamesWithPosts.length > 0 && (
-          <div>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Games with posts
-            </h2>
+          <section>
+            <h2 className="mb-3 text-[14px] font-semibold text-text-primary">Games With Posts</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {gamesWithPosts.map((g) => (
-                <GameCard key={g.slug} g={g} />
-              ))}
+              {gamesWithPosts.map((g) => {
+                const count = countBySlug[g.slug] ?? 0
+                return (
+                  <button key={g.slug} type="button" onClick={() => setSelected(g.slug)} className={TILE}>
+                    <GameTile src={g.imageUrl} name={g.name} className="h-10 w-10" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-text-primary">{g.name}</span>
+                      <span className="block text-[12px] text-text-tertiary">
+                        {count} {count === 1 ? 'post' : 'posts'}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Empty games — collapsed so they don't bury the active ones. */}
         {emptyGames.length > 0 && (
-          <div>
+          <section>
             <button
               type="button"
               onClick={() => setShowEmpty((v) => !v)}
-              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 transition hover:text-gray-300"
+              aria-expanded={showEmpty}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
             >
-              {showEmpty ? '▾' : '▸'} {emptyGames.length} games with no posts yet
+              <CaretDown aria-hidden weight="bold" className={cn('h-3.5 w-3.5 transition-transform', !showEmpty && '-rotate-90')} />
+              {emptyGames.length} games with no posts yet
             </button>
             {showEmpty && (
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -164,147 +181,140 @@ export function BlogListClient({
                     key={g.slug}
                     type="button"
                     onClick={() => setSelected(g.slug)}
-                    className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition hover:border-[rgba(86,184,127,0.50)]"
+                    className="flex min-w-0 items-center gap-2 rounded-md bg-bg-raised px-3 py-2 text-left transition-colors hover:bg-bg-raised-hover"
                   >
-                    {g.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={g.imageUrl} alt="" className="h-5 w-5 shrink-0 rounded object-cover" />
-                    )}
-                    <span className="truncate text-[13px] text-gray-300">{g.name}</span>
+                    <GameTile src={g.imageUrl} name={g.name} className="h-6 w-6 text-[11px]" />
+                    <span className="truncate text-[13px] text-text-secondary">{g.name}</span>
                   </button>
                 ))}
               </div>
             )}
-          </div>
+          </section>
         )}
+        {deleteDialog}
       </div>
     )
   }
 
   // ── Posts view for the chosen game ──
+  const heading =
+    selected === 'all' ? 'All Posts' : selected === 'general' ? 'General Posts' : selectedGame?.name ?? selected
+
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-        <div className="flex items-center gap-3">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/30"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
           >
-            ← Games
+            <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            Games
           </button>
-          <span className="flex items-center gap-2 text-sm font-semibold text-white">
-            {selectedGame?.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={selectedGame.imageUrl} alt="" className="h-5 w-5 rounded-md object-cover" />
-            )}
-            {selected === 'all'
-              ? 'All posts'
-              : selected === 'general'
-                ? 'General posts'
-                : selectedGame?.name ?? selected}
-            <span className="font-normal text-gray-500">({visiblePosts.length})</span>
+          <span aria-hidden className="h-4 w-px bg-white/[0.10]" />
+          <span className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-text-primary">
+            {selectedGame && <GameTile src={selectedGame.imageUrl} name={selectedGame.name} className="h-6 w-6 text-[11px]" />}
+            <span className="truncate">{heading}</span>
+            <span className="font-normal tabular-nums text-text-tertiary">{visiblePosts.length}</span>
           </span>
         </div>
         {selected !== 'all' && selected !== 'general' && (
-          <Link
-            href={`/admin/blog/new?game=${selected}`}
-            className="inline-flex rounded-md border border-[rgba(86,184,127,0.50)] px-3 py-1.5 text-xs font-semibold text-lime-text transition hover:bg-lime-tint-bg"
-          >
-            + New {selectedGame?.name ?? selected} post
+          <Link href={`/admin/blog/new?game=${selected}`} className={adminBtnSm.secondary}>
+            <Plus aria-hidden weight="bold" className="h-3.5 w-3.5" />
+            New {selectedGame?.name ?? selected} Post
           </Link>
         )}
       </div>
 
       {visiblePosts.length === 0 ? (
-        <div className="py-16 text-center text-sm text-gray-400">
-          {selected === 'all'
-            ? 'No posts yet. Click + New post to write one.'
-            : 'No posts for this game yet. Use the button above to write the first one.'}
-        </div>
+        <AdminEmpty
+          icon={Newspaper}
+          title="No Posts Yet"
+          hint={
+            selected === 'all'
+              ? 'Click New Post to write one.'
+              : 'No posts for this game yet. Use the button above to write the first one.'
+          }
+        />
       ) : (
-    <div className="flex flex-col gap-2">
-      {visiblePosts.map((post) => {
-        const isBusy = busyId === post.id && pending
-        const gameLabel = post.primary_game_slug || 'general'
-        return (
-          <div
-            key={post.id}
-            className="flex items-center gap-3 border border-white/10 bg-white/[0.02] p-2.5 transition hover:border-white/20 sm:gap-4 sm:p-3"
-          >
-            {/* Cover thumbnail (or a placeholder tile). */}
-            <Link
-              href={`/admin/blog/${post.id}`}
-              className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.03] sm:w-28"
-            >
-              {post.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={post.cover_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-[10px] text-gray-600">
-                  No cover
-                </span>
-              )}
-            </Link>
+        <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-bg-raised">
+          {visiblePosts.map((post) => {
+            const isBusy = busyId === post.id && pending
+            const gameLabel = post.primary_game_slug || 'general'
+            return (
+              <li key={post.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                  {/* Cover thumbnail (or a placeholder tile). */}
+                  <Link
+                    href={`/admin/blog/${post.id}`}
+                    className="relative aspect-[16/10] w-20 shrink-0 overflow-hidden rounded-md bg-white/[0.05] sm:w-28"
+                    aria-label={`Edit ${post.title || 'untitled post'}`}
+                  >
+                    {post.cover_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={post.cover_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-text-disabled">
+                        <ImageIcon aria-hidden weight="bold" className="h-5 w-5" />
+                      </span>
+                    )}
+                  </Link>
 
-            {/* Title + meta. */}
-            <div className="min-w-0 flex-1">
-              <Link
-                href={`/admin/blog/${post.id}`}
-                className="block truncate text-[14px] font-semibold text-white hover:text-lime-text sm:text-[15px]"
-              >
-                {post.title || <span className="text-gray-500">(untitled)</span>}
-              </Link>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-gray-500">
-                <span className="text-gray-400">{TYPE_LABEL[post.post_type] ?? post.post_type}</span>
-                <span className="text-gray-700">·</span>
-                <span>{gameLabel}</span>
-                <span className="text-gray-700">·</span>
-                <span>
-                  {post.updated_at ? `updated ${new Date(post.updated_at).toLocaleDateString()}` : '—'}
-                </span>
-              </div>
-            </div>
+                  {/* Title + meta. */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link
+                        href={`/admin/blog/${post.id}`}
+                        className="line-clamp-2 text-[14px] font-semibold text-text-primary underline-offset-4 hover:underline sm:text-[15px]"
+                      >
+                        {post.title || <span className="text-text-tertiary">(untitled)</span>}
+                      </Link>
+                      <StatusBadge status={post.status} tone={STATUS_TONE[post.status] ?? 'neutral'} className="shrink-0 sm:hidden" />
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-text-tertiary">
+                      <span className="text-text-secondary">{TYPE_LABEL[post.post_type] ?? post.post_type}</span>
+                      <span aria-hidden>·</span>
+                      <span>{gameLabel}</span>
+                      <span aria-hidden>·</span>
+                      <span>{post.updated_at ? `updated ${new Date(post.updated_at).toLocaleDateString()}` : '—'}</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Status pill. */}
-            <span
-              className={`hidden shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize sm:inline-flex ${
-                STATUS_STYLE[post.status] ?? STATUS_STYLE.archived
-              }`}
-            >
-              {post.status}
-            </span>
+                <StatusBadge status={post.status} tone={STATUS_TONE[post.status] ?? 'neutral'} className="hidden shrink-0 sm:inline-flex" />
 
-            {/* Actions. */}
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => togglePublish(post)}
-                disabled={isBusy}
-                className="rounded-md border border-white/15 px-2.5 py-1 text-[12px] font-semibold text-gray-200 transition hover:border-white/30 disabled:opacity-50"
-              >
-                {post.status === 'published' ? 'Unpublish' : 'Publish'}
-              </button>
-              <Link
-                href={`/admin/blog/${post.id}`}
-                className="rounded-md border border-white/15 px-2.5 py-1 text-[12px] font-semibold text-gray-200 transition hover:border-white/30"
-              >
-                Edit
-              </Link>
-              <button
-                type="button"
-                onClick={() => remove(post)}
-                disabled={isBusy}
-                className="rounded-md border border-red-500/30 px-2.5 py-1 text-[12px] font-semibold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )
-      })}
-    </div>
+                {/* Actions. */}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => togglePublish(post)}
+                    disabled={isBusy}
+                    className={cn(post.status === 'published' ? adminBtnSm.secondary : adminBtnSm.primary, 'flex-1 sm:flex-none')}
+                  >
+                    {isBusy && <CircleNotch aria-hidden weight="bold" className="h-3.5 w-3.5 animate-spin" />}
+                    {post.status === 'published' ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <Link href={`/admin/blog/${post.id}`} className={cn(adminBtnSm.secondary, 'flex-1 sm:flex-none')}>
+                    <PencilSimple aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(post)}
+                    disabled={isBusy}
+                    className={cn(adminBtnSm.danger, 'flex-1 sm:flex-none')}
+                  >
+                    <Trash aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       )}
+      {deleteDialog}
     </div>
   )
 }

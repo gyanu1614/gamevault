@@ -1,17 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { ArrowRight, Scales } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
-import {
-  AlertTriangle,
-  Clock,
-  AlertOctagon,
-  User,
-  Calendar
-} from 'lucide-react'
-import { PaginationControls } from '@/components/ui/pagination-controls'
-import { TABLE } from '../../components/kit'
+import { AdminEmpty, AdminPagination, StatusBadge, TABLE, type ChipTone } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 
 interface DisputesTableProps {
   disputes: any[]
@@ -23,240 +16,176 @@ interface DisputesTableProps {
   } | null
 }
 
+/** Status → label + tone. Resolved rows read "Completed – <who>". */
+function statusOf(status: string, dispute: any): { label: string; tone: ChipTone } {
+  if (status.startsWith('resolved_')) {
+    const who =
+      status === 'resolved_buyer_favor' ? 'Buyer Favor' : status === 'resolved_seller_favor' ? 'Seller Favor' : 'Partial'
+    return { label: `Completed – ${who}`, tone: 'success' }
+  }
+  switch (status) {
+    case 'under_review':
+      return { label: dispute.assigned_to ? 'Assigned' : 'Pending', tone: 'info' }
+    case 'escalated':
+      return { label: 'Escalated', tone: 'error' }
+    case 'awaiting_seller_response':
+      return { label: 'Awaiting Seller', tone: 'warning' }
+    case 'awaiting_buyer_response':
+      return { label: 'Awaiting Buyer', tone: 'warning' }
+    case 'closed':
+      return { label: 'Closed', tone: 'neutral' }
+    case 'open':
+    default:
+      return { label: 'Pending', tone: 'warning' }
+  }
+}
+
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const formatTime = (date: string) => new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+const formatAmount = (amount: number, currency: string = 'USD') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
+const reasonLabel = (reason?: string | null) =>
+  (reason ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || '—'
+
+/** Game mark: an image URL, an emoji, or the scales tile. */
+function GameMark({ icon, name }: { icon?: string | null; name?: string | null }) {
+  if (icon && /^(\/|https?:\/\/)/.test(icon)) return <GameTile src={icon} name={name} className="h-10 w-10" />
+  if (icon) return <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-bg-overlay text-xl">{icon}</span>
+  return (
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.05] text-text-tertiary">
+      <Scales aria-hidden weight="bold" className="h-4 w-4" />
+    </span>
+  )
+}
+
 export function DisputesTable({ disputes, pagination }: DisputesTableProps) {
   const router = useRouter()
-
-  const getStatusBadge = (status: string, dispute: any) => {
-    // If resolved, show "Completed - [Resolution Type]"
-    if (status.startsWith('resolved_')) {
-      let resolutionLabel = ''
-      if (status === 'resolved_buyer_favor') resolutionLabel = 'Buyer Favor'
-      else if (status === 'resolved_seller_favor') resolutionLabel = 'Seller Favor'
-      else if (status === 'resolved_partial') resolutionLabel = 'Partial'
-
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-green-500/10 text-green-400 border-green-500/20">
-          <Clock className="h-2.5 w-2.5" />
-          Completed - {resolutionLabel}
-        </span>
-      )
-    }
-
-    const statusConfig = {
-      open: {
-        label: 'Pending',
-        icon: AlertTriangle,
-        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-      },
-      under_review: {
-        label: dispute.assigned_to ? 'Assigned' : 'Pending',
-        icon: Clock,
-        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-      },
-      escalated: {
-        label: 'Escalated',
-        icon: AlertOctagon,
-        className: 'bg-red-500/10 text-red-400 border-red-500/20'
-      },
-      awaiting_seller_response: {
-        label: 'Awaiting Seller',
-        icon: Clock,
-        className: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-      },
-      awaiting_buyer_response: {
-        label: 'Awaiting Buyer',
-        icon: Clock,
-        className: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-      },
-      closed: {
-        label: 'Closed',
-        icon: Clock,
-        className: 'border-border-default bg-bg-overlay text-text-secondary'
-      },
-    }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.open
-    const Icon = config.icon
-
-    return (
-      <span className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border",
-        config.className
-      )}>
-        <Icon className="h-2.5 w-2.5" />
-        {config.label}
-      </span>
-    )
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatAmount = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount)
-  }
+  const open = (id: string) => router.push(`/admin/disputes/${id}`)
 
   if (disputes.length === 0) {
-    return (
-      <div className="rounded-xl border border-border-default bg-bg-raised p-12 text-center">
-        <AlertTriangle className="h-10 w-10 text-text-tertiary mx-auto mb-3" />
-        <p className="text-sm font-semibold text-text-primary">No disputes found</p>
-        <p className="text-xs text-text-tertiary mt-1">Disputes will appear here when users report issues</p>
-      </div>
-    )
+    return <AdminEmpty icon={Scales} title="No disputes found" hint="Disputes appear here when a buyer or seller reports a problem." />
   }
 
   return (
-    <div className="rounded-xl border border-border-default bg-bg-raised overflow-hidden">
-      <div className={TABLE.wrap}>
-        <table className={TABLE.table}>
-          <thead>
-            <tr>
-              <th className={TABLE.th}>
-                Order & Item
-              </th>
-              <th className={TABLE.th}>
-                Type
-              </th>
-              <th className={TABLE.th}>
-                Parties
-              </th>
-              <th className={TABLE.th}>
-                Amount
-              </th>
-              <th className={TABLE.th}>
-                Status
-              </th>
-              <th className={TABLE.th}>
-                Created
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {disputes.map((dispute) => (
-              <tr
-                key={dispute.id}
-                className={cn(TABLE.row, 'cursor-pointer')}
-                onClick={() => router.push(`/admin/disputes/${dispute.id}`)}
+    <div className="space-y-4">
+      {/* Below xl: cards */}
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 xl:hidden">
+        {disputes.map((d) => {
+          const st = statusOf(d.status, d)
+          return (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => open(d.id)}
+                className="block w-full rounded-lg bg-bg-raised p-4 text-left transition-colors hover:bg-bg-raised-hover"
               >
-                {/* Order & Item - with game logo + listing title */}
-                <td className={TABLE.td}>
-                  <div className="flex items-center gap-3">
-                    {dispute.game_icon && /^(\/|https?:\/\/)/.test(dispute.game_icon) ? (
-                      <div className="h-10 w-10 rounded-lg bg-bg-overlay border border-border-subtle flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {/* Game marks can live on any storage host: unoptimized
-                            skips the remotePatterns allow-list. */}
-                        <Image
-                          src={dispute.game_icon}
-                          alt={dispute.game_name || 'Game'}
-                          width={40}
-                          height={40}
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : dispute.game_icon ? (
-                      <div className="h-10 w-10 rounded-lg bg-bg-overlay border border-border-subtle flex items-center justify-center flex-shrink-0 text-xl">
-                        {dispute.game_icon}
-                      </div>
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg bg-bg-overlay border border-border-subtle flex items-center justify-center flex-shrink-0">
-                        <AlertTriangle className="h-4 w-4 text-text-tertiary" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-text-primary line-clamp-1">
-                        {dispute.game_name || 'Unknown Game'}
-                      </p>
-                      <p className="text-[11px] text-text-tertiary mt-0.5 line-clamp-1">
-                        {dispute.listing_title || dispute.title}
-                      </p>
-                      {dispute.order_number && (
-                        <p className="text-[11px] font-mono text-text-tertiary mt-0.5">
-                          #{dispute.order_number}
-                        </p>
-                      )}
-                    </div>
+                <div className="flex items-start gap-3">
+                  <GameMark icon={d.game_icon} name={d.game_name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-semibold text-text-primary">{d.listing_title || d.title}</p>
+                    <p className="truncate text-[12.5px] text-text-tertiary">
+                      {d.game_name || 'Unknown Game'}
+                      {d.order_number && <> · #{d.order_number}</>}
+                    </p>
                   </div>
-                </td>
-
-                {/* Type (reason) */}
-                <td className={TABLE.td}>
-                  <p className="text-[11px] text-text-tertiary capitalize">
-                    {dispute.reason?.replace(/_/g, ' ')}
+                  <StatusBadge status={st.label} tone={st.tone} className="shrink-0" />
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                  <p className="min-w-0 truncate text-[12.5px] text-text-secondary">
+                    {d.buyer_username || 'Buyer'}
+                    <ArrowRight aria-hidden weight="bold" className="mx-1.5 inline h-3 w-3 text-text-tertiary" />
+                    {d.seller_username || 'Seller'}
                   </p>
-                </td>
+                  <p className="shrink-0 text-[14px] font-semibold tabular-nums text-text-primary">
+                    {formatAmount(d.disputed_amount, d.currency)}
+                  </p>
+                </div>
+                <p className="mt-1.5 flex justify-between text-[12px] text-text-tertiary">
+                  <span>{reasonLabel(d.reason)}</span>
+                  <span>{formatDate(d.created_at)}</span>
+                </p>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
 
-                {/* Parties */}
-                <td className={TABLE.td}>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-5 w-5 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center flex-shrink-0">
-                        <User className="h-2.5 w-2.5 text-text-secondary" />
-                      </div>
-                      <span className="text-[11px] text-text-tertiary">
-                        {dispute.buyer_username || 'Buyer'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-5 w-5 rounded-full border border-border-subtle bg-bg-overlay flex items-center justify-center flex-shrink-0">
-                        <User className="h-2.5 w-2.5 text-text-secondary" />
-                      </div>
-                      <span className="text-[11px] text-text-tertiary">
-                        {dispute.seller_username || 'Seller'}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
-                {/* Amount */}
-                <td className={TABLE.td}>
-                  <span className="text-xs font-semibold tabular-nums text-text-primary">
-                    {formatAmount(dispute.disputed_amount, dispute.currency)}
-                  </span>
-                </td>
-
-                {/* Status */}
-                <td className={TABLE.td}>
-                  {getStatusBadge(dispute.status, dispute)}
-                </td>
-
-                {/* Created Date */}
-                <td className={TABLE.td}>
-                  <div className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-                    <Calendar className="h-2.5 w-2.5" />
-                    {formatDate(dispute.created_at)}
-                  </div>
-                </td>
+      {/* xl+: table */}
+      <div className="hidden overflow-hidden rounded-lg bg-bg-raised xl:block">
+        <div className={TABLE.wrap}>
+          <table className={TABLE.table}>
+            <thead>
+              <tr>
+                <th className={TABLE.th}>Order & Item</th>
+                <th className={TABLE.th}>Reason</th>
+                <th className={TABLE.th}>Parties</th>
+                <th className={cn(TABLE.th, 'text-right')}>Amount</th>
+                <th className={TABLE.th}>Status</th>
+                <th className={cn(TABLE.th, 'text-right')}>Opened</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {disputes.map((d) => {
+                const st = statusOf(d.status, d)
+                return (
+                  <tr
+                    key={d.id}
+                    tabIndex={0}
+                    role="link"
+                    onClick={() => open(d.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') open(d.id)
+                    }}
+                    className={cn(TABLE.row, 'cursor-pointer focus-visible:bg-white/[0.04] focus-visible:outline-none')}
+                  >
+                    <td className={TABLE.td}>
+                      <div className="flex items-center gap-3">
+                        <GameMark icon={d.game_icon} name={d.game_name} />
+                        <div className="min-w-0 max-w-[280px]">
+                          <p className="truncate text-[13.5px] font-medium text-text-primary">{d.listing_title || d.title}</p>
+                          <p className="truncate text-[12px] text-text-tertiary">
+                            {d.game_name || 'Unknown Game'}
+                            {d.order_number && <> · <span className="font-mono">#{d.order_number}</span></>}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className={cn(TABLE.td, 'text-[12.5px]')}>{reasonLabel(d.reason)}</td>
+                    <td className={TABLE.td}>
+                      <p className="text-[12.5px] text-text-secondary">{d.buyer_username || 'Buyer'}</p>
+                      <p className="text-[12px] text-text-tertiary">vs {d.seller_username || 'Seller'}</p>
+                    </td>
+                    <td className={cn(TABLE.tdPrimary, 'whitespace-nowrap text-right tabular-nums')}>
+                      {formatAmount(d.disputed_amount, d.currency)}
+                    </td>
+                    <td className={TABLE.td}>
+                      <StatusBadge status={st.label} tone={st.tone} />
+                    </td>
+                    <td className={cn(TABLE.td, 'whitespace-nowrap text-right')}>
+                      <p className="text-[12.5px] text-text-secondary">{formatDate(d.created_at)}</p>
+                      <p className="text-[12px] text-text-tertiary">{formatTime(d.created_at)}</p>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {pagination && pagination.totalPages > 1 && (
-        <PaginationControls
-          currentPage={pagination.page}
+      {pagination && (
+        <AdminPagination
+          page={pagination.page}
           totalPages={pagination.totalPages}
-          hasNextPage={pagination.page < pagination.totalPages}
-          hasPrevPage={pagination.page > 1}
-          onPageChange={(page) => {
+          total={pagination.total}
+          limit={pagination.limit}
+          noun="disputes"
+          onPage={(page) => {
             const params = new URLSearchParams(window.location.search)
             params.set('page', page.toString())
             router.push(`/admin/disputes?${params.toString()}`)
           }}
-          totalItems={pagination.total}
-          itemsPerPage={pagination.limit}
         />
       )}
     </div>

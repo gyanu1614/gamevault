@@ -34,6 +34,16 @@ const nextConfig = {
     // 14.2 — the top-level `serverExternalPackages` spelling is Next 15+ and
     // is silently IGNORED here (config-schema.js accepts only the former).
     serverComponentsExternalPackages: ['svix', 'resend', 'sharp'],
+    // Admin image uploads (game logo/cover/banner, currency/bundle/platform
+    // icons, template icons, blog images) post the file as a base64 data URL
+    // to a server action. The 1 MB default rejected anything over ~750 KB with
+    // a 413 before the action ran. 4 MB fits the largest file the admin allows
+    // (MAX_IMAGE_UPLOAD_BYTES = 2.5 MB → ~3.4 MB base64) and stays under
+    // Vercel's 4.5 MB function payload cap. Pinned by
+    // src/lib/uploads/image-upload.test.ts.
+    serverActions: {
+      bodySizeLimit: '4mb',
+    },
   },
   // Verification builds (agent/CI) set NEXT_DIST_DIR to keep their output OUT
   // of .next — a `next build` racing the running `next dev` corrupts the dev

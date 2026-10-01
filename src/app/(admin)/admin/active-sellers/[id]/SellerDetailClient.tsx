@@ -1,14 +1,15 @@
 'use client'
 
 /**
- * Forest Ledger — /admin/active-sellers/[id] seller-management detail.
+ * /admin/active-sellers/[id] seller-management detail (account-section
+ * design, 2026-09-30).
  *
- * Single-column forest-glass cards (Card/ModalShell lifted from the
- * application detail): hero identity band, real-number stat strip, tier
- * management (change control + history), listings, sales, wallet &
- * payouts (with withdrawal approve/reject wired to the existing
- * withdrawals actions), seller management (restrict/ban — moved here from
- * ApplicationDetail) and comms (in-app message + email).
+ * Header (identity + tier/status badges + View Shop / View Application), the
+ * seller's numbers as a StatStrip, then titled sections — heading ABOVE a
+ * data-only card (owner: "title floating outside, card has data only"): tier
+ * management (change control + history), listings, sales, wallet & payouts
+ * (withdrawal approve/reject wired to the existing withdrawals actions),
+ * seller management (restrict/ban) and comms (in-app message + email).
  *
  * Data via react-query seeded with the server wrapper's getSellerDetail;
  * every mutation invalidates the detail key + the active-sellers list.
@@ -19,23 +20,21 @@ import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  Ban,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  History,
-  Loader2,
-  Mail,
-  MessageSquare,
-  Send,
-  ShieldAlert,
-  ShieldCheck,
-  Star,
-  X,
-} from 'lucide-react'
+import { ArrowSquareOut } from '@phosphor-icons/react/dist/csr/ArrowSquareOut'
+import { CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown'
+import { CaretLeft } from '@phosphor-icons/react/dist/csr/CaretLeft'
+import { CaretUp } from '@phosphor-icons/react/dist/csr/CaretUp'
+import { ChatCircleText } from '@phosphor-icons/react/dist/csr/ChatCircleText'
+import { CheckCircle } from '@phosphor-icons/react/dist/csr/CheckCircle'
+import { CircleNotch } from '@phosphor-icons/react/dist/csr/CircleNotch'
+import { ClockCounterClockwise } from '@phosphor-icons/react/dist/csr/ClockCounterClockwise'
+import { EnvelopeSimple } from '@phosphor-icons/react/dist/csr/EnvelopeSimple'
+import { PaperPlaneTilt } from '@phosphor-icons/react/dist/csr/PaperPlaneTilt'
+import { Prohibit } from '@phosphor-icons/react/dist/csr/Prohibit'
+import { ShieldCheck } from '@phosphor-icons/react/dist/csr/ShieldCheck'
+import { ShieldWarning } from '@phosphor-icons/react/dist/csr/ShieldWarning'
+import { Star } from '@phosphor-icons/react/dist/csr/Star'
+import { X } from '@phosphor-icons/react/dist/csr/X'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
 import {
@@ -58,13 +57,11 @@ import {
   money,
   signedMoney,
 } from '@/lib/seller/format-amount'
-import {
-  FOREST_BG,
-  FOREST_CLASSES,
-  FOREST_MOTION,
-  forestStagger,
-} from '../../_theme/forest'
-import { tierChipClass } from '../_components/ActiveSellersPageClient'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { StatStrip } from '@/components/account/AccountSurface'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { StatusBadge, adminBtn, adminBtnSm, type ChipTone } from '../../components/kit'
+import { TierChip } from '../../components/TierChip'
 
 /** Seller rank ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
@@ -109,20 +106,14 @@ function titleCase(s: string): string {
     .join(' ')
 }
 
-/** Generic status → chip tone (lime / amber / red / neutral). */
-function statusChipClass(status: string): string {
-  const base =
-    'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-bold'
-  const lime = `${base} bg-[#A3E635]/[0.16] text-[#BEF264]`
-  const amber = `${base} bg-[#F59E0B]/[0.16] text-[#FCD34D]`
-  const red = `${base} bg-[#B42318]/20 text-[#FCA5A5]`
-  const neutral = `${base} bg-white/[0.1] text-white/85`
+/** Generic status → badge tone. */
+function statusTone(status: string): ChipTone {
   switch (status) {
     case 'active':
     case 'completed':
     case 'approved':
     case 'sold':
-      return lime
+      return 'success'
     case 'pending':
     case 'pending_approval':
     case 'changes_requested':
@@ -131,95 +122,102 @@ function statusChipClass(status: string): string {
     case 'delivering':
     case 'delivered':
     case 'paused':
-      return amber
+      return 'warning'
     case 'rejected':
     case 'cancelled':
     case 'refunded':
     case 'disputed':
     case 'failed':
     case 'banned':
-      return red
+      return 'error'
     default:
-      return neutral
+      return 'neutral'
   }
 }
 
-// ─── Small ledger primitives (lifted from ApplicationDetail) ─────────────────
+function Badge({ status }: { status: string }) {
+  return <StatusBadge status={titleCase(status)} tone={statusTone(status)} />
+}
+
+// ─── Small primitives ────────────────────────────────────────────────────────
 
 /**
- * Section = floating heading OUTSIDE the glass card, data-only card below
- * (owner: "title floating outside, card has data only" — no icon boxes).
+ * Section = heading ABOVE a data-only card (owner: "title floating outside,
+ * card has data only" — no icon boxes).
  */
-function Card({
+function Section({
   title,
   sub,
-  index,
+  aside,
   children,
   className,
 }: {
   title: string
   sub?: string
-  index: number
+  aside?: React.ReactNode
   children: React.ReactNode
   className?: string
 }) {
   return (
-    <section className={cn(FOREST_MOTION.fadeUp, className)} style={forestStagger(index)}>
-      <div className="mb-2 px-0.5">
-        <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-white">{title}</h3>
-        {sub && <p className="mt-0.5 text-[12.5px] text-white/85">{sub}</p>}
+    <section className={className}>
+      <div className="mb-2.5 flex items-end justify-between gap-3 px-0.5">
+        <div className="min-w-0">
+          <h2 className="text-[17px] font-semibold tracking-tight text-text-primary">{title}</h2>
+          {sub && <p className="mt-0.5 text-[12.5px] text-text-tertiary">{sub}</p>}
+        </div>
+        {aside && <div className="shrink-0 whitespace-nowrap">{aside}</div>}
       </div>
-      <div className={FOREST_CLASSES.card}>{children}</div>
+      <div className="rounded-lg bg-bg-raised p-4 sm:p-5">{children}</div>
     </section>
   )
 }
 
-/** CSS-only modal shell on the forest canvas — forest-glass panel. */
-function ModalShell({
+/** Sub-heading inside a card. */
+const INNER_LABEL = 'mb-2 text-[13px] font-semibold text-text-secondary'
+
+/** Rows inside a card, hairlines between. */
+const ROWS = 'divide-y divide-white/[0.06]'
+
+const FIELD_LABEL = 'mb-1.5 block text-[13px] font-medium text-text-secondary'
+
+const FLAG = 'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11.5px] font-semibold'
+
+/** The shared Radix dialog; closing is blocked while a mutation runs. */
+function ActionDialog({
+  open,
   onClose,
+  busy,
+  title,
+  description,
   children,
-  wide,
 }: {
+  open: boolean
   onClose: () => void
+  busy?: boolean
+  title: string
+  description?: React.ReactNode
   children: React.ReactNode
-  wide?: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div
-        className={cn('absolute inset-0 bg-[#08110C]/70', FOREST_MOTION.fadeIn)}
-        onClick={onClose}
-      />
-      <div
-        className={cn(
-          'relative w-full rounded-2xl border border-white/10 bg-[#0F2419]/95 p-6 text-white/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-md',
-          wide ? 'max-w-lg' : 'max-w-md',
-          'max-h-[90vh] overflow-y-auto',
-          FOREST_MOTION.fadeUp,
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogContent className="max-w-[480px] border-0 p-5 sm:p-6">
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold leading-tight">{title}</DialogTitle>
+          {description && <DialogDescription className="mt-1.5 leading-relaxed">{description}</DialogDescription>}
+        </div>
         {children}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-const MODAL_LABEL =
-  'mb-2 block text-[10.5px] font-bold uppercase tracking-[0.07em] text-white/85'
-/** In-card sub-section heading — short, bright, human (not a column header). */
-const INNER_LABEL = 'mb-2 block text-[13px] font-bold text-white/90'
-const MODAL_INPUT =
-  'w-full rounded-[10px] border border-white/15 bg-white/[0.05] px-3 py-2.5 text-[13px] text-white placeholder:text-white/30 focus:border-[#A3E635] focus:outline-none'
-const MODAL_CANCEL =
-  'flex-1 rounded-[10px] border border-white/15 px-3 py-2.5 text-[13px] font-semibold text-white/85 transition-colors hover:bg-white/[0.06] disabled:opacity-50'
-const MODAL_CONFIRM_LIME =
-  'flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#A3E635] px-3 py-2.5 text-[13px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50'
-const MODAL_CONFIRM_RED =
-  'flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#B42318] px-3 py-2.5 text-[13px] font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
+function DialogActions({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col-reverse gap-2 sm:flex-row [&>*]:sm:flex-1">{children}</div>
+}
 
-const CHIP =
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-bold'
+function Spinner() {
+  return <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+}
 
 // ─── The page ────────────────────────────────────────────────────────────────
 
@@ -403,1025 +401,803 @@ export default function SellerDetailClient({
     return order(info.eligible_tier) > order(profile.seller_tier) ? info.eligible_tier : null
   }, [detail.tier.info, profile.seller_tier])
 
-  let cardIndex = 0
-
-  const stats: { label: string; value: React.ReactNode; sub?: string }[] = [
-    { label: 'Active Listings', value: activeListings, sub: pendingListings > 0 ? `${pendingListings} pending` : undefined },
+  const statCells = [
+    {
+      label: 'Active Listings',
+      value: activeListings,
+      hint: pendingListings > 0 ? <span className="text-warning">{pendingListings} pending</span> : undefined,
+    },
     { label: 'Total Sales', value: detail.orders.completedCount },
-    { label: 'Revenue', value: money(detail.orders.revenue), sub: `GMV ${money(detail.orders.gmv)}` },
+    { label: 'Revenue', value: money(detail.orders.revenue), hint: `GMV ${money(detail.orders.gmv)}` },
     { label: 'Completion Rate', value: `${detail.orders.completionRate}%` },
     {
       label: 'Rating',
       value:
         profile.seller_rating != null ? (
           <span className="inline-flex items-center gap-1.5">
-            <Star className="h-5 w-5 fill-current text-[#FCD34D]" />
+            <Star aria-hidden weight="fill" className="h-5 w-5 text-warning" />
             {decimal(profile.seller_rating, 1)}
           </span>
         ) : (
           '—'
         ),
-      sub: `${profile.total_reviews} ${profile.total_reviews === 1 ? 'review' : 'reviews'}`,
+      hint: `${profile.total_reviews} ${profile.total_reviews === 1 ? 'review' : 'reviews'}`,
     },
-    { label: 'Seller Balance', value: balanceLabel(detail.wallet.sellerBalances) },
-    { label: 'Store Credit', value: balanceLabel(detail.wallet.storeCreditBalances) },
+    {
+      label: 'Seller Balance',
+      value: balanceLabel(detail.wallet.sellerBalances),
+      hint: `Store credit ${balanceLabel(detail.wallet.storeCreditBalances)}`,
+    },
   ]
 
+  const listings = showAllListings ? detail.listings.recent : detail.listings.recent.slice(0, 5)
+
   return (
-    <>
-      {/* ══ HERO — forest band, seller identity ══ */}
-      <section
-        className={cn('relative overflow-hidden rounded-2xl px-6 pb-6 pt-6 sm:px-7', FOREST_MOTION.fadeIn)}
-        style={{ background: FOREST_BG.hero }}
-      >
-        <div className="pointer-events-none absolute inset-0" style={{ background: FOREST_BG.heroNoise }} />
+    <div className="space-y-5">
+      {/* ══ Header ══ */}
+      <div>
+        <Link
+          href="/admin/active-sellers"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Active Sellers
+        </Link>
 
-        <div className="relative z-[1] mb-4 flex items-center gap-2 text-[12px] text-white/70">
-          <Link
-            href="/admin/active-sellers"
-            className="inline-flex items-center gap-1 transition-colors hover:text-white/70"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Active Sellers
-          </Link>
-          {' / '}
-          <b className="font-medium text-white/85">{shopName}</b>
-        </div>
-
-        <div className="relative z-[1] flex flex-wrap items-start gap-[18px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={getAvatarUrl(profile.avatar_url, profile.username || profile.email || 'seller')}
-            alt={shopName}
-            className="h-[76px] w-[76px] shrink-0 rounded-2xl object-cover shadow-[0_0_0_3px_rgba(255,255,255,0.14),0_14px_30px_-14px_rgba(0,0,0,0.7)]"
-          />
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-[11px]">
-              <h1 className="text-[26px] font-extrabold tracking-[-0.01em] text-white">{shopName}</h1>
-              <span
-                className={tierChipClass(
-                  profile.seller_tier,
-                  currentConfig?.badge_color ?? tierByKey(profile.seller_tier).colors.badgeColor,
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 items-start gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getAvatarUrl(profile.avatar_url, profile.username || profile.email || 'seller')}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="min-w-0 break-words text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
+                  {shopName}
+                </h1>
+                <TierChip tier={profile.seller_tier} />
+                {profile.kyc_status && (
+                  <StatusBadge status={`KYC ${titleCase(profile.kyc_status)}`} tone={statusTone(profile.kyc_status)} />
                 )}
-              >
-                {tierByKey(profile.seller_tier).label}
-              </span>
-              {profile.kyc_status && (
-                <span className={statusChipClass(profile.kyc_status)}>
-                  KYC {titleCase(profile.kyc_status)}
-                </span>
-              )}
-              {profile.seller_status === 'restricted' && (
-                <span className={cn(CHIP, 'bg-[#B42318]/20 text-[#FCA5A5]')}>Restricted</span>
-              )}
-              {profile.seller_status === 'banned' && (
-                <span className={cn(CHIP, 'bg-[#B42318]/25 text-[#FCA5A5]')}>Banned</span>
-              )}
-              {presence.store_paused && (
-                <span className={cn(CHIP, 'bg-[#F59E0B]/[0.16] text-[#FCD34D]')}>Paused</span>
-              )}
-              {profile.founding_seller && (
-                <span className={cn(CHIP, 'bg-[#A3E635]/[0.15] text-[#D9F99D]')}>Founding</span>
-              )}
-              {profile.is_test && (
-                <span className={cn(CHIP, 'bg-white/[0.1] text-white/85')}>Test</span>
-              )}
-            </div>
-            <div className="mt-1.5 text-[13px] text-white/85">
-              @{profile.username || 'unknown'}
-              {profile.email && <> · {profile.email}</>}
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-4 text-[12px] text-white/70">
-              <span>
-                Joined <b className="font-semibold text-white/85">{fmtDate(profile.created_at)}</b>
-              </span>
-              {presence.last_active_at && now != null && (
+                {profile.seller_status === 'restricted' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Restricted</span>}
+                {profile.seller_status === 'banned' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Banned</span>}
+                {presence.store_paused && <span className={cn(FLAG, 'bg-warning-bg text-warning')}>Paused</span>}
+                {profile.founding_seller && <span className={cn(FLAG, 'bg-success-bg text-success')}>Founding</span>}
+                {profile.is_test && <span className={cn(FLAG, 'bg-white/[0.07] text-text-secondary')}>Test</span>}
+              </div>
+              <p className="mt-1 break-words text-[13px] text-text-secondary">
+                @{profile.username || 'unknown'}
+                {profile.email && <> · {profile.email}</>}
+              </p>
+              <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-text-tertiary">
                 <span>
-                  Last Active{' '}
-                  <b className="font-semibold text-white/85">
-                    {relativeTime(presence.last_active_at, now)}
-                  </b>
+                  Joined <span className="font-medium text-text-secondary">{fmtDate(profile.created_at)}</span>
                 </span>
-              )}
+                {presence.last_active_at && now != null && (
+                  <span>
+                    Last active <span className="font-medium text-text-secondary">{relativeTime(presence.last_active_at, now)}</span>
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-[9px] lg:ml-auto">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {profile.shop_slug && (
-              <Link
-                href={`/shop/${profile.shop_slug}`}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/[0.12] px-4 py-2.5 text-[12.5px] font-bold text-white/85 transition-colors hover:bg-white/[0.2]"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
+              <Link href={`/shop/${profile.shop_slug}`} target="_blank" className={adminBtn.secondary}>
+                <ArrowSquareOut aria-hidden weight="bold" className="h-4 w-4" />
                 View Shop
               </Link>
             )}
             {detail.application && (
-              <Link
-                href={`/admin/sellers/${detail.application.id}`}
-                className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/[0.12] px-4 py-2.5 text-[12.5px] font-bold text-white/85 transition-colors hover:bg-white/[0.2]"
-              >
+              <Link href={`/admin/sellers/${detail.application.id}`} className={adminBtn.secondary}>
                 View Application
               </Link>
             )}
           </div>
         </div>
-      </section>
-
-      {/* ══ STAT BAND — one row, wraps on smaller widths ══ */}
-      <div
-        className={cn(
-          'mt-4 flex flex-wrap gap-x-10 gap-y-5 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-6 py-5 backdrop-blur-sm',
-          FOREST_MOTION.fadeUp,
-        )}
-        style={forestStagger(cardIndex++)}
-      >
-        {stats.map((s) => (
-          <div key={s.label}>
-            <div className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-white/85">
-              {s.label}
-            </div>
-            <div className="mt-1 text-[26px] font-bold leading-none tabular-nums text-white">
-              {s.value}
-            </div>
-            {s.sub && <div className="mt-1 text-[11.5px] tabular-nums text-white/85">{s.sub}</div>}
-          </div>
-        ))}
       </div>
 
-      {/* ══ BODY — single column of ledger cards ══ */}
-      <div className="mt-5 flex min-w-0 flex-col gap-3.5">
-        {/* ── Tier card ── */}
-        <Card
-          title="Seller Tier"
-          sub="Sets commission, listing limits and moderation."
-          index={cardIndex++}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={tierChipClass(
-                profile.seller_tier,
-                currentConfig?.badge_color ?? tierByKey(profile.seller_tier).colors.badgeColor,
-              )}
-            >
-              {currentConfig?.display_name || tierByKey(profile.seller_tier).label}
-            </span>
-            {currentConfig && (
-              <span className="text-[12px] text-white/85">
-                {currentConfig.discount_pts != null && (
-                  <>Rank Discount{' '}
-                    <b className="font-semibold tabular-nums text-white/85">
-                      {currentConfig.discount_pts > 0 ? `−${currentConfig.discount_pts} pts` : 'none'}
-                    </b>
-                  </>
-                )}
-                {' · '}Listing Limit{' '}
-                <b className="font-semibold tabular-nums text-white/85">
-                  {currentConfig.listing_limit ?? 'Unlimited'}
-                </b>
-                {currentConfig.pre_moderation_listings != null && (
-                  <>
-                    {' · '}Pre-Moderated Listings{' '}
-                    <b className="font-semibold tabular-nums text-white/85">
-                      {currentConfig.pre_moderation_listings}
-                    </b>
-                  </>
-                )}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setTierChoice(profile.seller_tier)
-                setTierNotes('')
-                setDialog({ kind: 'tier' })
-              }}
-              className="ml-auto rounded-[10px] bg-white/[0.12] px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.18]"
-            >
-              Change Tier
-            </button>
-          </div>
+      <StatStrip stats={statCells} className="md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6" />
 
-          {eligibleHigher && (
-            <div className="mt-3 rounded-[11px] bg-[#A3E635]/[0.12] px-3.5 py-2.5 text-[12px] text-[#D9F99D]">
-              Eligible For <b className="font-bold">{titleCase(eligibleHigher)}</b> by the automatic
-              rules — consider an upgrade.
-            </div>
-          )}
-
-          {detail.tier.history.length > 0 && (
-            <div className="mt-3.5">
-              <div className={INNER_LABEL}>Recent Tier Changes</div>
-              <div className={cn(FOREST_CLASSES.inset, 'px-3.5')}>
-                {detail.tier.history.map((h, i) => (
-                  <div
-                    key={h.id}
-                    className={cn(
-                      'flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-[12px] text-white/85',
-                      i > 0 && 'border-t border-white/[0.08]',
-                    )}
-                  >
-                    <span className="font-semibold text-white/85">
-                      {h.previous_tier ? titleCase(h.previous_tier) : '—'} → {titleCase(h.new_tier)}
-                    </span>
-                    <span className="text-white/70">{titleCase(h.reason)}</span>
-                    {h.notes && <span className="italic text-white/70">“{h.notes}”</span>}
-                    <span className="ml-auto text-white/70">{fmtDate(h.created_at)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* ── Listings card ── */}
-        <Card title="Listings" sub="Inventory by status, newest first." index={cardIndex++}>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(detail.listings.countsByStatus)
-              .sort(([, a], [, b]) => b - a)
-              .map(([status, count]) => (
-                <span key={status} className={statusChipClass(status)}>
-                  {titleCase(status)} <b className="tabular-nums">{count}</b>
-                </span>
-              ))}
-            {Object.keys(detail.listings.countsByStatus).length === 0 && (
-              <p className="text-[12.5px] text-white/70">No listings yet.</p>
-            )}
-            {pendingListings > 0 && (
-              <Link
-                href="/admin/moderation"
-                className="ml-auto text-[11px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110"
-              >
-                Open Moderation Queue ↗
-              </Link>
-            )}
-          </div>
-
-          {detail.listings.recent.length > 0 && (
-            <div className={cn(FOREST_CLASSES.inset, 'mt-3.5 px-3.5')}>
-              {(showAllListings
-                ? detail.listings.recent
-                : detail.listings.recent.slice(0, 5)
-              ).map((l, i) => (
-                <div
-                  key={l.id}
-                  className={cn(
-                    'flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5',
-                    i > 0 && 'border-t border-white/[0.08]',
-                  )}
-                >
-                  <p className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">
-                    {l.title}
-                  </p>
-                  {l.game_name && (
-                    <span className="rounded-md bg-white/[0.08] px-2 py-[2.5px] text-[10.5px] font-bold text-white/90">
-                      {l.game_name}
-                    </span>
-                  )}
-                  <span className="text-[12.5px] font-semibold tabular-nums text-white/90">
-                    {money(l.price)}
-                  </span>
-                  <span className={statusChipClass(l.status)}>{titleCase(l.status)}</span>
-                  <span className="w-[92px] text-right text-[11px] text-white/85">
-                    {fmtDate(l.created_at)}
-                  </span>
-                </div>
-              ))}
-              {detail.listings.recent.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllListings((v) => !v)}
-                  className="flex w-full items-center justify-center gap-1.5 border-t border-white/[0.08] py-2.5 text-[12px] font-bold text-white/85 transition-colors hover:text-white"
-                >
-                  {showAllListings ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                      Show Less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                      Show More ({detail.listings.recent.length - 5})
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* ── Sales card ── */}
-        <Card
-          title="Sales"
-          sub={`${detail.orders.totalOrders} orders all-time · ${detail.orders.completedCount} completed.`}
-          index={cardIndex++}
-        >
-          {detail.orders.recent.length === 0 ? (
-            <p className="text-[12.5px] text-white/70">No orders yet.</p>
-          ) : (
-            <div className={cn(FOREST_CLASSES.inset, 'px-3.5')}>
-              {detail.orders.recent.map((o, i) => (
-                <div
-                  key={o.id}
-                  className={cn(
-                    'flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5',
-                    i > 0 && 'border-t border-white/[0.08]',
-                  )}
-                >
-                  <span className={cn('text-[12px] font-bold text-white/85', FOREST_CLASSES.mono)}>
-                    {o.order_number || `#${o.id.split('-')[0]}`}
-                  </span>
-                  <span className="text-[12.5px] font-semibold tabular-nums text-white/85">
-                    {money(o.total_amount)}
-                  </span>
-                  <span className="text-[11.5px] tabular-nums text-white/70">
-                    payout {money(o.seller_payout)}
-                  </span>
-                  <span className={cn('ml-auto', statusChipClass(o.status))}>
-                    {titleCase(o.status)}
-                  </span>
-                  <span className="w-[92px] text-right text-[11px] text-white/85">
-                    {fmtDate(o.created_at)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* ── Wallet & payouts card ── */}
-        <Card
-          title="Wallet & Payouts"
-          sub="Balances, wallet activity and withdrawal requests."
-          index={cardIndex++}
-        >
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <div className={cn(FOREST_CLASSES.inset, 'px-3.5 py-3')}>
-              <div className={FOREST_CLASSES.kvKey}>Seller Balance</div>
-              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                {detail.wallet.sellerBalances.map((b) => (
-                  <span key={b.currency} className="text-[15px] font-extrabold tabular-nums text-white/95">
-                    {CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}
-                    {decimal(b.amount)}
-                    <span className="ml-1 text-[10.5px] font-bold text-white/70">{b.currency}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className={cn(FOREST_CLASSES.inset, 'px-3.5 py-3')}>
-              <div className={FOREST_CLASSES.kvKey}>Store Credit</div>
-              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                {detail.wallet.storeCreditBalances.map((b) => (
-                  <span key={b.currency} className="text-[15px] font-extrabold tabular-nums text-white/95">
-                    {CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}
-                    {decimal(b.amount)}
-                    <span className="ml-1 text-[10.5px] font-bold text-white/70">{b.currency}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {detail.wallet.transactions.length > 0 && (
-            <div className="mt-3.5">
-              <div className={INNER_LABEL}>Recent Wallet Activity</div>
-              <div className={cn(FOREST_CLASSES.inset, 'px-3.5')}>
-                {detail.wallet.transactions.map((t, i) => (
-                  <div
-                    key={t.id}
-                    className={cn(
-                      'flex flex-wrap items-center gap-x-3 gap-y-1 py-2',
-                      i > 0 && 'border-t border-white/[0.08]',
-                    )}
-                  >
-                    <span className="text-[12px] font-semibold text-white/90">
-                      {titleCase(t.type)}
-                    </span>
-                    {t.description && (
-                      <span className="min-w-0 flex-1 truncate text-[11.5px] text-white/70">
-                        {t.description}
-                      </span>
-                    )}
-                    <span
-                      className={cn(
-                        'ml-auto text-[12.5px] font-bold tabular-nums',
-                        t.amount < 0 ? 'text-[#FCA5A5]' : 'text-[#BEF264]',
-                      )}
-                    >
-                      {signedMoney(t.amount)}
-                    </span>
-                    <span className="w-[92px] text-right text-[11px] text-white/85">
-                      {fmtDate(t.created_at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-3.5">
-            <div className={INNER_LABEL}>Withdrawal Requests</div>
-            {detail.withdrawals.length === 0 ? (
-              <p className="text-[12.5px] text-white/70">No withdrawal requests.</p>
-            ) : (
-              <div className={cn(FOREST_CLASSES.inset, 'px-3.5')}>
-                {detail.withdrawals.map((w, i) => (
-                  <div
-                    key={w.id}
-                    className={cn(
-                      'flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5',
-                      i > 0 && 'border-t border-white/[0.08]',
-                    )}
-                  >
-                    <span className="text-[13px] font-bold tabular-nums text-white/90">
-                      {money(w.amount)}
-                    </span>
-                    {w.net_amount != null && w.net_amount !== w.amount && (
-                      <span className="text-[11px] tabular-nums text-white/70">
-                        net {money(w.net_amount)}
-                      </span>
-                    )}
-                    <span className="text-[12px] text-white/85">{w.method_name || '—'}</span>
-                    <span className={statusChipClass(w.status)}>{titleCase(w.status)}</span>
-                    <span className="text-[11px] text-white/85">{fmtDate(w.created_at)}</span>
-                    {w.status === 'pending' && (
-                      <span className="ml-auto flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            setDialog({ kind: 'withdrawal-approve', requestId: w.id, amount: w.amount })
-                          }
-                          className="rounded-[9px] bg-[#A3E635] px-3 py-1.5 text-[11.5px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            setDialog({ kind: 'withdrawal-reject', requestId: w.id, amount: w.amount })
-                          }
-                          className="rounded-[9px] border border-[#FCA5A5]/35 px-3 py-1.5 text-[11.5px] font-bold text-[#FCA5A5] transition hover:bg-[#FCA5A5]/10 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* ── Seller management card ── */}
-        <Card
-          title="Seller Management"
-          sub="Restrict or ban this seller's account."
-          index={cardIndex++}
-        >
-          {restrictedish && (
-            <div
-              className={cn(
-                'mb-3 rounded-[11px] px-3.5 py-3',
-                profile.seller_status === 'banned' ? 'bg-[#B42318]/20' : 'bg-[#F59E0B]/[0.16]',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex items-center gap-2 text-[12.5px] font-bold',
-                  profile.seller_status === 'banned' ? 'text-[#FCA5A5]' : 'text-[#FCD34D]',
-                )}
-              >
-                {profile.seller_status === 'banned' ? (
-                  <Ban className="h-4 w-4" />
-                ) : (
-                  <ShieldAlert className="h-4 w-4" />
-                )}
-                Currently {profile.seller_status === 'banned' ? 'Banned' : 'Restricted'}
-              </div>
-              {profile.seller_restriction_reason && (
-                <p className="mt-1.5 text-[11.5px] text-white/85">
-                  Reason: {profile.seller_restriction_reason}
-                </p>
-              )}
-              {profile.seller_restricted_at && (
-                <p className="mt-1 text-[11px] text-white/70">
-                  Since {fmtDate(profile.seller_restricted_at)}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {restrictedish ? (
+      {/* ══ Body ══ */}
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-5">
+          <Section
+            title="Seller Tier"
+            sub="Sets commission, listing limits and moderation."
+            aside={
               <button
                 type="button"
-                onClick={() => setDialog({ kind: 'unrestrict' })}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#A3E635] px-4 py-2 text-[13px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  setTierChoice(profile.seller_tier)
+                  setTierNotes('')
+                  setDialog({ kind: 'tier' })
+                }}
+                className={adminBtnSm.secondary}
               >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Remove Restriction
+                Change Tier
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRestrictionReason('')
-                    setDialog({ kind: 'restrict', type: 'restricted' })
-                  }}
-                  disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#F59E0B]/[0.16] px-4 py-2 text-[13px] font-bold text-[#FCD34D] transition hover:bg-[#F59E0B]/[0.24] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <ShieldAlert className="h-3.5 w-3.5" />
-                  Restrict
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRestrictionReason('')
-                    setDialog({ kind: 'restrict', type: 'banned' })
-                  }}
-                  disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#B42318]/20 px-4 py-2 text-[13px] font-bold text-[#FCA5A5] transition hover:bg-[#B42318]/30 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Ban className="h-3.5 w-3.5" />
-                  Ban
-                </button>
-              </>
+            }
+          >
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <TierChip tier={profile.seller_tier} className="text-[12.5px]" />
+              {currentConfig && (
+                <span className="text-[12.5px] text-text-tertiary">
+                  {currentConfig.discount_pts != null && (
+                    <>
+                      Rank discount{' '}
+                      <span className="font-semibold tabular-nums text-text-secondary">
+                        {currentConfig.discount_pts > 0 ? `−${currentConfig.discount_pts} pts` : 'none'}
+                      </span>
+                      {' · '}
+                    </>
+                  )}
+                  Listing limit{' '}
+                  <span className="font-semibold tabular-nums text-text-secondary">
+                    {currentConfig.listing_limit ?? 'Unlimited'}
+                  </span>
+                  {currentConfig.pre_moderation_listings != null && (
+                    <>
+                      {' · '}Pre-moderated listings{' '}
+                      <span className="font-semibold tabular-nums text-text-secondary">
+                        {currentConfig.pre_moderation_listings}
+                      </span>
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {eligibleHigher && (
+              <p className="mt-3 rounded-md bg-success-bg px-3.5 py-2.5 text-[12.5px] text-success">
+                Eligible for <span className="font-bold">{titleCase(eligibleHigher)}</span> by the automatic rules —
+                consider an upgrade.
+              </p>
             )}
-            <button
-              type="button"
-              onClick={() => setDialog({ kind: 'history' })}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/15 px-4 py-2 text-[13px] font-semibold text-white/85 transition-colors hover:bg-white/[0.06]"
-            >
-              <History className="h-3.5 w-3.5" />
-              View Restriction History
-            </button>
-          </div>
 
-          <p className="mt-3 rounded-[10px] bg-white/[0.04] px-3 py-2 text-[11px] leading-relaxed text-white/70">
-            <b className="text-white/85">Restrict / Ban:</b> pauses all active listings ·{' '}
-            <b className="text-white/85">Remove Restriction:</b> does NOT unpause them — the seller
-            republishes from their dashboard
-          </p>
-        </Card>
+            {detail.tier.history.length > 0 && (
+              <div className="mt-4">
+                <p className={INNER_LABEL}>Recent Tier Changes</p>
+                <div className={ROWS}>
+                  {detail.tier.history.map((h) => (
+                    <div key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-[12.5px] first:pt-0">
+                      <span className="font-semibold text-text-primary">
+                        {h.previous_tier ? titleCase(h.previous_tier) : '—'} → {titleCase(h.new_tier)}
+                      </span>
+                      <span className="text-text-tertiary">{titleCase(h.reason)}</span>
+                      {h.notes && <span className="italic text-text-tertiary">“{h.notes}”</span>}
+                      <span className="ml-auto text-text-tertiary">{fmtDate(h.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Section>
 
-        {/* ── Comms card ── */}
-        <Card
-          title="Contact Seller"
-          sub="In-app message or branded email — both are logged."
-          index={cardIndex++}
-        >
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setMessageText('')
-                setDialog({ kind: 'message' })
-              }}
-              className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/[0.12] px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.18]"
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Send In-App Message
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEmailSubject('')
-                setEmailBody('')
-                setDialog({ kind: 'email' })
-              }}
-              disabled={!profile.email}
-              className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/[0.12] px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.18] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Send Email
-            </button>
-          </div>
+          <Section
+            title="Listings"
+            sub="Inventory by status, newest first."
+            aside={
+              pendingListings > 0 ? (
+                <Link
+                  href="/admin/moderation"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
+                >
+                  Moderation Queue
+                  <ArrowSquareOut aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                </Link>
+              ) : undefined
+            }
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(detail.listings.countsByStatus)
+                .sort(([, a], [, b]) => b - a)
+                .map(([status, count]) => (
+                  <StatusBadge key={status} status={`${titleCase(status)} ${count}`} tone={statusTone(status)} />
+                ))}
+              {Object.keys(detail.listings.countsByStatus).length === 0 && (
+                <p className="text-[13px] text-text-tertiary">No listings yet.</p>
+              )}
+            </div>
 
-          {detail.reviews.length > 0 && (
-            <div className="mt-3.5">
-              <div className={INNER_LABEL}>Recent Reviews</div>
-              <div className={cn(FOREST_CLASSES.inset, 'px-3.5')}>
-                {detail.reviews.map((r, i) => (
-                  <div
-                    key={r.id}
-                    className={cn(
-                      'flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5',
-                      i > 0 && 'border-t border-white/[0.08]',
-                    )}
-                  >
-                    {r.rating != null && (
-                      <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#FCD34D]">
-                        <Star className="h-3 w-3 fill-current" />
-                        {r.rating}
+            {detail.listings.recent.length > 0 && (
+              <div className={cn(ROWS, 'mt-3')}>
+                {listings.map((l) => (
+                  <div key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+                    <p className="min-w-0 basis-full truncate text-[13.5px] font-medium text-text-primary sm:flex-1 sm:basis-auto">{l.title}</p>
+                    {l.game_name && (
+                      <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11.5px] font-medium text-text-secondary">
+                        {l.game_name}
                       </span>
                     )}
-                    <span className="min-w-0 flex-1 truncate text-[12px] text-white/85">
-                      {r.title || r.comment || '—'}
-                    </span>
-                    <span className="text-[11px] text-white/85">{fmtDate(r.created_at)}</span>
+                    <span className="text-[13px] font-semibold tabular-nums text-text-primary">{money(l.price)}</span>
+                    <Badge status={l.status} />
+                    <span className="w-[92px] text-right text-[12px] text-text-tertiary">{fmtDate(l.created_at)}</span>
                   </div>
                 ))}
+                {detail.listings.recent.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllListings((v) => !v)}
+                    className="flex w-full items-center justify-center gap-1.5 pt-2.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
+                  >
+                    {showAllListings ? (
+                      <>
+                        <CaretUp aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <CaretDown aria-hidden weight="bold" className="h-3.5 w-3.5" />
+                        Show More ({detail.listings.recent.length - 5})
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
-            </div>
-          )}
-        </Card>
-      </div>
+            )}
+          </Section>
 
-      {/* ══ MODALS ══ */}
+          <Section
+            title="Sales"
+            sub={`${detail.orders.totalOrders} orders all-time · ${detail.orders.completedCount} completed.`}
+          >
+            {detail.orders.recent.length === 0 ? (
+              <p className="text-[13px] text-text-tertiary">No orders yet.</p>
+            ) : (
+              <div className={ROWS}>
+                {detail.orders.recent.map((o) => (
+                  <Link
+                    key={o.id}
+                    href={`/admin/orders/${o.id}`}
+                    className="-mx-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-2.5 transition-colors first:pt-0 hover:bg-white/[0.03]"
+                  >
+                    <span className="font-mono text-[12.5px] font-semibold text-text-primary">
+                      {o.order_number || `#${o.id.split('-')[0]}`}
+                    </span>
+                    <span className="text-[13px] font-semibold tabular-nums text-text-primary">{money(o.total_amount)}</span>
+                    <span className="text-[12px] tabular-nums text-text-tertiary">payout {money(o.seller_payout)}</span>
+                    <span className="ml-auto">
+                      <Badge status={o.status} />
+                    </span>
+                    <span className="w-[92px] text-right text-[12px] text-text-tertiary">{fmtDate(o.created_at)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
 
-      {/* Tier change */}
-      {dialog?.kind === 'tier' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-5">
-            <h3 className="text-[16px] font-extrabold text-white/95">Change Seller Tier</h3>
-            <p className="mt-1 text-[12px] text-white/85">
-              Updates commission, listing limits and the moderation threshold immediately. The
-              seller is notified.
-            </p>
-          </div>
-          <div className="mb-4">
-            <label className={MODAL_LABEL}>New Tier</label>
-            <select
-              value={tierChoice}
-              onChange={(e) => setTierChoice(e.target.value)}
-              className={cn(MODAL_INPUT, '[&>option]:bg-[#0F2419]')}
-            >
-              {TIERS.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                  {t.key === profile.seller_tier ? ' (Current)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-5">
-            <label className={MODAL_LABEL}>Note (Optional)</label>
-            <textarea
-              value={tierNotes}
-              onChange={(e) => setTierNotes(e.target.value)}
-              rows={3}
-              placeholder="Why this change? Kept in the tier history…"
-              className={cn(MODAL_INPUT, 'resize-none')}
-            />
-          </div>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() => tierMutation.mutate()}
-              disabled={busy || tierChoice === profile.seller_tier}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {tierMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckCircle className="h-3.5 w-3.5" />
-              )}
-              Change {shopName} From {titleCase(profile.seller_tier)} To {titleCase(tierChoice)}
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Restrict / Ban */}
-      {dialog?.kind === 'restrict' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-6 text-center">
-            <div
-              className={cn(
-                'mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl',
-                dialog.type === 'banned' ? 'bg-[#B42318]/20' : 'bg-[#F59E0B]/[0.16]',
-              )}
-            >
-              {dialog.type === 'banned' ? (
-                <Ban className="h-7 w-7 text-[#FCA5A5]" />
-              ) : (
-                <ShieldAlert className="h-7 w-7 text-[#FCD34D]" />
-              )}
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">
-              {dialog.type === 'banned' ? 'Ban Seller' : 'Restrict Seller'}
-            </h3>
-            <p className="text-sm text-white/85">
-              {dialog.type === 'banned'
-                ? 'This bans the seller from all seller features and pauses their active listings.'
-                : 'This blocks new listings and pauses their active listings.'}
-            </p>
-          </div>
-          <div className="mb-6">
-            <label className={MODAL_LABEL}>Reason *</label>
-            <textarea
-              value={restrictionReason}
-              onChange={(e) => setRestrictionReason(e.target.value)}
-              className={cn(MODAL_INPUT, 'resize-none')}
-              rows={4}
-              placeholder="Enter a detailed reason — the seller sees it…"
-              required
-            />
-          </div>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() =>
-                restrictMutation.mutate({ status: dialog.type, reason: restrictionReason })
-              }
-              disabled={!restrictionReason.trim() || busy}
-              className={MODAL_CONFIRM_RED}
-            >
-              {restrictMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : dialog.type === 'banned' ? (
-                <Ban className="h-3.5 w-3.5" />
-              ) : (
-                <ShieldAlert className="h-3.5 w-3.5" />
-              )}
-              Confirm
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Unrestrict confirm */}
-      {dialog?.kind === 'unrestrict' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.15]">
-              <ShieldCheck className="h-7 w-7 text-[#A3E635]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Remove Restriction?</h3>
-            <p className="text-sm leading-relaxed text-white/85">
-              <b className="font-semibold text-white">{shopName}</b> can create and publish
-              listings again. Paused listings stay paused — the seller republishes them.
-            </p>
-          </div>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() => restrictMutation.mutate({ status: 'active' })}
-              disabled={busy}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {restrictMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <ShieldCheck className="h-3.5 w-3.5" />
-              )}
-              Remove Restriction
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Restriction history */}
-      {dialog?.kind === 'history' && (
-        <ModalShell onClose={() => setDialog(null)} wide>
-          <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-[#A3E635]" />
-              <h3 className="text-base font-extrabold text-white">Restriction History</h3>
-            </div>
-            <button
-              onClick={() => setDialog(null)}
-              className="rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4 text-white/85" />
-            </button>
-          </div>
-          {detail.restrictions.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-white/85">No restriction history found</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {detail.restrictions.map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-[11px] border border-white/[0.08] bg-white/[0.04] p-3"
-                >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {r.restriction_type === 'restricted' && (
-                        <ShieldAlert className="h-3.5 w-3.5 text-[#FCD34D]" />
-                      )}
-                      {r.restriction_type === 'banned' && (
-                        <Ban className="h-3.5 w-3.5 text-[#FCA5A5]" />
-                      )}
-                      {r.restriction_type === 'unrestricted' && (
-                        <CheckCircle className="h-3.5 w-3.5 text-[#A3E635]" />
-                      )}
-                      <span className="text-sm font-bold text-white/90">
-                        {titleCase(r.restriction_type)}
+        <div className="flex min-w-0 flex-col gap-5">
+          <Section title="Wallet & Payouts" sub="Balances, wallet activity and withdrawal requests.">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {[
+                { label: 'Seller Balance', rows: detail.wallet.sellerBalances },
+                { label: 'Store Credit', rows: detail.wallet.storeCreditBalances },
+              ].map((box) => (
+                <div key={box.label} className="rounded-md bg-bg-overlay px-3.5 py-3">
+                  <p className="text-[12px] font-medium text-text-tertiary">{box.label}</p>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                    {box.rows.map((b) => (
+                      <span key={b.currency} className="text-[16px] font-bold tabular-nums text-text-primary">
+                        {CURRENCY_SYMBOL[b.currency] ?? `${b.currency} `}
+                        {decimal(b.amount)}
+                        <span className="ml-1 text-[11.5px] font-semibold text-text-tertiary">{b.currency}</span>
                       </span>
-                    </div>
-                    <span className="text-xs text-white/70">{fmtDate(r.created_at)}</span>
+                    ))}
                   </div>
-                  {r.reason && <p className="mb-2 text-xs text-white/85">{r.reason}</p>}
-                  {r.admin && (
-                    <p className="text-xs text-white/70">
-                      By: {r.admin.username || r.admin.email}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
-          )}
-        </ModalShell>
-      )}
 
-      {/* In-app message */}
-      {dialog?.kind === 'message' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-4">
-            <h3 className="text-[16px] font-extrabold text-white/95">Send In-App Message</h3>
-            <p className="mt-1 text-[12px] text-white/85">
-              Lands in their notifications instantly, linked to their seller status page.
+            {detail.wallet.transactions.length > 0 && (
+              <div className="mt-4">
+                <p className={INNER_LABEL}>Recent Wallet Activity</p>
+                <div className={ROWS}>
+                  {detail.wallet.transactions.map((t) => (
+                    <div key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 first:pt-0">
+                      <span className="text-[13px] font-medium text-text-primary">{titleCase(t.type)}</span>
+                      {t.description && (
+                        <span className="min-w-0 flex-1 truncate text-[12px] text-text-tertiary">{t.description}</span>
+                      )}
+                      <span className={cn('ml-auto text-[13px] font-semibold tabular-nums', t.amount < 0 ? 'text-error' : 'text-success')}>
+                        {signedMoney(t.amount)}
+                      </span>
+                      <span className="w-[92px] text-right text-[12px] text-text-tertiary">{fmtDate(t.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <p className={INNER_LABEL}>Withdrawal Requests</p>
+              {detail.withdrawals.length === 0 ? (
+                <p className="text-[13px] text-text-tertiary">No withdrawal requests.</p>
+              ) : (
+                <div className={ROWS}>
+                  {detail.withdrawals.map((w) => (
+                    <div key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 first:pt-0">
+                      <span className="text-[13.5px] font-semibold tabular-nums text-text-primary">{money(w.amount)}</span>
+                      {w.net_amount != null && w.net_amount !== w.amount && (
+                        <span className="text-[12px] tabular-nums text-text-tertiary">net {money(w.net_amount)}</span>
+                      )}
+                      <span className="text-[12.5px] text-text-secondary">{w.method_name || '—'}</span>
+                      <Badge status={w.status} />
+                      <span className="text-[12px] text-text-tertiary">{fmtDate(w.created_at)}</span>
+                      {w.status === 'pending' && (
+                        <span className="ml-auto flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setDialog({ kind: 'withdrawal-reject', requestId: w.id, amount: w.amount })}
+                            className={adminBtnSm.danger}
+                          >
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setDialog({ kind: 'withdrawal-approve', requestId: w.id, amount: w.amount })}
+                            className={adminBtnSm.secondary}
+                          >
+                            Approve
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Section>
+
+          <Section title="Seller Management" sub="Restrict or ban this seller’s account.">
+            {restrictedish && (
+              <div
+                className={cn(
+                  'mb-3 rounded-md px-3.5 py-3',
+                  profile.seller_status === 'banned' ? 'bg-error-bg' : 'bg-warning-bg',
+                )}
+              >
+                <p
+                  className={cn(
+                    'flex items-center gap-2 text-[13px] font-semibold',
+                    profile.seller_status === 'banned' ? 'text-error' : 'text-warning',
+                  )}
+                >
+                  {profile.seller_status === 'banned' ? (
+                    <Prohibit aria-hidden weight="bold" className="h-4 w-4" />
+                  ) : (
+                    <ShieldWarning aria-hidden weight="bold" className="h-4 w-4" />
+                  )}
+                  Currently {profile.seller_status === 'banned' ? 'Banned' : 'Restricted'}
+                </p>
+                {profile.seller_restriction_reason && (
+                  <p className="mt-1.5 text-[12.5px] text-text-secondary">Reason: {profile.seller_restriction_reason}</p>
+                )}
+                {profile.seller_restricted_at && (
+                  <p className="mt-1 text-[12px] text-text-tertiary">Since {fmtDate(profile.seller_restricted_at)}</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {restrictedish ? (
+                <button type="button" onClick={() => setDialog({ kind: 'unrestrict' })} disabled={busy} className={adminBtn.primary}>
+                  <ShieldCheck aria-hidden weight="bold" className="h-4 w-4" />
+                  Remove Restriction
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRestrictionReason('')
+                      setDialog({ kind: 'restrict', type: 'restricted' })
+                    }}
+                    disabled={busy}
+                    className={cn(adminBtn.secondary, 'text-warning')}
+                  >
+                    <ShieldWarning aria-hidden weight="bold" className="h-4 w-4" />
+                    Restrict
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRestrictionReason('')
+                      setDialog({ kind: 'restrict', type: 'banned' })
+                    }}
+                    disabled={busy}
+                    className={adminBtn.danger}
+                  >
+                    <Prohibit aria-hidden weight="bold" className="h-4 w-4" />
+                    Ban
+                  </button>
+                </>
+              )}
+              <button type="button" onClick={() => setDialog({ kind: 'history' })} className={adminBtn.secondary}>
+                <ClockCounterClockwise aria-hidden weight="bold" className="h-4 w-4" />
+                Restriction History
+              </button>
+            </div>
+
+            <p className="mt-3 rounded-md bg-bg-overlay px-3.5 py-2.5 text-[12px] leading-relaxed text-text-tertiary">
+              <span className="font-semibold text-text-secondary">Restrict / Ban:</span> pauses all active listings ·{' '}
+              <span className="font-semibold text-text-secondary">Remove Restriction:</span> does NOT unpause them — the
+              seller republishes from their dashboard.
             </p>
+          </Section>
+
+          <Section title="Contact Seller" sub="In-app message or branded email — both are logged.">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMessageText('')
+                  setDialog({ kind: 'message' })
+                }}
+                className={adminBtn.secondary}
+              >
+                <ChatCircleText aria-hidden weight="bold" className="h-4 w-4" />
+                Send In-App Message
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailSubject('')
+                  setEmailBody('')
+                  setDialog({ kind: 'email' })
+                }}
+                disabled={!profile.email}
+                className={adminBtn.secondary}
+              >
+                <EnvelopeSimple aria-hidden weight="bold" className="h-4 w-4" />
+                Send Email
+              </button>
+            </div>
+
+            {detail.reviews.length > 0 && (
+              <div className="mt-4">
+                <p className={INNER_LABEL}>Recent Reviews</p>
+                <div className={ROWS}>
+                  {detail.reviews.map((r) => (
+                    <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 first:pt-0">
+                      {r.rating != null && (
+                        <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-warning">
+                          <Star aria-hidden weight="fill" className="h-3.5 w-3.5" />
+                          {r.rating}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-secondary">{r.title || r.comment || '—'}</span>
+                      <span className="text-[12px] text-text-tertiary">{fmtDate(r.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Section>
+        </div>
+      </div>
+
+      {/* ══ Dialogs ══ */}
+
+      <ActionDialog
+        open={dialog?.kind === 'tier'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Change Seller Tier"
+        description="Updates commission, listing limits and the moderation threshold immediately. The seller is notified."
+      >
+        <div>
+          <label htmlFor="tier-choice" className={FIELD_LABEL}>
+            New Tier
+          </label>
+          <select id="tier-choice" value={tierChoice} onChange={(e) => setTierChoice(e.target.value)} className={accountInputCls}>
+            {TIERS.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+                {t.key === profile.seller_tier ? ' (Current)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="tier-notes" className={FIELD_LABEL}>
+            Note (Optional)
+          </label>
+          <textarea
+            id="tier-notes"
+            value={tierNotes}
+            onChange={(e) => setTierNotes(e.target.value)}
+            rows={3}
+            placeholder="Why this change? Kept in the tier history…"
+            className={cn(accountInputCls, 'resize-none')}
+          />
+        </div>
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => tierMutation.mutate()}
+            disabled={busy || tierChoice === profile.seller_tier}
+            className={adminBtn.primary}
+          >
+            {tierMutation.isPending ? <Spinner /> : <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />}
+            {titleCase(profile.seller_tier)} → {titleCase(tierChoice)}
+          </button>
+        </DialogActions>
+      </ActionDialog>
+
+      <ActionDialog
+        open={dialog?.kind === 'restrict'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title={dialog?.kind === 'restrict' && dialog.type === 'banned' ? 'Ban Seller' : 'Restrict Seller'}
+        description={
+          dialog?.kind === 'restrict' && dialog.type === 'banned'
+            ? 'Bans the seller from all seller features and pauses their active listings.'
+            : 'Blocks new listings and pauses their active listings.'
+        }
+      >
+        <div>
+          <label htmlFor="restriction-reason" className={FIELD_LABEL}>
+            Reason
+          </label>
+          <textarea
+            id="restriction-reason"
+            value={restrictionReason}
+            onChange={(e) => setRestrictionReason(e.target.value)}
+            className={cn(accountInputCls, 'resize-none')}
+            rows={4}
+            placeholder="Enter a detailed reason — the seller sees it…"
+            required
+          />
+        </div>
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              dialog?.kind === 'restrict' && restrictMutation.mutate({ status: dialog.type, reason: restrictionReason })
+            }
+            disabled={!restrictionReason.trim() || busy}
+            className={adminBtn.danger}
+          >
+            {restrictMutation.isPending ? (
+              <Spinner />
+            ) : dialog?.kind === 'restrict' && dialog.type === 'banned' ? (
+              <Prohibit aria-hidden weight="bold" className="h-4 w-4" />
+            ) : (
+              <ShieldWarning aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            Confirm
+          </button>
+        </DialogActions>
+      </ActionDialog>
+
+      <ActionDialog
+        open={dialog?.kind === 'unrestrict'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Remove Restriction?"
+        description={
+          <>
+            <span className="font-semibold text-text-primary">{shopName}</span> can create and publish listings again.
+            Paused listings stay paused — the seller republishes them.
+          </>
+        }
+      >
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button type="button" onClick={() => restrictMutation.mutate({ status: 'active' })} disabled={busy} className={adminBtn.primary}>
+            {restrictMutation.isPending ? <Spinner /> : <ShieldCheck aria-hidden weight="bold" className="h-4 w-4" />}
+            Remove Restriction
+          </button>
+        </DialogActions>
+      </ActionDialog>
+
+      <ActionDialog open={dialog?.kind === 'history'} onClose={() => setDialog(null)} title="Restriction History">
+        {detail.restrictions.length === 0 ? (
+          <p className="py-6 text-center text-[13.5px] text-text-tertiary">No restriction history.</p>
+        ) : (
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {detail.restrictions.map((r) => (
+              <div key={r.id} className="rounded-md bg-bg-overlay p-3.5">
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-text-primary">
+                    {r.restriction_type === 'restricted' && <ShieldWarning aria-hidden weight="bold" className="h-4 w-4 text-warning" />}
+                    {r.restriction_type === 'banned' && <Prohibit aria-hidden weight="bold" className="h-4 w-4 text-error" />}
+                    {r.restriction_type === 'unrestricted' && <CheckCircle aria-hidden weight="bold" className="h-4 w-4 text-success" />}
+                    {titleCase(r.restriction_type)}
+                  </span>
+                  <span className="text-[12px] text-text-tertiary">{fmtDate(r.created_at)}</span>
+                </div>
+                {r.reason && <p className="text-[12.5px] text-text-secondary">{r.reason}</p>}
+                {r.admin && <p className="mt-1 text-[12px] text-text-tertiary">By {r.admin.username || r.admin.email}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </ActionDialog>
+
+      <ActionDialog
+        open={dialog?.kind === 'message'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Send In-App Message"
+        description="Lands in their notifications instantly, linked to their seller status page."
+      >
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <label htmlFor="seller-message" className="text-[13px] font-medium text-text-secondary">
+              Message
+            </label>
+            <span className="text-[12px] tabular-nums text-text-tertiary">{messageText.length}/500</span>
           </div>
           <textarea
+            id="seller-message"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             rows={4}
             maxLength={500}
             placeholder="e.g. Quick question about your recent listings…"
-            className={cn(MODAL_INPUT, 'resize-none')}
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <p className="mt-1 text-right text-[10.5px] tabular-nums text-white/70">
-            {messageText.length}/500
-          </p>
-          <div className="mt-3 flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() => messageMutation.mutate()}
-              disabled={busy || !messageText.trim()}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {messageMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              Send Message
-            </button>
-          </div>
-        </ModalShell>
-      )}
+        </div>
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button type="button" onClick={() => messageMutation.mutate()} disabled={busy || !messageText.trim()} className={adminBtn.primary}>
+            {messageMutation.isPending ? <Spinner /> : <PaperPlaneTilt aria-hidden weight="bold" className="h-4 w-4" />}
+            Send Message
+          </button>
+        </DialogActions>
+      </ActionDialog>
 
-      {/* Email */}
-      {dialog?.kind === 'email' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-4">
-            <h3 className="text-[16px] font-extrabold text-white/95">Send Email</h3>
-            <p className="mt-1 text-[12px] text-white/85">
-              Branded DropMarket email to {profile.email}. Replies reach the support inbox.
-            </p>
+      <ActionDialog
+        open={dialog?.kind === 'email'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Send Email"
+        description={`Branded DropMarket email to ${profile.email}. Replies reach the support inbox.`}
+      >
+        <div>
+          <label htmlFor="email-subject" className={FIELD_LABEL}>
+            Subject
+          </label>
+          <input
+            id="email-subject"
+            type="text"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            maxLength={150}
+            placeholder="e.g. About your DropMarket shop…"
+            className={accountInputCls}
+          />
+        </div>
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <label htmlFor="email-body" className="text-[13px] font-medium text-text-secondary">
+              Body
+            </label>
+            <span className="text-[12px] tabular-nums text-text-tertiary">{emailBody.length}/3000</span>
           </div>
-          <div className="mb-4">
-            <label className={MODAL_LABEL}>Subject *</label>
-            <input
-              type="text"
-              value={emailSubject}
-              onChange={(e) => setEmailSubject(e.target.value)}
-              maxLength={150}
-              placeholder="e.g. About your DropMarket shop…"
-              className={MODAL_INPUT}
-            />
-          </div>
-          <div className="mb-1">
-            <label className={MODAL_LABEL}>Body *</label>
-            <textarea
-              value={emailBody}
-              onChange={(e) => setEmailBody(e.target.value)}
-              rows={6}
-              maxLength={3000}
-              placeholder="Write the email body…"
-              className={cn(MODAL_INPUT, 'resize-none')}
-            />
-          </div>
-          <p className="mb-3 text-right text-[10.5px] tabular-nums text-white/70">
-            {emailBody.length}/3000
-          </p>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() => emailMutation.mutate()}
-              disabled={busy || !emailSubject.trim() || !emailBody.trim()}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {emailMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Mail className="h-3.5 w-3.5" />
-              )}
-              Send Email
-            </button>
-          </div>
-        </ModalShell>
-      )}
+          <textarea
+            id="email-body"
+            value={emailBody}
+            onChange={(e) => setEmailBody(e.target.value)}
+            rows={6}
+            maxLength={3000}
+            placeholder="Write the email body…"
+            className={cn(accountInputCls, 'resize-none')}
+          />
+        </div>
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => emailMutation.mutate()}
+            disabled={busy || !emailSubject.trim() || !emailBody.trim()}
+            className={adminBtn.primary}
+          >
+            {emailMutation.isPending ? <Spinner /> : <EnvelopeSimple aria-hidden weight="bold" className="h-4 w-4" />}
+            Send Email
+          </button>
+        </DialogActions>
+      </ActionDialog>
 
-      {/* Withdrawal approve confirm */}
-      {dialog?.kind === 'withdrawal-approve' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.15]">
-              <CheckCircle className="h-7 w-7 text-[#A3E635]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Approve Withdrawal?</h3>
-            <p className="text-sm leading-relaxed text-white/85">
-              Approves the{' '}
-              <b className="font-semibold tabular-nums text-white">{money(dialog.amount)}</b>{' '}
-              payout request — the seller is notified and ops sends the money.
-            </p>
-          </div>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() =>
-                withdrawalMutation.mutate({ requestId: dialog.requestId, decision: 'approve' })
-              }
-              disabled={busy}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {withdrawalMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckCircle className="h-3.5 w-3.5" />
-              )}
-              Approve Withdrawal
-            </button>
-          </div>
-        </ModalShell>
-      )}
+      <ActionDialog
+        open={dialog?.kind === 'withdrawal-approve'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Approve Withdrawal?"
+        description={
+          dialog?.kind === 'withdrawal-approve' ? (
+            <>
+              Approves the <span className="font-semibold tabular-nums text-text-primary">{money(dialog.amount)}</span> payout
+              request — the seller is notified and ops sends the money.
+            </>
+          ) : null
+        }
+      >
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              dialog?.kind === 'withdrawal-approve' &&
+              withdrawalMutation.mutate({ requestId: dialog.requestId, decision: 'approve' })
+            }
+            disabled={busy}
+            className={adminBtn.primary}
+          >
+            {withdrawalMutation.isPending ? <Spinner /> : <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />}
+            Approve Withdrawal
+          </button>
+        </DialogActions>
+      </ActionDialog>
 
-      {/* Withdrawal reject */}
-      {dialog?.kind === 'withdrawal-reject' && (
-        <ModalShell onClose={() => !busy && setDialog(null)}>
-          <div className="mb-5 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#B42318]/20">
-              <X className="h-7 w-7 text-[#FCA5A5]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Reject Withdrawal</h3>
-            <p className="text-sm leading-relaxed text-white/85">
-              Declines the{' '}
-              <b className="font-semibold tabular-nums text-white">{money(dialog.amount)}</b>{' '}
-              request and releases the hold — funds return to the seller&apos;s balance.
-            </p>
-          </div>
-          <div className="mb-6">
-            <label className={MODAL_LABEL}>Rejection Reason *</label>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className={cn(MODAL_INPUT, 'resize-none')}
-              rows={3}
-              placeholder="The seller sees this reason…"
-              required
-            />
-          </div>
-          <div className="flex gap-2.5">
-            <button onClick={() => setDialog(null)} disabled={busy} className={MODAL_CANCEL}>
-              Cancel
-            </button>
-            <button
-              onClick={() =>
-                withdrawalMutation.mutate({
-                  requestId: dialog.requestId,
-                  decision: 'reject',
-                  reason: rejectReason,
-                })
-              }
-              disabled={busy || !rejectReason.trim()}
-              className={MODAL_CONFIRM_RED}
-            >
-              {withdrawalMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <X className="h-3.5 w-3.5" />
-              )}
-              Reject Withdrawal
-            </button>
-          </div>
-        </ModalShell>
-      )}
-    </>
+      <ActionDialog
+        open={dialog?.kind === 'withdrawal-reject'}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        title="Reject Withdrawal"
+        description={
+          dialog?.kind === 'withdrawal-reject' ? (
+            <>
+              Declines the <span className="font-semibold tabular-nums text-text-primary">{money(dialog.amount)}</span> request
+              and releases the hold — funds return to the seller&apos;s balance.
+            </>
+          ) : null
+        }
+      >
+        <div>
+          <label htmlFor="withdrawal-reject-reason" className={FIELD_LABEL}>
+            Rejection Reason
+          </label>
+          <textarea
+            id="withdrawal-reject-reason"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            className={cn(accountInputCls, 'resize-none')}
+            rows={3}
+            placeholder="The seller sees this reason…"
+            required
+          />
+        </div>
+        <DialogActions>
+          <button type="button" onClick={() => setDialog(null)} disabled={busy} className={adminBtn.secondary}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              dialog?.kind === 'withdrawal-reject' &&
+              withdrawalMutation.mutate({ requestId: dialog.requestId, decision: 'reject', reason: rejectReason })
+            }
+            disabled={busy || !rejectReason.trim()}
+            className={adminBtn.danger}
+          >
+            {withdrawalMutation.isPending ? <Spinner /> : <X aria-hidden weight="bold" className="h-4 w-4" />}
+            Reject Withdrawal
+          </button>
+        </DialogActions>
+      </ActionDialog>
+    </div>
   )
 }

@@ -16,7 +16,8 @@
 import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, Zap, Star, ArrowRight, CheckCircle2, ChevronDown } from 'lucide-react'
+import { Shield, Zap, Star, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { FaqCards } from '@/components/marketplace/FaqCards'
 import { createClient } from '@/lib/supabase/server'
 import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/landingPages'
 import { getLandingPageListings } from '@/lib/seo/landingPageInventory'
@@ -392,22 +393,9 @@ export default async function SEOLandingPage({
             <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">
               Frequently Asked Questions
             </h2>
-            <div className="space-y-3">
-              {page.faqs.map((faq, i) => (
-                <details
-                  key={i}
-                  className="group rounded-2xl bg-white/[0.04] border border-border-subtle overflow-hidden"
-                >
-                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none font-medium text-foreground text-sm select-none hover:text-lime-text transition-colors">
-                    {faq.q}
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border-subtle pt-3">
-                    {faq.a}
-                  </div>
-                </details>
-              ))}
-            </div>
+            {/* The shared FAQ cards: answers animate open (framer-motion)
+                and stay in the HTML while closed. */}
+            <FaqCards items={page.faqs} defaultOpen={-1} className="mt-0" />
           </div>
         </section>
 

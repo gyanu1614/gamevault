@@ -3,36 +3,35 @@
 /**
  * P5.3 — Admin Promo Code Management Client
  *
- * V53 restyle — admin kit design language: PageHeader, neutral
- * bg-bg-raised surfaces, lime primary actions, StatusBadge pills,
- * kit-style inputs and modal.
+ * Numbers strip, then the codes: cards below lg, a table row from lg.
+ * Create and delete run in Radix dialogs. Every server action and
+ * payload is unchanged.
  */
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import {
-  Tag, Plus, Trash2, ToggleLeft, ToggleRight,
-  Calendar, Users, Percent, DollarSign, Loader2, X,
-} from 'lucide-react'
+import { CircleNotch, Plus, Tag, Trash } from '@phosphor-icons/react'
 import {
   createPromoCode,
   togglePromoCode,
   deletePromoCode,
 } from '@/lib/actions/promo'
 import type { PromoCode } from '@/types/database'
-import { PageHeader, StatusBadge } from '../components/kit'
+import { StatStrip, accountInputCls } from '@/components/account/AccountSurface'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
+import { AdminEmpty, PageHeader, StatusBadge, adminBtn, type ChipTone } from '../components/kit'
 
 interface Props {
   initialCodes: PromoCode[]
   fetchError?: string
 }
 
-const INPUT =
-  'w-full rounded-lg border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:border-focus-border focus:outline-none'
-const LABEL = 'block text-xs font-medium text-text-tertiary mb-1.5'
+const INPUT = accountInputCls
+const LABEL = 'mb-1.5 block text-[13px] font-medium text-text-secondary'
 
-// ── Create form ───────────────────────────────────────────────────────────────
+// ── Create dialog ─────────────────────────────────────────────────────────────
 function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }) {
   const [open,     setOpen]     = useState(false)
   const [saving,   setSaving]   = useState(false)
@@ -76,172 +75,184 @@ function CreatePromoForm({ onCreated }: { onCreated: (code: PromoCode) => void }
   }
 
   return (
-    <div>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg bg-lime-pressed px-4 py-2.5 text-sm font-bold text-text-inverse transition-colors hover:bg-lime"
-      >
-        <Plus className="h-4 w-4" />
+    <Dialog open={open} onOpenChange={(o) => !saving && setOpen(o)}>
+      <button type="button" onClick={() => setOpen(true)} className={adminBtn.primary}>
+        <Plus aria-hidden weight="bold" className="h-4 w-4" />
         New Promo Code
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-xl border border-border-default bg-bg-raised p-6"
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-text-primary">Create Promo Code</h2>
-                <button onClick={() => setOpen(false)} className="text-text-tertiary transition-colors hover:text-text-primary">
-                  <X className="h-5 w-5" />
-                </button>
+      <DialogContent className="max-w-[520px] border-0 p-5 sm:p-6">
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold leading-tight">Create Promo Code</DialogTitle>
+          <DialogDescription className="mt-1.5 leading-relaxed">
+            Buyers enter the code at checkout.
+          </DialogDescription>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Code + Type */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="promo-code" className={LABEL}>Code <span className="text-error">*</span></label>
+              <input
+                id="promo-code"
+                value={form.code}
+                onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="SUMMER20"
+                required
+                className={cn(INPUT, 'font-mono uppercase tracking-widest')}
+              />
+            </div>
+            <div>
+              <label htmlFor="promo-type" className={LABEL}>Type <span className="text-error">*</span></label>
+              <select
+                id="promo-type"
+                value={form.type}
+                onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percentage' | 'flat' }))}
+                className={cn(INPUT, 'h-[46px] cursor-pointer py-0 sm:h-[42px]')}
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="flat">Flat ($)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Value + Description */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="promo-value" className={LABEL}>
+                Value <span className="text-error">*</span> {form.type === 'percentage' ? '(%)' : '($)'}
+              </label>
+              <input
+                id="promo-value"
+                type="number"
+                min="0.01"
+                step="0.01"
+                max={form.type === 'percentage' ? '100' : undefined}
+                value={form.value}
+                onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                placeholder={form.type === 'percentage' ? '10' : '5.00'}
+                required
+                className={cn(INPUT, 'tabular-nums')}
+              />
+            </div>
+            <div>
+              <label htmlFor="promo-description" className={LABEL}>Description</label>
+              <input
+                id="promo-description"
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Summer sale 20% off"
+                className={INPUT}
+              />
+            </div>
+          </div>
+
+          {/* Min order + Max discount */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="promo-min" className={LABEL}>Min Order ($)</label>
+              <input
+                id="promo-min"
+                type="number" min="0" step="0.01"
+                value={form.minOrderAmount}
+                onChange={e => setForm(f => ({ ...f, minOrderAmount: e.target.value }))}
+                placeholder="0.00"
+                className={cn(INPUT, 'tabular-nums')}
+              />
+            </div>
+            {form.type === 'percentage' && (
+              <div>
+                <label htmlFor="promo-max" className={LABEL}>Max Discount ($)</label>
+                <input
+                  id="promo-max"
+                  type="number" min="0" step="0.01"
+                  value={form.maxDiscount}
+                  onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value }))}
+                  placeholder="No cap"
+                  className={cn(INPUT, 'tabular-nums')}
+                />
               </div>
+            )}
+          </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Code + Type */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={LABEL}>Code *</label>
-                    <input
-                      value={form.code}
-                      onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
-                      placeholder="SUMMER20"
-                      required
-                      className={`${INPUT} uppercase tracking-widest`}
-                    />
-                  </div>
-                  <div>
-                    <label className={LABEL}>Type *</label>
-                    <select
-                      value={form.type}
-                      onChange={e => setForm(f => ({ ...f, type: e.target.value as 'percentage' | 'flat' }))}
-                      className={INPUT}
-                    >
-                      <option value="percentage">Percentage (%)</option>
-                      <option value="flat">Flat ($)</option>
-                    </select>
-                  </div>
-                </div>
+          {/* Usage limit + Per-user limit + Expires */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div>
+              <label htmlFor="promo-uses" className={LABEL}>Total Uses</label>
+              <input
+                id="promo-uses"
+                type="number" min="1"
+                value={form.usageLimit}
+                onChange={e => setForm(f => ({ ...f, usageLimit: e.target.value }))}
+                placeholder="Unlimited"
+                className={cn(INPUT, 'tabular-nums')}
+              />
+            </div>
+            <div>
+              <label htmlFor="promo-per-user" className={LABEL}>Per User</label>
+              <input
+                id="promo-per-user"
+                type="number" min="1"
+                value={form.perUserLimit}
+                onChange={e => setForm(f => ({ ...f, perUserLimit: e.target.value }))}
+                className={cn(INPUT, 'tabular-nums')}
+              />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label htmlFor="promo-expires" className={LABEL}>Expires</label>
+              <input
+                id="promo-expires"
+                type="date"
+                value={form.expiresAt}
+                onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                className={INPUT}
+              />
+            </div>
+          </div>
 
-                {/* Value + Description */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={LABEL}>
-                      Value * {form.type === 'percentage' ? '(%)' : '($)'}
-                    </label>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      max={form.type === 'percentage' ? '100' : undefined}
-                      value={form.value}
-                      onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
-                      placeholder={form.type === 'percentage' ? '10' : '5.00'}
-                      required
-                      className={INPUT}
-                    />
-                  </div>
-                  <div>
-                    <label className={LABEL}>Description</label>
-                    <input
-                      value={form.description}
-                      onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                      placeholder="Summer sale 20% off"
-                      className={INPUT}
-                    />
-                  </div>
-                </div>
-
-                {/* Min order + Max discount */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={LABEL}>Min Order ($)</label>
-                    <input
-                      type="number" min="0" step="0.01"
-                      value={form.minOrderAmount}
-                      onChange={e => setForm(f => ({ ...f, minOrderAmount: e.target.value }))}
-                      placeholder="0.00"
-                      className={INPUT}
-                    />
-                  </div>
-                  {form.type === 'percentage' && (
-                    <div>
-                      <label className={LABEL}>Max Discount ($)</label>
-                      <input
-                        type="number" min="0" step="0.01"
-                        value={form.maxDiscount}
-                        onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value }))}
-                        placeholder="No cap"
-                        className={INPUT}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Usage limit + Per-user limit + Expires */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className={LABEL}>Total Uses</label>
-                    <input
-                      type="number" min="1"
-                      value={form.usageLimit}
-                      onChange={e => setForm(f => ({ ...f, usageLimit: e.target.value }))}
-                      placeholder="Unlimited"
-                      className={INPUT}
-                    />
-                  </div>
-                  <div>
-                    <label className={LABEL}>Per User</label>
-                    <input
-                      type="number" min="1"
-                      value={form.perUserLimit}
-                      onChange={e => setForm(f => ({ ...f, perUserLimit: e.target.value }))}
-                      className={INPUT}
-                    />
-                  </div>
-                  <div>
-                    <label className={LABEL}>Expires</label>
-                    <input
-                      type="date"
-                      value={form.expiresAt}
-                      onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                      className={INPUT}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-lime-pressed py-3 text-sm font-bold text-text-inverse transition-colors hover:bg-lime disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  Create Code
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setOpen(false)} disabled={saving} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className={adminBtn.primary}>
+              {saving ? <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" /> : <Plus aria-hidden weight="bold" className="h-4 w-4" />}
+              Create Code
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
+
+// ── Pieces ────────────────────────────────────────────────────────────────────
+
+function codeState(code: PromoCode): { label: string; tone: ChipTone } {
+  const isExpired = code.expires_at ? new Date(code.expires_at) < new Date() : false
+  const isFull    = code.usage_limit !== null && code.total_used >= code.usage_limit
+  if (!code.is_active) return { label: 'Inactive', tone: 'neutral' }
+  if (isExpired) return { label: 'Expired', tone: 'error' }
+  if (isFull) return { label: 'Full', tone: 'warning' }
+  return { label: 'Active', tone: 'success' }
+}
+
+const valueLabel = (code: PromoCode) =>
+  code.type === 'percentage' ? `${code.value}%` : `$${code.value.toFixed(2)}`
+
+const expiresLabel = (code: PromoCode) =>
+  code.expires_at
+    ? new Date(code.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+    : 'Never'
+
+const ROW_GRID = 'lg:grid lg:grid-cols-[minmax(0,1fr)_110px_90px_110px_100px_120px] lg:items-center lg:gap-4'
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
   const [codes, setCodes]   = useState<PromoCode[]>(initialCodes)
   const [loading, setLoading] = useState<string | null>(null)
+  /** Code waiting for the delete confirmation. */
+  const [pendingDelete, setPendingDelete] = useState<PromoCode | null>(null)
 
   const handleToggle = async (id: string) => {
     setLoading(id)
@@ -256,7 +267,7 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this promo code? This cannot be undone.')) return
+    setPendingDelete(null)
     setLoading(id + '-del')
     const result = await deletePromoCode(id)
     setLoading(null)
@@ -268,12 +279,15 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
     }
   }
 
+  const activeCount = codes.filter((c) => codeState(c).label === 'Active').length
+  const totalUses = codes.reduce((sum, c) => sum + (c.total_used ?? 0), 0)
+
   return (
-    <div className="mx-auto max-w-6xl">
-      {/* Header */}
+    <div className="space-y-5 pb-10">
       <PageHeader
         title="Promo Codes"
         description="Create and manage discount codes for buyers at checkout."
+        className="mb-0 sm:mb-0"
         actions={
           <CreatePromoForm
             onCreated={(code) => setCodes(prev => [code, ...prev])}
@@ -282,119 +296,130 @@ export default function PromoAdminClient({ initialCodes, fetchError }: Props) {
       />
 
       {fetchError && (
-        <div className="mb-4 rounded-xl border border-[rgba(255,92,92,0.25)] bg-error-bg px-4 py-3 text-sm text-error">
-          {fetchError}
-        </div>
+        <p className="rounded-lg bg-error-bg px-4 py-3 text-[13px] text-error">{fetchError}</p>
       )}
 
-      {/* Codes table */}
+      <StatStrip
+        className="grid-cols-3 lg:grid-cols-3"
+        stats={[
+          { label: 'Active', value: activeCount },
+          { label: 'All Codes', value: codes.length },
+          { label: 'Redemptions', value: totalUses.toLocaleString() },
+        ]}
+      />
+
       {codes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border-default bg-bg-raised py-20">
-          <Tag className="mb-3 h-12 w-12 text-text-disabled" />
-          <p className="text-sm font-medium text-text-secondary">No promo codes yet</p>
-          <p className="mt-1 text-xs text-text-tertiary">Create your first code to get started.</p>
-        </div>
+        <AdminEmpty icon={Tag} title="No Promo Codes Yet" hint="Create your first code to get started." />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border-default bg-bg-raised">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 border-b border-border-subtle px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="overflow-hidden rounded-lg bg-bg-raised">
+          <div className={cn('hidden border-b border-white/[0.06] px-4 py-3 text-[12px] font-medium text-text-tertiary', ROW_GRID)}>
             <span>Code</span>
-            <span>Type</span>
             <span>Value</span>
             <span>Used</span>
             <span>Expires</span>
             <span>Status</span>
-            <span>Actions</span>
+            <span className="text-right">Actions</span>
           </div>
 
-          {codes.map((code) => {
-            const isExpired = code.expires_at ? new Date(code.expires_at) < new Date() : false
-            const isFull    = code.usage_limit !== null && code.total_used >= code.usage_limit
-
-            return (
-              <div
-                key={code.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 border-b border-border-subtle px-5 py-3.5 transition-colors last:border-0 hover:bg-bg-overlay"
-              >
-                {/* Code + description */}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-bold tracking-widest text-text-primary">{code.code}</span>
-                    {code.min_order_amount > 0 && (
-                      <span className="text-[10px] text-text-tertiary">min ${code.min_order_amount.toFixed(0)}</span>
-                    )}
+          <ul className="divide-y divide-white/[0.06]">
+            {codes.map((code) => {
+              const state = codeState(code)
+              const toggling = loading === code.id
+              const deleting = loading === code.id + '-del'
+              return (
+                <li key={code.id} className={cn('px-4 py-3.5 transition-colors hover:bg-white/[0.02]', ROW_GRID)}>
+                  {/* Code + description */}
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="font-mono text-[14px] font-bold tracking-widest text-text-primary">{code.code}</span>
+                        {code.min_order_amount > 0 && (
+                          <span className="text-[12px] text-text-tertiary">min ${code.min_order_amount.toFixed(0)}</span>
+                        )}
+                      </div>
+                      {code.description && <p className="mt-0.5 truncate text-[12.5px] text-text-tertiary">{code.description}</p>}
+                    </div>
+                    <StatusBadge status={state.label} tone={state.tone} className="shrink-0 lg:hidden" />
                   </div>
-                  {code.description && (
-                    <p className="mt-0.5 text-xs text-text-tertiary">{code.description}</p>
-                  )}
-                </div>
 
-                {/* Type icon */}
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-subtle bg-bg-overlay">
-                  {code.type === 'percentage'
-                    ? <Percent className="h-3.5 w-3.5 text-lime-text" />
-                    : <DollarSign className="h-3.5 w-3.5 text-success" />
-                  }
-                </div>
+                  {/* Value */}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-text-tertiary lg:hidden">
+                    <span>
+                      <span className="font-semibold tabular-nums text-text-primary">{valueLabel(code)}</span>
+                      {code.max_discount ? ` · max $${code.max_discount}` : ''} off
+                    </span>
+                    <span className="tabular-nums">{code.total_used}{code.usage_limit ? `/${code.usage_limit}` : ''} used</span>
+                    <span>{code.expires_at ? `Expires ${expiresLabel(code)}` : 'No expiry'}</span>
+                  </div>
+                  <span className="hidden text-[13.5px] font-semibold tabular-nums text-text-primary lg:block">
+                    {valueLabel(code)}
+                    {code.max_discount ? <span className="ml-1 text-[12px] font-normal text-text-tertiary">max ${code.max_discount}</span> : null}
+                  </span>
+                  <span className="hidden text-[13px] tabular-nums text-text-secondary lg:block">
+                    {code.total_used}{code.usage_limit ? `/${code.usage_limit}` : ''}
+                  </span>
+                  <span className="hidden text-[13px] text-text-secondary lg:block">{expiresLabel(code)}</span>
+                  <span className="hidden lg:block">
+                    <StatusBadge status={state.label} tone={state.tone} />
+                  </span>
 
-                {/* Value */}
-                <span className="text-sm font-semibold tabular-nums text-text-primary">
-                  {code.type === 'percentage' ? `${code.value}%` : `$${code.value.toFixed(2)}`}
-                  {code.max_discount && (
-                    <span className="ml-1 text-[10px] text-text-tertiary">max ${code.max_discount}</span>
-                  )}
-                </span>
-
-                {/* Usage */}
-                <div className="flex items-center gap-1 text-xs tabular-nums text-text-secondary">
-                  <Users className="h-3 w-3" />
-                  {code.total_used}{code.usage_limit ? `/${code.usage_limit}` : ''}
-                </div>
-
-                {/* Expires */}
-                <div className="flex items-center gap-1 text-xs text-text-secondary">
-                  <Calendar className="h-3 w-3" />
-                  {code.expires_at
-                    ? new Date(code.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
-                    : '—'}
-                </div>
-
-                {/* Status badge */}
-                <StatusBadge
-                  status={!code.is_active ? 'Inactive' : isExpired ? 'Expired' : isFull ? 'Full' : 'Active'}
-                />
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggle(code.id)}
-                    disabled={loading === code.id}
-                    className="text-text-tertiary transition-colors hover:text-text-primary"
-                    title={code.is_active ? 'Deactivate' : 'Activate'}
-                  >
-                    {loading === code.id
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : code.is_active
-                      ? <ToggleRight className="h-5 w-5 text-success" />
-                      : <ToggleLeft className="h-5 w-5" />
-                    }
-                  </button>
-                  <button
-                    onClick={() => handleDelete(code.id)}
-                    disabled={loading === code.id + '-del'}
-                    className="text-text-tertiary transition-colors hover:text-error"
-                    title="Delete"
-                  >
-                    {loading === code.id + '-del'
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Trash2 className="h-4 w-4" />
-                    }
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+                  {/* Actions */}
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3 lg:mt-0 lg:justify-end lg:border-0 lg:pt-0">
+                    <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-medium text-text-secondary">
+                      {toggling ? (
+                        <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                      ) : null}
+                      <span className="lg:sr-only">{code.is_active ? 'Active' : 'Inactive'}</span>
+                      <Switch
+                        checked={code.is_active}
+                        onCheckedChange={() => handleToggle(code.id)}
+                        disabled={toggling}
+                        aria-label={code.is_active ? `Deactivate ${code.code}` : `Activate ${code.code}`}
+                        className="data-[state=unchecked]:bg-white/[0.12]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(code)}
+                      disabled={deleting}
+                      aria-label={`Delete ${code.code}`}
+                      title="Delete"
+                      className="grid h-9 w-9 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-error-bg hover:text-error disabled:opacity-50"
+                    >
+                      {deleting ? (
+                        <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash aria-hidden weight="bold" className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )}
+
+      {/* Delete confirmation */}
+      <Dialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">Delete {pendingDelete?.code}?</DialogTitle>
+            <DialogDescription className="mt-1.5 leading-relaxed">
+              Delete this promo code? This cannot be undone.
+            </DialogDescription>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setPendingDelete(null)} className={adminBtn.secondary}>
+              Cancel
+            </button>
+            <button type="button" onClick={() => pendingDelete && handleDelete(pendingDelete.id)} className={adminBtn.danger}>
+              <Trash aria-hidden weight="bold" className="h-4 w-4" />
+              Delete Code
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

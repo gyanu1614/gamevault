@@ -78,8 +78,9 @@ Local commits only (NOT pushed, no PR yet): 01ffea51, 12b3d6ff, 0bcc7e99, 26266a
   FAQ copy). Local `seed:games` still re-enables per-game rows after a reset (local only).
 - BuyButton: flat `bg-lime` → hover `lime-hover`, shine sweep, spring press; `FACE`/`BuySweep` exported;
   `sm` size. Currency phone bar = one 56px button "Buy Now | 100 Robux | $0.52 →".
-- Purchase sheet: `src/hooks/use-keyboard-inset.ts` (visualViewport) lifts the sheet above the keyboard,
-  hides description + trust row while typing; no autofocus on open; quantity field single focus style.
+- Purchase sheet: a vaul drawer (`repositionInputs`) keeps it above the keyboard; content is fixed (the old
+  visualViewport hook hid rows while typing and made the sheet drop + re-grow on keyboard close — removed
+  2026-09-30); no autofocus on open; quantity field single focus style.
 - Tier icons: `src/components/seller/tiers/TierIcon.tsx` (Phosphor medal ×3 / SketchLogo gem / crown,
   metal gradient via SVG child). SellerTierBadge now draws it (the PNG art never existed for metal tiers).
   SellerStats compact: `👍 100% · 34 Sold 🏅` (tier icon, `hideTier` prop); full keeps icon + word.

@@ -117,14 +117,14 @@ export function BlogBodyEditor({
   return (
     <div>
       {/* Toolbar */}
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+      <div className="-mx-4 mb-2 flex items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
         {BLOCKS.map((b) => (
           <button
             key={b.label}
             type="button"
             title={b.hint}
             onClick={() => doInsert(b)}
-            className="border border-white/15 px-2.5 py-1 text-[12px] font-medium text-gray-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+            className="h-8 shrink-0 rounded-md bg-white/[0.06] px-2.5 text-[12.5px] font-medium text-text-secondary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
           >
             {b.label}
           </button>
@@ -132,19 +132,20 @@ export function BlogBodyEditor({
         <button
           type="button"
           onClick={insertLink}
-          className="border border-white/15 px-2.5 py-1 text-[12px] font-medium text-gray-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+          className="h-8 shrink-0 rounded-md bg-white/[0.06] px-2.5 text-[12.5px] font-medium text-text-secondary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
         >
           Link
         </button>
 
-        <span className="mx-1 h-4 w-px bg-white/10" />
+        <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-white/[0.10]" />
 
         {/* Image insert with alignment choice */}
         <select
           value={imgAlign}
           onChange={(e) => setImgAlign(e.target.value as typeof imgAlign)}
-          className="border border-white/15 bg-transparent px-1.5 py-1 text-[12px] text-gray-300"
+          className="h-8 shrink-0 cursor-pointer rounded-md bg-white/[0.06] px-2 text-[12.5px] text-text-secondary [&>option]:bg-bg-raised"
           title="Image alignment"
+          aria-label="Image alignment"
         >
           <option value="center">Center</option>
           <option value="wide">Wide</option>
@@ -165,7 +166,7 @@ export function BlogBodyEditor({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="border border-[rgba(86,184,127,0.50)] px-2.5 py-1 text-[12px] font-semibold text-lime-text transition hover:bg-lime-tint-bg disabled:opacity-50"
+          className="h-8 shrink-0 rounded-md bg-lime-tint-bg px-2.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-[color-mix(in_srgb,var(--color-lime)_22%,transparent)] disabled:opacity-50"
         >
           {uploading ? 'Uploading…' : '+ Image'}
         </button>
@@ -174,44 +175,43 @@ export function BlogBodyEditor({
       {/* ── Editor (full width) — write markdown here. ── */}
       <textarea
         ref={bodyRef as RefObject<HTMLTextAreaElement>}
-        className="min-h-[380px] w-full resize-y rounded-lg border border-white/15 bg-white/[0.03] px-4 py-3 text-[14px] leading-7 text-white outline-none transition focus:border-focus-border"
+        aria-label="Post body (markdown)"
+        className="min-h-[380px] w-full resize-y rounded-md border border-transparent bg-bg-overlay px-4 py-3 text-base leading-7 text-text-primary placeholder:text-text-disabled transition-colors hover:border-white/[0.08] focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:text-[14px]"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder={'Paste your blog markdown here.\n\n## A section\n\nA paragraph with **bold** and a [link](/values).\n\n1. A numbered step\n2. Another step'}
         spellCheck
       />
 
-      <p className="mt-1.5 text-xs text-gray-500">
+      <p className="mt-1.5 text-[12px] leading-relaxed text-text-tertiary">
         Paste markdown, or use the toolbar to insert blocks at your cursor. Supports headings,
         bullet / numbered lists, callouts, steps, tables, quotes, centered images, links,{' '}
-        <strong className="text-gray-300">**bold**</strong> and <em className="text-gray-300">*italic*</em>.
+        <strong className="text-text-secondary">**bold**</strong> and <em className="text-text-secondary">*italic*</em>.
         Leave a blank line between blocks.
       </p>
 
       {/* ── Live preview BELOW, at FULL page width — renders exactly like the
           published article (same ArticleBody + article column width). ── */}
-      <div className="mt-6 border-t border-white/10 pt-5">
+      <div className="mt-6 border-t border-white/[0.06] pt-5">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Live preview
-          </span>
+          <span className="text-[14px] font-semibold text-text-primary">Live Preview</span>
           <button
             type="button"
             onClick={() => setShowPreview((v) => !v)}
-            className="rounded-md border border-white/15 px-2.5 py-1 text-[12px] font-semibold text-gray-300 transition hover:border-white/30"
+            className="h-8 rounded-md bg-white/[0.06] px-3 text-[12.5px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.10] hover:text-text-primary"
           >
-            {showPreview ? 'Hide preview' : 'Show preview'}
+            {showPreview ? 'Hide Preview' : 'Show Preview'}
           </button>
         </div>
         {showPreview && (
-          <div className="border border-[#1E2723] bg-[#0B0F0C] px-4 py-6 sm:px-8">
+          <div className="rounded-md bg-bg-base px-4 py-6 sm:px-8">
             {/* Match the real article's reading column (max-w-[760px] on the live
                 page) so line lengths/layout are identical, not squished. */}
             <div className="mx-auto w-full max-w-[760px]">
               {previewBlocks.length ? (
                 <ArticleBody body={previewBlocks} />
               ) : (
-                <p className="text-sm text-[#5E685E]">Start writing — the preview renders here exactly as it will publish.</p>
+                <p className="text-sm text-text-tertiary">Start writing — the preview renders here exactly as it will publish.</p>
               )}
             </div>
           </div>

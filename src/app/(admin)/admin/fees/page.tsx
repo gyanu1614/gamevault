@@ -19,6 +19,7 @@ import { PageHeader } from '../components/kit'
 import { MoneySettingsClient } from './_MoneySettingsClient'
 import { FeeNoticeClient } from './_FeeNoticeClient'
 import BuyerFeesClient from './BuyerFeesClient'
+import { FeesTabs } from './_FeesTabs'
 
 export const metadata: Metadata = { title: 'Fees & Payouts' }
 export const dynamic = 'force-dynamic'
@@ -26,14 +27,16 @@ export const dynamic = 'force-dynamic'
 export default async function AdminFeesPage() {
   const [data, buyerFees] = await Promise.all([fetchMoneySettings(), fetchBuyerFeeConfig()])
   return (
-    <div className="space-y-5">
+    <div>
       <PageHeader
         title="Fees & Payouts"
         description="Completion hold, protection windows, dispute window, withdrawal gate, payout fees and buyer processing fees per payment method. Each change writes an audit row."
       />
-      <MoneySettingsClient initial={data} />
-      <FeeNoticeClient />
-      <BuyerFeesClient initial={buyerFees} />
+      <FeesTabs
+        payouts={<MoneySettingsClient initial={data} />}
+        buyer={<BuyerFeesClient initial={buyerFees} />}
+        notice={<FeeNoticeClient />}
+      />
     </div>
   )
 }

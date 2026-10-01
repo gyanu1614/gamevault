@@ -12,12 +12,12 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { ArrowCounterClockwise, CheckCircle, CircleNotch, Warning } from '@phosphor-icons/react'
 import { adminOpenOrderDispute, resolveDispute } from '@/lib/actions/admin-disputes'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
+import { adminBtn } from '../../components/kit'
 
 type Mode = 'dispute' | 'release' | 'refund_full' | 'refund_partial' | null
 
@@ -74,36 +74,36 @@ export function AdminOrderActions({
   }
 
   return (
-    <div className="rounded-xl border border-border-default bg-bg-raised p-5">
-      <h3 className="text-sm font-semibold text-text-primary mb-1">Money Controls</h3>
-      <p className="text-xs text-text-tertiary mb-4">
+    <section className="rounded-lg bg-bg-raised p-5">
+      <h2 className="text-[15px] font-semibold text-text-primary">Money Controls</h2>
+      <p className="mb-4 mt-1 text-[12.5px] leading-relaxed text-text-tertiary">
         Seller amount {usd(sellerPayout)} of {usd(totalAmount)} total. Every action writes an audit row with your id and reason.
       </p>
       <div className="space-y-2">
         {canDispute && (
-          <Button variant="outline" className="w-full justify-center text-amber-400 border-amber-500/30" onClick={() => setMode('dispute')} disabled={busy}>
-            <AlertTriangle className="h-4 w-4" /> Mark Disputed
-          </Button>
+          <button type="button" className={cn(adminBtn.secondary, 'w-full text-warning')} onClick={() => setMode('dispute')} disabled={busy}>
+            <Warning aria-hidden weight="bold" className="h-4 w-4" /> Mark Disputed
+          </button>
         )}
         {canResolve && (
           <>
-            <Button className="w-full justify-center" onClick={() => setMode('release')} disabled={busy}>
-              <CheckCircle2 className="h-4 w-4" /> Release To Seller
-            </Button>
-            <Button variant="outline" className="w-full justify-center" onClick={() => setMode('refund_full')} disabled={busy}>
-              <RefreshCw className="h-4 w-4" /> Refund Buyer In Full
-            </Button>
-            <Button variant="ghost" className="w-full justify-center" onClick={() => setMode('refund_partial')} disabled={busy}>
+            <button type="button" className={cn(adminBtn.primary, 'w-full')} onClick={() => setMode('release')} disabled={busy}>
+              <CheckCircle aria-hidden weight="bold" className="h-4 w-4" /> Release To Seller
+            </button>
+            <button type="button" className={cn(adminBtn.secondary, 'w-full')} onClick={() => setMode('refund_full')} disabled={busy}>
+              <ArrowCounterClockwise aria-hidden weight="bold" className="h-4 w-4" /> Refund Buyer In Full
+            </button>
+            <button type="button" className={cn(adminBtn.secondary, 'w-full bg-transparent')} onClick={() => setMode('refund_partial')} disabled={busy}>
               Partial Refund…
-            </Button>
+            </button>
           </>
         )}
       </div>
 
       <Dialog open={mode !== null} onOpenChange={(o) => !o && !busy && close()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-[460px] border-0 p-5 sm:p-6">
+          <div className="space-y-2 pr-8">
+            <DialogTitle className="text-[18px] font-bold leading-tight">
               {mode === 'dispute' ? 'Mark Order Disputed'
                 : mode === 'release' ? 'Release To Seller'
                 : mode === 'refund_full' ? 'Refund Buyer In Full'
@@ -117,7 +117,7 @@ export function AdminOrderActions({
               {mode === 'refund_full' && `${usd(totalAmount)} is credited to the buyer’s wallet. The seller side (${usd(sellerPayout)}) is deducted from their balance — it may go negative.`}
               {mode === 'refund_partial' && `Enter the refund amount (under ${usd(totalAmount)}). The seller covers it first, up to ${usd(sellerPayout)}; the rest comes from our commission.`}
             </DialogDescription>
-          </DialogHeader>
+          </div>
           {mode === 'refund_partial' && (
             <input
               type="number"
@@ -127,7 +127,9 @@ export function AdminOrderActions({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Refund amount (USD)"
-              className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+              aria-label="Refund amount in USD"
+              inputMode="decimal"
+              className={accountInputCls}
             />
           )}
           <textarea
@@ -135,19 +137,26 @@ export function AdminOrderActions({
             onChange={(e) => setReason(e.target.value)}
             placeholder={mode === 'dispute' ? 'Reason (written to the audit trail, shown to both parties)' : 'Resolution notes (written to the audit trail)'}
             rows={3}
-            className="w-full rounded-lg border border-border-default bg-bg-overlay px-3 py-2 text-[13.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-focus-ring"
+            aria-label={mode === 'dispute' ? 'Reason' : 'Resolution notes'}
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <DialogFooter>
-            <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>
-            <Button
+          <p className="-mt-2 text-[12px] text-text-tertiary">At least 5 characters.</p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" className={adminBtn.secondary} onClick={close} disabled={busy}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={mode === 'refund_full' || mode === 'refund_partial' || mode === 'dispute' ? adminBtn.danger : adminBtn.primary}
               onClick={submit}
               disabled={busy || reason.trim().length < 5 || (mode === 'refund_partial' && !(Number(amount) > 0 && Number(amount) < totalAmount))}
             >
+              {busy && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
               {busy ? 'Working…' : 'Confirm'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   )
 }

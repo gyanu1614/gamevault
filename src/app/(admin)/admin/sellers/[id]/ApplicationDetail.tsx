@@ -1,21 +1,19 @@
 'use client'
 
 /**
- * Forest Ledger — /admin/sellers/[id] application detail (approved mockup ①).
+ * /admin/sellers/[id] application detail (account-section design, 2026-09-30).
  *
- * Photo-scrim forest hero led by the store identity (image tile + shop
- * name + status/Didit chips + quick actions), a full-width forest-glass
- * verification meter strip between hero and body (only APPLICABLE checks
- * count), then forest-glass ledger cards on the canvas: Games &
- * Categories with real logos, Identity & Documents with the Didit banner
- * + doc previews, Payout, the Business branch, Experience & the signed
- * Agreement, and the Applicant / Timeline / Admin Notes right rail.
+ * Header led by the store identity (image tile + shop name + status/Didit
+ * badges + quick actions), a verification panel (ring + the APPLICABLE
+ * checks), then fill-only cards: Games & Categories, Identity & Documents
+ * (Didit banner + doc previews), Experience & the signed Agreement, and the
+ * Applicant / Timeline / Admin Notes / Seller Management rail.
  *
  * Action wiring is UNCHANGED: approve stays admin-seller-review's
- * approveApplication (profile promotion first), reject stays
- * admin-sellers' rejectApplication (tiered cooldown RPC), request changes
- * is admin-seller-review's requestMoreInfo. Restrict/ban management for
- * approved sellers is preserved. Motion: CSS-only staggered fade-up.
+ * approveApplication (profile promotion first; ACC-02 identity-gap
+ * acknowledgement; founding grant), reject stays admin-sellers'
+ * rejectApplication (tiered cooldown RPC), request changes is
+ * admin-seller-review's requestMoreInfo, message is messageApplicant.
  */
 
 import { useState, useEffect, useMemo } from 'react'
@@ -46,39 +44,35 @@ import {
   SELLER_TYPE_LABELS,
   DOCUMENT_TYPE_LABELS,
 } from '@/lib/seller-application/labels'
-import {
-  FOREST_BG,
-  FOREST_CLASSES,
-  FOREST_DIDIT_CHIP,
-  FOREST_MOTION,
-  forestStagger,
-  forestStatusChip,
-  gameTileGradient,
-} from '../../_theme/forest'
-import {
-  IconGamepad,
-  IconIdCard,
-  IconSignaturePen,
-  IconPerson,
-  IconTimeline,
-  IconNotes,
-  IconContract,
-  IconShield,
-} from '../../_theme/SectionIcons'
+import { applicationStatusLabel } from '../_status'
 import { toast } from 'sonner'
 import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  ShieldCheck,
-  MessageSquareWarning,
-  X,
-  Mail,
-  MessageSquare,
-  Send,
-  Copy,
   ArrowRight,
-} from 'lucide-react'
+  ArrowSquareOut,
+  CaretLeft,
+  ChatCircleText,
+  CheckCircle,
+  CircleNotch,
+  ClockCounterClockwise,
+  Copy,
+  EnvelopeSimple,
+  FileArrowDown,
+  GameController,
+  IdentificationCard,
+  NotePencil,
+  PaperPlaneTilt,
+  ShieldCheck,
+  Signature,
+  User,
+  Warning,
+  XCircle,
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { accountInputCls } from '@/components/account/AccountSurface'
+import { AdminPanel, IconChip, StatusBadge, adminBtn, type ChipTone } from '../../components/kit'
+import { GameTile } from '../../components/GameTile'
 
 interface ApplicationDetailProps {
   application: SellerApplication
@@ -118,151 +112,158 @@ function isImageFile(name: string | null | undefined): boolean {
   return !!name && /\.(png|jpe?g|webp|gif|avif)$/i.test(name)
 }
 
-// ─── Small ledger primitives ─────────────────────────────────────────────────
+const STATUS_TONE: Record<string, ChipTone> = {
+  pending: 'warning',
+  under_review: 'warning',
+  info_requested: 'info',
+  approved: 'success',
+  rejected: 'error',
+  withdrawn: 'neutral',
+}
+
+// ─── Small primitives ────────────────────────────────────────────────────────
 
 function Card({
   icon,
   title,
   sub,
-  index,
   children,
   className,
 }: {
-  icon: React.ReactNode
+  icon: PhosphorIcon
   title: string
   sub?: string
-  index: number
   children: React.ReactNode
   className?: string
 }) {
   return (
-    <section
-      className={cn(FOREST_CLASSES.card, FOREST_MOTION.fadeUp, className)}
-      style={forestStagger(index)}
-    >
-      <h3 className={FOREST_CLASSES.cardTitle}>
-        <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-white/10">
-          {icon}
-        </span>
-        {title}
-      </h3>
-      {sub && <p className={cn(FOREST_CLASSES.cardSub, 'mb-3.5 mt-0.5')}>{sub}</p>}
+    <AdminPanel className={className}>
+      <div className="mb-4 flex items-start gap-3">
+        <IconChip icon={icon} />
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-semibold leading-tight text-text-primary">{title}</h2>
+          {sub && <p className="mt-1 text-[12.5px] leading-relaxed text-text-tertiary">{sub}</p>}
+        </div>
+      </div>
       {children}
-    </section>
+    </AdminPanel>
   )
 }
 
 function KV({ k, v, mono }: { k: string; v: React.ReactNode; mono?: boolean }) {
   return (
-    <div>
-      <div className={FOREST_CLASSES.kvKey}>{k}</div>
-      <div
-        className={
-          mono
-            ? 'mt-0.5 font-mono text-[12px] font-semibold text-white/85'
-            : FOREST_CLASSES.kvValue
-        }
-      >
-        {v || '—'}
-      </div>
+    <div className="min-w-0">
+      <div className="text-[12px] font-medium text-text-tertiary">{k}</div>
+      <div className={cn('mt-0.5 break-words text-[13.5px] text-text-primary', mono && 'font-mono text-[12.5px]')}>{v || '—'}</div>
     </div>
   )
 }
 
-function GameLogo({
-  name,
-  imageUrl,
-  size = 40,
+/** A header icon button with a tooltip (email / message). */
+function IconAction({
+  label,
+  icon: Icon,
+  href,
+  onClick,
 }: {
-  name: string
-  imageUrl: string | null
-  size?: number
+  label: string
+  icon: PhosphorIcon
+  href?: string
+  onClick?: () => void
 }) {
-  if (imageUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={imageUrl}
-        alt={name}
-        width={size}
-        height={size}
-        className="shrink-0 rounded-[10px] object-cover shadow-[0_2px_10px_-3px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
-        style={{ width: size, height: size }}
-      />
-    )
-  }
+  const cls =
+    'grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-primary transition-colors hover:bg-white/[0.10]'
+  const glyph = <Icon aria-hidden weight="bold" className="h-[18px] w-[18px]" />
   return (
-    <div
-      className="grid shrink-0 place-items-center rounded-[10px] text-[15px] font-black text-white shadow-[0_2px_10px_-3px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
-      style={{ width: size, height: size, background: gameTileGradient(name) }}
-    >
-      {(name || '?').charAt(0).toUpperCase()}
-    </div>
-  )
-}
-
-/** CSS-only modal shell on the forest canvas — forest-glass panel. */
-function ModalShell({
-  onClose,
-  children,
-  wide,
-  panelStyle,
-}: {
-  onClose: () => void
-  children: React.ReactNode
-  wide?: boolean
-  panelStyle?: React.CSSProperties
-}) {
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div
-        className={cn('absolute inset-0 bg-[#08110C]/70', FOREST_MOTION.fadeIn)}
-        onClick={onClose}
-      />
-      <div
-        className={cn(
-          'relative w-full rounded-2xl border border-white/10 bg-[#0F2419]/95 p-6 text-white/90 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)] backdrop-blur-md',
-          wide ? 'max-w-lg' : 'max-w-md',
-          'max-h-[90vh] overflow-y-auto',
-          FOREST_MOTION.fadeUp
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        {href ? (
+          <a href={href} aria-label={label} className={cls}>
+            {glyph}
+          </a>
+        ) : (
+          <button type="button" onClick={onClick} aria-label={label} className={cls}>
+            {glyph}
+          </button>
         )}
-        style={panelStyle}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
+      </TooltipTrigger>
+      <TooltipContent className="border-0 bg-bg-overlay-2 text-[12px]">{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** Verification ring: verified / applicable checks. */
+function Ring({ verified, total }: { verified: number; total: number }) {
+  const r = 22
+  const c = 2 * Math.PI * r
+  const pct = total > 0 ? verified / total : 0
+  return (
+    <div className="relative h-14 w-14 shrink-0">
+      <svg viewBox="0 0 56 56" className="h-14 w-14 -rotate-90" aria-hidden>
+        <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5" className="stroke-white/[0.08]" />
+        <circle
+          cx="28"
+          cy="28"
+          r={r}
+          fill="none"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+          className={cn('transition-[stroke-dashoffset] duration-500', pct === 1 ? 'stroke-success' : 'stroke-warning')}
+        />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-[13px] font-bold tabular-nums text-text-primary">
+        {verified}/{total}
+      </span>
     </div>
   )
 }
 
-// ─── Didit session details modal ─────────────────────────────────────────────
-
-/** Top-lit 3D depth treatment for the Didit modal panel (forest base). */
-const DIDIT_PANEL_DEPTH: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #16321F 0%, #0F2419 55%, #0C1D13 100%)',
-  boxShadow:
-    'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), 0 30px 80px -30px rgba(0,0,0,0.8)',
-}
-
-/** Approved → lime tint, Declined/rejected/failed → red, anything else → amber. */
-function diditStatusTone(status: string): string {
-  const s = status.toLowerCase()
-  if (s.includes('approved')) return 'bg-[#A3E635]/[0.16] text-[#D9F99D]'
-  if (s.includes('declined') || s.includes('rejected') || s.includes('failed'))
-    return 'bg-[#B42318]/25 text-[#FCA5A5]'
-  return 'bg-[#F59E0B]/[0.16] text-[#FCD34D]'
-}
-
-const DIDIT_CONSOLE_LINK =
-  'inline-flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110'
-
-function DiditSessionModal({
-  sessionId,
+/** The shared Radix dialog, sized for these forms; closing is blocked while busy. */
+function ActionDialog({
+  open,
   onClose,
+  busy,
+  title,
+  description,
+  children,
+  className,
 }: {
-  sessionId: string
+  open: boolean
   onClose: () => void
+  busy?: boolean
+  title: string
+  description?: React.ReactNode
+  children: React.ReactNode
+  className?: string
 }) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogContent className={cn('max-w-[480px] border-0 p-5 sm:p-6', className)}>
+        <div className="pr-8">
+          <DialogTitle className="text-[18px] font-bold leading-tight">{title}</DialogTitle>
+          {description && <DialogDescription className="mt-1.5 leading-relaxed">{description}</DialogDescription>}
+        </div>
+        {children}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const FIELD_LABEL = 'mb-1.5 block text-[13px] font-medium text-text-secondary'
+
+// ─── Didit session details ───────────────────────────────────────────────────
+
+/** Approved → success, Declined/rejected/failed → error, anything else → warning. */
+function diditTone(status: string): ChipTone {
+  const s = status.toLowerCase()
+  if (s.includes('approved')) return 'success'
+  if (s.includes('declined') || s.includes('rejected') || s.includes('failed')) return 'error'
+  return 'warning'
+}
+
+function DiditSessionBody({ sessionId }: { sessionId: string }) {
   const [loading, setLoading] = useState(true)
   const [details, setDetails] = useState<Extract<
     DiditSessionDetailsResult,
@@ -299,87 +300,42 @@ function DiditSessionModal({
   }
 
   return (
-    <ModalShell onClose={onClose} panelStyle={DIDIT_PANEL_DEPTH}>
-      <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-3">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#A3E635]" />
-          <h3 className="text-base font-extrabold text-white">Didit Verification Session</h3>
-        </div>
-        <button
-          onClick={onClose}
-          className="rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4 text-white/60" />
-        </button>
-      </div>
-
+    <div className="space-y-4">
       {loading ? (
-        <div className="flex items-center justify-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-[#A3E635]" />
+        <div className="flex justify-center py-8">
+          <CircleNotch aria-hidden weight="bold" className="h-6 w-6 animate-spin text-text-tertiary" />
         </div>
       ) : error ? (
-        <div className="rounded-[11px] bg-[#B42318]/20 px-3.5 py-3 text-[12.5px] leading-relaxed text-[#FCA5A5]">
+        <p role="alert" className="rounded-md bg-error-bg px-3.5 py-3 text-[13px] leading-relaxed text-error">
           {error}
-        </div>
+        </p>
       ) : details ? (
         <>
-          {/* Decision status */}
-          <div className="flex flex-col items-center gap-1.5 py-2">
-            <span
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[14px] font-extrabold',
-                diditStatusTone(details.status)
-              )}
-            >
-              <span className="h-2 w-2 rounded-full bg-current" />
-              {details.status}
-            </span>
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <StatusBadge status={details.status} tone={diditTone(details.status)} className="px-3 py-1 text-[13px]" />
             {details.sessionNumber != null && (
-              <span className="text-[11px] font-semibold text-white/40">
-                Session #{details.sessionNumber}
-              </span>
+              <span className="text-[12px] text-text-tertiary">Session #{details.sessionNumber}</span>
             )}
           </div>
 
-          {/* Session ID + copy */}
-          <div className="mt-3 flex items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 py-2.5">
-            <span className={cn('min-w-0 flex-1 truncate text-[12px] text-white/80', FOREST_CLASSES.mono)}>
-              {sessionId}
-            </span>
-            <button
-              onClick={copySessionId}
-              className="shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
-              aria-label="Copy Session ID"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={copySessionId}
+            aria-label="Copy session ID"
+            className="flex w-full items-center justify-between gap-3 rounded-md bg-bg-overlay px-3.5 py-2.5 text-left transition-colors hover:bg-bg-overlay-2"
+          >
+            <code className="min-w-0 truncate font-mono text-[12px] text-text-secondary">{sessionId}</code>
+            <Copy aria-hidden weight="bold" className="h-4 w-4 shrink-0 text-text-tertiary" />
+          </button>
 
-          {/* Verification checks */}
           {details.features.length > 0 && (
-            <div className="mt-4">
-              <div className={MODAL_LABEL}>Verification Checks</div>
-              <div className="rounded-[11px] border border-white/[0.08] bg-white/[0.03] px-3.5">
+            <div>
+              <p className={FIELD_LABEL}>Verification Checks</p>
+              <div className="divide-y divide-white/[0.06] rounded-md bg-bg-overlay px-3.5">
                 {details.features.map((feature, i) => (
-                  <div
-                    key={`${feature.name}-${i}`}
-                    className={cn(
-                      'flex items-center justify-between gap-3 py-2.5',
-                      i > 0 && 'border-t border-white/[0.08]'
-                    )}
-                  >
-                    <span className="text-[12.5px] font-semibold text-white/80">
-                      {feature.name}
-                    </span>
-                    <span
-                      className={cn(
-                        'rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]',
-                        diditStatusTone(feature.status)
-                      )}
-                    >
-                      {feature.status}
-                    </span>
+                  <div key={`${feature.name}-${i}`} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-[13px] text-text-primary">{feature.name}</span>
+                    <StatusBadge status={feature.status} tone={diditTone(feature.status)} />
                   </div>
                 ))}
               </div>
@@ -388,30 +344,20 @@ function DiditSessionModal({
         </>
       ) : null}
 
-      <div className="mt-5 flex justify-end border-t border-white/[0.08] pt-4">
+      <div className="flex justify-end">
         <a
           href="https://business.didit.me"
           target="_blank"
           rel="noopener noreferrer"
-          className={DIDIT_CONSOLE_LINK}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary"
         >
-          Open Didit Console ↗
+          Open Didit Console
+          <ArrowSquareOut aria-hidden weight="bold" className="h-3.5 w-3.5" />
         </a>
       </div>
-    </ModalShell>
+    </div>
   )
 }
-
-const MODAL_LABEL =
-  'mb-2 block text-[10.5px] font-bold uppercase tracking-[0.07em] text-white/40'
-const MODAL_INPUT =
-  'w-full rounded-[10px] border border-white/15 bg-white/[0.05] px-3 py-2.5 text-[13px] text-white placeholder:text-white/30 focus:border-[#A3E635] focus:outline-none'
-const MODAL_CANCEL =
-  'flex-1 rounded-[10px] border border-white/15 px-3 py-2.5 text-[13px] font-semibold text-white/60 transition-colors hover:bg-white/[0.06] disabled:opacity-50'
-const MODAL_CONFIRM_LIME =
-  'flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#A3E635] px-3 py-2.5 text-[13px] font-bold text-[#0F3320] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50'
-const MODAL_CONFIRM_RED =
-  'flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#B42318] px-3 py-2.5 text-[13px] font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
 
 // ─── The page ────────────────────────────────────────────────────────────────
 
@@ -459,7 +405,7 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
   const diditSessionId = application.didit_session_id ?? null
   const shopName = application.shop_name || application.display_name
   const submittedAt = application.submitted_at || application.created_at
-  const statusChip = forestStatusChip(application.status)
+  const statusLabel = applicationStatusLabel(application.status)
   const isActionable = ['pending', 'under_review', 'info_requested'].includes(
     application.status
   )
@@ -635,8 +581,6 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     return { title, sub: `uploaded ${fmtDate(doc.uploaded_at)}` }
   }
 
-  let cardIndex = 0
-
   const handleSendMessage = async () => {
     setIsSendingMessage(true)
     const result = await messageApplicant(application.id, outreachText)
@@ -650,292 +594,176 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
     }
   }
 
+  const identityOk = !!verification.checks.find((c) => c.key === 'identity')?.ok
+  // Show the identity warning when the server returned a gap, or when the
+  // client-side check already knows identity isn't verified.
+  const approveGap = kycGap !== null || !identityOk
+
   return (
-    <>
-      {/* ══ HERO — forest scrim band, store identity leads ══ */}
-      <section
-        className={cn('relative overflow-hidden rounded-2xl px-6 pb-6 pt-6 sm:px-7', FOREST_MOTION.fadeIn)}
-        style={{ backgroundColor: '#0F3320' }}
-      >
-        {/* Wide photo backdrop under a forest scrim — fades like the wizard rail. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/assets/heroes/sell.avif"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(105deg, rgba(15,51,32,0.96) 0%, rgba(20,67,42,0.9) 45%, rgba(20,67,42,0.72) 75%, rgba(15,51,32,0.6) 100%)',
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: FOREST_BG.heroNoise }}
-        />
+    <div className="space-y-5">
+      {/* ══ Header — store identity + actions ══ */}
+      <div>
+        <Link
+          href="/admin/sellers"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          <CaretLeft aria-hidden weight="bold" className="h-3.5 w-3.5" />
+          Seller Applications
+        </Link>
 
-        <div className="relative z-[1] mb-4 text-[12px] text-white/40">
-          <Link href="/admin/sellers" className="transition-colors hover:text-white/70">
-            Sellers
-          </Link>
-          {' / '}
-          <Link href="/admin/sellers" className="transition-colors hover:text-white/70">
-            Applications
-          </Link>
-          {' / '}
-          <b className="font-medium text-white/60">{shopName}</b>
-        </div>
-
-        <div className="relative z-[1] flex flex-wrap items-start gap-[18px]">
-          {/* Store image tile */}
-          {application.store_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 items-start gap-4">
+            <GameTile
               src={application.store_image_url}
-              alt={shopName || 'Store'}
-              className="h-[76px] w-[76px] shrink-0 rounded-2xl object-cover shadow-[0_0_0_3px_rgba(255,255,255,0.14),0_14px_30px_-14px_rgba(0,0,0,0.7)]"
+              name={shopName}
+              className="h-16 w-16 rounded-lg text-[24px] sm:h-[72px] sm:w-[72px]"
             />
-          ) : (
-            <div
-              className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-2xl text-[28px] font-black text-[#A3E635] shadow-[0_0_0_3px_rgba(255,255,255,0.14),0_14px_30px_-14px_rgba(0,0,0,0.7)]"
-              style={{ background: FOREST_BG.storeTile }}
-            >
-              {(shopName || '?').charAt(0).toUpperCase()}
-            </div>
-          )}
-
-          {/* Identity */}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-[11px]">
-              <h1 className="text-[26px] font-extrabold tracking-[-0.01em] text-white">
-                {shopName}
-              </h1>
-              <span className={statusChip.onDark}>
-                <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                {statusChip.label}
-              </span>
-              {diditSessionId && (
-                <span className={FOREST_DIDIT_CHIP}>✓ Didit Video Verified</span>
-              )}
-            </div>
-            <div className="mt-1.5 text-[13px] text-white/60">
-              by <b className="font-semibold text-white/[0.92]">{application.display_name}</b>
-              {application.user.username && <> · {application.user.username}</>}
-              {' · '}
-              {application.user.email}
-              {' · '}
-              {sellerTypeLabel} Seller
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-4 text-[12px] text-white/40">
-              <span>
-                Applied <b className="font-semibold text-white/60">{fmtDateTime(submittedAt)}</b>
-              </span>
-              <span>
-                Country <b className="font-semibold text-white/60">{application.country || '—'}</b>
-              </span>
-              <span>
-                Expected Volume <b className="font-semibold text-white/60">{volumeLabel}</b>
-              </span>
-              <span>
-                Ref{' '}
-                <b className={cn('font-semibold text-white/60', FOREST_CLASSES.mono)}>
-                  {application.id.split('-')[0]}
-                </b>
-              </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="min-w-0 break-words text-[24px] font-bold leading-tight tracking-tight text-text-primary sm:text-[28px]">
+                  {shopName}
+                </h1>
+                <StatusBadge status={statusLabel} tone={STATUS_TONE[application.status] ?? 'neutral'} />
+                {diditSessionId && <StatusBadge status="Didit Video Verified" tone="success" />}
+              </div>
+              <p className="mt-1 break-words text-[13px] text-text-secondary">
+                by <span className="font-semibold text-text-primary">{application.display_name}</span>
+                {application.user.username && <> · {application.user.username}</>} · {application.user.email} ·{' '}
+                {sellerTypeLabel} Seller
+              </p>
+              <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-text-tertiary">
+                <div>
+                  Applied <span className="font-medium text-text-secondary">{fmtDateTime(submittedAt)}</span>
+                </div>
+                <div>
+                  Country <span className="font-medium text-text-secondary">{application.country || '—'}</span>
+                </div>
+                <div>
+                  Expected Volume <span className="font-medium text-text-secondary">{volumeLabel}</span>
+                </div>
+                <div>
+                  Ref <span className="font-mono font-medium text-text-secondary">{application.id.split('-')[0]}</span>
+                </div>
+              </dl>
             </div>
           </div>
 
-          {/* Contextual actions */}
-          <div className="flex flex-wrap items-center gap-[9px] lg:ml-auto">
-            {/* Quick outreach — email + in-app message */}
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {application.user?.email && (
-              <a
+              <IconAction
+                label="Email Seller"
+                icon={EnvelopeSimple}
                 href={`mailto:${application.user.email}?subject=${encodeURIComponent('Your DropMarket Seller Application')}`}
-                className="group relative grid h-10 w-10 place-items-center rounded-[10px] bg-white/[0.12] transition-colors hover:bg-white/[0.2]"
-                aria-label="Email the applicant"
-              >
-                <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0A1810] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/15 transition-opacity duration-75 group-hover:opacity-100">
-                  Email Seller
-                </span>
-                <Mail className="h-4 w-4 text-white/85" />
-              </a>
+              />
             )}
-            <button
-              onClick={() => setShowMessageModal(true)}
-              className="group relative grid h-10 w-10 place-items-center rounded-[10px] bg-white/[0.12] transition-colors hover:bg-white/[0.2]"
-              aria-label="Send an in-app message"
-            >
-              <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0A1810] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/15 transition-opacity duration-75 group-hover:opacity-100">
-                Message Seller
-              </span>
-              <MessageSquare className="h-4 w-4 text-white/85" />
-            </button>
+            <IconAction label="Message Seller" icon={ChatCircleText} onClick={() => setShowMessageModal(true)} />
             {isActionable && (
               <>
-                <button
-                  onClick={() => setShowRejectModal(true)}
-                  disabled={isProcessing}
-                  className={cn(FOREST_CLASSES.btnReject, 'disabled:opacity-50')}
-                >
+                <button type="button" onClick={() => setShowRejectModal(true)} disabled={isProcessing} className={adminBtn.danger}>
                   Reject
                 </button>
-                <button
-                  onClick={() => setShowChangesModal(true)}
-                  disabled={isProcessing}
-                  className={cn(FOREST_CLASSES.btnChanges, 'disabled:opacity-50')}
-                >
+                <button type="button" onClick={() => setShowChangesModal(true)} disabled={isProcessing} className={adminBtn.secondary}>
                   Request Changes
                 </button>
-                <button
-                  onClick={() => setShowApproveModal(true)}
-                  disabled={isProcessing}
-                  className={cn(FOREST_CLASSES.btnApprove, 'disabled:opacity-50')}
-                >
-                  ✓ Approve Seller
+                <button type="button" onClick={() => setShowApproveModal(true)} disabled={isProcessing} className={adminBtn.primary}>
+                  <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+                  Approve Seller
                 </button>
               </>
             )}
             {application.status === 'approved' && (
-              <div className="flex items-center gap-2 rounded-[10px] bg-white/10 px-4 py-2.5 text-[12.5px] font-semibold text-white/85">
-                <ShieldCheck className="h-4 w-4 text-[#A3E635]" />
-                Approved On {fmtDate(application.reviewed_at)}
-              </div>
+              <span className="inline-flex h-10 items-center gap-2 rounded-md bg-success-bg px-3.5 text-[13px] font-semibold text-success">
+                <ShieldCheck aria-hidden weight="bold" className="h-4 w-4" />
+                Approved {fmtDate(application.reviewed_at)}
+              </span>
             )}
             {application.status === 'rejected' && (
-              <button
-                onClick={() => setShowApproveModal(true)}
-                disabled={isProcessing}
-                className={cn(FOREST_CLASSES.btnApprove, 'disabled:opacity-50')}
-              >
-                ✓ Approve Seller
+              <button type="button" onClick={() => setShowApproveModal(true)} disabled={isProcessing} className={adminBtn.primary}>
+                <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+                Approve Seller
               </button>
             )}
           </div>
         </div>
-      </section>
-
-      {/* ══ VERIFICATION METER — full-width glass strip between hero and body ══ */}
-      <div
-        className={cn(
-          'mt-4 flex flex-wrap items-center gap-x-[22px] gap-y-3 rounded-[14px] border border-white/[0.09] bg-white/[0.05] px-5 py-4 backdrop-blur-sm',
-          FOREST_MOTION.fadeUp
-        )}
-        style={forestStagger(cardIndex++)}
-      >
-        <div
-          className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full"
-          style={{
-            background: `conic-gradient(#A3E635 0 ${verification.percentage}%, rgba(255,255,255,0.12) ${verification.percentage}% 100%)`,
-          }}
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-[#0F3320] text-[12px] font-extrabold text-white">
-            {verification.verified}/{verification.total}
-          </span>
-        </div>
-        <div>
-          <div className="text-[13px] font-bold text-white/95">
-            Verification {verification.verified} of {verification.total} applicable checks
-          </div>
-          <div className="mt-0.5 text-[11.5px] text-white/60">
-            {application.seller_type === 'business'
-              ? 'Business seller — identity, address and business checks all apply.'
-              : 'Individual seller — the business check doesn’t apply and is not counted.'}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 lg:ml-auto">
-          {verification.checks.map((check) => {
-            if (!check.applicable) {
-              return (
-                <span key={check.key} className={FOREST_CLASSES.checkNa}>
-                  — {check.label} (N/A)
-                </span>
-              )
-            }
-            if (check.ok) {
-              return (
-                <span key={check.key} className={FOREST_CLASSES.checkOk}>
-                  <span className="font-black text-[#A3E635]">✓</span>
-                  {check.label}
-                  {check.viaDidit && ' · Didit Video'}
-                </span>
-              )
-            }
-            return (
-              <span key={check.key} className={FOREST_CLASSES.checkOpen}>
-                ○ {check.label}
-              </span>
-            )
-          })}
-        </div>
       </div>
 
-      {/* Status banners (rejected / changes requested) */}
-      {application.status === 'rejected' && application.rejection_reason && (
-        <div
-          className={cn(
-            'mt-5 rounded-[14px] border border-white/[0.08] bg-[#B42318]/20 px-5 py-4 backdrop-blur-sm',
-            FOREST_MOTION.fadeUp
-          )}
-          style={forestStagger(cardIndex++)}
-        >
-          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#FCA5A5]">
-            <XCircle className="h-4 w-4" /> Rejection Reason
+      {/* ══ Verification ══ */}
+      <AdminPanel className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="flex items-center gap-4">
+          <Ring verified={verification.verified} total={verification.total} />
+          <div>
+            <p className="text-[14px] font-semibold text-text-primary">
+              Verification: {verification.verified} of {verification.total} applicable checks
+            </p>
+            <p className="mt-0.5 text-[12.5px] text-text-tertiary">
+              {application.seller_type === 'business'
+                ? 'Business seller — identity, address and business checks all apply.'
+                : 'Individual seller — the business check doesn’t apply and is not counted.'}
+            </p>
           </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
-            {application.rejection_reason}
+        </div>
+        <div className="flex flex-wrap gap-1.5 lg:ml-auto lg:justify-end">
+          {verification.checks.map((check) => (
+            <span
+              key={check.key}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold',
+                !check.applicable
+                  ? 'bg-white/[0.04] text-text-disabled'
+                  : check.ok
+                    ? 'bg-success-bg text-success'
+                    : 'bg-white/[0.06] text-text-secondary',
+              )}
+            >
+              {check.applicable && check.ok ? (
+                <CheckCircle aria-hidden weight="fill" className="h-3.5 w-3.5" />
+              ) : (
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+              )}
+              {check.label}
+              {!check.applicable && ' (N/A)'}
+              {check.applicable && check.ok && check.viaDidit && ' · Didit Video'}
+            </span>
+          ))}
+        </div>
+      </AdminPanel>
+
+      {/* Status banners */}
+      {application.status === 'rejected' && application.rejection_reason && (
+        <div className="rounded-lg bg-error-bg px-5 py-4">
+          <p className="flex items-center gap-2 text-[13px] font-semibold text-error">
+            <XCircle aria-hidden weight="bold" className="h-4 w-4" /> Rejection Reason
           </p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-secondary">{application.rejection_reason}</p>
         </div>
       )}
       {application.status === 'info_requested' && application.admin_notes && (
-        <div
-          className={cn(
-            'mt-5 rounded-[14px] border border-white/[0.08] bg-[#F59E0B]/[0.16] px-5 py-4 backdrop-blur-sm',
-            FOREST_MOTION.fadeUp
-          )}
-          style={forestStagger(cardIndex++)}
-        >
-          <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.07em] text-[#FCD34D]">
-            <MessageSquareWarning className="h-4 w-4" /> Changes Requested From The Applicant
-          </div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
-            {application.admin_notes}
+        <div className="rounded-lg bg-warning-bg px-5 py-4">
+          <p className="flex items-center gap-2 text-[13px] font-semibold text-warning">
+            <Warning aria-hidden weight="bold" className="h-4 w-4" /> Changes Requested From the Applicant
           </p>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-secondary">{application.admin_notes}</p>
         </div>
       )}
 
-      {/* ══ BODY — ledger cards on the forest canvas ══ */}
-      <div className="mt-5 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_322px]">
-        {/* ── LEFT column ── */}
-        <div className="flex min-w-0 flex-col gap-3.5">
-          {/* Games & Categories */}
-          <Card
-            icon={<IconGamepad size={20} />}
-            title="Games & Categories"
-            sub="What they applied to sell — per game, from the live category map"
-            index={cardIndex++}
-          >
+      {/* ══ Body ══ */}
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <Card icon={GameController} title="Games & Categories" sub="What they applied to sell, per game, from the live category map.">
             {gameRows.length === 0 && !application.other_games ? (
-              <p className="py-3 text-[12.5px] text-white/40">No games selected.</p>
+              <p className="text-[13px] text-text-tertiary">No games selected.</p>
             ) : (
-              <div>
-                {gameRows.map((row, i) => (
-                  <div
-                    key={row.key}
-                    className={cn(
-                      'flex items-center gap-3 py-[11px]',
-                      i > 0 && 'border-t border-white/[0.08]'
-                    )}
-                  >
-                    <GameLogo name={row.name} imageUrl={row.image} />
-                    <div className="min-w-0">
-                      <div className="text-[13.5px] font-bold text-white/90">{row.name}</div>
+              <div className="divide-y divide-white/[0.06]">
+                {gameRows.map((row) => (
+                  <div key={row.key} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                    <GameTile src={row.image} name={row.name} className="h-10 w-10 text-[14px]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-semibold text-text-primary">{row.name}</p>
                       {row.cats.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1.5">
+                        <div className="mt-1 flex flex-wrap gap-1">
                           {row.cats.map((cat) => (
-                            <span key={cat} className={FOREST_CLASSES.gameCat}>
+                            <span key={cat} className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11.5px] font-medium text-text-secondary">
                               {titleFromSlug(cat)}
                             </span>
                           ))}
@@ -943,33 +771,18 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                       )}
                     </div>
                     {row.cats.length > 0 && (
-                      <div className="ml-auto text-right text-[11px] text-white/40">
+                      <span className="shrink-0 text-[12px] text-text-tertiary">
                         {row.cats.length} {row.cats.length === 1 ? 'Category' : 'Categories'}
-                      </div>
+                      </span>
                     )}
                   </div>
                 ))}
-
                 {application.other_games && (
-                  <div
-                    className={cn(
-                      'flex items-center gap-3 py-[11px]',
-                      gameRows.length > 0 && 'border-t border-white/[0.08]'
-                    )}
-                  >
-                    <div
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[15px] font-black text-white"
-                      style={{ background: 'linear-gradient(140deg, #F59E0B, #B45309)' }}
-                    >
-                      +
-                    </div>
+                  <div className="flex items-center gap-3 py-3 last:pb-0">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-warning-bg text-[15px] font-bold text-warning">+</span>
                     <div className="min-w-0">
-                      <div className="text-[13.5px] font-bold text-white/90">Other Games</div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        <span className={FOREST_CLASSES.gameCatOther}>
-                          “{application.other_games}”
-                        </span>
-                      </div>
+                      <p className="text-[14px] font-semibold text-text-primary">Other Games</p>
+                      <p className="mt-0.5 text-[12.5px] italic text-text-tertiary">“{application.other_games}”</p>
                     </div>
                   </div>
                 )}
@@ -977,30 +790,24 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
             )}
           </Card>
 
-          {/* Identity & Documents */}
-          <Card
-            icon={<IconIdCard size={20} />}
-            title="Identity & Documents"
-            sub="Didit decision + uploaded evidence (signed URLs, click to open)"
-            index={cardIndex++}
-          >
+          <Card icon={IdentificationCard} title="Identity & Documents" sub="Didit decision and uploaded evidence (signed links, click to open).">
             {diditSessionId && (
-              <div className="mb-3.5 flex flex-wrap items-start gap-3 rounded-[11px] bg-[#A3E635]/[0.15] px-3.5 py-3">
-                <div className="min-w-0">
-                  <div className="text-[13px] font-extrabold text-[#D9F99D]">
-                    Didit Video Verification — Approved
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-white/60">
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md bg-success-bg px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13.5px] font-semibold text-success">Didit Video Verification — Approved</p>
+                  <p className="mt-0.5 text-[12.5px] text-text-secondary">
                     Govt ID + liveness + face match passed · Session{' '}
-                    <span className={FOREST_CLASSES.mono}>{diditSessionId.slice(0, 8)}…</span>
+                    <span className="font-mono">{diditSessionId.slice(0, 8)}…</span>
                     {diditDoc?.uploaded_at && <> · {fmtDateTime(diditDoc.uploaded_at)}</>}
-                  </div>
+                  </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowDiditModal(true)}
-                  className="ml-auto text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[#A3E635] transition hover:brightness-110"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-primary underline-offset-4 hover:underline"
                 >
-                  View Session ↗
+                  View Session
+                  <ArrowSquareOut aria-hidden weight="bold" className="h-3.5 w-3.5" />
                 </button>
               </div>
             )}
@@ -1011,66 +818,43 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                   const url = documentUrls[doc.file_path]
                   const caption = docCaption(doc)
                   const thumb = loadingUrls ? (
-                    <div
-                      className="grid h-[74px] animate-pulse place-items-center text-[11px] font-semibold text-white/50"
-                      style={{ background: FOREST_BG.docThumb }}
-                    />
+                    <div className="skeleton h-[84px]" />
                   ) : url && isImageFile(doc.file_name) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      alt={caption.title}
-                      className="h-[74px] w-full object-cover ring-1 ring-inset ring-white/10"
-                    />
+                    <img src={url} alt={caption.title} className="h-[84px] w-full object-cover" />
                   ) : (
-                    <div
-                      className="grid h-[74px] place-items-center text-[11px] font-semibold text-white/50"
-                      style={{ background: FOREST_BG.docThumb }}
-                    >
-                      {url
-                        ? /\.pdf$/i.test(doc.file_name || '')
-                          ? 'PDF'
-                          : 'File'
-                        : 'Unavailable'}
+                    <div className="grid h-[84px] place-items-center bg-white/[0.04] text-[12px] font-semibold text-text-tertiary">
+                      {url ? (/\.pdf$/i.test(doc.file_name || '') ? 'PDF' : 'File') : 'Unavailable'}
                     </div>
                   )
-
                   const body = (
                     <>
                       <div className="overflow-hidden">{thumb}</div>
-                      <div className="px-2.5 py-2 text-[11px] font-bold text-white/90">
-                        {caption.title}
-                        <span className="mt-[1px] block text-[10px] font-medium text-white/40">
-                          {caption.sub}
-                        </span>
+                      <div className="px-3 py-2">
+                        <p className="truncate text-[12.5px] font-semibold text-text-primary">{caption.title}</p>
+                        <p className="truncate text-[11.5px] text-text-tertiary">{caption.sub}</p>
                       </div>
                     </>
                   )
-
                   return url ? (
                     <a
                       key={doc.id}
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block overflow-hidden rounded-[11px] border border-white/[0.08] bg-white/[0.06] transition hover:border-[#A3E635]/40 hover:shadow-[0_8px_20px_-12px_rgba(0,0,0,0.55)]"
+                      className="block overflow-hidden rounded-md bg-bg-overlay transition-colors hover:bg-bg-overlay-2"
                     >
                       {body}
                     </a>
                   ) : (
-                    <div
-                      key={doc.id}
-                      className="overflow-hidden rounded-[11px] border border-white/[0.08] bg-white/[0.06]"
-                    >
+                    <div key={doc.id} className="overflow-hidden rounded-md bg-bg-overlay">
                       {body}
                     </div>
                   )
                 })}
               </div>
             ) : (
-              !diditSessionId && (
-                <p className="py-3 text-[12.5px] text-white/40">No documents uploaded yet.</p>
-              )
+              !diditSessionId && <p className="text-[13px] text-text-tertiary">No documents uploaded yet.</p>
             )}
           </Card>
 
@@ -1080,23 +864,17 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
               details live in Settings. Business sellers still upload their
               business documents, which appear in Identity & Documents above. */}
 
-          {/* Experience & Agreement */}
-          <Card
-            icon={<IconSignaturePen size={20} />}
-            title="Experience & Agreement"
-            sub="Track record + the signed Seller Agency Agreement"
-            index={cardIndex++}
-          >
+          <Card icon={Signature} title="Experience & Agreement" sub="Track record and the signed Seller Agency Agreement.">
             {application.selling_experience ? (
-              <blockquote className="rounded-r-[10px] border-l-[3px] border-[#A3E635] bg-white/[0.04] px-3.5 py-[11px] text-[12.5px] italic leading-relaxed text-white/60">
+              <blockquote className="rounded-md bg-bg-overlay px-4 py-3 text-[13.5px] italic leading-relaxed text-text-secondary">
                 “{application.selling_experience}”
               </blockquote>
             ) : (
-              <p className="text-[12.5px] text-white/40">No selling experience provided.</p>
+              <p className="text-[13px] text-text-tertiary">No selling experience provided.</p>
             )}
 
             {application.seller_signature && (
-              <div className="mt-3 flex items-center gap-3.5 rounded-[11px] border border-dashed border-white/15 bg-white/[0.04] px-4 py-3">
+              <div className="mt-3 flex flex-wrap items-center gap-4 rounded-md bg-bg-overlay px-4 py-3">
                 {application.seller_signature_image && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -1105,42 +883,35 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
                     className="h-14 max-w-[180px] shrink-0 rounded-md bg-white object-contain px-2 py-1"
                   />
                 )}
-                <div>
-                  <div
-                    className="text-[22px] leading-tight text-[#D9F99D]"
-                    style={{
-                      fontFamily:
-                        "'Snell Roundhand', 'Segoe Script', 'Brush Script MT', cursive",
-                    }}
+                <div className="min-w-0">
+                  <p
+                    className="text-[22px] leading-tight text-text-primary"
+                    style={{ fontFamily: "'Snell Roundhand', 'Segoe Script', 'Brush Script MT', cursive" }}
                   >
                     {application.seller_signature}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-white/40">
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-text-tertiary">
                     Signed {fmtDateTime(application.seller_signed_at)} · Seller Agency Agreement
-                  </div>
+                  </p>
                 </div>
               </div>
             )}
 
-            <a
-              href={`/api/admin/seller-agreement/${application.id}`}
-              className="mt-3 inline-flex items-center gap-2 rounded-[10px] border border-white/15 bg-white/[0.05] px-4 py-2.5 text-[12px] font-bold text-white/85 transition-colors hover:bg-white/[0.09]"
-            >
-              <IconContract size={16} />
+            <a href={`/api/admin/seller-agreement/${application.id}`} className={cn(adminBtn.secondary, 'mt-3')}>
+              <FileArrowDown aria-hidden weight="bold" className="h-4 w-4" />
               Download Signed Agreement (PDF)
             </a>
 
-            <div className="mt-3 flex flex-wrap gap-[7px]">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {consents.map((c) => (
                 <span
                   key={c.label}
-                  className={
-                    c.ok
-                      ? FOREST_CLASSES.consent
-                      : 'rounded-md border border-white/20 px-2.5 py-[3px] text-[10.5px] font-bold text-white/35'
-                  }
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold',
+                    c.ok ? 'bg-success-bg text-success' : 'bg-white/[0.05] text-text-disabled',
+                  )}
                 >
-                  {c.ok ? '✓ ' : '○ '}
+                  {c.ok && <CheckCircle aria-hidden weight="fill" className="h-3.5 w-3.5" />}
                   {c.label}
                 </span>
               ))}
@@ -1148,368 +919,312 @@ export default function ApplicationDetail({ application }: ApplicationDetailProp
           </Card>
         </div>
 
-        {/* ── RIGHT rail ── */}
-        <div className="flex min-w-0 flex-col gap-3.5">
-          {/* Applicant */}
-          <Card icon={<IconPerson size={20} />} title="Applicant" sub="Account behind the store" index={cardIndex++}>
+        {/* Rail */}
+        <div className="flex min-w-0 flex-col gap-5">
+          <Card icon={User} title="Applicant" sub="The account behind the store.">
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={getAvatarUrl(
-                  application.user.avatar_url,
-                  application.user.username || application.user.email
-                )}
-                alt={application.user.username || 'Applicant'}
-                className="h-11 w-11 shrink-0 rounded-full border border-white/15 object-cover"
+                src={getAvatarUrl(application.user.avatar_url, application.user.username || application.user.email)}
+                alt=""
+                className="h-11 w-11 shrink-0 rounded-full object-cover"
               />
               <div className="min-w-0">
-                <div className="truncate text-[14px] font-extrabold text-white/95">
+                <p className="truncate text-[14px] font-semibold text-text-primary">
                   {application.user.username || application.user.full_name || 'Unknown User'}
-                </div>
-                <div className="truncate text-[11.5px] text-white/60">
-                  {application.user.email}
-                </div>
+                </p>
+                <p className="truncate text-[12.5px] text-text-tertiary">{application.user.email}</p>
                 {application.user.created_at && (
-                  <div className="text-[11.5px] text-white/60">
-                    Member Since{' '}
-                    {new Date(application.user.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </div>
+                  <p className="text-[12.5px] text-text-tertiary">
+                    Member since{' '}
+                    {new Date(application.user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </p>
                 )}
               </div>
             </div>
             {/* Phone / city are no longer part of the slimmed application
-                (KYC captures identity; profile details live in Settings). We
-                show only what the 3-step flow actually collects. */}
-            <div className="mt-3.5 grid grid-cols-2 gap-x-[18px] gap-y-2.5">
+                (KYC captures identity; profile details live in Settings). */}
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-white/[0.06] pt-4">
               <KV k="Legal Name" v={application.full_legal_name || '—'} />
               <KV k="Country" v={application.country || '—'} />
-              <KV
-                k="Languages"
-                v={
-                  application.languages_spoken?.length
-                    ? application.languages_spoken.join(', ')
-                    : '—'
-                }
-              />
+              <KV k="Languages" v={application.languages_spoken?.length ? application.languages_spoken.join(', ') : '—'} />
             </div>
           </Card>
 
-          {/* Timeline */}
-          <Card icon={<IconTimeline size={20} />} title="Timeline" sub="Application activity" index={cardIndex++}>
-            <ul>
+          <Card icon={ClockCounterClockwise} title="Timeline">
+            <ol className="relative space-y-4 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-white/[0.08]">
               {timeline.map((item, i) => (
-                <li
-                  key={`${item.title}-${i}`}
-                  className={cn(
-                    'relative pl-[22px] text-[12px] text-white/60',
-                    i < timeline.length - 1 && 'pb-4'
-                  )}
-                >
+                <li key={`${item.title}-${i}`} className="relative pl-6">
                   <span
+                    aria-hidden
                     className={cn(
-                      'absolute left-[5px] top-[4px] h-2 w-2 rounded-full',
-                      item.open
-                        ? 'bg-[#F59E0B]'
-                        : 'bg-gradient-to-br from-[#65A30D] to-[#A3E635]'
+                      'absolute left-0 top-1 h-[11px] w-[11px] rounded-full ring-4 ring-bg-raised',
+                      item.open ? 'bg-warning' : 'bg-white/[0.3]',
                     )}
                   />
-                  {i < timeline.length - 1 && (
-                    <span className="absolute bottom-0 left-[8.5px] top-[14px] w-px bg-white/[0.1]" />
-                  )}
-                  <b className="block text-[12.5px] font-bold text-white/90">{item.title}</b>
-                  {item.when}
+                  <p className="text-[13.5px] font-medium text-text-primary">{item.title}</p>
+                  <p className="text-[12.5px] text-text-tertiary">{item.when}</p>
                 </li>
               ))}
-            </ul>
+            </ol>
           </Card>
 
-          {/* Admin Notes */}
-          <Card
-            icon={<IconNotes size={20} />}
-            title="Admin Notes"
-            sub="Internal — attached to the decision when you approve or reject"
-            index={cardIndex++}
-          >
+          <Card icon={NotePencil} title="Admin Notes" sub="Internal, attached to the decision when you approve or reject.">
             <textarea
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
+              aria-label="Admin notes"
               placeholder="e.g. Selfie is blurry — ask for a re-upload…"
-              className="min-h-[64px] w-full resize-none rounded-[10px] border border-white/15 bg-white/[0.05] px-[11px] py-[9px] font-[inherit] text-[12.5px] text-white placeholder:text-white/30 focus:border-[#A3E635] focus:outline-none"
+              rows={3}
+              className={cn(accountInputCls, 'resize-none')}
             />
           </Card>
 
-          {/* Seller Management → moved to the seller-management hub */}
           {application.status === 'approved' && (
-            <Card
-              icon={<IconShield size={20} />}
-              title="Seller Management"
-              sub="Tier, wallet, payouts, restrictions"
-              index={cardIndex++}
-            >
-              <p className="text-[12.5px] leading-relaxed text-white/60">
-                Seller Management Has Moved — restrict/ban, tier changes, wallet and payout
-                controls now live in the seller hub.
-              </p>
-              <Link
-                href={`/admin/active-sellers/${application.user_id}`}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-[#A3E635] px-4 py-2 text-[12.5px] font-bold text-[#0F3320] transition hover:brightness-105"
-              >
+            <Card icon={ShieldCheck} title="Seller Management" sub="Tier, wallet, payouts and restrictions live in the seller hub.">
+              <Link href={`/admin/active-sellers/${application.user_id}`} className={cn(adminBtn.primary, 'w-full')}>
                 Open Seller Management
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight aria-hidden weight="bold" className="h-4 w-4" />
               </Link>
             </Card>
           )}
         </div>
       </div>
 
-      {/* ══ MODALS (CSS-only motion) ══ */}
+      {/* ══ Dialogs ══ */}
 
-      {/* Approve */}
-      {showApproveModal && (
-        <ModalShell onClose={() => !isProcessing && (setShowApproveModal(false), setKycGap(null))}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#A3E635]/[0.15]">
-              <CheckCircle className="h-7 w-7 text-[#A3E635]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Approve Seller?</h3>
-            <p className="text-sm leading-relaxed text-white/60">
-              This will grant <b className="font-semibold text-white">{shopName}</b> access
-              to the seller dashboard and allow them to start listing products.
+      <ActionDialog
+        open={showApproveModal}
+        busy={isProcessing}
+        onClose={() => {
+          setShowApproveModal(false)
+          setKycGap(null)
+        }}
+        title="Approve Seller?"
+        description={
+          <>
+            This grants <span className="font-semibold text-text-primary">{shopName}</span> the seller dashboard and lets
+            them start listing.
+          </>
+        }
+      >
+        {/* ACC-02 — identity not verified: say exactly what is missing. The
+            admin may still approve; the decision is recorded in the audit log
+            and profiles.kyc_status stays 'pending'. */}
+        {approveGap && (
+          <div role="alert" className="rounded-md bg-warning-bg px-4 py-3 text-[13px] leading-relaxed text-warning">
+            <p className="font-semibold">Identity Not Verified</p>
+            {kycGap ? (
+              <ul className="mt-1 list-disc pl-4">
+                {kycGap.missing.map((m) => <li key={`m-${m}`}>{m}: not uploaded</li>)}
+                {kycGap.unverified.map((u) => <li key={`u-${u}`}>{u}: uploaded, not verified</li>)}
+              </ul>
+            ) : (
+              <p className="mt-1">A verified government ID and selfie (or a Didit session) are not on file.</p>
+            )}
+            <p className="mt-1.5 text-text-secondary">
+              Approving now grants seller access without a verified identity and records that you accepted the gap.
             </p>
           </div>
-          {/* ACC-02 — identity not verified: say exactly what is missing. The
-              admin may still approve; the decision is recorded in the audit log
-              and profiles.kyc_status stays 'pending'. */}
-          {(kycGap ?? (!verification.checks.find((c) => c.key === 'identity')?.ok ? { missing: ['Government ID or selfie'], unverified: [] } : null)) && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-[#F5C451]/40 bg-[#F5C451]/10 px-3.5 py-3 text-[13px] leading-relaxed text-[#F5C451]"
-            >
-              <p className="font-semibold">Identity Not Verified</p>
-              {kycGap ? (
-                <ul className="mt-1 list-disc pl-4 text-[#F5C451]/90">
-                  {kycGap.missing.map((m) => <li key={`m-${m}`}>{m}: not uploaded</li>)}
-                  {kycGap.unverified.map((u) => <li key={`u-${u}`}>{u}: uploaded, not verified</li>)}
-                </ul>
-              ) : (
-                <p className="mt-1 text-[#F5C451]/90">A verified government ID and selfie (or a Didit session) are not on file.</p>
-              )}
-              <p className="mt-1.5 text-[#F5C451]/80">
-                Approving now grants seller access without a verified identity and records that you accepted the gap.
-              </p>
-            </div>
-          )}
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => { setShowApproveModal(false); setKycGap(null) }}
-              disabled={isProcessing}
-              className={MODAL_CANCEL}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleApprove(kycGap ? pendingFounding : false, kycGap !== null)}
-              disabled={isProcessing}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Approving…
-                </>
-              ) : kycGap ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Approve Anyway
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Approve
-                </>
-              )}
-            </button>
-          </div>
-          {/* Founding grant is otherwise a separate toggle the admin has to
-              remember; this closes the promise for a courted lead in one click.
-              (A waitlist founder is auto-granted founding by plain Approve too —
-              this button forces it for anyone.) */}
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <button
-            onClick={() => handleApprove(true, kycGap !== null)}
+            type="button"
+            onClick={() => {
+              setShowApproveModal(false)
+              setKycGap(null)
+            }}
             disabled={isProcessing}
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#F5C451]/40 bg-[#F5C451]/10 py-2.5 text-sm font-semibold text-[#F5C451] transition-colors hover:bg-[#F5C451]/15 disabled:opacity-50"
+            className={cn(adminBtn.secondary, 'sm:flex-1')}
           >
-            <CheckCircle className="h-3.5 w-3.5" />
-            Approve as Founding Seller
+            Cancel
           </button>
-        </ModalShell>
-      )}
+          <button
+            type="button"
+            onClick={() => handleApprove(kycGap ? pendingFounding : false, kycGap !== null)}
+            disabled={isProcessing}
+            className={cn(adminBtn.primary, 'sm:flex-1')}
+          >
+            {isProcessing ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            {isProcessing ? 'Approving…' : kycGap ? 'Approve Anyway' : 'Approve'}
+          </button>
+        </div>
+        {/* Founding grant is otherwise a separate toggle the admin has to
+            remember; this closes the promise for a courted lead in one click.
+            (A waitlist founder is auto-granted founding by plain Approve too —
+            this button forces it for anyone.) */}
+        <button
+          type="button"
+          onClick={() => handleApprove(true, kycGap !== null)}
+          disabled={isProcessing}
+          className={cn(adminBtn.secondary, 'w-full text-warning')}
+        >
+          <CheckCircle aria-hidden weight="bold" className="h-4 w-4" />
+          Approve as Founding Seller
+        </button>
+      </ActionDialog>
 
-      {/* Reject */}
-      {showRejectModal && (
-        <ModalShell onClose={() => !isProcessing && setShowRejectModal(false)}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#B42318]/20">
-              <XCircle className="h-7 w-7 text-[#FCA5A5]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Reject Application</h3>
-            <p className="text-sm text-white/60">
-              Please provide a clear reason for rejecting this application.
-            </p>
-          </div>
+      <ActionDialog
+        open={showRejectModal}
+        busy={isProcessing}
+        onClose={() => setShowRejectModal(false)}
+        title="Reject Application"
+        description="Give a clear reason; the applicant sees it."
+      >
+        <div>
+          <label htmlFor="reject-category" className={FIELD_LABEL}>
+            Rejection Category
+          </label>
+          <select
+            id="reject-category"
+            value={rejectionCategory}
+            onChange={(e) => setRejectionCategory(e.target.value)}
+            className={accountInputCls}
+            required
+          >
+            <option value="incomplete_documentation">Incomplete Documentation</option>
+            <option value="invalid_documents">Invalid or Expired Documents</option>
+            <option value="information_mismatch">Information Mismatch</option>
+            <option value="suspicious_activity">Suspicious Activity</option>
+            <option value="business_verification_failed">Business Verification Failed</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="reject-reason" className={FIELD_LABEL}>
+            Rejection Reason
+          </label>
+          <textarea
+            id="reject-reason"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            className={cn(accountInputCls, 'resize-none')}
+            rows={4}
+            placeholder="Enter a detailed reason for the rejection…"
+            required
+          />
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <button type="button" onClick={() => setShowRejectModal(false)} disabled={isProcessing} className={cn(adminBtn.secondary, 'sm:flex-1')}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleReject}
+            disabled={!rejectionReason.trim() || isProcessing}
+            className={cn(adminBtn.danger, 'sm:flex-1')}
+          >
+            {isProcessing ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+            ) : (
+              <XCircle aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            {isProcessing ? 'Rejecting…' : 'Reject'}
+          </button>
+        </div>
+      </ActionDialog>
 
-          <div className="mb-4">
-            <label className={MODAL_LABEL}>Rejection Category *</label>
-            <select
-              value={rejectionCategory}
-              onChange={(e) => setRejectionCategory(e.target.value)}
-              className={MODAL_INPUT}
-              required
-            >
-              <option value="incomplete_documentation">Incomplete Documentation</option>
-              <option value="invalid_documents">Invalid or Expired Documents</option>
-              <option value="information_mismatch">Information Mismatch</option>
-              <option value="suspicious_activity">Suspicious Activity</option>
-              <option value="business_verification_failed">Business Verification Failed</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div className="mb-6">
-            <label className={MODAL_LABEL}>Rejection Reason *</label>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className={cn(MODAL_INPUT, 'resize-none')}
-              rows={4}
-              placeholder="Enter detailed reason for rejection…"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => setShowRejectModal(false)}
-              disabled={isProcessing}
-              className={MODAL_CANCEL}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={!rejectionReason.trim() || isProcessing}
-              className={MODAL_CONFIRM_RED}
-            >
-              {isProcessing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <XCircle className="h-3.5 w-3.5" />
-              )}
-              {isProcessing ? 'Rejecting…' : 'Reject'}
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Message the applicant */}
-      {showMessageModal && (
-        <ModalShell onClose={() => !isSendingMessage && setShowMessageModal(false)}>
-          <div className="mb-4">
-            <h3 className="text-[16px] font-extrabold text-white/95">Message Seller</h3>
-            <p className="mt-1 text-[12px] text-white/50">
-              Lands in their notifications instantly, linked to their application status.
-            </p>
+      <ActionDialog
+        open={showMessageModal}
+        busy={isSendingMessage}
+        onClose={() => setShowMessageModal(false)}
+        title="Message Seller"
+        description="Lands in their notifications instantly, linked to their application status."
+      >
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <label htmlFor="outreach-text" className="text-[13px] font-medium text-text-secondary">
+              Message
+            </label>
+            <span className="text-[12px] tabular-nums text-text-tertiary">{outreachText.length}/500</span>
           </div>
           <textarea
+            id="outreach-text"
             value={outreachText}
             onChange={(e) => setOutreachText(e.target.value)}
             rows={4}
             maxLength={500}
             placeholder="e.g. Quick question about your payout details…"
-            className="w-full rounded-[10px] border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-[13px] text-white outline-none placeholder:text-white/30 focus:border-[#A3E635]/60"
+            className={cn(accountInputCls, 'resize-none')}
           />
-          <div className="mt-4 flex gap-2.5">
-            <button
-              onClick={() => setShowMessageModal(false)}
-              disabled={isSendingMessage}
-              className="flex-1 rounded-[10px] border border-white/15 px-4 py-2.5 text-[12.5px] font-semibold text-white/80 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSendMessage}
-              disabled={isSendingMessage || !outreachText.trim()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#A3E635] px-4 py-2.5 text-[12.5px] font-bold text-[#0F3320] disabled:opacity-50"
-            >
-              {isSendingMessage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              Send Message
-            </button>
-          </div>
-        </ModalShell>
-      )}
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <button type="button" onClick={() => setShowMessageModal(false)} disabled={isSendingMessage} className={cn(adminBtn.secondary, 'sm:flex-1')}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSendMessage}
+            disabled={isSendingMessage || !outreachText.trim()}
+            className={cn(adminBtn.primary, 'sm:flex-1')}
+          >
+            {isSendingMessage ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+            ) : (
+              <PaperPlaneTilt aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            Send Message
+          </button>
+        </div>
+      </ActionDialog>
 
-      {/* Request Changes */}
-      {showChangesModal && (
-        <ModalShell onClose={() => !isProcessing && setShowChangesModal(false)}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#F59E0B]/[0.16]">
-              <MessageSquareWarning className="h-7 w-7 text-[#FCD34D]" />
-            </div>
-            <h3 className="mb-2 text-xl font-extrabold text-white">Request Changes</h3>
-            <p className="text-sm leading-relaxed text-white/60">
-              The applicant gets your note by email and the application moves to{' '}
-              <b className="font-semibold text-white">Changes Requested</b> until they respond.
-            </p>
-          </div>
+      <ActionDialog
+        open={showChangesModal}
+        busy={isProcessing}
+        onClose={() => setShowChangesModal(false)}
+        title="Request Changes"
+        description={
+          <>
+            The applicant gets your note by email and the application moves to{' '}
+            <span className="font-semibold text-text-primary">Changes Requested</span> until they respond.
+          </>
+        }
+      >
+        <div>
+          <label htmlFor="changes-message" className={FIELD_LABEL}>
+            What Needs to Change
+          </label>
+          <textarea
+            id="changes-message"
+            value={changesMessage}
+            onChange={(e) => setChangesMessage(e.target.value)}
+            className={cn(accountInputCls, 'resize-none')}
+            rows={4}
+            placeholder="e.g. Your proof of address is older than 3 months — please upload a recent utility bill…"
+            required
+          />
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <button type="button" onClick={() => setShowChangesModal(false)} disabled={isProcessing} className={cn(adminBtn.secondary, 'sm:flex-1')}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleRequestChanges}
+            disabled={!changesMessage.trim() || isProcessing}
+            className={cn(adminBtn.primary, 'sm:flex-1')}
+          >
+            {isProcessing ? (
+              <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
+            ) : (
+              <Warning aria-hidden weight="bold" className="h-4 w-4" />
+            )}
+            {isProcessing ? 'Sending…' : 'Send Request'}
+          </button>
+        </div>
+      </ActionDialog>
 
-          <div className="mb-6">
-            <label className={MODAL_LABEL}>What Needs To Change *</label>
-            <textarea
-              value={changesMessage}
-              onChange={(e) => setChangesMessage(e.target.value)}
-              className={cn(MODAL_INPUT, 'resize-none')}
-              rows={4}
-              placeholder="e.g. Your proof of address is older than 3 months — please upload a recent utility bill…"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => setShowChangesModal(false)}
-              disabled={isProcessing}
-              className={MODAL_CANCEL}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleRequestChanges}
-              disabled={!changesMessage.trim() || isProcessing}
-              className={MODAL_CONFIRM_LIME}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Sending…
-                </>
-              ) : (
-                <>
-                  <MessageSquareWarning className="h-3.5 w-3.5" />
-                  Send Request
-                </>
-              )}
-            </button>
-          </div>
-        </ModalShell>
-      )}
-
-      {/* Didit Session Details */}
-      {showDiditModal && diditSessionId && (
-        <DiditSessionModal sessionId={diditSessionId} onClose={() => setShowDiditModal(false)} />
-      )}
-    </>
+      <ActionDialog
+        open={showDiditModal && !!diditSessionId}
+        onClose={() => setShowDiditModal(false)}
+        title="Didit Verification Session"
+      >
+        {diditSessionId && <DiditSessionBody sessionId={diditSessionId} />}
+      </ActionDialog>
+    </div>
   )
 }

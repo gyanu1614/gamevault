@@ -86,6 +86,7 @@
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
     "framer-motion": "^11.15.0",
+    "input-otp": "^1.5.0",
     "libphonenumber-js": "^1.13.8",
     "lucide-react": "^0.468.0",
     "next": "^14.2.35",

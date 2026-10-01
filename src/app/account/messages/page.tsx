@@ -9,6 +9,7 @@
  * messages).
  */
 
+import { lockScroll } from '@/lib/scroll-lock'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -93,11 +94,7 @@ export default function MessagesPage() {
   // global min-h-screen shell leaves an iOS dvh/vh mismatch strip under the
   // panes and the document scrolls by exactly that amount.
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [])
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId)

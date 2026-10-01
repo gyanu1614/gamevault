@@ -13,7 +13,7 @@
  * Here the toggle is driven by real layout: a ResizeObserver compares
  * scrollHeight against clientHeight on the clamped paragraph, so the
  * control appears if and only if the copy is actually cut off. The
- * fade is a `mask-image` on the text itself rather than a gradient
+ * fade is a `mask-image` on the clipped box rather than a gradient
  * <div> over it — it inherits whatever surface it is dropped onto, so
  * there is no colour seam to keep in sync with the panel background.
  *
@@ -22,11 +22,13 @@
  * affordance stays quiet. Its accessible name comes from aria-label.
  *
  * Collapsed height comes from `line-clamp`, which is also what the
- * mask is sized against. Expansion is an instant reflow rather than a
- * height animation: `line-clamp` drives the collapsed height, so there
- * is no fixed max-height to tween between without measuring and
- * pinning the expanded height first — which would fight the observer
- * that is measuring overflow on the same element.
+ * mask is sized against. Opening and closing animate the height with
+ * framer-motion (same 0.25 s ease-out as the account sidebar): the
+ * clamped height is measured alongside the overflow check, a wrapper
+ * tweens between that and `auto`, and the clamp itself is only lifted
+ * for the open state and put back once the close has finished — so the
+ * copy is never cut short mid-animation and the observer only ever
+ * measures the settled, clamped paragraph.
  */
 
 import {
@@ -38,7 +40,9 @@ import {
   useState,
 } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { EXPAND_TRANSITION } from '@/components/ui/expand'
 
 /**
  * useLayoutEffect warns when React renders on the server. The first
@@ -94,22 +98,31 @@ export function CollapsibleText({
   resetKey,
 }: CollapsibleTextProps) {
   const [expanded, setExpanded] = useState(false)
+  // True while the line clamp is on: collapsed AND the close animation
+  // has finished. Opening lifts it at once; closing puts it back only
+  // when the wrapper has shrunk to the clamped height.
+  const [settled, setSettled] = useState(true)
   const [overflows, setOverflows] = useState(false)
+  const [collapsedHeight, setCollapsedHeight] = useState<number | null>(null)
   const textRef = useRef<HTMLParagraphElement | null>(null)
   const regionId = useId()
+  const reduceMotion = useReducedMotion()
+  const clampOn = !expanded && settled
 
   /**
    * Overflow is only measurable while the clamp is applied, so this
-   * runs against the collapsed box. When expanded we keep the last
-   * measurement — the toggle must stay mounted to collapse again.
+   * runs against the settled, collapsed box. While open (or closing) we
+   * keep the last measurement — the toggle must stay mounted to
+   * collapse again, and the clamped height is the close target.
    */
   const measure = useCallback(() => {
     const el = textRef.current
-    if (!el || expanded) return
+    if (!el || !clampOn) return
     // 1px tolerance: sub-pixel line heights round inconsistently
     // across browsers and would otherwise flag a false overflow.
     setOverflows(el.scrollHeight - el.clientHeight > 1)
-  }, [expanded])
+    setCollapsedHeight(el.clientHeight)
+  }, [clampOn])
 
   /**
    * Measure synchronously after layout rather than relying on the
@@ -154,25 +167,50 @@ export function CollapsibleText({
 
   const clamped = !expanded && overflows
 
+  const toggle = () => {
+    if (expanded) {
+      setExpanded(false)
+      // No animation to wait for: clamp straight away.
+      if (reduceMotion) setSettled(true)
+    } else {
+      setSettled(false)
+      setExpanded(true)
+    }
+  }
+
   return (
     <div>
-      <p
-        ref={textRef}
-        id={regionId}
+      <motion.div
+        initial={false}
+        animate={{ height: expanded || !overflows || collapsedHeight == null ? 'auto' : collapsedHeight }}
+        transition={reduceMotion ? { duration: 0 } : EXPAND_TRANSITION}
+        onAnimationComplete={() => {
+          if (!expanded) setSettled(true)
+        }}
+        // The mask is the fade. It rides on the visible box (not the
+        // paragraph, which is taller than the box mid-close) so the cut
+        // edge fades during the animation too, and it picks up any
+        // background. Removed the moment the copy fits or is expanded —
+        // otherwise the last visible line would sit under a permanent
+        // dimmer.
         className={cn(
-          'whitespace-pre-line',
-          !expanded && (CLAMP_CLASS[lines] ?? CLAMP_CLASS[3]),
-          // The mask is the fade. It rides on the text element so it
-          // picks up any background, and is removed the moment the
-          // copy fits or is expanded — otherwise the last visible line
-          // would sit under a permanent dimmer.
+          'overflow-hidden',
           clamped &&
             '[mask-image:linear-gradient(to_bottom,#000_calc(100%-2.1em),transparent_100%)]',
-          className,
         )}
       >
-        {children}
-      </p>
+        <p
+          ref={textRef}
+          id={regionId}
+          className={cn(
+            'whitespace-pre-line',
+            clampOn && (CLAMP_CLASS[lines] ?? CLAMP_CLASS[3]),
+            className,
+          )}
+        >
+          {children}
+        </p>
+      </motion.div>
 
       {overflows && (
         // Centred so the control reads as a divider closing the block
@@ -180,7 +218,7 @@ export function CollapsibleText({
         <div className="mt-1 flex justify-center">
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={toggle}
             aria-expanded={expanded}
             aria-controls={regionId}
             // The chevron carries no text, so the label has to come

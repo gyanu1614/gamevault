@@ -17,6 +17,8 @@ import { getDisputes, getDisputeStats } from '@/lib/actions/admin-disputes'
 import { DisputesTable } from './disputes-table'
 import { DisputeFilters } from './dispute-filters'
 import { StatsCards } from './stats-cards'
+import { AdminLoadingRows, PageHeader } from '../../components/kit'
+import { SkAdminStrip } from '../../components/AdminSkeletons'
 
 type DisputesResult = Awaited<ReturnType<typeof getDisputes>>
 type DisputeStatsResult = Awaited<ReturnType<typeof getDisputeStats>>
@@ -69,28 +71,11 @@ function DisputesContent({ initialDisputes, initialStats }: DisputesPageClientPr
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Disputes</h1>
-          <p className="text-[13.5px] text-text-secondary mt-0.5">Manage and resolve buyer-seller disputes</p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
+      <PageHeader title="Disputes" description="Manage and resolve buyer–seller disputes." className="mb-0 sm:mb-0" />
       <StatsCards stats={(statsData?.success ? statsData.stats : null) || null} />
-
-      {/* Filters */}
       <DisputeFilters />
-
-      {/* Disputes Table */}
       {disputesLoading ? (
-        <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-          <div className="flex flex-col items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-lime border-r-transparent"></div>
-            <p className="text-sm text-text-tertiary mt-3">Loading disputes...</p>
-          </div>
-        </div>
+        <AdminLoadingRows rows={8} />
       ) : (
         <DisputesTable
           disputes={(disputesData?.success ? disputesData.disputes : []) || []}
@@ -103,22 +88,15 @@ function DisputesContent({ initialDisputes, initialStats }: DisputesPageClientPr
 
 export default function DisputesPageClient(props: DisputesPageClientProps) {
   return (
-    <Suspense fallback={
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-text-primary">Disputes</h1>
-            <p className="text-[13.5px] text-text-secondary mt-0.5">Manage and resolve buyer-seller disputes</p>
-          </div>
+    <Suspense
+      fallback={
+        <div className="space-y-5">
+          <PageHeader title="Disputes" description="Manage and resolve buyer–seller disputes." className="mb-0 sm:mb-0" />
+          <SkAdminStrip count={4} />
+          <AdminLoadingRows rows={8} />
         </div>
-        <div className="rounded-xl border border-border-default bg-bg-raised p-12">
-          <div className="flex flex-col items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-lime border-r-transparent"></div>
-            <p className="text-sm text-text-tertiary mt-3">Loading...</p>
-          </div>
-        </div>
-      </div>
-    }>
+      }
+    >
       <DisputesContent {...props} />
     </Suspense>
   )
