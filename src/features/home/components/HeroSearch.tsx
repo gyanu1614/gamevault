@@ -19,6 +19,7 @@
  * overlay, shown only while the field is empty and unfocused.
  */
 
+import { lockScroll } from '@/lib/scroll-lock'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -150,12 +151,7 @@ export function HeroSearch() {
   const [takeover, setTakeover] = useState(false)
   useEffect(() => {
     if (!takeover) return
-    const html = document.documentElement
-    const prev = html.style.overflow
-    html.style.overflow = 'hidden'
-    return () => {
-      html.style.overflow = prev
-    }
+    return lockScroll('html')
   }, [takeover])
 
   // Only fetched once the panel is wanted; the navbar usually has it cached.

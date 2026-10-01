@@ -1,5 +1,6 @@
 'use client'
 
+import { lockScroll } from '@/lib/scroll-lock'
 import Link from 'next/link'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
@@ -291,11 +292,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // scrolls behind the fixed panel and the user loses their place.
   useEffect(() => {
     if (!mobileMenuOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [mobileMenuOpen])
   // V21/P7.r — Expanding search. When true, the category links + right
   // icons collapse and GlobalSearch grows to fill the freed space.
@@ -344,11 +341,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
     const anyOpen = notificationsOpen || activityOpen || userMenuOpen
     if (!anyOpen) return
     if (!window.matchMedia('(max-width: 639px)').matches) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [notificationsOpen, activityOpen, userMenuOpen])
 
   // The navbar is always the full-width bar, pinned at every width (the

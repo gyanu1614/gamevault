@@ -1,5 +1,6 @@
 'use client'
 
+import { lockScroll } from '@/lib/scroll-lock'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -83,11 +84,10 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       if (event.key === 'Escape') setIsMobileOpen(false)
     }
     document.addEventListener('keydown', onKeyDown)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
     return () => {
       document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
+      unlock()
     }
   }, [isMobileOpen])
 

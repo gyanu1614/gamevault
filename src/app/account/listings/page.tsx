@@ -31,6 +31,7 @@
  * gating, getMyStorePaused offline badge.
  */
 
+import { lockScroll } from '@/lib/scroll-lock'
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -648,11 +649,7 @@ function OffersContent() {
   )
 
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [])
 
   return (
