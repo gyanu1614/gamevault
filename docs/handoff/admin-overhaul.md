@@ -70,6 +70,15 @@ Reachable but not in the sidebar: `/activities`, `/reviews`, `/notifications`,
   try/catch/finally; spinner overlays an existing image; inputs reset after each pick;
   upload triggers are real buttons (`components/useFilePicker.tsx`), inputs never nested
   in a button. Cover/banner copy now says Max 2.5 MB (server still allows 4 MB).
+- Site-wide, same branch:
+  - Scroll lock: one counted `src/lib/scroll-lock.ts`. Overlapping save/restore overflow
+    locks released out of order could leave the page frozen until a refresh.
+  - Phone purchase sheet on currency pages: a vaul drawer. It used to drop and re-grow
+    when the keyboard closed. `useKeyboardInset` is gone.
+  - Expanders: `src/components/ui/expand.tsx` (framer-motion height + fade, the account
+    sidebar's timing). Used by FaqCards, the seller row, `ui/collapsible`,
+    CollapsibleText, the footer Show All and the /buy FAQ. Still on CSS: the
+    listing-detail description Show More (left for the listing-detail revamp).
 
 ## Open (pre-existing, not fixed)
 - `GameWizard mode="create"` looks dead (only caller passes "edit").
