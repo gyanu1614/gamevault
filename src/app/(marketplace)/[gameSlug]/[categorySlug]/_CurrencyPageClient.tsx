@@ -20,6 +20,7 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
+import { Expand } from '@/components/ui/expand'
 import { Drawer } from 'vaul'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
@@ -1188,78 +1189,81 @@ function SellerRow({
           </div>
         </div>
 
-        <Collapsible.Content
-          className="overflow-hidden border-t border-white/[0.07] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        >
-          {/* V60 — Full-width detail panel: two glass tiles (the seller's
-              own instructions + structured offer facts) over the whole row,
-              then an action bar. Replaces the old left-hugging text block. */}
-          <div className="p-3.5 sm:p-4">
-            <div className="flex flex-col gap-3 lg:flex-row">
-              {/* Seller instructions tile */}
-              <div className="relative flex-1 overflow-hidden rounded-md bg-bg-overlay p-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-text-primary">
-                    Seller Instructions
-                  </span>
+        {/* Force-mounted so Expand can animate the close (height + fade,
+            like the account sidebar); Radix still wires the trigger's
+            aria-controls to it. */}
+        <Collapsible.Content forceMount asChild>
+          <Expand open={open}>
+            {/* V60 — Full-width detail panel: two glass tiles (the seller's
+                own instructions + structured offer facts) over the whole row,
+                then an action bar. Replaces the old left-hugging text block. */}
+            <div className="border-t border-white/[0.07] p-3.5 sm:p-4">
+              <div className="flex flex-col gap-3 lg:flex-row">
+                {/* Seller instructions tile */}
+                <div className="relative flex-1 overflow-hidden rounded-md bg-bg-overlay p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-text-primary">
+                      Seller Instructions
+                    </span>
+                  </div>
+                  {hasInstructions ? (
+                    <p className="mt-2.5 line-clamp-5 whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary">
+                      {offer.blurb}
+                    </p>
+                  ) : (
+                    <p className="mt-2.5 text-[13.5px] italic text-text-tertiary">
+                      This seller hasn&apos;t added instructions yet.
+                    </p>
+                  )}
                 </div>
-                {hasInstructions ? (
-                  <p className="mt-2.5 line-clamp-5 whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary">
-                    {offer.blurb}
-                  </p>
+
+                {/* Offer facts tile */}
+                <div className="relative shrink-0 overflow-hidden rounded-md bg-bg-overlay p-4 lg:w-[380px]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-text-primary">
+                      Offer Details
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                    <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
+                    <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
+                    <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
+                    <Fact
+                      icon={TuneRoundedIcon}
+                      label="Minimum Quantity"
+                      value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action bar — CTA left, SafeDrop Protection assurance right */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                {isOwn ? (
+                  <a
+                    href={`/sell/edit/${offer.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-9 items-center gap-1 rounded-md bg-amber-500/10 px-3 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
+                  >
+                    Edit Listing
+                  </a>
                 ) : (
-                  <p className="mt-2.5 text-[13.5px] italic text-text-tertiary">
-                    This seller hasn&apos;t added instructions yet.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onSelect() }}
+                    className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
+                  >
+                    View Full Offer
+                    <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
+                  </button>
                 )}
-              </div>
-
-              {/* Offer facts tile */}
-              <div className="relative shrink-0 overflow-hidden rounded-md bg-bg-overlay p-4 lg:w-[380px]">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-text-primary">
-                    Offer Details
-                  </span>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
-                  <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
-                  <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
-                  <Fact
-                    icon={TuneRoundedIcon}
-                    label="Minimum Quantity"
-                    value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
-                  />
-                </div>
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
+                  <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
+                  SafeDrop Protection: Item Guaranteed or Full Refund
+                </span>
               </div>
             </div>
-
-            {/* Action bar — CTA left, SafeDrop Protection assurance right */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              {isOwn ? (
-                <a
-                  href={`/sell/edit/${offer.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-9 items-center gap-1 rounded-md bg-amber-500/10 px-3 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
-                >
-                  Edit Listing
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
-                >
-                  View Full Offer
-                  <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
-                </button>
-              )}
-              <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
-                <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-                SafeDrop Protection: Item Guaranteed or Full Refund
-              </span>
-            </div>
-          </div>
+          </Expand>
         </Collapsible.Content>
       </article>
     </Collapsible.Root>

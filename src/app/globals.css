@@ -2666,37 +2666,6 @@
   }
 }
 
-/* Answer reveal. `grid-template-rows: 0fr -> 1fr` animates to the content's
-   own height with no JS measurement and no max-height guess (a guess makes
-   the content race open and then sit still for the rest of the duration).
-   The child needs `min-h-0; overflow: hidden` or it refuses to shrink below
-   its intrinsic height and the 0fr row has no effect. */
-.faq-glass__reveal {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 200ms ease;
-}
-
-.faq-glass__reveal--open {
-  grid-template-rows: 1fr;
-  opacity: 1;
-  /* Fade in over the back half of the expansion, so text arrives as the
-     space for it finishes opening rather than during the movement. */
-  transition:
-    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 240ms ease 120ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .faq-glass__reveal,
-  .faq-glass__reveal--open {
-    transition: opacity 160ms ease;
-  }
-}
-
 .faq-glass > * {
   position: relative;
   z-index: 1;
