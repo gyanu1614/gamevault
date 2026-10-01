@@ -364,3 +364,19 @@ export async function waitForStack({
     await sleep(intervalMs)
   }
 }
+
+/**
+ * What `test:reset` step [4/4] refuses, given the counts it read from the DB.
+ * `offPairs` counts enabled game_categories under a switched-off global
+ * category (itself or its primary): the listing guard refuses those, so every
+ * guard fixture that picks one fails far from the cause.
+ * @param {{ games: number, pairs: number, rules: number, gaps: number, offPairs: number }} s
+ * @returns {string[]}
+ */
+export function sanityProblems(s) {
+  const out = []
+  if (!s.games || !s.pairs || !s.rules) out.push('sanity: an empty catalogue or rule table — the seed did not land')
+  if (s.gaps !== 0) out.push(`sanity: ${s.gaps} pair(s) resolve through the fee fallback`)
+  if (s.offPairs !== 0) out.push(`sanity: ${s.offPairs} enabled pair(s) under a switched-off category — the seed re-enabled what a migration turned off`)
+  return out
+}

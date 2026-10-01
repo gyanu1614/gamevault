@@ -38,6 +38,7 @@ import {
   portsForSlot,
   releaseSlot,
   removeManagedBlock,
+  sanityProblems,
   stackReadiness,
   testEnvFor,
   upsertEnvVars,
@@ -354,10 +355,14 @@ function sanity(dbUrl) {
         WHERE (SELECT r.rule_id FROM public.resolve_seller_fee(NULL, gc.id) r) IS NULL
            OR ((SELECT s FROM pr4) IS NOT NULL
                AND (SELECT r.rule_id FROM public.resolve_seller_fee(NULL, gc.id, (SELECT s FROM pr4)) r) IS NULL)),
+      (SELECT count(*) FROM public.game_categories gc
+         JOIN public.global_categories g ON g.id = gc.global_category_id
+         LEFT JOIN public.global_categories p ON p.id = g.parent_id
+        WHERE gc.is_enabled AND (NOT g.is_active OR p.is_active IS FALSE)),
       (SELECT s FROM pr4);`
   const out = psql(dbUrl, ['-At', '-F', '\t', '-c', sql]).stdout.trim()
-  const [games, pairs, rules, gaps, start] = out.split('\t')
-  return { games: Number(games), pairs: Number(pairs), rules: Number(rules), gaps: Number(gaps), start }
+  const [games, pairs, rules, gaps, offPairs, start] = out.split('\t')
+  return { games: Number(games), pairs: Number(pairs), rules: Number(rules), gaps: Number(gaps), offPairs: Number(offPairs), start }
 }
 
 async function cmdReset() {
@@ -402,9 +407,9 @@ async function cmdReset() {
 
   step(4, 'sanity check')
   const s = sanity(dbUrl)
-  console.log(`  games ${s.games} · pairs ${s.pairs} · fee rules ${s.rules} · resolver gaps ${s.gaps}   (PR 4 start ${s.start || 'n/a'})`)
-  if (!s.games || !s.pairs || !s.rules) throw new Error('sanity: an empty catalogue or rule table — the seed did not land')
-  if (s.gaps !== 0) throw new Error(`sanity: ${s.gaps} pair(s) resolve through the fee fallback`)
+  console.log(`  games ${s.games} · pairs ${s.pairs} · fee rules ${s.rules} · resolver gaps ${s.gaps} · enabled under an off category ${s.offPairs}   (PR 4 start ${s.start || 'n/a'})`)
+  const problems = sanityProblems(s)
+  if (problems.length) throw new Error(problems.join('\n'))
   console.log(`\n✓ test:reset done in ${Math.round((Date.now() - t0) / 1000)}s — ${stack.projectId}`)
 }
 

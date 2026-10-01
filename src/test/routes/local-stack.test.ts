@@ -27,6 +27,7 @@ import {
   projectIdFor,
   releaseSlot,
   removeManagedBlock,
+  sanityProblems,
   stackReadiness,
   testEnvFor,
   upsertEnvVars,
@@ -316,5 +317,29 @@ describe('waiting for the stack', () => {
     const h = harness([waiting, { state: 'failed', pending: [], failed: ['storage (exited)'] }])
     await expect(waitForStack({ ...h.deps, timeoutMs: 180_000, intervalMs: 3_000 })).rejects.toThrow(/storage \(exited\)/)
     expect(h.probes).toHaveLength(2)
+  })
+})
+
+describe('reset sanity check', () => {
+  const healthy = { games: 235, pairs: 400, rules: 90, gaps: 0, offPairs: 0 }
+
+  it('passes a healthy catalogue', () => {
+    expect(sanityProblems(healthy)).toEqual([])
+  })
+
+  it('fails an empty catalogue or rule table', () => {
+    expect(sanityProblems({ ...healthy, games: 0 })).toHaveLength(1)
+    expect(sanityProblems({ ...healthy, rules: 0 })).toHaveLength(1)
+  })
+
+  it('fails a pair that resolves through the fee fallback', () => {
+    expect(sanityProblems({ ...healthy, gaps: 2 })[0]).toMatch(/2 pair\(s\) resolve through the fee fallback/)
+  })
+
+  // 2026-09-30: the seed re-enabled 52 top_up pairs after the migration that
+  // switched Top Up off; every guard fixture that picked one then failed the
+  // listing guard ("this category is not enabled for this game").
+  it('fails an enabled pair under a switched-off category', () => {
+    expect(sanityProblems({ ...healthy, offPairs: 52 })[0]).toMatch(/52 enabled pair\(s\) under a switched-off category/)
   })
 })

@@ -16,7 +16,10 @@
  * (src/lib/categories/ensure.ts) — the same function the admin wizard calls —
  * so a seeded game is wired exactly like one created in the wizard. Only
  * game_categories is written (Step 1b); the legacy public.categories mirror
- * is a Phase-A DB trigger, not this script.
+ * is a Phase-A DB trigger, not this script. A CSV category whose global row
+ * is switched off (or sits under a primary that is) is skipped, never created:
+ * on a fresh stack this runs after the migrations, and must not undo one that
+ * turned a category off (Top Up, Fortnite Skins).
  *
  * Writes use the service-role key: public.games and public.game_categories
  * are RLS-protected and admin-only.
@@ -25,7 +28,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { config as loadEnv } from 'dotenv'
 import { validateGameIdentity } from '../src/lib/games/validate-game.ts'
-import { mergeGameRow, findAliasSlugCollisions } from '../src/lib/games/seed-merge.ts'
+import { mergeGameRow, findAliasSlugCollisions, inactiveGlobalSlugs } from '../src/lib/games/seed-merge.ts'
 import { ensureGameCategory } from '../src/lib/categories/ensure.ts'
 import { getCanonicalCategorySlug } from '../src/lib/utils/category-canonical.ts'
 import { DEFAULT_CURRENCY_CONFIG } from '../src/lib/types/category-configs.ts'
@@ -171,6 +174,17 @@ if (readErr) {
 }
 const existing = new Map((existingRows ?? []).map((g) => [g.slug, g]))
 
+const { data: globalRows, error: globalErr } = await supabase
+  .from('global_categories')
+  .select('id, slug, parent_id, is_active')
+if (globalErr) {
+  console.error(`✗ Could not read global_categories: ${globalErr.message}`)
+  process.exit(1)
+}
+const inactive = inactiveGlobalSlugs(globalRows ?? [])
+/** The CSV categories the seeder may create pairs under (inactive ones skipped). */
+const seedable = (v) => v.categories.filter((s) => !inactive.has(s))
+
 /**
  * The exact row the seeder would write for a CSV record. Built ONCE here so
  * the dry-run diff and the real apply compare/write the same thing — the two
@@ -264,13 +278,19 @@ const { data: existingPairs } = await supabase
   .select('game_id, global_category:global_categories!game_categories_global_category_id_fkey(slug)')
 const pairSet = new Set((existingPairs ?? []).map((p) => `${p.game_id}|${p.global_category?.slug}`))
 let pairsToCreate = 0
+const skippedPairs = new Map()
 for (const v of valid) {
   const prior = existing.get(v.slug)
   for (const globalSlug of v.categories) {
+    if (inactive.has(globalSlug)) skippedPairs.set(globalSlug, (skippedPairs.get(globalSlug) ?? 0) + 1)
+  }
+  for (const globalSlug of seedable(v)) {
     if (!prior || !pairSet.has(`${prior.id}|${globalSlug}`)) pairsToCreate++
   }
 }
-console.log(`   Categories: ${pairsToCreate} (game, category) pair(s) to create\n`)
+console.log(`   Categories: ${pairsToCreate} (game, category) pair(s) to create`)
+for (const [slug, n] of skippedPairs) console.log(`     skipped ${n} × ${slug}  (category switched off)`)
+console.log('')
 
 if (DRY) {
   console.log('   Dry run complete — no writes issued.\n')
@@ -314,8 +334,9 @@ for (const v of valid) {
   }
 
   // Enable each category through the single creation path. Idempotent:
-  // an existing pair is left exactly as the admin configured it.
-  for (const globalSlug of v.categories) {
+  // an existing pair is left exactly as the admin configured it, and a
+  // switched-off category is never created or re-enabled.
+  for (const globalSlug of seedable(v)) {
     try {
       // seedCurrencyConfig: false — a category_configs row makes a hub count as
       // curated for the sitemap / robots rule; seeded games earn indexability
