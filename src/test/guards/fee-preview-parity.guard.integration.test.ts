@@ -122,7 +122,10 @@ describe.skipIf(!hasEnv)('fee engine PR 5 — the sell-wizard preview equals wha
     fx = await makeFixture()
     ready = !(await fx.svc.rpc('fee_engine_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
-    const { data, error } = await fx.svc.from('game_categories').select('id, slug, type, game_id, game:games ( slug )').eq('is_enabled', true)
+    // The listing guard (ACC-03) also needs the GLOBAL category active: a
+    // switched-off one (Top Up, 20260930042146) can leave is_enabled pairs.
+    const { data, error } = await fx.svc.from('game_categories').select('id, slug, type, game_id, game:games ( slug ), global_categories!inner ( is_active )')
+      .eq('is_enabled', true).eq('global_categories.is_active', true)
     if (error) throw new Error(`game_categories: ${error.message}`)
     matrix = pickMatrix((data ?? []) as unknown as Pair[])
   }, 60_000)
