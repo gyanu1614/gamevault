@@ -16,23 +16,35 @@
  *
  * Never run `supabase db reset` by hand to prepare for tests: it leaves the
  * catalogue and the fee pair rules unseeded. `pnpm test:reset` is the recipe.
+ *
+ * Under Docker CPU load the CLI's own health wait gives up on a restarted
+ * container (storage) that turns healthy a minute later. db:up starts with
+ * --ignore-health-check and test:reset recovers from that one failure; both
+ * then poll the containers themselves for up to HEALTH_WAIT_MS.
  */
-import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync, copyFileSync } from 'node:fs'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync, copyFileSync } from 'node:fs'
 import path from 'node:path'
 
 import {
+  HEALTH_WAIT_MS,
   MAIN_SLOT,
   allocateSlot,
+  classifyResetFailure,
   cliOverrides,
+  cliProjectId,
+  parseContainerRows,
   parseEnv,
   portsForSlot,
   releaseSlot,
   removeManagedBlock,
+  sanityProblems,
+  stackReadiness,
   testEnvFor,
   upsertEnvVars,
   upsertManagedBlock,
   urlPort,
+  waitForStack,
 } from './lib/local-stack.mjs'
 
 const REGISTRY_FILE = 'local-stacks.json'
@@ -153,11 +165,27 @@ function supabaseBin(top) {
  * child env (belt and braces), and any SUPABASE_* override left in the
  * caller's shell is dropped so only this worktree's file decides the target.
  */
-function supabase(id, args, { capture = false } = {}) {
+function cliEnv(id) {
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^SUPABASE_(PROJECT_ID|.*_PORT|.*_ENABLED)$/.test(k)))
   const file = path.join(id.top, 'supabase/.env')
   if (!id.isMain && existsSync(file)) Object.assign(env, parseEnv(readFileSync(file, 'utf8')))
-  return spawnSync(supabaseBin(id.top), args, { cwd: id.top, env, encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
+  return env
+}
+
+function supabase(id, args, { capture = false } = {}) {
+  return spawnSync(supabaseBin(id.top), args, { cwd: id.top, env: cliEnv(id), encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
+}
+
+/** Run the CLI with its output shown live AND kept, so a failure can be classified. */
+function supabaseTee(id, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(supabaseBin(id.top), args, { cwd: id.top, env: cliEnv(id), stdio: ['inherit', 'pipe', 'pipe'] })
+    let output = ''
+    child.stdout.on('data', (d) => { process.stdout.write(d); output += d })
+    child.stderr.on('data', (d) => { process.stderr.write(d); output += d })
+    child.on('error', reject)
+    child.on('close', (status) => resolve({ status, output }))
+  })
 }
 
 function statusEnv(id) {
@@ -172,6 +200,23 @@ function dockerUp() {
 function docker(args) {
   const r = spawnSync('docker', args, { encoding: 'utf8' })
   return r.status === 0 ? r.stdout : ''
+}
+
+/** Poll this stack's containers until every one is healthy (or has no healthcheck). */
+async function waitForHealthy(stack) {
+  const label = `label=com.supabase.cli.project=${cliProjectId(stack.projectId)}`
+  let last = ''
+  let lastAt = 0
+  await waitForStack({
+    probe: () => stackReadiness(parseContainerRows(docker(['ps', '-a', '--filter', label, '--format', '{{.Names}}\t{{.State}}\t{{.Status}}']))),
+    onWait: (r, elapsed) => {
+      const msg = r.pending.join(', ')
+      if (msg === last && elapsed - lastAt < 30_000) return
+      console.log(`  … ${Math.round(elapsed / 1000)}s  waiting on ${msg}`)
+      last = msg
+      lastAt = elapsed
+    },
+  })
 }
 
 // ── psql ────────────────────────────────────────────────────────────────────
@@ -195,7 +240,7 @@ function printStack(id, stack) {
   console.log(`  mail      http://127.0.0.1:${p.inbucket}\n`)
 }
 
-function cmdUp() {
+async function cmdUp() {
   const id = identity()
   if (!dockerUp()) throw new Error('Docker is not running — start Docker Desktop, then `pnpm db:up` again')
   const stack = resolveStack(id, { allocate: true })
@@ -203,8 +248,16 @@ function cmdUp() {
   writeCliEnv(id, stack, { full })
 
   console.log(`• supabase start   (project ${stack.projectId}, ${full ? 'all services' : 'lean: no studio/analytics/realtime/edge/imgproxy'})`)
-  const r = supabase(id, ['start'])
+  // --ignore-health-check: without it a slow container makes the CLI tear the
+  // whole stack down; we do the health wait ourselves, with a longer budget.
+  const r = supabase(id, ['start', '--ignore-health-check'])
   if (r.status !== 0) throw new Error(`supabase start failed (exit ${r.status})`)
+  console.log(`• waiting for every container to report healthy (up to ${HEALTH_WAIT_MS / 1000}s)`)
+  try {
+    await waitForHealthy(stack)
+  } catch (e) {
+    throw new Error(`${e.message} — the stack is left running: \`pnpm db:up\` again once it settles, or \`pnpm db:down\``)
+  }
 
   const keys = statusEnv(id)
   if (!keys) throw new Error('supabase status failed after start')
@@ -282,6 +335,15 @@ function cmdList() {
   console.log(`\nrunning stacks use ${Math.round(totalMib)} MiB of Docker's ${cap ? Math.round(Number(cap) / 1048576) : '?'} MiB\n`)
 }
 
+/** Versions in supabase_migrations.schema_migrations, or null when unreadable. */
+function appliedMigrations(dbUrl) {
+  try {
+    return psql(dbUrl, ['-At', '-c', 'SELECT version FROM supabase_migrations.schema_migrations']).stdout.split('\n').filter(Boolean)
+  } catch {
+    return null
+  }
+}
+
 function sanity(dbUrl) {
   const sql = `
     WITH pr4 AS (SELECT min(starts_at) AS s FROM public.fee_rules WHERE note LIKE 'PR4:%' AND kind = 'base' AND scope = 'category')
@@ -293,13 +355,17 @@ function sanity(dbUrl) {
         WHERE (SELECT r.rule_id FROM public.resolve_seller_fee(NULL, gc.id) r) IS NULL
            OR ((SELECT s FROM pr4) IS NOT NULL
                AND (SELECT r.rule_id FROM public.resolve_seller_fee(NULL, gc.id, (SELECT s FROM pr4)) r) IS NULL)),
+      (SELECT count(*) FROM public.game_categories gc
+         JOIN public.global_categories g ON g.id = gc.global_category_id
+         LEFT JOIN public.global_categories p ON p.id = g.parent_id
+        WHERE gc.is_enabled AND (NOT g.is_active OR p.is_active IS FALSE)),
       (SELECT s FROM pr4);`
   const out = psql(dbUrl, ['-At', '-F', '\t', '-c', sql]).stdout.trim()
-  const [games, pairs, rules, gaps, start] = out.split('\t')
-  return { games: Number(games), pairs: Number(pairs), rules: Number(rules), gaps: Number(gaps), start }
+  const [games, pairs, rules, gaps, offPairs, start] = out.split('\t')
+  return { games: Number(games), pairs: Number(pairs), rules: Number(rules), gaps: Number(gaps), offPairs: Number(offPairs), start }
 }
 
-function cmdReset() {
+async function cmdReset() {
   const id = identity()
   const stack = resolveStack(id, { allocate: false })
   if (!stack) throw new Error('this worktree has no stack yet — run `pnpm db:up` first')
@@ -318,8 +384,18 @@ function cmdReset() {
 
   step(1, `supabase db reset  (project ${stack.projectId}, db :${stack.ports.db})`)
   if (urlPort(keys.DB_URL) !== stack.ports.db) throw new Error(`the CLI targets db ${keys.DB_URL}, not this worktree's :${stack.ports.db} — refusing to reset`)
-  const r = supabase(id, ['db', 'reset'])
-  if (r.status !== 0) throw new Error(`supabase db reset failed (exit ${r.status})`)
+  const r = await supabaseTee(id, ['db', 'reset'])
+  if (r.status !== 0) {
+    const verdict = classifyResetFailure({
+      output: r.output,
+      migrationFiles: readdirSync(path.join(id.top, 'supabase/migrations')),
+      appliedVersions: appliedMigrations(dbUrl),
+    })
+    if (verdict.action === 'fail') throw new Error(`supabase db reset failed (exit ${r.status}): ${verdict.reason}`)
+    console.log(`\n• db reset exited ${r.status} on the CLI's container health wait, but every migration landed — waiting up to ${HEALTH_WAIT_MS / 1000}s for the stack`)
+    await waitForHealthy(stack)
+    console.log('• stack healthy — continuing')
+  }
 
   step(2, 'seed catalogue: pnpm seed:games --env=local')
   const g = spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/seed-games.mjs', '--env=local'], { cwd: id.top, stdio: 'inherit' })
@@ -331,9 +407,9 @@ function cmdReset() {
 
   step(4, 'sanity check')
   const s = sanity(dbUrl)
-  console.log(`  games ${s.games} · pairs ${s.pairs} · fee rules ${s.rules} · resolver gaps ${s.gaps}   (PR 4 start ${s.start || 'n/a'})`)
-  if (!s.games || !s.pairs || !s.rules) throw new Error('sanity: an empty catalogue or rule table — the seed did not land')
-  if (s.gaps !== 0) throw new Error(`sanity: ${s.gaps} pair(s) resolve through the fee fallback`)
+  console.log(`  games ${s.games} · pairs ${s.pairs} · fee rules ${s.rules} · resolver gaps ${s.gaps} · enabled under an off category ${s.offPairs}   (PR 4 start ${s.start || 'n/a'})`)
+  const problems = sanityProblems(s)
+  if (problems.length) throw new Error(problems.join('\n'))
   console.log(`\n✓ test:reset done in ${Math.round((Date.now() - t0) / 1000)}s — ${stack.projectId}`)
 }
 
@@ -344,7 +420,7 @@ if (!cmd) {
   process.exit(2)
 }
 try {
-  cmd()
+  await cmd()
 } catch (e) {
   console.error(`\n✗ ${e?.message ?? e}`)
   process.exit(1)
