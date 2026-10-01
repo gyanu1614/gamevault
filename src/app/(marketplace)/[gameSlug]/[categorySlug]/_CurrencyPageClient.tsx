@@ -12,7 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, t
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
-import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown, X } from 'lucide-react'
+import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown } from 'lucide-react'
 import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
@@ -21,7 +21,7 @@ import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { Expand } from '@/components/ui/expand'
-import { Drawer } from 'vaul'
+import { PhoneBuySheet } from './_PhoneBuySheet'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
@@ -776,7 +776,7 @@ function HeroCard({
       </div>
 
       {/* MOBILE — Sticky bottom price/CTA tile. Tapping opens the
-          slide-up sheet (vaul drawer) with the full purchase panel.
+          slide-up sheet (PhoneBuySheet) with the keypad purchase flow.
           Mirrors GameBoost / Eldorado mobile pattern. */}
       <div className="mt-3 lg:hidden">
         {isOwnOffer ? (
@@ -824,41 +824,24 @@ function HeroCard({
         )}
       </div>
 
-      {/* Phone purchase sheet. vaul keeps it above the keyboard while the
-          quantity is typed (repositionInputs) and follows the swipe. The
-          content never changes with the keyboard: hiding rows while typing
-          made the sheet drop and re-grow when the keyboard closed, which
-          read as the sheet closing and opening again. Opening doesn't focus
-          the quantity field (vaul's autoFocus is off), so the keyboard only
-          comes up when the buyer taps it. */}
-      <Drawer.Root open={mobileOpen} onOpenChange={setMobileOpen} repositionInputs>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 lg:hidden" />
-          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[640px] flex-col rounded-t-lg bg-bg-raised text-text-primary shadow-elevated outline-none lg:hidden">
-            <div aria-hidden className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-white/15" />
-            <div className="flex min-h-0 flex-col gap-5 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <Drawer.Title className="text-[20px] font-bold tracking-tight">
-                    Confirm Your Purchase
-                  </Drawer.Title>
-                  <Drawer.Description className="text-[14px] leading-[1.5] text-text-secondary">
-                    Review quantity and price below, then continue to checkout.
-                  </Drawer.Description>
-                </div>
-                <Drawer.Close className="-mr-2.5 -mt-1 shrink-0 rounded-sm p-2.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-soft">
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close</span>
-                </Drawer.Close>
-              </div>
-              {purchasePanel}
-              <div className="border-t border-white/[0.07] pt-4">
-                <TrustBand />
-              </div>
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+      {/* Phone purchase sheet: in-sheet keypad, never the OS keyboard
+          (see _PhoneBuySheet). */}
+      <PhoneBuySheet
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        offer={offer}
+        unitLabel={unitLabel}
+        granularity={granularity}
+        qty={qty}
+        setQty={setQty}
+        stepUp={stepUp}
+        stepDown={stepDown}
+        unit={unit}
+        total={total}
+        onBuy={onBuy}
+        buying={buying}
+        deliveryText={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)}
+      />
     </section>
   )
 }
