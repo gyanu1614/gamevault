@@ -12,7 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, t
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
-import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown } from 'lucide-react'
+import { ShieldCheck, Zap, Store, Minus, Plus, ArrowRight, ChevronDown, X } from 'lucide-react'
 import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
@@ -20,14 +20,13 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Drawer } from 'vaul'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
-import { useKeyboardInset } from '@/hooks/use-keyboard-inset'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyPageData, Offer } from './_currencyData'
@@ -459,7 +458,7 @@ export default function CurrencyPageClient({
 
       {/* V21/P7.i — Legacy mobile sticky buy bar removed. The new
           HeroCard renders an inline mobile price tile + slide-up
-          Dialog that replaces this. */}
+          drawer that replaces this. */}
     </main>
   )
 }
@@ -612,9 +611,6 @@ function HeroCard({
   isOwnOffer: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  // Phone sheet rides on top of the keyboard while the quantity is typed.
-  const keyboard = useKeyboardInset(mobileOpen)
-  const typing = keyboard.inset > 0
   const reduceMotion = useReducedMotion()
   const outOfStock = offer.stock === 0
   // Step in the unit the buyer is actually picking. On a per-K or
@@ -779,7 +775,7 @@ function HeroCard({
       </div>
 
       {/* MOBILE — Sticky bottom price/CTA tile. Tapping opens the
-          slide-up sheet (Dialog) with the full purchase panel.
+          slide-up sheet (vaul drawer) with the full purchase panel.
           Mirrors GameBoost / Eldorado mobile pattern. */}
       <div className="mt-3 lg:hidden">
         {isOwnOffer ? (
@@ -827,33 +823,41 @@ function HeroCard({
         )}
       </div>
 
-      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-        <DialogContent
-          // Opening must not focus the quantity field: on phones that pops
-          // the keyboard over the sheet before the buyer has read it.
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          // While the keyboard is up: sit on top of it, fit the visible
-          // viewport, and drop the description + trust row so the price,
-          // quantity box and Buy button stay in view together.
-          style={typing ? { bottom: keyboard.inset, maxHeight: keyboard.viewportHeight - 12 } : undefined}
-          className={cn('max-w-[640px] gap-5 p-6 transition-[bottom] duration-200 ease-out sm:p-7', typing && 'gap-4 pt-5')}
-        >
-          <DialogHeader className="gap-1.5">
-            <DialogTitle className="text-[20px] font-bold tracking-tight">
-              Confirm Your Purchase
-            </DialogTitle>
-            <DialogDescription className={cn('text-[14px] leading-[1.5] text-text-secondary', typing && 'sr-only')}>
-              Review quantity and price below, then continue to checkout.
-            </DialogDescription>
-          </DialogHeader>
-          {purchasePanel}
-          {!typing && (
-            <div className="border-t border-white/[0.07] pt-4">
-              <TrustBand />
+      {/* Phone purchase sheet. vaul keeps it above the keyboard while the
+          quantity is typed (repositionInputs) and follows the swipe. The
+          content never changes with the keyboard: hiding rows while typing
+          made the sheet drop and re-grow when the keyboard closed, which
+          read as the sheet closing and opening again. Opening doesn't focus
+          the quantity field (vaul's autoFocus is off), so the keyboard only
+          comes up when the buyer taps it. */}
+      <Drawer.Root open={mobileOpen} onOpenChange={setMobileOpen} repositionInputs>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/70 lg:hidden" />
+          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-[640px] flex-col rounded-t-lg bg-bg-raised text-text-primary shadow-elevated outline-none lg:hidden">
+            <div aria-hidden className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-white/15" />
+            <div className="flex min-h-0 flex-col gap-5 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1.5">
+                  <Drawer.Title className="text-[20px] font-bold tracking-tight">
+                    Confirm Your Purchase
+                  </Drawer.Title>
+                  <Drawer.Description className="text-[14px] leading-[1.5] text-text-secondary">
+                    Review quantity and price below, then continue to checkout.
+                  </Drawer.Description>
+                </div>
+                <Drawer.Close className="-mr-2.5 -mt-1 shrink-0 rounded-sm p-2.5 text-text-tertiary transition-colors hover:bg-bg-raised-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-soft">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Drawer.Close>
+              </div>
+              {purchasePanel}
+              <div className="border-t border-white/[0.07] pt-4">
+                <TrustBand />
+              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     </section>
   )
 }
@@ -862,7 +866,7 @@ function HeroCard({
  * PurchasePanel — V21/P7.i
  *
  * Right-card body extracted so the desktop card and the mobile
- * slide-up Dialog can share one implementation. Renders price + qty
+ * slide-up drawer can share one implementation. Renders price + qty
  * stepper + min/in-stock helper + CTA + trust tiles.
  */
 function PurchasePanel({
