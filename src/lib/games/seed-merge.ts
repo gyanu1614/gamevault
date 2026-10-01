@@ -98,3 +98,31 @@ export function findAliasSlugCollisions(
   }
   return hits
 }
+
+/** The global_categories columns inactiveGlobalSlugs reads. */
+export interface GlobalCategorySwitch {
+  id: string
+  slug: string
+  parent_id: string | null
+  is_active: boolean
+}
+
+/**
+ * Global category slugs the seeder must NOT create a (game, category) pair
+ * under: the category is switched off, or it is a sub-category of a primary
+ * that is — the same rule findEnabledGameCategory applies to sellers.
+ *
+ * On a fresh stack the seeder runs after the migrations, so a migration that
+ * switches a category off (Top Up, Fortnite Skins — 2026-09-30) would
+ * otherwise be undone by the seed creating those pairs enabled. A slug not in
+ * `rows` is not listed: an unknown slug must still fail in ensureGameCategory.
+ */
+export function inactiveGlobalSlugs(rows: ReadonlyArray<GlobalCategorySwitch>): Set<string> {
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const out = new Set<string>()
+  for (const r of rows) {
+    const parent = r.parent_id ? byId.get(r.parent_id) : null
+    if (!r.is_active || (parent && !parent.is_active)) out.add(r.slug)
+  }
+  return out
+}

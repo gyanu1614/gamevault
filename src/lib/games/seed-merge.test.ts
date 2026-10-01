@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeGameRow, findAliasSlugCollisions } from './seed-merge'
+import { mergeGameRow, findAliasSlugCollisions, inactiveGlobalSlugs } from './seed-merge'
 
 /**
  * Step 1d · E2 + E3.
@@ -124,5 +124,46 @@ describe('findAliasSlugCollisions', () => {
 
   it('ignores empty alias entries', () => {
     expect(findAliasSlugCollisions([{ slug: 'cs2', aliases: ['', '  '] }])).toEqual([])
+  })
+})
+
+/**
+ * A migration switches a category off (Top Up, Fortnite Skins — 2026-09-30),
+ * but on a fresh stack the seeder runs AFTER the migrations and used to
+ * create those pairs enabled again: 52 enabled top_up pairs under an
+ * inactive primary, and every guard fixture that picked one failed the
+ * listing guard. The seeder skips any slug this returns.
+ */
+describe('inactiveGlobalSlugs', () => {
+  const globals = [
+    { id: 'p-items', slug: 'items', parent_id: null, is_active: true },
+    { id: 'p-topup', slug: 'top-up', parent_id: null, is_active: false },
+    { id: 's-skins', slug: 'skins', parent_id: 'p-items', is_active: false },
+    { id: 's-limiteds', slug: 'limiteds', parent_id: 'p-items', is_active: true },
+    { id: 's-gift', slug: 'gift-cards', parent_id: 'p-topup', is_active: true },
+  ]
+
+  it('lists an inactive primary', () => {
+    expect(inactiveGlobalSlugs(globals).has('top-up')).toBe(true)
+  })
+
+  it('does not list an active primary', () => {
+    expect(inactiveGlobalSlugs(globals).has('items')).toBe(false)
+  })
+
+  it('lists an inactive sub-category under an active primary', () => {
+    expect(inactiveGlobalSlugs(globals).has('skins')).toBe(true)
+  })
+
+  it('lists an active sub-category whose primary is inactive (it inherits the switch)', () => {
+    expect(inactiveGlobalSlugs(globals).has('gift-cards')).toBe(true)
+  })
+
+  it('does not list an active sub-category under an active primary', () => {
+    expect(inactiveGlobalSlugs(globals).has('limiteds')).toBe(false)
+  })
+
+  it('does not list a slug it has never seen, so an unknown slug still fails loudly downstream', () => {
+    expect(inactiveGlobalSlugs(globals).has('not-a-category')).toBe(false)
   })
 })

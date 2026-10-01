@@ -292,7 +292,12 @@ export async function makeFixture(): Promise<Fixture> {
     // seeded globals (20260916104417) but no pairs — create one for the game;
     // the Phase-A mirror trigger writes the legacy row and
     // trg_listings_category_sync fills listings.category_id from it.
-    let { data: cat } = await svc.from('game_categories').select('id').eq('game_id', (game as any).id).eq('is_enabled', true).limit(1).maybeSingle()
+    // The pair must pass the listing guard: enabled AND its global category
+    // active (a switched-off category like Top Up keeps its disabled rows).
+    let { data: cat } = await svc.from('game_categories')
+      .select('id, global_category:global_categories!game_categories_global_category_id_fkey!inner(is_active)')
+      .eq('game_id', (game as any).id).eq('is_enabled', true).eq('global_category.is_active', true)
+      .limit(1).maybeSingle()
     if (!cat) {
       const { data: gc } = await svc.from('global_categories').select('id').eq('slug', 'items').maybeSingle()
       if (!gc) throw new Error('global_categories has no "items" row — apply migrations first')
@@ -300,7 +305,7 @@ export async function makeFixture(): Promise<Fixture> {
         .insert({ game_id: (game as any).id, global_category_id: (gc as any).id, is_enabled: true, slug: `guard-test-items-${tag}`, name: 'Guard Test Items', type: 'items' })
         .select('id').single()
       if (ce) throw new Error(`game_categories insert: ${ce.message}`)
-      cat = c
+      cat = c as any
       if (!createdGameId) createdGameCategoryId = (c as any).id
     }
 

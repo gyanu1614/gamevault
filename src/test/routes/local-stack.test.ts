@@ -23,6 +23,7 @@ import {
   projectIdFor,
   releaseSlot,
   removeManagedBlock,
+  sanityProblems,
   testEnvFor,
   upsertEnvVars,
   upsertManagedBlock,
@@ -154,5 +155,29 @@ describe('env files', () => {
     expect(lean).toMatchObject(LEAN_DISABLED)
     const full = cliOverrides('gamevault-x', ports, { full: true })
     expect(Object.keys(full).some((k) => k.endsWith('_ENABLED'))).toBe(false)
+  })
+})
+
+describe('reset sanity check', () => {
+  const healthy = { games: 235, pairs: 400, rules: 90, gaps: 0, offPairs: 0 }
+
+  it('passes a healthy catalogue', () => {
+    expect(sanityProblems(healthy)).toEqual([])
+  })
+
+  it('fails an empty catalogue or rule table', () => {
+    expect(sanityProblems({ ...healthy, games: 0 })).toHaveLength(1)
+    expect(sanityProblems({ ...healthy, rules: 0 })).toHaveLength(1)
+  })
+
+  it('fails a pair that resolves through the fee fallback', () => {
+    expect(sanityProblems({ ...healthy, gaps: 2 })[0]).toMatch(/2 pair\(s\) resolve through the fee fallback/)
+  })
+
+  // 2026-09-30: the seed re-enabled 52 top_up pairs after the migration that
+  // switched Top Up off; every guard fixture that picked one then failed the
+  // listing guard ("this category is not enabled for this game").
+  it('fails an enabled pair under a switched-off category', () => {
+    expect(sanityProblems({ ...healthy, offPairs: 52 })[0]).toMatch(/52 enabled pair\(s\) under a switched-off category/)
   })
 })
