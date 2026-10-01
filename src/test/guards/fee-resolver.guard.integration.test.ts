@@ -190,13 +190,20 @@ describe.skipIf(!hasEnv)('fee engine — resolve_seller_fee() (integration)', ()
     })
 
     itTx('5c. founding_seller with founding_since NULL anchors on profiles.created_at (past or future grant)', () => {
-      const t = run(
+      // Resolved relative to the fixture's own created_at, not a fixed date
+      // (that broke once the clock passed it): the window is
+      // [created_at, created_at + 12 months).
+      const at = (offset: string) => run(
         seller("founding_seller = true, founding_since = NULL, seller_tier = 'gold'") +
         rule('base', 'game_category', 'account', 'p_account', 20, '2026-01-01', null) +
-        resolve(S(), 'p_account', '2026-10-01 00:00:00+00') /* created_at is today */,
+        `SELECT row_to_json(r)::text FROM public.resolve_seller_fee(${S()}, :'p_account', (SELECT created_at + interval '${offset}' FROM public.profiles WHERE id = ${S()})) r;`,
       )
+      const t = at('1 day')
       expect(n(t.pct)).toBe(10)
       expect(t.founding_applied).toBe(true)
+      const after = at('12 months 1 day')
+      expect(n(after.pct)).toBe(19)
+      expect(after).toMatchObject({ founding_applied: false, rank: 'gold' })
     })
 
     itTx('6. Expired promo falls back to base; the range expired it, not a cron', () => {

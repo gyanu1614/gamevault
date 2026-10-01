@@ -173,7 +173,10 @@ describe.skipIf(!hasEnv)('fee engine PR 3 — createCheckout resolves the rate a
     ready = !(await fx.svc.rpc('fee_engine_version')).error
     await promoteToEstablishedSeller(fx.svc, fx.seller.id)
     sessionClient = fx.buyer.client
-    const { data, error } = await fx.svc.from('game_categories').select('id, slug, type, game_id, game:games ( slug )').eq('is_enabled', true)
+    // The listing guard (ACC-03) also needs the GLOBAL category active: a
+    // switched-off one (Top Up, 20260930042146) can leave is_enabled pairs.
+    const { data, error } = await fx.svc.from('game_categories').select('id, slug, type, game_id, game:games ( slug ), global_categories!inner ( is_active )')
+      .eq('is_enabled', true).eq('global_categories.is_active', true)
     if (error) throw new Error(`game_categories: ${error.message}`)
     pairs = (data ?? []) as unknown as Pair[]
     const { data: l } = await fx.svc.from('listings').select('game_category_id').eq('id', fx.listingId).single()
