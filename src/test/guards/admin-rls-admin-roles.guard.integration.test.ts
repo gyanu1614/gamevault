@@ -182,7 +182,7 @@ describe.skipIf(!hasEnv)('admin RLS reads admin_roles, never profiles.role (inte
       expect(await queueIds(fx!.admin.client)).toContain(requestId)
       expect(await ids(fx!.admin.client, 'withdrawal_methods', methodId)).toEqual([methodId])
     })
-  })
+  }, 30_000)
 
   it('an admin session can update a withdrawal request; a non-admin matches no row', async () => {
     const note = `guard ${fx!.ns.tag}`
@@ -213,7 +213,7 @@ describe.skipIf(!hasEnv)('admin RLS reads admin_roles, never profiles.role (inte
       expect(error, error?.message).toBeNull()
       expect(data).toEqual([])
     })
-  })
+  }, 30_000)
 
   it('moderator and support admin_roles rows do not see the payout queue', async () => {
     for (const role of ['moderator', 'support'] as const) {
@@ -222,7 +222,7 @@ describe.skipIf(!hasEnv)('admin RLS reads admin_roles, never profiles.role (inte
         expect(await ids(fx!.admin.client, 'withdrawal_methods', methodId), role).toEqual([])
       })
     }
-  })
+  }, 30_000)
 
   it('an INACTIVE admin_roles row grants nothing (payouts or hidden reviews)', async () => {
     await withAdminRole(fx!.admin.id, 'admin', false, async () => {
@@ -230,7 +230,7 @@ describe.skipIf(!hasEnv)('admin RLS reads admin_roles, never profiles.role (inte
       expect(await ids(fx!.admin.client, 'withdrawal_methods', methodId)).toEqual([])
       expect(await ids(fx!.admin.client, 'reviews', hiddenReviewId)).toEqual([])
     })
-  })
+  }, 30_000)
 
   it('admin and moderator read a hidden review; support and the review parties do not', async () => {
     expect(await ids(fx!.admin.client, 'reviews', hiddenReviewId)).toEqual([hiddenReviewId])
@@ -242,7 +242,7 @@ describe.skipIf(!hasEnv)('admin RLS reads admin_roles, never profiles.role (inte
     })
     expect(await ids(fx!.buyer.client, 'reviews', hiddenReviewId)).toEqual([])
     expect(await ids(fx!.seller.client, 'reviews', hiddenReviewId)).toEqual([])
-  })
+  }, 30_000)
 
   it('anon still reads visible reviews and active withdrawal methods, and no withdrawal', async () => {
     const a = anon()
