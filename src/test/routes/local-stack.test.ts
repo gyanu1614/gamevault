@@ -16,16 +16,22 @@ import {
   MAIN_SLOT,
   MAX_SLOT,
   allocateSlot,
+  classifyResetFailure,
   cliOverrides,
+  cliProjectId,
+  parseContainerRows,
   parseEnv,
+  pendingMigrations,
   portsForSlot,
   preferredSlot,
   projectIdFor,
   releaseSlot,
   removeManagedBlock,
+  stackReadiness,
   testEnvFor,
   upsertEnvVars,
   upsertManagedBlock,
+  waitForStack,
 } from '../../../scripts/lib/local-stack.mjs'
 
 describe('port blocks', () => {
@@ -154,5 +160,161 @@ describe('env files', () => {
     expect(lean).toMatchObject(LEAN_DISABLED)
     const full = cliOverrides('gamevault-x', ports, { full: true })
     expect(Object.keys(full).some((k) => k.endsWith('_ENABLED'))).toBe(false)
+  })
+})
+
+describe('cli project id', () => {
+  it('is truncated to 40 chars the way the Supabase CLI does, so the container label matches', () => {
+    // "gamevault-" + a 31-char folder → 41 chars; the CLI auto-fixes it to the first 40
+    expect(cliProjectId('gamevault-wonderful-goldberg-dabc1234567')).toBe('gamevault-wonderful-goldberg-dabc1234567')
+    expect(cliProjectId('gamevault-wonderful-goldberg-dabc12345678')).toBe('gamevault-wonderful-goldberg-dabc1234567')
+    expect(cliProjectId('gamevault-sab-pages')).toBe('gamevault-sab-pages')
+  })
+})
+
+/**
+ * Under Docker CPU load `supabase db reset` finishes the DB work, restarts the
+ * containers, then times out waiting for storage to report healthy (it logged
+ * nothing for ~45s on 2026-09-30, healthy ~1 min later). test:reset must wait
+ * that out itself — but only for that failure, never for a migration error.
+ */
+describe('container health', () => {
+  const ps = [
+    'supabase_db_gamevault-x\trunning\tUp About a minute (healthy)',
+    'supabase_storage_gamevault-x\trunning\tUp 11 seconds (health: starting)',
+    'supabase_rest_gamevault-x\trunning\tUp About a minute',
+    'supabase_auth_gamevault-x\trunning\tUp 2 minutes (unhealthy)',
+    'supabase_kong_gamevault-x\trestarting\tRestarting (1) 2 seconds ago',
+    'supabase_inbucket_gamevault-x\texited\tExited (137) 5 seconds ago',
+    '',
+  ].join('\n')
+
+  it('parses docker ps rows into name, state and health', () => {
+    expect(parseContainerRows(ps)).toEqual([
+      { name: 'supabase_db_gamevault-x', state: 'running', health: 'healthy' },
+      { name: 'supabase_storage_gamevault-x', state: 'running', health: 'starting' },
+      { name: 'supabase_rest_gamevault-x', state: 'running', health: null },
+      { name: 'supabase_auth_gamevault-x', state: 'running', health: 'unhealthy' },
+      { name: 'supabase_kong_gamevault-x', state: 'restarting', health: null },
+      { name: 'supabase_inbucket_gamevault-x', state: 'exited', health: null },
+    ])
+  })
+
+  it('is ready when every container runs and is healthy or has no healthcheck', () => {
+    const r = stackReadiness([
+      { name: 'db', state: 'running', health: 'healthy' },
+      { name: 'rest', state: 'running', health: null },
+    ])
+    expect(r).toEqual({ state: 'ready', pending: [], failed: [] })
+  })
+
+  it('waits on starting, unhealthy and restarting containers', () => {
+    const r = stackReadiness([
+      { name: 'db', state: 'running', health: 'healthy' },
+      { name: 'storage', state: 'running', health: 'starting' },
+      { name: 'auth', state: 'running', health: 'unhealthy' },
+      { name: 'kong', state: 'restarting', health: null },
+    ])
+    expect(r).toEqual({ state: 'waiting', pending: ['storage (starting)', 'auth (unhealthy)', 'kong (restarting)'], failed: [] })
+  })
+
+  it('fails on a container that exited, and on a stack with no containers', () => {
+    expect(stackReadiness([
+      { name: 'storage', state: 'running', health: 'starting' },
+      { name: 'inbucket', state: 'exited', health: null },
+    ])).toMatchObject({ state: 'failed', failed: ['inbucket (exited)'] })
+    expect(stackReadiness([])).toMatchObject({ state: 'failed' })
+  })
+})
+
+describe('db reset failure', () => {
+  const files = ['20260930054945_disable_fortnite_skins_category.sql', '20260930162255_admin_rls_admin_roles.sql', 'README.md']
+  const healthTimeout = [
+    'Resetting local database...',
+    'Recreating database...',
+    'Initialising schema...',
+    'Applying migration 20260930162255_admin_rls_admin_roles.sql...',
+    'Restarting containers...',
+    'supabase_storage_gamevault-x container logs:',
+    'supabase_storage_gamevault-x container is not ready: starting',
+    'Try rerunning the command with --debug to troubleshoot the error.',
+  ].join('\n')
+
+  it('lists the migration files the database has not applied', () => {
+    expect(pendingMigrations(files, ['20260930054945', '20260930162255'])).toEqual([])
+    expect(pendingMigrations(files, ['20260930054945'])).toEqual(['20260930162255'])
+  })
+
+  it('waits when only the post-restart health check timed out and every migration landed', () => {
+    expect(classifyResetFailure({ output: healthTimeout, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }))
+      .toEqual({ action: 'wait' })
+    const unhealthy = healthTimeout.replace('not ready: starting', 'not ready: unhealthy')
+    expect(classifyResetFailure({ output: unhealthy, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }))
+      .toEqual({ action: 'wait' })
+  })
+
+  it('fails when a migration is missing from the database', () => {
+    expect(classifyResetFailure({ output: healthTimeout, migrationFiles: files, appliedVersions: ['20260930054945'] }))
+      .toEqual({ action: 'fail', reason: expect.stringContaining('20260930162255') })
+  })
+
+  it('fails when the applied versions could not be read', () => {
+    expect(classifyResetFailure({ output: healthTimeout, migrationFiles: files, appliedVersions: null }).action).toBe('fail')
+  })
+
+  it('fails when the CLI died before restarting the containers (a migration or seed error)', () => {
+    const migrationError = [
+      'Recreating database...',
+      'Applying migration 20260930162255_admin_rls_admin_roles.sql...',
+      'ERROR: relation "admin_roles" does not exist (SQLSTATE 42P01)',
+    ].join('\n')
+    expect(classifyResetFailure({ output: migrationError, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }).action).toBe('fail')
+    // the recreated db's own health wait runs BEFORE migrations: same wording, but nothing was done
+    const dbTimeout = 'Recreating database...\nsupabase_db_gamevault-x container is not ready: starting'
+    expect(classifyResetFailure({ output: dbTimeout, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }).action).toBe('fail')
+  })
+
+  it('fails on any other error after the restart', () => {
+    const restartError = 'Restarting containers...\nfailed to restart supabase_storage_gamevault-x: Error response from daemon: No such container'
+    expect(classifyResetFailure({ output: restartError, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }).action).toBe('fail')
+    const notRunning = 'Restarting containers...\nsupabase_storage_gamevault-x container is not running: exited'
+    expect(classifyResetFailure({ output: notRunning, migrationFiles: files, appliedVersions: ['20260930054945', '20260930162255'] }).action).toBe('fail')
+  })
+})
+
+describe('waiting for the stack', () => {
+  type Readiness = ReturnType<typeof stackReadiness>
+  /** A fake clock: sleep advances it, probes return the scripted readiness in turn. */
+  function harness(script: Readiness[]) {
+    let t = 0
+    const probes: number[] = []
+    return {
+      probes,
+      deps: {
+        probe: () => { probes.push(t); return script[Math.min(probes.length - 1, script.length - 1)] },
+        now: () => t,
+        sleep: async (ms: number) => { t += ms },
+      },
+    }
+  }
+  const waiting: Readiness = { state: 'waiting', pending: ['storage (starting)'], failed: [] }
+  const ready: Readiness = { state: 'ready', pending: [], failed: [] }
+
+  it('resolves once the stack turns ready, polling at the interval', async () => {
+    const h = harness([waiting, waiting, ready])
+    await expect(waitForStack({ ...h.deps, timeoutMs: 180_000, intervalMs: 3_000 })).resolves.toMatchObject({ state: 'ready' })
+    expect(h.probes).toEqual([0, 3_000, 6_000])
+  })
+
+  it('gives up at the timeout, naming what is still not ready', async () => {
+    const h = harness([waiting])
+    await expect(waitForStack({ ...h.deps, timeoutMs: 9_000, intervalMs: 3_000 })).rejects.toThrow(/storage \(starting\)/)
+    expect(h.probes).toEqual([0, 3_000, 6_000, 9_000])
+  })
+
+  it('stops at once when a container has failed', async () => {
+    const h = harness([waiting, { state: 'failed', pending: [], failed: ['storage (exited)'] }])
+    await expect(waitForStack({ ...h.deps, timeoutMs: 180_000, intervalMs: 3_000 })).rejects.toThrow(/storage \(exited\)/)
+    expect(h.probes).toHaveLength(2)
   })
 })
