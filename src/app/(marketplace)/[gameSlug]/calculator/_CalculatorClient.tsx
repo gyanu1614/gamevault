@@ -19,6 +19,10 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import DeleteOutlineIcon from '@mui/icons-material/Delete'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import { cn } from '@/lib/utils'
+import { centsToUsd, sumSide, tradeVerdict, type SideTotals } from '@/lib/calculator/trade-sum'
+import { useBuyCta } from '@/components/value-listings/useBuyCta'
+import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
+import { itemBuyHref, type ItemStock } from '@/lib/value-listings/buy-state'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { parseCalculatorDeepLink, type CalculatorDeepLink, type CalculatorTab } from './_deepLink'
 import { HUB_NAV_CLEAR } from '@/components/content/hubNavGeometry'
@@ -77,7 +81,13 @@ interface CalculatorClientProps {
   mutations: CalcMutation[]
   cashPrices: CalcPrice[]
   tradePrices: CalcPrice[]
+  /** DropMarket's own live stock by brainrot slug (Bundle 2: buy buttons). */
+  buyStock: Record<string, ItemStock>
+  buyCategorySlug: string
 }
+
+/** Shared by the cash result's buy button and the trade list's links. */
+type BuyContext = { stock: Record<string, ItemStock>; categorySlug: string }
 
 type Tab = CalculatorTab
 
@@ -101,7 +111,10 @@ export default function CalculatorClient({
   mutations,
   cashPrices,
   tradePrices,
+  buyStock,
+  buyCategorySlug,
 }: CalculatorClientProps) {
+  const buy: BuyContext = useMemo(() => ({ stock: buyStock, categorySlug: buyCategorySlug }), [buyStock, buyCategorySlug])
   // Mode comes from the URL (?tab=cash), chosen in the navbar's Calculator
   // menu — there is no in-page switcher to hold local state for. The URL is
   // read on the client (Step 7a): the page is ISR, so the default view is in
@@ -138,6 +151,7 @@ export default function CalculatorClient({
   return (
     <>
       <SearchParamsBridge onParams={onParams} />
+      <TrackOnMount event={{ event: 'value_view', surface: 'calculator', game: 'steal-a-brainrot' }} />
       {/* Nav renders server-side in the page (HubNav). No breadcrumb — the
           BreadcrumbList JSON-LD keeps the SERP trail. pt clears the nav. */}
       <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
@@ -166,6 +180,7 @@ export default function CalculatorClient({
               orderedMutations={orderedMutations}
               mutations={mutations}
               prices={cashPrices}
+              buy={buy}
               initialBrainrotSlug={initialBrainrotSlug}
               initialMutationSlug={initialMutationSlug}
             />
@@ -180,6 +195,7 @@ export default function CalculatorClient({
               prices={cashPrices}
               brainrotMap={brainrotMap}
               mutationMap={mutationMap}
+              buy={buy}
             />
           )}
         </div>
@@ -197,6 +213,7 @@ function CashTab({
   orderedMutations,
   mutations,
   prices,
+  buy,
   initialBrainrotSlug,
   initialMutationSlug,
 }: {
@@ -204,6 +221,7 @@ function CashTab({
   orderedMutations: CalcMutation[]
   mutations: CalcMutation[]
   prices: CalcPrice[]
+  buy: BuyContext
   initialBrainrotSlug?: string
   initialMutationSlug?: string
 }) {
@@ -449,6 +467,7 @@ function CashTab({
             price={selectedPrice}
             priceMap={priceMap}
             onChooseMutation={chooseMutation}
+            buy={buy}
           />
         )}
       </div>
@@ -463,10 +482,12 @@ function CashResult({
   price,
   priceMap,
   onChooseMutation,
+  buy,
 }: {
   brainrot: CalcBrainrot
   mutation: CalcMutation
   orderedMutations: CalcMutation[]
+  buy: BuyContext
   price: CalcPrice | null
   priceMap: Map<string, CalcPrice>
   onChooseMutation: (mutation: CalcMutation) => void
@@ -485,9 +506,16 @@ function CashResult({
       : '—'
   const listings = price?.sampleSize ? String(price.sampleSize) : '—'
 
-  const buyHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(
-    brainrot.name,
-  )}${isDefault ? '' : `%20${encodeURIComponent(mutation.name)}`}`
+  // DropMarket's own stock for this brainrot + mutation (Bundle 2).
+  const cta = useBuyCta({
+    gameSlug: 'steal-a-brainrot',
+    categorySlug: buy.categorySlug,
+    itemSlug: brainrot.slug,
+    variant: mutation.slug,
+    variantName: isDefault ? brainrot.name : mutation.name,
+    stock: buy.stock[brainrot.slug] ?? null,
+    surface: 'calculator',
+  })
 
   return (
     <div>
@@ -544,10 +572,11 @@ function CashResult({
               real price; % from fee consts. */}
           <div className="flex flex-wrap items-center gap-2.5 self-start">
             <Link
-              href={buyHref}
+              href={cta.href}
+              onClick={cta.onClick}
               className="inline-flex items-center gap-1.5 bg-[#3FA35C] px-5 py-3.5 text-[13px] font-semibold text-[#08110B] transition hover:bg-[#4CBB6B]"
             >
-              Buy {brainrot.name}
+              {cta.label}
               <ArrowForwardIcon sx={{ fontSize: 16 }} />
             </Link>
             <Link
@@ -559,6 +588,7 @@ function CashResult({
               <ArrowForwardIcon sx={{ fontSize: 16 }} />
             </Link>
           </div>
+          {cta.subline ? <p className="mt-2 text-[12px] text-[#7C877C]">{cta.subline}</p> : null}
         </div>
       </div>
 
@@ -655,7 +685,18 @@ type EditorState = {
   instanceId?: string
 } | null
 
+/** "The verdict is paused because Garama (Diamond) has no cash estimate yet." */
+function pausedMessage(labels: string[]): string {
+  const [first, ...rest] = labels
+  if (rest.length === 0) {
+    return `The verdict is paused because ${first} has no cash estimate yet.`
+  }
+  const others = rest.length === 1 ? '1 other item' : `${rest.length} other items`
+  return `The verdict is paused because ${first} and ${others} have no cash estimate yet.`
+}
+
 type SideSummary = {
+  totals: SideTotals
   point: number
   low: number
   high: number
@@ -789,12 +830,14 @@ function TradeTab({
   prices,
   brainrotMap,
   mutationMap,
+  buy,
 }: {
   brainrots: CalcBrainrot[]
   mutations: CalcMutation[]
   prices: CalcPrice[]
   brainrotMap: Map<string, CalcBrainrot>
   mutationMap: Map<string, CalcMutation>
+  buy: BuyContext
 }) {
   // Phones: don't pop the keyboard over the list (see useCoarsePointer).
   const coarse = useCoarsePointer()
@@ -850,53 +893,51 @@ function TradeTab({
       `${entry.brainrotId}:${entry.mutationId}`,
     ) ?? null
 
-  // --- ported verbatim: summarize ---
+  // Shared cents-based maths (src/lib/calculator/trade-sum.ts): every positive
+  // estimate counts; only a variant with no price at all pauses the verdict.
+  // Thin-evidence prices (`isTradeReady=false`, low confidence) are counted and
+  // flagged, so the total always matches the tiles.
   const summarize = (
     entries: TradeEntry[],
   ): SideSummary => {
-    let point = 0
-    let low = 0
-    let high = 0
-    let unknown = 0
-    let lowConfidence = 0
-
-    for (const entry of entries) {
-      const price = getEntryPrice(entry)
-
-      if (
-        !price ||
-        !price.isTradeReady ||
-        price.marketValueUsd == null
-      ) {
-        unknown += 1
-        continue
-      }
-
-      point += price.marketValueUsd * entry.quantity
-      low += price.marketLowUsd * entry.quantity
-      high += price.marketHighUsd * entry.quantity
-
-      if (
-        price.confidenceLabel === 'low' ||
-        price.confidenceLabel === 'insufficient'
-      ) {
-        lowConfidence += 1
-      }
+    const totals = sumSide(
+      entries.map((entry) => {
+        const price = getEntryPrice(entry)
+        const brainrot = brainrotMap.get(entry.brainrotId)
+        const mutation = mutationMap.get(entry.mutationId)
+        return {
+          pointUsd: price?.marketValueUsd ?? null,
+          lowUsd: price?.marketLowUsd ?? null,
+          highUsd: price?.marketHighUsd ?? null,
+          quantity: entry.quantity,
+          lowConfidence:
+            price != null &&
+            (!price.isTradeReady ||
+              price.confidenceLabel === 'low' ||
+              price.confidenceLabel === 'insufficient'),
+          label: `${brainrot?.name ?? 'Unknown Brainrot'} (${mutation?.name ?? 'Default'})`,
+        }
+      }),
+    )
+    return {
+      totals,
+      point: centsToUsd(totals.pointCents),
+      low: centsToUsd(totals.lowCents),
+      high: centsToUsd(totals.highCents),
+      unknown: totals.unknown,
+      lowConfidence: totals.lowConfidence,
     }
-
-    return { point, low, high, unknown, lowConfidence }
   }
 
   const giveSummary = summarize(give)
   const receiveSummary = summarize(receive)
 
-  // --- ported verbatim: ready ---
-  const ready =
-    give.length > 0 &&
-    receive.length > 0 &&
-    giveSummary.unknown === 0 &&
-    receiveSummary.unknown === 0 &&
-    giveSummary.point > 0
+  const tradeResult = tradeVerdict(giveSummary.totals, receiveSummary.totals)
+  const ready = tradeResult != null
+  const pausedLabels = [
+    ...giveSummary.totals.unknownLabels,
+    ...receiveSummary.totals.unknownLabels,
+  ]
 
   /**
    * Flattened view of both sides for the "Brainrots in this trade" table.
@@ -912,6 +953,10 @@ function TradeTab({
         return {
           key: entry.instanceId,
           side,
+          // The item listings page (server-filtered), not a ?search= URL.
+          buyHref: brainrot
+            ? itemBuyHref({ gameSlug: 'steal-a-brainrot', categorySlug: buy.categorySlug, itemSlug: brainrot.slug, variant: mutation?.slug ?? null })
+            : `/steal-a-brainrot/${buy.categorySlug}`,
           name: brainrot?.name ?? 'Unknown Brainrot',
           imageUrl: brainrot?.imageUrl ?? null,
           mutationName: mutation?.name ?? 'Default',
@@ -925,15 +970,13 @@ function TradeTab({
       })
 
     return [...build(give, 'give'), ...build(receive, 'receive')]
-  }, [give, receive, brainrotMap, mutationMap, priceMap])
+  }, [give, receive, brainrotMap, mutationMap, priceMap, buy.categorySlug])
 
-  const pointDifference =
-    receiveSummary.point - giveSummary.point
+  const pointDifference = tradeResult
+    ? centsToUsd(tradeResult.diffCents)
+    : centsToUsd(receiveSummary.totals.pointCents - giveSummary.totals.pointCents)
 
-  // --- ported verbatim: percentageDifference ---
-  const percentageDifference = ready
-    ? (pointDifference / giveSummary.point) * 100
-    : null
+  const percentageDifference = tradeResult?.pct ?? null
 
   // --- ported verbatim: verdict (colors mapped to forest theme) ---
   const verdict: Verdict = (() => {
@@ -947,21 +990,8 @@ function TradeTab({
       }
     }
 
-    const fairTolerance = 0.05
-
-    const clearWin =
-      receiveSummary.low >
-      giveSummary.high * (1 + fairTolerance)
-
-    const clearLoss =
-      receiveSummary.high <
-      giveSummary.low * (1 - fairTolerance)
-
-    const rangesOverlapWithinTolerance =
-      receiveSummary.low <=
-        giveSummary.high * (1 + fairTolerance) &&
-      giveSummary.low <=
-        receiveSummary.high * (1 + fairTolerance)
+    const clearWin = tradeResult?.kind === 'win'
+    const clearLoss = tradeResult?.kind === 'loss'
 
     if (clearWin) {
       return {
@@ -985,10 +1015,7 @@ function TradeTab({
       }
     }
 
-    if (
-      Math.abs(percentageDifference) <= 5 &&
-      rangesOverlapWithinTolerance
-    ) {
+    if (tradeResult?.kind === 'fair') {
       return {
         label: 'FAIR',
         caption:
@@ -1165,24 +1192,11 @@ function TradeTab({
 
         {/* Any pause/low-confidence notices sit between the sides and the verdict
             so the verdict band always reads as the final answer. */}
-        {(giveSummary.unknown > 0 ||
-          receiveSummary.unknown > 0) && (
+        {pausedLabels.length > 0 && (
           <div className="border-t border-[#1A211A] bg-[#E0B155]/10 px-5 py-3 text-center text-[12.5px] text-[#E0B155] sm:px-8">
-            The verdict is paused because one or more selected
-            mutation variants has no cash-market estimate.
+            {pausedMessage(pausedLabels)}
           </div>
         )}
-
-        {(giveSummary.lowConfidence > 0 ||
-          receiveSummary.lowConfidence > 0) &&
-          giveSummary.unknown === 0 &&
-          receiveSummary.unknown === 0 && (
-            <div className="border-t border-[#1A211A] bg-white/[0.03] px-5 py-3 text-center text-[12.5px] text-[#9BA8A0] sm:px-8">
-              Low-confidence evidence is included. The verdict
-              uses the full low-to-high market range rather than
-              only the midpoint.
-            </div>
-          )}
 
         {/* ── Full-width verdict band: big WIN/LOSS + %, the fairness bar (you
             lose ← fair → you win) with a marker driven by the % difference and a
@@ -1193,6 +1207,13 @@ function TradeTab({
           pointDifference={pointDifference}
           ready={ready}
         />
+
+        {ready &&
+          giveSummary.lowConfidence + receiveSummary.lowConfidence > 0 && (
+            <p className="border-t border-[#1A211A] bg-white/[0.03] px-5 py-2.5 text-center text-[12px] text-[#9BA8A0] sm:px-8">
+              Based on limited price data
+            </p>
+          )}
 
         <div className="grid gap-3 border-t border-[#1A211A] bg-black/20 p-5 sm:grid-cols-2 sm:px-8">
           <button
@@ -1233,7 +1254,7 @@ function TradeTab({
             {tradeItems.map((item) => (
               <li key={item.key}>
                 <Link
-                  href={`/steal-a-brainrot/buy-items?search=${encodeURIComponent(item.name)}`}
+                  href={item.buyHref}
                   className="group grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-[#161C16]"
                 >
                   <span className="flex h-11 w-11 items-center justify-center overflow-hidden bg-[#0B0F0C]">

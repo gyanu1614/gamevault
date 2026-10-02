@@ -9,6 +9,7 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
 import AdoptMeWflClient from './_AdoptMeWflClient'
 import { getAdoptMeCalcPets, getAdoptMeTopValues } from './_adoptMeCalcData'
 import { AdoptMeCalcSeo } from './_AdoptMeCalcSeo'
+import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 
 export const ADOPT_ME_CALC_FAQ = [
   {
@@ -64,6 +65,7 @@ export default async function AdoptMeCalculatorPage() {
 
       <SabHeroBackdrop height={280}>
         <HubNav data={hubNav} calcMode="trade" />
+        <TrackOnMount event={{ event: 'value_view', surface: 'calculator', game: 'adopt-me' }} />
 
         <HubHero
           title="Adopt Me WFL Calculator"

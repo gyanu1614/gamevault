@@ -26,6 +26,7 @@ import { decidePublishStatus } from '@/lib/listings/publish-status'
 import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
+import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
 
@@ -730,6 +731,8 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       .select('id, slug')
       .single()
     if (error) return { success: false, error: error.message }
+    // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
+    await linkListingsToValueItems(getAdminSupabase(), [(data as { id: string }).id])
 
     revalidatePath('/account/listings')
     // Step 7b — the category page is prerendered (24 h TTL); tell it.
@@ -879,6 +882,8 @@ export async function updateListingFromWizard(
       .select('status')
       .single()
     if (error) return { success: false, error: error.message }
+    // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
+    await linkListingsToValueItems(getAdminSupabase(), [listingId])
     const finalStatus: string = (written as { status?: string } | null)?.status
       ?? (requestedStatus === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus)
 
@@ -1175,6 +1180,9 @@ export async function bulkPublishListings(
         failed.push({ line: r.line, error: e?.message ?? 'Unknown error' })
       }
     }
+
+    // Bundle 2 — link this seller's new rows (never blocks; see value-listings/link).
+    if (ok > 0) await linkListingsToValueItems(listingsWriter, { sellerId: user.id })
 
     revalidatePath('/account/listings')
     // Step 7b — one revalidation per category the batch touched.
