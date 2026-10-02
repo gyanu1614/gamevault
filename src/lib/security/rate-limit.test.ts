@@ -139,6 +139,8 @@ describe('budget boundaries', () => {
       contact: { limit: 5, windowSeconds: 60 },
       // Step 7b — seller-triggered category revalidation (CPU a client spends).
       revalidate: { limit: 10, windowSeconds: 60 },
+      // Listing views — one per visitor per listing per 6 h.
+      listingView: { limit: 1, windowSeconds: 21_600 },
     })
   })
 })

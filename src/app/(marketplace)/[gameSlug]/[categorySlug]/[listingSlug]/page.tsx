@@ -144,15 +144,9 @@ const getListing = cache(async function getListing(listingSlug: string) {
     isPreview = listing.status !== 'active'
   }
 
-  // Increment view count (fire and forget) — real traffic only, never
-  // owner/admin previews of unpublished listings.
-  if (!isPreview) {
-    ((supabase
-      .from('listings') as any)
-      .update({ views: (listing.views || 0) + 1 }))
-      .eq('id', listing.id)
-      .then()
-  }
+  // Views are counted by <ViewTracker> once the page opens in a browser
+  // (lib/actions/listing-views) — not here, where crawlers, prefetches and
+  // previews would count too.
 
   return { listing, isPreview }
 })

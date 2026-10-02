@@ -64,35 +64,6 @@ export async function getListings(filters: ListingsFilters = {}) {
   return { data: data as ListingWithRelations[], error: null }
 }
 
-export async function getListing(id: string) {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('listings')
-    .select(`
-      *,
-      seller:public_profiles!listings_seller_id_fkey(*),
-      game:games!listings_game_id_fkey(*),
-      category:game_categories!listings_game_category_id_fkey(*)
-    `)
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    console.error('Error fetching listing:', error)
-    return { data: null, error }
-  }
-
-  // Increment view count
-  const dataTyped = data as any
-  await (supabase
-    .from('listings')
-    .update as any)({ views: (dataTyped.views || 0) + 1 })
-    .eq('id', id)
-
-  return { data: data as ListingWithRelations, error: null }
-}
-
 export async function getGames() {
   const supabase = createClient()
 

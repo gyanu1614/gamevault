@@ -1,72 +1,56 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { checkRateLimit, clientIp } from '@/lib/security/rate-limit'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type IncrementRpc = (
+  fn: 'increment_listing_views',
+  args: { listing_uuid: string },
+) => PromiseLike<{ error: { message: string } | null }>
 
 /**
- * Track a listing view
- * Increments the view_count for a listing
+ * Count one view of a listing page (ViewTracker calls this once the page is
+ * open in a browser, so crawlers and prefetches don't count).
+ *
+ * Visitors cannot write `listings` (UPDATE is revoked from JWT callers), so
+ * the count goes through the service-role-only `increment_listing_views`,
+ * which bumps both `views` and `view_count` for an active listing (migration
+ * 20261001181007). One count per visitor (IP) per listing per 6 hours, and a
+ * seller opening their own listing is not a view.
  */
 export async function trackListingView(listingId: string): Promise<{
   success: boolean
+  counted?: boolean
   error?: string
 }> {
+  if (!UUID.test(listingId)) return { success: false, error: 'Invalid listing' }
+
   try {
+    const admin = createServiceRoleClient()
+
     const supabase = await createClient()
-
-    // Get current view count and increment
-    const { data: listing, error: fetchError } = await supabase
-      .from('listings')
-      .select('view_count')
-      .eq('id', listingId)
-      .single() as any
-
-    if (fetchError) {
-      console.error('Error fetching listing:', fetchError)
-      return { success: false, error: fetchError.message }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: row } = await admin.from('listings').select('seller_id').eq('id', listingId).maybeSingle()
+      if ((row as { seller_id?: string } | null)?.seller_id === user.id) return { success: true, counted: false }
     }
 
-    // Increment view count
-    const newCount = (listing.view_count || 0) + 1
-    const { error: updateError } = await (supabase
-      .from('listings')
-      .update as any)({ view_count: newCount })
-      .eq('id', listingId)
+    const seen = await checkRateLimit('listingView', `${listingId}:ip:${clientIp(headers())}`)
+    if (seen.limited) return { success: true, counted: false }
 
-    if (updateError) {
-      console.error('Error tracking view:', updateError)
-      return { success: false, error: updateError.message }
-    }
-
-    return { success: true }
-  } catch (error: any) {
-    console.error('Unexpected error tracking view:', error)
-    return { success: false, error: error.message }
+    const { error } = await (admin.rpc as unknown as IncrementRpc)('increment_listing_views', {
+      listing_uuid: listingId,
+    })
+    if (error) return { success: false, error: error.message }
+    return { success: true, counted: true }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'View not recorded' }
   }
 }
 
-/**
- * Get view count for a listing
- */
-export async function getListingViewCount(listingId: string): Promise<{
-  success: boolean
-  viewCount?: number
-  error?: string
-}> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('listings')
-      .select('view_count')
-      .eq('id', listingId)
-      .single() as any
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, viewCount: data.view_count || 0 }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}

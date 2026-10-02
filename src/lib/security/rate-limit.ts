@@ -43,6 +43,10 @@ export const RATE_LIMITS = {
   /** Seller-triggered cache revalidation (Step 7b): each call re-renders the
    *  caller's category pages on next visit, so it is CPU a client can spend. */
   revalidate: { limit: 10, windowSeconds: 60 },
+  /** Listing view counter: one count per visitor per listing per 6 hours
+   *  (keyed `listingView:<listingId>:ip:<ip>`), so reloads and scripts can't
+   *  pump a listing's views. */
+  listingView: { limit: 1, windowSeconds: 6 * 60 * 60 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS

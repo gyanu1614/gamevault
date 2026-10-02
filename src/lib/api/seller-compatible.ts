@@ -54,6 +54,9 @@ export interface Listing {
   delivery_time: string
   delivery_method: string
   views: number
+  /** Second view counter (the "most viewed" sort key); bumped together with
+   *  `views` since 2026-10-01. */
+  view_count?: number | null
   sales: number
   created_at: string
   updated_at: string
