@@ -18,6 +18,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { Search, Gamepad2, ShieldCheck } from 'lucide-react'
 import { bestOfferId, sortOffers } from './_itemsSort'
 import ItemCard from './_ItemCard'
+import Link from 'next/link'
+import { closestByName } from '@/lib/value-listings/closest'
 import { ScrollRow } from '@/components/ui/scroll-row'
 import type {
   ItemOffer,
@@ -447,7 +449,20 @@ export default function ItemsPageClient({
       <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
 
         {sorted.length === 0 ? (
-          <EmptyState onClear={clearFilters} />
+          <EmptyState
+            onClear={clearFilters}
+            query={q.trim()}
+            sellHref={`/${gameSlug}/sell?src=buy-search-empty`}
+            matches={closestByName(offers, q, 6).map((o) => (
+              <ItemCard
+                key={o.id}
+                offer={o}
+                gameSlug={gameSlug}
+                gameName={gameName}
+                isOwn={!!viewerId && o.sellerId === viewerId}
+              />
+            ))}
+          />
         ) : (
           <>
             {/* V15e — Landscape cards work best at 380px+ widths.
@@ -496,26 +511,66 @@ function Dot() {
   return <span aria-hidden className="text-text-disabled">·</span>
 }
 
-function EmptyState({ onClear }: { onClear: () => void }) {
+/**
+ * Nothing matched. With a search (e.g. a value page's old ?search= link) it
+ * says so in one line and shows the closest listings on this page instead of
+ * an empty grid (Bundle 2); without one, the original "clear filters" state.
+ */
+function EmptyState({
+  onClear,
+  query,
+  sellHref,
+  matches,
+}: {
+  onClear: () => void
+  query: string
+  sellHref: string
+  matches: React.ReactNode[]
+}) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
-        <Search className="h-5 w-5" />
+    <div className="space-y-8">
+      <div className="flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-12 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
+          <Search className="h-5 w-5" />
+        </div>
+        <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
+          {query ? `No ${query} listed right now.` : 'No items match your filters'}
+        </h3>
+        {!query ? (
+          <p className="mt-2 max-w-sm leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-meta)', lineHeight: 'var(--lh-body)' }}>
+            Try a different search, category, or type — or clear everything to see the full catalog.
+          </p>
+        ) : null}
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white/[0.07] px-4 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
+            style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
+          >
+            Clear Filters
+          </button>
+          {query ? (
+            <Link
+              href={sellHref}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-lime px-4 font-bold text-text-inverse transition-colors hover:bg-lime-hover active:bg-lime-pressed"
+              style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
+            >
+              Sell Yours For Cash
+            </Link>
+          ) : null}
+        </div>
       </div>
-      <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
-        No items match your filters
-      </h3>
-      <p className="mt-2 max-w-sm leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-meta)', lineHeight: 'var(--lh-body)' }}>
-        Try a different search, category, or type — or clear everything to see the full catalog.
-      </p>
-      <button
-        type="button"
-        onClick={onClear}
-        className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-white/[0.07] px-4 font-semibold text-text-primary transition-colors hover:bg-white/[0.11]"
-        style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-      >
-        Clear Filters
-      </button>
+      {query && matches.length > 0 ? (
+        <section aria-labelledby="closest-matches">
+          <h2 id="closest-matches" className="mb-4 font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)' }}>
+            Closest Matches
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" style={{ gap: 'var(--gap-grid)' }}>
+            {matches}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

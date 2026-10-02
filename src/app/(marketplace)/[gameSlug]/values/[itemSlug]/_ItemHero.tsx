@@ -12,6 +12,8 @@ import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
 import { MutationDot } from '@/lib/sab/MutationDot'
 import dynamic from 'next/dynamic'
 import { type PricePoint } from './_PriceTrendChart'
+import { useBuyCta } from '@/components/value-listings/useBuyCta'
+import type { ItemStock } from '@/lib/value-listings/buy-state'
 
 // recharts is ~100KB and the chart sits below the fold (often just a
 // "collecting data" state early on). Lazy-load it so it doesn't bloat the
@@ -56,8 +58,8 @@ interface ItemHeroProps {
   imageUrl: string | null
   imageAlt: string | null
   mutations: MutationOption[]
-  /** Base marketplace search URL for this brainrot. */
-  listingsHref: string
+  /** DropMarket's own live stock for this brainrot (drives the buy button). */
+  buy: { itemSlug: string; categorySlug: string; stock: ItemStock | null }
   /** Fallback price-updated timestamp (default mutation) for the freshness badge. */
   updatedAt: string | null
   /** Daily price history keyed by mutation slug (may be empty until it accrues). */
@@ -73,7 +75,7 @@ export default function ItemHero({
   imageUrl,
   imageAlt,
   mutations,
-  listingsHref,
+  buy,
   updatedAt,
   priceHistory,
 }: ItemHeroProps) {
@@ -100,6 +102,18 @@ export default function ItemHero({
     [ordered, selectedSlug],
   )
 
+  // The button is DropMarket's own stock for this mutation, never the market
+  // price above it (Bundle 2): three states, see value-listings/buy-state.
+  const cta = useBuyCta({
+    gameSlug: 'steal-a-brainrot',
+    categorySlug: buy.categorySlug,
+    itemSlug: buy.itemSlug,
+    variant: selected?.slug ?? 'default',
+    variantName: !selected || selected.slug === 'default' ? brainrotName : selected.name,
+    stock: buy.stock,
+    surface: 'value_item',
+  })
+
   if (!selected) return null
 
   const visual = mutationVisual(selected.slug)
@@ -113,9 +127,6 @@ export default function ItemHero({
   // Headline = cheapest when we have it, else market.
   const headlineUsd = cheapestUsd ?? marketUsd
   const cash = formatCash(headlineUsd)
-  const listingHref = `${listingsHref}${
-    isDefault ? '' : `%20${encodeURIComponent(selected.name)}`
-  }`
 
 
   return (
@@ -183,7 +194,8 @@ export default function ItemHero({
           {/* Price + CTA column. */}
           <div className="lg:text-right">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8FBF9C]">
-              {cheapestUsd != null ? 'Cheapest price' : 'Market price'}
+              {/* Market data, not DropMarket stock: the buy button carries ours. */}
+              Market Price
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums sm:text-[38px]">
               {cash ?? 'No data yet'}
@@ -209,8 +221,9 @@ export default function ItemHero({
 
             {/* Buy — color-flowing gradient in the mutation hue, no chunky shadow. */}
             <Link
-              href={listingHref}
-              aria-label={`Buy ${displayName}`}
+              href={cta.href}
+              onClick={cta.onClick}
+              aria-label={cta.state === 'none' ? `Browse items similar to ${displayName}` : `${cta.label}: ${displayName}`}
               className="group relative mt-4 inline-flex w-full items-center justify-center gap-1.5 overflow-hidden px-5 py-2.5 text-[13px] font-bold text-[#08110B] lg:w-auto"
               style={{
                 background: `linear-gradient(110deg, ${shade(visual.color, -0.12)}, ${visual.color}, ${shade(visual.color, -0.12)})`,
@@ -226,10 +239,13 @@ export default function ItemHero({
               />
               {/* Price-led label stays short + one line even for long names. */}
               <span className="relative truncate whitespace-nowrap">
-                {cash ? `Buy from ${cash}` : `Buy ${displayName}`}
+                {cta.label}
               </span>
               <ArrowForwardIcon sx={{ fontSize: 17 }} className="relative shrink-0" />
             </Link>
+            {cta.subline ? (
+              <p className="mt-1.5 text-[12px] text-[#9BA8A0]">{cta.subline}</p>
+            ) : null}
             {/* Sell — same flowing style as Buy, in a fixed cash-green so the two
                 actions read as distinct intents (green = cash out). */}
             <Link

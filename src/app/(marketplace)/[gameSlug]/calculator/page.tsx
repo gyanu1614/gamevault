@@ -17,6 +17,7 @@ import CalculatorClient, {
   type CalcPrice,
 } from './_CalculatorClient'
 import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
+import { getValueStock } from '@/lib/value-listings/stock-server'
 
 export const revalidate = 3600
 /**
@@ -361,7 +362,11 @@ export default async function SabCalculatorPage({ params }: PageProps) {
     timeZone: 'UTC',
   })
 
-  const hubNav = await getHubNavData('steal-a-brainrot')
+  const [hubNav, buyStock] = await Promise.all([
+    getHubNavData('steal-a-brainrot'),
+    // DropMarket's own live stock (Bundle 2): the cash result's buy button.
+    getValueStock('steal-a-brainrot'),
+  ])
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
@@ -398,6 +403,8 @@ export default async function SabCalculatorPage({ params }: PageProps) {
         mutations={mutations}
         cashPrices={cashPrices}
         tradePrices={tradePrices}
+        buyStock={buyStock?.byItem ?? {}}
+        buyCategorySlug={buyStock?.pair.categorySlug ?? 'buy-items'}
         // ?tab=cash / ?brainrot= / ?mutation= are read on the client
         // (_deepLink.ts): reading searchParams here made the ISR route render
         // per request. WFL stays the default; cash is the secondary tab.
