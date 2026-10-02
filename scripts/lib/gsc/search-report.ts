@@ -8,7 +8,7 @@ import { join } from 'node:path'
 
 import type { SearchAnalyticsBody, SearchAnalyticsResponse, SearchAnalyticsRow, SitemapEntry } from './client'
 import { GSC_SITE } from './config'
-import { toCsv } from './csv'
+import { neutralizeFormula, toCsv } from './csv'
 
 /** Search Console data is final ~2 days behind; the windows end there. */
 const DATA_LAG_DAYS = 2
@@ -149,7 +149,7 @@ export async function runSearchReport(
         toCsv(
           [dimension, 'clicks', 'impressions', 'ctr', 'position'],
           rows.map((r) => ({
-            [dimension]: r.keys?.[0] ?? '',
+            [dimension]: neutralizeFormula(r.keys?.[0] ?? ''),
             clicks: r.clicks,
             impressions: r.impressions,
             ctr: round(r.ctr, 4),

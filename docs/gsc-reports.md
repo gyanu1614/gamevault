@@ -24,6 +24,8 @@ Other flags: `--date YYYY-MM-DD`, `--out-dir <dir>`, `--concurrency <n>` (index 
 | `search-{28d,90d}-{totals,queries,pages,countries,devices,queries-pos-4-20}-YYYY-MM-DD.csv` | Search Analytics |
 | `sitemaps-YYYY-MM-DD.csv`, `search-summary-YYYY-MM-DD.md` | sitemap status; short summary of both windows |
 
+Search Analytics queries are typed by anyone, so a query or page cell that starts with `=`, `+`, `-` or `@` is written with a leading `'` — a spreadsheet then shows it as text instead of running it as a formula.
+
 ## Resuming
 
 The day's CSV is the only state. A rerun on the same day skips every URL already in it, so a quota stop, a crash or Ctrl-C loses nothing. A URL whose inspection failed is **not** saved — the next run retries it. If the CSV header ever differs from the current columns the run refuses to append; move the file aside.

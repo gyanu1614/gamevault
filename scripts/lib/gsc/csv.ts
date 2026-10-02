@@ -13,6 +13,16 @@ export function toCsvRow(values: readonly CsvCell[]): string {
     .join(',')
 }
 
+/**
+ * Free text from outside (Search Analytics queries are typed by anyone) can start
+ * with `=`, `+`, `-`, `@`, tab or CR, which Excel/Sheets run as a formula when the
+ * CSV is opened. Prefixing a `'` makes the cell plain text. Not applied to
+ * columns the resume logic reads back (`url`) — those always start `https://`.
+ */
+export function neutralizeFormula(text: string): string {
+  return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text
+}
+
 export function toCsv(
   columns: readonly string[],
   rows: readonly Record<string, CsvCell>[],

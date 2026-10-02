@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   INDEX_COLUMNS,
   inspectionToRow,
+  neutralizeFormula,
   parseCsv,
   parseCsvObjects,
   toCsv,
@@ -27,6 +28,18 @@ describe('toCsvRow', () => {
 
   it('writes null and undefined as empty cells', () => {
     expect(toCsvRow(['a', null, undefined, 0])).toBe('a,,,0')
+  })
+})
+
+describe('neutralizeFormula', () => {
+  it.each(['=SUM(A1)', '+1 pet', '-5 off', '@cmd', '\tx', '\rx'])('prefixes %j so a spreadsheet reads it as text', (s) => {
+    expect(neutralizeFormula(s)).toBe(`'${s}`)
+  })
+
+  it('leaves ordinary text, URLs and the empty string alone', () => {
+    for (const s of ['adopt me values', 'https://dropmarket.gg/x', '', 'a=b', '1+1']) {
+      expect(neutralizeFormula(s)).toBe(s)
+    }
   })
 })
 

