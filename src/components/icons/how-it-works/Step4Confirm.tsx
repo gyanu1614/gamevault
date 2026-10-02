@@ -23,6 +23,8 @@ export default function Step4Confirm({
       aria-hidden="true"
       width={640}
       height={640}
+      loading="lazy"
+      decoding="async"
       className={className}
       {...props}
     />

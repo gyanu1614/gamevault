@@ -151,6 +151,8 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
               <img
                 src="/brand/logo-mark-lime.avif"
                 alt="DropMarket"
+                loading="lazy"
+                decoding="async"
                 width={44}
                 height={44}
                 className="h-11 w-11 object-contain"
