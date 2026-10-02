@@ -29,6 +29,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { safeSession } from '@/lib/safe-storage'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -105,7 +106,7 @@ type Persisted = { phase: 'confirm'; email: string }
 function readPersisted(): Persisted | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.sessionStorage.getItem(PERSIST_KEY)
+    const raw = safeSession.get(PERSIST_KEY)
     if (!raw) return null
     const p = JSON.parse(raw) as Persisted
     return p?.phase === 'confirm' && typeof p.email === 'string' ? p : null
@@ -116,12 +117,9 @@ function readPersisted(): Persisted | null {
 
 function writePersisted(p: Persisted | null) {
   if (typeof window === 'undefined') return
-  try {
-    if (p) window.sessionStorage.setItem(PERSIST_KEY, JSON.stringify(p))
-    else window.sessionStorage.removeItem(PERSIST_KEY)
-  } catch {
-    /* storage unavailable (private mode / quota) — degrade to in-memory only */
-  }
+  // Storage unavailable (private mode / quota / webview) → in-memory only.
+  if (p) safeSession.set(PERSIST_KEY, JSON.stringify(p))
+  else safeSession.remove(PERSIST_KEY)
 }
 
 export function SignupToSellFlow() {

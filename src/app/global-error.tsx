@@ -12,6 +12,7 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
+import { reloadOnceForStaleBuild } from '@/lib/stale-build'
 
 export default function GlobalError({
   error,
@@ -19,6 +20,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
 }) {
   useEffect(() => {
+    // A tab running the previous deploy's JavaScript: reload once into the
+    // new build instead of showing this screen (lib/stale-build).
+    if (reloadOnceForStaleBuild(error)) return
+
     Sentry.captureException(error, {
       tags: { boundary: 'app/global-error' },
       contexts: error?.digest

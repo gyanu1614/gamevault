@@ -7,6 +7,24 @@
  * browser; the bare SENTRY_DSN is server-only and would inline as undefined.
  */
 import * as Sentry from '@sentry/nextjs'
+import { installDomTranslateGuard } from '@/lib/dom-translate-guard'
+import { reloadOnceForStaleBuild } from '@/lib/stale-build'
+
+// Before React hydrates: browser Translate / extensions rewriting React's DOM
+// must not crash the page (see lib/dom-translate-guard).
+installDomTranslateGuard()
+
+// A tab still running the previous deploy's JavaScript reloads itself once
+// instead of breaking (see lib/stale-build). Errors inside React go through
+// app/error.tsx and app/global-error.tsx, which do the same.
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => {
+    reloadOnceForStaleBuild(e.error ?? e.message)
+  })
+  window.addEventListener('unhandledrejection', (e) => {
+    reloadOnceForStaleBuild(e.reason)
+  })
+}
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -43,6 +61,14 @@ Sentry.init({
     'AbortError',
     'ResizeObserver loop',
     'Non-Error promise rejection',
+    // Third-party only: iOS in-app webviews and extensions running on our
+    // pages hit these when their host gives them no parent window or no
+    // sessionStorage. The app itself never reads window.parent, and every
+    // sessionStorage access goes through lib/safe-storage (which can't throw
+    // and reads through a local, so its message would differ). The pairing is
+    // pinned by sentry-noise-filters.guard.test.ts.
+    /null is not an object \(evaluating '(window\.)?parent\.(add|remove)EventListener'\)/,
+    "null is not an object (evaluating 'sessionStorage.getItem')",
   ],
 
   // Errors whose stack lives entirely in code we did not ship: browser

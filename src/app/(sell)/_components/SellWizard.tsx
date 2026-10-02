@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { safeSession } from '@/lib/safe-storage'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -528,7 +529,7 @@ export default function SellWizard({
     // below loads the actual listing and should fully own the form state.
     if (editListingId) { hydratedRef.current = true; return }
     try {
-      const raw = sessionStorage.getItem(WIZARD_SNAPSHOT_KEY)
+      const raw = safeSession.get(WIZARD_SNAPSHOT_KEY)
       if (!raw) { hydratedRef.current = true; return }
       const snap = JSON.parse(raw) as WizardSnapshot
       if (snap.categoryId) {
@@ -614,7 +615,7 @@ export default function SellWizard({
       agreeSellerRules,
       agreeTos,
     }
-    try { sessionStorage.setItem(WIZARD_SNAPSHOT_KEY, JSON.stringify(snap)) } catch {}
+    safeSession.set(WIZARD_SNAPSHOT_KEY, JSON.stringify(snap))
   }, [
     step,
     selectedCategory,
@@ -1050,7 +1051,7 @@ export default function SellWizard({
       }
       // R16 — clear the refresh-persistence snapshot so a future visit to
       // /sell/new starts fresh instead of restoring this just-published draft.
-      try { sessionStorage.removeItem(WIZARD_SNAPSHOT_KEY) } catch {}
+      safeSession.remove(WIZARD_SNAPSHOT_KEY)
       // V14p — Bust react-query caches so the listings page shows fresh data.
       // updateListingFromWizard already revalidates the RSC path, but the
       // /account/listings page is a client component using useQuery, so we
