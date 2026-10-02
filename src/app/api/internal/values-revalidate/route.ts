@@ -5,6 +5,8 @@ import {
 } from '@/lib/security/internal-route-auth'
 import { CONTENT_HUB_GAME_SLUGS, hasHubPage } from '@/lib/content/theme'
 import { valuesTag } from '@/lib/values/revalidation'
+import { submitChangedValuePages } from '@/lib/seo/indexnow'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 /**
  * Revalidate a game's price pages after a crawl republishes prices.
@@ -72,10 +74,20 @@ export async function POST(request: Request): Promise<Response> {
     revalidated.push(`/${gameSlug}/price-index`)
   }
 
+  // IndexNow: submit only the value pages whose cash value really moved against
+  // the game's previous daily snapshot. Steal a Brainrot is left to its own daily
+  // snapshot cron (which runs the same comparison); doing it here too would
+  // submit the same pages twice a day. Production only, never throws.
+  const indexNowChanged =
+    gameSlug === 'steal-a-brainrot'
+      ? 0
+      : await submitChangedValuePages(createServiceRoleClient(), gameSlug)
+
   return internalJson({
     ok: true,
     game: gameSlug,
     revalidated,
+    indexnow_changed: indexNowChanged,
     revalidated_at: new Date().toISOString(),
   })
 }
