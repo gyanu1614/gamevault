@@ -21,6 +21,10 @@ describe('toCsvRow', () => {
     expect(toCsvRow(['a,b', 'say "hi"', 'x\ny'])).toBe('"a,b","say ""hi""","x\ny"')
   })
 
+  it('writes booleans as true/false', () => {
+    expect(toCsvRow([true, false])).toBe('true,false')
+  })
+
   it('writes null and undefined as empty cells', () => {
     expect(toCsvRow(['a', null, undefined, 0])).toBe('a,,,0')
   })

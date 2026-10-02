@@ -2,7 +2,7 @@
 
 import type { PageType } from './page-type'
 
-export type CsvCell = string | number | null | undefined
+export type CsvCell = string | number | boolean | null | undefined
 
 export function toCsvRow(values: readonly CsvCell[]): string {
   return values

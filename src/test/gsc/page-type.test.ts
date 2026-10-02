@@ -93,9 +93,7 @@ describe('classifier stays in sync with src/app', () => {
         .map((f) => routePath(f)[0])
         .filter((s): s is string => !!s && !s.startsWith('[') && !s.startsWith('_')),
     )
-    const missing = [...firstSegments].filter(
-      (s) => !RESERVED_GAME_SLUGS.has(s) && s !== 'monitoring',
-    )
+    const missing = [...firstSegments].filter((s) => !RESERVED_GAME_SLUGS.has(s))
     expect(
       missing,
       `top-level route(s) ${missing.join(', ')} would be classified as a game hub — add to RESERVED_GAME_SLUGS (src/lib/games/validate-game.ts)`,

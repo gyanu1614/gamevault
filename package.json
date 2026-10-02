@@ -41,7 +41,9 @@
     "radar:backfill": "node --experimental-strip-types --no-warnings scripts/backfill-game-external-ids.mjs",
     "reprice": "tsx scripts/reprice.mjs",
     "sab:expire": "tsx scripts/expire-listings.mjs",
-    "retention:sab": "node scripts/roll-up-raw-listings.mjs"
+    "retention:sab": "node scripts/roll-up-raw-listings.mjs",
+    "gsc:index-report": "tsx scripts/gsc-index-report.ts",
+    "gsc:search-report": "tsx scripts/gsc-search-report.ts"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.3",
