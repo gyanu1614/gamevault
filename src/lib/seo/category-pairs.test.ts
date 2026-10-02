@@ -10,7 +10,11 @@ import { createSupabaseRecorder, type SupabaseRecorder } from '@/test/fakes/supa
 let recorder: SupabaseRecorder
 vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
 
-import { getIndexableCategoryPairs, getAllEnabledCategoryPairs } from './category-pairs'
+import {
+  getIndexableCategoryPairs,
+  getAllEnabledCategoryPairs,
+  onlyRenderablePairs,
+} from './category-pairs'
 
 // Reads reach React.cache / unstable_cache through seller presence; pass them through.
 vi.mock('react', async (importOriginal) => ({
@@ -96,5 +100,50 @@ describe('getAllEnabledCategoryPairs', () => {
       throw new Error('db down')
     }
     await expect(getAllEnabledCategoryPairs()).resolves.toEqual([])
+  })
+})
+
+/**
+ * Found by the 2026-10-01 GSC index report: the sitemap advertised
+ * /gta-vi/buy-items, which 404s. The pair came from an ACTIVE listing sitting
+ * under a category whose game_categories.is_enabled is false; the page gate
+ * (`_routeGate`) only serves enabled categories of active games. A sitemap URL
+ * the page cannot serve is a contradictory signal, so the sitemap's pair set is
+ * narrowed to what the page can render.
+ */
+describe('onlyRenderablePairs', () => {
+  const renderable = [
+    { gameSlug: 'gta-vi', categorySlug: 'buy-accounts' },
+    { gameSlug: 'roblox', categorySlug: 'buy-items' },
+    { gameSlug: 'valorant', categorySlug: 'buy-vp' },
+  ]
+
+  it('drops a pair the page would 404 on (listing under a disabled category)', () => {
+    const keys = ['roblox/buy-items', 'gta-vi/buy-items', 'valorant/buy-vp']
+    expect(onlyRenderablePairs(keys, renderable)).toEqual(['roblox/buy-items', 'valorant/buy-vp'])
+  })
+
+  it('keeps every renderable pair, in the order given', () => {
+    const keys = new Set(['valorant/buy-vp', 'gta-vi/buy-accounts', 'roblox/buy-items'])
+    expect(onlyRenderablePairs(keys, renderable)).toEqual([
+      'valorant/buy-vp',
+      'gta-vi/buy-accounts',
+      'roblox/buy-items',
+    ])
+  })
+
+  it('drops a pair of a game that is not active (absent from the renderable set)', () => {
+    expect(onlyRenderablePairs(['dead-game/buy-items'], renderable)).toEqual([])
+  })
+
+  it('fails OPEN when the renderable set is empty — a failed read must not empty the sitemap', () => {
+    expect(onlyRenderablePairs(['roblox/buy-items', 'gta-vi/buy-items'], [])).toEqual([
+      'roblox/buy-items',
+      'gta-vi/buy-items',
+    ])
+  })
+
+  it('returns [] for no pairs', () => {
+    expect(onlyRenderablePairs([], renderable)).toEqual([])
   })
 })

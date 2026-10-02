@@ -109,3 +109,6 @@ art/cs2/
 
 # page-weight measurement output (scripts/measure-page-weight.mjs)
 .measure-out/
+
+# GSC report output (pnpm gsc:index-report / gsc:search-report) — never committed
+docs/audit/gsc/
