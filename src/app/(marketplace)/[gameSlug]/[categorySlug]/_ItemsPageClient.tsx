@@ -413,10 +413,9 @@ export default function ItemsPageClient({
               />
             )}
 
-            {/* Sort */}
-            <div className="shrink-0">
-              <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
-            </div>
+            {/* Sort — a direct sibling of the filters (no wrapper), so the
+                phone bar draws its divider like the others. */}
+            <SingleSelectFilter title="Sort By" options={SORT_OPTIONS} value={sort} onChange={setSort} />
           </ScrollRow>
           </div>
 

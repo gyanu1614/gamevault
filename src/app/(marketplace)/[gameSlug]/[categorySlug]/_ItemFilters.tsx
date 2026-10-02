@@ -13,9 +13,14 @@
  *
  * Built on the site's own primitives: Radix Popover, and the shared
  * `Checkbox` / `Slider` from components/ui. Icons are Lucide.
+ *
+ * Every dropdown opens BELOW its button (owner, 2026-10-01: a list that
+ * flipped up ran off the top of the phone) and, on touch screens, opens
+ * without focusing its search box, so the keyboard only comes up when the
+ * search box is tapped. See useFilterDropdown.
  */
 
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState, type RefObject } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import {
   ArrowUpDown,
@@ -36,6 +41,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import type { TaxonomyOption } from './_itemsTypes'
 
 // ─── Shared pieces ──────────────────────────────────────────────────────────
@@ -62,6 +68,57 @@ export function titleCase(s: string): string {
   return s.replace(/\b([a-z])/g, (c) => c.toUpperCase())
 }
 
+const EDGE = 12 // panels keep this far from the screen edges
+const PANEL_WIDTH = 260
+const TOP_CLEARANCE = 96 // fixed navbar + a little air
+const ROOM_WANTED = 360 // header + search + about six rows
+
+/**
+ * Open state + placement for one filter dropdown. Radix would flip a panel
+ * that doesn't fit below to the top, and its sideways shift is behind the
+ * same switch, so both are off and handled here when the panel opens: the
+ * page scrolls just enough to leave room below the button (never past what
+ * fits under the navbar), and the panel is nudged sideways to stay on
+ * screen. Whatever height is left, the list scrolls inside it (Panel caps
+ * it with Radix's available-height variable).
+ */
+function useFilterDropdown(align: 'start' | 'end') {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpenState] = useState(false)
+  const [alignOffset, setAlignOffset] = useState(0)
+
+  const place = () => {
+    const el = triggerRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const vw = document.documentElement.clientWidth
+    const vh = window.innerHeight
+    const width = Math.min(PANEL_WIDTH, vw - EDGE * 2)
+    // alignOffset runs toward the panel's far side: rightward for 'start',
+    // leftward for 'end'.
+    if (align === 'start') {
+      const left = Math.min(Math.max(r.left, EDGE), vw - EDGE - width)
+      setAlignOffset(left - r.left)
+    } else {
+      const right = Math.max(Math.min(r.right, vw - EDGE), EDGE + width)
+      setAlignOffset(r.right - right)
+    }
+    const wanted = Math.min(ROOM_WANTED, vh - TOP_CLEARANCE - r.height - EDGE)
+    const room = vh - r.bottom - EDGE
+    if (room < wanted) {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      window.scrollBy({ top: wanted - room, behavior: reduce ? 'auto' : 'smooth' })
+    }
+  }
+
+  const setOpen = (next: boolean) => {
+    if (next) place()
+    setOpenState(next)
+  }
+
+  return { open, setOpen, triggerRef, alignOffset }
+}
+
 /**
  * The button that opens every filter. Width follows its content (no fixed
  * min-width), so the bar stays compact. The height comes from the
@@ -72,15 +129,18 @@ function Trigger({
   label,
   active,
   open,
+  buttonRef,
 }: {
   icon: LucideIcon
   label: string
   active: boolean
   open: boolean
+  buttonRef: RefObject<HTMLButtonElement>
 }) {
   return (
     <Popover.Trigger asChild>
       <button
+        ref={buttonRef}
         type="button"
         className={cn(
           // Fill only, no outline (card-surface system). sm+: a soft pill.
@@ -93,6 +153,11 @@ function Trigger({
           active || open
             ? 'bg-white/[0.11] max-sm:bg-white/[0.08] max-sm:text-white'
             : 'bg-white/[0.05] hover:bg-white/[0.08] max-sm:bg-transparent max-sm:text-text-secondary max-sm:hover:bg-white/[0.05] max-sm:hover:text-text-primary',
+          // Phones: the segments share one bar, so a hairline sits between
+          // neighbours (owner, 2026-10-01: Item Type and Trait read as one
+          // button). Not before the first, and not beside a filled segment.
+          'max-sm:relative max-sm:before:pointer-events-none max-sm:before:absolute max-sm:before:left-[-1.5px] max-sm:before:top-1/2 max-sm:before:h-4 max-sm:before:w-px max-sm:before:-translate-y-1/2 max-sm:before:bg-white/[0.14] max-sm:first:before:hidden',
+          (active || open) && 'max-sm:before:hidden max-sm:[&+button]:before:hidden',
         )}
         style={{ height: 'var(--h-btn-secondary)' }}
       >
@@ -116,26 +181,38 @@ function Panel({
   children,
   className,
   align = 'start',
+  alignOffset = 0,
 }: {
   title: string
   onClear?: () => void
   children: React.ReactNode
   className?: string
   align?: 'start' | 'end'
+  alignOffset?: number
 }) {
+  const coarse = useCoarsePointer()
   return (
     <Popover.Portal>
       <Popover.Content
+        side="bottom"
         align={align}
+        alignOffset={alignOffset}
         sideOffset={6}
-        collisionPadding={12}
+        // Never flip above the button; useFilterDropdown makes the room.
+        avoidCollisions={false}
+        collisionPadding={EDGE}
+        // Touch screens: don't focus the search box on open — that pops the
+        // keyboard over the list. Tapping the box brings it up.
+        onOpenAutoFocus={(e) => {
+          if (coarse) e.preventDefault()
+        }}
         className={cn(
-          'z-50 w-[min(260px,calc(100vw-24px))] overflow-hidden rounded-lg border border-white/10 bg-[#1D1E23] shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
+          'z-50 flex w-[min(260px,calc(100vw-24px))] max-h-[var(--radix-popover-content-available-height)] flex-col overflow-hidden rounded-lg border border-white/10 bg-[#1D1E23] shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]',
           'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           className,
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] bg-white/[0.03] px-4 py-2">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-white/[0.03] px-4 py-2">
           <p className="text-body-sm font-bold leading-tight text-text-primary">{title}</p>
           {onClear && (
             <button
@@ -171,7 +248,7 @@ export function MultiSelectFilter({
   selected: string[]
   onChange: (next: string[]) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
   const [query, setQuery] = useState('')
   const baseId = useId()
 
@@ -200,10 +277,10 @@ export function MultiSelectFilter({
         if (!o) setQuery('')
       }}
     >
-      <Trigger icon={icon} label={buttonLabel} active={selected.length > 0} open={open} />
-      <Panel title={label} onClear={selected.length > 0 ? () => onChange([]) : undefined}>
+      <Trigger icon={icon} label={buttonLabel} active={selected.length > 0} open={open} buttonRef={triggerRef} />
+      <Panel title={label} alignOffset={alignOffset} onClear={selected.length > 0 ? () => onChange([]) : undefined}>
         {options.length > SEARCH_THRESHOLD && (
-          <div className="relative border-b border-white/[0.06] px-3 py-2">
+          <div className="relative shrink-0 border-b border-white/[0.06] px-3 py-2">
             <Search aria-hidden className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
@@ -226,7 +303,7 @@ export function MultiSelectFilter({
             classes with cn() (tailwind-merge), which mistakes our custom
             `text-body-sm` size for a colour and deletes it when a colour
             class follows — the rows then fell back to 16px. */}
-        <ul className="max-h-[300px] overflow-y-auto py-1 text-body-sm" aria-label={`${label} options`}>
+        <ul className="max-h-[300px] min-h-0 overflow-y-auto overscroll-contain py-1 text-body-sm" aria-label={`${label} options`}>
           {shown.length === 0 && (
             <li className="px-4 py-2.5 text-text-tertiary">No matches</li>
           )}
@@ -274,14 +351,14 @@ export function SingleSelectFilter<T extends string>({
   onChange: (next: T) => void
   icon?: LucideIcon
 }) {
-  const [open, setOpen] = useState(false)
+  const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('end')
   const current = options.find((o) => o.slug === value)?.label ?? title
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Trigger icon={icon} label={current} active={false} open={open} />
-      <Panel title={title} align="end">
+      <Trigger icon={icon} label={current} active={false} open={open} buttonRef={triggerRef} />
+      <Panel title={title} align="end" alignOffset={alignOffset}>
         {/* Size on the <ul> for the same tailwind-merge reason as above. */}
-        <ul className="py-1 text-body-sm" role="listbox" aria-label={title}>
+        <ul className="min-h-0 overflow-y-auto overscroll-contain py-1 text-body-sm" role="listbox" aria-label={title}>
           {options.map((o) => {
             const selected = o.slug === value
             return (
@@ -326,7 +403,7 @@ export function PriceRangeFilter({
   value: [number, number] | null
   onChange: (next: [number, number] | null) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const { open, setOpen, triggerRef, alignOffset } = useFilterDropdown('start')
   const [lo, hi] = value ?? bounds
   const span = bounds[1] - bounds[0]
   // Whole dollars on wide ranges; cents when the page's prices are close.
@@ -367,9 +444,9 @@ export function PriceRangeFilter({
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Trigger icon={DollarSign} label={buttonLabel} active={!!value} open={open} />
-      <Panel title="Price" onClear={value ? () => onChange(null) : undefined}>
-        <div className="space-y-5 px-4 pb-4 pt-4">
+      <Trigger icon={DollarSign} label={buttonLabel} active={!!value} open={open} buttonRef={triggerRef} />
+      <Panel title="Price" alignOffset={alignOffset} onClear={value ? () => onChange(null) : undefined}>
+        <div className="min-h-0 space-y-5 overflow-y-auto px-4 pb-4 pt-4">
           <div className="flex items-end gap-2.5">
             {field(0, 'From')}
             <span aria-hidden className="pb-2.5 text-text-tertiary">–</span>
