@@ -43,7 +43,9 @@
     "value-refs:backfill": "tsx scripts/value-refs-backfill.mjs",
     "funnel:value": "node scripts/funnel-value.mjs",
     "sab:expire": "tsx scripts/expire-listings.mjs",
-    "retention:sab": "node scripts/roll-up-raw-listings.mjs"
+    "retention:sab": "node scripts/roll-up-raw-listings.mjs",
+    "gsc:index-report": "tsx scripts/gsc-index-report.ts",
+    "gsc:search-report": "tsx scripts/gsc-search-report.ts"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.3",
