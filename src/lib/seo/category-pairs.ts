@@ -97,3 +97,24 @@ export async function getAllEnabledCategoryPairs(): Promise<CategoryPair[]> {
     return []
   }
 }
+
+/**
+ * Narrow `game/category` keys to the pairs `/[gameSlug]/[categorySlug]` can
+ * actually serve (`renderable` = getAllEnabledCategoryPairs()). The sitemap
+ * builds its pairs from active LISTINGS, so a listing left under a category an
+ * admin switched off (is_enabled = false) put a URL in the sitemap that the page
+ * gate answers with a 404 — found live as /gta-vi/buy-items.
+ *
+ * Fails OPEN: getAllEnabledCategoryPairs() returns [] when its read fails, and
+ * a transient DB error must not empty the sitemap's category pages. Input order
+ * is kept.
+ */
+export function onlyRenderablePairs(
+  pairKeys: Iterable<string>,
+  renderable: readonly CategoryPair[],
+): string[] {
+  const keys = [...pairKeys]
+  if (renderable.length === 0) return keys
+  const servable = new Set(renderable.map((p) => `${p.gameSlug}/${p.categorySlug}`))
+  return keys.filter((key) => servable.has(key))
+}

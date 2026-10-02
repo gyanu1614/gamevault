@@ -18,6 +18,7 @@ import {
   isGameSellPageIndexable,
 } from '@/lib/games/indexability'
 import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
+import { getAllEnabledCategoryPairs, onlyRenderablePairs } from '@/lib/seo/category-pairs'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { getAllPosts, getFlatPosts } from '@/lib/blog/posts'
 
@@ -341,8 +342,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     gameCategoryPairs.add(`${gameSlug}/${cat.slug}`)
   })
 
+  // The pairs above come from active LISTINGS, so a listing left under a
+  // category an admin switched off (is_enabled = false) would advertise a URL the
+  // route gate answers with a 404 (/gta-vi/buy-items, 2026-10-01 GSC report).
+  // Keep only what /[gameSlug]/[categorySlug] can serve.
+  const servablePairs = onlyRenderablePairs(
+    gameCategoryPairs,
+    await getAllEnabledCategoryPairs(),
+  )
+
   // Game + category pages, lastmod = max listing updated_at in the pair.
-  const categoryPages: MetadataRoute.Sitemap = Array.from(gameCategoryPairs).map(
+  const categoryPages: MetadataRoute.Sitemap = servablePairs.map(
     (pair) => {
       const lastmod = pairLastmod.get(pair)
       return {
