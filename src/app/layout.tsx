@@ -1,4 +1,5 @@
 import { SITE_URL } from '@/config/site'
+import { TITLE_TEMPLATE } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 // Two display faces still load via next/font/google (it downloads and
@@ -104,7 +105,8 @@ export const metadata: Metadata = {
   alternates: { canonical: './' },
   title: {
     default: 'DropMarket — Buy & Sell Game Items Safely',
-    template: '%s | DropMarket',
+    // Pages hand over a BARE title; see src/lib/seo/title.ts.
+    template: TITLE_TEMPLATE,
   },
   description:
     'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Every order covered by SafeDrop Protection. 18+ games, instant delivery.',

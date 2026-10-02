@@ -15,6 +15,7 @@ import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts } from '@/lib/
 import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
+import { stripBrand } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import { IconListDetails, IconCalculator, IconTag, IconArrowUpRight } from '@tabler/icons-react'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
@@ -99,12 +100,15 @@ export async function generateMetadata({
   const post = await getGamePost(gameSlug, slug)
   if (!post) return { title: 'Not Found' }
   const url = `${SITE_URL}/${gameSlug}/blog/${slug}`
+  // The admin-written SEO title is reused for the social title; an editor may
+  // have typed the brand into it, so the templated <title> gets it bare.
+  const socialTitle = post.seoTitle || post.title
   return {
-    title: post.seoTitle || post.title,
+    title: stripBrand(socialTitle),
     description: post.seoDescription || post.excerpt,
     alternates: { canonical: `/${gameSlug}/blog/${slug}` },
     openGraph: {
-      title: post.seoTitle || post.title,
+      title: socialTitle,
       description: post.seoDescription || post.excerpt,
       url,
       type: 'article',
