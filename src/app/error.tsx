@@ -9,6 +9,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertCircle } from 'lucide-react'
 import * as Sentry from '@sentry/nextjs'
+import { reloadOnceForStaleBuild } from '@/lib/stale-build'
 
 export default function Error({
   error,
@@ -22,6 +23,10 @@ export default function Error({
   // same id shown to the user below, which makes a support ticket findable
   // in Sentry by that one string.
   useEffect(() => {
+    // A tab running the previous deploy's JavaScript: reload once into the
+    // new build instead of showing this screen (lib/stale-build).
+    if (reloadOnceForStaleBuild(error)) return
+
     Sentry.captureException(error, {
       tags: { boundary: 'app/error' },
       contexts: error?.digest

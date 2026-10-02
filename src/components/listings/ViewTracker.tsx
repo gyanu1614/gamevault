@@ -8,29 +8,15 @@ interface ViewTrackerProps {
 }
 
 /**
- * Client component to track listing views
- * Automatically tracks when the listing page is viewed
+ * Counts one view when a listing page opens in a browser (so crawlers and
+ * link prefetches don't). Fire and forget: a missed count never matters to
+ * the visitor, so failures stay silent. Dedupe and the seller's own views are
+ * handled by the action.
  */
 export default function ViewTracker({ listingId }: ViewTrackerProps) {
   useEffect(() => {
-    // Track view on mount
-    const trackView = async () => {
-      try {
-        console.log('📊 Tracking view for listing:', listingId)
-        const result = await trackListingView(listingId)
-        if (result.success) {
-          console.log('✅ View tracked successfully')
-        } else {
-          console.error('❌ View tracking failed:', result.error)
-        }
-      } catch (error) {
-        console.error('❌ Failed to track view:', error)
-      }
-    }
-
-    trackView()
+    trackListingView(listingId).catch(() => {})
   }, [listingId])
 
-  // This component doesn't render anything
   return null
 }

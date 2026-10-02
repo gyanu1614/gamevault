@@ -26,6 +26,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { safeSession } from '@/lib/safe-storage'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -60,10 +61,10 @@ export function PaymentReturnHandler({
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hasPaidParam = new URLSearchParams(window.location.search).get('paid') === '1'
-    const flagSet = window.sessionStorage.getItem(flagKey(orderId)) === '1'
+    const flagSet = safeSession.get(flagKey(orderId)) === '1'
 
     if (hasPaidParam) {
-      window.sessionStorage.setItem(flagKey(orderId), '1')
+      safeSession.set(flagKey(orderId), '1')
       // Collapse the ?paid=1 history entry so Back never returns to CoinGate.
       router.replace(pathname)
     }
@@ -80,8 +81,8 @@ export function PaymentReturnHandler({
   useEffect(() => {
     if (orderStatus === 'pending') return
     if (typeof window !== 'undefined') {
-      const wasConfirming = window.sessionStorage.getItem(flagKey(orderId)) === '1'
-      window.sessionStorage.removeItem(flagKey(orderId))
+      const wasConfirming = safeSession.get(flagKey(orderId)) === '1'
+      safeSession.remove(flagKey(orderId))
       if (wasConfirming && !resolvedRef.current) {
         resolvedRef.current = true
         toast.success('Payment Confirmed', {
@@ -109,7 +110,7 @@ export function PaymentReturnHandler({
 
   const dismiss = () => {
     if (typeof window !== 'undefined') {
-      window.sessionStorage.removeItem(flagKey(orderId))
+      safeSession.remove(flagKey(orderId))
     }
     setConfirming(false)
   }

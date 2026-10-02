@@ -15,7 +15,7 @@
  * the degradation helper those call sites depend on still exists.
  */
 import { describe, it, expect } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 const ROOT = process.cwd()
@@ -65,5 +65,37 @@ describe('sentry client noise filters', () => {
       existsSync(path.join(ROOT, 'src', 'lib', 'utils', 'safe-background.ts')),
       'safe-background.ts is gone — ignoreErrors would now hide real failures',
     ).toBe(true)
+  })
+
+  // 2026-10-01: "null is not an object (evaluating 'window.parent.
+  // removeEventListener')" on / and "… 'sessionStorage.getItem')" on
+  // /sell/new came from iOS webview / extension scripts. They are filtered
+  // only because the app can't produce them: nothing reads window.parent,
+  // and sessionStorage is only touched inside lib/safe-storage.
+  it('filters the third-party window.parent / sessionStorage messages', () => {
+    expect(src).toContain("parent\\.(add|remove)EventListener")
+    expect(src).toContain("null is not an object (evaluating 'sessionStorage.getItem')")
+  })
+
+  it('app code never reads window.parent or sessionStorage directly', () => {
+    const offenders: string[] = []
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = path.join(dir, name)
+        if (statSync(full).isDirectory()) {
+          walk(full)
+          continue
+        }
+        if (!/\.(ts|tsx)$/.test(name) || /\.test\.tsx?$/.test(name)) continue
+        // The helper itself, and the filter file that names the messages.
+        if (full.endsWith(path.join('lib', 'safe-storage.ts')) || full === CLIENT) continue
+        const code = readFileSync(full, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\/\/.*$/gm, '')
+        if (/\bwindow\.parent\b|\bsessionStorage\s*[.?[]/.test(code)) offenders.push(path.relative(ROOT, full))
+      }
+    }
+    walk(path.join(ROOT, 'src'))
+    expect(offenders, 'use safeSession from lib/safe-storage (and never window.parent)').toEqual([])
   })
 })

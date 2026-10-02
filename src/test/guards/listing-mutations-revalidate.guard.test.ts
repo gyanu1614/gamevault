@@ -25,14 +25,10 @@ const ROOT = process.cwd()
 const SRC = join(ROOT, 'src')
 
 /** Writers that do not need to revalidate, with the reason. */
-const EXEMPT: Record<string, string> = {
-  // View counters: `views`/`view_count` are not rendered on category pages
-  // (the generic branch's "popular" sort reads it; a 24 h lag on a sort key
-  // is fine). lib/api/listings runs in the browser and only bumps views.
-  'src/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page.tsx': 'views counter only',
-  'src/lib/actions/listing-views.ts': 'views counter only',
-  'src/lib/api/listings.ts': 'browser module, views counter only',
-}
+// View counters left the set on 2026-10-01: views are counted only through
+// the service-role `increment_listing_views` RPC (lib/actions/listing-views),
+// which bumps a sort key the nightly backstop covers — no revalidation needed.
+const EXEMPT: Record<string, string> = {}
 
 const SEAM = '@/lib/revalidation/listings'
 /** Browser-side modules cannot call revalidateTag; they call the session-scoped action. */
@@ -116,17 +112,14 @@ describe('listing mutations revalidate the category surfaces', () => {
 
   it('pins the set of mutation paths', () => {
     expect(writers.map((w) => w.file).sort()).toEqual([
-      'src/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page.tsx',
       'src/lib/actions/admin-seller-restrictions.ts',
       'src/lib/actions/instant-delivery.ts',
-      'src/lib/actions/listing-views.ts',
       'src/lib/actions/listings.ts',
       'src/lib/actions/moderation.ts',
       // orders.ts left the set with createOrder (fee engine PR 3, A9): the
       // live path is createCheckout → transition(), pinned below.
       'src/lib/actions/sell-wizard.ts',
       'src/lib/actions/seller-presence.ts',
-      'src/lib/api/listings.ts',
       'src/lib/api/seller-compatible.ts',
       'src/lib/escrow/transition.ts',
       // GRO-08: drafts built during the application are submitted on

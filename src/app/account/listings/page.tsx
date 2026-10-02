@@ -156,6 +156,12 @@ function fmtCompact(n: number): string {
   return String(n)
 }
 
+/** Times the listing page was opened. The two counters tracked different
+ *  paths before 2026-10-01 and now rise together, so show the larger. */
+function viewsOf(l: Listing): number {
+  return Math.max(Number(l.views ?? 0), Number(l.view_count ?? 0))
+}
+
 function fmtRelative(iso: string): string {
   const then = new Date(iso).getTime()
   if (!Number.isFinite(then)) return '—'
@@ -440,6 +446,10 @@ function OffersContent() {
   // table opens on the offers, not on a column of ticks). Bulk Actions
   // turns it on; "Stop Selecting" or finishing a bulk action turns it off.
   const [selecting, setSelecting] = useState(false)
+  // Views: items and accounts listings have their own page that buyers open
+  // (currency offers are bought from the game page, so they have no count).
+  const showViews = type === 'items' || type === 'accounts'
+  const columnCount = 10 + (selecting ? 1 : 0) + (showViews ? 1 : 0)
   const [bulkOpen, setBulkOpen] = useState(false)
   const endSelection = () => {
     setSelected(new Set())
@@ -867,6 +877,7 @@ function OffersContent() {
                 <th className="px-3 py-3">Price</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">Stock</th>
+                {showViews && <th className="px-3 py-3">Views</th>}
                 <th className="px-3 py-3 whitespace-nowrap">Min Quantity</th>
                 <th className="px-3 py-3 whitespace-nowrap">Delivery Method</th>
                 <th className="px-3 py-3 whitespace-nowrap">Offer ID</th>
@@ -878,7 +889,7 @@ function OffersContent() {
               {isLoading &&
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={`s${i}`} className="border-t border-white/[0.06]">
-                    <td colSpan={selecting ? 11 : 10} className="px-5 py-3">
+                    <td colSpan={columnCount} className="px-5 py-3">
                       <div className="h-10 animate-pulse rounded-md bg-white/[0.04]" />
                     </td>
                   </tr>
@@ -886,7 +897,7 @@ function OffersContent() {
 
               {!isLoading && error != null && (
                 <tr className="border-t border-white/[0.06]">
-                  <td colSpan={selecting ? 11 : 10} className="px-5 py-10 text-center text-[13px] text-red-300">
+                  <td colSpan={columnCount} className="px-5 py-10 text-center text-[13px] text-red-300">
                     Couldn’t load your offers. Refresh to try again.
                   </td>
                 </tr>
@@ -963,6 +974,14 @@ function OffersContent() {
                     <td className="whitespace-nowrap px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary">
                       {stockLabel(l)}
                     </td>
+                    {showViews && (
+                      <td
+                        className="whitespace-nowrap px-3 py-2.5 text-[13.5px] font-bold tabular-nums text-text-primary"
+                        title={`${viewsOf(l).toLocaleString('en-US')} ${viewsOf(l) === 1 ? 'view' : 'views'}`}
+                      >
+                        {fmtCompact(viewsOf(l))}
+                      </td>
+                    )}
                     <td className="whitespace-nowrap px-3 py-2.5 text-[13px] tabular-nums text-text-secondary">
                       {minQtyLabel(l)}
                     </td>
@@ -987,7 +1006,7 @@ function OffersContent() {
 
               {!isLoading && !error && paged.length === 0 && (
                 <tr className="border-t border-white/[0.06]">
-                  <td colSpan={selecting ? 11 : 10} className="px-5 py-12 text-center">
+                  <td colSpan={columnCount} className="px-5 py-12 text-center">
                     <p className="text-[13.5px] font-semibold text-text-secondary">
                       {typed.length === 0 ? `No ${OFFER_META[type].title.toLowerCase()} yet.` : 'No offers match these filters.'}
                     </p>
