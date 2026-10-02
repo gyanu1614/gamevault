@@ -768,9 +768,9 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               <h2 className="text-sm font-semibold text-[#F1F3F1]">Market activity</h2>
             </div>
             <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              <BodyRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
-              <BodyRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
-              <BodyRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
+              <BodyRow label="Active listings" value={(brainrot.active_listing_count ?? 0).toLocaleString()} />
+              <BodyRow label="Completed sales" value={(brainrot.completed_sale_count ?? 0).toLocaleString()} />
+              <BodyRow label="Unique sellers" value={(brainrot.unique_seller_count ?? 0).toLocaleString()} />
               <BodyRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
             </dl>
           </section>

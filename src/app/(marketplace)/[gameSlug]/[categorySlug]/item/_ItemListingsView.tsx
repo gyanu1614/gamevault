@@ -52,7 +52,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
         ) : null}
         <div className="min-w-0 flex-1">
           <h1
-            className="text-text-primary"
+            className="text-balance break-words text-text-primary"
             style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
           >
             Buy {fullName}

@@ -36,7 +36,7 @@ export function AvailableNow({
   const itemHref = itemBuyHref({ gameSlug, categorySlug, itemSlug })
   const shown = offers.slice(0, 4)
   return (
-    <section aria-labelledby="available-now" className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
+    <section aria-labelledby="available-now" className="relative mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
       <TrackOnMount event={{ event: 'value_view', surface: 'value_item', game: gameSlug, item: itemSlug }} />
       <div className="mb-4 flex items-end justify-between gap-3">
         <h2 id="available-now" className="text-lg font-semibold text-text-primary">
