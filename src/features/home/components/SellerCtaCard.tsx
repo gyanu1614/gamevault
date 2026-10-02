@@ -627,6 +627,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
           src={d.src}
           alt=""
           aria-hidden
+          loading="lazy"
+          decoding="async"
           draggable={false}
           className="pointer-events-none absolute select-none"
           style={{
@@ -831,6 +833,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
               alt=""
               width={d.w}
               height={d.h}
+              loading="lazy"
+              decoding="async"
               draggable={false}
               style={{
                 width: d.size[coinStyle],

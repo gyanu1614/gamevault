@@ -77,6 +77,8 @@ export function HubCtaBand({
             src={bgSrc ?? `/cta-heroes/${gameSlug}.jpg`}
             alt=""
             aria-hidden
+            loading="lazy"
+            decoding="async"
             onError={() => setHasImage(false)}
             style={{ opacity: bgOpacity }}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"

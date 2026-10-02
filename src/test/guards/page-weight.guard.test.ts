@@ -67,13 +67,21 @@ const BELOW_THE_FOLD: { file: string; eagerOk?: string[] }[] = [
   { file: 'src/components/marketplace/HowItWorksBand.tsx' },
   { file: 'src/components/marketplace/TrustBand.tsx' },
   { file: 'src/components/footer.tsx' },
+  // Home: the seller card sits below the hero, popular games and latest listings.
+  { file: 'src/features/home/components/SellerCtaCard.tsx' },
+  // React preloads every eager server-rendered <img>; the mask of the same URL
+  // still loads, so only the duplicate preload tag and early <img> fetch go.
+  { file: 'src/components/ui/silver-icon.tsx' },
+  // The values/calculator hubs' closing CTA band.
+  { file: 'src/components/content/HubCtaBand.tsx' },
   // The hub header logo (src={gameImageUrl}) is the first thing on the page.
   { file: 'src/app/(marketplace)/[gameSlug]/_GameHub.tsx', eagerOk: ['src={gameImageUrl}'] },
 ]
 
 describe('below-the-fold images are lazy and decode async', () => {
   it.each(BELOW_THE_FOLD.map((b) => [b.file, b] as const))('%s', (_file, { file, eagerOk = [] }) => {
-    const tags = read(file).match(/<img\b[\s\S]*?\/>/g) ?? []
+    // `<img` + whitespace: a real element, not the text "<img>" in a comment.
+    const tags = read(file).match(/<img\s[\s\S]*?\/>/g) ?? []
     expect(tags.length, `${file} renders no <img>: remove it from this list`).toBeGreaterThan(0)
     const bad = tags
       .filter((t) => !eagerOk.some((ok) => t.includes(ok)))
