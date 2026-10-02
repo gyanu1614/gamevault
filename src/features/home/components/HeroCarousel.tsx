@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { ArrowRight, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
 import useEmblaCarousel from 'embla-carousel-react'

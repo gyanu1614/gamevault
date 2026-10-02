@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { sabCard } from '@/lib/sab/theme'
 import { formatCash } from '@/lib/sab/format'

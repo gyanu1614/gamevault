@@ -3,7 +3,7 @@
  * and quick publish/unpublish + delete. Authoring lives in the client component.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Plus } from '@phosphor-icons/react/dist/ssr/Plus'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { fetchAdminBlogPosts } from '@/lib/actions/admin-blog'

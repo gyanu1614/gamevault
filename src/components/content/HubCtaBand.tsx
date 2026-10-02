@@ -14,7 +14,7 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRight } from 'lucide-react'
 
 export function HubCtaBand({

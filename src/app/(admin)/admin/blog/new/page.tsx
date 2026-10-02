@@ -1,6 +1,6 @@
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { PageHeader } from '../../components/kit'
 import { BlogEditor } from '../BlogEditor'

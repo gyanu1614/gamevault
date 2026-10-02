@@ -14,7 +14,7 @@
  * <AdminPanel/> with TABLE_* classes for tabular data.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowDownRight } from '@phosphor-icons/react/dist/ssr/ArrowDownRight'
 import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr/ArrowUpRight'
 import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'

@@ -11,7 +11,7 @@
 
 import { lockScroll } from '@/lib/scroll-lock'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
 import {

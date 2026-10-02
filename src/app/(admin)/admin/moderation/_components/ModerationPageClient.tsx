@@ -51,7 +51,7 @@ import {
 } from '@phosphor-icons/react'
 import Image from 'next/image'
 import { toast } from 'sonner'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
 import { accountInputCls } from '@/components/account/AccountSurface'

@@ -10,7 +10,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ChevronRight, ShoppingBag } from 'lucide-react'
 import { AccountPage, SettingsCard, StatStrip, accountBtn, accountRowCls } from '@/components/account/AccountSurface'
 import { CardLink } from '@/components/account/CardLink'

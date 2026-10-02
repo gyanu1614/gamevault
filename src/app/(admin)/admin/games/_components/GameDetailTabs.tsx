@@ -20,7 +20,7 @@
  */
 
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowSquareOut, CaretLeft } from '@phosphor-icons/react'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { AdminEmpty, adminBtn } from '../../components/kit'

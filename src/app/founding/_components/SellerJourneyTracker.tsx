@@ -21,7 +21,7 @@
  */
 
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Check, ArrowRight, Lock, X, Loader2 } from 'lucide-react'

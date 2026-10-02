@@ -13,7 +13,7 @@
  * cards. Renders nothing when there's no data.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion, useMotionTemplate, useMotionValue } from 'framer-motion'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import type { HubStat, HubTeaserItem } from './_hubData'

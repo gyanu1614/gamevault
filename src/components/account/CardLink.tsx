@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ChevronRight } from 'lucide-react'
 
 /** "View All ›" in a card's title row. */

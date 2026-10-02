@@ -16,7 +16,7 @@
  * the marketplace card gradient; green only on the Buy button.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 import {
   ArrowRightIcon,

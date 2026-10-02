@@ -1,7 +1,7 @@
 import React from 'react'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { createClient } from '@/lib/supabase/server'
 import { getOrder } from '@/lib/actions/orders'
 import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'

@@ -26,7 +26,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Drawer } from 'vaul'
 import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'

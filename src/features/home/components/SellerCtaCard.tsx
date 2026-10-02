@@ -20,7 +20,7 @@
 import { ShineBorder } from '@/components/ui/shine-border'
 import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 
 /**

@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Store, TrendingUp, DollarSign, Users, ArrowRight, Clock } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 

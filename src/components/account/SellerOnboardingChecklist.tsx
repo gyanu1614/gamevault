@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion, useReducedMotion } from 'framer-motion'
 import { CheckCircle2, Circle, X, Copy, Check, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'

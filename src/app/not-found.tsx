@@ -4,7 +4,7 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Compass } from 'lucide-react'
 
 export const metadata: Metadata = {

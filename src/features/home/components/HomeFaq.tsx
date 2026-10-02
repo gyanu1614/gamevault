@@ -15,7 +15,7 @@
  * "Item Guaranteed or Full Refund", never "we hold your money until…".
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { serializeJsonLd } from '@/lib/seo/jsonld'

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'

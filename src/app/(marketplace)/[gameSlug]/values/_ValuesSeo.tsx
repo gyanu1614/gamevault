@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 

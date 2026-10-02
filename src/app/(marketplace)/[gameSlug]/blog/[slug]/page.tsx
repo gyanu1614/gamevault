@@ -8,7 +8,7 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts } from '@/lib/blog/db'

@@ -15,7 +15,7 @@
 
 import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Shield, Zap, Star, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { createClient } from '@/lib/supabase/server'

@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'

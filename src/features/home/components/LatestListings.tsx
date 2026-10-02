@@ -6,7 +6,7 @@
  * section authoring contract in CLAUDE.md.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRight } from 'lucide-react'
 import { getLatestListings } from '../lib/latest-listings'
 import { getPopularGames } from '../lib/popular-games'

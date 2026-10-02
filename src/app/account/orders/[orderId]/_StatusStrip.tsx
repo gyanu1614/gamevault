@@ -25,7 +25,7 @@ import {
   TimerOff,
   Ban,
 } from 'lucide-react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { OrderCard } from './_OrderCard'
 import { cn } from '@/lib/utils'
 

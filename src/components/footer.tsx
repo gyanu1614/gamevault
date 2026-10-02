@@ -17,7 +17,7 @@
 
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
