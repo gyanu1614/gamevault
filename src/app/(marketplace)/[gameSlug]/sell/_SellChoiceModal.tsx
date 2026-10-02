@@ -14,7 +14,7 @@
  * open it (no duplicate button styling here).
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { IconRosetteDiscountCheck, IconBolt, IconClock, IconArrowRight } from '@tabler/icons-react'
 import {
   Dialog,

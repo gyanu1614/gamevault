@@ -1,4 +1,5 @@
 import { SITE_URL } from '@/config/site'
+import { TITLE_TEMPLATE } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 // Two display faces still load via next/font/google (it downloads and
@@ -11,7 +12,7 @@ import { Providers } from '@/components/providers'
 import { LayoutWrapper } from '@/components/layout-wrapper'
 import { FooterGameLinks } from '@/components/footer-game-links'
 import { Toaster } from 'sonner'
-import RecentPurchaseToast, { DailyStatsToast } from '@/components/marketplace/RecentPurchaseToast'
+import { DeferredSocialProof } from '@/components/marketplace/DeferredSocialProof'
 import { Analytics } from "@vercel/analytics/next"
 
 // Two text faces, split by surface:
@@ -76,6 +77,9 @@ const archivo = Archivo({
   // which covers 400-800 AND keeps the wdth axis live.
   axes: ['wdth'],
   display: 'swap',
+  // Used only by the homepage seller card. Without this next/font preloads the
+  // file on EVERY route, a high-priority fetch the other pages never use.
+  preload: false,
   subsets: ['latin'],
   variable: '--font-archivo',
 })
@@ -91,6 +95,8 @@ const archivo = Archivo({
 const bigShoulders = Roboto_Condensed({
   weight: '700',
   display: 'swap',
+  // Homepage buyer-steps numerals only: no preload on routes that never use it.
+  preload: false,
   subsets: ['latin'],
   variable: '--font-numeral',
 })
@@ -104,7 +110,8 @@ export const metadata: Metadata = {
   alternates: { canonical: './' },
   title: {
     default: 'DropMarket — Buy & Sell Game Items Safely',
-    template: '%s | DropMarket',
+    // Pages hand over a BARE title; see src/lib/seo/title.ts.
+    template: TITLE_TEMPLATE,
   },
   description:
     'The safest peer-to-peer marketplace for gaming items, currency, and accounts. Every order covered by SafeDrop Protection. 18+ games, instant delivery.',
@@ -172,10 +179,9 @@ export default function RootLayout({
               className: 'toast-reduced-glow',
             }}
           />
-          {/* Social Proof Widgets */}
-          <RecentPurchaseToast />
+          {/* Social proof widgets: mounted once the page is idle, not in the first-load window. */}
+          <DeferredSocialProof />
           <Analytics />
-          <DailyStatsToast />
         </Providers>
       </body>
     </html>

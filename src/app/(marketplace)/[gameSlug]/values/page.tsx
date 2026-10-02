@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
@@ -20,6 +20,7 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 import GenericValuesHubPage from './_generic/ValuesHubPage'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { stripBrand } from '@/lib/seo/title'
 
 export const revalidate = 3600
 /**
@@ -77,9 +78,11 @@ export async function generateMetadata({
       year: 'numeric',
       timeZone: 'UTC',
     })
-    const title = `Adopt Me Value List (${monthYear}) — Pet Values in USD | DropMarket`
+    // The branded string is reused on purpose for the social title; the
+    // templated <title> gets it bare (the layout appends "| DropMarket").
+    const socialTitle = `Adopt Me Value List (${monthYear}) — Pet Values in USD | DropMarket`
     return {
-      title,
+      title: stripBrand(socialTitle),
       description: `Adopt Me value list for ${monthYear}: real cash values and community trade values for every pet and potion variant (Fly Ride, Neon, Mega) — the only list that shows what a pet is worth in real money.`,
       keywords: [
         'adopt me value list',
@@ -95,7 +98,7 @@ export async function generateMetadata({
       ],
       alternates: { canonical: '/adopt-me/values' },
       openGraph: {
-        title,
+        title: socialTitle,
         description:
           'Every Adopt Me pet, every variant — community trade value and DropMarket cash value side by side.',
         url: '/adopt-me/values',

@@ -9,6 +9,7 @@ import RouteProgress from '@/components/global/RouteProgress'
 import AccessDeniedToast from '@/components/global/AccessDeniedToast'
 import EmailConfirmedToast from '@/components/global/EmailConfirmedToast'
 import { AuthDialogProvider } from '@/components/auth/AuthDialog'
+import { IntentPrefetch } from '@/components/navigation/IntentPrefetch'
 import { AuthProvider } from '@/hooks/use-auth'
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <Suspense fallback={null}>
             <RouteProgress />
           </Suspense>
+          {/* Link prefetching on intent (hover / touch / focus) for every
+              AppLink; nothing prefetches because it scrolled into view. */}
+          <IntentPrefetch />
           {/* V17e — Surfaces a toast when the middleware bounced the
               user with ?access=… so they understand WHY they landed
               on the homepage instead of the seller route they tried. */}

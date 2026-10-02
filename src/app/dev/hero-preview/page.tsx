@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion } from 'framer-motion'
 import { ArrowRight, Search, Sparkles, TrendingUp, X } from 'lucide-react'
 import { usePopularGames } from '@/features/home/hooks/usePopularGames'

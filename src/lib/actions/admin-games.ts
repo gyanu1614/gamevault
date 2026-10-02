@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
+import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,26 +93,34 @@ export async function insertGame(data: GameData) {
   await requireAdmin()
   const supabase = getAdminSupabase()
 
-  const { error } = await supabase.from('games').insert({
-    name: data.name,
-    slug: data.slug,
-    emoji: data.emoji || null,
-    image_url: data.image_url || null,
-    display_name: data.display_name || null,
-    sort_order: data.sort_order ?? 99,
-    is_active: true,
-  })
+  const { data: created, error } = await supabase
+    .from('games')
+    .insert({
+      name: data.name,
+      slug: data.slug,
+      emoji: data.emoji || null,
+      image_url: data.image_url || null,
+      display_name: data.display_name || null,
+      sort_order: data.sort_order ?? 99,
+      is_active: true,
+    })
+    .select('id')
+    .single()
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/games')
   // Footer game directory renders on every route (unstable_cache).
   revalidateTag(GAME_DIRECTORY_TAG)
+  // IndexNow: the new game's pages, only those the shared rule would index.
+  if (created) await submitGameIfLive(supabase, (created as { id: string }).id)
   return { success: true }
 }
 
 export async function toggleGameActive(id: string, isActive: boolean) {
   await requireAdmin()
   const supabase = getAdminSupabase()
+  // The slug is needed to tell engines a switched-off game's pages are gone.
+  const { data: before } = await supabase.from('games').select('slug').eq('id', id).maybeSingle()
 
   const { error } = await supabase
     .from('games')
@@ -122,6 +131,13 @@ export async function toggleGameActive(id: string, isActive: boolean) {
   revalidatePath('/admin/games')
   // Footer game directory renders on every route (unstable_cache).
   revalidateTag(GAME_DIRECTORY_TAG)
+  // IndexNow. `isActive` is the CURRENT flag, so the game is now !isActive.
+  if (isActive) {
+    const slug = (before as { slug?: string } | null)?.slug
+    if (slug) await submitGameRemoved(slug)
+  } else {
+    await submitGameIfLive(supabase, id)
+  }
   return { success: true }
 }
 

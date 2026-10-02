@@ -10,7 +10,7 @@
  * game, else /blog/[slug]) so the rail never links through a 301 redirect.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { BlogPost } from '@/lib/blog/posts'

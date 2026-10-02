@@ -14,7 +14,7 @@
  * Empty: returns null so no empty card renders.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useMemo, useState } from 'react'
 import { ChevronRight, Info, ListChecks, Pencil } from 'lucide-react'
 import { OrderCard } from './_OrderCard'

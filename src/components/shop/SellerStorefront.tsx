@@ -11,7 +11,7 @@
 import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import React, { useLayoutEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { Package, Calendar, Star } from 'lucide-react'
 

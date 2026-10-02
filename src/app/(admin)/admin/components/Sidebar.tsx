@@ -16,7 +16,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { Drawer } from 'vaul'
 import {

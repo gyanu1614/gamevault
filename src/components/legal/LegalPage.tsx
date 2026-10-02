@@ -8,7 +8,7 @@
  * inline marks.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Fragment } from 'react'
 import { LEGAL_DOCS, LEGAL_ENTITY, type LegalBlock, type LegalDoc } from '@/lib/legal/documents'
 

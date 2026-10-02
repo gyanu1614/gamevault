@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowDownToLine, ChevronRight } from 'lucide-react'
 import { useSellerEarnings } from '@/hooks/use-seller-earnings'
 import PayoutDetailsSection from '@/components/account/settings/PayoutDetailsSection'

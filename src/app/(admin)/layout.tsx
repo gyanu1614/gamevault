@@ -3,10 +3,11 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import AdminChrome from './admin/components/AdminChrome'
+import { ADMIN_TITLE_TEMPLATE } from '@/lib/seo/title'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | DropMarket Admin',
+    template: ADMIN_TITLE_TEMPLATE,
     default: 'DropMarket Admin',
   },
 }

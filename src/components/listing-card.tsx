@@ -1,7 +1,7 @@
 'use client'
 
 import { sellerDisplayName, sellerInitial, sellerRatingPercent } from '@/lib/seller/identity'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Eye, ShoppingBag, Clock, Zap, Infinity, TrendingDown } from 'lucide-react'

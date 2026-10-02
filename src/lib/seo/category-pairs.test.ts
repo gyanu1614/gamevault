@@ -16,23 +16,46 @@ import {
   onlyRenderablePairs,
 } from './category-pairs'
 
+// Reads reach React.cache / unstable_cache through seller presence; pass them through.
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react')>()),
+  cache: (fn: unknown) => fn,
+}))
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: () => Promise<unknown>) => fn,
+  revalidateTag: () => undefined,
+  revalidatePath: () => undefined,
+}))
+
 describe('getIndexableCategoryPairs', () => {
-  it('unions listing pairs with curated currency categories, deduped and sorted', async () => {
+  it('follows the sitemap rule: enabled categories with a buyable listing or curated content, sorted', async () => {
     recorder = createSupabaseRecorder({
-      listings: [
-        { game: { slug: 'roblox' }, category: { slug: 'buy-items' } },
-        { game: { slug: 'roblox' }, category: { slug: 'buy-items' } },
-        { game: { slug: 'fortnite' }, category: { slug: 'buy-accounts' } },
-        { game: null, category: { slug: 'orphan' } },
+      games: [
+        { id: 'g1', slug: 'roblox' },
+        { id: 'g2', slug: 'valorant' },
+        { id: 'g3', slug: 'fortnite' },
       ],
-      category_configs: [{ game_id: 'g1' }],
       game_categories: [
-        { slug: 'buy-robux', game_id: 'g1', game: { slug: 'roblox' } },
-        { slug: 'buy-vp', game_id: 'g2', game: { slug: 'valorant' } },
+        { id: 'c1', slug: 'buy-items', type: 'items', game_id: 'g1' },
+        { id: 'c2', slug: 'buy-robux', type: 'currency', game_id: 'g1' },
+        { id: 'c3', slug: 'buy-accounts', type: 'account', game_id: 'g3' },
+        { id: 'c4', slug: 'buy-vp', type: 'currency', game_id: 'g2' },
       ],
+      category_configs: [
+        // g1 curated, g2 only the default row (empty lists)
+        { game_id: 'g1', config: { faq: [{}], steps: [] }, updated_at: '2026-09-20T00:00:00Z' },
+        { game_id: 'g2', config: { faq: [], steps: [] }, updated_at: '2026-09-20T00:00:00Z' },
+      ],
+      listings: [
+        { game_id: 'g1', game_category_id: 'c1', seller_id: 's1', price: 5, updated_at: '2026-09-28T00:00:00Z' },
+        // free listing: not buyable, so fortnite/buy-accounts is not indexable
+        { game_id: 'g3', game_category_id: 'c3', seller_id: 's1', price: 0, updated_at: '2026-09-28T00:00:00Z' },
+        // a listing in a category that is not an enabled category of its game: never counts
+        { game_id: 'g2', game_category_id: 'cX', seller_id: 's1', price: 5, updated_at: '2026-09-28T00:00:00Z' },
+      ],
+      seller_presence: [],
     })
     await expect(getIndexableCategoryPairs()).resolves.toEqual([
-      { gameSlug: 'fortnite', categorySlug: 'buy-accounts' },
       { gameSlug: 'roblox', categorySlug: 'buy-items' },
       { gameSlug: 'roblox', categorySlug: 'buy-robux' },
     ])

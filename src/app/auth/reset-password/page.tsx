@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Eye, EyeOff, Lock, ArrowLeft } from 'lucide-react'
 
 export default function ResetPasswordPage() {

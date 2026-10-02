@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, Loader2, LogOut, Package, Settings, Wallet } from 'lucide-react'
 import { getAvatarUrl } from '@/lib/utils/avatar'

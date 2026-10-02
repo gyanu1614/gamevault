@@ -65,7 +65,8 @@ describe.skipIf(!hasEnv)('trend radar — review state machine (guard)', () => {
   })
 
   it('sitemap and game directory readers filter is_active explicitly (static pin)', () => {
-    for (const f of ['src/app/sitemap.ts', 'src/lib/marketplace/gameDirectoryCache.ts']) {
+    // The sitemap's games read lives in category-data.ts (sitemap.ts only wires loader + builder).
+    for (const f of ['src/lib/seo/category-data.ts', 'src/lib/marketplace/gameDirectoryCache.ts']) {
       const src = readFileSync(f, 'utf8')
       expect(src, f).toMatch(/from\('games'\)[\s\S]{0,400}\.eq\('is_active',\s*true\)/)
     }

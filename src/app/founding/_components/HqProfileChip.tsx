@@ -10,7 +10,7 @@
  * Sign out clears the session and lands on the homepage.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useTransition } from 'react'
 import { LayoutDashboard, Package, Wallet, LifeBuoy, LogOut, ChevronDown } from 'lucide-react'
 import {

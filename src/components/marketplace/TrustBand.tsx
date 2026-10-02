@@ -77,6 +77,8 @@ export function TrustBand({ className }: { className?: string }) {
                   src={item.img}
                   alt=""
                   aria-hidden
+                  loading="lazy"
+                  decoding="async"
                   style={{ '--icon-glow': `${item.glow}8C` } as React.CSSProperties}
                   className="relative h-8 w-8 shrink-0 object-contain transition-all duration-300 [filter:drop-shadow(0_0_5px_var(--icon-glow))_drop-shadow(0_6px_7px_rgba(0,0,0,0.45))] group-hover:-translate-y-0.5 group-hover:scale-110 group-hover:[filter:drop-shadow(0_0_9px_var(--icon-glow))_drop-shadow(0_6px_7px_rgba(0,0,0,0.45))]"
                 />

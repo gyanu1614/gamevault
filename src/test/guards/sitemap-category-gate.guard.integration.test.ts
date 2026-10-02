@@ -36,6 +36,14 @@ vi.mock('react', async () => {
   return { ...actual, cache: <T,>(fn: T) => fn }
 })
 
+// The sitemap reads the paused-seller list (seller-presence), which goes through
+// unstable_cache and needs Next's incremental cache; outside a request, read through.
+vi.mock('next/cache', () => ({
+  unstable_cache: <T,>(fn: T) => fn,
+  revalidateTag: () => undefined,
+  revalidatePath: () => undefined,
+}))
+
 let fx: Fixture | null = null
 let ready = false
 let categoryId = ''

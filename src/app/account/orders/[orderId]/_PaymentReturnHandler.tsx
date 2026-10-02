@@ -28,7 +28,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { safeSession } from '@/lib/safe-storage'
 import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 
 const CONFIRM_TIMEOUT_MS = 120_000

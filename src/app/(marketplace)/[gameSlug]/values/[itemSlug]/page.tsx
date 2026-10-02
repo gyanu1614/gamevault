@@ -21,6 +21,7 @@ import GenericValueItemPage from '../_generic/ValueItemPage'
 import { getValueItems } from '@/lib/values/data'
 import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { stripBrand } from '@/lib/seo/title'
 
 /**
  * The page SHELL is static content — an item's name, rarity, artwork, income
@@ -430,8 +431,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!pet) return { title: 'Value Not Found' }
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     // Title leads with the pet name + "value" (the head term) and carries the
-    // real-money wedge; keeps DropMarket last.
-    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value | DropMarket`
+    // real-money wedge. The social title keeps DropMarket last; the templated
+    // <title> takes it bare (the root layout appends "| DropMarket").
+    const socialTitle = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value | DropMarket`
     const description = `How much is a ${pet.name} worth in Adopt Me in real money? See the ${pet.name}'s cash value (USD) and community trade value — Normal, Fly Ride, Neon and Mega prices, updated ${monthYear} from real marketplace listings.`
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
@@ -451,12 +453,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `adopt me ${pet.name} price`,
     ]
     return {
-      title,
+      title: stripBrand(socialTitle),
       description,
       keywords,
       alternates: { canonical },
       openGraph: {
-        title,
+        title: socialTitle,
         description,
         url: canonical,
         type: 'website',

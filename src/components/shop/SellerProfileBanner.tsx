@@ -17,7 +17,7 @@ import { sellerDisplayName } from '@/lib/seller/identity'
 import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
 import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import React from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion } from 'framer-motion'
 import {
   ThumbsUp, Package, TrendingUp, MessageCircle, UserPlus, Check,

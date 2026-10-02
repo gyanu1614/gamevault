@@ -4,7 +4,7 @@
  * every card is the same fixed-ratio tile in a responsive grid, so nothing jumps.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 

@@ -33,13 +33,11 @@
  * scroll (e.g. back-button-style flows). Use plain next/link for those.
  */
 
-import NextLink, { type LinkProps } from 'next/link'
-import { forwardRef, type AnchorHTMLAttributes } from 'react'
+import AppLink, { type AppLinkProps } from '@/components/navigation/AppLink'
+import { forwardRef } from 'react'
 
-type SmartLinkProps = LinkProps &
-  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & {
-    children?: React.ReactNode
-  }
+// Built on AppLink, so it prefetches on intent only (hover / touch / focus).
+type SmartLinkProps = AppLinkProps
 
 /**
  * V17w — Final SmartLink. Just `next/link` with `scroll={false}`.
@@ -66,9 +64,9 @@ type SmartLinkProps = LinkProps &
 export const SmartLink = forwardRef<HTMLAnchorElement, SmartLinkProps>(
   function SmartLink({ children, ...rest }, ref) {
     return (
-      <NextLink ref={ref} scroll={false} {...rest}>
+      <AppLink ref={ref} scroll={false} {...rest}>
         {children}
-      </NextLink>
+      </AppLink>
     )
   },
 )

@@ -11,7 +11,7 @@
 
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { getFlatPosts, getPost } from '@/lib/blog/posts'

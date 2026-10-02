@@ -15,7 +15,7 @@
  * of three full columns, which is where most of the height went.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 
 const LEGAL = [

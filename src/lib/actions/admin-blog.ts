@@ -9,7 +9,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
-import { pingIndexNow } from '@/lib/seo/indexnow'
+import { submitPostEvent } from '@/lib/seo/indexnow'
 
 export type BlogPostType = 'guide' | 'value' | 'seller'
 export type BlogStatus = 'draft' | 'published' | 'archived'
@@ -69,15 +69,9 @@ function revalidatePostPaths(gameSlug: string | null, slug: string) {
   }
 }
 
-/** Ping IndexNow for a freshly published post (no-op outside prod). */
-async function pingPost(gameSlug: string | null, slug: string) {
-  const path = gameSlug ? `/${gameSlug}/blog/${slug}` : `/blog/${slug}`
-  try {
-    await pingIndexNow([path])
-  } catch {
-    /* never break a publish over an SEO ping */
-  }
-}
+// IndexNow for posts: lib/seo/indexnow submitPostEvent (post + its blog index;
+// production only, never throws). Publish and edit of a published post submit;
+// so do unpublish and delete of one that was live.
 
 /** All posts for the admin list (any status), newest first. */
 export async function fetchAdminBlogPosts(): Promise<AdminBlogPost[]> {
@@ -106,7 +100,7 @@ export async function insertBlogPost(input: BlogPostInput) {
   const { data, error } = await supabase.from('blog_posts').insert(row).select('id').single()
   if (error) return { success: false as const, error: error.message }
   revalidatePostPaths(row.primary_game_slug, row.slug)
-  if (row.status === 'published') await pingPost(row.primary_game_slug, row.slug)
+  if (row.status === 'published') await submitPostEvent('published', { gameSlug: row.primary_game_slug, slug: row.slug })
   return { success: true as const, id: (data as { id: string }).id }
 }
 
@@ -117,7 +111,7 @@ export async function updateBlogPost(id: string, input: BlogPostInput) {
   const { error } = await supabase.from('blog_posts').update(row).eq('id', id)
   if (error) return { success: false as const, error: error.message }
   revalidatePostPaths(row.primary_game_slug, row.slug)
-  if (row.status === 'published') await pingPost(row.primary_game_slug, row.slug)
+  if (row.status === 'published') await submitPostEvent('edited', { gameSlug: row.primary_game_slug, slug: row.slug })
   return { success: true as const }
 }
 
@@ -127,16 +121,16 @@ export async function deleteBlogPost(id: string) {
   // Grab the paths before deleting so we can revalidate them.
   const { data: existing } = await supabase
     .from('blog_posts')
-    .select('primary_game_slug, slug')
+    .select('primary_game_slug, slug, status')
     .eq('id', id)
     .maybeSingle()
   const { error } = await supabase.from('blog_posts').delete().eq('id', id)
   if (error) return { success: false as const, error: error.message }
   if (existing) {
-    revalidatePostPaths(
-      (existing as { primary_game_slug: string | null }).primary_game_slug,
-      (existing as { slug: string }).slug,
-    )
+    const gone = existing as { primary_game_slug: string | null; slug: string; status: string }
+    revalidatePostPaths(gone.primary_game_slug, gone.slug)
+    // A deleted post that was live is a page engines should see disappear.
+    if (gone.status === 'published') await submitPostEvent('removed', { gameSlug: gone.primary_game_slug, slug: gone.slug })
   }
   return { success: true as const }
 }
@@ -144,6 +138,7 @@ export async function deleteBlogPost(id: string) {
 export async function setBlogPostStatus(id: string, status: BlogStatus) {
   await requireAdmin()
   const supabase = getAdminSupabase()
+  const { data: previous } = await supabase.from('blog_posts').select('status').eq('id', id).maybeSingle()
   const { data, error } = await supabase
     .from('blog_posts')
     .update({ status })
@@ -153,7 +148,9 @@ export async function setBlogPostStatus(id: string, status: BlogStatus) {
   if (error) return { success: false as const, error: error.message }
   const r = data as { primary_game_slug: string | null; slug: string }
   revalidatePostPaths(r.primary_game_slug, r.slug)
-  if (status === 'published') await pingPost(r.primary_game_slug, r.slug)
+  const wasPublished = (previous as { status?: string } | null)?.status === 'published'
+  if (status === 'published') await submitPostEvent('published', { gameSlug: r.primary_game_slug, slug: r.slug })
+  else if (wasPublished) await submitPostEvent('removed', { gameSlug: r.primary_game_slug, slug: r.slug })
   return { success: true as const }
 }
 

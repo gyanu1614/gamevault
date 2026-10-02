@@ -26,6 +26,8 @@ export default function Step1ChooseItem({
       aria-hidden="true"
       width={640}
       height={640}
+      loading="lazy"
+      decoding="async"
       className={className}
       {...props}
     />

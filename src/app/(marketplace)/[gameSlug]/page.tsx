@@ -16,6 +16,7 @@ import { isGameHubIndexable } from '@/lib/games/indexability'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
+import { stripBrand } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import GameSubNav from '@/components/marketplace/GameSubNav'
 import { SabLanding } from './values/_SabLanding'
@@ -148,7 +149,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
 
   return {
-    title: seo.title,
+    // `seo.title` may be an admin override (games.seo_title) that carries the
+    // brand, and it is reused for the social title below; the templated
+    // <title> takes it bare.
+    title: stripBrand(seo.title),
     description: seo.description,
     robots: indexable ? undefined : { index: false, follow: true },
     keywords: seo.keywords,

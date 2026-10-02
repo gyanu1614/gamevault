@@ -16,7 +16,7 @@
  * in; this file only draws it.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import {
   SquaresFourIcon,
   ReceiptIcon,

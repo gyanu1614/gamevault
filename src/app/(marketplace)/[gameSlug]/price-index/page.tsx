@@ -10,7 +10,7 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'

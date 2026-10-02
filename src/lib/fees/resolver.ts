@@ -56,7 +56,6 @@ export interface SellerFeeResolution {
 /** The one method this seam needs; a SupabaseClient satisfies it (its rpc
  *  is generic over the function name, hence the loose parameter types). */
 export interface FeeRpcClient {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rpc: (fn: any, args?: any) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>
 }
 
