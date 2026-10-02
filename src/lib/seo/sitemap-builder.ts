@@ -1,0 +1,265 @@
+import type { MetadataRoute } from 'next'
+
+import { CONTENT_HUB_GAME_SLUGS, getGameContentTheme } from '@/lib/content/theme'
+import {
+  isGameHubIndexable,
+  isGameSellPageIndexable,
+  isValueItemIndexable,
+} from '@/lib/games/indexability'
+import { LEGAL_DOCS } from '@/lib/legal/documents'
+import { computeCategoryPages } from '@/lib/seo/category-index'
+import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
+
+/**
+ * The sitemap, as a pure function of already-fetched rows (the loader is
+ * sitemap-data.ts). Three promises, each pinned by sitemap-builder.test.ts:
+ *
+ *  1. Only URLs that return 200, are indexable and canonicalise to themselves.
+ *     Every page type uses the SAME verdict as the page's own robots meta
+ *     (lib/games/indexability.ts), so the two cannot drift.
+ *  2. Every entry carries a truthful lastmod: the real change date of the row or
+ *     copy behind the page. Never `new Date()`: a field that always says "now"
+ *     teaches Google to ignore it. An entry whose data has no date has none.
+ *  3. URLs equal their canonical exactly, including the homepage (the bare
+ *     origin, which is what next/metadata resolves "/" to).
+ *
+ * Sell pages stay (they earn traffic on Bing). No sitemap index: ~1,000 URLs is
+ * far below the 50,000 limit and /sitemap.xml must stay the single entry point.
+ */
+export interface SitemapInput {
+  baseUrl: string
+  /** Active games only. */
+  games: { id: string; slug: string; content_tier: string | null; updated_at: string | null; seo_indexable: boolean | null }[]
+  /** Enabled categories only. */
+  categories: { id: string; slug: string; type: string | null; game_id: string }[]
+  currencyConfigs: {
+    game_id: string
+    config: { faq?: unknown[] | null; steps?: unknown[] | null } | null
+    updated_at: string | null
+  }[]
+  /** Active listings of non-test sellers. */
+  listings: {
+    slug: string | null
+    updated_at: string | null
+    game_id: string
+    game_category_id: string
+    seller_id: string
+    price: number | string | null
+  }[]
+  pausedSellerIds: ReadonlySet<string>
+  sabBrainrots: { slug: string; updated_at: string | null }[]
+  adoptMePets: { slug: string; updated_at: string | null }[]
+  pipelineItems: { gameSlug: string; slug: string; priceChangedAt: string | null; sampleSize: number | null }[]
+  gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null }[]
+  /** Every blog post (for the index page's date). */
+  posts: { publishedAt: string }[]
+  /** Posts that still live at the flat /blog/{slug} URL. */
+  flatPosts: { slug: string; publishedAt: string }[]
+  /** Landing pages that have real inventory. */
+  landingSlugs: string[]
+}
+
+type Entry = MetadataRoute.Sitemap[number]
+
+const newest = (...dates: (string | null | undefined)[]): string | null =>
+  dates.reduce<string | null>((acc, d) => (d && (!acc || d > acc) ? d : acc), null)
+const dated = (d: string | null | undefined) => (d ? { lastModified: d } : {})
+
+export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
+  const { baseUrl } = input
+  const at = (path: string) => `${baseUrl}${path}`
+
+  const gameById = new Map(input.games.map((g) => [g.id, g]))
+  const categoryById = new Map(input.categories.map((c) => [c.id, c]))
+  const curatedConfigGameIds = new Set(input.currencyConfigs.map((c) => c.game_id))
+
+  // Listings whose detail page exists: the game is active and the category is an
+  // enabled category OF THAT GAME (otherwise the route gate 404s).
+  const liveListings = input.listings.filter((l) => {
+    const cat = categoryById.get(l.game_category_id)
+    return !!l.slug && gameById.has(l.game_id) && !!cat && cat.game_id === l.game_id
+  })
+  const buyable = (l: SitemapInput['listings'][number]) =>
+    !input.pausedSellerIds.has(l.seller_id) && Number(l.price) > 0
+
+  // Newest change per game, over every active listing (what the hub shows).
+  const gameListingLastmod = new Map<string, string>()
+  const gamesWithListings = new Set<string>()
+  for (const l of input.listings) {
+    gamesWithListings.add(l.game_id)
+    const prev = gameListingLastmod.get(l.game_id) ?? null
+    const next = newest(prev, l.updated_at)
+    if (next) gameListingLastmod.set(l.game_id, next)
+  }
+  // Home and /browse show live listings: they change when a buyable one does.
+  const marketLastmod = newest(...liveListings.filter(buyable).map((l) => l.updated_at))
+
+  // ── static pages ──────────────────────────────────────────────────────────
+  const staticPages: Entry[] = [
+    { url: baseUrl, ...dated(marketLastmod), changeFrequency: 'daily', priority: 1 },
+    { url: at('/browse'), ...dated(marketLastmod), changeFrequency: 'daily', priority: 0.9 },
+    { url: at('/safedrop'), ...dated(SITE_PAGES_UPDATED.safedrop), changeFrequency: 'weekly', priority: 0.8 },
+    { url: at('/sell/fees'), ...dated(SITE_PAGES_UPDATED.sellFees), changeFrequency: 'weekly', priority: 0.7 },
+    { url: at('/account/become-seller'), ...dated(SITE_PAGES_UPDATED.becomeSeller), changeFrequency: 'monthly', priority: 0.7 },
+  ]
+
+  // ── legal: one route per doc under src/app/(legal). `safedrop` is /safedrop-policy.
+  const legalUpdated = legalLastUpdatedIso()
+  const legalPages: Entry[] = LEGAL_DOCS.map((doc) => ({
+    url: at(doc.slug === 'safedrop' ? '/safedrop-policy' : `/${doc.slug}`),
+    ...dated(legalUpdated),
+    changeFrequency: 'monthly' as const,
+    priority: 0.3,
+  }))
+
+  // ── blog ──────────────────────────────────────────────────────────────────
+  const newestPost = newest(...input.posts.map((p) => p.publishedAt))
+  const blogPages: Entry[] = [
+    { url: at('/blog'), ...dated(newestPost), changeFrequency: 'weekly', priority: 0.6 },
+    ...input.flatPosts.map((p) => ({
+      url: at(`/blog/${p.slug}`),
+      ...dated(p.publishedAt),
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    })),
+  ]
+  const gameBlogLastmod = new Map<string, string>()
+  const gameBlogPages: Entry[] = input.gamePosts.map((p) => {
+    const next = newest(gameBlogLastmod.get(p.primary_game_slug), p.updated_at)
+    if (next) gameBlogLastmod.set(p.primary_game_slug, next)
+    return {
+      url: at(`/${p.primary_game_slug}/blog/${p.slug}`),
+      ...dated(p.updated_at),
+      changeFrequency: 'weekly' as const,
+      priority: 0.55,
+    }
+  })
+  const gameBlogIndexPages: Entry[] = [...new Set(input.gamePosts.map((p) => p.primary_game_slug))].map((g) => ({
+    url: at(`/${g}/blog`),
+    ...dated(gameBlogLastmod.get(g)),
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }))
+
+  // ── landing pages (curated copy; only the ones with inventory) ───────────
+  const landingPages: Entry[] = input.landingSlugs.map((slug) => ({
+    url: at(`/buy/${slug}`),
+    ...dated(SITE_PAGES_UPDATED.landingPages),
+    changeFrequency: 'weekly' as const,
+    priority: 0.75,
+  }))
+
+  // ── content hubs: values, calculator, methodology, price index, items ────
+  const valuesUpdated = (slug: string): string | null => {
+    if (slug === 'steal-a-brainrot') return newest(...input.sabBrainrots.map((i) => i.updated_at))
+    if (slug === 'adopt-me') return newest(...input.adoptMePets.map((i) => i.updated_at))
+    return newest(...input.pipelineItems.filter((i) => i.gameSlug === slug).map((i) => i.priceChangedAt))
+  }
+  const itemsByGame: Record<string, { slug: string; updated_at: string | null }[]> = {
+    'steal-a-brainrot': input.sabBrainrots,
+    'adopt-me': input.adoptMePets,
+  }
+  for (const i of input.pipelineItems) {
+    // Same rule as the item page's own robots meta: priced and backed by enough live listings.
+    if (!isValueItemIndexable({ priced: true, sampleSize: i.sampleSize })) continue
+    ;(itemsByGame[i.gameSlug] ??= []).push({ slug: i.slug, updated_at: i.priceChangedAt })
+  }
+  const extraPathsByGame: Record<string, { path: string; priority: number }[]> = {
+    'adopt-me': [{ path: 'neon-calculator', priority: 0.6 }],
+  }
+
+  const hubPages: Entry[] = CONTENT_HUB_GAME_SLUGS.flatMap((slug) => {
+    const theme = getGameContentTheme(slug)
+    const data = valuesUpdated(slug)
+    const out: Entry[] = []
+    if (theme.pages.values) out.push({ url: at(`/${slug}/values`), ...dated(data), changeFrequency: 'daily', priority: 0.85 })
+    if (theme.pages.calculator) out.push({ url: at(`/${slug}/calculator`), ...dated(data), changeFrequency: 'weekly', priority: 0.8 })
+    for (const extra of extraPathsByGame[slug] ?? []) {
+      out.push({ url: at(`/${slug}/${extra.path}`), ...dated(data), changeFrequency: 'weekly', priority: extra.priority })
+    }
+    if (theme.pages.methodology) {
+      out.push({ url: at(`/${slug}/values/methodology`), ...dated(SITE_PAGES_UPDATED.methodology), changeFrequency: 'monthly', priority: 0.5 })
+    }
+    if (theme.pages.priceIndex) out.push({ url: at(`/${slug}/price-index`), ...dated(data), changeFrequency: 'daily', priority: 0.7 })
+    for (const item of itemsByGame[slug] ?? []) {
+      if (!item.slug) continue
+      out.push({ url: at(`/${slug}/values/${item.slug}`), ...dated(item.updated_at), changeFrequency: 'daily', priority: 0.7 })
+    }
+    return out
+  })
+
+  // ── game hubs and sell pages ──────────────────────────────────────────────
+  const gamePages: Entry[] = input.games
+    .filter((g) =>
+      isGameHubIndexable({
+        contentTier: g.content_tier,
+        activeListingCount: gamesWithListings.has(g.id) ? 1 : 0,
+        hasCuratedCurrencyConfig: curatedConfigGameIds.has(g.id),
+        seoIndexable: g.seo_indexable,
+      }),
+    )
+    .map((g) => ({
+      url: at(`/${g.slug}`),
+      ...dated(newest(g.updated_at, gameListingLastmod.get(g.id))),
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
+
+  const gamesWithCategories = new Set(input.categories.map((c) => c.game_id))
+  const sellPages: Entry[] = input.games
+    .filter((g) =>
+      isGameSellPageIndexable({
+        enabledCategoryCount: gamesWithCategories.has(g.id) ? 1 : 0,
+        seoIndexable: g.seo_indexable,
+      }),
+    )
+    .map((g) => ({
+      url: at(`/${g.slug}/sell`),
+      ...dated(g.updated_at),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }))
+
+  // ── category and listing pages ────────────────────────────────────────────
+  const categoryPages: Entry[] = computeCategoryPages({
+    games: input.games,
+    categories: input.categories,
+    currencyConfigs: input.currencyConfigs,
+    listings: input.listings,
+    pausedSellerIds: input.pausedSellerIds,
+  })
+    .filter((r) => r.verdict === 'index')
+    .map((r) => ({
+      url: at(`/${r.gameSlug}/${r.categorySlug}`),
+      ...dated(r.lastmod),
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+    }))
+
+  const listingPages: Entry[] = liveListings.map((l) => {
+    const game = gameById.get(l.game_id)!
+    const cat = categoryById.get(l.game_category_id)!
+    return {
+      url: at(`/${game.slug}/${cat.slug}/${l.slug}`),
+      ...dated(l.updated_at),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    }
+  })
+
+  const all = [
+    ...staticPages,
+    ...legalPages,
+    ...blogPages,
+    ...gameBlogIndexPages,
+    ...gameBlogPages,
+    ...landingPages,
+    ...hubPages,
+    ...gamePages,
+    ...sellPages,
+    ...categoryPages,
+    ...listingPages,
+  ]
+  // One entry per URL, first one wins.
+  return [...new Map(all.map((e) => [e.url, e])).values()]
+}

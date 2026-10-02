@@ -67,3 +67,71 @@ describe('hub and sell rules differ where the decision intends', () => {
     expect(isGameSellPageIndexable({ enabledCategoryCount: 3 })).toBe(true)
   })
 })
+
+// ── Category pages and value items (Bundle 1, task 4) ───────────────────────
+// ONE verdict decides both the page's robots meta and the sitemap entry.
+import {
+  MIN_VALUE_SAMPLE_SIZE,
+  categoryPageVerdict,
+  hasCuratedCurrencyContent,
+  isCategoryPageIndexable,
+  isValueItemIndexable,
+} from './indexability'
+
+describe('hasCuratedCurrencyContent', () => {
+  it('is true with a non-empty FAQ or steps list', () => {
+    expect(hasCuratedCurrencyContent({ faq: [{}], steps: [] })).toBe(true)
+    expect(hasCuratedCurrencyContent({ faq: [], steps: [{}] })).toBe(true)
+  })
+  it('is false for no config, an empty config, or empty lists (a default config row is not curation)', () => {
+    expect(hasCuratedCurrencyContent(null)).toBe(false)
+    expect(hasCuratedCurrencyContent(undefined)).toBe(false)
+    expect(hasCuratedCurrencyContent({})).toBe(false)
+    expect(hasCuratedCurrencyContent({ faq: [], steps: [] })).toBe(false)
+    expect(hasCuratedCurrencyContent({ faq: null, steps: null })).toBe(false)
+  })
+})
+
+describe('isCategoryPageIndexable', () => {
+  it('needs a buyable listing or curated content', () => {
+    expect(isCategoryPageIndexable({ buyableListingCount: 0, hasCuratedContent: false })).toBe(false)
+    expect(isCategoryPageIndexable({ buyableListingCount: 1, hasCuratedContent: false })).toBe(true)
+    expect(isCategoryPageIndexable({ buyableListingCount: 0, hasCuratedContent: true })).toBe(true)
+  })
+})
+
+describe('categoryPageVerdict', () => {
+  const base = {
+    gameActive: true,
+    categoryEnabled: true,
+    categoryBelongsToGame: true,
+    buyableListingCount: 3,
+    hasCuratedContent: false,
+  }
+  it('indexes an enabled category with buyable listings', () => {
+    expect(categoryPageVerdict(base)).toBe('index')
+  })
+  it('noindexes an empty category with no curated content (the page still renders)', () => {
+    expect(categoryPageVerdict({ ...base, buyableListingCount: 0 })).toBe('noindex')
+  })
+  it('indexes an empty category with curated content', () => {
+    expect(categoryPageVerdict({ ...base, buyableListingCount: 0, hasCuratedContent: true })).toBe('index')
+  })
+  it.each([
+    ['an inactive game', { gameActive: false }],
+    ['a disabled category (the /gta-vi/buy-items case: listed but 404)', { categoryEnabled: false }],
+    ['a category that belongs to another game', { categoryBelongsToGame: false }],
+  ])('is not-found for %s, whatever the listings say', (_label, override) => {
+    expect(categoryPageVerdict({ ...base, ...override })).toBe('not-found')
+  })
+})
+
+describe('isValueItemIndexable', () => {
+  it('needs a price backed by at least the minimum number of live listings', () => {
+    expect(MIN_VALUE_SAMPLE_SIZE).toBe(3)
+    expect(isValueItemIndexable({ priced: true, sampleSize: 3 })).toBe(true)
+    expect(isValueItemIndexable({ priced: true, sampleSize: 2 })).toBe(false)
+    expect(isValueItemIndexable({ priced: false, sampleSize: 50 })).toBe(false)
+    expect(isValueItemIndexable({ priced: true, sampleSize: null })).toBe(false)
+  })
+})
