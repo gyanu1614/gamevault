@@ -92,8 +92,6 @@ interface Route {
   load: () => Promise<MetaModule>
   params?: object
   template?: string
-  /** Why this route may still double the brand today (a file this bundle may not edit). */
-  knownDoubled?: string
 }
 
 const ROUTES: Route[] = [
@@ -118,12 +116,7 @@ const ROUTES: Route[] = [
   { name: 'game sell page', load: () => import('@/app/(marketplace)/[gameSlug]/sell/page'), params: { gameSlug: 'valorant' } },
   { name: 'category page', load: () => import('@/app/(marketplace)/[gameSlug]/[categorySlug]/page'), params: { gameSlug: 'valorant', categorySlug: 'buy-vp' } },
   { name: 'listing page', load: () => import('@/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page'), params: { gameSlug: 'valorant', categorySlug: 'buy-vp', listingSlug: 'valorant-1000-vp' } },
-  {
-    name: 'value item (adopt-me)',
-    load: () => import('@/app/(marketplace)/[gameSlug]/values/[itemSlug]/page'),
-    params: { gameSlug: 'adopt-me', itemSlug: 'bat-dragon' },
-    knownDoubled: 'Bundle 2 owns values/[itemSlug]/page.tsx (~line 434): Adopt Me pet pages double the brand until it drops the suffix.',
-  },
+  { name: 'value item (adopt-me)', load: () => import('@/app/(marketplace)/[gameSlug]/values/[itemSlug]/page'), params: { gameSlug: 'adopt-me', itemSlug: 'bat-dragon' } },
 ]
 
 // Every legal document page: the title comes from the document registry.
@@ -144,14 +137,20 @@ describe('final <title> repeats the brand at most once (every route type)', () =
     // The seeded rows must carry each page to its real title, not its 404 title.
     expect(title, `${route.name} fell through to a not-found title`).not.toMatch(/not found/i)
     const marks = brandMarkCount(title)
-
-    if (route.knownDoubled) {
-      // The exemption must stay honest: once the owner of the file fixes it,
-      // this fails and the exemption (and its note) must be deleted.
-      expect(marks, `"${title}" no longer doubles the brand: remove this exemption`).toBeGreaterThan(1)
-      return
-    }
     expect(marks, `"${title}" carries the brand ${marks} times`).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('Adopt Me value item page: bare tab title, branded social title', () => {
+  it('renders the brand once in the tab and keeps the OG title branded as before', async () => {
+    const mod = await import('@/app/(marketplace)/[gameSlug]/values/[itemSlug]/page')
+    const meta = await metadataOf(mod, { gameSlug: 'adopt-me', itemSlug: 'bat-dragon' })
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    const bare = `Bat Dragon Value in Adopt Me (${monthYear}) — Cash & Trade Value`
+
+    expect(meta.title).toBe(bare) // the page hands the layout a bare title
+    expect(resolveTitle(meta.title, TITLE_TEMPLATE)).toBe(`${bare} | DropMarket`)
+    expect(meta.openGraph?.title).toBe(`${bare} | DropMarket`) // social title unchanged
   })
 })
 
@@ -190,12 +189,6 @@ function* walk(dir: string): Generator<string> {
 const BRAND_SUFFIXED_TITLE = /\btitle:\s*[`'"][^`'"\n]*\|\s*DropMarket(?: Admin)?[`'"]/
 const BRAND_SUFFIXED_CONST = /const title = `[^`\n]*\|\s*DropMarket`/
 
-/** Files this bundle may not edit (Bundle 2), with the reason each still doubles. */
-const SCAN_EXEMPT: Record<string, string> = {
-  '(marketplace)/[gameSlug]/values/[itemSlug]/page.tsx':
-    'Bundle 2 owns the value item page (`const title = ... | DropMarket`, ~line 434). Adopt Me pet pages double the brand until it drops the suffix.',
-}
-
 describe('no metadata file hands the layout a title that already ends in the brand', () => {
   const root = path.join(process.cwd(), 'src/app')
   const files = [...walk(root)].filter((f) => /export (async )?function generateMetadata|export const metadata/.test(readFileSync(f, 'utf8')))
@@ -207,10 +200,6 @@ describe('no metadata file hands the layout a title that already ends in the bra
   it.each(files.map((f) => [path.relative(root, f), f] as const))('%s', (rel, file) => {
     const src = readFileSync(file, 'utf8')
     const doubled = BRAND_SUFFIXED_TITLE.test(src) || BRAND_SUFFIXED_CONST.test(src)
-    if (SCAN_EXEMPT[rel]) {
-      expect(doubled, `${rel} is fixed: remove it from SCAN_EXEMPT`).toBe(true)
-      return
-    }
     expect(doubled, `${rel} writes the brand into its own title; the layout template adds it`).toBe(false)
   })
 })
