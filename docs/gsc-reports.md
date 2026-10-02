@@ -40,7 +40,7 @@ A `403` from the API almost always means the service account has not been added 
 
 ## Quotas and pacing
 
-URL Inspection: **2,000/day and 600/min per property**. The tool paces one request per 250 ms (4/s = 240/min, shared by all workers) and retries 429/5xx with exponential backoff and `Retry-After`. A *per-day* 429 is not retried: the run stops cleanly and finishes on the next day's rerun. Ten failures in a row abort the run, so a bad credential cannot burn the quota. One full sitemap pass (~1,025 URLs) takes ~4½ minutes and uses about half the daily quota.
+URL Inspection: **2,000/day and 600/min per property**. The tool paces one request per 250 ms (4/s = 240/min, shared by all workers) and retries 429/5xx with exponential backoff and `Retry-After`. A *per-day* 429 is not retried: the run stops cleanly and finishes on the next day's rerun. Ten failures in a row abort the run, so a bad credential cannot burn the quota. Each inspection is a live fetch that takes ~13 s, so the tool runs 16 in parallel (`--concurrency`); at that setting one full sitemap pass (~1,025 URLs) takes ~10–12 minutes and uses about half the daily quota.
 
 Search Analytics windows end two days before the run (Search Console data lags) and cover 28 / 90 days inclusive.
 

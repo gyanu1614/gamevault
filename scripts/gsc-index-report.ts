@@ -23,7 +23,7 @@ import { realClock } from './lib/gsc/types'
 const HELP = `Usage: pnpm gsc:index-report [options]
   --extra-urls <file>   extra URLs to inspect (one per line; # comments; /paths ok)
   --limit <n>           inspect at most n not-yet-saved URLs this run
-  --concurrency <n>     parallel inspections (default 4; pacing stays at 4 req/s)
+  --concurrency <n>     parallel inspections (default 16; pacing stays at 4 req/s)
   --date <YYYY-MM-DD>   file date (default: today, local)
   --out-dir <dir>       output directory (default ${DEFAULT_OUT_DIR})`
 

@@ -10,7 +10,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { GSC_SITE } from './config'
+import { DEFAULT_INDEX_CONCURRENCY, GSC_SITE } from './config'
 import {
   INDEX_COLUMNS,
   inspectionToRow,
@@ -66,7 +66,7 @@ export async function runIndexReport(
   opts: IndexReportOptions,
   deps: IndexReportDeps,
 ): Promise<IndexReportResult> {
-  const { outDir, date, concurrency = 4, limit, maxConsecutiveFailures = 10 } = opts
+  const { outDir, date, concurrency = DEFAULT_INDEX_CONCURRENCY, limit, maxConsecutiveFailures = 10 } = opts
   const { client, log = console.log } = deps
   const urls = [...new Set(opts.urls)]
 

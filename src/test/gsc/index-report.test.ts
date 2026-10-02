@@ -148,6 +148,21 @@ describe('runIndexReport', () => {
     expect(result.remaining).toBe(1)
   })
 
+  it('defaults to 16 parallel inspections — each call takes ~13 s, so fewer workers cannot reach the 4 req/s pacing', async () => {
+    let inFlight = 0
+    let peak = 0
+    const inspectUrl = vi.fn(async () => {
+      inFlight++
+      peak = Math.max(peak, inFlight)
+      await new Promise((r) => setTimeout(r, 5))
+      inFlight--
+      return inspection()
+    })
+    const urls = Array.from({ length: 60 }, (_, i) => U(`/d${i}`))
+    await runIndexReport({ urls, outDir: dir, date: DATE }, { client: { inspectUrl }, ...quiet })
+    expect(peak).toBe(16)
+  })
+
   it('never runs more than `concurrency` inspections at once', async () => {
     let inFlight = 0
     let peak = 0
