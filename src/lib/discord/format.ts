@@ -12,7 +12,7 @@ import { formatCash, formatConfidence, formatIncome } from '@/lib/sab/format'
 export { formatCash, formatConfidence, formatIncome }
 
 /**
- * Rarity accent colours, mirroring `_ValuesDirectoryClient.tsx` so a rarity
+ * Rarity accent colours, mirroring `src/lib/values/rarity.ts` so a rarity
  * reads the same colour in Discord as on the site. Discord wants an integer,
  * not a hex string.
  */

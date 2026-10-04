@@ -31,6 +31,7 @@ import { ValuePopoverField } from '@/components/values/ValuePopoverField'
 import { ValuePagination } from '@/components/values/ValuePagination'
 import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
+import { MARKET_SECONDARY_GAP } from '@/lib/values/pricing'
 import { ADOPT_ME_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
 
 const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
@@ -66,9 +67,6 @@ export interface AdoptMePetItem {
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
-/** Show the "typically ~$X" market line only when market exceeds cheapest by
- * this multiple; matches the SAB cards (≥25% step, else cheapest alone). */
-const MARKET_SECONDARY_GAP = 1.25
 
 const POPULAR_COUNT = 12
 const PAGE_SIZE = 25

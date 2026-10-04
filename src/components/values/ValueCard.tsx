@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
@@ -180,7 +180,8 @@ export function VariantPill({
   )
 }
 
-/** In-card picker overlay: covers the card, fades in, closes on ✕ / Escape. */
+/** In-card picker overlay: covers the card, fades in, closes on ✕ / Escape /
+ *  a tap outside the card. */
 export function CardPickerOverlay({
   open,
   title,
@@ -192,10 +193,22 @@ export function CardPickerOverlay({
   onClose: () => void
   children: ReactNode
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      // The overlay fills its card, so "outside the overlay" = outside the card.
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open, onClose])
+
   return (
     <AnimatePresence>
       {open && (
         <motion.div
+          ref={ref}
           role="dialog"
           aria-label={title}
           initial={{ opacity: 0, scale: 0.97 }}

@@ -18,16 +18,19 @@ export function ValueBuyActions({
   cta,
   itemName,
   sell,
+  align = 'start',
   className = '',
 }: {
   cta: BuyCta
   itemName: string
   sell?: { href: string; label: string } | null
+  /** Desktop alignment of the button row (phones always stack full width). */
+  align?: 'start' | 'end'
   className?: string
 }) {
   return (
     <div className={className}>
-      <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap">
+      <div className={`flex flex-col gap-2 lg:flex-row lg:flex-wrap ${align === 'end' ? 'lg:justify-end' : ''}`}>
         <Link
           href={cta.href}
           onClick={cta.onClick}
@@ -45,7 +48,7 @@ export function ValueBuyActions({
           </Link>
         )}
       </div>
-      {cta.subline ? <p className="mt-1.5 text-[12px] text-text-secondary">{cta.subline}</p> : null}
+      {cta.subline ? <p className={`mt-1.5 text-[12px] text-text-secondary ${align === 'end' ? 'lg:text-right' : ''}`}>{cta.subline}</p> : null}
     </div>
   )
 }

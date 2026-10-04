@@ -5,7 +5,7 @@ import { ImageBrokenIcon } from '@phosphor-icons/react/dist/csr/ImageBroken'
 
 /**
  * Item art for value cards / heroes / rails. Remote catalogue art is
- * hotlinked and sometimes 404s upstream (e.g. Adopt Me's Amethyst Penguin),
+ * hotlinked and sometimes 404s upstream (a few Adopt Me pets do),
  * so a failed load swaps to a quiet placeholder instead of the browser's
  * broken-image glyph + alt text.
  */
