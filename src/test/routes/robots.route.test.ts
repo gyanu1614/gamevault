@@ -12,27 +12,7 @@ import path from 'node:path'
 
 import robots from '@/app/robots'
 import { NON_CANONICAL_PARAMS } from '@/lib/seo/crawl-params'
-
-function rulesFor(kind: 'allow' | 'disallow'): string[] {
-  const rules = robots().rules
-  const list = Array.isArray(rules) ? rules : [rules]
-  return list.flatMap((r) => (r.userAgent === '*' ? ([] as string[]).concat(r[kind] ?? []) : []))
-}
-
-/** Google's robots.txt matching: prefix match, `*` = any run, trailing `$` = end. */
-function patternMatches(pattern: string, target: string): boolean {
-  const anchored = pattern.endsWith('$')
-  const body = anchored ? pattern.slice(0, -1) : pattern
-  const source = body.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')
-  return new RegExp(`^${source}${anchored ? '$' : ''}`).test(target)
-}
-
-/** Google: the longest matching rule wins; on a tie, Allow wins. */
-function isBlocked(target: string): boolean {
-  const longest = (rules: string[]) =>
-    rules.filter((r) => patternMatches(r, target)).reduce((n, r) => Math.max(n, r.length), -1)
-  return longest(rulesFor('disallow')) > longest(rulesFor('allow'))
-}
+import { isBlockedByRobots as isBlocked } from '../helpers/robots-match'
 
 describe('robots.txt: prefetch payloads', () => {
   it.each([
