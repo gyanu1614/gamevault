@@ -158,18 +158,16 @@ export default function RootLayout({
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}
           </LayoutWrapper>
-          {/* V17c — react-aria-inspired styling: subtle glass surface
-              with a thin lime accent strip for success (and matching
-              soft accents for error/warning/info). Skipping
-              `richColors` because that flips on sonner's saturated
-              defaults, which fight our globals.css custom palette. */}
+          {/* House toast: card surface, no outline, tinted icon tile per
+              type (globals.css `.dm-toast`). No `richColors` — sonner's
+              saturated fills fight the card. */}
           <Toaster
             position="bottom-right"
             theme="dark"
             duration={3200}
             closeButton
             toastOptions={{
-              className: 'toast-reduced-glow',
+              className: 'dm-toast',
             }}
           />
           {/* Social Proof Widgets */}

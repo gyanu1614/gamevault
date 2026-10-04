@@ -17,7 +17,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeBackground } from '@/lib/utils/safe-background'
 import { toast } from 'sonner'
-import { ShoppingCart, Zap } from 'lucide-react'
+import { ShoppingCartSimpleIcon } from '@phosphor-icons/react/dist/csr/ShoppingCartSimple'
+import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
+import { XIcon } from '@phosphor-icons/react/dist/csr/X'
+import { TOAST_CARD } from '@/lib/ui/surfaces'
 
 interface RecentPurchase {
   id: string
@@ -102,54 +105,30 @@ export default function RecentPurchaseToast() {
 
     toast.custom(
       (t) => (
-        <div className="bg-gradient-to-r from-[rgba(86,184,127,0.10)] to-blue-500/10 backdrop-blur-xl border border-lime-tint-border rounded-xl p-4 shadow-2xl min-w-[320px] max-w-md">
-          <div className="flex items-start gap-3">
-            {/* Icon */}
-            <div className="flex-shrink-0 p-2 bg-[rgba(86,184,127,0.20)] rounded-lg">
-              <ShoppingCart className="w-5 h-5 text-lime-text" />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="w-4 h-4 text-lime-text" />
-                <p className="text-sm font-semibold text-text-primary">Recent Purchase</p>
-              </div>
-
-              <p className="text-xs text-text-secondary line-clamp-2 mb-1">
-                {purchase.buyer_location && (
-                  <>
-                    Someone in <span className="font-medium text-lime-text">{purchase.buyer_location}</span>{' '}
-                  </>
-                )}
-                just bought{' '}
-                <span className="font-medium text-text-primary">
-                  {purchase.game_name}
-                </span>
-              </p>
-
-              <p className="text-xs text-text-tertiary">{timeAgo}</p>
-            </div>
-
-            {/* Dismiss Button */}
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="flex-shrink-0 text-text-secondary hover:text-text-primary transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+        <div className={`relative flex w-[356px] max-w-[calc(100vw-32px)] items-center gap-3 py-3 pl-3 pr-11 ${TOAST_CARD}`}>
+          <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-success-bg text-success">
+            <ShoppingCartSimpleIcon size={17} weight="bold" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold leading-snug text-text-primary">Recent Purchase</p>
+            <p className="line-clamp-2 text-[12.5px] leading-snug text-text-secondary">
+              {purchase.buyer_location && (
+                <>
+                  Someone in <span className="font-medium text-text-primary">{purchase.buyer_location}</span>{' '}
+                </>
+              )}
+              just bought <span className="font-medium text-text-primary">{purchase.game_name}</span>
+              <span className="text-text-tertiary"> · {timeAgo}</span>
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={() => toast.dismiss(t)}
+            aria-label="Dismiss"
+            className="absolute right-[9px] top-1/2 flex h-[26px] w-[26px] -translate-y-1/2 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.08] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            <XIcon size={13} weight="bold" />
+          </button>
         </div>
       ),
       {
@@ -278,7 +257,7 @@ export function DailyStatsToast() {
   // two-line card inside the toast frame read as big and fake).
   const showStatsToast = (count: number) => {
     toast(`${count.toLocaleString('en-US')} ${count === 1 ? 'Order' : 'Orders'} Completed Today`, {
-      icon: <Zap className="h-4 w-4 text-success" aria-hidden />,
+      icon: <LightningIcon size={17} weight="fill" aria-hidden />,
       duration: 6000,
       position: 'bottom-left',
     })
