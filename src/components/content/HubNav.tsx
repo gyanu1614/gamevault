@@ -133,7 +133,7 @@ export function HubNav({
         {/* ── Brand mark + game switcher ──
             shrink-0 below md (the row is already tight on a phone), flex-1 from
             md up so it claims its half and centres the tabs. */}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3 md:flex-1">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3 xl:flex-1">
           <Link
             href="/"
             aria-label="DropMarket home"
@@ -208,7 +208,7 @@ export function HubNav({
         {/* ── Section tabs — DESKTOP (md+) only ──
             Inline in the single row, centred on the page by the flex-1 side
             groups. On mobile these move to the sub-row below the top row. */}
-        <nav className="hidden min-w-0 items-center justify-center gap-9 self-stretch md:flex md:flex-none">
+        <nav className="hidden min-w-0 items-center justify-center gap-9 self-stretch xl:flex xl:flex-none">
           {tabs.map((tab) => {
             const active = isTabActive(tab)
             return (
@@ -234,8 +234,8 @@ export function HubNav({
         {/* ── Storefront buttons — the primary green Shop + the amber Sell,
             separated by a divider. Data-driven per game. ml-auto pushes the
             pair to the right edge on mobile (where the middle nav is hidden);
-            md:flex-1 takes over the centring role from md up. ── */}
-        <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5 md:ml-0 md:flex-1">
+            xl:flex-1 takes over the centring role from xl up (below xl a long game name like "Steal a Brainrot" collided with the centred tabs). ── */}
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5 xl:ml-0 xl:flex-1">
           {(() => {
             // Buy = items board when it exists, else the accounts board.
             const buyHref = itemsHref ?? accountsHref
@@ -278,11 +278,11 @@ export function HubNav({
       </div>
 
       {/* ── Mobile sub-row: the page tabs (below md only) ──
-          The desktop nav above is hidden under md; these move here so the top
+          The desktop nav above is hidden under xl; these move here so the top
           row stays uncluttered. Left-aligned + horizontally scrollable so a long
           set (Guides · Values · WFL Calculator · Cash Price) never clips the way
           the old single-row bar did. */}
-      <nav className="flex items-center gap-6 overflow-x-auto border-t border-white/[0.07] px-4 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+      <nav className="flex items-center gap-6 overflow-x-auto border-t border-white/[0.07] px-4 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => {
           const active = isTabActive(tab)
           return (
