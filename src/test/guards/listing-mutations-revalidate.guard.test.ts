@@ -28,7 +28,13 @@ const SRC = join(ROOT, 'src')
 // View counters left the set on 2026-10-01: views are counted only through
 // the service-role `increment_listing_views` RPC (lib/actions/listing-views),
 // which bumps a sort key the nightly backstop covers — no revalidation needed.
-const EXEMPT: Record<string, string> = {}
+const EXEMPT: Record<string, string> = {
+  // Bundle 2: writes only the value_item_slug / value_variant /
+  // value_matched_at link columns. Every caller revalidates right after it
+  // (the create/edit paths, pinned by value-listings-link-seams.guard.test.ts,
+  // and the nightly /api/cron/value-listing-refs).
+  'src/lib/value-listings/link.ts': 'link columns only; its callers revalidate',
+}
 
 const SEAM = '@/lib/revalidation/listings'
 /** Browser-side modules cannot call revalidateTag; they call the session-scoped action. */
@@ -125,6 +131,8 @@ describe('listing mutations revalidate the category surfaces', () => {
       // GRO-08: drafts built during the application are submitted on
       // approval (service role) — calls the seam per touched listing.
       'src/lib/listings/submit-applicant-drafts.ts',
+      // Bundle 2: the value item link (exempt above; callers revalidate).
+      'src/lib/value-listings/link.ts',
     ])
   })
 })

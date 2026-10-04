@@ -23,6 +23,7 @@ import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
 import { VariantAxisPicker } from './_VariantAxisPicker'
 import { CompactVariantPicker } from '../values/_CompactVariantPicker'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
+import { centsToUsd, sumSide } from '@/lib/calculator/trade-sum'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -64,15 +65,13 @@ export default function AdoptMeWflClient({ pets }: { pets: CalcPet[] }) {
   const totals = useMemo(() => {
     const sum = (list: Entry[]) => {
       let trade = 0
-      let cash = 0
-      let cashMissing = false
-      for (const e of list) {
-        const v = petBySlug.get(e.slug)?.values[e.variant]
-        trade += v?.tradeValue ?? 0
-        if (v?.cashUsd != null) cash += v.cashUsd
-        else cashMissing = true
-      }
-      return { trade, cash, cashMissing }
+      for (const e of list) trade += petBySlug.get(e.slug)?.values[e.variant]?.tradeValue ?? 0
+      // Cash sums in cents through the shared calculator maths, so small
+      // estimates are never lost to float drift.
+      const cashSide = sumSide(
+        list.map((e) => ({ pointUsd: petBySlug.get(e.slug)?.values[e.variant]?.cashUsd, quantity: 1 })),
+      )
+      return { trade, cash: centsToUsd(cashSide.pointCents), cashMissing: cashSide.unknown > 0 }
     }
     return { give: sum(give), receive: sum(receive) }
   }, [give, receive, petBySlug])

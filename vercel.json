@@ -8,6 +8,7 @@
     { "path": "/api/cron/snapshot-sab-prices", "schedule": "15 10 * * *" },
     { "path": "/api/cron/discord-daily-post", "schedule": "30 10 * * *" },
     { "path": "/api/cron/check-sab-freshness", "schedule": "40 6 * * *" },
-    { "path": "/api/cron/revalidate-listing-pages", "schedule": "35 4 * * *" }
+    { "path": "/api/cron/revalidate-listing-pages", "schedule": "35 4 * * *" },
+    { "path": "/api/cron/value-listing-refs", "schedule": "50 4 * * *" }
   ]
 }

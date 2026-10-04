@@ -21,6 +21,9 @@ import GenericValueItemPage from '../_generic/ValueItemPage'
 import { getValueItems } from '@/lib/values/data'
 import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { socialTitle } from '@/lib/seo/title'
+import { AvailableNow } from '@/components/value-listings/AvailableNow'
+import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 
 /**
  * The page SHELL is static content — an item's name, rarity, artwork, income
@@ -431,7 +434,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     // Title leads with the pet name + "value" (the head term) and carries the
     // real-money wedge; keeps DropMarket last.
-    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value | DropMarket`
+    // Bare: the layout template adds " | DropMarket" (it used to be doubled).
+    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value`
     const description = `How much is a ${pet.name} worth in Adopt Me in real money? See the ${pet.name}'s cash value (USD) and community trade value — Normal, Fly Ride, Neon and Mega prices, updated ${monthYear} from real marketplace listings.`
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
@@ -456,7 +460,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       keywords,
       alternates: { canonical },
       openGraph: {
-        title,
+        title: socialTitle(title),
         description,
         url: canonical,
         type: 'website',
@@ -502,7 +506,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     alternates: { canonical },
     openGraph: {
-      title,
+      title: socialTitle(title),
       description,
       url: canonical,
       type: 'website',
@@ -597,7 +601,10 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       : brainrot.price_updated_at,
   )
 
-  const marketplaceHref = `/steal-a-brainrot/buy-items?search=${encodeURIComponent(brainrot.name)}`
+  // DropMarket's own live stock for this brainrot (Bundle 2): the hero button
+  // and "Available Now" read it; cached per game, refreshed by listing changes.
+  const buyData = await getValueItemBuyData('steal-a-brainrot', brainrot.slug)
+  const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   // Highest-value priced mutation (excluding default) for the FAQ copy.
   const topMutation = mutations
@@ -657,12 +664,9 @@ export default async function BrainrotValuePage({ params }: PageProps) {
             Values
           </Link>
           <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
-          <Link
-            href={`/steal-a-brainrot/values?rarity=${encodeURIComponent(brainrot.rarity)}`}
-            className="transition-colors hover:text-[#F1F3F1]"
-          >
-            {brainrot.rarity}
-          </Link>
+          {/* Plain text: ?rarity= is robots-blocked and the hub ignores it, so
+              the link spent crawl on a dead URL (Bundle 1 hand-off). */}
+          <span>{brainrot.rarity}</span>
           <ChevronRight className="h-3.5 w-3.5 text-[#4C564E]" />
           <span className="font-medium text-[#F1F3F1]">{brainrot.name}</span>
         </nav>
@@ -676,7 +680,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           imageUrl={brainrot.image_url}
           imageAlt={brainrot.image_alt}
           mutations={mutations}
-          listingsHref={marketplaceHref}
+          buy={{ itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
           priceHistory={priceHistory}
           updatedAt={
             hasPublicMarketPrice
@@ -685,6 +689,17 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           }
         />
       </section>
+
+      <AvailableNow
+        gameSlug="steal-a-brainrot"
+        gameName="Steal a Brainrot"
+        categorySlug={buyCategorySlug}
+        itemSlug={brainrot.slug}
+        itemName={brainrot.name}
+        offers={buyData?.offers ?? []}
+        total={buyData?.stock?.total ?? 0}
+        sellHref="/steal-a-brainrot/sell?src=sab-item-page"
+      />
 
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <div className="space-y-6">
@@ -753,9 +768,9 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               <h2 className="text-sm font-semibold text-[#F1F3F1]">Market activity</h2>
             </div>
             <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              <BodyRow label="Active listings" value={brainrot.active_listing_count.toLocaleString()} />
-              <BodyRow label="Completed sales" value={brainrot.completed_sale_count.toLocaleString()} />
-              <BodyRow label="Unique sellers" value={brainrot.unique_seller_count.toLocaleString()} />
+              <BodyRow label="Active listings" value={(brainrot.active_listing_count ?? 0).toLocaleString()} />
+              <BodyRow label="Completed sales" value={(brainrot.completed_sale_count ?? 0).toLocaleString()} />
+              <BodyRow label="Unique sellers" value={(brainrot.unique_seller_count ?? 0).toLocaleString()} />
               <BodyRow label="Confidence" value={effectiveConfidenceLabel} capitalize />
             </dl>
           </section>
