@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageBrokenIcon } from '@phosphor-icons/react/dist/csr/ImageBroken'
 
 /**
@@ -25,6 +25,13 @@ export function ValueArt({
   priority?: boolean
 }) {
   const [failed, setFailed] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+  // A server-rendered <img> can fail BEFORE hydration attaches onError; catch
+  // that case once on mount (complete + no pixels = failed load).
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) setFailed(true)
+  }, [src])
   if (!src || failed) {
     return (
       <span
@@ -40,6 +47,7 @@ export function ValueArt({
   return (
     // eslint-disable-next-line @next/next/no-img-element -- remote catalogue art
     <img
+      ref={imgRef}
       src={src}
       alt={alt}
       width={size}

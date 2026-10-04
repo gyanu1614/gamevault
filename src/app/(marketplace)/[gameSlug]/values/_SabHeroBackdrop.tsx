@@ -105,7 +105,10 @@ export function SabHeroBackdrop({
         />
       </div>
 
-      <div className="relative z-10">{children}</div>
+      {/* z-20, not z-10: the children include the FIXED HubNav, and pages put
+          their body in a later `relative z-10` sibling, which (same z, later in
+          the DOM) painted over the bar while scrolling. */}
+      <div className="relative z-20">{children}</div>
     </>
   )
 }
