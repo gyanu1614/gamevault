@@ -15,7 +15,13 @@
 
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+
+/** 6px button, brand fill by default; hover lifts brightness (fill is inline). */
+const CTA_BTN =
+  'inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-6 text-sm font-semibold ' +
+  'shadow-[0_6px_16px_-8px_rgba(0,0,0,0.6)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
 export function HubCtaBand({
   gameSlug,
@@ -23,9 +29,10 @@ export function HubCtaBand({
   body,
   ctaLabel,
   ctaHref,
-  /** 'green' = forest buy button (default); 'accent' passes a custom bg color. */
-  ctaColor = '#1B6B3F',
-  ctaTextColor = '#ffffff',
+  /** Button fill. Defaults to the brand green (same as VALUE_BTN_PRIMARY);
+      a caller may pass its own accent. */
+  ctaColor = 'var(--color-accent-default)',
+  ctaTextColor = 'var(--color-text-inverse)',
   className,
   /** When set, the CTA opens a modal instead of navigating: the button is
       rendered as a <button> and passed to this wrapper (e.g. a DialogTrigger).
@@ -68,7 +75,8 @@ export function HubCtaBand({
         className ?? 'mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8'
       }
     >
-      <div className="relative overflow-hidden border border-[#1E2723] bg-[#0C0F0E]">
+      {/* Card-surface band: 8px corners, soft drop shadow, no outline. */}
+      <div className="relative overflow-hidden rounded-lg bg-bg-base shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]">
         {/* Per-game background hero. Buy banner: public/cta-heroes/{slug}.jpg;
             seller banner passes bgSrc for its own folder. */}
         {hasImage && (
@@ -88,7 +96,7 @@ export function HubCtaBand({
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(90deg, #0C0F0E 0%, rgba(12,15,14,0.92) 42%, rgba(12,15,14,0.55) 100%)',
+              'linear-gradient(90deg, var(--color-bg-base) 0%, rgba(22,23,27,0.92) 42%, rgba(22,23,27,0.55) 100%)',
           }}
         />
         {/* Optional right-edge scrim — darkens the right third so a brighter
@@ -99,37 +107,37 @@ export function HubCtaBand({
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(90deg, transparent 55%, rgba(12,15,14,0.65) 100%)',
+                'linear-gradient(90deg, transparent 55%, rgba(22,23,27,0.65) 100%)',
             }}
           />
         )}
 
         <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-10">
           <div className="min-w-0">
-            <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[26px]">
+            <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[26px]">
               {title}
             </h2>
-            <p className="max-w-xl text-sm leading-relaxed text-[#98A398]">{body}</p>
+            <p className="max-w-xl text-sm leading-relaxed text-text-secondary">{body}</p>
           </div>
           {ctaWrap ? (
             ctaWrap(
               <button
                 type="button"
-                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-6 py-4 text-sm font-bold shadow-[0_6px_16px_-8px_rgba(0,0,0,0.6)] transition-transform active:scale-[0.99]"
+                className={CTA_BTN}
                 style={{ background: ctaColor, color: ctaTextColor }}
               >
                 {ctaLabel}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRightIcon size={16} weight="bold" aria-hidden />
               </button>,
             )
           ) : (
             <Link
               href={ctaHref}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-6 py-4 text-sm font-bold shadow-[0_6px_16px_-8px_rgba(0,0,0,0.6)] transition-transform active:scale-[0.99]"
+              className={CTA_BTN}
               style={{ background: ctaColor, color: ctaTextColor }}
             >
               {ctaLabel}
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRightIcon size={16} weight="bold" aria-hidden />
             </Link>
           )}
         </div>

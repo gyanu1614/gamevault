@@ -8,9 +8,12 @@
  * cards nearly touching. Presentational — every surface brings its own
  * items and heading.
  *
- * `square` opts into the game content hub's geometry (zero radius, forest
- * accent instead of lime). The rounded lime default stays for the marketplace
- * pages — currency, bundle and listing detail — which share this component.
+ * `square` is the game content hub's variant (name kept for API stability):
+ * the marketplace card surface — 8px radius, the near-black MARKET_CARD
+ * gradient, no outline — with a neutral 6px toggle, so hub FAQs read as the
+ * same cards as the rest of the values hubs. The rounded lime default stays
+ * for the marketplace pages — currency, bundle and listing detail — which
+ * share this component.
  *
  * `glass` is the homepage variant: a blurred translucent surface with NO
  * perimeter outline at all — it is defined by a lit top edge, a shadow
@@ -29,6 +32,7 @@
 import { useState } from 'react'
 import { ChevronDown, Plus, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { Expand } from '@/components/ui/expand'
 
 export interface FaqItem {
@@ -47,7 +51,7 @@ export function FaqCards({
   /** Index opened initially; -1 for all closed. */
   defaultOpen?: number
   className?: string
-  /** Content-hub variant: square edges, forest accent. */
+  /** Content-hub variant: card surface, no outline, neutral toggle. */
   square?: boolean
   /** Homepage variant: glassmorphic surface, rotating green chevron. */
   glass?: boolean
@@ -71,15 +75,17 @@ export function FaqCards({
               glass
                 ? 'faq-glass'
                 : square
-                  ? 'overflow-hidden border border-[rgba(255,255,255,0.08)]'
+                  ? cn('overflow-hidden rounded-lg', MARKET_CARD, MARKET_CARD_HOVER)
                   : 'overflow-hidden rounded-[20px]',
               glass
                 ? open
                   ? 'faq-glass--open'
                   : ''
-                : open
-                  ? 'bg-white/[0.06]'
-                  : 'bg-white/[0.04] hover:bg-white/[0.06]',
+                : square
+                  ? ''
+                  : open
+                    ? 'bg-white/[0.06]'
+                    : 'bg-white/[0.04] hover:bg-white/[0.06]',
             )}
           >
             <h3>
@@ -110,14 +116,14 @@ export function FaqCards({
                     'flex shrink-0 items-center justify-center transition-all duration-300',
                     glass
                       ? 'h-9 w-9 rounded-[7px]'
-                      : cn('h-10 w-10', square ? '' : 'rounded-[10px]'),
+                      : cn('h-10 w-10', square ? 'rounded-md' : 'rounded-[10px]'),
                     glass
                       ? open
                         ? 'bg-[color-mix(in_srgb,var(--color-accent-text)_18%,transparent)] text-[var(--color-accent-text)]'
                         : 'bg-white/[0.05] text-[color-mix(in_srgb,var(--color-accent-text)_75%,transparent)]'
                       : open
                         ? square
-                          ? 'bg-[#2A7A50] text-white'
+                          ? 'bg-bg-overlay-2 text-text-primary'
                           : 'bg-lime text-text-inverse'
                         : 'bg-white/[0.05] text-text-secondary',
                   )}

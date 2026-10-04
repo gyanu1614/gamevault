@@ -29,7 +29,7 @@ export function HubHero({
   title: ReactNode
   /** One line of context under the title. Optional — a few hubs run title-only. */
   lead?: ReactNode
-  /** Small uppercase kicker above the title (icon + label, etc.). Optional. */
+  /** Small kicker above the title (icon + label, etc.). Optional. */
   eyebrow?: ReactNode
   /** Anything that sits BELOW the lead, still centred (CTA button, badges). */
   children?: ReactNode
@@ -38,11 +38,11 @@ export function HubHero({
     <div className={`mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
       <div className="flex flex-col items-center text-center">
         {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
-        <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-[#F2F6F0] sm:text-[42px]">
+        <h1 className="text-balance text-[30px] font-bold leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[42px]">
           {title}
         </h1>
         {lead ? (
-          <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-[#98A398] sm:text-[17px]">
+          <p className="mx-auto mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-text-secondary sm:text-[17px]">
             {lead}
           </p>
         ) : null}

@@ -14,9 +14,13 @@
  * (Each clear = nav height + the same comfortable gap; when the nav height
  * changes, shift these by the identical amount so the gap stays constant.)
  *
- * MOBILE (below sm) the nav is TWO rows — a 56px top row plus a ~41px tab
- * sub-row — so the mobile clear adds that sub-row height (92 + 41 = 133). From
- * sm up the nav is a single row again, so the sm: clears are unchanged.
+ * Below md the nav is TWO rows — the top row plus a ~41px tab sub-row (the
+ * sub-row is `md:hidden`, so it is still there from sm to md, where the top
+ * row is already 68px):
+ *   - below sm:  56 + 41 + gap  (133 / hero 145)
+ *   - sm → md:   68 + 41 + gap  (145 / hero 173) — this band used to get the
+ *                single-row clear and the sub-row overlapped the content
+ *   - md up:     68 + gap       (104 / hero 132), single row
  *
  * NOTE: this lives under src/components, not src/lib, on purpose — Tailwind's
  * `content` globs cover src/components but NOT src/lib, so arbitrary classes
@@ -24,7 +28,7 @@
  */
 
 /** Standard clearance: nav height + a comfortable gap. */
-export const HUB_NAV_CLEAR = 'pt-[133px] sm:pt-[104px]'
+export const HUB_NAV_CLEAR = 'pt-[133px] sm:pt-[145px] md:pt-[104px]'
 
 /** Extra air, for the centred blog-hub hero where the H1 needs room. */
-export const HUB_NAV_CLEAR_HERO = 'pt-[145px] sm:pt-[132px]'
+export const HUB_NAV_CLEAR_HERO = 'pt-[145px] sm:pt-[173px] md:pt-[132px]'
