@@ -1,18 +1,12 @@
 import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
 import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { AdoptMeTopValue } from './_adoptMeCalcData'
+import { rarityMeta } from '@/lib/values/rarity'
+import { VALUE_SURFACE, VALUE_TILE } from '@/components/values/styles'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-
-const RARITY_LABEL: Record<string, string> = {
-  legendary: 'Legendary',
-  ultra_rare: 'Ultra-Rare',
-  rare: 'Rare',
-  uncommon: 'Uncommon',
-  common: 'Common',
-}
 
 /**
  * SEO content package rendered BELOW the Adopt Me WFL calculator. Mirrors SAB's
@@ -34,50 +28,50 @@ export function AdoptMeCalcSeo({
       {topValues.length > 0 && (
         <section>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold text-[#F1F3F1]">
+            <h2 className="text-lg font-semibold text-text-primary">
               Top Adopt Me pet values ({monthYear})
             </h2>
             <Link
               href="/adopt-me/values"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-[#8FBF9C] hover:underline"
+              className="inline-flex items-center gap-1 rounded-md text-sm font-semibold text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               See all Adopt Me values
-              <ArrowForwardIcon sx={{ fontSize: 16 }} />
+              <ArrowRightIcon size={15} weight="bold" aria-hidden />
             </Link>
           </div>
-          <p className="mt-1 text-sm text-[#9BA8A0]">
+          <p className="mt-1 text-sm text-text-secondary">
             Cheapest Fly Ride (FR) cash prices for the most valuable pets, from sellers
             with 100+ reviews. Click any pet for its full value, every variant, and its
             daily price trend.
           </p>
 
-          <div className="mt-4 overflow-hidden border border-[#1E2723]">
+          <div className={`mt-4 overflow-x-auto ${VALUE_SURFACE}`}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1E2723] bg-white/[0.02] text-left text-xs uppercase tracking-wide text-[#6D7A72]">
-                  <th className="px-4 py-2.5 font-semibold">Pet</th>
-                  <th className="px-4 py-2.5 font-semibold">Rarity</th>
-                  <th className="px-4 py-2.5 text-right font-semibold">Cheapest (FR)</th>
+                <tr className="border-b border-white/[0.07] text-left text-[12px] text-text-tertiary">
+                  <th className="px-4 py-2.5 font-medium">Pet</th>
+                  <th className="px-4 py-2.5 font-medium">Rarity</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Cheapest (FR)</th>
                 </tr>
               </thead>
               <tbody>
                 {topValues.map((row) => (
                   <tr
                     key={row.slug}
-                    className="border-b border-[#161d19] transition hover:bg-white/[0.02] last:border-0"
+                    className="border-b border-white/[0.07] transition-colors hover:bg-white/[0.03] last:border-0"
                   >
                     <td className="px-4 py-2.5">
                       <Link
                         href={`/adopt-me/values/${row.slug}`}
-                        className="font-medium text-[#EDF3E9] hover:text-[#8FBF9C] hover:underline"
+                        className="font-medium text-text-primary hover:underline"
                       >
                         {row.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-[#9BA8A0]">
-                      {RARITY_LABEL[row.rarity] ?? row.rarity}
+                    <td className="px-4 py-2.5 text-text-secondary">
+                      {rarityMeta('adopt-me', row.rarity).label}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-medium tabular-nums text-[#8FBF9C]">
+                    <td className="px-4 py-2.5 text-right font-medium tabular-nums text-[#54DDBE]">
                       {row.cheapestUsd != null ? USD.format(row.cheapestUsd) : '—'}
                     </td>
                   </tr>
@@ -89,9 +83,9 @@ export function AdoptMeCalcSeo({
       )}
 
       {/* Variant reference — Adopt Me's 8-form ladder (the price dimension). */}
-      <section className="mt-6 border border-[#1E2723] bg-[#0E1211] p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-[#F1F3F1]">Adopt Me pet variants</h2>
-        <p className="mt-1 text-sm text-[#9BA8A0]">
+      <section className={`mt-6 p-5 sm:p-6 ${VALUE_SURFACE}`}>
+        <h2 className="text-lg font-semibold text-text-primary">Adopt Me pet variants</h2>
+        <p className="mt-1 text-sm text-text-secondary">
           A pet&apos;s value depends on which potions have been applied. Fly Ride (FR) is
           the standard trading benchmark; Neon and Mega forms are worth the most because
           they take many pets to build.
@@ -100,7 +94,7 @@ export function AdoptMeCalcSeo({
           {(VARIANTS as readonly string[]).map((v) => (
             <div
               key={v}
-              className="flex items-center gap-2 border border-[#1E2723] bg-[#111613] px-3 py-2"
+              className={`flex items-center gap-2 px-3 py-2 ${VALUE_TILE}`}
             >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -111,7 +105,7 @@ export function AdoptMeCalcSeo({
                 style={{ color: variantColor(v) }}
               >
                 {VARIANT_LABEL[v as keyof typeof VARIANT_LABEL]}{' '}
-                <span className="text-[#6D7A72]">({v})</span>
+                <span className="text-text-tertiary">({v})</span>
               </span>
             </div>
           ))}
@@ -121,14 +115,14 @@ export function AdoptMeCalcSeo({
       {/* Long-form guide — the ranking engine. */}
       <section className="mt-8 space-y-6">
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             Find accurate Adopt Me trade values
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             Whether you&apos;re trading pets or buying one outright, knowing what a pet is
             really worth matters. The DropMarket Adopt Me WFL calculator scores any trade
-            two ways at once — in <strong className="text-[#EDF3E9]">community trade
-            value</strong> and in <strong className="text-[#EDF3E9]">real money
+            two ways at once — in <strong className="text-text-primary">community trade
+            value</strong> and in <strong className="text-text-primary">real money
             (USD)</strong> — so you never accept a trade that looks fair on points but
             loses you cash. Add the pets on each side, pick each pet&apos;s variant, and
             get an instant Win, Fair, or Loss verdict.
@@ -136,10 +130,10 @@ export function AdoptMeCalcSeo({
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             Why use the DropMarket Adopt Me calculator?
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             Most Adopt Me calculators only score trades in community value points. Those
             points are useful, but they don&apos;t tell you what a pet costs in real money —
             and the two often disagree. DropMarket holds a live cash value for every priced
@@ -150,29 +144,29 @@ export function AdoptMeCalcSeo({
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             What determines an Adopt Me pet&apos;s value?
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             A pet&apos;s worth comes down to a few factors, all of which the calculator
             accounts for:
           </p>
           <div className="mt-4 space-y-4">
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Rarity</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Rarity</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 From Common up to Legendary. Legendary pets — especially unobtainable ones
                 from past events — are the most sought-after and hold the highest values.
                 Compare every pet in the{' '}
-                <Link href="/adopt-me/values" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/adopt-me/values" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   Adopt Me value list
                 </Link>
                 .
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Variant (Fly &amp; Ride, Neon, Mega)</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Variant (Fly &amp; Ride, Neon, Mega)</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 Potions change a pet&apos;s value dramatically. A Fly Ride (FR) is the
                 trading benchmark; a Neon takes four full-grown pets to make, and a Mega
                 takes four Neons — so Neon and Mega forms command a large premium. The
@@ -180,23 +174,23 @@ export function AdoptMeCalcSeo({
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Demand &amp; availability</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Demand &amp; availability</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 Once a pet leaves the game it can only be traded, so demand — not supply —
                 sets the price, and values drift as the community&apos;s wants change. Our
                 cash prices refresh daily to keep pace; see how we build them in the{' '}
-                <Link href="/adopt-me/values/methodology" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/adopt-me/values/methodology" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   pricing methodology
                 </Link>
                 .
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Real cash price</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Real cash price</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 What a pet actually sells for, not a made-up score. Every cash value here
                 comes from live listings from reputable sellers — you can{' '}
-                <Link href="/adopt-me/buy-items" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/adopt-me/buy-items" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   buy Adopt Me pets
                 </Link>{' '}
                 at these prices with SafeDrop protection.
@@ -206,8 +200,8 @@ export function AdoptMeCalcSeo({
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">How to use the WFL calculator</h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <h2 className="text-xl font-semibold text-text-primary">How to use the WFL calculator</h2>
+          <p className="mt-3 leading-7 text-text-secondary">
             Add the pets you&apos;d give to your side and the pets you&apos;d receive to
             theirs, picking each pet&apos;s variant from the two-axis selector. The
             calculator totals both sides and returns a Win, Fair, or Loss verdict — shown

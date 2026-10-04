@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { sabCard } from '@/lib/sab/theme'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { VALUE_SURFACE, VALUE_TILE } from '@/components/values/styles'
 import { formatCash } from '@/lib/sab/format'
 import { MUTATIONS, mutationVisual } from '@/lib/sab/mutations'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
@@ -78,55 +78,55 @@ export function CalculatorSeo({
       {topValues.length > 0 && (
         <section>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold text-[#F1F3F1]">
+            <h2 className="text-lg font-semibold text-text-primary">
               Top Steal a Brainrot values ({monthYear})
             </h2>
             <div className="flex flex-col items-end gap-1.5">
               <Link
                 href="/steal-a-brainrot/values"
-                className="inline-flex items-center gap-1 text-sm font-semibold text-[#4FB477] hover:underline"
+                className="inline-flex items-center gap-1 rounded-md text-sm font-semibold text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
                 See all 498 values
-                <ArrowForwardIcon sx={{ fontSize: 16 }} />
+                <ArrowRightIcon size={15} weight="bold" aria-hidden />
               </Link>
               {updatedAgo && (
-                <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#8FBF9C]">
-                  <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3FA35C]" />
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-text-tertiary">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477] motion-safe:animate-pulse" />
                   Updated {updatedAgo}
                 </span>
               )}
             </div>
           </div>
-          <p className="mt-1 text-sm text-[#9BA8A0]">
+          <p className="mt-1 text-sm text-text-secondary">
             Live cash prices for the most valuable Brainrots, refreshed every few hours from real
             listings. Click any Brainrot for its full value, mutation prices, and daily trend.
           </p>
 
-          <div className="mt-4 overflow-hidden border border-[#1E2723]">
+          <div className={`mt-4 overflow-x-auto ${VALUE_SURFACE}`}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1E2723] bg-white/[0.02] text-left text-xs uppercase tracking-wide text-[#6D7A72]">
-                  <th className="px-4 py-2.5 font-semibold">Brainrot</th>
-                  <th className="px-4 py-2.5 font-semibold">Rarity</th>
-                  <th className="px-4 py-2.5 text-right font-semibold">Cash value</th>
+                <tr className="border-b border-white/[0.07] text-left text-[12px] text-text-tertiary">
+                  <th className="px-4 py-2.5 font-medium">Brainrot</th>
+                  <th className="px-4 py-2.5 font-medium">Rarity</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Cash value</th>
                 </tr>
               </thead>
               <tbody>
                 {topValues.map((row) => (
                   <tr
                     key={row.slug}
-                    className="border-b border-[#161d19] transition hover:bg-white/[0.02] last:border-0"
+                    className="border-b border-white/[0.07] transition-colors hover:bg-white/[0.03] last:border-0"
                   >
                     <td className="px-4 py-2.5">
                       <Link
                         href={`/steal-a-brainrot/values/${row.slug}`}
-                        className="font-medium text-[#EDF3E9] hover:text-[#4FB477] hover:underline"
+                        className="font-medium text-text-primary hover:underline"
                       >
                         {row.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-[#9BA8A0]">{row.rarity}</td>
-                    <td className="px-4 py-2.5 text-right font-medium tabular-nums text-[#F1F3F1]">
+                    <td className="px-4 py-2.5 text-text-secondary">{row.rarity}</td>
+                    <td className="px-4 py-2.5 text-right font-medium tabular-nums text-text-primary">
                       {formatCash(row.priceUsd) ?? '—'}
                     </td>
                   </tr>
@@ -138,9 +138,9 @@ export function CalculatorSeo({
       )}
 
       {/* Mutation multiplier reference. */}
-      <section className={`${sabCard} mt-6 p-5 sm:p-6`}>
-        <h2 className="text-lg font-semibold text-[#F1F3F1]">Steal a Brainrot mutation multipliers</h2>
-        <p className="mt-1 text-sm text-[#9BA8A0]">
+      <section className={`mt-6 p-5 sm:p-6 ${VALUE_SURFACE}`}>
+        <h2 className="text-lg font-semibold text-text-primary">Steal a Brainrot mutation multipliers</h2>
+        <p className="mt-1 text-sm text-text-secondary">
           Mutations multiply a Brainrot&apos;s income and cash value. The calculator prices each
           mutation from live listings — these multipliers show the relative income boost.
         </p>
@@ -150,7 +150,7 @@ export function CalculatorSeo({
             return (
               <div
                 key={m.slug}
-                className="flex items-center gap-2 border border-[#1E2723] bg-[#111613] px-3 py-2"
+                className={`flex items-center gap-2 px-3 py-2 ${VALUE_TILE}`}
               >
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -168,25 +168,25 @@ export function CalculatorSeo({
       {/* Long-form guide content — the ranking engine. */}
       <section className="mt-8 space-y-6">
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             Find accurate Steal a Brainrot trading values
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             Whether you&apos;re buying, selling, or trading Brainrots in Steal a Brainrot, knowing the
             real cash value matters. The DropMarket Steal a Brainrot value calculator gives you the
             live USD worth of every Brainrot and mutation, pulled from real marketplace listings and
             refreshed daily — so you never overpay, get lowballed, or accept a bad trade. Use{' '}
-            <strong className="text-[#EDF3E9]">Cash Price</strong> mode to check what a single
-            Brainrot is worth, or <strong className="text-[#EDF3E9]">Trade / WFL</strong> mode to
+            <strong className="text-text-primary">Cash Price</strong> mode to check what a single
+            Brainrot is worth, or <strong className="text-text-primary">Trade / WFL</strong> mode to
             compare a full trade and get an instant Win, Fair, or Loss verdict.
           </p>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             Why use the DropMarket Brainrot calculator?
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             Most Brainrot value lists use static &quot;value points&quot; that go stale within days of
             an update. DropMarket is different: our values are real cash prices in USD, sourced from
             live listings and updated every day. That means the WFL verdict you get reflects the
@@ -197,10 +197,10 @@ export function CalculatorSeo({
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">
+          <h2 className="text-xl font-semibold text-text-primary">
             What determines a Brainrot&apos;s value?
           </h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
+          <p className="mt-3 leading-7 text-text-secondary">
             A Brainrot&apos;s worth comes down to a few factors, all of which the calculator accounts
             for:
           </p>
@@ -212,52 +212,52 @@ export function CalculatorSeo({
               same visual weight — no hidden text, which would be cloaking. */}
           <div className="mt-4 space-y-4">
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Income Per Second</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Income Per Second</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 The core value driver. Higher-earning Brainrots are worth more because they generate
                 cash faster in-game — you can compare every Brainrot&apos;s income side by side in the{' '}
-                <Link href="/steal-a-brainrot/values" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/steal-a-brainrot/values" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   Steal a Brainrot value list
                 </Link>
                 .
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Brainrot Rarity</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Brainrot Rarity</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 From Common up to Mythic, Legendary, Secret, and the top-tier OG Brainrots. Secret
                 and OG variants are the most sought-after and command the highest prices.
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Applied Mutations</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Applied Mutations</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 Traits like Rainbow, Cursed, Galaxy, and Diamond multiply both income and value. A
                 mutated Brainrot can be worth several times its default price, which is why the
                 calculator prices each mutation separately rather than deriving it from a multiplier.
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Market Trends &amp; Demand</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Market Trends &amp; Demand</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 Prices shift after game updates and new releases. Because our data updates daily, the
                 values you see keep pace with the real market — see how we build them in the{' '}
-                <Link href="/steal-a-brainrot/values/methodology" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/steal-a-brainrot/values/methodology" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   pricing methodology
                 </Link>
                 .
               </p>
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-[#EDF3E9]">Purchase Price</h3>
-              <p className="mt-1.5 leading-7 text-[#9BA8A0]">
+              <h3 className="text-[15px] font-semibold text-text-primary">Purchase Price</h3>
+              <p className="mt-1.5 leading-7 text-text-secondary">
                 What a Brainrot actually sells for in cash, rather than what a value list claims.
                 Every price here comes from live marketplace listings by reputable sellers — you can{' '}
-                <Link href="/steal-a-brainrot/buy-items" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/steal-a-brainrot/buy-items" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   buy Steal a Brainrot items
                 </Link>{' '}
                 or{' '}
-                <Link href="/steal-a-brainrot/buy-accounts" className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]">
+                <Link href="/steal-a-brainrot/buy-accounts" className="text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white">
                   browse accounts
                 </Link>{' '}
                 at these prices with SafeDrop protection.
@@ -267,11 +267,11 @@ export function CalculatorSeo({
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">How to use the value calculator</h2>
-          <p className="mt-3 leading-7 text-[#9BA8A0]">
-            In <strong className="text-[#EDF3E9]">Cash Price</strong> mode, search for a Brainrot,
+          <h2 className="text-xl font-semibold text-text-primary">How to use the value calculator</h2>
+          <p className="mt-3 leading-7 text-text-secondary">
+            In <strong className="text-text-primary">Cash Price</strong> mode, search for a Brainrot,
             pick a mutation, and see its live cash value, typical range, and confidence. In{' '}
-            <strong className="text-[#EDF3E9]">Trade / WFL</strong> mode, add the Brainrots you&apos;d
+            <strong className="text-text-primary">Trade / WFL</strong> mode, add the Brainrots you&apos;d
             give to your side and the ones you&apos;d receive to theirs — the calculator totals both
             sides and returns a Win, Fair, or Loss verdict. When you&apos;re ready, click through to
             buy any Brainrot from verified DropMarket sellers, with SafeDrop Protection on every order.
@@ -290,4 +290,3 @@ export function CalculatorSeo({
   )
 }
 
-export { }
