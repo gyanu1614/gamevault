@@ -7,19 +7,10 @@ import { createAnonClient } from '@/lib/supabase/anon'
  * 404s rather than publishing an empty page.
  */
 
-export const VARIANT_ORDER = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR'] as const
-export type Variant = (typeof VARIANT_ORDER)[number]
+import { VARIANTS as VARIANT_ORDER, VARIANT_LABEL, type Variant } from '../../calculator/_adoptMeCalcTypes'
 
-export const VARIANT_LABEL: Record<Variant, string> = {
-  N: 'Normal',
-  F: 'Fly',
-  R: 'Ride',
-  FR: 'Fly Ride',
-  NEON: 'Neon',
-  NFR: 'Neon Fly Ride',
-  MEGA: 'Mega Neon',
-  MFR: 'Mega Fly Ride',
-}
+export { VARIANT_ORDER, VARIANT_LABEL }
+export type { Variant }
 
 export interface AdoptMePetVariant {
   variant: Variant

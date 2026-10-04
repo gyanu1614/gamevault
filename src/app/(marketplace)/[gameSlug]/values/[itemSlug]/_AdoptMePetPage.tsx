@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
+import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { AdoptMePriceTrend } from './_AdoptMePriceTrend'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
@@ -14,7 +14,9 @@ import {
   type AdoptMePetVariant,
 } from './_adoptMePetData'
 import AdoptMePetHero from './_AdoptMePetHero'
-import { AdoptMeSimilar } from './_AdoptMeSimilar'
+import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
+import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
+import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
 import { AdoptMeAboutStats } from './_AdoptMeAboutStats'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -22,13 +24,6 @@ import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 
-const RARITY_META: Record<string, { label: string; color: string }> = {
-  legendary: { label: 'Legendary', color: '#F5C542' },
-  ultra_rare: { label: 'Ultra-Rare', color: '#B07BC9' },
-  rare: { label: 'Rare', color: '#4FB477' },
-  uncommon: { label: 'Uncommon', color: '#7FE3F0' },
-  common: { label: 'Common', color: '#9BA8A0' },
-}
 const OBTAINABILITY_LABEL: Record<string, string> = {
   obtainable: 'Obtainable',
   limited: 'Limited',
@@ -37,10 +32,9 @@ const OBTAINABILITY_LABEL: Record<string, string> = {
 
 // Trade-points formatter — used by the per-pet FAQ copy below.
 const TRADE = new Intl.NumberFormat('en-US')
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
-function rarityMeta(r: string) {
-  return RARITY_META[r] ?? { label: r, color: '#9BA8A0' }
-}
+const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
 
 /**
  * Lightly highlight the freeform description so the eye catches the facts that
@@ -72,7 +66,7 @@ function HighlightedDescription({ text }: { text: string }) {
     if (m.index === re.lastIndex) re.lastIndex += 1
     if (m.index > last) nodes.push(text.slice(last, m.index))
     nodes.push(
-      <span key={`${m.index}-${m[0]}`} className="font-semibold text-[#CBD6CD]">
+      <span key={`${m.index}-${m[0]}`} className="font-semibold text-text-primary">
         {m[0]}
       </span>,
     )
@@ -130,7 +124,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   const faq = petFaq(pet)
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -168,16 +162,16 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
 
         <div className={`mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
           {/* Breadcrumb */}
-          <nav className="mb-5 flex items-center gap-1.5 text-caption text-[#6D7A72]">
-            <Link href="/adopt-me/values" className="transition-colors hover:text-[#F1F3F1]">Values</Link>
-            <span>›</span>
-            <span className="text-[#E6EAE7]">{pet.name}</span>
+          <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-caption text-text-tertiary">
+            <Link href="/adopt-me/values" className="transition-colors hover:text-text-primary">Values</Link>
+            <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-disabled" />
+            <span className="text-text-primary">{pet.name}</span>
           </nav>
 
-          <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-[#F2F6F0] sm:text-display">
+          <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-display">
             {pet.name} Value in Adopt Me
           </h1>
-          <p className="mt-3 max-w-2xl text-body leading-7 text-[#98A398]">
+          <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
             What a {pet.name} is worth in trade — and in real money.
           </p>
 
@@ -215,7 +209,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             a compact stats row. Only renders the price sentence when FR is
             actually priced. ──────────────────────────────────────────────── */}
         <section>
-          <h2 className="mb-5 text-heading font-bold tracking-tight text-[#F1F3F1]">About The {pet.name}</h2>
+          <h2 className="mb-5 text-heading font-bold tracking-tight text-text-primary">About The {pet.name}</h2>
 
           {/* Quick-answer callout + market-activity stats — both reprice to the
               variant selected in the hero (via SelectedVariantContext). */}
@@ -225,7 +219,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
           />
 
-          <p className="mt-6 text-body leading-7 text-[#A9B4AD]">
+          <p className="mt-6 text-body leading-7 text-text-secondary">
             <HighlightedDescription text={pet.description} />
           </p>
         </section>
@@ -235,48 +229,52 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             selection back so the hero + stats follow too. ─────────────────── */}
         <AdoptMePriceTrend history={pet.priceHistory} />
 
-        {/* ── Similar pets — SAB carousel layout, neutral chrome ───────────── */}
-        <AdoptMeSimilar rarityLabel={meta.label} rarityColor={meta.color} items={similar} />
+        {/* ── Similar pets — the shared values rail ───────────────────────── */}
+        <SimilarItemsRail
+          title={`Similar ${meta.label} Pets`}
+          seeAllHref="/adopt-me/values"
+          itemNoun="pets"
+          className="border-t border-white/[0.07] pt-10"
+          items={similar.map((item) => ({
+            key: item.slug,
+            href: `/adopt-me/values/${item.slug}`,
+            name: item.name,
+            imageSrc: item.imageUrl,
+            imageAlt: `${item.name} — Adopt Me`,
+            price: item.frCashUsd != null ? `${USD.format(item.frCashUsd)} FR` : 'Price pending',
+          }))}
+        />
 
-        {/* ── FAQ — the shared content-hub FaqCards (square = neutral hub).
-            Heading sits in the SAME max-w-3xl column as the cards so the two
-            line up (FaqCards centers its cards in mx-auto max-w-3xl). ─────── */}
-        <section className="border-t border-white/[0.07] pt-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-[26px] font-bold tracking-tight text-[#F1F3F1] sm:text-heading">
-              Frequently Asked Questions
-            </h2>
-            <p className="mt-2 text-body text-[#9BA8A0]">
-              Everything about the {pet.name}&apos;s value, variants and how to buy it.
-            </p>
-          </div>
-          <FaqCards items={faq} square defaultOpen={0} className="mt-6" />
-        </section>
+        {/* ── FAQ — the shared content-hub FAQ block. ─────────────────────── */}
+        <HubFaqSection
+          title="Frequently Asked Questions"
+          subtitle={`Everything about the ${pet.name}'s value, variants and how to buy it.`}
+          items={faq}
+        />
 
-        {/* Cross-links — a single full-width nav strip (not two orphan pills):
-            back to the whole list on the left, the methodology page on the right
-            (E-E-A-T: every cited value links to how we calculate it). Each side
-            is a labelled two-line link with an icon that slides on hover. */}
-        <nav className="grid grid-cols-1 overflow-hidden rounded-lg border border-[#1E2723] sm:grid-cols-2">
+        {/* Cross-links — back to the whole list on the left, the methodology
+            page on the right (E-E-A-T: every cited value links to how we
+            calculate it). Each side is a labelled two-line link. */}
+        <nav aria-label="More Adopt Me values" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Link
             href="/adopt-me/values"
-            className="group flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/[0.03]"
+            className={`${VALUE_SURFACE_LINK} group flex items-center gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
           >
-            <ChevronLeftIcon sx={{ fontSize: 22 }} className="shrink-0 text-[#6D7A72] transition-transform group-hover:-translate-x-0.5 group-hover:text-[#8FBF9C]" />
+            <CaretLeftIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:-translate-x-0.5 group-hover:text-text-primary" />
             <span>
-              <span className="block text-caption font-semibold uppercase tracking-[0.1em] text-[#6D7A72]">Back to</span>
-              <span className="block text-body-sm font-semibold text-[#E6EAE7] group-hover:text-white">All Adopt Me Values</span>
+              <span className={`block ${VALUE_LABEL}`}>Back to</span>
+              <span className="block text-body-sm font-semibold text-text-primary">All Adopt Me Values</span>
             </span>
           </Link>
           <Link
             href="/adopt-me/values/methodology"
-            className="group flex items-center justify-between gap-3 border-t border-[#1E2723] px-5 py-4 transition-colors hover:bg-white/[0.03] sm:border-l sm:border-t-0"
+            className={`${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
           >
             <span>
-              <span className="block text-caption font-semibold uppercase tracking-[0.1em] text-[#6D7A72]">Our Method</span>
-              <span className="block text-body-sm font-semibold text-[#E6EAE7] group-hover:text-white">How We Value Pets</span>
+              <span className={`block ${VALUE_LABEL}`}>Our Method</span>
+              <span className="block text-body-sm font-semibold text-text-primary">How We Value Pets</span>
             </span>
-            <ChevronRightIcon sx={{ fontSize: 22 }} className="shrink-0 text-[#6D7A72] transition-transform group-hover:translate-x-0.5 group-hover:text-[#8FBF9C]" />
+            <CaretRightIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
           </Link>
         </nav>
 
