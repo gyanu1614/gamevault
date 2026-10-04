@@ -37,8 +37,8 @@ export function CompactVariantPicker({
   const split = tierHasSplitPotions(axes.tier)
   const onStyle: CSSProperties = { backgroundColor: accent, borderColor: accent, color: onAccentText }
   const btn =
-    'flex-1 rounded-md border border-[#232A2F] bg-white/[0.02] px-2 py-2 text-body-sm font-semibold text-[#9BA8A0] transition hover:bg-white/[0.06] hover:text-[#E6EAE7]'
-  const label = 'mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6D7A72]'
+    'flex-1 rounded-md border border-transparent bg-bg-overlay px-2 py-2 text-body-sm font-semibold text-text-secondary transition-[background-color,color,transform] hover:bg-bg-overlay-2 hover:text-text-primary active:scale-[0.98]'
+  const label = 'mb-1.5 text-[11px] font-medium text-text-tertiary'
   const stop = (fn: () => void) => (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); fn() }
 
   return (
@@ -84,7 +84,7 @@ export function CompactVariantPicker({
         </div>
       </div>
       {showSelected && (
-        <p className="text-center text-caption text-[#6D7A72]">
+        <p className="text-center text-caption text-text-tertiary">
           Showing <span className="font-semibold" style={{ color: accent }}>{VARIANT_LABEL[variant]}</span>
         </p>
       )}

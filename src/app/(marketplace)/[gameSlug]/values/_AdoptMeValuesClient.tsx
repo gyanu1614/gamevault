@@ -23,6 +23,10 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import SearchIcon from '@mui/icons-material/Search'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import CheckIcon from '@mui/icons-material/Check'
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
+import { AnimatePresence, motion } from 'framer-motion'
+import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { variantColor } from './[itemSlug]/_adoptMeVariantColor'
 import { CompactVariantPicker } from './_CompactVariantPicker'
 
@@ -88,41 +92,14 @@ function rarityMeta(r: string) {
   return RARITY_META[r] ?? { label: r, color: '#9BA8A0' }
 }
 
-/** #RRGGBB → an rgba() glow colour for the card's subtle hover bloom + shadow. */
-function hexToGlow(hex: string, alpha = 0.16): string {
-  const c = hex.replace('#', '')
-  const r = parseInt(c.slice(0, 2), 16)
-  const g = parseInt(c.slice(2, 4), 16)
-  const b = parseInt(c.slice(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
+/** Toolbar controls: fill-only (no resting border), neutral focus ring. */
+const FIELD_CLS =
+  'rounded-md border border-transparent bg-bg-overlay text-text-primary outline-none transition-colors ' +
+  'hover:border-white/[0.08] focus-visible:border-focus-border focus-visible:ring-2 focus-visible:ring-focus-soft'
 
-/** Card depth: flat rectangular surface at rest; the variant-tinted glow and
- *  lift appear ONLY on hover (no ambient bloom sitting there all the time). */
-const AM_CARD_CSS = `
-.am-card{
-  background:linear-gradient(180deg,#141917 0%,#0D1110 100%);
-  box-shadow:0 2px 6px -3px rgba(0,0,0,.55);
-}
-.am-card::before{
-  content:'';position:absolute;inset:0;z-index:0;opacity:0;transition:opacity .25s;pointer-events:none;
-  background:radial-gradient(75% 48% at 50% 0%, var(--vglow) 0%, transparent 62%);
-}
-.am-card:hover{
-  box-shadow:
-    0 12px 24px -14px rgba(0,0,0,.7),
-    0 0 16px -10px var(--vglow);
-}
-.am-card:hover::before{opacity:.4}
-.am-vbar{
-  background:linear-gradient(180deg, color-mix(in srgb,var(--vc) 12%,transparent), color-mix(in srgb,var(--vc) 5%,transparent));
-}
-.am-vbar:hover{filter:brightness(1.08)}
-@media (prefers-reduced-motion: reduce){
-  .am-card{transition:none}
-  .am-card:hover{transform:none}
-}
-`
+/** Dropdown panel: raised card, no outline (card-surface system). */
+const PANEL_CLS =
+  'absolute right-0 z-30 mt-1.5 w-full rounded-lg bg-bg-raised shadow-[0_18px_40px_-14px_rgba(0,0,0,0.75)]'
 
 const POPULAR_COUNT = 12
 const PAGE_SIZE = 25
@@ -174,13 +151,11 @@ function ConfidenceText({ confidence, hasCash }: { confidence: string; hasCash: 
 function SegBtn({
   active,
   color,
-  first = false,
   onClick,
   children,
 }: {
   active: boolean
   color: string
-  first?: boolean
   onClick: () => void
   children: React.ReactNode
 }) {
@@ -196,9 +171,9 @@ function SegBtn({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`group/seg flex flex-1 items-center justify-center whitespace-nowrap px-3 py-2.5 text-body-sm font-semibold transition-colors ${
-        first ? '' : 'border-l border-[#151B18]'
-      } ${active ? '' : 'hover:brightness-125'}`}
+      className={`group/seg flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3.5 py-2.5 text-body-sm font-semibold transition-[filter,transform] active:scale-[0.98] ${
+        active ? '' : 'hover:brightness-125'
+      }`}
       style={style}
     >
       {children}
@@ -338,26 +313,20 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 
   return (
     <div>
-      {/* Card depth + glow — layered shadow, inset edge highlight, and an
-          ambient variant-tinted bloom (::before) that intensifies on hover.
-          Kept in one style block because the layered box-shadow + gradient
-          pseudo-element can't be expressed as Tailwind utilities. --vc / --vglow
-          are set per-card inline. */}
-      <style dangerouslySetInnerHTML={{ __html: AM_CARD_CSS }} />
-      {/* ── Toolbar (Option B): search is the hero (grows) with the variant +
-          sort compact beside it; rarity below as a CONNECTED segmented control
-          (one bordered unit, active segment filled in its rarity colour). ── */}
+      {/* ── Toolbar: search grows, variant + sort compact beside it; rarity
+          below as a row of filled tiles (active one solid in its colour). ── */}
       {/* Row 1 — controls */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <span aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#5E6B63]">
+          <span aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">
             <SearchIcon sx={{ fontSize: 19 }} />
           </span>
           <input
             value={query}
             onChange={(e) => { setQuery(e.target.value); resetPage() }}
             placeholder="Search a pet by name…"
-            className="h-12 w-full rounded-md border border-[#1E2723] bg-white/[0.04] pl-11 pr-3 text-body text-[#F1F3F1] outline-none transition-colors placeholder:text-[#6D7A72] focus:border-[#2F6B46]"
+            aria-label="Search pets"
+            className={`h-12 w-full pl-11 pr-3 text-base placeholder:text-text-disabled sm:text-body ${FIELD_CLS}`}
           />
         </div>
         <div className="h-12 w-full shrink-0 sm:w-48">
@@ -368,12 +337,11 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
         </div>
       </div>
 
-      {/* Row 2 — rarity as a connected segmented control, stretched FULL WIDTH
-          to match the search row (each segment flex-1, equal share). Each is a
-          DIMMED tile in its rarity colour; selecting one fills it solid with
-          dark text. One bordered unit, hairline dividers, scrolls on mobile. */}
-      <div className="mt-3 flex w-full overflow-x-auto rounded-md border border-[#1E2723] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <SegBtn active={view === 'popular'} color="#4FB477" first onClick={() => { setView('popular'); resetPage() }}>
+      {/* Row 2 — rarity tiles, stretched FULL WIDTH to match the search row
+          (each flex-1). Each is a DIMMED fill in its rarity colour; selecting
+          one fills it solid with dark text. No outline; scrolls on mobile. */}
+      <div className="mt-2 flex w-full gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <SegBtn active={view === 'popular'} color="#4FB477" onClick={() => { setView('popular'); resetPage() }}>
           Popular
         </SegBtn>
         <SegBtn active={view === 'all'} color="#9AA6A0" onClick={() => { setView('all'); resetPage() }}>
@@ -414,16 +382,16 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 
       {/* ── Card grid ────────────────────────────────────────────────────── */}
       {visible.length === 0 ? (
-        <div className="mt-6 border border-[#2E2338] bg-[#120E15] px-6 py-12 text-center">
-          <h2 className="text-xl font-semibold text-[#F1F3F1]">No pets found</h2>
-          <p className="mt-2 text-[#9BA8A0]">Try changing the search or filters.</p>
+        <div className={`mt-6 rounded-lg px-6 py-12 text-center ${MARKET_CARD}`}>
+          <h2 className="text-xl font-semibold text-text-primary">No Pets Found</h2>
+          <p className="mt-2 text-text-secondary">Try changing the search or filters.</p>
         </div>
       ) : (
         // SAB-style card grid (2→6 across), Adopt-Me-tinted. Each card carries a
         // per-card variant picker that reprices its own footer, independent of
         // the table-wide variant selector. Trade value (gold) + Cheapest (teal)
         // read as the two axes.
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
           {visible.map((p, i) => (
             <PetCard
               key={p.slug}
@@ -443,17 +411,17 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
           <PageBtn disabled={safePage === 1} onClick={() => goToPage(safePage - 1)}>Prev</PageBtn>
           {pageNumbers(safePage, totalPages).map((n, i) =>
             n === '…' ? (
-              <span key={`gap-${i}`} className="px-1.5 font-mono text-[13px] text-[#5E685E]">…</span>
+              <span key={`gap-${i}`} className="px-1.5 text-[13px] text-text-tertiary">…</span>
             ) : (
               <button
                 key={n}
                 type="button"
                 onClick={() => goToPage(n)}
                 aria-current={n === safePage ? 'page' : undefined}
-                className={`min-w-[38px] border px-3 py-2 text-[13px] font-semibold tabular-nums transition ${
+                className={`h-9 min-w-[36px] rounded-md px-3 text-[13px] font-semibold tabular-nums transition-colors ${
                   n === safePage
-                    ? 'border-[#B07BC9] bg-[#B07BC9]/15 text-[#CBA8DA]'
-                    : 'border-[#1E2723] text-[#9BA8A0] hover:border-[#2A3A31] hover:text-[#E6EAE7]'
+                    ? 'bg-white/[0.12] text-text-primary'
+                    : 'bg-bg-raised text-text-secondary hover:bg-bg-raised-hover hover:text-text-primary'
                 }`}
               >
                 {n}
@@ -465,7 +433,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
       )}
 
       {/* ── Disclaimer (structure the brief + data rules require) ─────────── */}
-      <p className="mt-8 border-t border-[#1A1420] pt-5 font-mono text-[11px] leading-relaxed text-[#6D7A72]">
+      <p className="mt-8 border-t border-white/[0.07] pt-5 text-[12px] leading-relaxed text-text-tertiary">
         Prices come from active listings by reputable sellers. Bundles, account
         sales and disputed orders are excluded. Cash values marked “Est.” are derived
         from the variant ladder until we hold enough real sales; change indicators
@@ -476,23 +444,13 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 }
 
 /**
- * One value card — the SAB card pattern in Adopt Me colours (Option B).
- *
- * Header: a variant chip (opens the in-card picker) + rarity. Body: art on a
- * variant-tinted radial glow + name. Footer: TRADE (gold) | CHEAPEST (teal) —
- * the two axes read as different colours. The card seeds its variant from the
- * table-wide selector but can be repriced on its own via the picker; the whole
- * card is a link to the pet page (only when it has one, so we never 404).
- */
-/**
- * One value card — SAB card structure, polished with Apple-style depth.
- *
- * Rounded surface that lifts on hover with a layered drop-shadow; an ambient
- * glow in the selected variant's colour blooms behind the art; a glass edge
- * highlight rings the card. Body: art + name. A full-width variant BAR (the
- * primary control, opens the in-card picker) sits above the footer. Footer:
- * TRADE (gold) | CHEAPEST (teal) — the two axes, in Inter (not mono). The whole
- * card links to the pet page (only when one exists, so we never 404).
+ * One value card, on the marketplace card system (MARKET_CARD: near-black
+ * gradient, soft drop shadow, NO outline). Header: rank + Popular + rarity.
+ * Body: art + name. A flat variant pill (opens the in-card picker) sits above
+ * the footer band. Footer: Trade (gold) | Cheapest (teal), the two axes. The
+ * card seeds its variant from the table-wide selector but can be repriced on
+ * its own; body + footer link to the pet page (only when one exists, so we
+ * never 404).
  */
 function PetCard({
   pet,
@@ -513,7 +471,6 @@ function PetCard({
   const v = pet.values[code]
   const meta = rarityMeta(pet.rarity)
   const c = variantColor(code)
-  const glow = hexToGlow(c)
   const cheapest = v?.cheapestUsd ?? v?.cashUsd ?? null
   const showTypical =
     v?.cheapestUsd != null &&
@@ -533,54 +490,47 @@ function PetCard({
 
   return (
     <div
-      style={
-        {
-          ['--vc' as string]: c,
-          ['--vglow' as string]: glow,
-        } as CSSProperties
-      }
-      className="am-card group relative isolate flex flex-col overflow-hidden border border-[#1E2723] transition-[transform,box-shadow,border-color] duration-200 hover:border-[#2C3A31]"
+      className={`group relative isolate flex flex-col overflow-hidden rounded-lg ${MARKET_CARD} ${MARKET_CARD_HOVER}`}
     >
-      {/* Header: rarity only (the variant lives in the bar below). */}
-      <div className="relative z-[1] flex items-center justify-end px-3.5 pt-3">
-        <span
-          className="text-[10px] font-semibold uppercase tracking-[0.13em]"
-          style={{ color: meta.color }}
-        >
+      {/* Header: rank + Popular left, rarity right. */}
+      <div className="flex items-center justify-between gap-2 px-3 pt-3">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="text-[11px] font-medium tabular-nums text-text-tertiary">#{rank}</span>
+          {isPopular && (
+            <span className="rounded bg-[#4FB477]/[0.14] px-1.5 py-0.5 text-[10px] font-semibold text-[#6FD495]">
+              Popular
+            </span>
+          )}
+        </span>
+        <span className="truncate text-[11px] font-semibold" style={{ color: meta.color }}>
           {meta.label}
         </span>
       </div>
 
-      {/* Body (link): art on the ambient glow + Popular/rank + name. */}
-      <Wrapper {...wrapperProps} className="relative z-[1] flex flex-1 flex-col">
-        <div className="relative flex h-[118px] items-center justify-center px-3 pt-1.5">
-          {isPopular && (
-            <span className="absolute left-3 top-0 text-[10px] font-semibold text-[#5AD08A]">
-              Popular
-            </span>
-          )}
-          <span className="absolute right-3.5 top-0 text-[11px] font-semibold tabular-nums text-[#616B65]">
-            {rank}
-          </span>
+      {/* Body (link): art + name. */}
+      <Wrapper {...wrapperProps} className="flex flex-1 flex-col">
+        <div className="flex h-[112px] items-center justify-center px-3 pt-1">
           {pet.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote pet art
             <img
               src={pet.imageUrl}
-              alt={`${pet.name} — Adopt Me`}
+              alt={`${pet.name} in Adopt Me`}
+              width={96}
+              height={96}
               loading="lazy"
-              className="h-[96px] w-[96px] object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.55)]"
+              className="h-[96px] w-[96px] object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             />
           ) : (
-            <span className="font-mono text-[9px] text-[#5E685E]">N/A</span>
+            <span className="text-[11px] text-text-disabled">No Image</span>
           )}
         </div>
-        <div className="px-3 pb-2 pt-2 text-center text-[15.5px] font-semibold tracking-[-0.01em] text-[#F2F5F2] transition-colors group-hover:text-white">
+        <div className="truncate px-3 pb-2.5 pt-1.5 text-center text-[15px] font-medium tracking-[-0.01em] text-text-primary">
           {pet.name}
         </div>
       </Wrapper>
 
-      {/* Variant bar — the primary control (opens the picker). Full width,
-          glowing dot, gradient fill in the variant colour. */}
+      {/* Variant pill — opens the in-card picker. Flat fill, dot in the
+          variant colour, no outline. */}
       <button
         type="button"
         onClick={(e) => {
@@ -588,38 +538,32 @@ function PetCard({
           e.stopPropagation()
           setPickerOpen((o) => !o)
         }}
-        aria-label="Choose variant"
-        className="am-vbar relative z-[1] mx-3 mb-3 flex items-center justify-center gap-2 border px-3 py-2 text-[13px] font-semibold tracking-[0.01em] transition"
-        style={{ color: c, borderColor: c }}
+        aria-label={`Variant: ${VARIANT_LABEL[code]}. Change variant`}
+        aria-expanded={pickerOpen}
+        className="mx-3 mb-3 flex h-9 items-center justify-center gap-2 rounded-md bg-bg-overlay px-3 text-[13px] font-semibold text-text-primary transition-[background-color,transform] hover:bg-bg-overlay-2 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
       >
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: c, boxShadow: `0 0 8px 0 ${c}` }}
-        />
-        {VARIANT_LABEL[code]}
-        <span className="text-[11px] opacity-60">▾</span>
+        <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: c }} />
+        <span className="truncate">{VARIANT_LABEL[code]}</span>
+        <KeyboardArrowDownRoundedIcon aria-hidden style={{ fontSize: 16 }} className="shrink-0 text-text-tertiary" />
       </button>
 
-      {/* Footer: TRADE (gold) | CHEAPEST (teal). Numbers in Inter. */}
-      <Wrapper {...wrapperProps} className="relative z-[1] block">
-        <div className="flex border-t border-white/[0.06] bg-gradient-to-b from-white/[0.015] to-transparent">
-          <div className="flex-1 border-r border-white/[0.06] px-1.5 py-3 text-center">
-            <div className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#616B65]">
-              Trade
-            </div>
-            <div className="mt-1 truncate text-[18px] font-semibold tracking-[-0.01em] text-[#E8BD6A]">
-              {tradeVal != null ? TRADE.format(tradeVal) : '—'}
+      {/* Footer band: Trade (gold) | Cheapest (teal). */}
+      <Wrapper {...wrapperProps} className="block">
+        <div className="flex border-t border-white/[0.07] bg-[#17181C]">
+          <div className="flex-1 px-1.5 py-2.5 text-center">
+            <div className="text-[11px] font-medium text-text-tertiary">Trade</div>
+            <div className="mt-0.5 truncate text-[17px] font-semibold tabular-nums tracking-[-0.01em] text-[#E8BD6A]">
+              {tradeVal != null ? TRADE.format(tradeVal) : '-'}
             </div>
           </div>
-          <div className="flex-1 px-1.5 py-3 text-center">
-            <div className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#616B65]">
-              Cheapest
-            </div>
-            <div className="mt-1 truncate text-[18px] font-semibold tracking-[-0.01em] text-[#54DDBE]">
-              {cheapest != null ? USD.format(cheapest) : '—'}
+          <div aria-hidden className="my-2.5 w-px bg-white/[0.07]" />
+          <div className="flex-1 px-1.5 py-2.5 text-center">
+            <div className="text-[11px] font-medium text-text-tertiary">Cheapest</div>
+            <div className="mt-0.5 truncate text-[17px] font-semibold tabular-nums tracking-[-0.01em] text-[#54DDBE]">
+              {cheapest != null ? USD.format(cheapest) : '-'}
             </div>
             {showTypical && (
-              <div className="text-[10px] tabular-nums text-[#616B65]">
+              <div className="text-[10px] tabular-nums text-text-tertiary">
                 ~{USD.format(v!.averageUsd as number)}
               </div>
             )}
@@ -628,33 +572,38 @@ function PetCard({
       </Wrapper>
 
       {/* In-card variant picker overlay. */}
-      {pickerOpen && (
-        <div className="absolute inset-0 z-30 flex flex-col rounded-md bg-[#060809]/[0.97] p-3">
-          <div className="mb-2 flex shrink-0 items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8C98A4]">
-              Variant
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setPickerOpen(false)
-              }}
-              aria-label="Close variant picker"
-              className="-mr-1 -mt-1 px-1 text-[14px] leading-none text-[#8C98A4] transition hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-          {/* Two-axis picker (shared with the toolbar dropdown), accented in the
-              card's variant colour. Stacked Tier + Potion rows; Neon/Mega show a
-              single Fly-Ride toggle since they inherit the base pet's abilities. */}
-          <div className="flex flex-1 flex-col justify-center">
-            <CompactVariantPicker variant={code} onChange={setCode} accent={c} />
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {pickerOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 z-30 flex flex-col rounded-lg bg-[#1A1B1F]/[0.98] p-3"
+          >
+            <div className="mb-2 flex shrink-0 items-center justify-between">
+              <span className="text-[12px] font-semibold text-text-secondary">Choose Variant</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setPickerOpen(false)
+                }}
+                aria-label="Close variant picker"
+                className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+              >
+                <CloseRoundedIcon style={{ fontSize: 17 }} />
+              </button>
+            </div>
+            {/* Two-axis picker (shared with the toolbar dropdown), accented in the
+                card's variant colour. */}
+            <div className="flex flex-1 flex-col justify-center">
+              <CompactVariantPicker variant={code} onChange={setCode} accent={c} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -690,18 +639,18 @@ function SortDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[#1E2723] bg-white/[0.04] px-3.5 text-body-sm text-[#C6CEC9] outline-none transition hover:bg-white/[0.06] focus:border-[#2F6B46]"
+        className={`flex h-full w-full items-center justify-between gap-2 px-3.5 text-body-sm ${FIELD_CLS}`}
       >
         <span className="flex items-center gap-2 truncate">
-          <SwapVertIcon sx={{ fontSize: 17 }} className="shrink-0 text-[#6D7A72]" />
+          <SwapVertIcon sx={{ fontSize: 17 }} className="shrink-0 text-text-tertiary" />
           <span className="truncate">{current.label}</span>
         </span>
-        <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-[#8B978F] transition ${open ? 'rotate-180' : ''}`} />
+        <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 z-30 mt-1.5 w-full min-w-[13rem] overflow-hidden rounded-md border border-[#232A2F] bg-[#0E1211] p-1 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+          className={`min-w-[13rem] overflow-hidden p-1 ${PANEL_CLS}`}
         >
           {SORT_OPTIONS.map((o) => {
             const active = o.value === value
@@ -712,12 +661,12 @@ function SortDropdown({
                 role="option"
                 aria-selected={active}
                 onClick={() => { onChange(o.value); setOpen(false) }}
-                className={`flex w-full items-center justify-between gap-2 rounded px-3 py-2 text-left text-body-sm transition ${
-                  active ? 'bg-white/[0.06] font-semibold text-[#F1F3F1]' : 'text-[#9BA8A0] hover:bg-white/[0.04] hover:text-[#E6EAE7]'
+                className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-body-sm transition-colors ${
+                  active ? 'bg-white/[0.06] font-semibold text-text-primary' : 'text-text-secondary hover:bg-white/[0.04] hover:text-text-primary'
                 }`}
               >
                 {o.label}
-                {active && <CheckIcon sx={{ fontSize: 16 }} className="shrink-0 text-[#4FB477]" />}
+                {active && <CheckIcon sx={{ fontSize: 16 }} className="shrink-0 text-text-primary" />}
               </button>
             )
           })}
@@ -759,16 +708,16 @@ function VariantDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-full w-full items-center justify-between gap-2 rounded-md border border-[#1E2723] bg-white/[0.04] px-3.5 text-body-sm text-[#F1F3F1] outline-none transition hover:bg-white/[0.06] focus:border-[#2F6B46]"
+        className={`flex h-full w-full items-center justify-between gap-2 px-3.5 text-body-sm ${FIELD_CLS}`}
       >
         <span className="flex items-center gap-2">
-          <span className="border border-[#26332C] bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-semibold text-[#E6EAE7]">{value}</span>
+          <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-semibold text-text-primary">{value}</span>
           <span className="truncate">{VARIANT_LABEL[value]}</span>
         </span>
-        <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-[#8B978F] transition ${open ? 'rotate-180' : ''}`} />
+        <KeyboardArrowDownIcon sx={{ fontSize: 18 }} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1.5 w-full min-w-[16rem] rounded-md border border-[#232A2F] bg-[#0E1211] p-3.5 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]">
+        <div className={`min-w-[16rem] p-3.5 ${PANEL_CLS}`}>
           {/* Two-axis picker: tier (Default/Neon/Mega) + Fly/Ride, forest accent.
               Every form is a valid whole-list view (unpriced forms fall back to
               trade value), so nothing is disabled. */}
@@ -803,7 +752,7 @@ function PageBtn({ disabled, onClick, children }: { disabled: boolean; onClick: 
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="border border-[#2E2338] bg-[#120E15] px-4 py-2 text-[13px] font-semibold text-[#CBA8DA] transition hover:bg-[#181022] disabled:cursor-not-allowed disabled:opacity-40"
+      className="h-9 rounded-md bg-bg-raised px-4 text-[13px] font-semibold text-text-secondary transition-colors hover:bg-bg-raised-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-bg-raised"
     >
       {children}
     </button>
