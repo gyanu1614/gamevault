@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
+import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 
 /**
  * ValuesSeo — the SEO content package rendered BELOW the value directory.
@@ -17,6 +18,11 @@ import { HubFaqSection } from '@/components/content/HubFaqSection'
  */
 
 export type ValuesFaqItem = { q: string; a: string }
+
+/** Inline link inside the values SEO copy (neutral, underlined). Shared with
+ *  the Adopt Me intro so both hubs' body links match. */
+export const VALUES_SEO_LINK =
+  'font-medium text-text-primary underline decoration-white/30 underline-offset-2 transition-colors hover:decoration-white/70'
 
 /** Build the value-list FAQ for a game. Exported so the page emits matching schema. */
 export function valuesFaq({
@@ -90,7 +96,7 @@ export function ValuesSeo({
           range, and daily trend, or check a full swap in the{' '}
           <Link
             href={calculatorHref}
-            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+            className={VALUES_SEO_LINK}
           >
             {gameName} WFL calculator
           </Link>
@@ -109,7 +115,7 @@ export function ValuesSeo({
           each number is sourced, dated, and quality-checked in our{' '}
           <Link
             href={methodologyHref}
-            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+            className={VALUES_SEO_LINK}
           >
             pricing methodology
           </Link>
@@ -128,7 +134,7 @@ export function ValuesSeo({
           its own honest cash value. When you know what a {u} is worth, you can{' '}
           <Link
             href={buyHref}
-            className="text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]"
+            className={VALUES_SEO_LINK}
           >
             buy {gameName} items
           </Link>{' '}
@@ -141,14 +147,14 @@ export function ValuesSeo({
   const sections = intro ?? defaultIntro
 
   return (
-    <div className="mx-auto w-full max-w-7xl border-t border-[#1A211A] px-4 pb-4 pt-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl border-t border-white/[0.07] px-4 pb-4 pt-12 sm:px-6 lg:px-8">
       {/* Answer-first intro — the extractable summary Google wants on the head
           term. space-y-8 gives each sub-section clear breathing room. */}
       <section className="space-y-8">
         {sections.map((s, i) => (
           <div key={i}>
-            <h2 className="text-xl font-semibold text-[#F1F3F1]">{s.heading}</h2>
-            <p className="mt-3 leading-7 text-[#9BA8A0]">{s.body}</p>
+            <h2 className="text-xl font-semibold text-text-primary">{s.heading}</h2>
+            <p className="mt-3 leading-7 text-text-secondary">{s.body}</p>
           </div>
         ))}
       </section>
@@ -162,10 +168,10 @@ export function ValuesSeo({
         footer={
           <Link
             href={calculatorHref}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#4FB477] hover:underline"
+            className={VALUE_BTN_SECONDARY}
           >
             Open the {gameName} calculator
-            <ArrowForwardIcon sx={{ fontSize: 16 }} />
+            <ArrowRightIcon size={16} weight="bold" aria-hidden />
           </Link>
         }
       />

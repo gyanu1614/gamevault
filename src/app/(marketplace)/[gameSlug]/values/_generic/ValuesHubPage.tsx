@@ -5,7 +5,8 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme, contentThemeVars } from '@/lib/content/theme'
+import { getGameContentTheme } from '@/lib/content/theme'
+import { HUB_GROUND, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { getValueItems, getValuesFreshness, type ValueItem } from '@/lib/values/data'
 
@@ -45,19 +46,15 @@ function formatIncome(perSec: number): string {
 function PriceCell({ item }: { item: ValueItem }) {
   const p = item.price
   if (!p || p.cheapestUsd == null) {
-    return (
-      <span className="font-mono text-[12px] text-[var(--ct-text-faint)]">
-        No price yet
-      </span>
-    )
+    return <span className="shrink-0 text-[12px] font-medium text-text-disabled">No Price Yet</span>
   }
   return (
-    <span className="flex flex-col gap-0.5">
-      <span className="font-mono text-[15px] font-bold tabular-nums text-[var(--ct-text)]">
+    <span className="flex shrink-0 flex-col items-end gap-0.5">
+      <span className="text-[15px] font-semibold tabular-nums text-text-primary">
         {usd(p.cheapestUsd)}
       </span>
       {p.averageUsd != null && p.averageUsd !== p.cheapestUsd && (
-        <span className="font-mono text-[11px] tabular-nums text-[var(--ct-text-faint)]">
+        <span className="text-[11px] tabular-nums text-text-tertiary">
           avg {usd(p.averageUsd)}
         </span>
       )}
@@ -66,21 +63,31 @@ function PriceCell({ item }: { item: ValueItem }) {
 }
 
 function ItemRow({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
+  const meta = [
+    item.rarity,
+    item.area,
+    item.incomePerSec != null ? formatIncome(item.incomePerSec) : null,
+    item.price?.sampleSize ? `${item.price.sampleSize} listings` : null,
+  ].filter(Boolean) as string[]
   return (
     <Link
       href={`/${gameSlug}/values/${item.slug}`}
-      className="flex items-center justify-between gap-4 bg-[var(--ct-surface)] px-5 py-4 transition-colors hover:bg-[var(--ct-hover)]"
+      className={`flex items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
     >
       <span className="flex min-w-0 flex-col gap-1">
-        <span className="truncate text-[15px] font-semibold text-[var(--ct-text)]">
+        <span className="truncate text-[15px] font-semibold text-text-primary">
           {item.name}
         </span>
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ct-text-faint)]">
-          {item.rarity && <span>{item.rarity}</span>}
-          {item.area && <span>{item.area}</span>}
-          {item.incomePerSec != null && <span>{formatIncome(item.incomePerSec)}</span>}
-          {item.price?.sampleSize ? <span>{item.price.sampleSize} listings</span> : null}
-        </span>
+        {meta.length > 0 && (
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-text-tertiary">
+            {meta.map((m, i) => (
+              <span key={`${i}-${m}`} className="flex items-center gap-1.5">
+                {i > 0 && <span aria-hidden className="h-1 w-1 rounded-full bg-white/20" />}
+                {m}
+              </span>
+            ))}
+          </span>
+        )}
       </span>
       <PriceCell item={item} />
     </Link>
@@ -104,14 +111,14 @@ function Section({
   return (
     <section id={id} className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
       <div className="mb-4">
-        <h2 className="text-[20px] font-semibold tracking-tight text-[var(--ct-text)] sm:text-[24px]">
+        <h2 className="text-[20px] font-semibold tracking-tight text-text-primary sm:text-[24px]">
           {title}
         </h2>
-        <p className="mt-1.5 max-w-3xl text-[14px] leading-relaxed text-[var(--ct-text-muted)]">
+        <p className="mt-1.5 max-w-3xl text-[14px] leading-relaxed text-text-secondary">
           {lead}
         </p>
       </div>
-      <div className="grid gap-px border border-[var(--ct-line)] bg-[var(--ct-line)] sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <ItemRow key={item.id} item={item} gameSlug={gameSlug} />
         ))}
@@ -142,10 +149,7 @@ export default async function ValuesHubPage({ gameSlug }: { gameSlug: string }) 
     .slice(0, 50)
 
   return (
-    <main
-      className="relative min-h-screen bg-[var(--ct-bg)]"
-      style={contentThemeVars(theme)}
-    >
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([

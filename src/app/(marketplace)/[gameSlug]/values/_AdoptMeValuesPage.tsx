@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
-import { ValuesSeo, valuesFaq } from './_ValuesSeo'
+import { ValuesSeo, valuesFaq, VALUES_SEO_LINK as linkCls } from './_ValuesSeo'
 import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -11,6 +11,8 @@ import AdoptMeValuesClient from './_AdoptMeValuesClient'
 import { getAdoptMePets } from './_adoptMeData'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
+import { HUB_GROUND } from '@/components/values/styles'
+import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 
 /**
  * /adopt-me/values — the Adopt Me pillar page. Kept as its own component so the
@@ -18,9 +20,6 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
  * gameSlug === 'adopt-me'. Same hub chrome (nav, backdrop, footer), Adopt-Me
  * data + client.
  */
-
-const linkCls =
-  'text-[#8FBF9C] underline underline-offset-2 hover:text-[#B9DCC4]'
 
 /**
  * Adopt Me's own intro copy for ValuesSeo — plain-English, written for a player
@@ -89,7 +88,7 @@ export default async function AdoptMeValuesPage() {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <SabHeroBackdrop>
         <HubNav data={hubNav} />
         <JsonLd
@@ -145,15 +144,10 @@ export default async function AdoptMeValuesPage() {
             the band's dark overlay, hiding the variant selector and search. */}
         <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           {pets.length === 0 ? (
-            <div className="border border-[#2E2338] bg-[#120E15] px-6 py-12 text-center">
-              <h2 className="text-xl font-semibold text-[#F1F3F1]">
-                Values are temporarily unavailable
-              </h2>
-              <p className="mt-2 text-[#9BA8A0]">
-                The Adopt Me pet database could not be loaded. Please check again
-                shortly.
-              </p>
-            </div>
+            <ValuesEmptyState
+              title="Values are temporarily unavailable"
+              body="The Adopt Me pet database could not be loaded. Please check again shortly."
+            />
           ) : (
             <AdoptMeValuesClient pets={pets} />
           )}

@@ -13,13 +13,18 @@ import { SabHeroBackdrop } from './_SabHeroBackdrop'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
-import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
+import { getHubNavData } from '@/lib/content/hubNav'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 import GenericValuesHubPage from './_generic/ValuesHubPage'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
+import { ValueArt } from '@/components/values/ValueArt'
+import { RarityLabel } from '@/components/values/ValueCard'
+import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
+import { rarityMeta } from '@/lib/values/rarity'
 
 export const revalidate = 3600
 /**
@@ -472,7 +477,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <SabHeroBackdrop>
       <HubNav data={hubNav} />
       <JsonLd
@@ -535,45 +540,41 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
       {movers.length > 0 && (
         <section className="mx-auto w-full max-w-7xl px-4 pb-2 sm:px-6 lg:px-8">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-[20px] font-semibold tracking-tight text-[#F1F3F1] sm:text-[24px]">
+            <h2 className="text-[20px] font-semibold tracking-tight text-text-primary sm:text-[24px]">
               Biggest movers this week
             </h2>
-            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
-              Based on live listings · 7d
-            </span>
+            <span className={VALUE_LABEL}>Based on live listings · 7d</span>
           </div>
-          <div className="grid gap-px border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             {movers.map((m) => {
               const up = m.changePct >= 0
+              const rarity = rarityMeta('steal-a-brainrot', m.rarity)
               return (
                 <Link
                   key={m.slug}
                   href={`/steal-a-brainrot/values/${m.slug}`}
-                  className="flex items-center gap-4 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#111A12] sm:gap-5 sm:p-6"
+                  className={`flex items-center gap-4 p-5 sm:gap-5 sm:p-6 ${VALUE_SURFACE_LINK}`}
                 >
                   {m.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <ValueArt
                       src={m.imageUrl}
                       alt=""
-                      loading="lazy"
-                      className="h-16 w-16 shrink-0 object-contain sm:h-[76px] sm:w-[76px]"
+                      size={68}
+                      pixelated
+                      className="shrink-0"
                     />
                   )}
                   <span className="flex min-w-0 flex-col gap-1.5">
-                    <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#5E685E]">
-                      {m.rarity}
-                    </span>
-                    <span className="truncate text-[17px] font-bold tracking-tight text-[#F2F6F0] sm:text-[19px]">
+                    {m.rarity && <RarityLabel label={rarity.label} color={rarity.color} />}
+                    <span className="truncate text-[17px] font-semibold tracking-tight text-text-primary sm:text-[19px]">
                       {m.name}
                     </span>
                     <span className="flex items-baseline gap-2.5">
-                      <span className="font-mono text-[16px] font-bold tabular-nums text-[#E4EAE2] sm:text-[18px]">
+                      <span className="text-[16px] font-semibold tabular-nums text-text-primary sm:text-[18px]">
                         {USD_FMT.format(m.price)}
                       </span>
                       <span
-                        className="font-mono text-[12px] font-semibold tabular-nums"
-                        style={{ color: up ? '#8FBF9C' : '#C97B6B' }}
+                        className={`text-[12px] font-semibold tabular-nums ${up ? 'text-success' : 'text-error'}`}
                       >
                         {up ? '+' : '−'}
                         {Math.abs(m.changePct).toFixed(1)}%
@@ -589,15 +590,10 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
 
       <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-8">
         {brainrots.length === 0 ? (
-          <div className="border border-[#1E2723] bg-[#121613] px-6 py-12 text-center">
-            <h2 className="text-xl font-semibold text-[#F1F3F1]">
-              Values are temporarily unavailable
-            </h2>
-            <p className="mt-2 text-[#9BA8A0]">
-              The Brainrot database could not be loaded. Please check again
-              shortly.
-            </p>
-          </div>
+          <ValuesEmptyState
+            title="Values are temporarily unavailable"
+            body="The Brainrot database could not be loaded. Please check again shortly."
+          />
         ) : (
           <ValuesDirectoryClient brainrots={brainrots} />
         )}
@@ -630,13 +626,13 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         <HubBuyCta gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" buyHref="/steal-a-brainrot/buy-items" />
       )}
       </SabHeroBackdrop>
-          <HubFooter
+      <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
         tools={hubNav.tools}
         itemsHref={hubNav.itemsHref}
         accountsHref={hubNav.accountsHref}
       />
-</main>
+    </main>
   )
 }

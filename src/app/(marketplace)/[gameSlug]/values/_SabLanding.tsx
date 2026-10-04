@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import {
-  ArrowRight,
-  Search,
-  Store,
-  TrendingUp,
-  User,
-} from 'lucide-react'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
+import { TrendUpIcon } from '@phosphor-icons/react/dist/csr/TrendUp'
+import { UserIcon } from '@phosphor-icons/react/dist/csr/User'
+import { VALUE_BTN_SECONDARY, VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import type { ItemOffer } from '../[categorySlug]/_itemsTypes'
 import type { SabTopValue } from '../page'
@@ -79,7 +78,7 @@ export function SabLanding({
         gameSlug={gameSlug}
         gameName={gameName}
         empty={{
-          icon: <Store className="h-5 w-5" />,
+          icon: <StorefrontIcon size={20} weight="bold" />,
           title: 'No items listed yet',
           body: 'Item listings will appear here as sellers go live.',
         }}
@@ -93,7 +92,7 @@ export function SabLanding({
         gameSlug={gameSlug}
         gameName={gameName}
         empty={{
-          icon: <User className="h-5 w-5" />,
+          icon: <UserIcon size={20} weight="bold" />,
           title: 'No accounts listed yet',
           body: 'Be the first to sell a Steal a Brainrot account.',
           cta: { label: 'Become a Founding Seller', href: '/early-seller' },
@@ -111,12 +110,12 @@ export function SabLanding({
 
 function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover">
+    <div className={`flex flex-col overflow-hidden ${VALUE_SURFACE}`}>
       <div className="flex flex-col gap-3 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-text-secondary">
-              <TrendingUp className="h-5 w-5" />
+              <TrendUpIcon size={20} weight="bold" />
             </span>
             <h2 className="text-lg font-bold text-text-primary">Brainrot Values</h2>
           </div>
@@ -127,20 +126,20 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
           <SwooshLink
             href="/steal-a-brainrot/values"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-md bg-white/[0.06] px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.1] hover:text-text-secondary"
+            className={`mt-5 w-fit ${VALUE_BTN_SECONDARY}`}
           >
-            Open values
-            <ArrowRight className="h-4 w-4" />
+            Open Values
+            <ArrowRightIcon size={16} weight="bold" aria-hidden />
           </SwooshLink>
         </div>
 
         {/* Mini value-table preview (a real slice of the /values UI). */}
         {topValues.length > 0 && (
-          <div className="w-full shrink-0 overflow-hidden rounded-lg bg-black/25 sm:w-[236px]">
-            <div className="border-b border-border-subtle px-3 py-2 text-[10.5px] font-bold uppercase tracking-wider text-text-tertiary">
-              Top values
+          <div className="w-full shrink-0 overflow-hidden rounded-md bg-white/[0.04] sm:w-[236px]">
+            <div className={`border-b border-white/[0.07] px-3 py-2 ${VALUE_LABEL}`}>
+              Top Values
             </div>
-            <div className="divide-y divide-border-subtle">
+            <div className="divide-y divide-white/[0.07]">
               {topValues.slice(0, 5).map((value) => (
                 <div
                   key={value.slug}
@@ -149,7 +148,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
                   <span className="truncate text-[12.5px] text-text-primary">
                     {value.name}
                   </span>
-                  <span className="shrink-0 font-mono text-[12.5px] font-bold tabular-nums text-lime-text">
+                  <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-lime-text">
                     {formatUsd(value.priceUsd) ?? '—'}
                   </span>
                 </div>
@@ -165,7 +164,7 @@ function ValuesPreviewCard({ topValues }: { topValues: SabTopValue[] }) {
 /** Calculator card — mini calculator UI preview (not a black box) + CTA. */
 function CalculatorPreviewCard() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover">
+    <div className={`flex flex-col overflow-hidden ${VALUE_SURFACE}`}>
       <div className="flex flex-col gap-3 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-text-primary">Value &amp; Trade Calculator</h2>
@@ -176,15 +175,15 @@ function CalculatorPreviewCard() {
           <SwooshLink
             href="/steal-a-brainrot/calculator"
             to="values"
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-md bg-white/[0.06] px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-white/[0.1] hover:text-text-secondary"
+            className={`mt-5 w-fit ${VALUE_BTN_SECONDARY}`}
           >
-            Open calculator
-            <ArrowRight className="h-4 w-4" />
+            Open Calculator
+            <ArrowRightIcon size={16} weight="bold" aria-hidden />
           </SwooshLink>
         </div>
 
         {/* Mini calculator UI preview. */}
-        <div className="w-full shrink-0 overflow-hidden rounded-lg bg-black/25 p-3 sm:w-[236px]">
+        <div className="w-full shrink-0 overflow-hidden rounded-md bg-white/[0.04] p-3 sm:w-[236px]">
           {/* tab row */}
           <div className="mb-2.5 flex gap-1 rounded-md bg-white/[0.05] p-1">
             <span className="flex-1 rounded bg-lime px-2 py-1 text-center text-[10.5px] font-bold text-text-inverse">
@@ -196,13 +195,13 @@ function CalculatorPreviewCard() {
           </div>
           {/* fake search */}
           <div className="mb-2.5 flex items-center gap-1.5 rounded-md bg-white/[0.05] px-2 py-1.5 text-[10.5px] text-text-tertiary">
-            <Search className="h-3 w-3" />
+            <MagnifyingGlassIcon size={12} weight="bold" aria-hidden />
             Search a Brainrot…
           </div>
           {/* result row */}
-          <div className="flex items-center justify-between rounded-md border border-lime-tint-border bg-[rgba(86,184,127,0.03)] px-2.5 py-2">
+          <div className="flex items-center justify-between rounded-md bg-white/[0.06] px-2.5 py-2">
             <span className="text-[11px] font-semibold text-text-primary">Neon · La Vacca</span>
-            <span className="font-mono text-[12px] font-bold tabular-nums text-lime-text">
+            <span className="text-[12px] font-semibold tabular-nums text-lime-text">
               $42.00
             </span>
           </div>

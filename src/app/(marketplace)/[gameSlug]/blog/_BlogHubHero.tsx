@@ -9,11 +9,12 @@
  */
 
 import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { HubHero } from '@/components/content/HubHero'
 import { HUB_NAV_CLEAR } from '@/components/content/hubNavGeometry'
 import type { HubStat, HubTeaserItem } from './_hubData'
 import { MarketSnapshotBento } from './_MarketSnapshotBento'
+import { VALUE_BTN_PRIMARY, VALUE_BTN_SECONDARY } from '@/components/values/styles'
 
 export function BlogHubHero({
   gameName,
@@ -60,31 +61,28 @@ export function BlogHubHero({
       <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
         {/* Left — copy + CTAs */}
         <div className="bhh-anim">
-          <span className="inline-flex items-center gap-2 text-caption font-bold uppercase tracking-[0.14em] text-[#CFE0D6]">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3FA96A] opacity-70" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
-            </span>
+          <span className="inline-flex items-center gap-2 text-[13px] font-medium text-text-secondary">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
             Live Prices · Refreshed Daily
           </span>
-          <h1 className="mt-4 text-balance text-[32px] font-extrabold leading-[1.05] tracking-[-0.02em] text-[#F6FAF4] sm:text-[46px]">
+          <h1 className="mt-4 text-balance text-[32px] font-bold leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[42px]">
             {heading}
           </h1>
-          <p className="mt-4 max-w-xl text-pretty text-body leading-7 text-[#B8C4BC] sm:text-body-lg">
+          <p className="mt-4 max-w-xl text-pretty text-body leading-7 text-text-secondary sm:text-body-lg">
             {lead}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={`/${gameSlug}/values`}
-              className="inline-flex items-center gap-2 rounded-md bg-[#1B6B3F] px-5 py-3 text-body-sm font-bold text-white transition hover:bg-[#1f7a48]"
+              className={VALUE_BTN_PRIMARY}
             >
               Value List
-              <ArrowForwardIcon sx={{ fontSize: 18 }} />
+              <ArrowRightIcon size={16} weight="bold" aria-hidden />
             </Link>
             {hasCalculator && (
               <Link
                 href={`/${gameSlug}/calculator`}
-                className="inline-flex items-center gap-2 rounded-md border border-[#2C3A31] bg-white/[0.03] px-5 py-3 text-body-sm font-semibold text-[#E6EAE7] transition hover:border-[#3A4A40] hover:bg-white/[0.06]"
+                className={VALUE_BTN_SECONDARY}
               >
                 WFL Calculator
               </Link>

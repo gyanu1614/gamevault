@@ -5,13 +5,17 @@
  * dark text panel on the right (no divider line — the gradient IS the seam).
  * Below ~lg it stacks: image becomes a 16:9 band fading down into the panel.
  *
- * Palette is mapped onto our forest tokens per the handoff's token contract:
- * block #0C0F0E, hairline #1E2723, accent #3FA35C (hover #4CBB6B), mint
- * #8FBF9C, on-green #08110B. Fade end stops MUST equal the block background.
+ * Card-surface system: the block is a raised card (bg-bg-raised, no outline)
+ * and every fade end stop is that same colour (--color-bg-raised-rgb), so the
+ * dissolve never opens a seam. The CTA is the brand primary button.
  */
 
 import Link from 'next/link'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
+
+/** The card colour at an alpha — fade stops must equal the block background. */
+const card = (a: number) => `rgba(var(--color-bg-raised-rgb), ${a})`
 
 const UPDATED = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
@@ -41,21 +45,21 @@ export function FeaturedGuide({
 }) {
   const updated = (() => {
     const d = new Date(publishedAt)
-    return Number.isFinite(d.getTime()) ? UPDATED.format(d).toUpperCase() : null
+    return Number.isFinite(d.getTime()) ? UPDATED.format(d) : null
   })()
 
   return (
     <section className="pt-12 sm:pt-16">
-      <h2 className="mb-4 text-subheading text-[#F1F3F1] sm:text-heading">
+      <h2 className="mb-4 text-subheading text-text-primary sm:text-heading">
         Featured Guide
       </h2>
 
       <Link
         href={href}
         // No hover background here: the photo dissolve's end stops are pinned
-        // to #0C0F0E, so shifting the block's bg would open a visible seam in
-        // the gradient. Border + CTA carry the hover state instead.
-        className="group relative block overflow-hidden border border-[#1E2723] bg-[#0C0F0E] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3FA35C] lg:h-[300px]"
+        // to the card colour, so shifting the block's bg would open a visible
+        // seam in the gradient. The shadow + CTA carry the hover state instead.
+        className="group relative block overflow-hidden rounded-lg bg-bg-raised shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] transition-shadow duration-200 hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.75)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:h-[300px]"
       >
         {/* ── Image layer ── */}
         {/* Mobile: full-width 16:9 band. Desktop: absolute left half. */}
@@ -71,7 +75,7 @@ export function FeaturedGuide({
               className="h-full w-full object-cover [object-position:35%_center]"
             />
           ) : (
-            <div className="h-full w-full bg-[#0E1A11]" />
+            <div className="h-full w-full bg-white/[0.04]" />
           )}
           {/* Horizontal fade into the panel (desktop) — starts melting the
               photo earlier so the dissolve reads clearly. */}
@@ -79,8 +83,7 @@ export function FeaturedGuide({
             aria-hidden
             className="pointer-events-none absolute inset-0 hidden lg:block"
             style={{
-              background:
-                'linear-gradient(90deg, rgba(12,15,14,.55) 0%, rgba(12,15,14,.15) 34%, rgba(12,15,14,.45) 58%, rgba(12,15,14,.85) 78%, #0C0F0E 94%)',
+              background: `linear-gradient(90deg, ${card(0.55)} 0%, ${card(0.15)} 34%, ${card(0.45)} 58%, ${card(0.85)} 78%, ${card(1)} 94%)`,
             }}
           />
           {/* Vertical fade — subtle on desktop, the dissolve on mobile. */}
@@ -88,60 +91,42 @@ export function FeaturedGuide({
             aria-hidden
             className="pointer-events-none absolute inset-0"
             style={{
-              background:
-                'linear-gradient(180deg, rgba(12,15,14,.5) 0%, rgba(12,15,14,0) 30%, rgba(12,15,14,.55) 78%, #0C0F0E 100%)',
+              background: `linear-gradient(180deg, ${card(0.5)} 0%, ${card(0)} 30%, ${card(0.55)} 78%, ${card(1)} 100%)`,
             }}
           />
-          {/* Overlay label — no solid green box; just the word in Figtree over
-              the art, matching the grid card's eyebrow. */}
-          <span className="pointer-events-none absolute left-[30px] top-[26px] flex items-center gap-2.5">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-[#4FB477]" />
-            <span className="text-[13px] font-bold uppercase tracking-[0.08em] text-[#A7D8B6] [text-shadow:0_2px_10px_rgba(0,0,0,.85)]">
-              Featured Guide
-            </span>
+          {/* Overlay label — the same flat tag as the grid card's category. */}
+          <span className="pointer-events-none absolute left-5 top-5 rounded bg-black/55 px-2 py-0.5 text-[12px] font-semibold text-text-primary backdrop-blur-sm sm:left-[30px] sm:top-[26px]">
+            Featured Guide
           </span>
         </div>
 
-        {/* ── Interior accent — the currency bundle tiles' pool-of-light idea
-            in forest, pooling behind the copy and CTA so the panel isn't a flat
-            dark rectangle. Sits after the image layer and before the panel, so
-            painting order puts it over the faded photo tail and under the type
-            without a single z-index. ── */}
+        {/* Top sheen — faint light falling from above. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
-          style={{
-            background:
-              'radial-gradient(85% 115% at 100% 100%, rgba(79,180,119,0.17), rgba(79,180,119,0.05) 40%, rgba(12,15,14,0) 70%)',
-          }}
-        />
-        {/* Top sheen — faint light falling from above, as on the bundle tile. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.045),transparent)]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.035),transparent)]"
         />
 
         {/* ── Text panel — overlaps onto the faded image tail on desktop.
             `relative` lifts it above the absolutely-positioned image layer,
             which otherwise paints over the panel's first characters. ── */}
         <div className="relative flex flex-col justify-center gap-2.5 p-5 sm:gap-3 sm:p-8 lg:ml-[48%] lg:h-full lg:w-[52%] lg:py-0 lg:pl-10 lg:pr-11">
-          <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#4FB477]">
+          <p className="text-[13px] font-medium text-text-tertiary">
             {category} · {readMinutes} min read
           </p>
-          <h3 className="text-pretty text-[24px] font-extrabold leading-[1.08] tracking-[-0.025em] text-white sm:text-[27px] lg:text-[30px]">
+          <h3 className="text-pretty text-[24px] font-bold leading-[1.08] tracking-[-0.025em] text-text-primary sm:text-[27px] lg:text-[30px]">
             {title}
           </h3>
           {/* Clamped so the panel always fits the shorter card height. */}
-          <p className="line-clamp-2 text-pretty text-[14px] leading-[1.5] text-[#9BA8A0] sm:text-[15px]">
+          <p className="line-clamp-2 text-pretty text-[14px] leading-[1.5] text-text-secondary sm:text-[15px]">
             {excerpt}
           </p>
           <div className="mt-1 flex items-center gap-4">
-            <span className="inline-flex h-[44px] items-center gap-2 whitespace-nowrap bg-[#3FA35C] px-[22px] text-[15px] font-extrabold text-[#08110B] transition-colors group-hover:bg-[#4CBB6B]">
-              Read the guide
-              <ArrowForwardIcon sx={{ fontSize: 18 }} />
+            <span className={`${VALUE_BTN_PRIMARY} group-hover:bg-lime-hover`}>
+              Read the Guide
+              <ArrowRightIcon size={16} weight="bold" aria-hidden />
             </span>
             {updated && (
-              <span className="text-[12px] font-semibold text-[#8A968D]">
+              <span className="text-[12px] font-medium text-text-tertiary">
                 Updated {updated}
               </span>
             )}
