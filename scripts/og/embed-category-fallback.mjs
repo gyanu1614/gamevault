@@ -10,7 +10,7 @@ const PNG = 'public/og/category-fallback.png'
 const OUT = 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ogFallback.ts'
 
 const bytes = readFileSync(PNG)
-const lines = bytes.toString('base64').match(/.{1,120}/g).map((l) => `  '${l}'`).join(' +\n')
+const lines = bytes.toString('base64').match(/.{1,120}/g).map((l) => `  '${l}',`).join('\n')
 writeFileSync(
   OUT,
   `/**
@@ -21,8 +21,11 @@ writeFileSync(
  * fetched at build). Regenerate with scripts/og/embed-category-fallback.mjs.
  * ${bytes.length} bytes, 1200×630 PNG.
  */
-export const OG_CATEGORY_FALLBACK_BASE64 =
+export const OG_CATEGORY_FALLBACK_BASE64 = [
 ${lines}
+  // An array join, not ~900 '+' concatenations: that chain overflowed ESLint's
+  // parser ("Maximum call stack size exceeded").
+].join('')
 
 export function ogCategoryFallbackBytes(): ArrayBuffer {
   const buf = Buffer.from(OG_CATEGORY_FALLBACK_BASE64, 'base64')

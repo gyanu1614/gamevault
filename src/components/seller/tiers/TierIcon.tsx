@@ -16,7 +16,12 @@
  */
 
 import { useId } from 'react'
-import { MedalIcon, SketchLogoIcon, CrownIcon } from '@phosphor-icons/react'
+// Per-icon entry points, not the barrel: Next tree-shakes the barrel
+// (optimizePackageImports) but vitest loads all ~9,000 icon modules from it,
+// which made every test that renders a tier icon cold-start in seconds.
+import { MedalIcon } from '@phosphor-icons/react/dist/csr/Medal'
+import { SketchLogoIcon } from '@phosphor-icons/react/dist/csr/SketchLogo'
+import { CrownIcon } from '@phosphor-icons/react/dist/csr/Crown'
 import { tierByKey, type SellerTier } from '@/lib/seller/tiers'
 import { cn } from '@/lib/utils'
 

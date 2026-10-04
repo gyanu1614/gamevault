@@ -18,6 +18,9 @@ import { AdoptMeSimilar } from './_AdoptMeSimilar'
 import { AdoptMeAboutStats } from './_AdoptMeAboutStats'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
+import { AvailableNow } from '@/components/value-listings/AvailableNow'
+import { itemBuyHref } from '@/lib/value-listings/buy-state'
+import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 
 const RARITY_META: Record<string, { label: string; color: string }> = {
   legendary: { label: 'Legendary', color: '#F5C542' },
@@ -115,10 +118,13 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   // This pet's FR cash value — used to rank similar pets by value proximity.
   const refFrUsd = fr?.cheapestUsd ?? fr?.cashUsd ?? null
 
-  const [hubNav, similar] = await Promise.all([
+  const [hubNav, similar, buyData] = await Promise.all([
     getHubNavData('adopt-me'),
     getSimilarPets(pet.rarity, pet.slug, refFrUsd),
+    // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
+    getValueItemBuyData('adopt-me', pet.slug),
   ])
+  const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const meta = rarityMeta(pet.rarity)
   const faq = petFaq(pet)
@@ -184,12 +190,23 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
               rarityColor={meta.color}
               obtainabilityLabel={OBTAINABILITY_LABEL[pet.obtainability] ?? pet.obtainability}
               imageUrl={pet.imageUrl}
-              buyHref={`/adopt-me/buy-items?pet=${pet.slug}`}
+              buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
               variants={pet.variants}
             />
           </div>
         </div>
       </SabHeroBackdrop>
+
+      <AvailableNow
+        gameSlug="adopt-me"
+        gameName="Adopt Me"
+        categorySlug={buyCategorySlug}
+        itemSlug={pet.slug}
+        itemName={pet.name}
+        offers={buyData?.offers ?? []}
+        total={buyData?.stock?.total ?? 0}
+        sellHref="/adopt-me/sell?src=am-item-page"
+      />
 
       <div className="relative mx-auto w-full max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
         {/* ── Answer-first, dated lead + market-activity strip ─────────────────
@@ -202,7 +219,11 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
 
           {/* Quick-answer callout + market-activity stats — both reprice to the
               variant selected in the hero (via SelectedVariantContext). */}
-          <AdoptMeAboutStats name={pet.name} slug={pet.slug} variants={pet.variants} />
+          <AdoptMeAboutStats
+            name={pet.name}
+            variants={pet.variants}
+            buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
+          />
 
           <p className="mt-6 text-body leading-7 text-[#A9B4AD]">
             <HighlightedDescription text={pet.description} />
@@ -260,7 +281,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         </nav>
 
         {/* Shared end-of-page CTA with the per-game background hero. */}
-        <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref={`/adopt-me/buy-items?pet=${pet.slug}`} />
+        <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })} />
       </div>
       </SelectedVariantProvider>
 

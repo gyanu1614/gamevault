@@ -50,6 +50,7 @@ import { CategoryGuide } from '@/components/marketplace/CategoryGuide'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions } from '@/lib/types/category-configs'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { pageTitle } from '@/lib/seo/title'
 import { getCategoryStats, formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
 
 // V19/P24/P4 — Inline delivery formatter for bundle offers. The
@@ -247,12 +248,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     (v ?? '').trim() || fallback
 
   return {
-    title: seoOverride(
+    // An admin seo_title that already ends with the brand is used as-is
+    // (pageTitle → absolute) so the layout template doesn't add it twice.
+    title: pageTitle(seoOverride(
       category.seo_title,
       hasListings
         ? `Buy ${game.name} ${category.name} from ${priceLabel}`
         : emptyTitleFor(game.name, category.name),
-    ),
+    )),
     description: seoOverride(
       category.seo_description,
       hasListings

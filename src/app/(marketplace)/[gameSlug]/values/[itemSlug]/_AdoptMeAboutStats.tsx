@@ -13,6 +13,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { AdoptMePetVariant } from './_adoptMePetData'
 import { VARIANT_LABEL } from '../../calculator/_adoptMeCalcTypes'
 import { useSelectedVariant } from './_SelectedVariantContext'
+import { useBuyCta } from '@/components/value-listings/useBuyCta'
+import { amVariantKey } from '@/lib/value-listings/catalogs'
+import type { ItemStock } from '@/lib/value-listings/buy-state'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -36,18 +39,28 @@ function ActivityCell({ label, value, accent }: { label: string; value: string; 
 
 export function AdoptMeAboutStats({
   name,
-  slug,
   variants,
+  buy,
 }: {
   name: string
-  slug: string
   variants: AdoptMePetVariant[]
+  /** DropMarket's own live stock for this pet (drives the buy button). */
+  buy: { itemSlug: string; categorySlug: string; stock: ItemStock | null }
 }) {
   const { selectedCode } = useSelectedVariant()
   const v =
     variants.find((x) => x.variant === selectedCode) ??
     variants.find((x) => x.variant === 'FR') ??
     variants[0]
+  const cta = useBuyCta({
+    gameSlug: 'adopt-me',
+    categorySlug: buy.categorySlug,
+    itemSlug: buy.itemSlug,
+    variant: v ? amVariantKey(v.variant) : null,
+    variantName: v ? (v.variant === 'N' ? 'Normal' : VARIANT_LABEL[v.variant] ?? v.variant) : name,
+    stock: buy.stock,
+    surface: 'value_item',
+  })
   if (!v) return null
 
   const code = v.variant
@@ -82,10 +95,11 @@ export function AdoptMeAboutStats({
               </div>
             )}
             <Link
-              href={`/adopt-me/buy-items?pet=${slug}`}
+              href={cta.href}
+              onClick={cta.onClick}
               className="inline-flex items-center justify-center gap-1.5 border border-[#2F6B46] bg-[#1B6B3F] px-4 py-2.5 text-body-sm font-semibold text-white transition hover:bg-[#1f7a48]"
             >
-              Buy {name}
+              {cta.label}
               <ChevronRightIcon sx={{ fontSize: 18 }} />
             </Link>
           </div>

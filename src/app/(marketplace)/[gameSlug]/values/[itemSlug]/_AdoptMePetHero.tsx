@@ -15,6 +15,9 @@ import type { AdoptMePetVariant, Variant } from './_adoptMePetData'
 import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
 import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
+import { useBuyCta } from '@/components/value-listings/useBuyCta'
+import { amVariantKey } from '@/lib/value-listings/catalogs'
+import type { ItemStock } from '@/lib/value-listings/buy-state'
 
 /** Tier → the variant forms it contains, in ladder order. Default exposes the
  *  full potion matrix; Neon/Mega only have the plain + Fly-Ride forms. */
@@ -51,7 +54,7 @@ export default function AdoptMePetHero({
   rarityColor,
   obtainabilityLabel,
   imageUrl,
-  buyHref,
+  buy,
   variants,
 }: {
   name: string
@@ -59,7 +62,8 @@ export default function AdoptMePetHero({
   rarityColor: string
   obtainabilityLabel: string
   imageUrl: string | null
-  buyHref: string
+  /** DropMarket's own live stock for this pet (drives the buy button). */
+  buy: { itemSlug: string; categorySlug: string; stock: ItemStock | null }
   variants: AdoptMePetVariant[]
 }) {
   // Selection is SHARED via context — the callout, stats strip and price chart
@@ -91,6 +95,18 @@ export default function AdoptMePetHero({
   const tierVariants = (TIER_TABS.find((t) => t.key === activeTier) ?? TIER_TABS[0]).variants.map(
     (code) => variants.find((v) => v.variant === code) ?? ({ variant: code, label: code } as AdoptMePetVariant),
   )
+
+  // The button is DropMarket's own stock for the selected form, never the
+  // market price above it (Bundle 2): see value-listings/buy-state.
+  const cta = useBuyCta({
+    gameSlug: 'adopt-me',
+    categorySlug: buy.categorySlug,
+    itemSlug: buy.itemSlug,
+    variant: selected ? amVariantKey(selected.variant) : null,
+    variantName: selected ? (selected.variant === 'N' ? 'Normal' : selected.label) : name,
+    stock: buy.stock,
+    surface: 'value_item',
+  })
 
   if (!selected) return null
 
@@ -175,7 +191,8 @@ export default function AdoptMePetHero({
               cheapest/market split. */}
           <div className="lg:text-right">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {hasCash ? (hasReputable ? 'Cheapest' : 'Cash value') : pointsValue ? 'Trade value' : 'Value'}
+              {/* Market data, not DropMarket stock: the buy button carries ours. */}
+              {hasCash ? (hasReputable ? 'Market Price' : 'Cash value') : pointsValue ? 'Trade value' : 'Value'}
             </p>
             <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
               {hasCash ? (
@@ -215,13 +232,15 @@ export default function AdoptMePetHero({
                 not the per-variant colour. Matches SAB's Buy button across the
                 whole value hub. */}
             <Link
-              href={buyHref}
-              aria-label={`Buy ${displayName}`}
+              href={cta.href}
+              onClick={cta.onClick}
+              aria-label={cta.state === 'none' ? `Browse items similar to ${displayName}` : `${cta.label}: ${displayName}`}
               className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48] lg:w-auto"
             >
-              Buy {name}
+              {cta.label}
               <ArrowRight className="h-4 w-4" />
             </Link>
+            {cta.subline ? <p className="mt-1.5 text-[12px] text-[#9BA8A0]">{cta.subline}</p> : null}
             {/* Sell door — outline, quieter than Buy. No keep-figure: Adopt Me
                 cash values are estimates, so we never attach a $ payout here. */}
             <Link
