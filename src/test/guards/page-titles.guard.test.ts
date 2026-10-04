@@ -70,6 +70,10 @@ recorder.client.rpc = async () => ({ data: null, error: null })
 vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => recorder.client }))
 
+// Each route test imports the REAL page module (and its component tree) on first
+// use: ~1-3 s normally, 5-10 s on a loaded machine. Vitest's 5 s default is too tight.
+const SLOW_IMPORT_MS = 60_000
+
 // A thenable that is also the plain object: works for `await params` (Next 15
 // shape) and `params.slug` (Next 14 shape).
 const params = <T extends object>(p: T) => Object.assign(Promise.resolve(p), p)
@@ -138,7 +142,7 @@ describe('final <title> repeats the brand at most once (every route type)', () =
     expect(title, `${route.name} fell through to a not-found title`).not.toMatch(/not found/i)
     const marks = brandMarkCount(title)
     expect(marks, `"${title}" carries the brand ${marks} times`).toBeLessThanOrEqual(1)
-  })
+  }, SLOW_IMPORT_MS)
 })
 
 describe('Adopt Me value item page: bare tab title, branded social title', () => {
@@ -151,7 +155,7 @@ describe('Adopt Me value item page: bare tab title, branded social title', () =>
     expect(meta.title).toBe(bare) // the page hands the layout a bare title
     expect(resolveTitle(meta.title, TITLE_TEMPLATE)).toBe(`${bare} | DropMarket`)
     expect(meta.openGraph?.title).toBe(`${bare} | DropMarket`) // social title unchanged
-  })
+  }, SLOW_IMPORT_MS)
 })
 
 describe('a title typed into the admin (data, not code) cannot double the brand either', () => {
@@ -168,7 +172,7 @@ describe('a title typed into the admin (data, not code) cannot double the brand 
     } finally {
       SEED.games = original
     }
-  })
+  }, SLOW_IMPORT_MS)
 })
 
 // ---------------------------------------------------------------------------
