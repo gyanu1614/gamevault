@@ -5,7 +5,9 @@ import {
   BRAND,
   TITLE_TEMPLATE,
   brandMarkCount,
+  pageTitle,
   resolveTitle,
+  socialTitle,
   stripBrand,
 } from '@/lib/seo/title'
 
@@ -63,5 +65,39 @@ describe('brandMarkCount: brand used as a mark (leading "DropMarket |" or traili
   })
   it('ignores the brand inside the copy', () => {
     expect(brandMarkCount('How DropMarket Values Adopt Me Pets — Methodology | DropMarket')).toBe(1)
+  })
+})
+
+describe('pageTitle: for titles whose text comes from data (value pages, category page)', () => {
+  it('leaves a bare title to the layout template', () => {
+    expect(pageTitle('Bat Dragon Value')).toBe('Bat Dragon Value')
+  })
+
+  it('does not let the template add the brand twice', () => {
+    expect(pageTitle('Adopt Me Pets | DropMarket')).toEqual({ absolute: 'Adopt Me Pets | DropMarket' })
+    expect(pageTitle('Adopt Me Pets — DropMarket')).toEqual({ absolute: 'Adopt Me Pets — DropMarket' })
+    expect(pageTitle('Adopt Me Pets - dropmarket ')).toEqual({ absolute: 'Adopt Me Pets - dropmarket' })
+  })
+
+  it('keeps a mid-title brand mention as a normal title', () => {
+    expect(pageTitle('DropMarket Fees Explained')).toBe('DropMarket Fees Explained')
+  })
+
+  it('both ways end in exactly one brand once the template has run', () => {
+    for (const t of ['Adopt Me Pets | DropMarket', 'Adopt Me Pets', 'Bat Dragon — DropMarket']) {
+      expect(brandMarkCount(resolveTitle(pageTitle(t), TITLE_TEMPLATE)!)).toBe(1)
+      expect(brandMarkCount(resolveTitle(stripBrand(t), TITLE_TEMPLATE)!)).toBe(1)
+    }
+    // Same text for the common "|" separator and for a bare title.
+    for (const t of ['Adopt Me Pets | DropMarket', 'Adopt Me Pets']) {
+      expect(resolveTitle(pageTitle(t), TITLE_TEMPLATE)).toBe(resolveTitle(stripBrand(t), TITLE_TEMPLATE))
+    }
+  })
+})
+
+describe('socialTitle', () => {
+  it('brands a bare title once', () => {
+    expect(socialTitle('Bat Dragon Value')).toBe('Bat Dragon Value | DropMarket')
+    expect(socialTitle('Bat Dragon Value | DropMarket')).toBe('Bat Dragon Value | DropMarket')
   })
 })

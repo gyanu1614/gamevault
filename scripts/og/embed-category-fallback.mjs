@@ -2,8 +2,7 @@
 /**
  * Regenerate src/app/(marketplace)/[gameSlug]/[categorySlug]/_ogFallback.ts
  * from public/og/category-fallback.png (Step 7b). Run after replacing the
- * PNG; the guard test checks the two stay in sync, and
- * src/test/guards/og-fallback-lintable.guard.test.ts checks ESLint can parse it.
+ * PNG; the guard test checks the two stay in sync.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 
@@ -11,8 +10,6 @@ const PNG = 'public/og/category-fallback.png'
 const OUT = 'src/app/(marketplace)/[gameSlug]/[categorySlug]/_ogFallback.ts'
 
 const bytes = readFileSync(PNG)
-// A flat array, NOT a `'…' + '…' + …` chain: ~1,200 chained terms nest a
-// BinaryExpression ~1,200 levels deep and overflow ESLint's parser.
 const lines = bytes.toString('base64').match(/.{1,120}/g).map((l) => `  '${l}',`).join('\n')
 writeFileSync(
   OUT,
@@ -26,6 +23,8 @@ writeFileSync(
  */
 export const OG_CATEGORY_FALLBACK_BASE64 = [
 ${lines}
+  // An array join, not ~900 '+' concatenations: that chain overflowed ESLint's
+  // parser ("Maximum call stack size exceeded").
 ].join('')
 
 export function ogCategoryFallbackBytes(): ArrayBuffer {

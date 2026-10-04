@@ -9,6 +9,7 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubHero } from '@/components/content/HubHero'
 import { getAdoptMeCalcPets } from '../calculator/_adoptMeCalcData'
 import AdoptMeNeonClient from './_AdoptMeNeonClient'
+import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 
 export const revalidate = 3600
 /**
@@ -100,6 +101,7 @@ export default async function NeonCalculatorPage({ params }: PageProps) {
 
       <SabHeroBackdrop height={340}>
         <HubNav data={hubNav} />
+        <TrackOnMount event={{ event: 'value_view', surface: 'calculator', game: 'adopt-me' }} />
 
         <HubHero
           title="Adopt Me Neon Cost Calculator"

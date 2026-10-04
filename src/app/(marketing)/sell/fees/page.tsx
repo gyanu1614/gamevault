@@ -12,15 +12,14 @@
 
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
-import {
-  PercentIcon,
-  CalendarBlankIcon,
-  CrownSimpleIcon,
-  SparkleIcon,
-  WalletIcon,
-  ArrowRightIcon,
-  CheckIcon,
-} from '@phosphor-icons/react/dist/ssr'
+// Per-icon entry points (see TierIcon.tsx): the ssr barrel costs vitest ~9,000 modules.
+import { PercentIcon } from '@phosphor-icons/react/dist/ssr/Percent'
+import { CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank'
+import { CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple'
+import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle'
+import { WalletIcon } from '@phosphor-icons/react/dist/ssr/Wallet'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check'
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'

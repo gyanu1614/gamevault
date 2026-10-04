@@ -1249,6 +1249,8 @@ export const OG_CATEGORY_FALLBACK_BASE64 = [
   'S7eWZkLoV7TeYaXPMibx50kqiTNMPDwPc7DmtSMni1cN6GrQrWJIHmbyAILjL0OGJ4bpMOlXAayjtTbkEMSpM/4ELNHXdaKDi07Yajh4d+iS0QyveOyM2B1c',
   'iTbQCPDzsTOFpVtLMyH0K1rvsNJnGZP48ySVxBkmHp6HOVjz2pGTxasGdDXoVjEkDzN5AMHxlyHDE8N0mPSrANbRWhtyCOJ0Lv5/pe8vXqzy9zYAAAAASUVO',
   'RK5CYII=',
+  // An array join, not ~900 '+' concatenations: that chain overflowed ESLint's
+  // parser ("Maximum call stack size exceeded").
 ].join('')
 
 export function ogCategoryFallbackBytes(): ArrayBuffer {

@@ -8,6 +8,8 @@ import { getGameContentTheme, contentThemeVars } from '@/lib/content/theme'
 import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { ValuesBuyModule } from '@/components/content/ValuesBuyModule'
 import { getValueItems, type ValueItem } from '@/lib/values/data'
+import { AvailableNow } from '@/components/value-listings/AvailableNow'
+import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 
 /**
  * Generic value page for any item on the values_* pipeline, priced or not.
@@ -49,10 +51,13 @@ export default async function ValueItemPage({
   itemSlug: string
 }) {
   const theme = getGameContentTheme(gameSlug)
-  const [items, hubNav] = await Promise.all([
+  const [items, hubNav, buyData] = await Promise.all([
     getValueItems(gameSlug),
     getHubNavData(gameSlug),
+    // DropMarket's own live stock (Bundle 2): buy button + "Available Now".
+    getValueItemBuyData(gameSlug, itemSlug),
   ])
+  const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const item = items.find((i) => i.slug === itemSlug)
   if (!item) notFound()
@@ -132,7 +137,7 @@ export default async function ValueItemPage({
         ) : (
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[var(--ct-text-muted)]">
             We do not publish a price for {item.name} — it is not sold directly
-            on the marketplaces we track. Everything below is from the game's
+            on the marketplaces we track. Everything below is from the game&apos;s
             own data.
           </p>
         )}
@@ -167,17 +172,24 @@ export default async function ValueItemPage({
         </dl>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+      <AvailableNow
+        gameSlug={gameSlug}
+        gameName={theme.name}
+        categorySlug={buyCategorySlug}
+        itemSlug={item.slug}
+        itemName={item.name}
+        offers={buyData?.offers ?? []}
+        total={buyData?.stock?.total ?? 0}
+        sellHref={hubNav.sellHref ?? `/${gameSlug}/sell`}
+      />
+
+      <section className="mx-auto w-full max-w-7xl px-4 pb-14 pt-7 sm:px-6 lg:px-8">
         <ValuesBuyModule
           itemName={item.name}
           gameName={theme.name}
-          buyHref={hubNav.itemsHref ?? `/${gameSlug}`}
           sellHref={hubNav.sellHref ?? `/${gameSlug}/sell`}
           cheapestUsd={price?.cheapestUsd ?? null}
-          // Our own marketplace inventory is still empty for this game, so the
-          // module shows the honest "sell yours" state rather than a buy link
-          // into an empty category.
-          hasListings={false}
+          buy={{ gameSlug, categorySlug: buyCategorySlug, itemSlug: item.slug, stock: buyData?.stock ?? null }}
           sourceItem={
             source
               ? {

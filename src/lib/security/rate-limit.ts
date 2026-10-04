@@ -47,6 +47,10 @@ export const RATE_LIMITS = {
    *  (keyed `listingView:<listingId>:ip:<ip>`), so reloads and scripts can't
    *  pump a listing's views. */
   listingView: { limit: 1, windowSeconds: 6 * 60 * 60 },
+  /** Value-page funnel beacons (/api/events/value): a few per page view, so
+   *  60 a minute per IP is generous for people and stops a script filling the
+   *  table. */
+  valueEvent: { limit: 60, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitBudget>
 
 export type RateLimitName = keyof typeof RATE_LIMITS

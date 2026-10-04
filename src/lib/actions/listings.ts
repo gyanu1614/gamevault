@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { snapshotListings, submitListingChanges } from '@/lib/seo/indexnow'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
@@ -356,6 +357,8 @@ export async function updateListing(
       .single()
 
     if (updateError) throw updateError
+    // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
+    await linkListingsToValueItems(createServiceRoleClient(), [listingId])
 
     revalidatePath('/account/listings')
     // No revalidatePath('/'): every homepage shelf is a CLIENT react-query
@@ -441,6 +444,8 @@ export async function bulkUpdateListings(
     }
 
     revalidatePath('/account/listings')
+    // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
+    await linkListingsToValueItems(service, eligible.map((r) => r.id))
     await revalidateListingSurfaces(supabase as never, { listingIds: eligible.map((r) => r.id) })
     await submitListingChanges(indexNowBefore, await snapshotListings(service, indexNowIds))
     return { success: true, updated }

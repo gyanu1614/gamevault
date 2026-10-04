@@ -44,6 +44,8 @@
     "adoptme:snapshot": "node scripts/adopt-me-snapshot-history.mjs",
     "radar:backfill": "node --experimental-strip-types --no-warnings scripts/backfill-game-external-ids.mjs",
     "reprice": "tsx scripts/reprice.mjs",
+    "value-refs:backfill": "tsx scripts/value-refs-backfill.mjs",
+    "funnel:value": "node scripts/funnel-value.mjs",
     "sab:expire": "tsx scripts/expire-listings.mjs",
     "retention:sab": "node scripts/roll-up-raw-listings.mjs",
     "gsc:index-report": "tsx scripts/gsc-index-report.ts",

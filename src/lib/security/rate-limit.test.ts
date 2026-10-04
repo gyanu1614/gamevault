@@ -141,6 +141,8 @@ describe('budget boundaries', () => {
       revalidate: { limit: 10, windowSeconds: 60 },
       // Listing views — one per visitor per listing per 6 h.
       listingView: { limit: 1, windowSeconds: 21_600 },
+      // Bundle 2 — value-page funnel beacons, per IP.
+      valueEvent: { limit: 60, windowSeconds: 60 },
     })
   })
 })

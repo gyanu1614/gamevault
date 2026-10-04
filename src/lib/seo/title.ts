@@ -8,10 +8,16 @@ import type { Metadata } from 'next'
  * already leads ('DropMarket | Buy & Sell ...'). A page that also wrote the
  * brand itself rendered `... | DropMarket | DropMarket`.
  *
- * `stripBrand` is for the one legitimate case where a branded string is reused
- * on purpose (for example an OG/social title that keeps the brand, whose same
- * text must be bare for the templated `<title>`). Do not use it to paper over a
- * page that simply forgot the layout adds the brand.
+ * Two ways to keep a branded string from doubling, both ending in ONE brand:
+ *  - `stripBrand(title)`: drop the trailing brand and let the template add it
+ *    back. For the case where one branded string is reused on purpose for the
+ *    social (OG) title, whose bare form feeds the templated `<title>`.
+ *  - `pageTitle(title)` / `socialTitle(title)`: a title that already ends with
+ *    the brand (an admin-entered `seo_title`, a legacy string) becomes
+ *    `{ absolute }`, which the template skips; a social title, which never goes
+ *    through the template, is branded explicitly, once. For titles whose text
+ *    comes from data.
+ * Neither is a licence to paper over a page that forgot the layout adds the brand.
  */
 export const BRAND = 'DropMarket'
 
@@ -54,4 +60,19 @@ export function resolveTitle(title: Metadata['title'], template: string): string
 export function brandMarkCount(title: string): number {
   const trailing = title.match(BRAND_AFTER_SEPARATOR)?.length ?? 0
   return trailing + (LEADING_BRAND_MARK.test(title) ? 1 : 0)
+}
+
+// ── pageTitle / socialTitle (value pages and category page) ──────────────────
+const ENDS_WITH_BRAND = /\s*[|—–-]\s*dropmarket\s*$/i
+
+/** A bare title for the layout template, or `{ absolute }` if it already ends with the brand. */
+export function pageTitle(title: string): string | { absolute: string } {
+  const t = title.trim()
+  return ENDS_WITH_BRAND.test(t) ? { absolute: t } : t
+}
+
+/** A title for OpenGraph/Twitter (not templated): branded exactly once. */
+export function socialTitle(title: string): string {
+  const t = title.trim()
+  return ENDS_WITH_BRAND.test(t) ? t : `${t} | ${BRAND}`
 }
