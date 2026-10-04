@@ -15,7 +15,7 @@
  * Posts with no cover fall back to a flat near-black card.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
 
 const POST_TYPE_LABEL: Record<string, string> = {

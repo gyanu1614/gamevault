@@ -11,7 +11,7 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 // Per-icon entry points (see TierIcon.tsx): the ssr barrel costs vitest ~9,000 modules.
 import { PercentIcon } from '@phosphor-icons/react/dist/ssr/Percent'
 import { CalendarBlankIcon } from '@phosphor-icons/react/dist/ssr/CalendarBlank'

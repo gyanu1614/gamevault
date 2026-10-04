@@ -21,7 +21,7 @@
 import { useEffect, useState } from 'react'
 import { useMotionValue, useSpring, motion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 
 interface PreFooterCtaBandProps {
   /** Clean in-game screenshot, 16:9, ≥1600px wide. No baked-in text or logos. */

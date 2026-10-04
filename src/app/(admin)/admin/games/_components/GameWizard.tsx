@@ -21,7 +21,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ArrowRight, CaretLeft, Check, CircleNotch, Clock, FloppyDisk,

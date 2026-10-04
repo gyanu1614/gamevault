@@ -9,7 +9,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowUUpLeft, CheckCircle, CircleNotch, XCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'

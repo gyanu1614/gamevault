@@ -15,7 +15,7 @@
  * payout.svg, escrow.svg). Swap with final art using same filenames.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'

@@ -20,7 +20,7 @@
 import { ShineBorder } from '@/components/ui/shine-border'
 import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 
 /**
@@ -627,6 +627,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
           src={d.src}
           alt=""
           aria-hidden
+          loading="lazy"
+          decoding="async"
           draggable={false}
           className="pointer-events-none absolute select-none"
           style={{
@@ -831,6 +833,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
               alt=""
               width={d.w}
               height={d.h}
+              loading="lazy"
+              decoding="async"
               draggable={false}
               style={{
                 width: d.size[coinStyle],

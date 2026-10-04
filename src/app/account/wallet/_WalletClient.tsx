@@ -15,7 +15,7 @@ import { WALLET_TOPUP_ENABLED } from '@/lib/config/purchases'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
 import { getLoyaltyStats } from '@/lib/actions/loyalty'
 import { getMyWithdrawalRequests } from '@/lib/actions/withdrawals'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import {
   Wallet,
   ShoppingCart,

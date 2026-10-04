@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import { ValuesSeo, valuesFaq } from './_ValuesSeo'

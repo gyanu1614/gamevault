@@ -6,7 +6,7 @@
  * account menu right. One component so the two pages stay pixel-identical.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Info } from 'lucide-react'
 import { AccountMenu } from './AccountMenu'
 

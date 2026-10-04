@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   useCallback,
 } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { usePathname, useRouter } from 'next/navigation'
 import confetti from 'canvas-confetti'
 import ThumbDownAltOutlinedIcon from '@mui/icons-material/ThumbDownAltOutlined'

@@ -11,7 +11,7 @@
  * panel on the left, the ivory content on the right). No border, no shadow.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'

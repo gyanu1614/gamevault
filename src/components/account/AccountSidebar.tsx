@@ -3,7 +3,7 @@
 import { lockScroll } from '@/lib/scroll-lock'
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'

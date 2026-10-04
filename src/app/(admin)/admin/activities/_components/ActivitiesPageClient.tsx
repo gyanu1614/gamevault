@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getAllActivities } from '@/lib/actions/admin-dashboard'
 import { cn } from '@/lib/utils'
 import { CalendarBlank, CaretLeft, CaretRight, Scales, ShieldWarning, UserPlus, Warning } from '@phosphor-icons/react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
 import {
   AdminEmpty,

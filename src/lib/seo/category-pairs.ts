@@ -1,4 +1,6 @@
 import { createAnonClient } from '@/lib/supabase/anon'
+import { loadCoreRows } from '@/lib/seo/category-data'
+import { computeCategoryPages } from '@/lib/seo/category-index'
 
 export interface CategoryPair {
   gameSlug: string
@@ -6,13 +8,13 @@ export interface CategoryPair {
 }
 
 /**
- * The (game, category) pairs the sitemap advertises — the prerender set for
- * `/[gameSlug]/[categorySlug]` (Step 7a).
+ * The (game, category) pairs the sitemap advertises: the prerender set for
+ * `/[gameSlug]/[categorySlug]/opengraph-image` (Step 7a).
  *
- * Same rule as src/app/sitemap.ts: a pair with at least one active listing
- * from a non-test seller, plus every enabled currency category of a game that
- * has an admin currency config (curated content makes the page indexable
- * before its first listing). Cookie-free: this runs in generateStaticParams at
+ * The SAME rule as src/app/sitemap.ts (lib/seo/category-index.ts +
+ * lib/games/indexability.ts): an enabled category of an active game with a
+ * buyable listing (active, non-test seller, not paused, price above 0) or
+ * curated currency content. Cookie-free: this runs in generateStaticParams at
  * build time, where there is no request.
  *
  * Any read failure yields [] — the long tail renders on demand into the same
@@ -20,50 +22,10 @@ export interface CategoryPair {
  */
 export async function getIndexableCategoryPairs(): Promise<CategoryPair[]> {
   try {
-    const supabase = createAnonClient()
-    const [{ data: listings }, { data: currencyConfigs }, { data: currencyCategories }] =
-      await Promise.all([
-        supabase
-          .from('listings')
-          .select(
-            `
-            slug,
-            seller:public_profiles!listings_seller_id_fkey!inner(is_test),
-            game:games!listings_game_id_fkey(slug),
-            category:game_categories!listings_game_category_id_fkey(slug)
-          `,
-          )
-          .eq('status', 'active')
-          .eq('seller.is_test', false) as unknown as Promise<{
-          data: { game: { slug: string } | null; category: { slug: string } | null }[] | null
-        }>,
-        supabase.from('category_configs').select('game_id').eq('category_type', 'currency') as unknown as Promise<{
-          data: { game_id: string }[] | null
-        }>,
-        supabase
-          .from('game_categories')
-          .select('slug, game_id, game:games!game_categories_game_id_fkey(slug)')
-          .eq('is_enabled', true)
-          .eq('type', 'currency') as unknown as Promise<{
-          data: { slug: string; game_id: string; game: { slug: string } | null }[] | null
-        }>,
-      ])
-
-    const keys = new Set<string>()
-    for (const l of listings ?? []) {
-      if (l.game?.slug && l.category?.slug) keys.add(`${l.game.slug}/${l.category.slug}`)
-    }
-    const curated = new Set((currencyConfigs ?? []).map((c) => c.game_id))
-    for (const c of currencyCategories ?? []) {
-      if (c.game?.slug && curated.has(c.game_id)) keys.add(`${c.game.slug}/${c.slug}`)
-    }
-
-    return [...keys]
-      .sort()
-      .map((k) => {
-        const [gameSlug, categorySlug] = k.split('/')
-        return { gameSlug, categorySlug }
-      })
+    const rows = computeCategoryPages(await loadCoreRows(createAnonClient()))
+    return rows
+      .filter((r) => r.verdict === 'index')
+      .map(({ gameSlug, categorySlug }) => ({ gameSlug, categorySlug }))
   } catch {
     return []
   }
@@ -104,6 +66,11 @@ export async function getAllEnabledCategoryPairs(): Promise<CategoryPair[]> {
  * builds its pairs from active LISTINGS, so a listing left under a category an
  * admin switched off (is_enabled = false) put a URL in the sitemap that the page
  * gate answers with a 404 — found live as /gta-vi/buy-items.
+ *
+ * Since the sitemap rewrite (lib/seo/sitemap-builder.ts + category-index.ts) the
+ * sitemap applies this rule itself: it only emits categories that are ENABLED
+ * categories of ACTIVE games and that belong to the listing's game, so it no
+ * longer calls this helper. It stays exported, with its tests, for other callers.
  *
  * Fails OPEN: getAllEnabledCategoryPairs() returns [] when its read fails, and
  * a transient DB error must not empty the sitemap's category pages. Input order

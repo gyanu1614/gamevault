@@ -34,7 +34,7 @@ import {
    neon of lime. Not a token yet; kept here until reused elsewhere. */
 const FOREST_LINK = '#4FA96A'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import {
   Step1ChooseItem,
   Step2SecurePayment,

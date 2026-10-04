@@ -18,7 +18,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { SellerApplication, KYCDocument } from '@/lib/actions/admin-sellers'
 import { rejectApplication } from '@/lib/actions/admin-sellers'

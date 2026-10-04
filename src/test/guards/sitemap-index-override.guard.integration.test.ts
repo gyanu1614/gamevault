@@ -21,6 +21,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 
 import { hasEnv, URL as SB_URL, SVC, assertGuardTargetAllowed } from './throwaway'
+import { isBlockedByRobots } from '../helpers/robots-match'
 
 // The sitemap reads through the server client, which resolves cookies. Give it
 // a request scope that works outside Next's request lifecycle.
@@ -40,6 +41,14 @@ vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react')
   return { ...actual, cache: <T,>(fn: T) => fn }
 })
+
+// The sitemap reads the paused-seller list (seller-presence), which goes through
+// unstable_cache and needs Next's incremental cache; outside a request, read through.
+vi.mock('next/cache', () => ({
+  unstable_cache: <T,>(fn: T) => fn,
+  revalidateTag: () => undefined,
+  revalidatePath: () => undefined,
+}))
 
 const svc = hasEnv
   ? createClient(SB_URL!, SVC!, { auth: { persistSession: false } })
@@ -155,6 +164,15 @@ describe.skipIf(!hasEnv)('Step 1c — sitemap honours seo_indexable (integration
     // from a hardcoded content-hub block and once from the rule-driven
     // sellPages. A duplicate is how the rule-bypassing entry announced itself.
     expect(dupes).toEqual([])
+  }, 120_000)
+
+  it('advertises no URL that robots.txt blocks (real sitemap, real data)', async () => {
+    if (!ready) return
+    await setOverride(INCLUDED_BY_DEFAULT, null)
+    await setOverride(EXCLUDED_BY_DEFAULT, null)
+    // sitemapPaths() strips the origin: robots rules match from the path onward.
+    const blocked = (await sitemapPaths()).filter((p) => isBlockedByRobots(p))
+    expect(blocked, `robots.txt blocks URLs the sitemap advertises:\n  ${blocked.join('\n  ')}`).toEqual([])
   }, 120_000)
 
   it('routes content-hub sell pages through the shared rule, not a hardcoded entry', async () => {

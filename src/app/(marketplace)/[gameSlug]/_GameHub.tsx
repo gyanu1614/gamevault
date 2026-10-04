@@ -16,7 +16,7 @@
  * the marketplace card gradient; green only on the Buy button.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 import {
   ArrowRightIcon,
@@ -64,7 +64,7 @@ function CategoryGlyph({ src, className }: { src: string; className?: string }) 
     )
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" aria-hidden className={cn('object-contain', className)} />
+  return <img src={src} alt="" aria-hidden loading="lazy" decoding="async" className={cn('object-contain', className)} />
 }
 
 function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {

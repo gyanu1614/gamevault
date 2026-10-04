@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { ShieldAlert, Ban, AlertCircle, X } from 'lucide-react'
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { SellerStatus } from '@/lib/utils/seller-status'
 

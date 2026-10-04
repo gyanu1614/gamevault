@@ -21,6 +21,7 @@ import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { ensureGameCategory } from '@/lib/categories'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
+import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
 import {
   validateGameIdentity,
   type GameContentTier,
@@ -268,6 +269,9 @@ export async function saveGameIdentity(
       revalidatePath(`/admin/games/${input.id}/edit`)
       // Footer game directory renders on every route (unstable_cache).
       revalidateTag(GAME_DIRECTORY_TAG)
+      // IndexNow: a game switched on or off changes whether its pages exist.
+      if (input.is_active === true) await submitGameIfLive(supabase, input.id)
+      if (input.is_active === false) await submitGameRemoved(slug)
       return { success: true, data: { id: input.id } }
     } else {
       // Insert — slug uniqueness will throw a 23505 error from Postgres
@@ -286,6 +290,8 @@ export async function saveGameIdentity(
       revalidatePath('/admin/games')
       // Footer game directory renders on every route (unstable_cache).
       revalidateTag(GAME_DIRECTORY_TAG)
+      // IndexNow: a new game's pages, only those the shared rule would index.
+      await submitGameIfLive(supabase, (data as any).id)
       return { success: true, data: { id: (data as any).id } }
     }
   } catch (e: any) {
@@ -569,6 +575,8 @@ export async function upsertGameCategory(
     revalidatePath('/admin/games')
     // Footer game directory renders on every route (unstable_cache).
     revalidateTag(GAME_DIRECTORY_TAG)
+    // IndexNow: the first enabled category is what makes /<game>/sell indexable.
+    if (input.is_enabled) await submitGameIfLive(supabase, input.game_id)
     return { success: true, data: { id: gameCategoryRowId } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

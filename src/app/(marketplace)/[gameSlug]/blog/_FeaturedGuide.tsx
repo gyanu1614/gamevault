@@ -10,7 +10,7 @@
  * #8FBF9C, on-green #08110B. Fade end stops MUST equal the block background.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 
 const UPDATED = new Intl.DateTimeFormat('en-GB', {

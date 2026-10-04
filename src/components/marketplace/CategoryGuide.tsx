@@ -21,7 +21,7 @@
  * when money moves between buyer, us and seller.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 
 import { SilverIcon } from '@/components/ui/silver-icon'

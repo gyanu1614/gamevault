@@ -29,6 +29,10 @@ vi.mock('@/lib/security/internal-route-auth', () => ({
   authorizeInternalRequest: async () => ({ ok: true }),
   internalJson: (body: unknown, status = 200) => Response.json(body, { status }),
 }))
+// IndexNow: which value pages really changed is decided in lib/seo/indexnow.
+const submitChangedValuePages = vi.fn(async (..._a: unknown[]) => 2)
+vi.mock('@/lib/seo/indexnow', () => ({ submitChangedValuePages: (...a: unknown[]) => submitChangedValuePages(...a) }))
+vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ marker: 'service-role' }) }))
 
 async function post(game: string) {
   const { POST } = await import('@/app/api/internal/values-revalidate/route')
@@ -67,6 +71,29 @@ describe('values-revalidate route', () => {
       expect.arrayContaining(['/steal-an-egg/values', '/steal-an-egg/values/methodology']),
     )
     expect(paths().some((p) => p.includes('calculator') || p.includes('price-index'))).toBe(false)
+  })
+
+  describe('IndexNow after a republish: only value pages whose cash value moved', () => {
+    beforeEach(() => submitChangedValuePages.mockClear())
+
+    it.each(['adopt-me', 'steal-an-egg'])('%s: runs the change detector once, after revalidating', async (game) => {
+      const { status, body } = await post(game)
+      expect(status).toBe(200)
+      expect(submitChangedValuePages).toHaveBeenCalledTimes(1)
+      expect(submitChangedValuePages.mock.calls[0][1]).toBe(game)
+      expect(body.indexnow_changed).toBe(2)
+    })
+
+    it('steal-a-brainrot: left to its daily snapshot cron, which owns that comparison (no double submission)', async () => {
+      const { body } = await post('steal-a-brainrot')
+      expect(submitChangedValuePages).not.toHaveBeenCalled()
+      expect(body.indexnow_changed).toBe(0)
+    })
+
+    it('an unknown game never reaches IndexNow', async () => {
+      await post('rust')
+      expect(submitChangedValuePages).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects an unknown game without touching the cache', async () => {

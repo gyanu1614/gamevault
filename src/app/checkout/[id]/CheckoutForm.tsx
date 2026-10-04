@@ -24,7 +24,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import * as Select from '@radix-ui/react-select'
 import * as Dropdown from '@radix-ui/react-dropdown-menu'

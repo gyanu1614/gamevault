@@ -8,7 +8,7 @@
  * Shared by every game's blog hub; the copy is composed from the game name.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { HubHero } from '@/components/content/HubHero'
 import { HUB_NAV_CLEAR } from '@/components/content/hubNavGeometry'

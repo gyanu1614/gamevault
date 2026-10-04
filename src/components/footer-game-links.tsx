@@ -15,7 +15,7 @@
  * weight. This spreads ranking equity from every page to the money pages.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'

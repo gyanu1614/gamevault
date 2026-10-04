@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { HUB_COPY } from '@/lib/content/theme'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'

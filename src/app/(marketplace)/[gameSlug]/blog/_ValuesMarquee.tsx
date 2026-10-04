@@ -8,7 +8,7 @@
  * static row for prefers-reduced-motion.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useMemo } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import AutoScroll from 'embla-carousel-auto-scroll'

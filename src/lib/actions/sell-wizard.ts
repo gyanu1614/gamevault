@@ -19,7 +19,7 @@ import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
-import { pingIndexNow } from '@/lib/seo/indexnow'
+import { snapshotListings, submitIndexNow, submitListingChanges } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
 import { publishDenialMessage, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
 import { decidePublishStatus } from '@/lib/listings/publish-status'
@@ -740,12 +740,11 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       gameCategoryIds: [gameCategory.id],
     })
 
-    // SEO — IndexNow ping for the freshly published listing + the pages
-    // it appears on. Only 'active' listings are publicly crawlable;
-    // pending_approval/draft get picked up by the sitemap once live.
-    // NOTE: later client-side status changes (pause/activate/price edits
-    // in the seller offers table) are deliberately NOT wired to IndexNow
-    // — the sitemap's lastmod (max listing updated_at) covers those.
+    // SEO — IndexNow for the freshly published listing + the pages it appears
+    // on. Only 'active' listings are publicly crawlable; pending_approval/draft
+    // are submitted when moderation approves them (moderation.ts). Later edits,
+    // pause and delete go through the same snapshot comparison
+    // (lib/seo/indexnow/listing-events.ts), which submits only real changes.
     // The public category page this offer now appears on — the wizard
     // lands the seller there. Only a live offer is visible, so drafts and
     // offers waiting for review get no path (the wizard falls back to the
@@ -755,12 +754,10 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       const { data: pingGame } = await supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any
       if (pingGame?.slug) categoryPath = `/${pingGame.slug}/${gameCategory.slug}`
       if (pingGame?.slug) {
-        const listingSlug = (data as { id: string; slug?: string | null }).slug
-        await pingIndexNow([
-          ...(listingSlug ? [`/${pingGame.slug}/${gameCategory.slug}/${listingSlug}`] : []),
-          `/${pingGame.slug}`,
-          `/${pingGame.slug}/${gameCategory.slug}`,
-        ])
+        await submitListingChanges(
+          new Map(), // a new row: nothing existed before
+          await snapshotListings(getAdminSupabase(), [(data as { id: string }).id]),
+        )
       }
     }
 
@@ -870,6 +867,10 @@ export async function updateListingFromWizard(
           : {}),
     }
 
+    // IndexNow compares the listing before and after this write, so only a
+    // real change (title, description, images, price, going live or off) is submitted.
+    const indexNowBefore = await snapshotListings(getAdminSupabase(), [listingId])
+
     // Service-role write after the ownership check above; the row id AND
     // seller_id are both pinned so a race on ownership cannot widen it. The
     // status is read back: the DB may bounce a moderated seller's content
@@ -902,6 +903,7 @@ export async function updateListingFromWizard(
     // belt-and-braces measure costs nothing.
     revalidatePath(`/sell/edit/${listingId}`)
     revalidatePath(`/account/listings/${listingId}/edit`)
+    await submitListingChanges(indexNowBefore, await snapshotListings(getAdminSupabase(), [listingId]))
     return { success: true, data: { id: listingId, status: finalStatus } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -1192,14 +1194,14 @@ export async function bulkPublishListings(
       })
     }
 
-    // SEO — one IndexNow ping for the game hub + category page when bulk
+    // SEO — one IndexNow submission for the game hub + category page when bulk
     // rows went live. Individual listing URLs are skipped here (slugs
     // are DB-generated and not selected back in the loop); the sitemap
     // picks them up on the next crawl.
     if (ok > 0 && status === 'active') {
       const { data: pingGame } = await supabase.from('games').select('slug').eq('id', gameId).maybeSingle() as any
       if (pingGame?.slug) {
-        await pingIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${gameCategory.slug}`])
+        await submitIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${gameCategory.slug}`], { reason: 'listing-published' })
       }
     }
 

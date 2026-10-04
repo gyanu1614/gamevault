@@ -58,3 +58,59 @@ export function isGameSellPageIndexable(input: {
   if (input.seoIndexable === false) return false
   return input.enabledCategoryCount > 0
 }
+
+// ── Category pages and value items (Bundle 1, task 4) ───────────────────────
+// The same contract as the game rules above: the page's robots meta and the
+// sitemap entry read ONE verdict, so a listed page can never say noindex and a
+// page that 404s can never be listed (`/gta-vi/buy-items` was both).
+
+/** Fewer live listings than this behind a value = not a ranking page (noindex). */
+export const MIN_VALUE_SAMPLE_SIZE = 3
+
+/** A value item page is a ranking page only with a price backed by enough live listings. */
+export function isValueItemIndexable(input: {
+  priced: boolean
+  sampleSize: number | null | undefined
+}): boolean {
+  return input.priced && (input.sampleSize ?? 0) >= MIN_VALUE_SAMPLE_SIZE
+}
+
+/**
+ * Admin-curated currency content (FAQ or steps) makes a currency category page
+ * unique value before its first listing. A default config row with empty lists
+ * is NOT curation: the admin wizard seeds one for every currency game.
+ */
+export function hasCuratedCurrencyContent(
+  config: { faq?: unknown[] | null; steps?: unknown[] | null } | null | undefined,
+): boolean {
+  return !!config && ((config.faq?.length ?? 0) > 0 || (config.steps?.length ?? 0) > 0)
+}
+
+/**
+ * Category page `/[game]/[category]` — indexable with at least one BUYABLE
+ * listing (active, non-test seller, seller not paused, price above 0: exactly
+ * what the page's own grid and stats show) or curated currency content.
+ */
+export function isCategoryPageIndexable(input: {
+  buyableListingCount: number
+  hasCuratedContent: boolean
+}): boolean {
+  return input.buyableListingCount > 0 || input.hasCuratedContent
+}
+
+export type CategoryPageVerdict = 'not-found' | 'noindex' | 'index'
+
+/**
+ * What a category page does: 404 unless the game is active and the category is
+ * enabled AND belongs to that game; otherwise indexable or noindex per above.
+ */
+export function categoryPageVerdict(input: {
+  gameActive: boolean
+  categoryEnabled: boolean
+  categoryBelongsToGame: boolean
+  buyableListingCount: number
+  hasCuratedContent: boolean
+}): CategoryPageVerdict {
+  if (!input.gameActive || !input.categoryEnabled || !input.categoryBelongsToGame) return 'not-found'
+  return isCategoryPageIndexable(input) ? 'index' : 'noindex'
+}
