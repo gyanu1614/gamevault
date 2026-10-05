@@ -57,11 +57,21 @@ export function roundPrice(n: number): number {
   return n < 0 ? -rounded : rounded
 }
 
+/**
+ * A site-relative static image ("/games/gag.png"): older currency offers carry
+ * their game's logo this way (games.image_url is a public/ path for most
+ * games), and every edit of them failed with "images.0: image must be an
+ * http(s) URL" (2026-10-05, 15 offers across GaG / Fortnite / Roblox / GTA V /
+ * R6). Same-origin only: one leading slash, then a plain path ending in an
+ * image extension — no "//host", no "..", no query.
+ */
+const SITE_IMAGE_PATH = /^\/(?!\/)(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9/_.-]*\.(?:png|jpe?g|webp|avif|gif|svg)$/i
+
 const httpUrl = z
   .string()
   .trim()
   .max(2048, 'image URL is too long')
-  .refine((s) => /^https?:\/\//i.test(s), 'image must be an http(s) URL')
+  .refine((s) => /^https?:\/\//i.test(s) || SITE_IMAGE_PATH.test(s), 'image must be an http(s) URL or a site image path')
 
 const optionalLabel = z.string().trim().max(100).nullable().optional()
 
