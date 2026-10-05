@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ImageBrokenIcon } from '@phosphor-icons/react/dist/csr/ImageBroken'
+import { ImageIcon } from '@phosphor-icons/react/dist/csr/Image'
 
 /**
  * Item art for value cards / heroes / rails. Remote catalogue art is
@@ -40,7 +41,13 @@ export function ValueArt({
         className={`flex items-center justify-center rounded-md bg-white/[0.04] text-text-disabled ${className}`}
         style={{ width: size, height: size }}
       >
-        <ImageBrokenIcon size={Math.round(size * 0.32)} weight="duotone" aria-hidden />
+        {/* No art at all (e.g. account brackets) reads as a plain image slot;
+            only a load that FAILED shows the broken glyph. */}
+        {src ? (
+          <ImageBrokenIcon size={Math.round(size * 0.32)} weight="duotone" aria-hidden />
+        ) : (
+          <ImageIcon size={Math.round(size * 0.32)} weight="duotone" aria-hidden />
+        )}
       </span>
     )
   }

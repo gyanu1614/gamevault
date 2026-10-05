@@ -6,17 +6,17 @@
  * the buy CTA uses — so buy and sell read as one family. Minimal, catchy copy
  * (a seller reads one line and clicks); the button is "Sell {Game}".
  *
- * Per-game backdrop: a dedicated public/seller-cta/{gameSlug}.png fills the band
- * when present (SAB has one). Games without their own seller art reuse the buy
- * banner (public/cta-heroes/{gameSlug}.jpg) so buy + sell read as one family;
- * if neither exists, HubCtaBand falls back to the clean forest scrim.
+ * Backdrop: the game's ONE CTA image (`getGameCtaImage` — the admin upload,
+ * then the static art), the same image as the buy band so buy + sell read as
+ * one family; if nothing loads, HubCtaBand falls back to the clean scrim.
+ * Async SERVER component (cached, cookie-free read; pages stay static).
  *
  * Placement rule (callers): render BELOW the price/verdict content — the
  * buyer's answer comes first; the seller ask is skippable.
  */
 
 import { HubCtaBand } from '@/components/content/HubCtaBand'
-import { gameCtaArt } from '@/lib/content/game-cta-art'
+import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 
 interface HubSellerCtaProps {
   /** Game slug — the /early-seller source tag + the per-game backdrop file. */
@@ -27,9 +27,9 @@ interface HubSellerCtaProps {
   src: string
 }
 
-export function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProps) {
-  // Shared with the category-page guide so both show the same art.
-  const bgSrc = gameCtaArt(gameSlug)
+export async function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProps) {
+  // Shared with the buy band and the category-page guide: one image per game.
+  const bgSrc = await getGameCtaImage(gameSlug)
 
   return (
     <HubCtaBand

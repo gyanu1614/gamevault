@@ -102,3 +102,26 @@ export function bundleExample(o: { bundleMin: number | null; bundleMax: number |
   if (o.bundleMax != null) return `A seller listing ${what} can charge up to ${formatUnitPrice(o.bundleMax)}.`
   return `A seller listing ${what} can charge any price from $0.01.`
 }
+
+/** Smallest per-single-unit amount the rule precision can show (8 decimals). */
+const SMALLEST_RULE_AMOUNT = 1e-8
+
+/**
+ * "= $0.00001 per Sheckles": what a per-K / per-M rule means for ONE unit,
+ * shown under the price boxes so an admin thinking "per Sheckle" can type
+ * the per-K amount with confidence. Null for single-unit currencies or no
+ * amount.
+ */
+export function perSingleUnitText(
+  amount: number | null,
+  granularity: QuantityGranularity | null | undefined,
+  unitLabel: string,
+): string | null {
+  const mult = granularityMultiplier(granularity)
+  if (amount == null || !(amount > 0) || mult === 1) return null
+  const unit = unitLabel.trim() || 'unit'
+  const each = amount / mult
+  return each < SMALLEST_RULE_AMOUNT
+    ? `= less than ${formatUnitPrice(SMALLEST_RULE_AMOUNT)} per ${unit}`
+    : `= ${formatUnitPrice(each)} per ${unit}`
+}

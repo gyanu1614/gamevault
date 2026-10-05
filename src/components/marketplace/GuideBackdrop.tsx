@@ -1,27 +1,39 @@
 'use client'
 
 import { useState } from 'react'
+import { gameCtaSources } from '@/lib/content/game-cta-art'
 
 /**
- * Background art for a guide card. Hides itself if the file doesn't exist
- * (per the drop-a-file contract in public/cta-heroes/README.md), so a game
- * without art simply gets the card's plain surface — never a broken image.
+ * Background art for a guide card: the game's ONE CTA image (`src`, read
+ * server-side — the admin upload), then its static art, then nothing (the
+ * card's plain surface — never a broken image).
  *
  * The image carries its own normalising filter (CLAUDE.md artwork rule):
  * bright promo art is pulled down to a night value first, and the card's
  * wash on top does the rest.
  */
-export function GuideBackdrop({ src, position = '50% 30%' }: { src: string; position?: string }) {
-  const [ok, setOk] = useState(true)
-  if (!ok) return null
+export function GuideBackdrop({
+  gameSlug,
+  src,
+  position = '50% 30%',
+}: {
+  gameSlug: string
+  src?: string
+  position?: string
+}) {
+  const sources = gameCtaSources(gameSlug, src)
+  const [index, setIndex] = useState(0)
+  const current = sources[index]
+  if (!current) return null
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- static per-game art, same as HubCtaBand
+    // eslint-disable-next-line @next/next/no-img-element -- per-game art, same as HubCtaBand
     <img
-      src={src}
+      key={current}
+      src={current}
       alt=""
       aria-hidden
       loading="lazy"
-      onError={() => setOk(false)}
+      onError={() => setIndex((i) => i + 1)}
       className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       style={{ objectPosition: position, filter: 'brightness(0.4) saturate(0.6)' }}
     />

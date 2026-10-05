@@ -39,6 +39,7 @@ import {
   bundleExample,
   flexibleExample,
   parseRuleTexts,
+  perSingleUnitText,
   type RuleTexts,
 } from '@/lib/currency/price-rule-form'
 
@@ -74,7 +75,15 @@ export function CurrencyPricingRules({
     if (isRuleAmountInput(v)) onTexts({ ...texts, [k]: v })
   }
 
-  const amount = (k: keyof RuleTexts, id: string, label: string, hint: string, placeholder: string) => (
+  const amount = (
+    k: keyof RuleTexts,
+    id: string,
+    label: string,
+    hint: string,
+    placeholder: string,
+    /** Line under the box, e.g. the per-single-unit equivalent of a per-K price. */
+    below?: string | null,
+  ) => (
     <Field label={label} hint={hint} htmlFor={id} error={errorOf(k)}>
       <div
         className={cn(
@@ -99,6 +108,7 @@ export function CurrencyPricingRules({
           className="h-full min-w-0 flex-1 bg-transparent pr-3.5 text-base tabular-nums text-text-primary placeholder:text-text-disabled focus:outline-none sm:text-[14px]"
         />
       </div>
+      {below && <p className="mt-1.5 text-[12px] tabular-nums leading-snug text-text-tertiary">{below}</p>}
     </Field>
   )
 
@@ -180,8 +190,22 @@ export function CurrencyPricingRules({
                 </SelectContent>
               </Select>
             </Field>
-            {amount('unitMin', 'cc-unit-min', `Minimum Price per ${per}`, 'Optional. Up to 8 decimal places.', 'No minimum')}
-            {amount('unitMax', 'cc-unit-max', `Maximum Price per ${per}`, 'Optional. Leave blank for no maximum.', 'No maximum')}
+            {amount(
+              'unitMin',
+              'cc-unit-min',
+              `Minimum Price per ${per}`,
+              'Optional. Up to 8 decimal places.',
+              'No minimum',
+              perSingleUnitText(v.unitMin, draft.quantity_granularity, unit),
+            )}
+            {amount(
+              'unitMax',
+              'cc-unit-max',
+              `Maximum Price per ${per}`,
+              'Optional. Leave blank for no maximum.',
+              'No maximum',
+              perSingleUnitText(v.unitMax, draft.quantity_granularity, unit),
+            )}
             <Field label="Minimum Order" hint={`The smallest order a seller may offer, in ${per}.`} htmlFor="cc-min-quantity">
               <input
                 id="cc-min-quantity"

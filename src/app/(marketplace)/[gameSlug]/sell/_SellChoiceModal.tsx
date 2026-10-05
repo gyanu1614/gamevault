@@ -131,14 +131,18 @@ export function SellFinalCta({
   gameName,
   gameSlug,
   accent,
+  bgSrc,
 }: {
   gameName: string
   gameSlug: string
   accent: string
+  /** The game's ONE CTA image, read server-side by the page. */
+  bgSrc?: string
 }) {
   return (
     <HubCtaBand
       gameSlug={gameSlug}
+      bgSrc={bgSrc}
       title={`Ready to sell ${gameName}?`}
       body="Two ways in — join the founding programme, or sign up and apply to sell now."
       ctaLabel={`Start Selling ${gameName}`}

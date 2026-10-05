@@ -36,6 +36,7 @@ import { getHubTopValues } from '../blog/_hubData'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { HubCtaBand } from '@/components/content/HubCtaBand'
+import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 import { SellChoiceModal, SellFinalCta } from './_SellChoiceModal'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
 
@@ -152,11 +153,13 @@ export default async function SellLandingPage({ params }: PageProps) {
   if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
-  const [hubNav, topPets] = await Promise.all([
+  const [hubNav, topPets, ctaImage] = await Promise.all([
     getHubNavData(gameSlug),
     // Returns [] for any game without a values hub, so the teaser section
     // below simply doesn't render for the seeded `listed` catalogue.
     getHubTopValues(gameSlug, 3),
+    // The game's ONE CTA image (admin upload → static art) for both bands.
+    getGameCtaImage(gameSlug),
   ])
   const name = CONTENT_HUB_GAME_SLUGS.includes(gameSlug) ? theme.name : game.name
 
@@ -394,6 +397,7 @@ export default async function SellLandingPage({ params }: PageProps) {
         <div className="mt-16">
           <HubCtaBand
             gameSlug={gameSlug}
+            bgSrc={ctaImage}
             title={`Know your ${name} price before you list`}
             body={`Check what your ${name} is really worth, then list to sell at a number that moves.`}
             ctaLabel={`See ${name} Values`}
@@ -414,7 +418,7 @@ export default async function SellLandingPage({ params }: PageProps) {
             via the SellFinalCta client wrapper so the modal trigger stays
             client-side. */}
         <div className="mt-16">
-          <SellFinalCta gameName={name} gameSlug={gameSlug} accent={theme.accent} />
+          <SellFinalCta gameName={name} gameSlug={gameSlug} accent={theme.accent} bgSrc={ctaImage} />
         </div>
       </div>
       </SabHeroBackdrop>

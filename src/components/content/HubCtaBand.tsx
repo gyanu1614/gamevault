@@ -2,18 +2,19 @@
 
 /**
  * HubCtaBand — the shared "modal band" used at the bottom of every content-hub
- * page: a per-game background hero (public/cta-heroes/{gameSlug}.jpg) behind a
- * left-weighted scrim, left-aligned title + body, and a CTA button on the right.
+ * page: the game's ONE CTA image behind a left-weighted scrim, left-aligned
+ * title + body, and a CTA button on the right.
  *
- * This is the ONE band. HubBuyCta (buy) and the /sell page CTAs both render it
- * with different text so every page's CTA looks identical — no reinventing the
- * modal. Drop public/cta-heroes/{slug}.jpg to fill the bg; missing file falls
- * back to a clean gradient.
+ * This is the ONE band. HubBuyCta (buy), the seller band and the /sell page
+ * CTAs all render it with different text so every page's CTA looks identical.
+ * Background: `bgSrc` (server callers pass `getGameCtaImage(slug)` — the admin
+ * upload) → the static art (`gameCtaFallback`) → a clean scrim.
  *
- * Client component only for the <img> onError fallback.
+ * Client component only for the <img> onError fallback chain.
  */
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { gameCtaSources } from '@/lib/content/game-cta-art'
 import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 
@@ -38,9 +39,9 @@ export function HubCtaBand({
       rendered as a <button> and passed to this wrapper (e.g. a DialogTrigger).
       Takes precedence over ctaHref. */
   ctaWrap,
-  /** Override the background image path. Defaults to the buy banner's
-      public/cta-heroes/{slug}.jpg; the seller banner passes its own folder
-      (public/seller-cta/{slug}.png). Missing file falls back to the scrim. */
+  /** The game's CTA image (server: `getGameCtaImage(slug)`, the admin
+      upload). Without it — or when it fails to load — the static art
+      (`gameCtaFallback`) is tried, then the plain scrim. */
   bgSrc,
   /** Background image opacity (0–1). Default 0.28 (buy banner); the seller
       banner passes a higher value for a more visible backdrop. */
@@ -63,7 +64,17 @@ export function HubCtaBand({
   bgOpacity?: number
   rightScrim?: boolean
 }) {
-  const [hasImage, setHasImage] = useState(true)
+  // Walk the candidates on load error; past the end = no image (scrim only).
+  const sources = gameCtaSources(gameSlug, bgSrc)
+  const [srcIndex, setSrcIndex] = useState(0)
+  const src = sources[srcIndex]
+  const imgRef = useRef<HTMLImageElement>(null)
+  // A server-rendered <img> can fail BEFORE hydration attaches onError; catch
+  // that once per candidate (complete + no pixels = failed load).
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) setSrcIndex((i) => i + 1)
+  }, [src])
 
   return (
     // Constrained to the standard page width by DEFAULT so every CTA (buy +
@@ -77,17 +88,18 @@ export function HubCtaBand({
     >
       {/* Card-surface band: 8px corners, soft drop shadow, no outline. */}
       <div className="relative overflow-hidden rounded-lg bg-bg-base shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]">
-        {/* Per-game background hero. Buy banner: public/cta-heroes/{slug}.jpg;
-            seller banner passes bgSrc for its own folder. */}
-        {hasImage && (
+        {/* The game's ONE CTA image (admin upload → static art). */}
+        {src && (
           // eslint-disable-next-line @next/next/no-img-element -- static per-game bg
           <img
-            src={bgSrc ?? `/cta-heroes/${gameSlug}.jpg`}
+            key={src}
+            ref={imgRef}
+            src={src}
             alt=""
             aria-hidden
             loading="lazy"
             decoding="async"
-            onError={() => setHasImage(false)}
+            onError={() => setSrcIndex((i) => i + 1)}
             style={{ opacity: bgOpacity }}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />

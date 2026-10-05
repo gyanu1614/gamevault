@@ -30,9 +30,13 @@ export function ValueSelect<T extends string>({
         aria-label={label}
         className={`h-12 gap-2 px-3.5 text-body-sm data-[state=open]:ring-2 data-[state=open]:ring-focus-soft ${VALUE_FIELD} ${className}`}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          {icon && <span className="shrink-0 text-text-tertiary">{icon}</span>}
-          <SelectValue />
+        {/* The shared trigger clamps its direct <span> children with
+            `[&>span]:line-clamp-1`, which makes them `display:-webkit-box`
+            (vertical) — the icon then stacks above the value. `!flex` keeps
+            icon + value on one row; the value itself truncates. */}
+        <span className="!flex min-w-0 flex-1 items-center gap-2 text-left">
+          {icon && <span className="flex shrink-0 text-text-tertiary">{icon}</span>}
+          <SelectValue className="min-w-0 truncate" />
         </span>
       </SelectTrigger>
       <SelectContent className={`p-0 ${VALUE_PANEL}`}>
