@@ -19,31 +19,11 @@ import {
   plural,
   parseRecipe,
   unboxExpectation,
-  type HowToGetStatus,
   type ValueHowToGet,
 } from '@/lib/values/how-to-get'
 
 /** Wiki text is CC BY-SA; the credit goes next to the source link. */
 export const WIKI_LICENSE = 'CC BY-SA 3.0'
-
-export interface StatusMeta {
-  label: string
-  /** Tailwind background for the status dot — the only colour in the pill. */
-  dot: string
-}
-
-export function howToGetStatusMeta(status: HowToGetStatus): StatusMeta {
-  switch (status) {
-    case 'obtainable':
-      return { label: 'Obtainable Now', dot: 'bg-success' }
-    case 'unobtainable':
-      return { label: 'No Longer Obtainable', dot: 'bg-text-tertiary' }
-    case 'seasonal':
-      return { label: 'Returns Seasonally', dot: 'bg-info' }
-    default:
-      return { label: 'Unconfirmed', dot: 'bg-warning' }
-  }
-}
 
 /**
  * The short muted line under the steps. Never on an unconfirmed item (its

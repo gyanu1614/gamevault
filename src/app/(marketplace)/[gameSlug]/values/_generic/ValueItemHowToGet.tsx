@@ -3,19 +3,21 @@ import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockw
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise'
 import { CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins'
 import { HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer'
+import { HourglassMediumIcon } from '@phosphor-icons/react/dist/ssr/HourglassMedium'
+import { LightbulbIcon } from '@phosphor-icons/react/dist/ssr/Lightbulb'
 import { PackageIcon } from '@phosphor-icons/react/dist/ssr/Package'
 import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question'
 import { TargetIcon } from '@phosphor-icons/react/dist/ssr/Target'
 import type { IconProps } from '@phosphor-icons/react'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { VALUE_SURFACE } from '@/components/values/styles'
+import { ValueCallout } from '@/components/values/ValueCallout'
 import { cn } from '@/lib/utils'
 import { HowToGetFastWay, type ItemBuy } from './ValueListItemClient'
 import {
   checkedLabel,
   howToGetNote,
   howToGetSources,
-  howToGetStatusMeta,
   howToGetWays,
   type FreeWay,
   type WayIcon,
@@ -74,7 +76,6 @@ export function ValueItemHowToGet({
   buy: ItemBuy
 }) {
   if (!howToGet) return null
-  const status = howToGetStatusMeta(howToGet.status)
   const ways = howToGetWays({ name: itemName, gameName, shortName, h: howToGet, cheapestUsd, earnRate })
   const note = howToGetNote(howToGet)
   const sources = howToGetSources(howToGet)
@@ -105,7 +106,7 @@ export function ValueItemHowToGet({
 
       <div className="p-5 sm:p-8">
         {/* Header: art tile + the search phrase as the heading. */}
-        <div className="flex items-start gap-4">
+        <div className="flex items-center gap-4">
           {imageUrl && (
             <div
               className="relative hidden h-[72px] w-[72px] shrink-0 place-items-center rounded-lg sm:grid"
@@ -116,11 +117,7 @@ export function ValueItemHowToGet({
             </div>
           )}
           <div className="min-w-0">
-            <span className="inline-flex h-7 items-center gap-2 rounded-md bg-white/[0.06] px-2.5 text-[12px] font-semibold text-text-secondary">
-              <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
-            <h2 id="how-to-get-title" className="mt-2 text-heading font-bold tracking-tight text-text-primary">
+            <h2 id="how-to-get-title" className="text-heading font-bold tracking-tight text-text-primary">
               {ways.title}
             </h2>
           </div>
@@ -133,10 +130,9 @@ export function ValueItemHowToGet({
 
         {/* The two ways, as two plain rows on the same card (no card-in-card):
             the free way, then buy it. */}
-        <FreeWayRow way={ways.free} />
+        <FreeWayRow way={ways.free} note={note} />
         <HowToGetFastWay way={ways.fast} name={itemName} shortName={shortName} buy={buy} />
 
-        {note && <p className="mt-5 text-body-sm leading-6 text-text-tertiary">{note}</p>}
       </div>
 
       <p className="border-t border-white/[0.07] px-5 py-3.5 text-[12px] leading-5 text-text-tertiary sm:px-8">
@@ -184,7 +180,7 @@ export const WAY_STEP_COLS: Record<number, string> = {
 }
 
 /** Row 1: the free in-game route (or why it's gone) — steps in a line, then the total. */
-function FreeWayRow({ way }: { way: FreeWay }) {
+function FreeWayRow({ way, note }: { way: FreeWay; note: string | null }) {
   const muted = way.state !== 'available'
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
@@ -220,13 +216,22 @@ function FreeWayRow({ way }: { way: FreeWay }) {
 
       {way.message && <p className="mt-3 text-body-sm leading-6 text-text-secondary">{way.message}</p>}
 
-      {way.total && (
-        <p className="mt-5 text-body leading-7 text-text-secondary">
-          <span className="font-semibold text-text-primary">
-            {way.total.label}: {way.total.value}.
-          </span>
-          {way.total.detail && <> {way.total.detail}</>}
-        </p>
+      {/* The two things worth stopping on: what the free way really costs,
+          and the tip that goes with it — tinted callouts right under the
+          steps, side by side on desktop. */}
+      {(way.total || note) && (
+        <div className={cn('mt-5 grid grid-cols-1 gap-3', way.total && note && 'lg:grid-cols-2')}>
+          {way.total && (
+            <ValueCallout tone="amber" icon={HourglassMediumIcon} title={`${way.total.label}: ${way.total.value}`}>
+              {way.total.detail}
+            </ValueCallout>
+          )}
+          {note && (
+            <ValueCallout tone="yellow" icon={LightbulbIcon} title="Good To Know">
+              {note}
+            </ValueCallout>
+          )}
+        </div>
       )}
     </div>
   )

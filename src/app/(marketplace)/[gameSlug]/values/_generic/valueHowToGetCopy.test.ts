@@ -8,7 +8,6 @@ import {
   howToGetWays,
   howToGetNote,
   howToGetSources,
-  howToGetStatusMeta,
 } from './valueHowToGetCopy'
 import { itemFaq, type ItemCopyInput } from './valueListItemCopy'
 
@@ -60,13 +59,6 @@ const beachy: ValueHowToGet = {
 }
 
 describe('how-to-get copy', () => {
-  it('labels each status with a quiet pill', () => {
-    expect(howToGetStatusMeta('obtainable')).toEqual({ label: 'Obtainable Now', dot: 'bg-success' })
-    expect(howToGetStatusMeta('unobtainable').label).toBe('No Longer Obtainable')
-    expect(howToGetStatusMeta('unknown')).toEqual({ label: 'Unconfirmed', dot: 'bg-warning' })
-    expect(howToGetStatusMeta('seasonal')).toEqual({ label: 'Returns Seasonally', dot: 'bg-info' })
-  })
-
   const ways = (name: string, h: ValueHowToGet, cheapestUsd: number | null = 2.17) =>
     howToGetWays({ name, gameName: 'Murder Mystery 2', shortName: 'MM2', h, cheapestUsd, earnRate: { unit: 'Coins', perRound: 40 } })
 
