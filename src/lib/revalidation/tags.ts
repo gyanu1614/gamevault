@@ -30,3 +30,13 @@ export const FEE_RULES_TAG = 'fees:rules'
  * after every write; the page's 24 h `revalidate` is the backstop.
  */
 export const BUYER_FEES_TAG = 'fees:buyer-methods'
+
+/**
+ * A game's hero background (games.hero_bg_*), read by GameHeroBackdrop on
+ * every page of that game. The admin hero upload / reposition / remove
+ * revalidates it, which refreshes every prerendered page of that one game
+ * and nothing else.
+ */
+export function gameHeroTag(gameSlug: string): string {
+  return `game-hero:${gameSlug}`
+}

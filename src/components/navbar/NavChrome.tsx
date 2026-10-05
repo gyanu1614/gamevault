@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils'
 
 /** One menu row. `group` lets the leading icon brighten with the label. */
 export const navMenuRowCls =
-  'group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:bg-white/[0.06] focus-visible:text-text-primary focus-visible:outline-none'
+  'group flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-[14px] font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:bg-white/[0.06] focus-visible:text-text-primary focus-visible:outline-none'
 
 /** Leading icon colour for a menu row (tertiary at rest, primary on hover). */
 export const navMenuIconCls = 'shrink-0 text-text-tertiary transition-colors group-hover:text-text-primary group-focus-visible:text-text-primary'
@@ -73,7 +73,7 @@ export const NavIconButton = forwardRef<HTMLButtonElement, NavIconButtonProps>(f
   ref,
 ) {
   const cls = cn(
-    'relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white/80 transition-[background-color,color,transform] duration-150 hover:bg-white/[0.07] hover:text-white active:scale-[0.94] max-lg:h-9 max-lg:w-9',
+    'relative grid h-10 w-10 shrink-0 place-items-center rounded-[8px] text-white/80 transition-[background-color,color,transform] duration-150 hover:bg-white/[0.07] hover:text-white active:scale-[0.94] max-lg:h-9 max-lg:w-9',
     active && 'bg-white/[0.09] text-white',
     className,
   )
@@ -127,9 +127,11 @@ export function NavPanel({
       >
         <div
           className={cn(
-            'relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-xl bg-[#1D1E23]',
-            'shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)]',
-            'max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)] max-sm:rounded-none max-sm:rounded-b-xl',
+            // 10px corners (the site's card family), no edge line — a soft shadow
+            // and the inner top highlight separate it from the page.
+            'relative flex max-h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-[10px] bg-[#1D1E23]',
+            'shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_56px_-16px_rgba(0,0,0,0.85)]',
+            'max-sm:max-h-[calc(100dvh-60px-env(safe-area-inset-bottom)-16px)] max-sm:rounded-none max-sm:rounded-b-[10px]',
             className,
           )}
         >
@@ -142,7 +144,7 @@ export function NavPanel({
 
 export function NavPanelHeader({ title, aside }: { title: string; aside?: ReactNode }) {
   return (
-    <div className="flex h-[52px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-4">
+    <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-5">
       <h3 className="text-[15px] font-semibold text-text-primary">{title}</h3>
       {aside}
     </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -101,7 +101,7 @@ export default async function NeonCalculatorPage({ params }: PageProps) {
         }}
       />
 
-      <SabHeroBackdrop height={340}>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
         <TrackOnMount event={{ event: 'value_view', surface: 'calculator', game: 'adopt-me' }} />
 
@@ -127,7 +127,7 @@ export default async function NeonCalculatorPage({ params }: PageProps) {
 
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <HubFooter
         gameName={hubNav.current.name}

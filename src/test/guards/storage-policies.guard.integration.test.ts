@@ -42,6 +42,8 @@ const BUCKETS = {
   'blog-images': { public: true },
   // Seller store banners (20261004194021): public read, service-role writes only.
   'store-banners': { public: true },
+  // Game hero backgrounds (20261005000116): public read, service-role writes.
+  'game-heroes': { public: true },
 } as const
 
 let svc: SupabaseClient

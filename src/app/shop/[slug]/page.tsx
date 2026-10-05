@@ -318,7 +318,7 @@ export default async function SellerShopPage({ params }: PageProps) {
     offers,
     reviews,
     breakdown,
-    banner: resolveStoreBanner({ bannerUrl: profile.banner_url, tier: profile.seller_tier }),
+    banner: resolveStoreBanner({ bannerUrl: profile.banner_url, tier: profile.seller_tier, focalY: profile.banner_focal_y }),
     isPaused: (presenceRes.data as { store_paused?: boolean } | null)?.store_paused === true,
     stats: {
       totalSales,

@@ -3,8 +3,10 @@
 /**
  * SellerStorefront — the public /shop/[slug] page.
  *
- *   Header   banner (Silver+ custom / generated art) + avatar + identity
- *   Stats    one strip: feedback · sold · offers · stated delivery · member since
+ *   Header   ONE card: banner strip (Silver+ custom / generated art) melting
+ *            into the identity block (avatar + rank halo, name, action), then
+ *            a hairline and the stats row: feedback · sold · offers · stated
+ *            delivery · rank
  *   Tabs     Offers (filters + shared ItemCard grid) · Reviews · About
  *
  * Every tab panel is in the HTML (inactive ones `hidden`), so the cached page
@@ -110,42 +112,42 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             memberSince={memberSince}
             isPaused={isPaused}
             banner={banner}
+            stats={
+              <dl className="grid grid-cols-2 gap-x-5 gap-y-6 py-5 sm:gap-x-8 sm:py-6 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
+                <Stat
+                  label="Positive Feedback"
+                  value={breakdown.positivePercent != null ? `${breakdown.positivePercent}%` : '—'}
+                  hint={
+                    breakdown.total > 0
+                      ? `${breakdown.total.toLocaleString('en-US')} ${breakdown.total === 1 ? 'Review' : 'Reviews'}`
+                      : 'No Reviews Yet'
+                  }
+                />
+                <Stat
+                  label="Sold"
+                  value={stats.totalSales > 0 ? stats.totalSales.toLocaleString('en-US') : '—'}
+                  hint={stats.totalSales > 0 ? 'Completed Orders' : 'No Sales Yet'}
+                />
+                <Stat
+                  label="Active Offers"
+                  value={stats.activeListings.toLocaleString('en-US')}
+                  hint={games.length > 0 ? `Across ${games.length} ${games.length === 1 ? 'Game' : 'Games'}` : 'None Listed'}
+                />
+                <Stat label="Avg. Delivery" value={stats.avgDelivery ?? '—'} hint="Seller's Stated Time" />
+                <Stat
+                  label="Rank"
+                  value={
+                    <span className={cn('inline-flex items-center gap-2', tier.colors.text)}>
+                      <TierIcon tier={tier.key} size={17} decorative />
+                      {tier.label}
+                    </span>
+                  }
+                  hint={memberSince ? `Since ${memberSince}` : 'DropMarket Seller'}
+                  className="col-span-2 lg:col-span-1"
+                />
+              </dl>
+            }
           />
-
-          {/* Stat strip */}
-          <dl className={cn('mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-white/[0.07] sm:grid-cols-3 lg:grid-cols-5')}>
-            <Stat
-              label="Positive Feedback"
-              value={breakdown.positivePercent != null ? `${breakdown.positivePercent}%` : '—'}
-              hint={
-                breakdown.total > 0
-                  ? `${breakdown.total.toLocaleString('en-US')} ${breakdown.total === 1 ? 'Review' : 'Reviews'}`
-                  : 'No Reviews Yet'
-              }
-            />
-            <Stat
-              label="Sold"
-              value={stats.totalSales > 0 ? stats.totalSales.toLocaleString('en-US') : '—'}
-              hint={stats.totalSales > 0 ? 'Completed Orders' : 'No Sales Yet'}
-            />
-            <Stat
-              label="Active Offers"
-              value={stats.activeListings.toLocaleString('en-US')}
-              hint={games.length > 0 ? `Across ${games.length} ${games.length === 1 ? 'Game' : 'Games'}` : 'None Listed'}
-            />
-            <Stat label="Avg. Delivery" value={stats.avgDelivery ?? '—'} hint="Seller's Stated Time" />
-            <Stat
-              label="Rank"
-              value={
-                <span className={cn('inline-flex items-center gap-2', tier.colors.text)}>
-                  <TierIcon tier={tier.key} size={22} decorative />
-                  {tier.label}
-                </span>
-              }
-              hint={memberSince ? `Since ${memberSince}` : 'DropMarket Seller'}
-              className="col-span-2 sm:col-span-1"
-            />
-          </dl>
 
           {isPaused && (
             <div className="mt-4 flex items-start gap-3 rounded-lg bg-warning-bg px-4 py-3 text-[13px] text-warning">
@@ -280,10 +282,12 @@ function Stat({
   className?: string
 }) {
   return (
-    <div className={cn('min-w-0 bg-[#1D1E23] px-4 py-3.5 sm:px-5 sm:py-4', className)}>
-      <dt className="truncate text-[12.5px] font-medium text-text-secondary">{label}</dt>
-      <dd className="mt-1 truncate text-[20px] font-bold leading-tight tabular-nums text-text-primary sm:text-[22px]">{value}</dd>
-      {hint && <dd className="mt-0.5 truncate text-[12px] text-text-tertiary">{hint}</dd>}
+    // Phone / tablet: a 2-column grid on whitespace alone. lg+: one row,
+    // hairlines between cells (the first is flush with the identity above).
+    <div className={cn('min-w-0 lg:px-6 lg:first:pl-0 lg:last:pr-0 xl:px-8', className)}>
+      <dt className="truncate text-[12px] font-medium text-text-tertiary">{label}</dt>
+      <dd className="mt-1.5 truncate text-[17px] font-semibold leading-tight tracking-[-0.01em] tabular-nums text-text-primary">{value}</dd>
+      {hint && <dd className="mt-1 truncate text-[12px] text-text-tertiary">{hint}</dd>}
     </div>
   )
 }

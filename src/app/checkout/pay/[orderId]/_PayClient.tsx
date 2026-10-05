@@ -1,23 +1,16 @@
 'use client'
 
 /**
- * PayClient — "The Ledger Receipt" (design_handoff_crypto_payment_page,
- * option 1a). Payment presented as a living document:
+ * PayClient: the native BTCPay payment page (2026-10 revamp).
  *
- *   · left  — Payment Ledger rail: each event becomes a timestamped line
- *             (Invoice Created → Rate Locked → live entry → ghosts), the
- *             live entry pulses and swaps through the six states;
- *   · center— receipt card: order row, dashed dividers, QR with a lime
- *             scan line, Send Exactly + address copy chips, network chip,
- *             rate-lock timer, warning callout, mono receipt footer;
- *             Confirmed stamps the receipt PAID;
- *   · right — SafeDrop assurance + help/legal links.
+ *   · main column: amount to send (the hero, with copy), the expiry chip,
+ *     the QR, the deposit address with copy + network chip, Open In Wallet,
+ *     a one-line network note, then "safe to close" + Cancel Order;
+ *   · side column: order summary (item, order number, money rows) and the
+ *     payment status timeline, then SafeDrop + help/policy links.
+ * Phone: one column, amount + QR first, status next, then the summary.
  *
- * Mobile: live status card first, then the receipt, then a condensed
- * footer line. Library parts per the house rule: qr-code-styling, sonner,
- * Framer Motion, canvas-confetti, vaul, Radix, lucide.
- *
- * Display-only state machine — the verified webhook is the sole authority
+ * Display-only state machine; the verified webhook is the sole authority
  * for marking the order paid:
  *   waiting → seen (instant chain-watch, tx id shown) → confirming → paid
  *   waiting → partial (live remaining due) · waiting/partial → expired
@@ -28,13 +21,28 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from '@/components/navigation/AppLink'
 import { Drawer } from 'vaul'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Check, Copy, Loader2, Lock, RefreshCw, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowClockwise'
+import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
+import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
+import { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch'
+import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
+import { CopyIcon } from '@phosphor-icons/react/dist/csr/Copy'
+import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck'
+import { WalletIcon } from '@phosphor-icons/react/dist/csr/Wallet'
+import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle'
 import { getPaymentPageStatus } from '@/lib/actions/payment-page'
 import { retryOrderPayment } from '@/lib/actions/checkout'
 import { cancelOrder } from '@/lib/actions/orders'
+import { MARKET_CARD } from '@/lib/ui/surfaces'
+import { accountBtn } from '@/components/account/AccountSurface'
+import { cn } from '@/lib/utils'
 import { CheckoutNavbar } from '../../_components/CheckoutNavbar'
+import { nextPollDelayMs, countdownShouldContinue, POLL_BASE_MS } from './poll-policy'
+import { qrPayload, walletDeepLink } from './qr'
+import { PaymentQr } from './_PaymentQr'
 
 export interface PayMethod {
   id: string
@@ -42,7 +50,7 @@ export interface PayMethod {
   short: string
   icon: string | null
   network: string | null
-  /** Human chain name for prose ("TRON", "Polygon") — null when unproven. */
+  /** Human chain name for prose ("TRON", "Polygon"); null when unproven. */
   networkName: string | null
   /** Confirmation-time clause, lowercase ("usually under a minute"). */
   confirmEta: string | null
@@ -54,39 +62,20 @@ export interface PayMethod {
   rate: string | null
 }
 
-import { nextPollDelayMs, countdownShouldContinue, POLL_BASE_MS } from './poll-policy'
+/** Order money rows, built on the server from the buyer's own fields.
+ *  itemPrice/serviceFee are null when they could not be read. */
+export interface PaySummary {
+  itemPrice: number | null
+  quantity: number
+  serviceFee: number | null
+  promoDiscount: number
+  storeCredit: number
+  total: number
+}
 
 type ViewState = 'waiting' | 'seen' | 'confirming' | 'paid' | 'partial' | 'expired' | 'unreachable'
 
-
-// ─── Ledger Receipt tokens (handoff README) ─────────────────────────
-const L = {
-  // Dark marketplace theme (src/styles/tokens.css) — same keys as the light
-  // era so every call site reads unchanged. ivory = page ground.
-  ivory: '#16171B',
-  raised: '#1D1E23',
-  well: '#191A1F',
-  white: '#FFFFFF',
-  line: 'rgba(255,255,255,0.14)',
-  line2: 'rgba(255,255,255,0.08)',
-  dash: 'rgba(255,255,255,0.18)',
-  conn: 'rgba(255,255,255,0.22)',
-  ink: '#E9EDF2',
-  muted: '#9AA6B3',
-  faint: '#6C7684',
-  ghost: '#6C7684',
-  forest: '#56B87F',      // green as text / icon
-  forestBtn: '#2A7A50',   // green as button fill
-  lime: '#A3E635',
-  limePale: 'rgba(86,184,127,0.14)',
-  warnBg: 'rgba(255,178,62,0.10)',
-  warnLn: 'rgba(255,178,62,0.35)',
-  warnTx: '#FFB23E',
-  blue: '#589BFF',
-  blueLn: 'rgba(88,155,255,0.35)',
-  blueBg: 'rgba(88,155,255,0.10)',
-  tether: '#26A17B',
-}
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
 function fmtCountdown(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000))
@@ -97,7 +86,7 @@ function fmtCountdown(ms: number): string {
 function fmtTime(iso: string | null): string {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleTimeString('en-GB', { hour12: false })
+    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
   } catch {
     return ''
   }
@@ -113,7 +102,7 @@ function fmtCrypto(v: string | undefined): string {
 
 function shortTx(tx?: string | null): string {
   if (!tx) return ''
-  return `${tx.slice(0, 4)}…${tx.slice(-4)}`
+  return `${tx.slice(0, 6)}…${tx.slice(-4)}`
 }
 
 /** execCommand fallback for insecure contexts (http over LAN IP, older
@@ -136,296 +125,293 @@ function legacyCopy(value: string): boolean {
   }
 }
 
-async function copyText(value: string, label: string) {
-  try {
+/** Copy to the clipboard. Inline buttons show their own "Copied"; a toast
+ *  only when asked (or on failure). */
+async function copyText(value: string, label: string, opts: { toast?: boolean } = {}) {
+  const ok = async () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(value)
-    } else if (!legacyCopy(value)) {
-      throw new Error('copy unavailable')
-    }
-    toast.success(`${label} Copied`)
-    return true
-  } catch {
-    if (legacyCopy(value)) {
-      toast.success(`${label} Copied`)
       return true
     }
-    toast.error('Copy Failed — Select The Text Manually')
-    return false
+    return legacyCopy(value)
   }
+  let done = false
+  try {
+    done = await ok()
+  } catch {
+    done = legacyCopy(value)
+  }
+  if (done) {
+    if (opts.toast) toast.success(`${label} Copied`)
+    return true
+  }
+  toast.error('Copy Failed. Select The Text Manually')
+  return false
 }
 
 // ─── Small pieces ───────────────────────────────────────────────────
 
-function CopyChip({ value, label }: { value: string; label: string }) {
+function CopyButton({
+  value,
+  label,
+  className,
+}: {
+  value: string
+  label: string
+  className?: string
+}) {
   const [copied, setCopied] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(timer.current), [])
   return (
     <button
       type="button"
       onClick={async () => {
         if (await copyText(value, label)) {
           setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
+          clearTimeout(timer.current)
+          timer.current = setTimeout(() => setCopied(false), 1600)
         }
       }}
-      className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border bg-[#1D1E23] px-2.5 text-[11.5px] font-semibold transition-colors hover:border-[#56B87F66]"
-      style={{ borderColor: L.line, color: L.ink }}
+      aria-label={copied ? `${label} Copied` : `Copy ${label}`}
+      className={cn(accountBtn.secondary, 'h-10 min-w-[92px]', FOCUS, className)}
     >
       {copied ? (
-        <>
-          <Check className="h-3 w-3" style={{ color: L.forest }} strokeWidth={2.5} /> Copied
-        </>
+        <CheckIcon className="h-4 w-4 text-lime-text" weight="bold" aria-hidden />
       ) : (
-        <>
-          <Copy className="h-3 w-3 opacity-50" /> Copy
-        </>
+        <CopyIcon className="h-4 w-4 text-text-secondary" aria-hidden />
       )}
+      <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
     </button>
   )
 }
 
-/** qr-code-styling — rounded modules, coin logo center, lime scan line
- *  sweeping while we wait (stops once payment is seen). */
-function StyledQr({ data, logo, scanning }: { data: string; logo: string | null; scanning: boolean }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const qrRef = useRef<any>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const { default: QRCodeStyling } = await import('qr-code-styling')
-      if (cancelled || !ref.current) return
-      const options = {
-        width: 200,
-        height: 200,
-        type: 'svg' as const,
-        data,
-        margin: 4,
-        image: logo ?? undefined,
-        dotsOptions: { type: 'rounded' as const, color: L.ink },
-        cornersSquareOptions: { type: 'extra-rounded' as const, color: L.forest },
-        backgroundOptions: { color: '#FFFFFF' },
-        imageOptions: { margin: 5, imageSize: 0.32, hideBackgroundDots: true },
-        qrOptions: { errorCorrectionLevel: 'Q' as const },
-      }
-      if (!qrRef.current) {
-        qrRef.current = new QRCodeStyling(options)
-        ref.current.innerHTML = ''
-        qrRef.current.append(ref.current)
-      } else {
-        qrRef.current.update(options)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [data, logo])
-
+function ExpiryChip({ remainingMs }: { remainingMs: number }) {
+  const low = remainingMs < 60_000
   return (
-    <div
-      className="relative shrink-0 overflow-hidden rounded-md border bg-white p-2"
-      style={{ borderColor: L.line }}
-      aria-label="Payment QR Code"
+    <span
+      role="timer"
+      className={cn(
+        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-[13px] font-medium tabular-nums',
+        low ? 'text-warning' : 'text-text-secondary'
+      )}
     >
-      <div ref={ref} />
-      {scanning && (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-2 h-[2px] rounded-full"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${L.lime}, transparent)`,
-          }}
-          animate={{ top: ['6%', '88%', '6%'] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
+      <ClockIcon className="h-4 w-4" aria-hidden />
+      <span suppressHydrationWarning>Expires In {fmtCountdown(remainingMs)}</span>
+    </span>
+  )
+}
+
+/** One calm inline status line under the amount (seen / partial). */
+function StatusNote({
+  tone,
+  icon,
+  children,
+}: {
+  tone: 'live' | 'warn'
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mt-4 flex items-start gap-2.5 text-[14px] leading-relaxed text-text-primary">
+      <span className={cn('mt-[3px] shrink-0', tone === 'live' ? 'text-lime-text' : 'text-warning')}>{icon}</span>
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }
 
-// ─── Step indicator ─────────────────────────────────────────────────
-
-const STEPS = ['Amount', 'Pay', 'Confirming', 'Done'] as const
-
-function StepIndicator({ view }: { view: ViewState }) {
-  const current =
-    view === 'paid' ? 3 : view === 'seen' || view === 'confirming' ? 2 : 1
+/** Confirming / paid / expired / unreachable: the main column's state screen. */
+function StatePanel({
+  icon,
+  title,
+  children,
+  action,
+}: {
+  icon: React.ReactNode
+  title: string
+  children: React.ReactNode
+  action?: React.ReactNode
+}) {
   return (
-    <div className="flex items-center justify-center gap-2 text-[12.5px]" style={{ color: L.muted }}>
-      {STEPS.map((label, i) => (
-        <span key={label} className="flex items-center gap-2">
-          {i > 0 && <span className="h-px w-[22px]" style={{ background: L.conn }} />}
-          {i < current ? (
-            <span className="flex items-center gap-1 font-semibold" style={{ color: L.forest }}>
-              <Check className="h-3 w-3" strokeWidth={3} />
-              {label}
-            </span>
-          ) : i === current ? (
-            <span
-              className="rounded-md px-3 py-[3px] font-semibold text-white"
-              style={{ background: L.forestBtn }}
-            >
-              {label}
-            </span>
-          ) : (
-            <span>{label}</span>
-          )}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-// ─── Ledger rail pieces ─────────────────────────────────────────────
-
-function LedgerDone({ title, meta }: { title: string; meta: string }) {
-  return (
-    <div className="relative pl-[22px] pb-4">
-      <span
-        className="absolute left-0 top-[3px] h-2 w-2 rounded-full"
-        style={{ background: L.forestBtn }}
-      />
-      <span
-        className="absolute left-[3.5px] top-[14px] bottom-0 w-px"
-        style={{ background: L.line2 }}
-      />
-      <p className="text-[12.5px] font-semibold leading-tight" style={{ color: L.ink }}>
+    <div className="px-5 py-8 sm:px-8 sm:py-10">
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.06]">{icon}</span>
+      <h2 className="mt-5 text-[20px] font-semibold leading-tight tracking-[-0.01em] text-text-primary sm:text-[22px]">
         {title}
-      </p>
-      {meta && (
-        <p className="mt-0.5 font-mono text-[11px]" style={{ color: L.faint }}>
-          {meta}
-        </p>
-      )}
+      </h2>
+      <div className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-text-secondary">{children}</div>
+      {action && <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">{action}</div>}
     </div>
   )
 }
 
-function LedgerGhost({ title, last = false }: { title: string; last?: boolean }) {
+function SummaryRow({
+  label,
+  children,
+  strong,
+}: {
+  label: React.ReactNode
+  children: React.ReactNode
+  strong?: boolean
+}) {
   return (
-    <div className="relative pl-[22px] pb-4" style={last ? { paddingBottom: 0 } : undefined}>
+    <div className="flex items-baseline justify-between gap-4 border-t border-white/[0.07] py-3 first:border-t-0">
+      <span className={cn('text-[13.5px]', strong ? 'font-semibold text-text-primary' : 'text-text-secondary')}>
+        {label}
+      </span>
       <span
-        className="absolute left-0 top-[3px] h-2 w-2 rounded-full bg-[#1D1E23]"
-        style={{ boxShadow: `inset 0 0 0 1.5px ${L.conn}` }}
-      />
-      {!last && (
-        <span
-          className="absolute left-[3.5px] top-[14px] bottom-0 w-px"
-          style={{ background: L.line2 }}
-        />
-      )}
-      <p className="text-[12.5px] font-medium leading-tight" style={{ color: L.ghost }}>
-        {title}
-      </p>
+        className={cn(
+          'tabular-nums text-text-primary',
+          strong ? 'text-[16px] font-semibold' : 'text-[13.5px] font-medium'
+        )}
+      >
+        {children}
+      </span>
     </div>
   )
 }
 
-/** The pulsing live entry — content swaps per state. */
-function LedgerLive({
+// ─── Status timeline ────────────────────────────────────────────────
+
+type StepState = 'done' | 'current' | 'upcoming'
+
+function StepDot({ state, warn, reduce }: { state: StepState; warn?: boolean; reduce: boolean }) {
+  if (state === 'done') {
+    return (
+      <span className="grid h-4 w-4 place-items-center rounded-full bg-white/[0.10]">
+        <CheckIcon className="h-2.5 w-2.5 text-text-primary" weight="bold" aria-hidden />
+      </span>
+    )
+  }
+  if (state === 'current') {
+    const color = warn ? 'bg-warning' : 'bg-lime-text'
+    return (
+      <span className="relative grid h-4 w-4 place-items-center">
+        {!reduce && (
+          <motion.span
+            aria-hidden
+            className={cn('absolute inset-0 rounded-full', color)}
+            initial={{ opacity: 0.35, scale: 0.6 }}
+            animate={{ opacity: 0, scale: 1.6 }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+          />
+        )}
+        <span className={cn('relative h-2 w-2 rounded-full', color)} />
+      </span>
+    )
+  }
+  return (
+    <span className="grid h-4 w-4 place-items-center">
+      <span className="h-2 w-2 rounded-full bg-white/[0.14]" />
+    </span>
+  )
+}
+
+function StatusTimeline({
   view,
-  dueDisplay,
-  short,
+  createdAt,
+  seenAt,
+  confirmedAt,
   seenTx,
-  onCopyRemaining,
-  remainingClock,
   networkName,
   confirmEta,
 }: {
   view: ViewState
-  dueDisplay: string
-  short: string
+  createdAt: string | null
+  seenAt: string | null
+  confirmedAt: string | null
   seenTx: string | null
-  onCopyRemaining: () => void
-  remainingClock: string
   networkName: string | null
   confirmEta: string | null
 }) {
-  const dotColor = view === 'seen' ? L.blue : L.forest
+  const reduce = useReducedMotion() ?? false
+
+  if (view === 'expired' || view === 'unreachable') {
+    return (
+      <ol aria-label="Payment Status" className="space-y-4">
+        <li className="flex gap-3">
+          <StepDot state="done" reduce={reduce} />
+          <div className="-mt-0.5 flex min-w-0 flex-1 justify-between gap-3 text-[13.5px]">
+            <span className="text-text-secondary">Invoice Created</span>
+            <span className="tabular-nums text-text-tertiary">{fmtTime(createdAt)}</span>
+          </div>
+        </li>
+        <li className="flex gap-3" aria-current="step">
+          <span className="grid h-4 w-4 place-items-center">
+            <span className="h-2 w-2 rounded-full bg-text-tertiary" />
+          </span>
+          <div className="-mt-0.5 min-w-0 flex-1">
+            <p className="text-[13.5px] font-semibold text-text-primary">
+              {view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
+            </p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-text-tertiary">Nothing was charged.</p>
+          </div>
+        </li>
+      </ol>
+    )
+  }
+
+  const current = view === 'paid' ? 4 : view === 'confirming' ? 3 : view === 'seen' ? 2 : 1
+  const steps: Array<{ label: string; meta?: string; note?: string; warn?: boolean }> = [
+    { label: 'Invoice Created', meta: fmtTime(createdAt) },
+    view === 'partial'
+      ? {
+          label: 'Partial Payment Received',
+          note: 'Send the remaining amount to the same address.',
+          warn: true,
+        }
+      : {
+          label: current > 1 ? 'Payment Sent' : 'Waiting For Payment',
+          note: networkName
+            ? `Watching the ${networkName} network. Your payment shows up here seconds after you send it.`
+            : 'Watching the network. Your payment shows up here seconds after you send it.',
+        },
+    {
+      label: 'Seen On Network',
+      meta: current > 2 ? fmtTime(seenAt) : undefined,
+      note: seenTx ? `Tx ${shortTx(seenTx)}` : 'Confirming now.',
+    },
+    {
+      label: view === 'confirming' ? 'Confirming' : 'Confirmed',
+      meta: view === 'paid' ? fmtTime(confirmedAt) : undefined,
+      note: confirmEta
+        ? `${confirmEta.charAt(0).toUpperCase()}${confirmEta.slice(1)}${networkName ? ` on ${networkName}` : ''}.`
+        : 'Usually just a few minutes.',
+    },
+  ]
+
   return (
-    <div className="relative pl-[22px] pb-4">
-      <motion.span
-        className="absolute left-[-1px] top-[2px] h-[10px] w-[10px] rounded-full"
-        style={{ background: dotColor }}
-        animate={{ boxShadow: ['0 0 0 0 rgba(163,230,53,0.55)', '0 0 0 12px rgba(163,230,53,0)'] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
-      />
-      <span
-        className="absolute left-[3.5px] top-[16px] bottom-0 w-px"
-        style={{ background: L.line2 }}
-      />
-      <AnimatePresence mode="wait" initial={false}>
-        {view === 'seen' ? (
-          <motion.div key="seen" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <p className="flex items-center gap-1.5 text-[13px] font-bold" style={{ color: L.blue }}>
-              <Zap className="h-3.5 w-3.5" /> Payment Seen On Network
-            </p>
-            <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              {dueDisplay} {short} spotted — your money is on its way. Confirming now.
-            </p>
-            {seenTx && (
-              <p className="mt-1 font-mono text-[11px]" style={{ color: L.faint }}>
-                tx {seenTx}
-              </p>
-            )}
-          </motion.div>
-        ) : view === 'confirming' ? (
-          <motion.div key="confirming" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <p className="text-[13px] font-bold" style={{ color: L.forest }}>
-              Confirming Your Payment
-            </p>
-            <div className="mt-1.5 h-[6px] w-full overflow-hidden rounded-full" style={{ background: L.line2 }}>
-              <motion.div
-                className="h-full w-[40%] rounded-full"
-                style={{ background: L.forestBtn }}
-                animate={{ x: ['-100%', '250%'] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-              />
+    <ol aria-label="Payment Status">
+      {steps.map((s, i) => {
+        const state: StepState = i < current ? 'done' : i === current ? 'current' : 'upcoming'
+        const last = i === steps.length - 1
+        return (
+          <li key={i} className="relative flex gap-3 pb-4 last:pb-0" aria-current={state === 'current' ? 'step' : undefined}>
+            {!last && <span aria-hidden className="absolute bottom-0 left-[7.5px] top-5 w-px bg-white/[0.08]" />}
+            <StepDot state={state} warn={s.warn} reduce={reduce} />
+            <div className="-mt-0.5 min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <span
+                  className={cn(
+                    'text-[13.5px]',
+                    state === 'current' && 'font-semibold text-text-primary',
+                    state === 'done' && 'text-text-secondary',
+                    state === 'upcoming' && 'text-text-tertiary'
+                  )}
+                >
+                  {s.label}
+                </span>
+                {s.meta && state === 'done' && (
+                  <span className="shrink-0 text-[12.5px] tabular-nums text-text-tertiary">{s.meta}</span>
+                )}
+              </div>
+              {state === 'current' && s.note && (
+                <p className="mt-0.5 text-[13px] leading-relaxed text-text-tertiary">{s.note}</p>
+              )}
             </div>
-            <p className="mt-1.5 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              {confirmEta
-                ? `${confirmEta.charAt(0).toUpperCase()}${confirmEta.slice(1)}${networkName ? ` on ${networkName}` : ''}. Your funds are safe either way.`
-                : 'Usually just a few minutes. Your funds are safe either way.'}
-            </p>
-          </motion.div>
-        ) : view === 'partial' ? (
-          <motion.div key="partial" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <p className="text-[13px] font-bold" style={{ color: L.warnTx }}>
-              Partial Payment Received
-            </p>
-            <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              Exchange fees often cause this — nothing is lost. Send the remaining{' '}
-              <b style={{ color: L.ink }}>
-                {dueDisplay} {short}
-              </b>{' '}
-              to the same address.
-            </p>
-            <button
-              type="button"
-              onClick={onCopyRemaining}
-              className="mt-2 inline-flex h-[28px] items-center gap-1.5 rounded-md border bg-[#1D1E23] px-2.5 text-[11.5px] font-semibold"
-              style={{ borderColor: L.warnLn, color: L.warnTx }}
-            >
-              <Copy className="h-3 w-3" /> Copy {dueDisplay} {short}
-            </button>
-            <p className="mt-1.5 font-mono text-[11px]" style={{ color: L.faint }} suppressHydrationWarning>
-              Rate still locked · {remainingClock}
-            </p>
-          </motion.div>
-        ) : (
-          <motion.div key="waiting" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <p className="text-[13px] font-bold" style={{ color: L.forest }}>
-              Waiting For Your Payment
-            </p>
-            <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-              {networkName
-                ? `Watching the ${networkName} network — your payment shows up here seconds after you send it.`
-                : 'Watching the network — your payment shows up here seconds after you send it.'}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -434,31 +420,27 @@ function HelpDrawer({ trigger }: { trigger: React.ReactNode }) {
     <Drawer.Root>
       <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
         <Drawer.Content
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-lg p-6 pb-9"
-          style={{ background: L.raised, color: L.ink }}
+          aria-describedby={undefined}
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[520px] rounded-t-lg bg-bg-raised p-6 pb-9 text-text-primary"
         >
-          <div className="mx-auto mb-4 h-1.5 w-10 rounded-full" style={{ background: L.line }} />
-          <Drawer.Title className="text-[15px] font-extrabold">Payment Help</Drawer.Title>
-          <div className="mt-3 space-y-3 text-[12.5px] leading-relaxed" style={{ color: L.muted }}>
+          <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-white/[0.14]" />
+          <Drawer.Title className="text-[16px] font-semibold">Payment Help</Drawer.Title>
+          <div className="mt-4 space-y-4 text-[14px] leading-relaxed text-text-secondary">
             <p>
-              <b style={{ color: L.ink }}>How long does it take?</b> Crypto payments are usually
-              detected within seconds of sending and confirmed within a few minutes.
+              <span className="font-semibold text-text-primary">How long does it take?</span> Crypto payments
+              are usually detected within seconds of sending and confirmed within a few minutes.
             </p>
             <p>
-              <b style={{ color: L.ink }}>Sent slightly too little?</b> Exchange withdrawal fees can
-              shave the amount — this page shows the small remainder to send.
+              <span className="font-semibold text-text-primary">Sent slightly too little?</span> Exchange
+              withdrawal fees can shave the amount. This page shows the small remainder to send.
             </p>
             <p>
-              <b style={{ color: L.ink }}>Invoice expired after you paid?</b> Don’t worry — payments
+              <span className="font-semibold text-text-primary">Invoice expired after you paid?</span> Payments
               are never lost. Contact us and we’ll sort it right away.
             </p>
-            <a
-              href="mailto:support@dropmarket.gg"
-              className="inline-flex h-[42px] items-center rounded-md px-4 text-[13px] font-bold text-white"
-              style={{ background: L.forestBtn }}
-            >
+            <a href="mailto:support@dropmarket.gg" className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}>
               Contact Support
             </a>
           </div>
@@ -477,7 +459,7 @@ export default function PayClient({
   listingTitle,
   itemImage,
   gameName,
-  totalAmount,
+  summary,
   currency,
   invoiceAmount,
   initialInvoiceStatus,
@@ -494,7 +476,7 @@ export default function PayClient({
   listingTitle: string
   itemImage: string | null
   gameName: string | null
-  totalAmount: number
+  summary: PaySummary
   currency: string
   invoiceAmount: number
   initialInvoiceStatus: string
@@ -506,6 +488,7 @@ export default function PayClient({
   buyerProfile?: { username: string | null; avatar_url: string | null } | null
 }) {
   const router = useRouter()
+  const reduce = useReducedMotion() ?? false
 
   const initialView: ViewState =
     initialInvoiceStatus === 'Processing'
@@ -527,7 +510,6 @@ export default function PayClient({
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const stamps = useRef<Record<string, string>>({})
-  const confettiFired = useRef(false)
 
   const selected = useMemo(
     () => methods.find((m) => m.id === selectedId) ?? methods[0],
@@ -536,6 +518,7 @@ export default function PayClient({
   const live = selected ? liveDue[selected.id] : undefined
   const dueDisplay = fmtCrypto(live?.due ?? selected?.due)
   const sym = currency.toUpperCase() === 'EUR' ? '€' : '$'
+  const money = (n: number) => `${sym}${n.toFixed(2)}`
   const rateLine = selected?.rate
     ? `1 ${selected.short} = ${sym}${Number(selected.rate).toFixed(2)}`
     : null
@@ -632,21 +615,6 @@ export default function PayClient({
     }
   }, [orderId, router, view])
 
-  // ── Confirmed celebration ─────────────────────────────────────────
-  useEffect(() => {
-    if (view !== 'paid' || confettiFired.current) return
-    confettiFired.current = true
-    ;(async () => {
-      const { default: confetti } = await import('canvas-confetti')
-      confetti({
-        particleCount: 110,
-        spread: 75,
-        origin: { y: 0.45 },
-        colors: [L.lime, '#1B5E3A', '#ffffff', L.forest],
-      })
-    })()
-  }, [view])
-
   const freshInvoice = useCallback(async () => {
     setRetrying(true)
     const res = await retryOrderPayment(orderId)
@@ -661,458 +629,424 @@ export default function PayClient({
 
   // Cancel = "no order ever happened": the order flips to cancelled (hidden
   // from the orders list), wallet credit returns, and the buyer lands back on
-  // the checkout page — the exact pre-order state.
+  // the checkout page, the exact pre-order state.
   const handleCancelOrder = useCallback(async () => {
     setCancelling(true)
     try {
       const res = await cancelOrder(orderId)
       if (res.success) {
-        toast.success('Order Cancelled — nothing was charged.')
+        toast.success('Order Cancelled. Nothing was charged.')
         router.replace(listingId ? `/checkout/${listingId}` : '/')
         return
       }
-      toast.error(res.error || 'Could not cancel — please try again.')
+      toast.error(res.error || 'Could not cancel. Please try again.')
       setCancelling(false)
       setConfirmingCancel(false)
     } catch {
-      toast.error('Could not cancel — please try again.')
+      toast.error('Could not cancel. Please try again.')
       setCancelling(false)
       setConfirmingCancel(false)
     }
   }, [orderId, listingId, router])
 
   const openInWallet = useCallback(async () => {
-    const link = selected?.paymentLink
+    const link = selected ? walletDeepLink(selected) : null
     const coarse =
       typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
     if (link && coarse) {
       window.location.href = link
       return
     }
-    // Desktop fallback (per handoff): copy the address instead.
+    // Desktop fallback: copy the address instead.
     if (selected) {
-      await copyText(selected.address, 'Address')
-      toast.info('Open your wallet app on your phone and paste the address.')
+      if (await copyText(selected.address, 'Address', { toast: true })) {
+        toast.info('Open your wallet app on your phone and paste the address.')
+      }
     }
   }, [selected])
 
-  const scanning = view === 'waiting'
-  const seenAtMeta = stamps.current.seen ? `· ${fmtTime(stamps.current.seen)}` : ''
+  const livePay = view === 'waiting' || view === 'seen' || view === 'partial'
+  const phase: 'pay' | 'confirming' | 'paid' | 'expired' | 'unreachable' =
+    livePay ? 'pay' : view
+  const canCancel = view === 'waiting' || view === 'unreachable'
+  const netChip = selected?.network ?? selected?.networkName ?? null
+  const payingWith = selected
+    ? selected.networkName && !selected.label.includes(selected.networkName)
+      ? `Pay with ${selected.label} on ${selected.networkName}`
+      : `Pay with ${selected.label}`
+    : null
+  const announce =
+    view === 'paid'
+      ? 'Payment confirmed.'
+      : view === 'confirming'
+        ? 'Payment received. Confirming.'
+        : view === 'seen'
+          ? 'Payment seen on the network.'
+          : view === 'partial'
+            ? `Partial payment received. ${dueDisplay} ${selected?.short ?? ''} remaining.`
+            : view === 'expired'
+              ? 'Invoice expired.'
+              : view === 'unreachable'
+                ? 'Payment service unreachable.'
+                : ''
 
-  // ── Ledger rail (shared desktop rail / mobile status card) ────────
-  const ledgerRail = (
-    <div>
-      <p
-        className="mb-4 text-[11px] font-bold uppercase tracking-[0.08em]"
-        style={{ color: L.faint }}
-      >
-        Payment Ledger
-      </p>
-      <LedgerDone title="Invoice Created" meta={fmtTime(createdAt)} />
-      <LedgerDone title="Rate Locked" meta={rateLine ? `${rateLine} · ${fmtTime(createdAt)}` : fmtTime(createdAt)} />
-      {(view === 'confirming' || view === 'paid') && (
-        <LedgerDone title="Payment Seen On Network" meta={`${seenTx ? `tx ${shortTx(seenTx)} ` : ''}${seenAtMeta}`.trim()} />
-      )}
-      {view === 'paid' ? (
-        <div className="relative pl-[22px]">
-          <motion.span
-            initial={{ scale: 0.5 }}
-            animate={{ scale: [0.5, 1.12, 1] }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="absolute left-[-4px] top-0 grid h-4 w-4 place-items-center rounded-full"
-            style={{ background: L.forestBtn }}
-          >
-            <Check className="h-2.5 w-2.5" style={{ color: L.lime }} strokeWidth={4} />
-          </motion.span>
-          <p className="text-[13px] font-extrabold" style={{ color: L.forest }}>
-            Payment Confirmed
+  const fade = {
+    initial: reduce ? false : { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: reduce ? { opacity: 1 } : { opacity: 0 },
+    transition: { duration: reduce ? 0 : 0.18, ease: 'easeOut' },
+  } as const
+
+  // ── Main column bodies ────────────────────────────────────────────
+  const payBody = selected ? (
+    <>
+      {/* Amount: the hero */}
+      <div className="p-5 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <p className="text-[13.5px] font-medium text-text-secondary">
+            {view === 'partial' ? 'Remaining To Send' : 'Send Exactly'}
           </p>
-          <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-            {listingTitle} is on its way to your inventory. Receipt emailed.
-          </p>
+          {expiresAt && <ExpiryChip remainingMs={remainingMs} />}
         </div>
-      ) : view === 'expired' || view === 'unreachable' ? (
-        <div className="relative pl-[22px]">
-          <span className="absolute left-0 top-[3px] h-2 w-2 rounded-full" style={{ background: L.ghost }} />
-          <p className="text-[13px] font-bold" style={{ color: L.ink }}>
-            {view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <p className="min-w-0 text-text-primary">
+            <span className="select-all break-all text-[34px] font-bold leading-[1.05] tracking-[-0.02em] tabular-nums sm:text-[40px]">
+              {dueDisplay}
+            </span>{' '}
+            <span className="text-[18px] font-semibold text-text-secondary sm:text-[20px]">{selected.short}</span>
           </p>
-          <p className="mt-1 text-[11.5px] leading-snug" style={{ color: L.muted }}>
-            {view === 'unreachable'
-              ? 'We couldn’t reach the payment server. Nothing was charged.'
-              : 'No charge was made and nothing was lost. Rates move, so we start fresh.'}
-          </p>
+          <CopyButton value={dueDisplay} label="Amount" />
         </div>
-      ) : (
-        <>
-          <LedgerLive
-            view={view}
-            dueDisplay={dueDisplay}
-            short={selected?.short ?? ''}
-            seenTx={seenTx ? shortTx(seenTx) : null}
-            onCopyRemaining={() => void copyText(dueDisplay, 'Remaining Amount')}
-            remainingClock={fmtCountdown(remainingMs)}
-            networkName={selected?.networkName ?? null}
-            confirmEta={selected?.confirmEta ?? null}
+        <p className="mt-2 text-[13px] tabular-nums text-text-tertiary">
+          {money(invoiceAmount)}
+          {rateLine ? ` · Rate locked at ${rateLine}` : ''}
+        </p>
+
+        {view === 'seen' && (
+          <StatusNote tone="live" icon={<CheckCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
+            Payment seen on the network. Confirming now.
+          </StatusNote>
+        )}
+        {view === 'partial' && (
+          <StatusNote tone="warn" icon={<WarningCircleIcon className="h-4 w-4" weight="fill" aria-hidden />}>
+            Partial payment received. Send the remaining{' '}
+            <span className="font-semibold tabular-nums">
+              {dueDisplay} {selected.short}
+            </span>{' '}
+            to the same address. Exchange fees often cause this, nothing is lost.
+          </StatusNote>
+        )}
+      </div>
+
+      {/* QR + address */}
+      <div className="grid grid-cols-1 gap-6 border-t border-white/[0.07] p-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8 sm:p-8">
+        <div className="justify-self-center sm:justify-self-start">
+          <PaymentQr
+            payload={qrPayload(selected)}
+            logo={selected.icon}
+            label={`QR code to pay ${dueDisplay} ${selected.short}${selected.networkName ? ` on ${selected.networkName}` : ''}`}
           />
-          {view !== 'seen' && <LedgerGhost title="Payment Seen On Network" />}
-          <LedgerGhost title="Confirmed" last />
-        </>
-      )}
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen" style={{ background: L.ivory }}>
-      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
-
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 sm:px-10">
-        {/* No back button on the payment page — leaving is a decision, and
-            the Cancel Order control below the receipt is the honest exit. */}
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-3">
-            <Lock className="h-[18px] w-[18px] shrink-0" style={{ color: L.forest }} />
-            <span
-              className="whitespace-nowrap text-[18px] font-bold sm:text-[24px]"
-              style={{ color: L.ink }}
-            >
-              Complete Your Payment
-            </span>
-          </span>
-          <span
-            className="hidden items-center gap-1.5 rounded-md border bg-[#1D1E23] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] sm:flex sm:text-[12.5px]"
-            style={{ borderColor: L.line, color: L.ink }}
-          >
-            <ShieldCheck className="h-4 w-4" style={{ color: L.forest }} />
-            256-Bit SSL Secure
-          </span>
         </div>
-
-        <div className="mt-6">
-          <StepIndicator view={view} />
-        </div>
-
-        <div className="mt-5 flex flex-col gap-3 lg:grid lg:justify-center lg:gap-7 lg:[grid-template-columns:280px_minmax(0,1fr)_260px]">
-          {/* ── Mobile: receipt first, ledger card second (order-*); lg grid
-              resets to source order via lg:order-none. ── */}
-          <div
-            className="order-2 rounded-lg border bg-[#1D1E23] p-4 lg:hidden"
-            style={{
-              borderColor:
-                view === 'seen' ? L.blueLn : view === 'partial' ? L.warnLn : view === 'paid' ? L.lime : L.line,
-            }}
-          >
-            {ledgerRail}
-          </div>
-
-          {/* ── Column 1: ledger rail (desktop) ── */}
-          <div className="hidden lg:block">
-            <div
-              className="rounded-lg border bg-[#1D1E23] p-[18px]"
-              style={{
-                borderColor:
-                  view === 'seen' ? L.blueLn : view === 'partial' ? L.warnLn : view === 'paid' ? L.lime : L.line,
-              }}
-            >
-              {ledgerRail}
-            </div>
-            <div className="mt-3 rounded-lg border bg-[#1D1E23] px-[18px] py-3.5" style={{ borderColor: L.line }}>
-              <p className="text-[12px] leading-relaxed" style={{ color: L.muted }}>
-                <b style={{ color: L.forest }}>Safe To Close This Page.</b> We keep watching —
-                you’ll get an email the moment it confirms.
-              </p>
-            </div>
-          </div>
-
-          {/* ── Column 2: receipt card ── */}
-          <div className="relative order-1 rounded-lg border bg-[#1D1E23] px-5 py-5 sm:px-8 sm:py-7 lg:order-none" style={{ borderColor: view === 'paid' ? L.lime : L.line }}>
-            {/* PAID stamp */}
-            <AnimatePresence>
-              {view === 'paid' && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 1.4, rotate: 8 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 8 }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
-                  className="pointer-events-none absolute right-6 top-5 z-10 rounded-md px-3 py-1 text-[18px] font-extrabold tracking-[0.12em]"
-                  style={{
-                    border: `2.5px solid ${L.forest}`,
-                    color: L.forest,
-                    background: 'rgba(163,230,53,0.18)',
-                  }}
-                >
-                  PAID
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Order row */}
-            <div className="flex items-center gap-3.5">
-              {itemImage && (
-                <Image
-                  src={itemImage}
-                  alt={listingTitle}
-                  width={52}
-                  height={52}
-                  unoptimized
-                  className="h-[52px] w-[52px] shrink-0 rounded-md object-cover"
-                  style={{ background: L.line2 }}
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold" style={{ color: L.ink }}>
-                  {listingTitle}
-                </p>
-                <p className="mt-0.5 font-mono text-[12px]" style={{ color: L.faint }}>
-                  {orderNumber ? `Order #${orderNumber}` : gameName ?? ''}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p
-                  className="text-[11px] font-bold uppercase tracking-[0.08em]"
-                  style={{ color: L.faint }}
-                >
-                  Amount Due
-                </p>
-                <p className="mt-0.5 text-[16px] font-bold" style={{ color: L.ink }}>
-                  {sym}
-                  {invoiceAmount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <div className="my-5 border-t border-dashed" style={{ borderColor: L.dash }} />
-
-            {view === 'expired' || view === 'unreachable' ? (
-              /* ── Expired / unreachable panel ── */
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <p className="text-[15px] font-bold" style={{ color: L.ink }}>
-                  {view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
-                </p>
-                <p className="max-w-[340px] text-[12.5px] leading-relaxed" style={{ color: L.muted }}>
-                  {view === 'unreachable'
-                    ? 'We couldn’t reach the payment server. Nothing was charged — try again in a moment.'
-                    : 'No charge was made and nothing was lost. Rates move, so we start fresh.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void freshInvoice()}
-                  disabled={retrying}
-                  className="inline-flex h-[44px] items-center gap-2 rounded-md px-5 text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110 disabled:opacity-70"
-                  style={{ background: L.forestBtn }}
-                >
-                  {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  {view === 'unreachable' ? 'Try Again' : 'Get A Fresh Invoice'}
-                </button>
-                <Link href="/support" className="text-[12px] underline" style={{ color: L.muted }}>
-                  Already sent? Contact support
-                </Link>
-              </div>
-            ) : selected ? (
-              <>
-                {/* Payment row — QR beside the amount/action stack; the
-                    button bottom-aligns with the QR so the row reads as one
-                    balanced block. */}
-                <div className="flex flex-col items-center gap-6 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-stretch sm:gap-7">
-                  <StyledQr
-                    data={selected.paymentLink || selected.address}
-                    logo={selected.icon}
-                    scanning={scanning}
-                  />
-                  {/* Phone: amount + pay button ABOVE the QR (order-first);
-                      sm+ keeps QR left / stack right. */}
-                  <div className="order-first flex w-full min-w-0 flex-col justify-between gap-5 sm:order-none sm:py-1">
-                    <div>
-                      <p
-                        className="text-[11px] font-bold uppercase tracking-[0.08em]"
-                        style={{ color: L.faint }}
-                      >
-                        Send Exactly
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <p
-                          className="whitespace-nowrap text-[26px] font-extrabold leading-none"
-                          style={{ color: L.ink }}
-                        >
-                          {dueDisplay} {selected.short}
-                        </p>
-                        <CopyChip value={dueDisplay} label="Amount" />
-                      </div>
-                      {(view === 'waiting' || view === 'seen' || view === 'partial') && (
-                        <p className="mt-2.5 text-[12px]" style={{ color: L.muted }}>
-                          Rate Locked · Expires In{' '}
-                          <b className="font-mono" style={{ color: L.forest }} suppressHydrationWarning>
-                            {fmtCountdown(remainingMs)}
-                          </b>
-                        </p>
-                      )}
-                    </div>
-                    {view === 'paid' ? (
-                      <button
-                        type="button"
-                        onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
-                        className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
-                        style={{ background: L.forestBtn }}
-                      >
-                        View Your Item
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void openInWallet()}
-                        className="h-[44px] w-full rounded-md text-[13.5px] font-semibold text-white transition-[filter] hover:brightness-110"
-                        style={{ background: L.forestBtn }}
-                      >
-                        Open In Wallet App
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address — full card width so it never folds into a tall
-                    column; network name lives in the label. */}
-                <div className="mt-5">
-                  <p
-                    className="text-[11px] font-bold uppercase tracking-[0.08em]"
-                    style={{ color: L.faint }}
-                  >
-                    {selected.short} Address
-                    {selected.networkName ? ` · ${selected.networkName}` : ''}
-                  </p>
-                  <div
-                    className="mt-2 flex items-center gap-1.5 rounded-md border py-1 pl-3 pr-1"
-                    style={{ borderColor: L.line, background: L.well }}
-                  >
-                    <code
-                      className="min-w-0 flex-1 break-all py-1.5 font-mono text-[12.5px] leading-relaxed"
-                      style={{ color: L.ink }}
-                    >
-                      {selected.address}
-                    </code>
-                    <CopyChip value={selected.address} label="Address" />
-                  </div>
-                </div>
-
-                {/* Network warning — only when the chain is known to matter. */}
-                {view !== 'paid' && selected.networkWarning && (
-                  <div
-                    className="mt-4 rounded-md border px-3.5 py-2.5 text-[12px] leading-[1.55]"
-                    style={{ background: L.warnBg, borderColor: L.warnLn, color: L.warnTx }}
-                  >
-                    {(() => {
-                      const [lead, ...rest] = selected.networkWarning.split(' — ')
-                      return rest.length ? (
-                        <>
-                          <b>{lead}</b> — {rest.join(' — ')}
-                        </>
-                      ) : (
-                        selected.networkWarning
-                      )
-                    })()}
-                  </div>
-                )}
-              </>
-            ) : null}
-
-            {/* Cancel — only while nothing has been sent; once a payment is
-                seen/confirming, cancelling could strand the buyer's coins. */}
-            {(view === 'waiting' || view === 'unreachable') && (
-              <div
-                className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-dashed pt-4 text-[12.5px]"
-                style={{ borderColor: L.dash }}
-              >
-                {!confirmingCancel ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingCancel(true)}
-                    className="font-semibold hover:underline"
-                    style={{ color: '#B42318' }}
-                  >
-                    Cancel Order
-                  </button>
-                ) : (
-                  <>
-                    <span style={{ color: L.muted }}>Cancel this order? Nothing has been charged.</span>
-                    <button
-                      type="button"
-                      onClick={() => void handleCancelOrder()}
-                      disabled={cancelling}
-                      className="inline-flex h-[30px] items-center gap-1.5 rounded-md border bg-[#1D1E23] px-3 font-semibold disabled:opacity-60"
-                      style={{ borderColor: 'rgba(255,107,107,0.4)', color: '#FF6B6B' }}
-                    >
-                      {cancelling && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      Yes, Cancel It
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingCancel(false)}
-                      disabled={cancelling}
-                      className="inline-flex h-[30px] items-center rounded-md border bg-[#1D1E23] px-3 font-semibold disabled:opacity-60"
-                      style={{ borderColor: L.line, color: L.ink }}
-                    >
-                      Keep Waiting
-                    </button>
-                  </>
-                )}
-              </div>
+        <div className="flex min-w-0 flex-col">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[13.5px] font-medium text-text-secondary">{selected.short} Address</p>
+            {netChip && (
+              <span className="inline-flex h-6 items-center rounded-full bg-white/[0.06] px-2.5 text-[12px] font-medium text-text-secondary">
+                {netChip}
+              </span>
             )}
           </div>
-
-          {/* ── Column 3: assurance (desktop) ── */}
-          <div className="hidden lg:block">
-            <div className="rounded-lg border bg-[#1D1E23] p-[18px]" style={{ borderColor: L.line }}>
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="grid h-5 w-5 place-items-center rounded-md"
-                  style={{ background: L.limePale }}
-                >
-                  <Check className="h-3 w-3" style={{ color: L.forest }} strokeWidth={3} />
-                </span>
-                <p className="text-[13px] font-bold" style={{ color: L.forest }}>
-                  SafeDrop Protection
-                </p>
-              </div>
-              <p className="mt-2 text-[12px] leading-relaxed" style={{ color: L.muted }}>
-                Item guaranteed or full refund — released to your inventory only after your payment
-                confirms.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-col gap-2 rounded-lg border bg-[#1D1E23] p-[18px]" style={{ borderColor: L.line }}>
-              <HelpDrawer
-                trigger={
-                  <button type="button" className="text-left text-[12.5px] font-semibold hover:underline" style={{ color: L.forest }}>
-                    Need Help?
-                  </button>
-                }
-              />
-              <Link href="/terms" className="text-[12.5px] hover:underline" style={{ color: L.forest }}>
-                Terms
-              </Link>
-              <Link href="/refunds" className="text-[12.5px] hover:underline" style={{ color: L.forest }}>
-                Refund Policy
-              </Link>
-            </div>
-          </div>
-
-          {/* ── Mobile footer line ── */}
-          <p className="order-3 pb-2 text-center text-[11.5px] lg:hidden" style={{ color: L.muted }}>
-            <Check className="mr-1 inline h-3 w-3" style={{ color: L.forest }} strokeWidth={3} />
-            SafeDrop Protected ·{' '}
-            <HelpDrawer
-              trigger={
-                <button type="button" className="font-semibold" style={{ color: L.forest }}>
-                  Need Help?
-                </button>
-              }
-            />{' '}
-            ·{' '}
-            <Link href="/terms" style={{ color: L.forest }}>
-              Terms
-            </Link>{' '}
-            ·{' '}
-            <Link href="/refunds" style={{ color: L.forest }}>
-              Refunds
-            </Link>
+          <p className="mt-2 select-all break-all font-mono text-[14px] leading-relaxed text-text-primary sm:text-[15px]">
+            {selected.address}
           </p>
+          <div className="mt-4 grid grid-cols-1 gap-2.5 sm:flex sm:flex-wrap">
+            <CopyButton value={selected.address} label="Address" className="w-full sm:w-auto" />
+            <button
+              type="button"
+              onClick={() => void openInWallet()}
+              className={cn(accountBtn.primary, 'h-10 w-full sm:w-auto', FOCUS)}
+            >
+              <WalletIcon className="h-4 w-4" aria-hidden />
+              Open In Wallet
+            </button>
+          </div>
+          {selected.networkWarning && (
+            <p className="mt-5 flex items-start gap-2 text-[13px] leading-relaxed text-text-secondary sm:mt-auto sm:pt-5">
+              <InfoIcon className="mt-[2px] h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+              <span>{selected.networkWarning}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    </>
+  ) : (
+    <StatePanel
+      icon={<WarningCircleIcon className="h-5 w-5 text-text-secondary" aria-hidden />}
+      title="Payment Details Unavailable"
+      action={
+        <button type="button" onClick={() => router.refresh()} className={cn(accountBtn.secondary, 'h-11 px-5', FOCUS)}>
+          <ArrowClockwiseIcon className="h-4 w-4" aria-hidden />
+          Reload
+        </button>
+      }
+    >
+      We couldn’t load the payment address. Nothing was charged.
+    </StatePanel>
+  )
+
+  const confirmingBody = (
+    <StatePanel
+      icon={<CircleNotchIcon className="h-5 w-5 text-lime-text motion-safe:animate-spin" aria-hidden />}
+      title="Payment Received, Confirming"
+    >
+      {selected?.confirmEta
+        ? `${selected.confirmEta.charAt(0).toUpperCase()}${selected.confirmEta.slice(1)}${selected.networkName ? ` on ${selected.networkName}` : ''}.`
+        : 'Usually just a few minutes.'}{' '}
+      Your funds are safe either way. You can close this page, we email you the moment it confirms.
+    </StatePanel>
+  )
+
+  const paidBody = (
+    <StatePanel
+      icon={<CheckCircleIcon className="h-6 w-6 text-lime-text" weight="fill" aria-hidden />}
+      title="Payment Confirmed"
+      action={
+        <>
+          <button
+            type="button"
+            onClick={() => router.replace(`/account/orders/${orderId}?paid=1`)}
+            className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}
+          >
+            View Your Item
+          </button>
+          <span className="text-[13px] text-text-tertiary">Taking you to your order…</span>
+        </>
+      }
+    >
+      {listingTitle} is on its way to your inventory. Receipt emailed.
+    </StatePanel>
+  )
+
+  const retryBody = (
+    <StatePanel
+      icon={
+        view === 'unreachable' ? (
+          <WarningCircleIcon className="h-5 w-5 text-text-secondary" aria-hidden />
+        ) : (
+          <ClockIcon className="h-5 w-5 text-text-secondary" aria-hidden />
+        )
+      }
+      title={view === 'unreachable' ? 'Payment Service Unreachable' : 'Invoice Expired'}
+      action={
+        <>
+          <button
+            type="button"
+            onClick={() => void freshInvoice()}
+            disabled={retrying}
+            className={cn(accountBtn.primary, 'h-11 px-5', FOCUS)}
+          >
+            {retrying ? (
+              <CircleNotchIcon className="h-4 w-4 motion-safe:animate-spin" aria-hidden />
+            ) : (
+              <ArrowClockwiseIcon className="h-4 w-4" aria-hidden />
+            )}
+            {view === 'unreachable' ? 'Try Again' : 'Get A Fresh Invoice'}
+          </button>
+          <Link
+            href="/support"
+            className={cn('rounded-sm text-[13.5px] text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
+          >
+            Already Sent? Contact Support
+          </Link>
+        </>
+      }
+    >
+      {view === 'unreachable'
+        ? 'We couldn’t reach the payment server. Nothing was charged. Try again in a moment.'
+        : 'No charge was made and nothing was lost. Rates move, so we start fresh.'}
+    </StatePanel>
+  )
+
+  const body =
+    phase === 'pay'
+      ? payBody
+      : phase === 'confirming'
+        ? confirmingBody
+        : phase === 'paid'
+          ? paidBody
+          : retryBody
+
+  return (
+    <div className="min-h-[100dvh] bg-bg-base">
+      <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
+
+      <div className="mx-auto w-full max-w-[1080px] px-4 pb-16 pt-6 sm:px-6 sm:pt-10 lg:px-8">
+        {/* No back button: leaving is a decision, and Cancel Order below
+            the payment is the honest exit. */}
+        <header>
+          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.015em] text-text-primary sm:text-[28px]">
+            Complete Your Payment
+          </h1>
+          {payingWith && <p className="mt-1.5 text-[14px] text-text-secondary">{payingWith}</p>}
+        </header>
+        <p className="sr-only" aria-live="polite">
+          {announce}
+        </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+          {/* ── Main column: payment ── */}
+          <section aria-label="Payment" className={cn(MARKET_CARD, 'min-w-0 overflow-hidden rounded-lg')}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={phase} {...fade}>
+                {body}
+              </motion.div>
+            </AnimatePresence>
+
+            {(livePay || canCancel) && (
+              <div className="flex flex-col gap-3 border-t border-white/[0.07] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                {livePay ? (
+                  <p className="text-[13px] leading-relaxed text-text-tertiary">
+                    Safe to close this page. We keep watching and email you the moment it confirms.
+                  </p>
+                ) : (
+                  <span />
+                )}
+                {canCancel &&
+                  (!confirmingCancel ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingCancel(true)}
+                      className={cn(
+                        '-mx-2 self-start rounded-md px-2 py-1.5 text-[13.5px] font-medium text-text-secondary transition-colors hover:text-error sm:self-auto',
+                        FOCUS
+                      )}
+                    >
+                      Cancel Order
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-[13.5px] text-text-secondary">
+                        Cancel this order? Nothing has been charged.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingCancel(false)}
+                        disabled={cancelling}
+                        className={cn(accountBtn.secondary, 'h-10', FOCUS)}
+                      >
+                        Keep Waiting
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleCancelOrder()}
+                        disabled={cancelling}
+                        className={cn(accountBtn.danger, 'h-10', FOCUS)}
+                      >
+                        {cancelling && <CircleNotchIcon className="h-4 w-4 motion-safe:animate-spin" aria-hidden />}
+                        Yes, Cancel It
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </section>
+
+          {/* ── Side column: status + summary + policy ── */}
+          <aside className="flex min-w-0 flex-col gap-4" aria-label="Order">
+            <section aria-label="Payment Status" className={cn(MARKET_CARD, 'order-1 rounded-lg p-5 lg:order-2')}>
+              <h2 className="mb-4 text-[14px] font-semibold text-text-primary">Payment Status</h2>
+              <StatusTimeline
+                view={view}
+                createdAt={createdAt}
+                seenAt={stamps.current.seen ?? null}
+                confirmedAt={stamps.current.confirmed ?? null}
+                seenTx={seenTx}
+                networkName={selected?.networkName ?? null}
+                confirmEta={selected?.confirmEta ?? null}
+              />
+            </section>
+
+            <section aria-label="Order Summary" className={cn(MARKET_CARD, 'order-2 rounded-lg p-5 lg:order-1')}>
+              <div className="flex items-start gap-3.5">
+                {itemImage ? (
+                  <Image
+                    src={itemImage}
+                    alt=""
+                    width={52}
+                    height={52}
+                    unoptimized
+                    className="h-[52px] w-[52px] shrink-0 rounded-md bg-white/[0.04] object-cover"
+                  />
+                ) : (
+                  <span aria-hidden className="h-[52px] w-[52px] shrink-0 rounded-md bg-white/[0.04]" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-text-primary">
+                    {listingTitle}
+                  </p>
+                  {gameName && <p className="mt-0.5 truncate text-[13px] text-text-secondary">{gameName}</p>}
+                  {orderNumber && (
+                    <p className="mt-0.5 select-all text-[12.5px] tabular-nums text-text-tertiary">
+                      Order {orderNumber}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 border-t border-white/[0.07] pt-1">
+                {summary.itemPrice != null && (
+                  <SummaryRow label={summary.quantity > 1 ? `Item Price × ${summary.quantity}` : 'Item Price'}>
+                    {money(summary.itemPrice)}
+                  </SummaryRow>
+                )}
+                {summary.serviceFee != null && summary.serviceFee > 0 && (
+                  <SummaryRow label="Service Fee">{money(summary.serviceFee)}</SummaryRow>
+                )}
+                {summary.promoDiscount > 0 && (
+                  <SummaryRow label="Discount">−{money(summary.promoDiscount)}</SummaryRow>
+                )}
+                {summary.storeCredit > 0 && (
+                  <SummaryRow label="Store Credit">−{money(summary.storeCredit)}</SummaryRow>
+                )}
+                <SummaryRow label="Total" strong>
+                  {money(invoiceAmount)}
+                </SummaryRow>
+              </div>
+            </section>
+
+            <div className="order-3 px-1 pt-1">
+              <p className="flex items-start gap-2 text-[13px] leading-relaxed text-text-secondary">
+                <ShieldCheckIcon className="mt-[2px] h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+                <span>
+                  Covered by <span className="font-medium text-text-primary">SafeDrop Protection</span>. Item
+                  guaranteed or full refund.
+                </span>
+              </p>
+              <nav aria-label="Help And Policies" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 pl-6 text-[13px]">
+                <HelpDrawer
+                  trigger={
+                    <button
+                      type="button"
+                      className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
+                    >
+                      Payment Help
+                    </button>
+                  }
+                />
+                <Link
+                  href="/terms"
+                  className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
+                >
+                  Terms
+                </Link>
+                <Link
+                  href="/refunds"
+                  className={cn('rounded-sm text-text-secondary underline-offset-4 hover:text-text-primary hover:underline', FOCUS)}
+                >
+                  Refund Policy
+                </Link>
+              </nav>
+            </div>
+          </aside>
         </div>
       </div>
     </div>

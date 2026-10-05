@@ -5,6 +5,7 @@ import { socialTitle } from '@/lib/seo/title'
 import { formatUsd } from '@/lib/value-listings/format'
 import { loadItemListingsPage } from '../_valueItemOffers'
 import { ItemListingsView } from './_ItemListingsView'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 
 /**
  * Shared by /{game}/{category}/item/{item} and …/item/{item}/{variant}.
@@ -43,7 +44,7 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
   const data = await loadItemListingsPage(params.gameSlug, params.categorySlug, params.itemSlug, params.variant ?? null)
   if (!data) notFound()
   return (
-    <>
+    <GameHeroBackdrop gameSlug={params.gameSlug} size="market">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -53,6 +54,6 @@ export async function ItemRoutePage({ params }: { params: ItemRouteParams }) {
         ])}
       />
       <ItemListingsView gameSlug={params.gameSlug} data={data} />
-    </>
+    </GameHeroBackdrop>
   )
 }

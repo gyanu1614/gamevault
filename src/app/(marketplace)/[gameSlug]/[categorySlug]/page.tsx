@@ -29,6 +29,7 @@ import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
 import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
 import { unstable_cache } from 'next/cache'
 import RouteSkeleton from './_RouteSkeleton'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 // PERF-004 — the three page variants below are mutually exclusive: a category
 // resolves to exactly one of them at render time. Statically importing all
 // three made every visitor download all three (60.4 + 50.5 + 30.5 kB of source
@@ -392,11 +393,15 @@ export default async function CategoryBrowseRoute(props: PageProps) {
   if (resolution.kind === 'not-found') notFound()
 
   // Skeleton preserved — it just lives in an in-page boundary now instead of
-  // a route-level loading.tsx.
+  // a route-level loading.tsx. The game's hero background sits OUTSIDE the
+  // boundary, so it ships in the first flush with the skeleton (every branch:
+  // currency, bundles, items, accounts, boosting, generic).
   return (
-    <Suspense fallback={<RouteSkeleton />}>
-      <CategoryBrowsePage {...props} />
-    </Suspense>
+    <GameHeroBackdrop gameSlug={gameSlug} size="market">
+      <Suspense fallback={<RouteSkeleton />}>
+        <CategoryBrowsePage {...props} />
+      </Suspense>
+    </GameHeroBackdrop>
   )
 }
 
@@ -867,7 +872,8 @@ async function CategoryBrowsePage({ params }: PageProps) {
   const subTypes = ((category as any).sub_types as string[]) || []
 
   return (
-    <div className="min-h-screen bg-bg-base">
+    // Transparent: the game's hero background shows through behind the header.
+    <div className="min-h-screen">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },

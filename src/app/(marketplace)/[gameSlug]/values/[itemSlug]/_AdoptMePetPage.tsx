@@ -4,7 +4,7 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { AdoptMePriceTrend } from './_AdoptMePriceTrend'
-import { SabHeroBackdrop } from '../_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -157,7 +157,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
       {/* Everything the variant selection touches — hero, callout, stats, chart —
           lives inside one provider so picking a form up top reprices it all. */}
       <SelectedVariantProvider initial="FR">
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug="adopt-me" size="tall">
         <HubNav data={hubNav} />
 
         <div className={`mx-auto w-full max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
@@ -189,7 +189,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             />
           </div>
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <AvailableNow
         gameSlug="adopt-me"
