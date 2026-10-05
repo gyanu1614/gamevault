@@ -56,6 +56,17 @@ describe('ACC-03 — delivery method / window are closed sets', () => {
     expect(validateListingWrite({ ...base, images: Array(11).fill('https://x.y/a.png') }, ITEMS)).toMatchObject({ ok: false })
   })
 
+  it('images may be a same-site static path (older currency offers carry /games/<game>.png)', () => {
+    const CURRENCY = { categoryType: 'currency' as const, currencyConfig: null }
+    const cur = { ...base, title: '', quantity: 1000, min_quantity: 1 }
+    expect(validateListingWrite({ ...cur, images: ['/games/gag.png'] }, CURRENCY)).toMatchObject({ ok: true })
+    expect(validateListingWrite({ ...base, images: ['/games/fortnite.png'] }, ITEMS)).toMatchObject({ ok: true })
+    // Never another host, a traversal, a query or a non-image.
+    for (const bad of ['//evil.com/a.png', '/../etc/passwd.png', '/games/a.png?x=1', '/games/a.html', '/', 'games/a.png', '/\\evil.com/a.png']) {
+      expect(validateListingWrite({ ...base, images: [bad] }, ITEMS), bad).toMatchObject({ ok: false })
+    }
+  })
+
   it('patch: only the touched fields are validated, unknown keys are refused', () => {
     expect(validateListingPatch({ price: 2 }, ITEMS, existing)).toMatchObject({ ok: true, value: { price: 2 } })
     expect(validateListingPatch({ approved_by: 'me' }, ITEMS, existing)).toMatchObject({ ok: false })
