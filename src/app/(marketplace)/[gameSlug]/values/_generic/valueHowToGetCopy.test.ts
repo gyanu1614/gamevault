@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseHowToGet, type ValueHowToGet } from '@/lib/values/how-to-get'
 import {
+  boxName,
   checkedLabel,
-  howToGetFaq,
+  howToGetFaqs,
+  howToGetGuide,
   howToGetNote,
-  howToGetPath,
-  howToGetRows,
   howToGetSources,
   howToGetStatusMeta,
 } from './valueHowToGetCopy'
@@ -67,38 +67,67 @@ describe('how-to-get copy', () => {
     expect(howToGetStatusMeta('seasonal')).toEqual({ label: 'Returns Seasonally', dot: 'bg-info' })
   })
 
-  it('shows only the rows that are present', () => {
-    expect(howToGetRows(chromaLightbringer).map((r) => r.label)).toEqual(['Method', 'Cost', 'Odds', 'Released'])
-    // Seer's cost is its recipe, shown in the Craft It panel, so no Cost row.
-    expect(howToGetRows(seer).map((r) => r.label)).toEqual(['Method'])
-    expect(howToGetRows(harvester).map((r) => r.label)).toEqual(['Method', 'Original Cost', 'Released'])
+  const guide = (name: string, h: ValueHowToGet, cheapestUsd: number | null = 2.17) =>
+    howToGetGuide({ name, shortName: 'MM2', h, cheapestUsd })
+
+  it('answers first, like a guide: yes, free, and the honest maths for a box drop', () => {
+    const g = guide('Chroma Lightbringer', chromaLightbringer)
+    expect(g.lead).toBe('Yes, you can get Chroma Lightbringer for free in MM2.')
+    expect(g.body).toBe(
+      'It drops from Mystery Box 2, and you can spin it with Coins you earn by playing. ' +
+        'It’s a 0.004% chance, so it takes about 25,000 spins (25,000,000 Coins) on average. ' +
+        'That’s why most players buy or trade for it instead, from $2.17.',
+    )
+    expect(g.steps.map((s) => s.title)).toEqual(['Earn Coins', 'Open Mystery Box 2', 'Spin It', 'Keep Spinning'])
+    expect(g.steps[0].body).toBe('Play rounds to earn Coins. Diamonds or Mystery Keys work too.')
+    expect(g.steps[2].body).toBe('Each spin costs 1,000 Coins, 100 Diamonds or 1 Mystery Key.')
+    expect(g.buyLabel).toBe('Or Skip The Grind')
+    expect(g.history).toBe('Released March 2020 update.')
   })
 
-  it('compares unboxing with buying, on average, from the stated odds', () => {
-    expect(howToGetPath(chromaLightbringer)).toEqual({
-      kind: 'unbox',
-      copy: {
-        headline: '25,000,000 Coins',
-        detail: '25,000 spins at 1,000 Coins each',
-        alternatives: 'or 2,500,000 Diamonds, or 25,000 Mystery Keys',
-      },
-    })
-    expect(howToGetPath(seer)).toEqual({
-      kind: 'craft',
-      recipe: [{ label: '20 Legendary Shards', hint: 'salvage at least 10 Legendary weapons' }],
-    })
+  it('turns a recipe into craft steps', () => {
+    const g = guide('Seer', seer, 0.29)
+    expect(g.lead).toBe('Yes, you can craft Seer for free in MM2.')
+    expect(g.steps.map((s) => s.title)).toEqual(['Collect 20 Legendary Shards', 'Open The Crafting Station', 'Craft Seer'])
+    expect(g.steps[0].body).toBe('Salvage at least 10 Legendary weapons.')
   })
 
-  it('is honest when it cannot be obtained, and never implies an unconfirmed item can', () => {
-    expect(howToGetPath(harvester)).toEqual({ kind: 'trade', lines: ['Trading or buying is the only way to get it now.'] })
-    expect(howToGetPath(beachy)).toEqual({
-      kind: 'trade',
-      lines: ["We couldn't confirm whether this can still be obtained.", 'Trading or buying is the sure way to get it now.'],
-    })
-    // No cost, odds or research memo on an unconfirmed item.
-    expect(howToGetRows(beachy).map((r) => r.label)).toEqual(['Method', 'Released'])
+  it('says no plainly when it cannot be obtained, and keeps the history', () => {
+    const g = guide('Harvester', harvester, 7.2)
+    expect(g.lead).toBe('No, Harvester can’t be obtained in MM2 anymore.')
+    expect(g.body).toMatch(/no free way to get it now/)
+    expect(g.steps.map((s) => s.title)).toEqual(['Check What It’s Worth', 'Buy Or Trade For It', 'Get It In-Game'])
+    expect(g.steps[1].body).toBe('Buy it from a reputable seller (from $7.20), or trade for it with another player.')
+    expect(g.history).toBe(
+      'Originally: Tier 30 reward of the Halloween 2021 event pass (80,000 Candies (2021)) · Released 2021 (Halloween Event 2021).',
+    )
+  })
+
+  it('never implies an unconfirmed item can be obtained', () => {
+    const g = guide('Beachy', beachy)
+    expect(g.lead).toMatch(/^Unconfirmed/)
+    expect(`${g.lead} ${g.body}`).not.toMatch(/Yes|for free|1,699|3,399/)
     expect(howToGetNote(beachy)).toBeNull()
-    expect(howToGetFaq('Beachy', 'MM2', beachy).a).not.toMatch(/1,699|3,399|can be obtained in MM2 now/)
+    expect(howToGetFaqs({ name: 'Beachy', shortName: 'MM2', h: beachy, cheapestUsd: 3 })[0].a).not.toMatch(/Yes/)
+  })
+
+  it('uses "hatch" for pets from an egg', () => {
+    const fireCat: ValueHowToGet = {
+      ...base,
+      status: 'obtainable',
+      method: 'Hatched from the Common Egg in the in-game Shop (Chroma drop).',
+      costs: '1,000 Coins or 100 Diamonds per hatch',
+      odds: '0.004% per hatch',
+    }
+    const g = guide('Chroma Fire Cat', fireCat)
+    expect(g.body).toMatch(/^It hatches from Common Egg, and you can hatch it with Coins you earn by playing\. /)
+    expect(g.steps.map((s) => s.title)).toEqual(['Earn Coins', 'Open Common Egg', 'Hatch It', 'Keep Hatching'])
+    expect(g.steps[3].body).toMatch(/^At 0.004% per hatch, expect about 25,000 hatches on average/)
+  })
+
+  it('finds the box name in the method', () => {
+    expect(boxName(chromaLightbringer.method)).toBe('Mystery Box 2')
+    expect(boxName('Tier 30 reward of the Halloween 2021 event pass.')).toBeNull()
   })
 
   it("doesn't repeat the trade line in an unobtainable note", () => {
@@ -127,17 +156,15 @@ describe('how-to-get copy', () => {
     expect(checkedLabel(chromaLightbringer)).toBe('Checked Oct 5, 2026')
   })
 
-  it('answers "How do you get X?" for the FAQ and its schema', () => {
-    expect(howToGetFaq('Chroma Lightbringer', 'MM2', chromaLightbringer)).toEqual({
-      q: 'How do you get Chroma Lightbringer in MM2?',
-      a:
-        'Chroma Lightbringer can be obtained in MM2 now. Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop). ' +
-        'Each spin costs 1,000 Coins, 100 Diamonds or 1 Mystery Key, and it drops at 0.004% per spin — about 25,000 spins (25,000,000 Coins) on average. ' +
-        'You can also trade for it or buy it from another player.',
+  it('answers the searches people make: "how do you get X" and "can you get X for free"', () => {
+    const [how, free] = howToGetFaqs({ name: 'Chroma Lightbringer', shortName: 'MM2', h: chromaLightbringer, cheapestUsd: 2.17 })
+    expect(how.q).toBe('How do you get Chroma Lightbringer in MM2?')
+    expect(how.a).toMatch(/^Yes, you can get Chroma Lightbringer for free in MM2\. /)
+    expect(how.a).toMatch(/Step by step: 1\. Earn Coins — Play rounds to earn Coins/)
+    expect(free).toEqual({
+      q: 'Can you get Chroma Lightbringer for free in MM2?',
+      a: `${guide('Chroma Lightbringer', chromaLightbringer).lead} ${guide('Chroma Lightbringer', chromaLightbringer).body}`,
     })
-    expect(howToGetFaq('Harvester', 'MM2', harvester).a).toBe(
-      'Harvester is no longer obtainable in MM2. Tier 30 reward of the Halloween 2021 event pass. Trading or buying is the only way to get it now.',
-    )
   })
 
   it('takes the "Where does it come from?" slot in the page FAQ (one FAQ list, no repeat)', () => {
@@ -156,25 +183,24 @@ describe('how-to-get copy', () => {
       priceChangedAt: null,
       counterpart: null,
     }
-    const qs = itemFaq(input, howToGetFaq('Harvester', 'MM2', harvester)).map((f) => f.q)
-    expect(qs[1]).toBe('How do you get Harvester in MM2?')
+    const qs = itemFaq(input, howToGetFaqs({ name: 'Harvester', shortName: 'MM2', h: harvester, cheapestUsd: 7.2 })).map((f) => f.q)
+    expect(qs.slice(1, 3)).toEqual(['How do you get Harvester in MM2?', 'Can you get Harvester for free in MM2?'])
     expect(qs.some((q) => q.startsWith('Where does'))).toBe(false)
     expect(itemFaq(input).map((f) => f.q)[1]).toBe('Where does Harvester come from?')
   })
 
-  it('reads every entry of the shipped dataset into a section', () => {
+  it('builds a guide for every entry of the shipped dataset; every obtainable item gets steps', () => {
     const entries = JSON.parse(readFileSync('scripts/values-seeds/murder-mystery-2.how-to-get.json', 'utf8')) as Array<
-      Record<string, unknown> & { slug: string }
+      Record<string, unknown> & { slug: string; name: string }
     >
-    const kinds: Record<string, number> = {}
+    expect(entries.length).toBeGreaterThanOrEqual(100)
     for (const e of entries) {
       const h = parseHowToGet(e)
       expect(h, e.slug).not.toBeNull()
-      const path = howToGetPath(h!)
-      kinds[path.kind] = (kinds[path.kind] ?? 0) + 1
-      // Every obtainable item in the data is a box with stated odds or a recipe.
-      if (h!.status === 'obtainable') expect(['unbox', 'craft'], e.slug).toContain(path.kind)
+      const g = howToGetGuide({ name: e.name, shortName: 'MM2', h: h!, cheapestUsd: 1 })
+      expect(g.lead, e.slug).toBeTruthy()
+      if (h!.status === 'obtainable') expect(g.steps.length, e.slug).toBeGreaterThan(0)
+      if (h!.status !== 'obtainable') expect(`${g.lead} ${g.body}`, e.slug).not.toMatch(/\bfor free\b(?! way)/)
     }
-    expect(kinds.trade).toBe(73)
   })
 })

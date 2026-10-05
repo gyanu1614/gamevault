@@ -16,11 +16,10 @@ import {
   formatAmount,
   formatCount,
   isCrafted,
+  plural,
   parseRecipe,
   unboxExpectation,
   type HowToGetStatus,
-  type RecipePart,
-  type UnboxExpectation,
   type ValueHowToGet,
 } from '@/lib/values/how-to-get'
 
@@ -46,29 +45,11 @@ export function howToGetStatusMeta(status: HowToGetStatus): StatusMeta {
   }
 }
 
-/** Method / Cost / Odds / Released, only the ones present (and allowed for the status). */
-export function howToGetRows(h: ValueHowToGet): Array<{ label: string; value: string }> {
-  const rows = [{ label: 'Method', value: h.method }]
-  if (h.status === 'unknown') {
-    if (h.released) rows.push({ label: 'Released', value: h.released })
-    return rows
-  }
-  // A craftable item's cost IS its recipe, which the Craft It panel already
-  // shows — don't print it twice.
-  const recipeShown = h.status === 'obtainable' && isCrafted(h) && parseRecipe(h.costs) != null
-  if (h.costs && !recipeShown) {
-    rows.push({ label: h.status === 'unobtainable' ? 'Original Cost' : 'Cost', value: h.costs })
-  }
-  if (h.odds) rows.push({ label: 'Odds', value: h.odds })
-  if (h.released) rows.push({ label: 'Released', value: h.released })
-  return rows
-}
-
 /**
- * The short muted line under the rows. Never on an unconfirmed item (its note
- * is a research memo). On an unobtainable item the data's closing "trading or
- * buying is the only way now" is dropped: the panel next to it says exactly
- * that, so the page doesn't say it twice.
+ * The short muted line under the steps. Never on an unconfirmed item (its
+ * note is a research memo). On an unobtainable item the data's closing
+ * "trading or buying is the only way now" is dropped: the answer above says
+ * exactly that, so the card doesn't say it twice.
  */
 export function howToGetNote(h: ValueHowToGet): string | null {
   if (h.status === 'unknown' || !h.note) return null
@@ -78,54 +59,6 @@ export function howToGetNote(h: ValueHowToGet): string | null {
     .replace(/\s*Trading or buying is the only way( to get it)? now\.$/, '')
     .trim()
   return note || null
-}
-
-export const TRADE_ONLY_LINE = 'Trading or buying is the only way to get it now.'
-export const UNCONFIRMED_LINE = "We couldn't confirm whether this can still be obtained."
-export const UNCONFIRMED_TRADE_LINE = 'Trading or buying is the sure way to get it now.'
-export const SEASONAL_LINE = 'It comes back with its event. Until then, trading or buying is the way to get it.'
-
-export interface UnboxCopy {
-  /** "25,000,000 Coins" */
-  headline: string
-  /** "25,000 spins at 1,000 Coins each" */
-  detail: string
-  /** "or 2,500,000 Diamonds, or 25,000 Mystery Keys" */
-  alternatives: string | null
-}
-
-export function unboxCopy(e: UnboxExpectation): UnboxCopy {
-  const [first, ...rest] = e.totals
-  return {
-    headline: formatAmount(first.total, first.unit),
-    detail: `${formatCount(e.spins)} ${e.spins === 1 ? 'spin' : 'spins'} at ${formatAmount(first.amount, first.unit)} each`,
-    alternatives: rest.length ? `or ${rest.map((t) => formatAmount(t.total, t.unit)).join(', or ')}` : null,
-  }
-}
-
-/** What the right-hand panel shows next to "Buy It". */
-export type HowToGetPath =
-  | { kind: 'unbox'; copy: UnboxCopy }
-  | { kind: 'craft'; recipe: RecipePart[] }
-  | { kind: 'buy' }
-  | { kind: 'trade'; lines: string[] }
-
-export function howToGetPath(h: ValueHowToGet): HowToGetPath {
-  switch (h.status) {
-    case 'unobtainable':
-      return { kind: 'trade', lines: [TRADE_ONLY_LINE] }
-    case 'unknown':
-      return { kind: 'trade', lines: [UNCONFIRMED_LINE, UNCONFIRMED_TRADE_LINE] }
-    case 'seasonal':
-      return { kind: 'trade', lines: [SEASONAL_LINE] }
-  }
-  const e = unboxExpectation(h)
-  if (e) return { kind: 'unbox', copy: unboxCopy(e) }
-  if (isCrafted(h)) {
-    const recipe = parseRecipe(h.costs)
-    if (recipe) return { kind: 'craft', recipe }
-  }
-  return { kind: 'buy' }
 }
 
 export interface SourceGroup {
@@ -181,28 +114,175 @@ export function checkedLabel(h: ValueHowToGet): string {
 
 const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)
 
-/** The FAQ entry (visible FAQ + FAQPage schema): "How do you get X in MM2?" */
-export function howToGetFaq(name: string, shortName: string, h: ValueHowToGet): { q: string; a: string } {
-  const q = `How do you get ${name} in ${shortName}?`
-  const method = sentence(h.method)
-  switch (h.status) {
-    case 'unobtainable':
-      return { q, a: `${name} is no longer obtainable in ${shortName}. ${method} ${TRADE_ONLY_LINE}` }
-    case 'unknown':
-      return {
-        q,
-        a: `We couldn't confirm whether ${name} can still be obtained in ${shortName}. ${method} ${UNCONFIRMED_TRADE_LINE}`,
-      }
-    case 'seasonal':
-      return { q, a: `${name} returns seasonally in ${shortName}. ${method} ${SEASONAL_LINE}` }
+/* ───────────────────────── The guide (owner, 2026-10-05) ─────────────────────────
+ * One card that reads like a short guide, not a data table: a direct answer
+ * (Yes / No / Unconfirmed, and whether it can be had FREE — what players
+ * search), then numbered steps, then one "or buy it" line. The same answer
+ * feeds the FAQ + FAQPage schema, so the page and Google say the same thing.
+ */
+
+export interface GuideStep {
+  title: string
+  body: string
+}
+
+export interface HowToGetGuide {
+  /** "Yes, you can get it free." — the answer's first, bold clause. */
+  lead: string
+  /** The rest of the answer paragraph. */
+  body: string
+  /** Numbered steps (empty when there is nothing honest to list). */
+  steps: GuideStep[]
+  /** "Originally: …" / "Released …" — the item's history, one muted line. */
+  history: string | null
+  /** Label over the price in the closing bar: "Or skip the grind" / "Buy it now". */
+  buyLabel: string
+}
+
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+const noDot = (s: string) => s.replace(/[.\s]+$/, '')
+const usd = (n: number | null) =>
+  n == null ? null : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+/** "Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop)." → "Mystery Box 2" */
+export function boxName(method: string): string | null {
+  const m = method.match(/\bfrom (?:the )?(.+?) in the in-game Shop\b/i)
+  return m ? m[1].trim() : null
+}
+
+function historyLine(h: ValueHowToGet, past: boolean): string | null {
+  const parts: string[] = []
+  if (past) parts.push(`Originally: ${noDot(h.method)}${h.costs ? ` (${noDot(h.costs)})` : ''}`)
+  if (h.released) parts.push(`Released ${h.released}`)
+  return parts.length ? `${parts.join(' · ')}.` : null
+}
+
+const TRADE_STEPS = (name: string, price: string | null): GuideStep[] => [
+  { title: 'Check What It’s Worth', body: 'Use the prices on this page so you know what a fair deal looks like.' },
+  {
+    title: 'Buy Or Trade For It',
+    body: `Buy it from a reputable seller${price ? ` (from ${price})` : ''}, or trade for it with another player.`,
+  },
+  { title: 'Get It In-Game', body: `The seller sends ${name} to you through an in-game trade.` },
+]
+
+export function howToGetGuide(opts: {
+  name: string
+  shortName: string
+  h: ValueHowToGet
+  cheapestUsd: number | null
+}): HowToGetGuide {
+  const { name, shortName, h } = opts
+  const price = usd(opts.cheapestUsd)
+  const fromPrice = price ? `, from ${price}` : ''
+
+  if (h.status === 'unobtainable') {
+    return {
+      lead: `No, ${name} can’t be obtained in ${shortName} anymore.`,
+      body: `There’s no free way to get it now, and it isn’t sold for Robux either. Trading or buying from another player is the only way${fromPrice}.`,
+      steps: TRADE_STEPS(name, price),
+      history: historyLine(h, true),
+      buyLabel: 'Buy It Now',
+    }
   }
-  let a = `${name} can be obtained in ${shortName} now. ${method}`
+  if (h.status === 'unknown') {
+    return {
+      lead: `Unconfirmed: we couldn’t verify whether ${name} can still be obtained in ${shortName}.`,
+      body: `Until that’s confirmed, trading or buying is the sure way to get it${fromPrice}.`,
+      steps: TRADE_STEPS(name, price),
+      history: historyLine(h, true),
+      buyLabel: 'Buy It Now',
+    }
+  }
+  if (h.status === 'seasonal') {
+    return {
+      lead: `Only during its event: ${name} comes back with its event in ${shortName}.`,
+      body: `Until then, trading or buying is the way to get it${fromPrice}.`,
+      steps: TRADE_STEPS(name, price),
+      history: historyLine(h, true),
+      buyLabel: 'Buy It Now',
+    }
+  }
+
+  // Obtainable now.
   const e = unboxExpectation(h)
   if (e) {
-    const u = unboxCopy(e)
-    a += ` Each spin costs ${h.costs!.replace(/\s+per\s+spin$/i, '')}, and it drops at ${e.oddsPct}% per spin — about ${formatCount(e.spins)} spins (${u.headline}) on average.`
-  } else if (h.costs) {
-    a += ` It costs ${sentence(h.costs)}`
+    const coins = e.totals.find((t) => /^coins?$/i.test(t.unit))
+    const box = boxName(h.method)
+    const first = e.totals[0]
+    const perSpin = e.totals.map((t) => formatAmount(t.amount, t.unit)).join(', ')
+    const others = e.totals.filter((t) => t !== (coins ?? first)).map((t) => plural(t.unit, 2))
+    // A box is spun, an egg (pets) is hatched — the steps use the game's word.
+    const hatch = e.action === 'hatch'
+    const verb = hatch ? 'hatch' : 'spin'
+    const verbs = hatch ? 'hatches' : 'spins'
+    const where = box ?? (hatch ? 'an egg in the in-game Shop' : 'a box in the in-game Shop')
+    return {
+      lead: coins
+        ? `Yes, you can get ${name} for free in ${shortName}.`
+        : `Yes, ${name} can still be obtained in ${shortName}.`,
+      body: `It ${hatch ? 'hatches' : 'drops'} from ${where}${coins ? `, and you can ${verb} ${hatch ? 'it' : 'it'} with Coins you earn by playing` : ''}. It’s a ${e.oddsPct}% chance, so it takes about ${formatCount(e.spins)} ${verbs} (${formatAmount((coins ?? first).total, (coins ?? first).unit)}) on average. That’s why most players buy or trade for it instead${fromPrice}.`,
+      steps: [
+        {
+          title: coins ? 'Earn Coins' : `Get ${plural(first.unit, 2)}`,
+          body: coins
+            ? `Play rounds to earn Coins.${others.length ? ` ${others.join(' or ')} work too.` : ''}`
+            : `Each ${verb} is paid with ${plural(first.unit, 2)}.`,
+        },
+        { title: `Open ${box ?? (hatch ? 'The Egg' : 'The Box')}`, body: `Find ${box ?? (hatch ? 'the egg' : 'the box')} in the in-game Shop.` },
+        { title: hatch ? 'Hatch It' : 'Spin It', body: `Each ${verb} costs ${perSpin.replace(/, ([^,]*)$/, ' or $1')}.` },
+        {
+          title: hatch ? 'Keep Hatching' : 'Keep Spinning',
+          body: `At ${e.oddsPct}% per ${verb}, expect about ${formatCount(e.spins)} ${verbs} on average — luck can make it far more or far fewer.`,
+        },
+      ],
+      history: historyLine(h, false),
+      buyLabel: 'Or Skip The Grind',
+    }
   }
-  return { q, a: `${a} You can also trade for it or buy it from another player.` }
+
+  const recipe = isCrafted(h) ? parseRecipe(h.costs) : null
+  if (recipe) {
+    const needs = recipe.map((r) => r.label).join(' + ')
+    return {
+      lead: `Yes, you can craft ${name} for free in ${shortName}.`,
+      body: `It’s made at the Crafting Station from ${needs} — no Robux needed. Buying one is the shortcut${fromPrice}.`,
+      steps: [
+        ...recipe.map((r) => ({
+          title: `Collect ${r.label}`,
+          body: r.hint ? `${r.hint.charAt(0).toUpperCase()}${r.hint.slice(1)}.` : `You need ${r.label}.`,
+        })),
+        { title: 'Open The Crafting Station', body: 'Use the Crafting Station in MM2.' },
+        { title: `Craft ${name}`, body: sentence(h.method) },
+      ],
+      history: historyLine(h, false),
+      buyLabel: 'Or Skip The Grind',
+    }
+  }
+
+  return {
+    lead: `Yes, ${name} can still be obtained in ${shortName}.`,
+    body: `${sentence(h.method)}${h.costs ? ` It costs ${noDot(h.costs)}.` : ''} You can also buy or trade for it${fromPrice}.`,
+    steps: [],
+    history: historyLine(h, false),
+    buyLabel: 'Or Buy It Now',
+  }
+}
+
+/** The FAQ entries (visible FAQ + FAQPage schema), worded like the searches. */
+export function howToGetFaqs(opts: {
+  name: string
+  shortName: string
+  h: ValueHowToGet
+  cheapestUsd: number | null
+}): { q: string; a: string }[] {
+  const g = howToGetGuide(opts)
+  const answer = `${g.lead} ${g.body}`
+  const steps = g.steps.length
+    ? ` Step by step: ${g.steps.map((s, i) => `${i + 1}. ${noDot(s.title)} — ${noDot(s.body)}.`).join(' ')}`
+    : ''
+  return [
+    { q: `How do you get ${opts.name} in ${opts.shortName}?`, a: `${answer}${steps}` },
+    { q: `Can you get ${opts.name} for free in ${opts.shortName}?`, a: answer },
+  ]
 }

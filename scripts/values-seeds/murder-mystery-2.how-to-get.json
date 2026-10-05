@@ -424,10 +424,11 @@
     "status": "unobtainable",
     "method": "Bought with Robux via the Futuristic Item Pack; the pass is now off sale.",
     "costs": "899 Robux",
-    "released": "2017 (Futuristic Item Pack)",
+    "released": "March 2016 (Futuristic Item Pack)",
     "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Virtual",
+      "https://murder-mystery-2.fandom.com/wiki/Futuristic_Item_Pack",
       "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
     ],
     "confidence": "high",
@@ -530,10 +531,11 @@
     "status": "unobtainable",
     "method": "Bought with Robux via the American Item Pack; the pass is now off sale.",
     "costs": "899 Robux",
-    "released": "2017 (American Item Pack)",
+    "released": "July 2016 (American Item Pack)",
     "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Old_Glory",
+      "https://murder-mystery-2.fandom.com/wiki/American_Item_Pack",
       "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
     ],
     "confidence": "high",
@@ -804,10 +806,11 @@
     "status": "unobtainable",
     "method": "Bought with Robux via the Futuristic Item Pack; the pass is now off sale.",
     "costs": "899 Robux",
-    "released": "2017 (Futuristic Item Pack)",
+    "released": "March 2016 (Futuristic Item Pack)",
     "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Blaster",
+      "https://murder-mystery-2.fandom.com/wiki/Futuristic_Item_Pack",
       "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
     ],
     "confidence": "high",
@@ -1201,10 +1204,11 @@
     "name": "Clockwork",
     "status": "unobtainable",
     "method": "Bought with Robux via the Clockwork Item Pack; the pass is now off sale.",
-    "released": "2017 (Clockwork Item Pack)",
+    "released": "February 2016 (Clockwork Item Pack)",
     "note": "Off sale: Roblox lists this pack as not for sale (checked 2026-10-05). The wiki gives two different past prices (899 and 1,299 Robux), so no price is shown.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Clockwork",
+      "https://murder-mystery-2.fandom.com/wiki/Clockwork_Item_Pack",
       "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
     ],
     "confidence": "high",
@@ -1529,6 +1533,1824 @@
       "https://murder-mystery-2.fandom.com/wiki/Red_Seer",
       "https://murder-mystery-2.fandom.com/wiki/Crafting",
       "https://murder-mystery-2.fandom.com/wiki/Random_Painted_Seers"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-travelers-gun",
+    "name": "Chroma Traveler's Gun",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2023 Halloween Box during the Halloween Event 2023 (Chroma drop); the box left with the event.",
+    "costs": "300 Candies or 1 Traveler Key per spin",
+    "odds": "under 0.2% (wiki estimate)",
+    "released": "2023 (Halloween Event 2023, Oct 17 - Nov 21 2023)",
+    "note": "The regular Traveler's Gun came from the same box at 0.2%. The exact Chroma rate was never published. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Traveler's_Gun",
+      "https://murder-mystery-2.fandom.com/wiki/2023_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-evergun",
+    "name": "Chroma Evergun",
+    "status": "unobtainable",
+    "method": "Rare alternate reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2023.",
+    "costs": "100 Gifts given (800 Snow Tokens each, about 80,000 Snow Tokens in total)",
+    "released": "2023 (Christmas Event 2023, Dec 20 2023 - Feb 2 2024)",
+    "note": "Each 100-Gift reward was normally the regular Evergun, with a very small chance of the Chroma. The exact rate was never published. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Evergun",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-evergreen",
+    "name": "Chroma Evergreen",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2023 Christmas Box during the Christmas Event 2023 (Chroma drop); the box left with the event.",
+    "costs": "800 Snow Tokens or 1 Snow Key per spin",
+    "released": "2023 (Christmas Event 2023, Dec 20 2023 - Feb 2 2024)",
+    "note": "The regular Evergreen dropped at 0.2%. The wiki box table lists the Chroma at the same 0.2%, which we could not confirm, so no rate is shown. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Evergreen",
+      "https://murder-mystery-2.fandom.com/wiki/2023_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-bauble",
+    "name": "Chroma Bauble",
+    "status": "unobtainable",
+    "method": "Rare alternate reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2024.",
+    "costs": "100 Gifts given (800 Snow Tokens each, about 80,000 Snow Tokens in total)",
+    "odds": "about 1 in 50 per 100-Gift reward (wiki)",
+    "released": "2024 (Christmas Event 2024, Dec 20 2024 - Feb 1 2025)",
+    "note": "The other 49 in 50 rewards were the regular Bauble. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Bauble",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-vampires-gun",
+    "name": "Chroma Vampire's Gun",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2024 Halloween Box during the Halloween Event 2024 (Chroma drop); the box left with the event.",
+    "costs": "800 Candies or 1 Vampire Key per spin",
+    "odds": "under 0.2% (wiki estimate)",
+    "released": "2024 (Halloween Event 2024, Oct 16 - Dec 9 2024)",
+    "note": "The regular Vampire's Gun came from the same box at 0.2%. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Vampire's_Gun",
+      "https://murder-mystery-2.fandom.com/wiki/2024_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-constellation",
+    "name": "Chroma Constellation",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2024 Christmas Box during the Christmas Event 2024 (Chroma drop); the box left with the event.",
+    "costs": "800 Snow Tokens or 1 Snow Key per spin",
+    "released": "2024 (Christmas Event 2024, Dec 20 2024 - Feb 1 2025)",
+    "note": "The regular Constellation dropped at 0.2%; the Chroma rate was never published. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Constellation",
+      "https://murder-mystery-2.fandom.com/wiki/2024_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-alienbeam",
+    "name": "Chroma Alienbeam",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2025 Halloween Box during the Halloween Event 2025 (Chroma drop); the box left with the event.",
+    "costs": "800 Candies or 1 Alien Key per spin",
+    "odds": "under 0.2% (wiki estimate)",
+    "released": "2025 (Halloween Event 2025, Oct 18 - Nov 21 2025)",
+    "note": "The wiki item page still reads 'is obtainable', but the Halloween 2025 event ended Nov 21, 2025. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Alienbeam",
+      "https://murder-mystery-2.fandom.com/wiki/2025_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-raygun",
+    "name": "Chroma Raygun",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Raygun at tier 25 of the Halloween 2025 battle pass.",
+    "costs": "90,000 Candies (2025) for the tier",
+    "odds": "about 1 in 50 per Raygun purchase (wiki estimate)",
+    "released": "2025 (Halloween Event 2025, Oct 18 - Nov 21 2025)",
+    "note": "The DB flag said obtainable, but the Halloween 2025 event ended Nov 21, 2025. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Raygun",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-sunrise",
+    "name": "Chroma Sunrise",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2025 Summer Box during the Summer Event 2025 (Chroma drop); the box left with the event.",
+    "costs": "800 Beach Balls or 1 Summer Key per spin",
+    "released": "2025 (Summer Event 2025, Jul 18 - Oct 18 2025)",
+    "note": "The wiki item and box pages still say 'currently obtainable', which is out of date: the Summer 2025 event ended Oct 18, 2025. The box table lists the Chroma at the same 0.2% as the regular Sunrise, which we could not confirm, so no rate is shown.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Sunrise",
+      "https://murder-mystery-2.fandom.com/wiki/2025_Summer_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-sunset",
+    "name": "Chroma Sunset",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Sunset at tier 25 of the Summer 2025 battle pass.",
+    "costs": "90,000 Beach Balls for the tier",
+    "odds": "2% per Sunset purchase (wiki)",
+    "released": "2025 (Summer Event 2025, Jul 18 - Oct 18 2025)",
+    "note": "The DB flag said obtainable, but the Summer 2025 event ended Oct 18, 2025. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Sunset",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "travelers-axe",
+    "name": "Traveler's Axe",
+    "status": "unobtainable",
+    "method": "Tier 30 reward of the Halloween 2023 battle pass.",
+    "costs": "30,000 Candies (2023)",
+    "released": "2023 (Halloween Event 2023, Oct 17 - Nov 21 2023)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Traveler's_Axe",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-snowcannon",
+    "name": "Chroma Snowcannon",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Snowcannon at tier 30 of the Christmas 2025 battle pass.",
+    "costs": "100,000 Snow Tokens for the tier",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "The DB flag said obtainable, but the Christmas 2025 event ended Jan 19, 2026. The Chroma rate was never published. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Snowcannon",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-blizzard",
+    "name": "Chroma Blizzard",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Snowstorm Bundle during the Christmas 2025 event.",
+    "costs": "3,399 Robux (Snowstorm Bundle)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "There was no separate Blizzard gamepass; the bundle was the only way. Roblox lists the Snowstorm bundle as not for sale (checked 2026-10-05). The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Blizzard",
+      "https://murder-mystery-2.fandom.com/wiki/Snowstorm_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "travelers-gun",
+    "name": "Traveler's Gun",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2023 Halloween Box during the Halloween Event 2023; the box left with the event.",
+    "costs": "300 Candies or 1 Traveler Key per spin",
+    "odds": "0.2% per spin",
+    "released": "2023 (Halloween Event 2023, Oct 17 - Nov 21 2023)",
+    "note": "Chroma Traveler's Gun came from the same box at a lower rate. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Traveler's_Gun",
+      "https://murder-mystery-2.fandom.com/wiki/2023_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-snowstorm",
+    "name": "Chroma Snowstorm",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Snowstorm Bundle during the Christmas 2025 event.",
+    "costs": "3,399 Robux (Snowstorm Bundle)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "There was no separate Snowstorm gamepass; the bundle was the only way. Roblox lists the Snowstorm bundle as not for sale (checked 2026-10-05). The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Snowstorm",
+      "https://murder-mystery-2.fandom.com/wiki/Snowstorm_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-heart-wand",
+    "name": "Chroma Heart Wand",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2026 Valentine's Box during the Valentine's Event 2026 (Chroma drop); the box left with the event.",
+    "costs": "30 Heart Gems or 60 Diamonds per spin",
+    "odds": "under 0.1% (wiki estimate)",
+    "released": "2026 (Valentine's Event, Feb 13 - Apr 13 2026)",
+    "note": "The wiki item page and the DB flag still say obtainable, but the event ended Apr 13, 2026. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Heart_Wand",
+      "https://murder-mystery-2.fandom.com/wiki/2026_Valentine's_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Valentines_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "evergun",
+    "name": "Evergun",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2023.",
+    "costs": "100 Gifts given (800 Snow Tokens each, about 80,000 Snow Tokens in total)",
+    "released": "2023 (Christmas Event 2023, Dec 20 2023 - Feb 2 2024)",
+    "note": "Each 100-Gift reward had a very small chance to be Chroma Evergun instead. Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Evergun",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "evergreen",
+    "name": "Evergreen",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2023 Christmas Box during the Christmas Event 2023; the box left with the event.",
+    "costs": "800 Snow Tokens or 1 Snow Key per spin",
+    "odds": "0.2% per spin",
+    "released": "2023 (Christmas Event 2023, Dec 20 2023 - Feb 2 2024)",
+    "note": "Chroma Evergreen came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Evergreen",
+      "https://murder-mystery-2.fandom.com/wiki/2023_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2023"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-watergun",
+    "name": "Chroma Watergun",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2024 Summer Box during the Summer Event 2024 (Chroma drop); the box left with the event.",
+    "costs": "400 Beach Balls or 1 Summer Key per spin",
+    "released": "2024 (Summer Event 2024, Jul 5 - Oct 16 2024)",
+    "note": "The wiki box table lists the Chroma at the same 0.2% as the regular Watergun, which we could not confirm, so no rate is shown. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Watergun",
+      "https://murder-mystery-2.fandom.com/wiki/2024_Summer_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-snow-dagger",
+    "name": "Chroma Snow Dagger",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2025 Christmas Box during the Christmas Event 2025 (Chroma drop); the box left with the event.",
+    "costs": "600 Snow Tokens or 1 Snow Key per spin",
+    "odds": "under 0.1% (wiki estimate)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "The DB flag said obtainable, but the Christmas 2025 event ended Jan 19, 2026. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Snow_Dagger",
+      "https://murder-mystery-2.fandom.com/wiki/2025_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "constellation",
+    "name": "Constellation",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2024 Christmas Box during the Christmas Event 2024; the box left with the event.",
+    "costs": "800 Snow Tokens or 1 Snow Key per spin",
+    "odds": "0.2% per spin",
+    "released": "2024 (Christmas Event 2024, Dec 20 2024 - Feb 1 2025)",
+    "note": "Chroma Constellation came from the same box at a lower rate. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Constellation",
+      "https://murder-mystery-2.fandom.com/wiki/2024_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "celestial",
+    "name": "Celestial",
+    "status": "unobtainable",
+    "method": "Tier 20 reward of the Christmas 2024 battle pass.",
+    "costs": "98,000 Snow Tokens",
+    "released": "2024 (Christmas Event 2024, Dec 20 2024 - Feb 1 2025)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Celestial",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2024"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-treat",
+    "name": "Chroma Treat",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Treat Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Sweet Bundle",
+    "released": "2026 (Valentine's Event, Feb 13 - Apr 13 2026)",
+    "note": "The wiki item page still reads 'is obtainable', but the event ended Apr 13, 2026 and Roblox lists the Sweet Treat bundle as not for sale (checked 2026-10-05). The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Treat",
+      "https://murder-mystery-2.fandom.com/wiki/Treat_Gamepass",
+      "https://murder-mystery-2.fandom.com/wiki/Sweet_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "alienbeam",
+    "name": "Alienbeam",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2025 Halloween Box during the Halloween Event 2025; the box left with the event.",
+    "costs": "800 Candies or 1 Alien Key per spin",
+    "odds": "0.2% per spin",
+    "released": "2025 (Halloween Event 2025, Oct 18 - Nov 21 2025)",
+    "note": "Chroma Alienbeam came from the same box at a lower rate. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Alienbeam",
+      "https://murder-mystery-2.fandom.com/wiki/2025_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-sweet",
+    "name": "Chroma Sweet",
+    "status": "unobtainable",
+    "method": "Rare alternate reward when buying the Sweet Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Sweet Bundle",
+    "released": "2026 (Valentine's Event, Feb 13 - Apr 13 2026)",
+    "note": "The wiki item page still reads 'is obtainable', but the event ended Apr 13, 2026 and Roblox lists the Sweet Treat bundle as not for sale (checked 2026-10-05). The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Sweet",
+      "https://murder-mystery-2.fandom.com/wiki/Sweet_Gamepass",
+      "https://murder-mystery-2.fandom.com/wiki/Sweet_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "darkshot",
+    "name": "Darkshot",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Darkshot Gamepass (or the Darkness Bundle) during the Halloween 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Darkness Bundle",
+    "released": "2023 (Halloween Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Darkshot",
+      "https://murder-mystery-2.fandom.com/wiki/Darkness_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-icecream",
+    "name": "Chroma Icecream",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2026 Summer Box during the Summer Event 2026 (Chroma drop); the box left with the event.",
+    "costs": "120 Shells or 60 Diamonds per spin",
+    "odds": "0.004% per spin",
+    "released": "2026 (Summer Event 2026, Jul 23 - Aug 23 2026)",
+    "note": "The wiki item page still reads 'is obtainable', but the Summer 2026 event ended Aug 23, 2026. The regular Icecream came from the same box at 0.2%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Icecream",
+      "https://murder-mystery-2.fandom.com/wiki/2026_Summer_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "darksword",
+    "name": "Darksword",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Darksword Gamepass (or the Darkness Bundle) during the Halloween 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Darkness Bundle",
+    "released": "2023 (Halloween Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Darksword",
+      "https://murder-mystery-2.fandom.com/wiki/Darkness_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-sands",
+    "name": "Chroma Sands",
+    "status": "unknown",
+    "method": "Rare alternate reward when buying the Sands Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026).",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Beach Bundle",
+    "released": "2026 (Summer Event 2026)",
+    "note": "Sources conflict: the wiki calls it a limited-time Summer 2026 offer and the event ended Aug 23, 2026, but Roblox still lists the Beach Bundle gamepass as for sale at 3,399 Robux (checked 2026-10-05), and the single-item pass is not listed. We could not confirm a purchase still grants the weapons or a Chroma chance. Show trade/buy only. The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Sands",
+      "https://murder-mystery-2.fandom.com/wiki/Beach_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "low",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "blossom",
+    "name": "Blossom",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Blossom Gamepass (or the Sakura Bundle) during the Valentine's 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Sakura Bundle",
+    "released": "2023 (Valentines Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Blossom",
+      "https://murder-mystery-2.fandom.com/wiki/Sakura_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-beachy",
+    "name": "Chroma Beachy",
+    "status": "unknown",
+    "method": "Rare alternate reward when buying the Beachy Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026).",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Beach Bundle",
+    "released": "2026 (Summer Event 2026)",
+    "note": "Sources conflict: the wiki calls it a limited-time Summer 2026 offer and the event ended Aug 23, 2026, but Roblox still lists the Beach Bundle gamepass as for sale at 3,399 Robux (checked 2026-10-05), and the single-item pass is not listed. We could not confirm a purchase still grants the weapons or a Chroma chance. Show trade/buy only. The Chroma rate was never published.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Beachy",
+      "https://murder-mystery-2.fandom.com/wiki/Beach_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "low",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "sakura",
+    "name": "Sakura",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Sakura Gamepass (or the Sakura Bundle) during the Valentine's 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Sakura Bundle",
+    "released": "2023 (Valentines Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Sakura",
+      "https://murder-mystery-2.fandom.com/wiki/Sakura_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "sunset",
+    "name": "Sunset",
+    "status": "unobtainable",
+    "method": "Tier 25 reward of the Summer 2025 battle pass.",
+    "costs": "90,000 Beach Balls",
+    "released": "2025 (Summer Event 2025, Jul 18 - Oct 18 2025)",
+    "note": "The DB flag said obtainable, but the Summer 2025 event ended Oct 18, 2025. Each purchase had a 2% chance to give Chroma Sunset instead. Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Sunset",
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "soul",
+    "name": "Soul",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Soul Gamepass (or the Spirit & Soul Bundle) during the Halloween 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Spirit & Soul Bundle",
+    "released": "2024 (Halloween Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Soul",
+      "https://murder-mystery-2.fandom.com/wiki/Spirit_&_Soul_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "spirit",
+    "name": "Spirit",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Spirit Gamepass (or the Spirit & Soul Bundle) during the Halloween 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Spirit & Soul Bundle",
+    "released": "2024 (Halloween Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Spirit",
+      "https://murder-mystery-2.fandom.com/wiki/Spirit_&_Soul_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "xenoshot",
+    "name": "Xenoshot",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Xenoshot Gamepass (or the Xenotech Bundle) during the Halloween 2025 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Xenotech Bundle",
+    "released": "2025 (Halloween Event 2025)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Xenoshot",
+      "https://murder-mystery-2.fandom.com/wiki/Xenotech_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "xenoknife",
+    "name": "Xenoknife",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Xenoknife Gamepass (or the Xenotech Bundle) during the Halloween 2025 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Xenotech Bundle",
+    "released": "2025 (Halloween Event 2025)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now. (The Xenoknife wiki page says 3,499 Robux for the bundle; the bundle and event pages say 3,399.)",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Xenoknife",
+      "https://murder-mystery-2.fandom.com/wiki/Xenotech_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "flora",
+    "name": "Flora",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Flora Gamepass (or the Bloom Bundle) during the Easter 2025 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Bloom Bundle",
+    "released": "2025 (Easter Event 2025)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Flora",
+      "https://murder-mystery-2.fandom.com/wiki/Bloom_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "bloom",
+    "name": "Bloom",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Bloom Gamepass (or the Bloom Bundle) during the Easter 2025 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Bloom Bundle",
+    "released": "2025 (Easter Event 2025)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Bloom",
+      "https://murder-mystery-2.fandom.com/wiki/Bloom_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "rainbow-godly",
+    "name": "Rainbow (Godly)",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Rainbow Gamepass (or the Rainbow Bundle) during the Easter 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Rainbow Bundle",
+    "released": "April 2023 (Easter Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now. This Godly knife is a different item from the Rainbow Box and from the Godly Rainbow Gun.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Rainbow_(Godly)",
+      "https://murder-mystery-2.fandom.com/wiki/Rainbow_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "blizzard",
+    "name": "Blizzard",
+    "status": "unobtainable",
+    "method": "Came in the Snowstorm Bundle, sold for Robux during the Christmas 2025 event; the bundle is now off sale.",
+    "costs": "3,399 Robux (Snowstorm Bundle)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "There was no separate Blizzard gamepass. The DB flag said obtainable, but Roblox lists the Snowstorm bundle as not for sale (checked 2026-10-05). Each purchase had a small chance to give Chroma Blizzard instead.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Blizzard",
+      "https://murder-mystery-2.fandom.com/wiki/Snowstorm_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "snowstorm",
+    "name": "Snowstorm",
+    "status": "unobtainable",
+    "method": "Came in the Snowstorm Bundle, sold for Robux during the Christmas 2025 event; the bundle is now off sale.",
+    "costs": "3,399 Robux (Snowstorm Bundle)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "There was no separate Snowstorm gamepass. The DB flag said obtainable, but Roblox lists the Snowstorm bundle as not for sale (checked 2026-10-05). Each purchase had a small chance to give Chroma Snowstorm instead.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Snowstorm",
+      "https://murder-mystery-2.fandom.com/wiki/Snowstorm_Bundle",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "waves",
+    "name": "Waves",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Waves Gamepass (or the Ocean/Beach Pack bundle) during the Summer 2023 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the bundle",
+    "released": "2023 (Summer Event 2023)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Waves",
+      "https://murder-mystery-2.fandom.com/wiki/Ocean_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "australis",
+    "name": "Australis",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Australis Gamepass (or the Aurora bundle) during the Christmas 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the bundle",
+    "released": "2024 (Christmas Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Australis",
+      "https://murder-mystery-2.fandom.com/wiki/Australis_&_Borealis_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "borealis",
+    "name": "Borealis",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Borealis Gamepass (or the Aurora bundle) during the Christmas 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the bundle",
+    "released": "2024 (Christmas Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Borealis",
+      "https://murder-mystery-2.fandom.com/wiki/Australis_&_Borealis_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "pearlshine",
+    "name": "Pearlshine",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Pearlshine Gamepass (or the Pearls Bundle) during the Summer 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Pearls Bundle",
+    "released": "2024 (Summer Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Pearlshine",
+      "https://murder-mystery-2.fandom.com/wiki/Pearls_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "pearl",
+    "name": "Pearl",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Pearl Gamepass (or the Pearls Bundle) during the Summer 2024 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the Pearls Bundle",
+    "released": "2024 (Summer Event 2024)",
+    "note": "The DB flag said obtainable, but off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Pearl",
+      "https://murder-mystery-2.fandom.com/wiki/Pearls_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "ornament",
+    "name": "Ornament",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2025.",
+    "costs": "100 Gifts given (600 Snow Tokens each, about 60,000 Snow Tokens in total)",
+    "released": "2025 (Christmas Event 2025, Dec 14 2025 - Jan 19 2026)",
+    "note": "The wiki item page and the DB flag still say obtainable, but the Christmas 2025 event ended Jan 19, 2026. Each 100-Gift reward had about a 1 in 50 chance to be Chroma Ornament instead. Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Ornament",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-laser",
+    "name": "Chroma Laser",
+    "status": "obtainable",
+    "method": "Unboxed from Gun Box 3 in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
+    "odds": "0.004% per spin",
+    "note": "The regular Godly Laser drops from the same box at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Laser",
+      "https://murder-mystery-2.fandom.com/wiki/Gun_Box_3",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-gemstone",
+    "name": "Chroma Gemstone",
+    "status": "obtainable",
+    "method": "Unboxed from Mystery Box 1 in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
+    "odds": "0.004% per spin",
+    "released": "2019 (Season 1 update)",
+    "note": "The DB flag said not obtainable, but Mystery Box 1 is in the Shop. The regular Gemstone drops from the same box at 0.2%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Gemstone",
+      "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_1",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-slasher",
+    "name": "Chroma Slasher",
+    "status": "obtainable",
+    "method": "Unboxed from Knife Box 4 in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
+    "odds": "0.004% per spin",
+    "note": "The regular Slasher drops from the same box at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Slasher",
+      "https://murder-mystery-2.fandom.com/wiki/Knife_Box_4",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "makeshift",
+    "name": "Makeshift",
+    "status": "unobtainable",
+    "method": "Tier 20 of the Survivors reward track in the Halloween 2022 event.",
+    "costs": "50,000 Candies (2022)",
+    "released": "2022 (Halloween Event 2022)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Makeshift",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2022"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "elderwood-blade",
+    "name": "Elderwood Blade",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2022 Halloween Box during the Halloween Event 2022; the box left with the event.",
+    "costs": "600 Candies per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2022 (Halloween Event 2022)",
+    "note": "Chroma Elderwood Blade came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Elderwood_Blade",
+      "https://murder-mystery-2.fandom.com/wiki/2022_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2022"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-cookiecane",
+    "name": "Chroma Cookiecane",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2022 Christmas Box during the Christmas Event 2022 (Chroma drop); the box left with the event.",
+    "costs": "700 Snow Tokens or 1 Snow Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2022 (Christmas Event 2022)",
+    "note": "Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Cookiecane",
+      "https://murder-mystery-2.fandom.com/wiki/2022_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2022"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "swirly-axe",
+    "name": "Swirly Axe",
+    "status": "unobtainable",
+    "method": "Tier 20 reward of the Christmas 2021 event.",
+    "costs": "80,000 Snow Tokens",
+    "released": "2021 (Christmas Event 2021)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Swirly_Axe",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2021"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "candleflame",
+    "name": "Candleflame",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2021 Halloween Box during the Halloween Event 2021; the box left with the event.",
+    "costs": "600 Candies or 1 Reaver Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2021 (Halloween Event 2021)",
+    "note": "Chroma Candleflame came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Candleflame",
+      "https://murder-mystery-2.fandom.com/wiki/2021_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2021"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-seer",
+    "name": "Chroma Seer",
+    "status": "obtainable",
+    "method": "Crafted from the Random Painted Seer recipe at the Crafting Station; it is the rarest of the six possible results.",
+    "costs": "10 Godly Shards + 10 Godly Metals per craft",
+    "released": "2019 (Season 1 update)",
+    "note": "You cannot pick the colour: the recipe rolls Red, Orange, Yellow, Blue, Purple or (rarely) Chroma Seer. The Chroma rate is not published. The materials need at least ten Seers and one other Godly salvaged.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Seer",
+      "https://murder-mystery-2.fandom.com/wiki/Crafting",
+      "https://murder-mystery-2.fandom.com/wiki/Random_Painted_Seers"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "phantom",
+    "name": "Phantom",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Phantom Gamepass (or the Phantom & Spectre bundle) during the Halloween 2022 event; the pass is now off sale.",
+    "costs": "1,699 Robux alone, 3,399 Robux in the bundle",
+    "released": "2022 (Halloween Event 2022)",
+    "note": "Off sale: Roblox lists both the single pass and the bundle as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Phantom",
+      "https://murder-mystery-2.fandom.com/wiki/Ghost_Bundle",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "green-luger",
+    "name": "Green Luger",
+    "status": "unobtainable",
+    "method": "Crafted during Christmas 2015 by combining a Luger with 75 Gifts; the recipe ended with the event.",
+    "costs": "1 Luger + 75 Gifts (2015 event currency)",
+    "odds": "51% per craft (the other 49% gave Red Luger)",
+    "released": "2015 (Christmas Event 2015)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Green_Luger",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2015"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "swirly-gun",
+    "name": "Swirly Gun",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2021 Christmas Box during the Christmas Event 2021; the box left with the event.",
+    "costs": "800 Snow Tokens or 1 Snow Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2021 (Christmas Event 2021)",
+    "note": "Chroma Swirly Gun came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Swirly_Gun",
+      "https://murder-mystery-2.fandom.com/wiki/2021_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2021"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "amerilaser",
+    "name": "Amerilaser",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the American Item Pack; the pass is now off sale.",
+    "costs": "899 Robux",
+    "released": "July 2016 (American Item Pack)",
+    "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Amerilaser",
+      "https://murder-mystery-2.fandom.com/wiki/American_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "pixel",
+    "name": "Pixel",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the 8-Bit Item Pack; the pass is now off sale.",
+    "costs": "899 Robux",
+    "released": "February 2016 (8-Bit Item Pack)",
+    "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Pixel",
+      "https://murder-mystery-2.fandom.com/wiki/8-Bit_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "laser-vintage",
+    "name": "Laser (Vintage)",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "1,200 Points in MM1 (the wiki gives both 15 and 20 Cash as the Cash price)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now. Not the same item as the Godly Laser from Gun Box 3.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Laser_(Vintage)",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "ginger-luger",
+    "name": "Ginger Luger",
+    "status": "unobtainable",
+    "method": "Crafted during Christmas 2018 from a Gingerbread Cookie (salvaged from a Gingerblade) and a Gold Bar (salvaged from a Luger); the recipe ended with the event.",
+    "costs": "1 Gingerbread Cookie + 1 Gold Bar",
+    "released": "2018 (Christmas Event 2018)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Ginger_Luger",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2018"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "lugercane",
+    "name": "Lugercane",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2019.",
+    "costs": "100 Gifts given (1,000 Snow Tokens each, about 100,000 Snow Tokens in total)",
+    "released": "2019 (Christmas Event 2019)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Lugercane",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2019"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "minty",
+    "name": "Minty",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2019 Christmas Box during the Christmas Event 2019; the box left with the event.",
+    "costs": "600 Snow Tokens or 1 Snow Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2019 (Christmas Event 2019)",
+    "note": "Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Minty",
+      "https://murder-mystery-2.fandom.com/wiki/2019_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2019"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "gingermint",
+    "name": "Gingermint",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2022.",
+    "costs": "100 Gifts given (1,000 Snow Tokens each, about 100,000 Snow Tokens in total)",
+    "released": "2022 (Christmas Event 2022)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Gingermint",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2022"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "spider",
+    "name": "Spider",
+    "status": "unobtainable",
+    "method": "Reward for completing every Bingo Challenge in the Halloween 2015 event.",
+    "released": "2015 (Halloween Event 2015, Oct 29 - Nov 4 2015)",
+    "note": "It was the only Godly in MM2's first event. Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Spider",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2015"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "jinglegun",
+    "name": "Jinglegun",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2020.",
+    "costs": "100 Gifts given (1,000 Snow Tokens each, about 100,000 Snow Tokens in total)",
+    "released": "2020 (Christmas Event 2020)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Jinglegun",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2020"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "cookiecane",
+    "name": "Cookiecane",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2022 Christmas Box during the Christmas Event 2022; the box left with the event.",
+    "costs": "700 Snow Tokens or 1 Snow Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2022 (Christmas Event 2022)",
+    "note": "Chroma Cookiecane came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Cookiecane",
+      "https://murder-mystery-2.fandom.com/wiki/2022_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2022"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "phaser",
+    "name": "Phaser",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "2,000 Points or 40 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Phaser",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "prismatic",
+    "name": "Prismatic",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Prismatic Gamepass; the pass is now off sale.",
+    "costs": "1,699 Robux",
+    "released": "July 2020",
+    "note": "Sold from Jul 17 to Dec 13, 2020, with a short break around Halloween 2020. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Prismatic",
+      "https://murder-mystery-2.fandom.com/wiki/Prismatic_Gamepass",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-cat",
+    "name": "Chroma Fire Cat",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Cat hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Cat",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-bat",
+    "name": "Chroma Fire Bat",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Bat hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bat",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "ghost",
+    "name": "Ghost",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "1,200 Points or 20 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Ghost",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "hallows-blade",
+    "name": "Hallow's Blade",
+    "status": "unobtainable",
+    "method": "Bought from the Mysterious Traveller NPC for Candies during the Halloween 2017 event.",
+    "costs": "100 Candies (2017 event currency)",
+    "released": "2017 (Halloween Event 2017, Oct 27 - Nov 14 2017)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Hallow's_Blade",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2017"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chill",
+    "name": "Chill",
+    "status": "unobtainable",
+    "method": "Crafted during Christmas 2015 by combining a Heat with 100 Gifts; the recipe ended with the event.",
+    "costs": "1 Heat + 100 Gifts (2015 event currency)",
+    "released": "2015 (Christmas Event 2015)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chill",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2015"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "traveller-pet",
+    "name": "Traveller",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Halloween Item Pack during the Halloween 2017 event; the pass is now off sale.",
+    "costs": "1,299 Robux",
+    "released": "2017 (Halloween Event 2017)",
+    "note": "A Godly pet, not a weapon. The pack also held the Battleaxe. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Traveller_(Pet)",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "frostbite",
+    "name": "Frostbite",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Frostbite Item Pack during the Christmas 2019 event; the pass is now off sale.",
+    "costs": "1,699 Robux",
+    "released": "2019 (Christmas Event 2019)",
+    "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Frostbite",
+      "https://murder-mystery-2.fandom.com/wiki/Frostbite_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "blood",
+    "name": "Blood",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "4,000 Points or 175 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Blood",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "shadow",
+    "name": "Shadow",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "125 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Shadow",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "handsaw",
+    "name": "Handsaw",
+    "status": "unobtainable",
+    "method": "Crafted during Christmas 2015 by combining a Saw with 100 Gifts; the recipe ended with the event.",
+    "costs": "1 Saw + 100 Gifts (2015 event currency)",
+    "released": "2015 (Christmas Event 2015)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Handsaw",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2015"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "gingerblade",
+    "name": "Gingerblade",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2018 Christmas Box during the Christmas Event 2018; the box left with the event.",
+    "costs": "1 Snowflake Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2018 (Christmas Event 2018)",
+    "note": "Chroma Gingerblade came from the same box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Gingerblade",
+      "https://murder-mystery-2.fandom.com/wiki/2018_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2018"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "cowboy",
+    "name": "Cowboy",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "800 Points or 5 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Cowboy",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "golden",
+    "name": "Golden",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "3,000 Points or 125 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Golden",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "peppermint",
+    "name": "Peppermint",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Peppermint Gamepass during the Christmas 2020 pre-release; the pass is now off sale.",
+    "costs": "1,699 Robux",
+    "released": "December 2020 (Christmas Event 2020 pre-release)",
+    "note": "Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Peppermint",
+      "https://murder-mystery-2.fandom.com/wiki/Peppermint_Gamepass",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "swirly-blade",
+    "name": "Swirly Blade",
+    "status": "unobtainable",
+    "method": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2021.",
+    "costs": "100 Gifts given (1,000 Snow Tokens each, about 100,000 Snow Tokens in total)",
+    "released": "2021 (Christmas Event 2021)",
+    "note": "Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Swirly_Blade",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2021"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "hallows-edge",
+    "name": "Hallow's Edge",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2016 Halloween Box during the Halloween Event 2016; the box left with the event.",
+    "costs": "100 Candies per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2016 (Halloween Event 2016)",
+    "note": "It came from MM2's first Halloween box. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Hallow's_Edge",
+      "https://murder-mystery-2.fandom.com/wiki/2016_Halloween_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2016"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "winters-edge",
+    "name": "Winter's Edge",
+    "status": "unobtainable",
+    "method": "Unboxed from the 2017 Christmas Box during the Christmas Event 2017; the box left with the event.",
+    "costs": "1 Winter Key per spin",
+    "odds": "under 1% (wiki estimate)",
+    "released": "2017 (Christmas Event 2017)",
+    "note": "Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Winter's_Edge",
+      "https://murder-mystery-2.fandom.com/wiki/2017_Christmas_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2017"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "splitter",
+    "name": "Splitter",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "800 Points or 5 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Splitter",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "prince",
+    "name": "Prince",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "2,000 Points or 40 Cash (MM1)",
+    "released": "2014 (Murder Mystery 1)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Prince",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-fox",
+    "name": "Fire Fox",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Fox hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Fox",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-bunny",
+    "name": "Fire Bunny",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Bunny hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Bunny",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-bear",
+    "name": "Chroma Fire Bear",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Bear hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bear",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-bunny",
+    "name": "Chroma Fire Bunny",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Bunny hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bunny",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-pig",
+    "name": "Chroma Fire Pig",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Pig hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Pig",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "sammy",
+    "name": "Sammy",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the American Item Pack; the pass is now off sale.",
+    "costs": "899 Robux",
+    "released": "July 2016 (American Item Pack)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Sammy",
+      "https://murder-mystery-2.fandom.com/wiki/American_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "skelly",
+    "name": "Skelly",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Shadow Item Pack; the pass is now off sale.",
+    "costs": "1,299 Robux",
+    "released": "August 2016 (Shadow Item Pack)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Skelly",
+      "https://murder-mystery-2.fandom.com/wiki/Shadow_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "icey",
+    "name": "Icey",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Frostbite Item Pack during the Christmas 2019 event; the pass is now off sale.",
+    "costs": "1,699 Robux",
+    "released": "2019 (Christmas Event 2019)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Icey",
+      "https://murder-mystery-2.fandom.com/wiki/Frostbite_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "phoenix",
+    "name": "Phoenix",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the 8-Bit Item Pack; the pass is now off sale.",
+    "costs": "899 Robux",
+    "released": "February 2016 (8-Bit Item Pack)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Phoenix",
+      "https://murder-mystery-2.fandom.com/wiki/8-Bit_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-dog",
+    "name": "Chroma Fire Dog",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Dog hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Dog",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-cat",
+    "name": "Fire Cat",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Cat hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Cat",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "chroma-fire-fox",
+    "name": "Chroma Fire Fox",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.004% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "The regular Fire Fox hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Fox",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "deathspeaker",
+    "name": "Deathspeaker",
+    "status": "unobtainable",
+    "method": "Unboxed from the Pet Box, which was removed from the Shop in the Season 1 update (2019) and replaced by the Common Egg.",
+    "costs": "300 Coins per spin (before Season 1)",
+    "odds": "under 1% (wiki estimate)",
+    "note": "A Godly pet. The current Shop page lists no Pet Box. One line on the Pet Box wiki page says it is still sold for 1,000 Coins, which contradicts the rest of that page, so confidence is medium. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Deathspeaker",
+      "https://murder-mystery-2.fandom.com/wiki/Pet_Box",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-bat",
+    "name": "Fire Bat",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Bat hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Bat",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "electro",
+    "name": "Electro",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Futuristic Item Pack; the pass is now off sale.",
+    "costs": "899 Robux",
+    "released": "March 2016 (Futuristic Item Pack)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Electro",
+      "https://murder-mystery-2.fandom.com/wiki/Futuristic_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "ice-phoenix",
+    "name": "Ice Phoenix",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Winter Item Pack during the Christmas 2017 event; the pass is now off sale.",
+    "costs": "1,299 Robux",
+    "released": "2017 (Christmas Event 2017)",
+    "note": "A Godly pet. Off sale: Roblox lists this gamepass as not for sale (checked 2026-10-05). Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Ice_Phoenix",
+      "https://murder-mystery-2.fandom.com/wiki/Winter_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "frostbird",
+    "name": "Frostbird",
+    "status": "unobtainable",
+    "method": "Final (tier 100) reward of the Lumber Yard in the Christmas 2018 event.",
+    "released": "2018 (Christmas Event 2018, Dec 23 2018 - Jan 14 2019)",
+    "note": "A Godly pet. The DB flag said obtainable, but the Christmas 2018 event ended Jan 14, 2019. Event-exclusive: it did not return in later events. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Frostbird",
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2018"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "america-vintage",
+    "name": "America (Vintage)",
+    "status": "unobtainable",
+    "method": "Bought from the Murder Mystery 1 shop before MM2 replaced it.",
+    "costs": "25 Cash (MM1)",
+    "released": "July 2014 (Murder Mystery 1, sold Jul 4 - 6 2014)",
+    "note": "Murder Mystery 1 was replaced by MM2 on Dec 25, 2014, and its shop went with it. Trading or buying is the only way now.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/America_(Vintage)",
+      "https://murder-mystery-2.fandom.com/wiki/Murder_Mystery"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-bear",
+    "name": "Fire Bear",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Bear hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Bear",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-pig",
+    "name": "Fire Pig",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Pig hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Pig",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "fire-dog",
+    "name": "Fire Dog",
+    "status": "obtainable",
+    "method": "Hatched from the Common Egg in the in-game Shop.",
+    "costs": "1,000 Coins or 100 Diamonds per hatch",
+    "odds": "0.2% per hatch",
+    "released": "2019 (Season 1 update)",
+    "note": "A Godly pet. Chroma Fire Dog hatches from the same egg at 0.004%.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Fire_Dog",
+      "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
+      "https://murder-mystery-2.fandom.com/wiki/Shop"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "steambird",
+    "name": "Steambird",
+    "status": "unobtainable",
+    "method": "Bought with Robux via the Clockwork Item Pack; the pass is now off sale.",
+    "released": "February 2016 (Clockwork Item Pack)",
+    "note": "A Godly pet. Off sale: Roblox lists this pack as not for sale (checked 2026-10-05). The wiki gives two different past prices (899 and 1,299 Robux), so no price is shown.",
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Steambird",
+      "https://murder-mystery-2.fandom.com/wiki/Clockwork_Item_Pack",
+      "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"

@@ -60,6 +60,7 @@ describe('how_to_get parsing', () => {
     expect(unboxExpectation(box)).toEqual({
       oddsPct: 0.004,
       spins: 25000,
+      action: 'spin',
       totals: [
         { amount: 1000, unit: 'Coins', total: 25_000_000 },
         { amount: 100, unit: 'Diamonds', total: 2_500_000 },

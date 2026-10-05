@@ -28,7 +28,7 @@ import {
 import { ValueItemHowToGet } from './ValueItemHowToGet'
 import { ValueListItemSkeleton } from './ValueListItemSkeleton'
 import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type ItemCopyInput } from './valueListItemCopy'
-import { howToGetFaq } from './valueHowToGetCopy'
+import { howToGetFaqs } from './valueHowToGetCopy'
 
 /**
  * Value page for one high-tier item on a value-list hub (Murder Mystery 2:
@@ -91,7 +91,10 @@ export default async function ValueListItemPage({
       : null,
   }
   // One FAQPage per page: the how-to-get answer joins the same list.
-  const faq = itemFaq(copy, howToGet ? howToGetFaq(item.name, hub.shortName, howToGet) : null)
+  const faq = itemFaq(
+    copy,
+    howToGet ? howToGetFaqs({ name: item.name, shortName: hub.shortName, h: howToGet, cheapestUsd }) : [],
+  )
   const path = `/${gameSlug}/values/${item.slug}`
 
   return (
@@ -324,6 +327,7 @@ async function ItemBody({
 
         <ValueItemHowToGet
           itemName={item.name}
+          shortName={hub.shortName}
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}

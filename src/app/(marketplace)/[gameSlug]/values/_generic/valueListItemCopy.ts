@@ -111,12 +111,13 @@ export function priceSentence(i: ItemCopyInput): string | null {
 }
 
 /**
- * The page's FAQ (visible block + the one FAQPage schema). `howTo` is the
- * verified "How do you get X?" entry (valueHowToGetCopy.howToGetFaq): when the
- * item has one it takes the "Where does X come from?" slot, so the page never
- * answers the same question twice from two sources.
+ * The page's FAQ (visible block + the one FAQPage schema). `howTo` are the
+ * verified "How do you get X?" / "Can you get X for free?" entries
+ * (valueHowToGetCopy.howToGetFaqs): when the item has them they take the
+ * "Where does X come from?" slot, so the page never answers the same
+ * question twice from two sources.
  */
-export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string } | null = null): { q: string; a: string }[] {
+export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string }[] = []): { q: string; a: string }[] {
   const out: { q: string; a: string }[] = []
   const price = priceSentence(i)
   out.push({
@@ -126,8 +127,8 @@ export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string } | null
       : `We do not have enough reputable listings to price ${i.name} right now. We only publish a value when at least three live listings from established sellers back it.`,
   })
   const from = originPhrase(i.obtain[0], i.origin)
-  if (howTo) {
-    out.push(howTo)
+  if (howTo.length > 0) {
+    out.push(...howTo)
   } else if (from || i.releaseYear) {
     out.push({
       q: `Where does ${i.name} come from?`,

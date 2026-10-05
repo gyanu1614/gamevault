@@ -53,7 +53,7 @@ export function parseHowToGet(raw: unknown): ValueHowToGet | null {
 
 /** "0.004% per spin" → 0.004. Anything hedged (estimate, "under", "<", a range) → null. */
 export function parseStatedOddsPct(odds: string | null): number | null {
-  const m = odds?.trim().match(/^(\d+(?:\.\d+)?)%\s+per\s+spin$/i)
+  const m = odds?.trim().match(/^(\d+(?:\.\d+)?)%\s+per\s+(?:spin|hatch)$/i)
   if (!m) return null
   const pct = Number(m[1])
   return pct > 0 && pct <= 100 ? pct : null
@@ -65,9 +65,9 @@ export interface SpinPrice {
   unit: string
 }
 
-/** "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin" → three prices. Null unless every part parses. */
+/** "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin" (or "per hatch", eggs) → three prices. Null unless every part parses. */
 export function parseSpinPrices(costs: string | null): SpinPrice[] | null {
-  const m = costs?.trim().match(/^(.+?)\s+per\s+spin$/i)
+  const m = costs?.trim().match(/^(.+?)\s+per\s+(?:spin|hatch)$/i)
   if (!m) return null
   // ", " and " or " separate prices; "1,000" keeps its thousands comma.
   const parts = m[1].split(/,\s+|\s+or\s+/).map((p) => p.trim()).filter(Boolean)
@@ -80,7 +80,7 @@ export function parseSpinPrices(costs: string | null): SpinPrice[] | null {
   return out.length ? out : null
 }
 
-const plural = (unit: string, n: number) => (n === 1 || /s$/i.test(unit) ? unit : `${unit}s`)
+export const plural = (unit: string, n: number) => (n === 1 || /s$/i.test(unit) ? unit : `${unit}s`)
 
 export const formatCount = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
@@ -90,8 +90,10 @@ export const formatAmount = (amount: number, unit: string) => `${formatCount(amo
 export interface UnboxExpectation {
   /** Stated drop chance per spin, in percent. */
   oddsPct: number
-  /** Expected spins to get one: 1 / p, rounded. */
+  /** Expected spins (or hatches) to get one: 1 / p, rounded. */
   spins: number
+  /** A box is spun, an egg is hatched (MM2 pets). */
+  action: 'spin' | 'hatch'
   /** Each way to pay for those spins, first-listed first: spins × the per-spin price. */
   totals: Array<SpinPrice & { total: number }>
 }
@@ -107,7 +109,8 @@ export function unboxExpectation(h: ValueHowToGet): UnboxExpectation | null {
   const prices = parseSpinPrices(h.costs)
   if (oddsPct == null || !prices) return null
   const spins = Math.round(100 / oddsPct)
-  return { oddsPct, spins, totals: prices.map((p) => ({ ...p, total: p.amount * spins })) }
+  const action = /per\s+hatch$/i.test(h.odds ?? '') || /per\s+hatch$/i.test(h.costs ?? '') ? 'hatch' : 'spin'
+  return { oddsPct, spins, action, totals: prices.map((p) => ({ ...p, total: p.amount * spins })) }
 }
 
 /** Crafted at the Crafting Station (MM2's Seers). */
