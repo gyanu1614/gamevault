@@ -38,6 +38,11 @@ export interface ValueListHubConfig {
   itemTypeLabels: Readonly<Record<string, string>>
   /** Where the catalogue art comes from (page-level CC-BY-SA credit). */
   imageSource: { label: string; license: string; href: string } | null
+  /**
+   * How fast the free currency is earned, for the How To Get "free way"
+   * totals (rounds of play). Only set from a verified source.
+   */
+  earnRate: { unit: string; perRound: number; source: string } | null
 }
 
 const MM2_TAB_RARITIES = ['Godly', 'Ancient', 'Vintage', 'Chroma', 'Unique'] as const
@@ -61,6 +66,10 @@ const MM2: ValueListHubConfig = {
     license: 'CC BY-SA 3.0',
     href: 'https://murder-mystery-2.fandom.com/',
   },
+  // The coin bag caps at 40 Coins a round (50 with the Elite gamepass) —
+  // MM2 wiki, Coins (checked 2026-10-05). Round length is not documented, so
+  // totals are given in rounds, never hours.
+  earnRate: { unit: 'Coins', perRound: 40, source: 'https://murder-mystery-2.fandom.com/wiki/Coins' },
 }
 
 const VALUE_LIST_HUBS: Record<string, ValueListHubConfig> = {

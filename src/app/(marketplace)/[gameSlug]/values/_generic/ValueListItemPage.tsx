@@ -93,7 +93,9 @@ export default async function ValueListItemPage({
   // One FAQPage per page: the how-to-get answer joins the same list.
   const faq = itemFaq(
     copy,
-    howToGet ? howToGetFaqs({ name: item.name, shortName: hub.shortName, h: howToGet, cheapestUsd }) : [],
+    howToGet
+      ? howToGetFaqs({ name: item.name, gameName: theme.name, shortName: hub.shortName, h: howToGet, cheapestUsd, earnRate: hub.earnRate })
+      : [],
   )
   const path = `/${gameSlug}/values/${item.slug}`
 
@@ -327,7 +329,11 @@ async function ItemBody({
 
         <ValueItemHowToGet
           itemName={item.name}
+          gameName={theme.name}
           shortName={hub.shortName}
+          imageUrl={item.imageUrl}
+          accent={rarity.color}
+          earnRate={hub.earnRate}
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}

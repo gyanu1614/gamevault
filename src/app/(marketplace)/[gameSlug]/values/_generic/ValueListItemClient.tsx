@@ -19,6 +19,10 @@ import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
 import { marketSecondaryUsd } from '@/lib/values/pricing'
 import type { TrendSeries } from '@/components/values/PriceTrendChart'
+import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
+import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
+import type { WayStep } from './valueHowToGetCopy'
 
 // recharts is ~100KB and sits below the fold: load it after the page.
 const PriceTrendChart = dynamic(
@@ -292,6 +296,92 @@ export function ValueListBuyActions({
 }) {
   const cta = useItemCta(buy, name)
   return <ValueBuyActions cta={cta} itemName={name} sell={sell} className={className} />
+}
+
+const FAST_ICONS = { store: StorefrontIcon, cart: ShoppingCartIcon, bolt: LightningIcon } as const
+const FAST_GREEN = '63,217,134'
+
+/**
+ * How To Get, way 2 — the fast way: DropMarket → buy → delivered in minutes.
+ * Client-side only for the live buy link (useBuyCta: this item's listings
+ * when we stock it, else the closest listings); the text itself is in the
+ * server HTML. Step 1 links to the same place as the button.
+ */
+export function HowToGetFastWay({
+  index,
+  way,
+  name,
+  buy,
+  sellHref,
+}: {
+  index: number
+  way: { heading: string; tag: string; steps: WayStep[] }
+  name: string
+  buy: ItemBuy
+  /** Shown when the item can't be obtained any more (sellers hold the supply). */
+  sellHref: string | null
+}) {
+  const cta = useItemCta(buy, name)
+  return (
+    <div
+      className="flex flex-col rounded-lg p-5"
+      style={{ background: `linear-gradient(180deg, rgba(${FAST_GREEN},0.09) 0%, rgba(${FAST_GREEN},0.03) 100%)` }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className={VALUE_LABEL}>Way {index}</p>
+        <span
+          className="rounded-md px-2 py-0.5 text-[11px] font-semibold"
+          style={{ background: `rgba(${FAST_GREEN},0.14)`, color: `rgb(${FAST_GREEN})` }}
+        >
+          {way.tag}
+        </span>
+      </div>
+      <h3 className="mt-1.5 text-[17px] font-semibold text-text-primary">{way.heading}</h3>
+      <ol className="mt-4 space-y-3">
+        {way.steps.map((step, i) => {
+          const Icon = FAST_ICONS[step.icon as keyof typeof FAST_ICONS] ?? StorefrontIcon
+          const body = (
+            <>
+              <p className="text-[14px] font-semibold leading-5 text-text-primary">
+                <span className="sr-only">Step {i + 1}: </span>
+                {step.title}
+              </p>
+              <p className="text-[13px] leading-5 text-text-secondary">{step.value}</p>
+            </>
+          )
+          return (
+            <li key={step.title} className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
+                style={{ background: `rgba(${FAST_GREEN},0.14)`, color: `rgb(${FAST_GREEN})` }}
+              >
+                <Icon size={18} weight="duotone" />
+              </span>
+              {i === 0 ? (
+                <Link
+                  href={cta.href}
+                  prefetch={false}
+                  onClick={cta.onClick}
+                  className="min-w-0 rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div className="min-w-0">{body}</div>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      <ValueBuyActions
+        cta={cta}
+        itemName={name}
+        sell={sellHref ? { href: sellHref, label: 'Sell Yours For Cash' } : null}
+        className="mt-auto pt-5"
+      />
+    </div>
+  )
 }
 
 /** Daily price history: this item's line; Compare adds the other form. */

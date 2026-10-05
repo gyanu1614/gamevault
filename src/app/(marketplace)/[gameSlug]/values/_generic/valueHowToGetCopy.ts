@@ -114,32 +114,52 @@ export function checkedLabel(h: ValueHowToGet): string {
 
 const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)
 
-/* ───────────────────────── The guide (owner, 2026-10-05) ─────────────────────────
- * One card that reads like a short guide, not a data table: a direct answer
- * (Yes / No / Unconfirmed, and whether it can be had FREE — what players
- * search), then numbered steps, then one "or buy it" line. The same answer
- * feeds the FAQ + FAQPage schema, so the page and Google say the same thing.
+/* ───────────────────────── Two ways (owner, 2026-10-05) ─────────────────────────
+ * The section answers the search people make — "how to get <item> for free in
+ * Murder Mystery 2" — with TWO ways side by side:
+ *   1. The free way: the in-game route in short steps, each with its number
+ *      (cost per spin, odds, spins), ending in the honest total (Coins and
+ *      rounds of play). Gone / unconfirmed when it can't be done any more.
+ *   2. The fast way: DropMarket → buy the item → delivered in minutes.
+ * Every string is written for search: the title and the answer carry the
+ * query words, and the FAQ + FAQPage schema reuse the same sentences.
  */
 
-export interface GuideStep {
+export type WayIcon = 'coins' | 'box' | 'spin' | 'target' | 'materials' | 'craft' | 'history' | 'store' | 'cart' | 'bolt'
+
+export interface WayStep {
+  icon: WayIcon
   title: string
-  body: string
+  /** The number or fact for this step ("1,000 Coins per spin"). */
+  value: string
 }
 
-export interface HowToGetGuide {
-  /** "Yes, you can get it free." — the answer's first, bold clause. */
+export interface FreeWay {
+  state: 'available' | 'gone' | 'unconfirmed'
+  /** Chip over the panel: "Free · Takes A While". */
+  tag: string
+  /** Panel heading: "Unbox It For Free". */
+  heading: string
+  steps: WayStep[]
+  /** The bottom line: what the free way really costs. */
+  total: { label: string; value: string; detail: string | null } | null
+  /** One line when the free way is gone / unconfirmed. */
+  message: string | null
+}
+
+export interface HowToGetWays {
+  /** H2 — the search phrase. */
+  title: string
+  /** Bold first sentence of the answer. */
   lead: string
-  /** The rest of the answer paragraph. */
+  /** The rest of the answer. */
   body: string
-  /** Numbered steps (empty when there is nothing honest to list). */
-  steps: GuideStep[]
-  /** "Originally: …" / "Released …" — the item's history, one muted line. */
+  free: FreeWay
+  fast: { heading: string; tag: string; steps: WayStep[] }
+  /** "Released March 2020 update." / "Originally: … · Released …" */
   history: string | null
-  /** Label over the price in the closing bar: "Or skip the grind" / "Buy it now". */
-  buyLabel: string
 }
 
-const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 const noDot = (s: string) => s.replace(/[.\s]+$/, '')
 const usd = (n: number | null) =>
   n == null ? null : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -157,87 +177,110 @@ function historyLine(h: ValueHowToGet, past: boolean): string | null {
   return parts.length ? `${parts.join(' · ')}.` : null
 }
 
-const TRADE_STEPS = (name: string, price: string | null): GuideStep[] => [
-  { title: 'Check What It’s Worth', body: 'Use the prices on this page so you know what a fair deal looks like.' },
-  {
-    title: 'Buy Or Trade For It',
-    body: `Buy it from a reputable seller${price ? ` (from ${price})` : ''}, or trade for it with another player.`,
-  },
-  { title: 'Get It In-Game', body: `The seller sends ${name} to you through an in-game trade.` },
-]
-
-export function howToGetGuide(opts: {
+export interface WaysInput {
   name: string
+  /** "Murder Mystery 2" — titles use the full name (it's what people type). */
+  gameName: string
+  /** "MM2" — the second half of the search volume. */
   shortName: string
   h: ValueHowToGet
   cheapestUsd: number | null
-}): HowToGetGuide {
-  const { name, shortName, h } = opts
-  const price = usd(opts.cheapestUsd)
-  const fromPrice = price ? `, from ${price}` : ''
+  earnRate?: { unit: string; perRound: number } | null
+}
 
-  if (h.status === 'unobtainable') {
-    return {
-      lead: `No, ${name} can’t be obtained in ${shortName} anymore.`,
-      body: `There’s no free way to get it now, and it isn’t sold for Robux either. Trading or buying from another player is the only way${fromPrice}.`,
-      steps: TRADE_STEPS(name, price),
-      history: historyLine(h, true),
-      buyLabel: 'Buy It Now',
-    }
+function fastWay(name: string, gameName: string, shortName: string, price: string | null) {
+  return {
+    heading: `Buy ${name} On DropMarket`,
+    tag: 'Fastest · Minutes',
+    steps: [
+      { icon: 'store' as const, title: 'Open DropMarket', value: `${shortName} listings for ${name}` },
+      { icon: 'cart' as const, title: `Buy ${name}`, value: price ? `From ${price}, reputable sellers` : 'From reputable sellers' },
+      { icon: 'bolt' as const, title: 'Get It In Minutes', value: `Delivered by in-game trade in ${gameName}` },
+    ],
   }
-  if (h.status === 'unknown') {
+}
+
+export function howToGetWays(i: WaysInput): HowToGetWays {
+  const { name, gameName, shortName, h } = i
+  const price = usd(i.cheapestUsd)
+  const fromPrice = price ? ` from ${price}` : ''
+  const fast = fastWay(name, gameName, shortName, price)
+
+  if (h.status !== 'obtainable') {
+    const unconfirmed = h.status === 'unknown'
+    const seasonal = h.status === 'seasonal'
     return {
-      lead: `Unconfirmed: we couldn’t verify whether ${name} can still be obtained in ${shortName}.`,
-      body: `Until that’s confirmed, trading or buying is the sure way to get it${fromPrice}.`,
-      steps: TRADE_STEPS(name, price),
-      history: historyLine(h, true),
-      buyLabel: 'Buy It Now',
-    }
-  }
-  if (h.status === 'seasonal') {
-    return {
-      lead: `Only during its event: ${name} comes back with its event in ${shortName}.`,
-      body: `Until then, trading or buying is the way to get it${fromPrice}.`,
-      steps: TRADE_STEPS(name, price),
-      history: historyLine(h, true),
-      buyLabel: 'Buy It Now',
+      title: `How To Get ${name} in ${gameName}`,
+      lead: unconfirmed
+        ? `We couldn’t confirm a free way to get ${name} in ${shortName} right now.`
+        : seasonal
+          ? `${name} only comes back with its event in ${shortName}.`
+          : `There’s no free way to get ${name} in ${shortName} anymore.`,
+      body: unconfirmed
+        ? `Until that’s confirmed, the sure way is to buy it from another player${fromPrice} and get it traded to you in-game.`
+        : `It isn’t in the Shop or sold for Robux, so buying it from another player${fromPrice} is the way to get it now — delivered by in-game trade in minutes.`,
+      free: {
+        state: unconfirmed ? 'unconfirmed' : 'gone',
+        tag: unconfirmed ? 'Unconfirmed' : seasonal ? 'Event Only' : 'No Longer Available',
+        heading: unconfirmed ? 'Free Way: Unconfirmed' : 'The Free Way Has Ended',
+        steps: unconfirmed
+          ? []
+          : [
+              { icon: 'history', title: 'How It Was Obtained', value: noDot(h.method) },
+              ...(h.costs ? [{ icon: 'coins' as const, title: 'What It Cost', value: noDot(h.costs) }] : []),
+              ...(h.released ? [{ icon: 'target' as const, title: 'Released', value: h.released }] : []),
+            ],
+        total: null,
+        message: unconfirmed
+          ? `Sources disagree on whether ${name} can still be obtained in ${shortName}, so we don’t list a free way.`
+          : seasonal
+            ? 'It returns only during its event. Until then, buying is the way to get it.'
+            : `It hasn’t returned since, and it isn’t sold for Robux.`,
+      },
+      fast,
+      // The gone panel already shows how it was obtained; an unconfirmed one shows nothing, so it gets the line.
+      history: unconfirmed ? historyLine(h, true) : null,
     }
   }
 
-  // Obtainable now.
   const e = unboxExpectation(h)
   if (e) {
-    const coins = e.totals.find((t) => /^coins?$/i.test(t.unit))
     const box = boxName(h.method)
-    const first = e.totals[0]
-    const perSpin = e.totals.map((t) => formatAmount(t.amount, t.unit)).join(', ')
-    const others = e.totals.filter((t) => t !== (coins ?? first)).map((t) => plural(t.unit, 2))
-    // A box is spun, an egg (pets) is hatched — the steps use the game's word.
     const hatch = e.action === 'hatch'
     const verb = hatch ? 'hatch' : 'spin'
     const verbs = hatch ? 'hatches' : 'spins'
-    const where = box ?? (hatch ? 'an egg in the in-game Shop' : 'a box in the in-game Shop')
+    const coins = e.totals.find((t) => /^coins?$/i.test(t.unit))
+    const pay = coins ?? e.totals[0]
+    const rate = i.earnRate && coins && i.earnRate.unit.toLowerCase() === 'coins' ? i.earnRate.perRound : null
+    const rounds = rate ? Math.ceil(pay.total / rate) : null
+    const perSpin = e.totals.map((t) => formatAmount(t.amount, t.unit)).join(', ').replace(/, ([^,]*)$/, ' or $1')
     return {
-      lead: coins
-        ? `Yes, you can get ${name} for free in ${shortName}.`
-        : `Yes, ${name} can still be obtained in ${shortName}.`,
-      body: `It ${hatch ? 'hatches' : 'drops'} from ${where}${coins ? `, and you can ${verb} ${hatch ? 'it' : 'it'} with Coins you earn by playing` : ''}. It’s a ${e.oddsPct}% chance, so it takes about ${formatCount(e.spins)} ${verbs} (${formatAmount((coins ?? first).total, (coins ?? first).unit)}) on average. That’s why most players buy or trade for it instead${fromPrice}.`,
-      steps: [
-        {
-          title: coins ? 'Earn Coins' : `Get ${plural(first.unit, 2)}`,
-          body: coins
-            ? `Play rounds to earn Coins.${others.length ? ` ${others.join(' or ')} work too.` : ''}`
-            : `Each ${verb} is paid with ${plural(first.unit, 2)}.`,
+      title: `How To Get ${name} for Free in ${gameName}`,
+      lead: `Yes, you can get ${name} for free in ${shortName}${box ? ` from ${box}` : ''}.`,
+      body: `It’s a ${e.oddsPct}% chance per ${verb}, so expect about ${formatCount(e.spins)} ${verbs} — ${formatAmount(pay.total, pay.unit)}${rounds ? `, or about ${formatCount(rounds)} rounds of play` : ''}. Most players skip the grind and buy it${fromPrice}, delivered in minutes.`,
+      free: {
+        state: 'available',
+        tag: 'Free · Takes A While',
+        heading: hatch ? 'Hatch It For Free' : 'Unbox It For Free',
+        steps: [
+          {
+            icon: 'coins',
+            title: coins ? 'Earn Coins' : `Get ${plural(pay.unit, 2)}`,
+            value: coins && rate ? `Up to ${rate} Coins per round` : coins ? 'Collect Coins in every round' : `Pay in ${plural(pay.unit, 2)}`,
+          },
+          { icon: 'box', title: `Open ${box ?? (hatch ? 'The Egg' : 'The Box')}`, value: 'In the in-game Shop' },
+          { icon: 'spin', title: hatch ? 'Hatch It' : 'Spin It', value: `${perSpin} per ${verb}` },
+          { icon: 'target', title: 'Land The Drop', value: `${e.oddsPct}% per ${verb} — about ${formatCount(e.spins)} ${verbs}` },
+        ],
+        total: {
+          label: 'Total On Average',
+          value: formatAmount(pay.total, pay.unit),
+          detail: rounds ? `≈ ${formatCount(rounds)} rounds at ${rate} Coins a round` : null,
         },
-        { title: `Open ${box ?? (hatch ? 'The Egg' : 'The Box')}`, body: `Find ${box ?? (hatch ? 'the egg' : 'the box')} in the in-game Shop.` },
-        { title: hatch ? 'Hatch It' : 'Spin It', body: `Each ${verb} costs ${perSpin.replace(/, ([^,]*)$/, ' or $1')}.` },
-        {
-          title: hatch ? 'Keep Hatching' : 'Keep Spinning',
-          body: `At ${e.oddsPct}% per ${verb}, expect about ${formatCount(e.spins)} ${verbs} on average — luck can make it far more or far fewer.`,
-        },
-      ],
+        message: null,
+      },
+      fast,
       history: historyLine(h, false),
-      buyLabel: 'Or Skip The Grind',
     }
   }
 
@@ -245,44 +288,61 @@ export function howToGetGuide(opts: {
   if (recipe) {
     const needs = recipe.map((r) => r.label).join(' + ')
     return {
+      title: `How To Get ${name} for Free in ${gameName}`,
       lead: `Yes, you can craft ${name} for free in ${shortName}.`,
-      body: `It’s made at the Crafting Station from ${needs} — no Robux needed. Buying one is the shortcut${fromPrice}.`,
-      steps: [
-        ...recipe.map((r) => ({
-          title: `Collect ${r.label}`,
-          body: r.hint ? `${r.hint.charAt(0).toUpperCase()}${r.hint.slice(1)}.` : `You need ${r.label}.`,
-        })),
-        { title: 'Open The Crafting Station', body: 'Use the Crafting Station in MM2.' },
-        { title: `Craft ${name}`, body: sentence(h.method) },
-      ],
+      body: `Collect ${needs} and craft it at the Crafting Station — no Robux needed. Or skip the grind and buy it${fromPrice}, delivered in minutes.`,
+      free: {
+        state: 'available',
+        tag: 'Free · Takes A While',
+        heading: 'Craft It For Free',
+        steps: [
+          ...recipe.map((r) => ({
+            icon: 'materials' as const,
+            title: `Collect ${r.label}`,
+            value: r.hint ? `${r.hint.charAt(0).toUpperCase()}${r.hint.slice(1)}` : 'From salvaging weapons',
+          })),
+          { icon: 'craft' as const, title: 'Open The Crafting Station', value: `In ${shortName}` },
+          { icon: 'target' as const, title: `Craft ${name}`, value: 'No Robux needed' },
+        ],
+        total: { label: 'Recipe', value: needs, detail: null },
+        message: null,
+      },
+      fast,
       history: historyLine(h, false),
-      buyLabel: 'Or Skip The Grind',
     }
   }
 
   return {
+    title: `How To Get ${name} in ${gameName}`,
     lead: `Yes, ${name} can still be obtained in ${shortName}.`,
-    body: `${sentence(h.method)}${h.costs ? ` It costs ${noDot(h.costs)}.` : ''} You can also buy or trade for it${fromPrice}.`,
-    steps: [],
+    body: `${sentence(h.method)}${h.costs ? ` It costs ${noDot(h.costs)}.` : ''} You can also buy it${fromPrice}, delivered in minutes.`,
+    free: {
+      state: 'available',
+      tag: 'In-Game',
+      heading: 'Get It In-Game',
+      steps: [
+        { icon: 'box', title: 'How', value: noDot(h.method) },
+        ...(h.costs ? [{ icon: 'coins' as const, title: 'Cost', value: noDot(h.costs) }] : []),
+      ],
+      total: null,
+      message: null,
+    },
+    fast,
     history: historyLine(h, false),
-    buyLabel: 'Or Buy It Now',
   }
 }
 
-/** The FAQ entries (visible FAQ + FAQPage schema), worded like the searches. */
-export function howToGetFaqs(opts: {
-  name: string
-  shortName: string
-  h: ValueHowToGet
-  cheapestUsd: number | null
-}): { q: string; a: string }[] {
-  const g = howToGetGuide(opts)
-  const answer = `${g.lead} ${g.body}`
-  const steps = g.steps.length
-    ? ` Step by step: ${g.steps.map((s, i) => `${i + 1}. ${noDot(s.title)} — ${noDot(s.body)}.`).join(' ')}`
-    : ''
+/** FAQ entries (visible FAQ + FAQPage schema), worded like the searches. */
+export function howToGetFaqs(i: WaysInput): { q: string; a: string }[] {
+  const w = howToGetWays(i)
+  const answer = `${w.lead} ${w.body}`
+  const freeSteps =
+    w.free.state === 'available' && w.free.steps.length
+      ? ` The free way, step by step: ${w.free.steps.map((s, n) => `${n + 1}. ${s.title} (${noDot(s.value)}).`).join(' ')}`
+      : ''
+  const fastSteps = ` The fast way: ${w.fast.steps.map((s, n) => `${n + 1}. ${s.title}.`).join(' ')}`
   return [
-    { q: `How do you get ${opts.name} in ${opts.shortName}?`, a: `${answer}${steps}` },
-    { q: `Can you get ${opts.name} for free in ${opts.shortName}?`, a: answer },
+    { q: `How do you get ${i.name} in ${i.shortName}?`, a: `${answer}${freeSteps}${fastSteps}` },
+    { q: `Can you get ${i.name} for free in ${i.gameName}?`, a: answer },
   ]
 }
