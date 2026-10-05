@@ -170,6 +170,31 @@ function MobileServiceRow({
  * mount so the visual transition is identical to what scrolling
  * triggers.
  */
+/** Game logo for a live-order row: the game's own uploaded logo (games.image_url),
+ *  then the static icon map, then a receipt glyph if the image fails to load. */
+function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?: string | null } | null }) {
+  const [failed, setFailed] = useState(false)
+  const src = game?.image_url || (game?.slug ? getGameIcon(game.slug) : null)
+  return (
+    <div className="grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.06]">
+      {src && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          aria-hidden
+          width={40}
+          height={40}
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <ReceiptIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
+      )}
+    </div>
+  )
+}
+
 /** Live-order row (Live Orders panel): game icon, title, the orders-list
  *  status pill (shared labels), total. Fill-only row. */
 function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => void }) {
@@ -179,21 +204,7 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
       onClick={onNavigate}
       className="group flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/[0.05] focus-visible:bg-white/[0.05] focus-visible:outline-none"
     >
-      <div className="grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.06]">
-        {(order.listing as any)?.game?.slug ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={getGameIcon((order.listing as any).game.slug)}
-            alt=""
-            aria-hidden
-            width={40}
-            height={40}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <ReceiptIcon size={17} weight="bold" aria-hidden className="text-text-secondary" />
-        )}
-      </div>
+      <LiveOrderGameIcon game={(order.listing as any)?.game} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-semibold text-text-primary">
           {(order.listing as any)?.title || 'Order'}
@@ -649,14 +660,14 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
       const [buyResult, sellResult] = await Promise.all([
         supabase
           .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
+          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
           .eq('buyer_id', user.id)
           .in('status', ACTIVE_BUYING)
           .order('created_at', { ascending: false })
           .limit(5),
         supabase
           .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug))')
+          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
           .eq('seller_id', user.id)
           .in('status', ACTIVE_SELLING)
           .order('created_at', { ascending: false })
