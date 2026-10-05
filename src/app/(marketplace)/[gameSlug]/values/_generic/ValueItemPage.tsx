@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { JsonLd, breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
 import { HubNav } from '@/components/content/HubNav'
@@ -10,6 +10,9 @@ import { ValuesBuyModule } from '@/components/content/ValuesBuyModule'
 import { getValueItems, type ValueItem } from '@/lib/values/data'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
+import { ValueItemHero } from '@/components/values/ValueItemHero'
+import { HUB_GROUND, VALUE_BTN_SECONDARY } from '@/components/values/styles'
 
 /**
  * Generic value page for any item on the values_* pipeline, priced or not.
@@ -30,17 +33,6 @@ function formatIncome(perSec: number): string {
     }
   }
   return `${perSec}/s`
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-[var(--ct-line)] bg-[var(--ct-surface)] px-4 py-3">
-      <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ct-text-faint)]">
-        {label}
-      </dt>
-      <dd className="mt-1 text-[15px] font-semibold text-[var(--ct-text)]">{value}</dd>
-    </div>
-  )
 }
 
 export default async function ValueItemPage({
@@ -72,6 +64,22 @@ export default async function ValueItemPage({
   // strong enough to index.
   const thin = !hasPrice || (price?.sampleSize ?? 0) < 3
 
+  // Catalogue facts → the hero's stat rows.
+  const facts: { label: string; value: string }[] = []
+  if (item.rarity) facts.push({ label: 'Rarity', value: item.rarity })
+  if (item.area) facts.push({ label: 'Area', value: item.area })
+  if (item.incomePerSec != null) facts.push({ label: 'Income', value: formatIncome(item.incomePerSec) })
+  if (item.kind === 'account_bracket' && item.bracketMin != null) {
+    facts.push({
+      label: 'Income Bracket',
+      value:
+        item.bracketMax != null
+          ? `${formatIncome(item.bracketMin)} – ${formatIncome(item.bracketMax)}`
+          : `${formatIncome(item.bracketMin)}+`,
+    })
+  }
+  if (source) facts.push({ label: 'Hatches From', value: source.name })
+
   const kindLabel =
     item.kind === 'account_bracket'
       ? 'Account'
@@ -83,7 +91,7 @@ export default async function ValueItemPage({
 
   return (
     <main
-      className="relative min-h-screen bg-[var(--ct-bg)]"
+      className={`relative min-h-screen ${HUB_GROUND}`}
       style={contentThemeVars(theme)}
     >
       <HubNav data={hubNav} />
@@ -110,66 +118,52 @@ export default async function ValueItemPage({
         />
       )}
 
-      <section className="mx-auto w-full max-w-7xl px-4 pb-8 pt-28 sm:px-6 lg:px-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--ct-text-faint)]">
-          {kindLabel}
-        </p>
-        <h1 className="mt-2 text-[32px] font-bold tracking-tight text-[var(--ct-text)] sm:text-[42px]">
-          {item.name}
-        </h1>
-
-        {hasPrice ? (
-          <div className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-2">
-            <span className="font-mono text-[30px] font-bold tabular-nums text-[var(--ct-text)]">
-              {usd(price!.cheapestUsd!)}
-            </span>
-            {price!.averageUsd != null && (
-              <span className="font-mono text-[14px] tabular-nums text-[var(--ct-text-muted)]">
-                typical {usd(price!.averageUsd)}
-              </span>
-            )}
-            {price!.lowUsd != null && price!.highUsd != null && (
-              <span className="font-mono text-[12px] tabular-nums text-[var(--ct-text-faint)]">
-                real listings {usd(price!.lowUsd)}–{usd(price!.highUsd)}
-              </span>
-            )}
-          </div>
-        ) : (
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[var(--ct-text-muted)]">
-            We do not publish a price for {item.name} — it is not sold directly
-            on the marketplaces we track. Everything below is from the game&apos;s
-            own data.
-          </p>
-        )}
-
-        <div className="mt-3">
-          <ValuesFreshnessBadge
-            lastChangedAt={price?.priceChangedAt ?? null}
-            listingCount={price?.sampleSize ?? 0}
-            sourceCount={price?.sourceCount ?? 0}
-          />
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
-        <dl className="grid gap-px border border-[var(--ct-line)] bg-[var(--ct-line)] sm:grid-cols-2 lg:grid-cols-4">
-          {item.rarity && <Fact label="Rarity" value={item.rarity} />}
-          {item.area && <Fact label="Area" value={item.area} />}
-          {item.incomePerSec != null && (
-            <Fact label="Income" value={formatIncome(item.incomePerSec)} />
-          )}
-          {item.kind === 'account_bracket' && item.bracketMin != null && (
-            <Fact
-              label="Income bracket"
-              value={
-                item.bracketMax != null
-                  ? `${formatIncome(item.bracketMin)} – ${formatIncome(item.bracketMax)}`
-                  : `${formatIncome(item.bracketMin)}+`
-              }
-            />
-          )}
-          {source && <Fact label="Hatches from" value={source.name} />}
-        </dl>
+      <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-28 sm:px-6 lg:px-8">
+        <ValueItemHero
+          art={item.imageUrl ? { src: item.imageUrl, alt: item.name } : null}
+          eyebrow={kindLabel}
+          title={item.name}
+          stats={facts}
+          price={
+            hasPrice
+              ? {
+                  value: usd(price!.cheapestUsd!),
+                  children: (
+                    <>
+                      {price!.averageUsd != null && (
+                        <p className="mt-2 text-[14px] tabular-nums text-text-secondary">
+                          typical {usd(price!.averageUsd)}
+                        </p>
+                      )}
+                      {price!.lowUsd != null && price!.highUsd != null && (
+                        <p className="mt-1 text-[12px] tabular-nums text-text-tertiary">
+                          real listings {usd(price!.lowUsd)}–{usd(price!.highUsd)}
+                        </p>
+                      )}
+                    </>
+                  ),
+                }
+              : {
+                  children: (
+                    <p className="text-left text-[15px] leading-relaxed text-text-secondary">
+                      We do not publish a price for {item.name} — it is not sold directly
+                      on the marketplaces we track. Everything below is from the game&apos;s
+                      own data.
+                    </p>
+                  ),
+                }
+          }
+          footer={
+            // The badge renders nothing without a dated, listing-backed price.
+            price?.priceChangedAt && (price.sampleSize ?? 0) > 0 ? (
+              <ValuesFreshnessBadge
+                lastChangedAt={price.priceChangedAt}
+                listingCount={price.sampleSize}
+                sourceCount={price.sourceCount ?? 0}
+              />
+            ) : null
+          }
+        />
       </section>
 
       <AvailableNow
@@ -203,11 +197,9 @@ export default async function ValueItemPage({
       </section>
 
       <div className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <Link
-          href={`/${gameSlug}/values`}
-          className="text-[13px] font-semibold text-[var(--ct-accent-text)] hover:underline"
-        >
-          ← All {theme.name} values
+        <Link href={`/${gameSlug}/values`} className={VALUE_BTN_SECONDARY}>
+          <ArrowLeftIcon aria-hidden size={15} weight="bold" />
+          All {theme.name} Values
         </Link>
       </div>
 

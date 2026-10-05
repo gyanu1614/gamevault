@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
  * Data for the blog-hub teaser strips. Kept small and defensive: every query
@@ -43,14 +44,22 @@ export async function getHubCalcExample(
 
   const supabase = createAnonClient()
   const [petsRes, valsRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,name,image_url,has_page')
-      .eq('is_active', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select('pet_id,cash_value_usd')
-      .eq('variant', 'FR'),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,name,image_url,has_page')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select('pet_id,cash_value_usd')
+        .eq('variant', 'FR')
+        .order('pet_id', { ascending: true })
+        .range(from, to),
+    ),
   ])
   if (petsRes.error || valsRes.error) return null
 
@@ -137,19 +146,35 @@ export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
   const supabase = createAnonClient()
 
   const [petsRes, valsRes, histRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,name,slug,image_url,has_page')
-      .eq('is_active', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select('pet_id,cash_value_usd')
-      .eq('variant', 'FR'),
-    (supabase as any)
-      .from('adopt_me_price_history')
-      .select('pet_id,cash_value_usd,history_date')
-      .eq('variant', 'FR')
-      .order('history_date', { ascending: true }),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,name,slug,image_url,has_page')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select('pet_id,cash_value_usd')
+        .eq('variant', 'FR')
+        .order('pet_id', { ascending: true })
+        .range(from, to),
+    ),
+    // FR history for EVERY pet, one row a day each: past PostgREST's 1000-row
+    // cap within weeks. Unpaged, the ascending order meant the cut dropped the
+    // NEWEST days, so "movers" compared stale dates. (pet_id, history_date) is
+    // unique for one variant, so the paging order is stable.
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_price_history')
+        .select('pet_id,cash_value_usd,history_date')
+        .eq('variant', 'FR')
+        .order('history_date', { ascending: true })
+        .order('pet_id', { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   if (petsRes.error || valsRes.error) return []
@@ -360,14 +385,22 @@ async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
   const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,slug,name,image_url,has_page')
-      .eq('is_active', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select('pet_id,variant,cash_value_usd,confidence,price_change_7d')
-      .eq('variant', 'FR'),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,slug,name,image_url,has_page')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select('pet_id,variant,cash_value_usd,confidence,price_change_7d')
+        .eq('variant', 'FR')
+        .order('pet_id', { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   if (petsRes.error || valuesRes.error) {

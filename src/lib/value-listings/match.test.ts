@@ -173,3 +173,65 @@ describe('matchListingToValueItem — Adopt Me', () => {
     expect(matchListingToValueItem({ title: 'R Bat Dragon', templateData: {} }, AM)?.variant).toBeNull()
   })
 })
+
+// 2026-10-04: "Fairy Bat Dragon NFR" (a pet not in the catalogue) showed on the
+// Bat Dragon page. A catalogue name must be the WHOLE pet name: a word directly
+// before it that is not a variant/quality token means the title names a
+// different item.
+describe('matchListingToValueItem — whole-name rule', () => {
+  it('rejects a title whose extra leading word makes it a different pet', () => {
+    expect(matchListingToValueItem({ title: 'Fairy Bat Dragon NFR', templateData: {} }, AM)).toBeNull()
+    expect(matchListingToValueItem({ title: 'Golden Chocolate Chip Bat Dragon', templateData: {} }, AM)).toBeNull()
+  })
+
+  it('rejects it even when the seller picked the nearest catalogue pet in the template', () => {
+    expect(
+      matchListingToValueItem({ title: 'Fairy Bat Dragon NFR', templateData: { 'pet-name': 'bat-dragon' } }, AM),
+    ).toBeNull()
+  })
+
+  it('accepts variant / quality tokens before the name, and words after it', () => {
+    expect(matchListingToValueItem({ title: 'NFR Bat Dragon', templateData: {} }, AM)).toEqual({
+      itemSlug: 'bat-dragon',
+      variant: 'neon-fly-ride',
+    })
+    expect(matchListingToValueItem({ title: 'Bat Dragon NFR', templateData: {} }, AM)).toEqual({
+      itemSlug: 'bat-dragon',
+      variant: 'neon-fly-ride',
+    })
+    expect(matchListingToValueItem({ title: 'FR bat dragon |quick delivery| adopt me', templateData: {} }, AM)).toEqual({
+      itemSlug: 'bat-dragon',
+      variant: 'fly-ride',
+    })
+    expect(matchListingToValueItem({ title: 'Mega Neon Bat Dragon', templateData: {} }, AM)).toEqual({
+      itemSlug: 'bat-dragon',
+      variant: 'mega-neon',
+    })
+    expect(matchListingToValueItem({ title: 'Adopt Me | Neon Bat Dragon', templateData: {} }, AM)?.itemSlug).toBe('bat-dragon')
+  })
+
+  it('still prefers the longest catalogue name', () => {
+    expect(matchListingToValueItem({ title: 'Neon Chocolate Chip Bat Dragon', templateData: {} }, AM)).toEqual({
+      itemSlug: 'chocolate-chip-bat-dragon',
+      variant: 'neon',
+    })
+  })
+
+  it('SAB: a mutation word before the name is a variant, any other word is a different brainrot', () => {
+    const catalog: ValueCatalog = { ...SAB, variants: [...SAB.variants, { key: 'divine', names: ['Divine'] }] }
+    expect(matchListingToValueItem({ title: 'Divine Dragon Cannelloni', templateData: {} }, catalog)).toEqual({
+      itemSlug: 'dragon-cannelloni',
+      variant: 'divine',
+    })
+    expect(
+      matchListingToValueItem(
+        { title: 'Divine Dragon Cannelloni 250M/s', templateData: { 'select-brainrot': 'dragon-cannelloni' } },
+        catalog,
+      ),
+    ).toEqual({ itemSlug: 'dragon-cannelloni', variant: 'divine' })
+    expect(matchListingToValueItem({ title: '1.5B/s Dragon Cannelloni', templateData: {} }, catalog)?.itemSlug).toBe(
+      'dragon-cannelloni',
+    )
+    expect(matchListingToValueItem({ title: 'Mystery Dragon Cannelloni', templateData: {} }, catalog)).toBeNull()
+  })
+})

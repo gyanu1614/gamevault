@@ -5,8 +5,9 @@
  */
 
 import Link from '@/components/navigation/AppLink'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock'
+import { VALUE_SURFACE_LINK } from '@/components/values/styles'
 
 export interface ArticleCardData {
   slug: string
@@ -32,10 +33,10 @@ export function ArticleGrid({
   return (
     <section className="pt-12 sm:pt-16">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-subheading text-[#F1F3F1] sm:text-heading">
+        <h2 className="text-subheading text-text-primary sm:text-heading">
           All {gameName} Guides
         </h2>
-        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#5E685E]">
+        <span className="text-[12px] font-medium tabular-nums text-text-tertiary">
           {posts.length} {posts.length === 1 ? 'guide' : 'guides'}
         </span>
       </div>
@@ -67,7 +68,7 @@ export function GuideCard({
   return (
     <Link
       href={`/${gameSlug}/blog/${post.slug}`}
-      className="group flex h-full flex-col overflow-hidden border border-[#1E2723] bg-[#121613] transition-colors duration-200 hover:border-[#33453A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8FBF9C]"
+      className={`group flex h-full flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
     >
       {/* Cover — fixed 16:9 so every card is the same height. */}
       <div className="relative aspect-[16/9] w-full shrink-0 overflow-hidden">
@@ -80,42 +81,38 @@ export function GuideCard({
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
         ) : (
-          <span
-            aria-hidden
-            className="absolute inset-0"
-            style={{ background: 'repeating-linear-gradient(135deg, #0E1A11 0 10px, #0B1310 10px 20px)' }}
-          />
+          <span aria-hidden className="absolute inset-0 bg-white/[0.04]" />
         )}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
-          style={{ background: 'linear-gradient(180deg, rgba(18,22,19,0) 0%, rgba(18,22,19,.55) 100%)' }}
+          style={{ background: 'linear-gradient(180deg, rgba(33,34,40,0) 0%, rgba(33,34,40,.55) 100%)' }}
         />
-        <span className="absolute left-3.5 top-3 border border-white/10 bg-black/40 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#A7D8B6] backdrop-blur-sm">
+        <span className="absolute left-3.5 top-3 rounded bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-text-primary backdrop-blur-sm">
           {post.category}
         </span>
       </div>
 
       {/* Body — grows to fill; meta pinned to the bottom so all cards align. */}
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="line-clamp-2 text-balance text-[17px] font-bold leading-[1.25] tracking-[-0.02em] text-[#F2F6F0] transition-colors group-hover:text-white sm:text-[18px]">
+        <h3 className="line-clamp-2 text-balance text-[17px] font-semibold leading-[1.25] tracking-[-0.02em] text-text-primary sm:text-[18px]">
           {post.title}
         </h3>
         {post.excerpt && (
-          <p className="line-clamp-2 text-[13px] leading-[1.5] text-[#9BA8A0]">{post.excerpt}</p>
+          <p className="line-clamp-2 text-[13px] leading-[1.5] text-text-secondary">{post.excerpt}</p>
         )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="flex items-center gap-2 text-[11.5px] font-medium text-[#98A69C]">
+          <span className="flex items-center gap-2 text-[11.5px] font-medium text-text-tertiary">
             <span>{post.date}</span>
-            <span aria-hidden className="h-1 w-1 rounded-full bg-[#4A574F]" />
+            <span aria-hidden className="h-1 w-1 rounded-full bg-white/20" />
             <span className="flex items-center gap-1">
-              <AccessTimeIcon sx={{ fontSize: 13 }} className="text-[#6E7C73]" />
+              <ClockIcon size={13} weight="bold" aria-hidden />
               {post.readMinutes} min
             </span>
           </span>
-          <span className="flex items-center gap-1 text-[12px] font-bold text-[#8FBF9C] transition-colors group-hover:text-[#B6E3C4]">
+          <span className="flex items-center gap-1 text-[12px] font-semibold text-text-secondary transition-colors group-hover:text-text-primary">
             Read
-            <ArrowForwardIcon sx={{ fontSize: 15 }} className="transition-transform duration-200 group-hover:translate-x-1" />
+            <ArrowRightIcon size={14} weight="bold" aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" />
           </span>
         </div>
       </div>

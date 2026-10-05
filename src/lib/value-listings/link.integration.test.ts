@@ -53,7 +53,7 @@ describe.skipIf(!hasEnv)('linkListingsToValueItems (integration)', () => {
   }, 60_000)
 
   it('links a listing to its item and variant', async () => {
-    const id = await insertListing(`${fx!.ns.listingTitle()} NFR ${petName}`)
+    const id = await insertListing(`${fx!.ns.listingTitle()} | NFR ${petName}`)
     const out = await linkListingsToValueItems(fx!.svc, [id])
     expect(out.linked).toBe(1)
     expect(await refOf(id)).toMatchObject({ value_item_slug: petSlug, value_variant: 'neon-fly-ride' })
@@ -75,9 +75,9 @@ describe.skipIf(!hasEnv)('linkListingsToValueItems (integration)', () => {
   })
 
   it('reconcile picks up listings whose link was cleared by an edit', async () => {
-    const id = await insertListing(`${fx!.ns.listingTitle()} Neon ${petName}`)
+    const id = await insertListing(`${fx!.ns.listingTitle()} | Neon ${petName}`)
     await linkListingsToValueItems(fx!.svc, [id])
-    await fx!.svc.from('listings').update({ title: `${fx!.ns.listingTitle()} Mega Neon ${petName}` }).eq('id', id)
+    await fx!.svc.from('listings').update({ title: `${fx!.ns.listingTitle()} | Mega Neon ${petName}` }).eq('id', id)
     expect((await refOf(id)).value_matched_at).toBeNull()
     await reconcileValueRefs(fx!.svc, { limit: 500 })
     expect(await refOf(id)).toMatchObject({ value_item_slug: petSlug, value_variant: 'mega-neon' })

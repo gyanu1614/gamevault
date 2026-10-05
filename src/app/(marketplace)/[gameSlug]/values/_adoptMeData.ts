@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import type { AdoptMePetItem, AdoptMeVariantValue } from './_AdoptMeValuesClient'
 
 /**
@@ -41,16 +42,28 @@ function num(v: number | string | null): number | null {
 export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
   const supabase = createAnonClient()
 
+  // Both reads are PAGED: one PostgREST response stops at max_rows (1000) and
+  // the cut is silent — 8 value rows per pet would lose every pet past ~125.
+  // Each page orders on a unique key so pages never overlap or skip.
   const [petsRes, valuesRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,slug,name,rarity,image_url,has_page,demand_rank')
-      .eq('is_active', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select(
-        'pet_id,variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence',
-      ),
+    fetchAllRows<PetRow>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,slug,name,rarity,image_url,has_page,demand_rank')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<ValueRow>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select(
+          'pet_id,variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated,confidence',
+        )
+        .order('pet_id', { ascending: true })
+        .order('variant', { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   if (petsRes.error) {
@@ -62,13 +75,13 @@ export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
   }
 
   const valuesByPet = new Map<string, ValueRow[]>()
-  for (const row of (valuesRes.data ?? []) as ValueRow[]) {
+  for (const row of valuesRes.data ?? []) {
     const list = valuesByPet.get(row.pet_id) ?? []
     list.push(row)
     valuesByPet.set(row.pet_id, list)
   }
 
-  return ((petsRes.data ?? []) as PetRow[]).map((pet) => {
+  return (petsRes.data ?? []).map((pet) => {
     const values = {} as Record<Variant, AdoptMeVariantValue | undefined>
     let topTradeValue = 0
 

@@ -26,18 +26,6 @@ const ALLOWED: { prefix: string; reason: string }[] = [
     prefix: 'src/app/(marketplace)/[gameSlug]/[categorySlug]/',
     reason: 'Bundle 2 owns the listing category page, its filters/cards and the listing detail page',
   },
-  {
-    prefix: 'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/',
-    reason: 'Bundle 2 owns the value item page and its components',
-  },
-  {
-    prefix: 'src/app/(marketplace)/[gameSlug]/values/_generic/ValueItemPage.tsx',
-    reason: 'Bundle 2 owns ValueItemPage',
-  },
-  {
-    prefix: 'src/components/value-listings/',
-    reason: "Bundle 2's value-listings UI (the \"Available Now\" list, merged in #137): swap the import in a follow-up",
-  },
   { prefix: 'src/app/notifications/', reason: 'Bundle 2 owns alerts/notifications' },
   { prefix: 'src/app/(admin)/admin/notifications/', reason: 'Bundle 2 owns alerts/notifications' },
 ]

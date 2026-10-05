@@ -12,6 +12,9 @@ import Link from '@/components/navigation/AppLink'
 import { useMemo } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import AutoScroll from 'embla-carousel-auto-scroll'
+import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
+import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
+import { ValueArt } from '@/components/values/ValueArt'
 import type { HubTeaserItem } from './_hubData'
 
 function usePrefersReducedMotion(): boolean {
@@ -19,48 +22,50 @@ function usePrefersReducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-/** One priced-pet card in the strip. Fixed width so the marquee reads evenly. */
-function ValueCard({ item, gameSlug }: { item: HubTeaserItem; gameSlug: string }) {
+/** Edge fade as a mask, so it works on any surface colour behind it. */
+const EDGE_MASK =
+  '[mask-image:linear-gradient(90deg,transparent,#000_48px,#000_calc(100%_-_48px),transparent)] sm:[mask-image:linear-gradient(90deg,transparent,#000_80px,#000_calc(100%_-_80px),transparent)]'
+
+/** One priced-pet tile in the strip (flat tile inside the teaser card).
+ *  Fixed width so the marquee reads evenly. */
+function MarqueeTile({ item, gameSlug }: { item: HubTeaserItem; gameSlug: string }) {
+  const up = item.changePct != null && item.changePct >= 0
   return (
     <Link
       href={`/${gameSlug}/values/${item.slug}`}
-      className="flex w-[268px] shrink-0 select-none items-center gap-3 border border-[#1A211A] bg-[#0B0F0C] p-4 transition-colors hover:bg-[#101710]"
+      draggable={false}
+      className="flex w-[268px] shrink-0 select-none items-center gap-3 rounded-md bg-white/[0.04] p-4 transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
-      {item.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- remote item art
-        <img
-          src={item.imageUrl}
-          alt=""
-          className="h-11 w-11 shrink-0 border border-[#1A211A] bg-[#0E140F] object-contain"
-          draggable={false}
-        />
-      ) : (
-        <span className="h-11 w-11 shrink-0 border border-[#23291F] bg-[#0E140F]" />
-      )}
+      <ValueArt src={item.imageUrl} alt="" size={44} className="shrink-0" />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[13px] font-semibold text-[#E4EAE2]">
+          <span className="truncate text-[13px] font-semibold text-text-primary">
             {item.name}
           </span>
           {item.variant && (
-            <span className="shrink-0 border border-[#26332C] bg-white/[0.04] px-1 py-px font-mono text-[10px] font-semibold text-[#8FBF9C]">
+            <span className="shrink-0 rounded bg-white/[0.08] px-1 py-px text-[10px] font-semibold text-text-secondary">
               {item.variant}
             </span>
           )}
         </span>
-        <span className="truncate text-[11px] text-[#7C8A80]">{item.qualifier}</span>
+        <span className="truncate text-[11px] text-text-tertiary">{item.qualifier}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-0.5">
-        <span className="font-mono text-[14px] font-bold tabular-nums text-[#8FBF9C]">
+        <span className="text-[14px] font-semibold tabular-nums text-text-primary">
           {item.priceLabel}
         </span>
         {item.changePct != null && (
           <span
-            className={`font-mono text-[11px] font-semibold tabular-nums ${
-              item.changePct >= 0 ? 'text-[#5BC77E]' : 'text-[#E0736B]'
+            className={`flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
+              up ? 'text-success' : 'text-error'
             }`}
           >
-            {item.changePct >= 0 ? '▲' : '▼'} {Math.abs(item.changePct).toFixed(0)}%
+            {up ? (
+              <CaretUpIcon size={10} weight="fill" aria-label="Up" />
+            ) : (
+              <CaretDownIcon size={10} weight="fill" aria-label="Down" />
+            )}
+            {Math.abs(item.changePct).toFixed(0)}%
           </span>
         )}
       </span>
@@ -99,33 +104,18 @@ export default function ValuesMarquee({
     return (
       <div className="flex gap-3 overflow-x-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
-          <ValueCard key={item.slug} item={item} gameSlug={gameSlug} />
+          <MarqueeTile key={item.slug} item={item} gameSlug={gameSlug} />
         ))}
       </div>
     )
   }
 
   return (
-    <div className="relative">
-      {/* Edge fades so cards glide in/out instead of getting clipped. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 sm:w-20"
-        style={{
-          background: 'linear-gradient(90deg,#0B0F0C 0%, rgba(11,15,12,0) 100%)',
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 sm:w-20"
-        style={{
-          background: 'linear-gradient(270deg,#0B0F0C 0%, rgba(11,15,12,0) 100%)',
-        }}
-      />
+    <div className={`relative ${EDGE_MASK}`}>
       <div ref={emblaRef} className="overflow-hidden p-3">
         <div className="flex gap-3" style={{ touchAction: 'pan-y' }}>
           {loopItems.map((item, i) => (
-            <ValueCard key={`${item.slug}-${i}`} item={item} gameSlug={gameSlug} />
+            <MarqueeTile key={`${item.slug}-${i}`} item={item} gameSlug={gameSlug} />
           ))}
         </div>
       </div>

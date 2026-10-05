@@ -1,52 +1,28 @@
 'use client'
 
 /**
- * Interactive per-pet hero for Adopt Me — matches SAB's ItemHero aesthetic
- * (near-black hero stat-card + a tappable card grid below that reprices the
- * hero) but models Adopt Me: the grid is the 8-variant potion/Neon ladder, not
- * mutations, and the hero shows BOTH numbers (cash + trade). Default variant is
- * FR — the trading benchmark.
+ * Adopt Me pet hero: the shared ValueItemHero with Adopt Me's data — BOTH
+ * numbers (cash + trade) and the two-axis tier/potion picker (the same
+ * CompactVariantPicker the value cards use) instead of SAB's mutation grid.
+ * Default variant is FR — the trading benchmark.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
-import type { AdoptMePetVariant, Variant } from './_adoptMePetData'
+import { useMemo, useRef } from 'react'
+import type { AdoptMePetVariant } from './_adoptMePetTypes'
+import type { Variant } from '../../calculator/_adoptMeCalcTypes'
 import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
+import { CompactVariantPicker } from '../_CompactVariantPicker'
 import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
+import { marketSecondaryUsd } from '@/lib/values/pricing'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import { amVariantKey } from '@/lib/value-listings/catalogs'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
-
-/** Tier → the variant forms it contains, in ladder order. Default exposes the
- *  full potion matrix; Neon/Mega only have the plain + Fly-Ride forms. */
-const TIER_TABS: { key: string; label: string; variants: Variant[] }[] = [
-  { key: 'default', label: 'Default', variants: ['N', 'F', 'R', 'FR'] },
-  { key: 'neon', label: 'Neon', variants: ['NEON', 'NFR'] },
-  { key: 'mega', label: 'Mega', variants: ['MEGA', 'MFR'] },
-]
-
-/** Which tier a variant code belongs to. */
-function tierOf(code: Variant): string {
-  if (code === 'MEGA' || code === 'MFR') return 'mega'
-  if (code === 'NEON' || code === 'NFR') return 'neon'
-  return 'default'
-}
+import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
+import { ValueBuyActions } from '@/components/values/ValueBuyActions'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
-
-/**
- * Show the quiet "typically ~$X" market line only when the market (average)
- * exceeds the cheapest by this multiple; below it the two are near-identical
- * and the cheapest headline says it all. Mirrors SAB's ItemHero split — the
- * buyer's headline is ALWAYS the cheapest real listing. 1.25 matches the Adopt
- * Me values list page (_AdoptMeValuesClient) and SAB's _ItemHero, so a pet shows
- * the same "typically ~$X" line on its page and in the list.
- */
-const MARKET_SECONDARY_GAP = 1.25
-
 
 export default function AdoptMePetHero({
   name,
@@ -69,12 +45,6 @@ export default function AdoptMePetHero({
   // Selection is SHARED via context — the callout, stats strip and price chart
   // all read it, so picking a form here reprices the whole page below.
   const { selectedCode, setSelectedCode } = useSelectedVariant()
-  // The tier tab whose grid is shown. Follows the selection, but a user can tab
-  // to another tier to browse its forms before picking one.
-  const [activeTier, setActiveTier] = useState<string>(() => tierOf(selectedCode))
-  // Follow the tier when the selection changes elsewhere (e.g. the chart's own
-  // variant dropdown writes to the shared context).
-  useEffect(() => setActiveTier(tierOf(selectedCode)), [selectedCode])
   const heroRef = useRef<HTMLDivElement>(null)
 
   const selected = useMemo(
@@ -84,17 +54,10 @@ export default function AdoptMePetHero({
 
   function pick(code: Variant) {
     setSelectedCode(code)
-    setActiveTier(tierOf(code))
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
       heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
-
-  // The forms shown in the grid for the current tab, in ladder order, joined to
-  // their price data (a form with no row still renders as "—").
-  const tierVariants = (TIER_TABS.find((t) => t.key === activeTier) ?? TIER_TABS[0]).variants.map(
-    (code) => variants.find((v) => v.variant === code) ?? ({ variant: code, label: code } as AdoptMePetVariant),
-  )
 
   // The button is DropMarket's own stock for the selected form, never the
   // market price above it (Bundle 2): see value-listings/buy-state.
@@ -113,261 +76,103 @@ export default function AdoptMePetHero({
   const accent = variantColor(selected.variant)
   // CHEAPEST is the headline — the price a buyer acts on. MARKET (the typical
   // reputable price = average) shows as a quiet secondary ONLY when it sits a
-  // meaningful step above the cheapest (> MARKET_SECONDARY_GAP); near-identical
-  // pairs read as one number. Mirrors SAB's _ItemHero exactly.
+  // meaningful step above the cheapest (MARKET_SECONDARY_GAP).
   const marketUsd = selected.averageUsd ?? selected.cashUsd
   const cheapestUsd = selected.cheapestUsd
-  // Headline = cheapest when we have it, else the reputable market. Both are
-  // REAL cash (cashUsd no longer carries an estimate). When neither exists we
-  // do NOT invent a dollar figure — we fall back to the trade-points value.
+  // Headline = cheapest when we have it, else the reputable market. When
+  // neither exists we do NOT invent a dollar figure — we fall back to the
+  // trade-points value.
   const headlineUsd = cheapestUsd ?? marketUsd
-  const showMarket =
-    cheapestUsd != null &&
-    marketUsd != null &&
-    marketUsd > cheapestUsd * MARKET_SECONDARY_GAP
-  const marketSecondary = showMarket ? USD.format(marketUsd) : null
+  const secondaryUsd = marketSecondaryUsd(cheapestUsd, marketUsd)
   // A reputable price exists whenever we priced an average from real listings.
   const hasReputable = selected.averageUsd != null
-  // No real cash → show the community trade-points value (real data) instead of
-  // a fabricated estimate. Only when there are no points either do we show
-  // "No data yet".
   const hasCash = headlineUsd != null
   const pointsValue = selected.tradeValue != null && selected.tradeValue > 0 ? selected.tradeValue : null
   // Pet name FIRST, variant as a readable suffix: "Bat Dragon - Normal",
-  // "Bat Dragon - FR", "Bat Dragon - Neon Fly Ride" — never "Mega Fly Ride Bat
-  // Dragon". N reads as "Normal"; the potioned forms use their full label.
+  // "Bat Dragon - Neon Fly Ride". N reads as "Normal".
   const variantSuffix = selected.variant === 'N' ? 'Normal' : selected.label
   const displayName = `${name} - ${variantSuffix}`
-  // The buy button / plain references still want just the pet name.
-  const petName = name
 
   return (
-    <div className="space-y-4">
-      {/* Hero stat-card */}
-      <div
-        ref={heroRef}
-        className="relative scroll-mt-20 overflow-hidden border border-[#1E2723] bg-[#101512]/[0.94] backdrop-blur-sm"
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-1/4 -top-1/2 h-[150%] w-[80%] rounded-full blur-3xl"
-          style={{ background: `radial-gradient(closest-side, ${accent}22, transparent)` }}
-        />
-        <div className="relative grid gap-5 p-5 sm:p-6 lg:grid-cols-[190px_minmax(0,1fr)_240px] lg:items-center">
-          {/* Art */}
-          <div className="mx-auto aspect-square w-40 overflow-hidden sm:w-44 lg:mx-0 lg:w-[190px]">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- remote pet art
-              <img src={imageUrl} alt={`${displayName} — Adopt Me`} className="h-full w-full object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.55)]" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-[#5E685E]">No image</div>
-            )}
-          </div>
-
-          {/* Name + stat rows */}
-          <div>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              <span className="h-2 w-2 rounded-full" style={{ background: accent }} />
-              {selected.variant === 'N' ? 'Normal (no potion)' : `${selected.label} variant`}
-            </span>
-            <h1 className="mt-2 text-2xl font-semibold leading-[1.15] tracking-[-0.01em] text-[#F1F3F1] sm:text-[30px]">
-              {displayName}
-            </h1>
-
-            <dl className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              <StatRow label="Rarity" value={rarityLabel} valueColor={rarityColor} />
-              <StatRow label="Availability" value={obtainabilityLabel} />
-              <StatRow label="Trade value" value={selected.tradeValue != null ? TRADE.format(selected.tradeValue) : '—'} />
-              <StatRow
-                label="Listings tracked"
-                value={selected.listingsTracked > 0 ? String(selected.listingsTracked) : 'None yet'}
-              />
-            </dl>
-          </div>
-
-          {/* Cash price + confidence + CTA. CHEAPEST is the headline (the price a
-              buyer acts on); the typical/market price shows as a quiet secondary
-              only when it's a meaningful step above. Mirrors SAB's ItemHero
-              cheapest/market split. */}
-          <div className="lg:text-right">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {/* Market data, not DropMarket stock: the buy button carries ours. */}
-              {hasCash ? (hasReputable ? 'Market Price' : 'Cash value') : pointsValue ? 'Trade value' : 'Value'}
-            </p>
-            <p className="mt-1 text-[34px] font-bold leading-none tracking-[-0.02em] text-[#F1F3F1] tabular-nums">
-              {hasCash ? (
-                USD.format(headlineUsd as number)
-              ) : pointsValue ? (
-                <>
-                  {TRADE.format(pointsValue)}
-                  <span className="ml-1.5 text-[15px] font-semibold text-[#7C8A80]">pts</span>
-                </>
-              ) : (
-                'No data yet'
-              )}
-            </p>
-            {/* Typical (market) price — shown only when it genuinely exceeds the
+    <ValueItemHero
+      anchorRef={heroRef}
+      accent={accent}
+      art={{ src: imageUrl, alt: `${displayName} — Adopt Me` }}
+      eyebrow={
+        <>
+          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: accent }} />
+          {selected.variant === 'N' ? 'Normal (no potion)' : `${selected.label} variant`}
+        </>
+      }
+      title={displayName}
+      stats={[
+        { label: 'Rarity', value: <span style={{ color: rarityColor }}>{rarityLabel}</span> },
+        { label: 'Availability', value: obtainabilityLabel },
+        { label: 'Trade Value', value: selected.tradeValue != null ? TRADE.format(selected.tradeValue) : '—' },
+        { label: 'Listings Tracked', value: selected.listingsTracked > 0 ? String(selected.listingsTracked) : 'None yet' },
+      ]}
+      price={{
+        // Market data, not DropMarket stock: the buy button carries ours.
+        label: hasCash ? (hasReputable ? 'Market Price' : 'Cash Value') : pointsValue ? 'Trade Value' : 'Value',
+        labelColor: accent,
+        value: hasCash ? (
+          USD.format(headlineUsd as number)
+        ) : pointsValue ? (
+          <>
+            {TRADE.format(pointsValue)}
+            <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts</span>
+          </>
+        ) : (
+          'No data yet'
+        ),
+        children: (
+          <>
+            {/* Typical (market) price — only when it genuinely exceeds the
                 cheapest headline (never a duplicate number). */}
-            {marketSecondary && (
-              <p className="mt-1.5 text-[13px] text-[#7C8A80] tabular-nums lg:text-right">
-                typically ~{marketSecondary}
-              </p>
+            {secondaryUsd != null && (
+              <p className="mt-1.5 text-[13px] tabular-nums text-text-tertiary">typically ~{USD.format(secondaryUsd)}</p>
             )}
             <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {hasReputable ? (
-                <span className="inline-flex items-center gap-1.5 border px-2 py-1 text-[11.5px] font-semibold" style={{ borderColor: '#8FBF9C44', color: '#8FBF9C' }}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#8FBF9C]" />
-                  From verified sellers
-                </span>
+                <HeroBadge color="var(--color-success)">From verified sellers</HeroBadge>
               ) : hasCash ? (
-                <ConfidenceBadge label={selected.confidence} />
+                <ConfidenceBadge confidence={selected.confidence} />
               ) : pointsValue ? (
-                <span className="inline-flex items-center gap-1.5 border border-[#26332C] bg-white/[0.03] px-2 py-1 text-[11.5px] font-semibold text-[#9BA8A0]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#9BA8A0]" />
-                  Community trade value
-                </span>
+                <HeroBadge>Community trade value</HeroBadge>
               ) : null}
             </div>
-            {/* Buy CTA is CHROME (same on every pet) → the shared forest accent,
-                not the per-variant colour. Matches SAB's Buy button across the
-                whole value hub. */}
-            <Link
-              href={cta.href}
-              onClick={cta.onClick}
-              aria-label={cta.state === 'none' ? `Browse items similar to ${displayName}` : `${cta.label}: ${displayName}`}
-              className="group mt-4 inline-flex w-full items-center justify-center gap-1.5 bg-[#1B6B3F] px-5 py-3 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48] lg:w-auto"
-            >
-              {cta.label}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            {cta.subline ? <p className="mt-1.5 text-[12px] text-[#9BA8A0]">{cta.subline}</p> : null}
-            {/* Sell door — outline, quieter than Buy. No keep-figure: Adopt Me
-                cash values are estimates, so we never attach a $ payout here. */}
-            <Link
-              href="/adopt-me/sell?src=am-item-page"
-              aria-label={`Sell your ${name}`}
-              className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 border border-[#2F6B46] px-5 py-2.5 text-[13px] font-semibold text-[#8FBF9C] transition hover:border-[#3FA35C] hover:text-[#A6D9B6] lg:w-auto"
-            >
-              Sell {name} For Cash
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-
-        <div className="relative flex items-center justify-center border-t border-white/[0.06] px-5 py-3">
-          {hasReputable && selected.lastPricedAt ? (
-            // Live-freshness cue (SEO + trust): "Updated <time> UTC" with a
-            // pulsing dot, same component SAB uses on its item page.
-            <FreshnessBadge updatedAt={selected.lastPricedAt} />
-          ) : (
-            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#6D7A72]">
-              {hasReputable
-                ? 'Cheapest price from sellers with 100+ reviews'
-                : hasCash
-                  ? 'Cheapest from tracked marketplace listings'
-                  : pointsValue
-                    ? 'Community trade value — no cash listings tracked yet'
-                    : 'No data tracked yet'}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Variant selector — one panel: tier tabs (Default / Neon / Mega) over a
-          price grid showing only that tier's forms. Tapping a form reprices the
-          hero above. Replaces the old split picker + separate grid. */}
-      <div className="overflow-hidden rounded-md border border-[#1E2723] bg-[#0E1211]">
-        {/* Tier tabs */}
-        <div className="flex gap-1 border-b border-[#1E2723] bg-white/[0.015] p-1.5">
-          {TIER_TABS.map((t) => {
-            const on = activeTier === t.key
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setActiveTier(t.key)}
-                aria-pressed={on}
-                className={`flex-1 rounded px-3 py-2 text-body-sm font-semibold transition-colors ${
-                  on ? 'bg-[#1B6B3F] text-white' : 'text-[#9BA8A0] hover:bg-white/[0.05]'
-                }`}
-              >
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Price grid for the active tier — tap to reprice. Column count follows
-            the tier size (4 forms for Default, 2 for Neon/Mega) so cells fill the
-            row instead of leaving gaps. */}
-        <div className={`grid gap-2 p-3 ${tierVariants.length > 2 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
-          {tierVariants.map((v) => {
-            const active = v.variant === selected.variant
-            const c = variantColor(v.variant)
-            const hasCash = v.cashUsd != null
-            return (
-              <button
-                key={v.variant}
-                type="button"
-                onClick={() => pick(v.variant)}
-                aria-pressed={active}
-                className="flex flex-col justify-between gap-2 rounded-md border px-3 py-2.5 text-left transition hover:brightness-110"
-                style={
-                  active
-                    ? { borderColor: c, backgroundColor: `color-mix(in srgb, ${c} 14%, #0E1211)` }
-                    : { borderColor: '#1E2723', backgroundColor: '#111613' }
-                }
-              >
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c }} />
-                  <span className="min-w-0 truncate text-body-sm font-semibold" style={{ color: active ? c : '#E6EAE7' }}>
-                    {v.label}
-                  </span>
-                </span>
-                <span className="text-body-sm font-bold tabular-nums" style={{ color: active ? '#F1F3F1' : '#C6CEC9' }}>
-                  {hasCash ? (
-                    <>
-                      {USD.format(v.cashUsd as number)}
-                      {v.isEstimated && <span className="ml-1 text-caption font-medium text-[#8B7BA0]">est</span>}
-                    </>
-                  ) : v.tradeValue != null ? (
-                    <span className="text-[#9BA8A0]">
-                      {TRADE.format(v.tradeValue)} <span className="text-caption font-medium">trade</span>
-                    </span>
-                  ) : (
-                    <span className="text-[#6D7A72]">—</span>
-                  )}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StatRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
-  return (
-    <div className="flex items-center justify-between py-2.5">
-      <dt className="text-[13.5px] text-[#8B978F]">{label}</dt>
-      <dd className="text-[14px] font-semibold tabular-nums" style={{ color: valueColor ?? '#E6EAE7' }}>{value}</dd>
-    </div>
-  )
-}
-
-function ConfidenceBadge({ label }: { label: string }) {
-  const map: Record<string, { text: string; color: string }> = {
-    highly_accurate: { text: 'Highly Accurate', color: '#8FBF9C' },
-    high: { text: 'High Confidence', color: '#8FBF9C' },
-    medium: { text: 'Medium Confidence', color: '#E0B155' },
-    low: { text: 'Low Confidence', color: '#9BA8A0' },
-  }
-  const c = map[label] ?? map.low
-  return (
-    <span className="inline-flex items-center gap-1.5 border px-2 py-1 text-[11.5px] font-semibold" style={{ borderColor: `${c.color}44`, color: c.color }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: c.color }} />
-      {c.text}
-    </span>
+          </>
+        ),
+      }}
+      actions={
+        // Sell door: no keep-figure — Adopt Me cash values are estimates, so we
+        // never attach a $ payout here.
+        <ValueBuyActions
+          cta={cta}
+          itemName={displayName}
+          sell={{ href: '/adopt-me/sell?src=am-item-page', label: `Sell ${name} For Cash` }}
+          align="end"
+        />
+      }
+      footer={
+        hasReputable && selected.lastPricedAt ? (
+          // Live-freshness cue (SEO + trust): "Updated <time> UTC".
+          <FreshnessBadge updatedAt={selected.lastPricedAt} />
+        ) : (
+          <span className="text-[12px] text-text-tertiary">
+            {hasReputable
+              ? 'Cheapest price from sellers with 100+ reviews'
+              : hasCash
+                ? 'Cheapest from tracked marketplace listings'
+                : pointsValue
+                  ? 'Community trade value — no cash listings tracked yet'
+                  : 'No data tracked yet'}
+          </span>
+        )
+      }
+      // Tier (Default / Neon / Mega) over Potion (Fly / Ride) — picking a form
+      // reprices the hero and every section below.
+      picker={<CompactVariantPicker variant={selected.variant} onChange={pick} accent={accent} />}
+    />
   )
 }

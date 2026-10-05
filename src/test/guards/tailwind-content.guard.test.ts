@@ -7,7 +7,7 @@
  * 2026-09-28: the Bronze label had no orange, Silver and Diamond badges had no
  * bg/border, the storefront avatar ring fell back to Tailwind's default blue
  * (`src/lib/seller/tiers.ts`), and the SAB hub cards, item hero and calculator
- * tiles lost their shadows (`src/lib/sab/theme.ts`).
+ * tiles lost their shadows (the since-retired `src/lib/sab/theme.ts`).
  *
  * Both checks compile with the real config through Tailwind's PostCSS plugin
  * (no Next, no globals.css) and read the class names back out of the selectors:
@@ -23,7 +23,8 @@ import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
 import tailwindConfig from '../../../tailwind.config'
 import { TIERS } from '@/lib/seller/tiers'
-import * as sabTheme from '@/lib/sab/theme'
+import * as surfaces from '@/lib/ui/surfaces'
+import * as valueStyles from '@/components/values/styles'
 
 // tailwind.config.ts lists plain glob strings (no `{ raw }` entries).
 const CONTENT = tailwindConfig.content as string[]
@@ -67,10 +68,10 @@ function unscannedSrcGlobs(content: string[]): string[] {
     .map((entry) => (entry.isDirectory() ? `./src/${entry.name}/**/*.${SOURCE_EXT}` : `./src/${entry.name}`))
 }
 
-/** Every class token a SAB theme export carries (SAB_BASE is a hex colour, not a class list). */
-const SAB_CLASSES = Object.entries(sabTheme)
-  .filter(([name]) => name !== 'SAB_BASE')
-  .flatMap(([, value]) => (typeof value === 'string' ? [value] : Object.values(value)))
+/** Every class token the shared surface / values style maps carry (the SAB
+ *  hub theme they replaced, src/lib/sab/theme.ts, was retired 2026-10-04). */
+const STYLE_MAP_CLASSES = [...Object.values(surfaces), ...Object.values(valueStyles)]
+  .filter((value): value is string => typeof value === 'string')
   .flatMap((list) => list.split(/\s+/).filter(Boolean))
 
 describe('tailwind.config.ts content covers every class src/ hands to a component', () => {
@@ -88,9 +89,9 @@ describe('tailwind.config.ts content covers every class src/ hands to a componen
     },
   )
 
-  it('SAB theme classes are generated', () => {
-    expect(SAB_CLASSES.length).toBeGreaterThan(0)
-    expect(SAB_CLASSES.filter((cls) => !generated.has(cls))).toEqual([])
+  it('shared surface + values style classes are generated', () => {
+    expect(STYLE_MAP_CLASSES.length).toBeGreaterThan(0)
+    expect(STYLE_MAP_CLASSES.filter((cls) => !generated.has(cls))).toEqual([])
   })
 
   it(

@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 import {
   VARIANTS,
   type Variant,
@@ -26,14 +27,25 @@ function num(v: number | string | null): number | null {
 export async function getAdoptMeCalcPets(): Promise<CalcPet[]> {
   const supabase = createAnonClient()
 
+  // Paged (PostgREST stops one response at 1000 rows, silently): 8 value rows
+  // per pet would drop every pet past ~125. Unique-key order per page.
   const [petsRes, valuesRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,slug,name,rarity,image_url')
-      .eq('is_active', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select('pet_id,variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated'),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,slug,name,rarity,image_url')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select('pet_id,variant,trade_value,cash_value_usd,cheapest_usd,average_usd,is_estimated')
+        .order('pet_id', { ascending: true })
+        .order('variant', { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   if (petsRes.error) {
@@ -93,15 +105,23 @@ export async function getAdoptMeTopValues(limit = 20): Promise<AdoptMeTopValue[]
   const supabase = createAnonClient()
 
   const [petsRes, valuesRes] = await Promise.all([
-    (supabase as any)
-      .from('adopt_me_pets')
-      .select('id,slug,name,rarity')
-      .eq('is_active', true)
-      .eq('has_page', true),
-    (supabase as any)
-      .from('adopt_me_pet_values')
-      .select('pet_id,cheapest_usd,average_usd,cash_value_usd')
-      .eq('variant', 'FR'),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pets')
+        .select('id,slug,name,rarity')
+        .eq('is_active', true)
+        .eq('has_page', true)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    fetchAllRows<any>((from, to) =>
+      (supabase as any)
+        .from('adopt_me_pet_values')
+        .select('pet_id,cheapest_usd,average_usd,cash_value_usd')
+        .eq('variant', 'FR')
+        .order('pet_id', { ascending: true })
+        .range(from, to),
+    ),
   ])
 
   if (petsRes.error || valuesRes.error) {

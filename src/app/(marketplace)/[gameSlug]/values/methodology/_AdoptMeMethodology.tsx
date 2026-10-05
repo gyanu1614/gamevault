@@ -1,7 +1,8 @@
 import Link from '@/components/navigation/AppLink'
-import { ArrowRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { sabCard } from '@/lib/sab/theme'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
+import { HubSection } from '@/components/values/HubSection'
+import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_LABEL } from '@/components/values/styles'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SabHeroBackdrop } from '../_SabHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
@@ -50,7 +51,7 @@ export default async function AdoptMeMethodology() {
   const hubNav = await getHubNavData('adopt-me')
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -65,19 +66,17 @@ export default async function AdoptMeMethodology() {
         <HubNav data={hubNav} />
 
         <div className={`mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-[#6D7A72]">
-            <Link href="/adopt-me/values" className="transition-colors hover:text-[#F1F3F1]">Values</Link>
-            <ArrowRight className="h-3.5 w-3.5" />
-            <span className="text-[#E6EAE7]">Methodology</span>
+          <nav className="mb-4 flex items-center gap-1.5 text-[12.5px] text-text-tertiary">
+            <Link href="/adopt-me/values" className="transition-colors hover:text-text-primary">Values</Link>
+            <CaretRightIcon size={12} weight="bold" aria-hidden />
+            <span className="text-text-secondary">Methodology</span>
           </nav>
 
-          <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-            DropMarket value database
-          </p>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[32px]">
+          <p className={`mb-2 ${VALUE_LABEL}`}>DropMarket Value Database</p>
+          <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[32px]">
             How we value Adopt Me pets
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#9BA8A0]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
             Adopt Me is the only Roblox trading economy where you can ask two
             different questions about a pet: what is it worth in a trade, and
             what is it worth in real money? DropMarket answers both — and this
@@ -87,45 +86,45 @@ export default async function AdoptMeMethodology() {
       </SabHeroBackdrop>
 
       <div className="relative z-10 mx-auto w-full max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
-        <Section title="Trade value vs cash value — why we show both">
+        <HubSection title="Trade value vs cash value — why we show both">
           Every incumbent Adopt Me value site publishes one number: an abstract
           community <em>trade value</em> in points. That is useful for checking
           whether a swap is fair, but it cannot tell you what a pet is worth in
           real money — because those sites do not process transactions.
           DropMarket does. So every pet shows two numbers: the community{' '}
-          <strong className="text-[#E6EAE7]">trade value</strong>, and the
-          DropMarket <strong className="text-[#8FBF9C]">cash value in USD</strong>,
+          <strong className="text-[#E8BD6A]">trade value</strong>, and the
+          DropMarket <strong className="text-[#54DDBE]">cash value in USD</strong>,
           built from real marketplace activity. They diverge because point
           ratings lag real demand — and that gap is exactly what you want to see
           before you accept an offer or decide to sell.
-        </Section>
+        </HubSection>
 
-        <Section title="Real listings, priced at the low end">
+        <HubSection title="Real listings, priced at the low end">
           Cash values come from real marketplace listings, pooled across multiple
           sources. Rather than an inflated average, we price at the{' '}
-          <strong className="text-[#E6EAE7]">low end of the clean listings</strong>{' '}
+          <strong className="text-text-primary">low end of the clean listings</strong>{' '}
           — the cheapest a buyer could realistically get the pet for. More
           sources mean more samples and a more honest floor.
-        </Section>
+        </HubSection>
 
-        <Section title="Filtering out fakes and scams">
+        <HubSection title="Filtering out fakes and scams">
           Raw marketplace data is full of noise that would distort a price if we
           let it through. Before anything is priced we remove:
-          <ul className="mt-3 space-y-1.5 text-[#9BA8A0]">
-            <li>• <strong className="text-[#E6EAE7]">Scam bait</strong> — a few-cent
+          <ul className="mt-3 space-y-1.5">
+            <li>• <strong className="text-text-primary">Scam bait</strong> — a few-cent
               &ldquo;add me in-game / friend request&rdquo; listings that are not real sales.</li>
-            <li>• <strong className="text-[#E6EAE7]">Untrustworthy sellers</strong> —
+            <li>• <strong className="text-text-primary">Untrustworthy sellers</strong> —
               brand-new accounts and sellers with little completed-order history.</li>
-            <li>• <strong className="text-[#E6EAE7]">Toys and bundles</strong> named after
+            <li>• <strong className="text-text-primary">Toys and bundles</strong> named after
               a pet (strollers, plushies, multi-pet packs) — these are different items.</li>
-            <li>• <strong className="text-[#E6EAE7]">Duplicate spam</strong> — one seller
+            <li>• <strong className="text-text-primary">Duplicate spam</strong> — one seller
               posting the same listing many times counts once, not many.</li>
-            <li>• <strong className="text-[#E6EAE7]">Absurd outliers</strong> — any price
+            <li>• <strong className="text-text-primary">Absurd outliers</strong> — any price
               far below the real cluster is treated as a fake, not a deal.</li>
           </ul>
-        </Section>
+        </HubSection>
 
-        <Section title="How the eight variants are priced">
+        <HubSection title="How the eight variants are priced">
           A single pet exists in eight tradable forms — Normal, Fly, Ride, Fly
           Ride, Neon, Neon Fly Ride, Mega Neon and Mega Fly Ride. Fly Ride (FR)
           is the standard benchmark traders quote. We price the high-volume,
@@ -133,38 +132,37 @@ export default async function AdoptMeMethodology() {
           has too few trustworthy listings, we show a clearly-marked{' '}
           <em>estimate</em> derived from the variant ladder rather than inventing
           a precise number. We never present an estimate as an observed sale.
-        </Section>
+        </HubSection>
 
-        <Section title="Confidence, and what we exclude">
+        <HubSection title="Confidence, and what we exclude">
           Every cash value carries a confidence label from the number of clean
           listings behind it — highly accurate (25+), high (10+), medium (3+),
           low below that. We exclude bundles, account sales, disputed orders,
           toys, and mislabelled variants. A pet we cannot price honestly shows an
           estimate, not a guess dressed up as a fact.
-        </Section>
+        </HubSection>
 
-        <Section title="Why you can trust and cite these numbers">
+        <HubSection title="Why you can trust and cite these numbers">
           Because the data is real, dated, refreshed daily, and openly filtered,
           DropMarket values are designed to be the reference the community links
           to — and the source an AI assistant can quote. Each value states itself
           as plain, dated text, so it stays accurate whether it is read by a
           person, Google, or an answer engine.
-        </Section>
+        </HubSection>
 
-        <section className={cn(sabCard, 'p-5 sm:p-6')}>
-          <h2 className="text-lg font-semibold text-[#F1F3F1]">
+        {/* FAQ sits on the page ground (not inside a card): the FAQ cards are
+            surfaces themselves, and a card inside a card is off-system. */}
+        <section className="pt-2">
+          <h2 className="text-lg font-semibold tracking-tight text-text-primary">
             Methodology — frequently asked questions
           </h2>
           <FaqCards items={ADOPT_ME_METHODOLOGY_FAQ} square defaultOpen={0} className="mt-4" />
         </section>
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <Link
-            href="/adopt-me/values"
-            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_-8px_rgba(27,107,63,0.6)] transition hover:bg-[#1f7a48]"
-          >
+          <Link href="/adopt-me/values" className={VALUE_BTN_SECONDARY}>
             Browse all Adopt Me values
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRightIcon size={15} weight="bold" aria-hidden />
           </Link>
         </div>
       </div>
@@ -177,14 +175,5 @@ export default async function AdoptMeMethodology() {
         accountsHref={hubNav.accountsHref}
       />
     </main>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className={cn(sabCard, 'p-5 sm:p-6')}>
-      <h2 className="text-lg font-semibold text-[#F1F3F1]">{title}</h2>
-      <div className="mt-2 text-sm leading-6 text-[#9BA8A0]">{children}</div>
-    </section>
   )
 }

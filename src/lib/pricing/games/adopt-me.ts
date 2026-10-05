@@ -16,6 +16,7 @@ import {
   type AdoptMeVariantCorrection,
 } from '@/lib/pricing/adopt-me-correction'
 import type { RawListing } from '@/lib/pricing/reputable-adapter'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 const PAGE_SIZE = 1000
 
@@ -33,26 +34,6 @@ function toNumber(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-async function selectAll<T>(
-  client: ReturnType<typeof createServiceRoleClient>,
-  table: string,
-  columns: string,
-  filter?: (q: any) => any,
-): Promise<T[]> {
-  const rows: T[] = []
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
-    let query = (client as any).from(table).select(columns)
-    if (filter) query = filter(query)
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-    if (error) throw new Error(`${table}: ${error.message}`)
-    if (!data?.length) break
-    rows.push(...(data as T[]))
-    if (data.length < PAGE_SIZE) break
-  }
-  return rows
-}
-
 /**
  * `options.full` is accepted for registry parity but not yet acted on: this
  * game reads ~38k already-filtered rows (listing_status=active) against 488
@@ -67,12 +48,25 @@ export async function runAdoptMeCorrection(
 
   // Only ACTIVE raw listings feed the price. Ended (vanished) listings stay for
   // history but must not set today's value.
-  const rawRows = await selectAll<RawRow>(
-    admin,
-    'adopt_me_market_raw_listings',
-    'pet_id,variant,price_usd,reviews,listing_status',
-    (q) => q.eq('listing_status', 'active'),
+  // Paged with a UNIQUE order (id): paging without ORDER BY lets Postgres
+  // return rows in any order, so page seams skip and duplicate rows — the
+  // same bug that made SAB reprice differently on identical runs.
+  const { data: rawData, error: rawError } = await fetchAllRows<RawRow>(
+    (from, to) =>
+      (admin as any)
+        .from('adopt_me_market_raw_listings')
+        .select('pet_id,variant,price_usd,reviews,listing_status')
+        .eq('listing_status', 'active')
+        .order('id', { ascending: true })
+        .range(from, to),
+    PAGE_SIZE,
   )
+  if (rawError) {
+    throw new Error(
+      `adopt_me_market_raw_listings: ${(rawError as { message?: string }).message ?? String(rawError)}`,
+    )
+  }
+  const rawRows = rawData ?? []
 
   const listings: RawListing[] = rawRows.map((row) => ({
     itemId: row.pet_id,

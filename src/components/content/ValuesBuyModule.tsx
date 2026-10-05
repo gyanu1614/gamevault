@@ -1,9 +1,12 @@
 'use client'
 
 import Link from '@/components/navigation/AppLink'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { HUB_COPY } from '@/lib/content/theme'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
+import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { VALUE_BTN_SECONDARY, VALUE_SURFACE } from '@/components/values/styles'
 
 /**
  * "Buy X from $Y" / "Sell X" module for a value page. Shared by every game on
@@ -17,6 +20,9 @@ import type { ItemStock } from '@/lib/value-listings/buy-state'
  *     Items" (the price is real, the supply is not)
  *  3. No price at all (every Steal An Egg PET)  -> "no market price yet", with
  *     a link to the item's source egg, which IS priced.
+ *
+ * The buttons are the values hubs' one Buy + Sell pair (ValueBuyActions) on
+ * the shared card surface, so this module matches every other item page.
  *
  * Copy stays honest at low prices: Steal An Egg eggs clear around $0.97, so
  * "from $0.97" is what it says. No rounding up, no "from $1".
@@ -48,11 +54,11 @@ export function ValuesBuyModule({
   // 3. Unpriced item (pet catalogue page).
   if (cheapestUsd == null) {
     return (
-      <div className="border border-[var(--ct-line)] bg-[var(--ct-surface)] p-5 sm:p-6">
-        <p className="text-[15px] font-semibold text-[var(--ct-text)]">
+      <div className={`${VALUE_SURFACE} p-5 sm:p-6`}>
+        <p className="text-[15px] font-semibold text-text-primary">
           No market price yet for {itemName}
         </p>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ct-text-muted)]">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">
           {itemName} is not sold directly on the marketplaces we track — players
           get it by hatching.{' '}
           {sourceItem
@@ -61,11 +67,13 @@ export function ValuesBuyModule({
         </p>
         {sourceItem && (
           <Link
-            href={`/steal-an-egg/values/${sourceItem.slug}`}
-            className="mt-4 inline-flex items-center gap-2 border border-[var(--ct-accent-border)] bg-[var(--ct-accent-deep)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ct-accent-text)] transition-colors hover:bg-[var(--ct-hover)]"
+            // Same game as this item: the source egg's own value page.
+            href={`/${buy.gameSlug}/values/${sourceItem.slug}`}
+            className={`${VALUE_BTN_SECONDARY} mt-4`}
           >
             {/* A value page link, so no price promise on it (Bundle 2). */}
             See {sourceItem.name} Value
+            <ArrowRightIcon size={15} weight="bold" aria-hidden />
           </Link>
         )}
       </div>
@@ -75,49 +83,34 @@ export function ValuesBuyModule({
   // 1. Priced with live DropMarket stock.
   if (cta.state === 'in_stock') {
     return (
-      <div className="border border-[var(--ct-line)] bg-[var(--ct-surface)] p-5 sm:p-6">
-        <p className="text-[15px] font-semibold text-[var(--ct-text)]">
+      <div className={`${VALUE_SURFACE} p-5 sm:p-6`}>
+        <p className="text-[15px] font-semibold text-text-primary">
           {itemName} sells for about {fmt(cheapestUsd)}
         </p>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ct-text-muted)]">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">
           {HUB_COPY.safedrop}
         </p>
-        <Link
-          href={cta.href}
-          onClick={cta.onClick}
-          className="mt-4 inline-flex items-center gap-2 bg-[var(--ct-accent)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ct-on-accent)] transition-opacity hover:opacity-90"
-        >
-          {cta.label}
-        </Link>
+        <ValueBuyActions cta={cta} itemName={itemName} className="mt-4" />
       </div>
     )
   }
 
   // 2. Priced, but nobody is selling it here yet.
   return (
-    <div className="border border-[var(--ct-line)] bg-[var(--ct-surface)] p-5 sm:p-6">
-      <p className="text-[15px] font-semibold text-[var(--ct-text)]">
+    <div className={`${VALUE_SURFACE} p-5 sm:p-6`}>
+      <p className="text-[15px] font-semibold text-text-primary">
         {itemName} sells for about {fmt(cheapestUsd)}
       </p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ct-text-muted)]">
+      <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">
         No one is listing {itemName} on DropMarket right now. If you have one,
         this is a good moment to sell it.
       </p>
-      <div className="mt-4 flex flex-wrap gap-2.5">
-        <Link
-          href={sellHref}
-          className="inline-flex items-center gap-2 border border-[var(--ct-accent-border)] bg-[var(--ct-accent-deep)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ct-accent-text)] transition-colors hover:bg-[var(--ct-hover)]"
-        >
-          Sell {itemName} on {gameName}
-        </Link>
-        <Link
-          href={cta.href}
-          onClick={cta.onClick}
-          className="inline-flex items-center gap-2 border border-[var(--ct-line)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ct-text)] transition-colors hover:bg-[var(--ct-hover)]"
-        >
-          {cta.label}
-        </Link>
-      </div>
+      <ValueBuyActions
+        cta={cta}
+        itemName={itemName}
+        sell={{ href: sellHref, label: `Sell ${itemName} on ${gameName}` }}
+        className="mt-4"
+      />
     </div>
   )
 }

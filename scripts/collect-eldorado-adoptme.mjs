@@ -16,9 +16,22 @@
  * Polite: one pet at a time, delay between pets, a few pages each. Tune with
  * flags. USER runs this against the live site (as the SAB collector is run).
  *
+ * Offer cleaning (toys, scam-bait, new accounts, trait-primary variant) lives
+ * in scripts/lib/adoptme-eldorado.mjs, shared with the category crawl.
+ *
+ * TWO MODES
+ *   per-pet (default)  one te_v2 query per catalog pet, every page. Requests
+ *                      grow with the catalog (~1 + offers/50 per pet).
+ *   --crawl            ONE paged walk of the whole Adopt Me "Pets" item type
+ *                      (~1,300 pages on 2026-10-04), grouped by Item name and
+ *                      kept for catalog pets only. Request count is fixed by
+ *                      Eldorado's offer volume, not by how many pets we list —
+ *                      the mode to use once the catalog is ~800 pets.
+ *
  * Usage:
  *   node scripts/collect-eldorado-adoptme.mjs --limit 5        # test on 5 pets
  *   node scripts/collect-eldorado-adoptme.mjs                  # all pets → JSON
+ *   node scripts/collect-eldorado-adoptme.mjs --crawl          # one category crawl → JSON
  *   node scripts/collect-eldorado-adoptme.mjs --send           # + run importer
  */
 
@@ -27,107 +40,19 @@ import { dirname, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
+import {
+  ELDORADO_AM_GAME_ID as GAME_ID,
+  DEFAULT_MIN_ACCOUNT_AGE_DAYS,
+  cleanEldoradoOffer,
+  crawlEldoradoPets,
+  fetchEldoradoOffers,
+  itemNameOf,
+  eldoradoKeyFor,
+  normalizeName,
+} from './lib/adoptme-eldorado.mjs'
 
-const BASE_URL = 'https://www.eldorado.gg'
-const GAME_ID = '201' // Adopt Me on Eldorado
-const CATEGORY = 'CustomItem'
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/eldorado-cash-latest.json'
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120.0 Safari/537.36'
-const COLLECTOR_VERSION = 1
-
-/**
- * VARIANT DETECTION — title-driven, not trait-driven.
- *
- * The Eldorado "Traits" field is unreliable: sellers dump FR/Neon listings and
- * toys into the "None" bucket, so trait=None does NOT mean Normal. We only
- * trust a variant when the LISTING TITLE explicitly states it, and (when a
- * trait is present) the two agree. A listing whose variant can't be confirmed
- * from its own title is dropped — better to show "no reliable listings" than a
- * fabricated price. Plain Normal legendaries barely trade, so N will often have
- * no confirmable listings, which is the honest outcome.
- */
-
-// Toys / non-pet items named after a pet, and bundles — reject outright.
-// (plural "duckies" included — it slipped through before.)
-const TOY_WORDS = /(duck(y|ies)|skateboard|sabre|saber|stroller|plush|\btoy\b|kingdom|castle|\bmap\b|\bbase\b|house|home|split|theme|bundle|pack|set|potion|egg|account|\bacc\b|robux)/
-
-/**
- * Infer the variant from a listing title. Order matters: check the most
- * specific (MFR/NFR) before the generic (FR/N). Returns null when the title
- * gives no clear variant signal — we do NOT guess.
- */
-function variantFromTitle(title) {
-  const t = ` ${String(title).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ')} `
-  const has = (re) => re.test(t)
-  // Most specific first.
-  if (has(/\bmfr\b/) || has(/\bmega fly ride\b/) || has(/\bmega neon fly ride\b/)) return 'MFR'
-  if (has(/\bnfr\b/) || has(/\bneon fly ride\b/)) return 'NFR'
-  if (has(/\bmega neon\b/) || (has(/\bmega\b/) && !has(/\bfr\b|fly ride/))) return 'MEGA'
-  if (has(/\bneon\b/) && !has(/\bfr\b|fly ride|fly|ride/)) return 'NEON'
-  if (has(/\bfr\b/) || has(/\bfly ride\b/)) return 'FR'
-  if (has(/\bfly\b/) && !has(/\bride\b/)) return 'F'
-  if (has(/\bride\b/) && !has(/\bfly\b/)) return 'R'
-  // Explicit Normal, OR the title is essentially just the pet name (handled by
-  // the caller, which knows the pet name) — return 'N' only on an explicit word.
-  if (has(/\bnormal\b/) || has(/\bno potion\b/) || has(/\bdefault\b/)) return 'N'
-  return null
-}
-
-// Variants we are willing to publish as OBSERVED. NEON/MEGA plain forms were
-// previously excluded because their TITLES are easily confused with NFR/MFR —
-// but the structured Traits attribute distinguishes them unambiguously, so with
-// trait-primary detection they are safe to include. (A NEON/MEGA that comes ONLY
-// from a title, with no trait, is still risky, but the trait-first path means a
-// title-only NEON/MEGA is rare.) The full 8-form ladder is now publishable.
-const PUBLISHABLE_VARIANTS = new Set([
-  'N',
-  'F',
-  'R',
-  'FR',
-  'NEON',
-  'NFR',
-  'MEGA',
-  'MFR',
-])
-
-// Eldorado's structured "Traits" attribute is the PRIMARY variant source — it
-// is more reliable than parsing emoji-filled titles. Map its codes to our
-// 8-form ladder.
-//
-// IMPORTANT: Eldorado emits the Mega Neon form as trait code "M" (NOT "MEGA")
-// and also accepts "MEGA" from some listings — both are our MEGA column, so we
-// map BOTH. (Without the "M" alias every correctly-trait-tagged Mega listing was
-// dropped, so our MEGA column sat empty while $2k Mega pets existed on Eldorado.)
-//
-// The combo forms Eldorado also tracks — NR (Neon Ride), MR (Mega Ride), MF
-// (Mega Fly), NF (Neon Fly) — have NO column/UI in our 8-form ladder AND carry
-// negligible volume (a handful of listings across the whole catalog), so they
-// stay intentionally unmapped: such listings fall through to the title and are
-// skipped if the title gives no publishable variant either. We only price
-// variants we actually have a column and data for.
-//   N   Normal        F  Fly          R  Ride         FR  Fly Ride
-//   NEON Neon         MEGA Mega Neon  NFR Neon Fly Ride   MFR Mega Fly Ride
-const TRAIT_TO_VARIANT = {
-  N: 'N',
-  F: 'F',
-  R: 'R',
-  FR: 'FR',
-  NEON: 'NEON',
-  NFR: 'NFR',
-  MEGA: 'MEGA',
-  M: 'MEGA', // Eldorado's Mega Neon trait code
-  MFR: 'MFR',
-}
-
-/** Map an Eldorado trait code to our variant, or null if unmapped/None. */
-function variantFromTrait(trait) {
-  if (!trait) return null
-  const key = String(trait).trim().toUpperCase()
-  if (key === 'NONE') return null
-  return TRAIT_TO_VARIANT[key] ?? null
-}
+const COLLECTOR_VERSION = 2 // 2 = shared cleaning lib + shape-tolerant trait/Item name
 
 function loadEnv() {
   // No-op when .env.local is absent (CI uses GitHub-secret env vars).
@@ -163,6 +88,12 @@ function parseArgs(argv) {
     outputPath: DEFAULT_OUTPUT,
     slugs: null, // comma-separated slugs to target a subset
     onlyPublished: false, // only pets with a live page (has_page)
+    // --crawl: one walk of the whole Pets category instead of per-pet queries.
+    // Its own page ceiling — ELDORADO_AM_MAX_PAGES (per pet, 20) would cut a
+    // ~1,300-page crawl short.
+    crawl: process.env.ELDORADO_AM_CRAWL === '1',
+    crawlMaxPages: Number(process.env.ELDORADO_AM_CRAWL_MAX_PAGES ?? 2000),
+    minAccountAgeDays: Number(process.env.ELDORADO_MIN_ACCOUNT_DAYS ?? DEFAULT_MIN_ACCOUNT_AGE_DAYS),
   }
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i]
@@ -173,277 +104,76 @@ function parseArgs(argv) {
     else if (a === '--delay-ms') o.delayMs = Number(argv[++i])
     else if (a === '--output') o.outputPath = argv[++i]
     else if (a === '--slugs') o.slugs = argv[++i].split(',').map((s) => s.trim())
+    else if (a === '--crawl') o.crawl = true
+    else if (a === '--crawl-max-pages') o.crawlMaxPages = Number(argv[++i])
   }
+  // Politeness floor: never faster than one request a second.
+  o.delayMs = Math.max(1000, o.delayMs)
   return o
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * Offers URL — filters by the CANONICAL pet identity, not a fuzzy title search.
- *
- * `tradeEnvironmentValue2=<pet name>` is Eldorado's server-side "Item Name"
- * facet (the dropdown in the site UI). Passing the plain pet name returns ONLY
- * that exact pet — e.g. te_v2="Owl" gives 628 offers, 100% real Owl, ZERO Snow
- * Owl / Peach Owl / Grave Owl contamination. The old `searchQuery=<name>` did a
- * SUBSTRING match: "Owl" pulled every *-Owl pet (on one page of 50, only 12 of
- * 50 were the real Owl), which is why cheapest prices were wrong.
- *
- * (SAB resolves te_v2 via `seoAliasMappings?seoAlias=<slug>-for-sale`; Adopt Me
- * pet slugs 404 on that endpoint, but the plain NAME works as te_v2 directly.)
+ * One pet's offers, by the CANONICAL identity: `tradeEnvironmentValue2=<pet
+ * name>` is Eldorado's server-side Item-name facet, so "Owl" returns only Owl
+ * (a `searchQuery` substring match also returned Snow Owl, Peach Owl …).
  */
-function offersUrl(itemName, pageIndex) {
-  const u = new URL('/api/v1/item-management/offers', BASE_URL)
-  u.searchParams.set('gameId', GAME_ID)
-  u.searchParams.set('category', CATEGORY)
-  u.searchParams.set('tradeEnvironmentValue2', itemName)
-  u.searchParams.set('pageIndex', String(pageIndex))
-  u.searchParams.set('pageSize', '50')
-  u.searchParams.set('includeDeliveryMedians', 'true')
-  return u.toString()
-}
-
-async function fetchOffers(itemName, pageIndex) {
-  const res = await fetch(offersUrl(itemName, pageIndex), {
-    headers: { 'user-agent': UA, accept: 'application/json' },
-  })
-  if (!res.ok) throw new Error(`offers ${itemName} p${pageIndex} → ${res.status}`)
-  return res.json()
-}
+const fetchOffers = (itemName, page) =>
+  fetchEldoradoOffers({ tradeEnvironmentValue2: itemName }, page, { retries: 0 })
 
 /**
- * Fallback offers URL — a fuzzy `searchQuery` used ONLY when the exact te_v2
- * returns nothing (e.g. a casing/spelling drift: our "Ring-Tailed Lemur" vs
- * Eldorado's "Ring-tailed Lemur", which te_v2 treats case-sensitively). The
- * caller MUST re-filter the results by normalised Item Name, because searchQuery
- * is a substring match that also returns other pets.
+ * Fallback for casing/spelling drift (our "Ring-Tailed Lemur" vs Eldorado's
+ * "Ring-tailed Lemur" — te_v2 is case-sensitive). Fuzzy, so the caller MUST
+ * re-filter each result by normalised Item name.
  */
-function searchOffersUrl(searchQuery, pageIndex) {
-  const u = new URL('/api/v1/item-management/offers', BASE_URL)
-  u.searchParams.set('gameId', GAME_ID)
-  u.searchParams.set('category', CATEGORY)
-  u.searchParams.set('searchQuery', searchQuery)
-  u.searchParams.set('pageIndex', String(pageIndex))
-  u.searchParams.set('pageSize', '50')
-  u.searchParams.set('includeDeliveryMedians', 'true')
-  return u.toString()
-}
+const fetchSearchOffers = (query, page) =>
+  fetchEldoradoOffers({ searchQuery: query }, page, { retries: 0 })
 
-async function fetchSearchOffers(searchQuery, pageIndex) {
-  const res = await fetch(searchOffersUrl(searchQuery, pageIndex), {
-    headers: { 'user-agent': UA, accept: 'application/json' },
-  })
-  if (!res.ok) throw new Error(`search ${searchQuery} p${pageIndex} → ${res.status}`)
-  return res.json()
-}
-
-/** The offer's structured "Item Name" (canonical pet identity), or null. */
-function itemNameOf(offer) {
-  const tev = offer?.tradeEnvironmentValues || []
-  return tev.find((a) => a.name === 'Item Name')?.value ?? null
-}
-
-/** Normalise a title/name for exact matching (strip emoji, punctuation, case). */
-function normalizeName(s) {
-  return String(s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/**
- * Does this offer title refer to exactly THIS pet (not a "…Ducky" variant or a
- * bundle)? We require the pet name to appear and the leftover words to be only
- * trait tokens — this rejects "Shadow Dragon Ducky" while accepting
- * "FR Shadow Dragon" and "💜 Shadow Dragon 💜".
- */
-function titleMatchesPet(title, petName) {
-  const nt = normalizeName(title)
-  const np = normalizeName(petName)
-  if (!nt.includes(np)) return false
-  // A toy/bundle named after the pet ("Shadow Dragon Ducky") is NOT the pet.
-  if (TOY_WORDS.test(nt)) return false
-  // After removing the pet name, only trait/adjective filler may remain. Any
-  // leftover word that isn't a known modifier means it's a different item
-  // (another pet in a bundle, a described variant we can't trust, etc.).
-  const leftover = nt
-    .replace(np, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .filter(
-      (w) =>
-        !/^(fr|nfr|mfr|nf|nr|mf|mr|n|f|r|m|none|neon|fly|ride|mega|adopt|me|pet|pets|the|a|an|for|sale|cheap|fast|op|instant|delivery|trusted|seller|online|ultra|rare|common|legendary|normal|24|7|to|and)$/.test(
-          w,
-        ),
-    )
-  return leftover.length === 0
-}
-
-function traitValue(offer) {
-  const attrs = offer?.offerAttributeIdValues || []
-  const t = attrs.find((a) => a.name === 'Traits')
-  return t?.value ?? null
-}
-
-// Scam-bait titles ("add me / you need to add / friend request") — a few-cent
-// "friend me in-game" listing, not a real sale. Eldorado's cheap fakes almost
-// all carry one of these.
-const SCAM_WORDS =
-  /(you need add|you need to add|need to add|\badd me\b|add first|friend request|friend me|need friend|dm me|message me first|read desc|read description|not real|fake price)/i
-
-// Minimum seller account age. The $0.67 scam listings are all brand-new (2026)
-// accounts; the real high-value sellers are 2019-2022. Drop very new accounts.
-const MIN_ACCOUNT_AGE_DAYS = Number(process.env.ELDORADO_MIN_ACCOUNT_DAYS ?? 120)
-
-/** Account age in days from an ISO createdDate, or null if unknown. */
-function accountAgeDays(createdDateIso, nowMs) {
-  if (!createdDateIso) return null
-  const created = Date.parse(createdDateIso)
-  if (!Number.isFinite(created)) return null
-  return (nowMs - created) / 86400000
-}
-
-async function main() {
-  const opts = parseArgs(process.argv.slice(2))
-  console.log('Adopt Me cash collector — Eldorado (gameId 201)')
-  console.log(`  limit=${opts.limit || 'all'} maxPages=${opts.maxPages} delay=${opts.delayMs}ms\n`)
-
-  // Which pets to price — from our catalog.
-  let query = sb.from('adopt_me_pets').select('slug,name').eq('is_active', true).order('name')
-  if (opts.onlyPublished) query = query.eq('has_page', true)
-  if (opts.slugs) query = query.in('slug', opts.slugs)
-  const { data: pets, error } = await query
-  if (error) throw new Error(`load pets: ${error.message}`)
-  const targets = opts.limit > 0 ? pets.slice(0, opts.limit) : pets
-
+/** Per-pet mode: walk every page of each pet's te_v2 query. */
+async function collectPerPet(targets, opts) {
   const listings = []
   let matched = 0
   let skipped = 0
-
   for (let i = 0; i < targets.length; i += 1) {
     const pet = targets[i]
     let petListings = 0
     try {
-      // Walk EVERY page for this pet. te_v2 scopes the result set to the exact
-      // pet, so the cheapest reputable listing (which can sit deep in a
-      // popularity-sorted response) is never missed. `opts.maxPages` is a safety
-      // ceiling only; we stop early when the API reports the last page or a page
-      // comes back empty.
       const petKey = normalizeName(pet.name)
       let firstBody = await fetchOffers(pet.name, 1)
-      // FALLBACK: te_v2 is case/spelling-sensitive. If the exact name returns
-      // nothing (our "Ring-Tailed Lemur" vs Eldorado's "Ring-tailed Lemur"),
-      // switch to a fuzzy searchQuery and re-verify each result's structured
-      // Item Name against the pet name, normalised (case/punctuation-insensitive)
-      // — so we recover the listings without letting other pets leak in.
       let useSearchFallback = false
       if ((Number(firstBody?.recordCount) || 0) === 0) {
         useSearchFallback = true
         firstBody = await fetchSearchOffers(pet.name, 1)
       }
       const fetchPage = (page) =>
-        useSearchFallback
-          ? fetchSearchOffers(pet.name, page)
-          : fetchOffers(pet.name, page)
-      const totalPages = Math.min(
-        Number(firstBody?.totalPages) || 1,
-        opts.maxPages,
-      )
+        useSearchFallback ? fetchSearchOffers(pet.name, page) : fetchOffers(pet.name, page)
+      const totalPages = Math.min(Number(firstBody?.totalPages) || 1, opts.maxPages)
       for (let page = 1; page <= totalPages; page += 1) {
         const body = page === 1 ? firstBody : await fetchPage(page)
         const results = body?.results ?? []
         if (!results.length) break
         const nowMs = Date.now()
         for (const item of results) {
-          const offer = item.offer
-          if (!offer) continue
-          const title = offer.offerTitle
-          // In fallback mode the search is fuzzy, so enforce identity here via
-          // the structured Item Name (normalised). In te_v2 mode the server
-          // already guaranteed identity; skip only if a stray Item Name appears.
+          if (!item?.offer) continue
+          // Fallback search is fuzzy: enforce identity by the structured Item name.
           if (useSearchFallback) {
-            const iname = itemNameOf(offer)
+            const iname = itemNameOf(item.offer)
             if (!iname || normalizeName(iname) !== petKey) {
               skipped++
               continue
             }
           }
-          // Identity is now guaranteed by the te_v2 (Item Name) server filter,
-          // so we no longer gate on a strict title match (that silently dropped
-          // legit listings with emoji/marketing titles like "🌟 FR 🐛 Owl • ⚡").
-          // We still reject TOYS/bundles/accounts named after the pet, which can
-          // legitimately carry the same Item Name (an "Owl Plush" is not an Owl).
-          if (TOY_WORDS.test(normalizeName(title))) {
-            skipped++
-            continue
-          }
-          // Scam-bait "add me in-game" listings are not real sales.
-          if (SCAM_WORDS.test(String(title))) {
-            skipped++
-            continue
-          }
-          // Drop brand-new seller accounts — the cheap fakes are all new.
-          const age = accountAgeDays(item.user?.createdDate, nowMs)
-          if (age != null && age < MIN_ACCOUNT_AGE_DAYS) {
-            skipped++
-            continue
-          }
-          // Variant: TRAIT-PRIMARY, title fallback. Eldorado's structured Traits
-          // attribute is the reliable source (titles are emoji soup); when it
-          // gives an explicit, mapped variant we trust it. Only when the trait is
-          // None/absent/unmapped (e.g. a combo form we don't model) do we fall
-          // back to parsing the title. When BOTH exist and DISAGREE, we drop the
-          // listing — a mislabeled item we can't trust either way.
-          const trait = traitValue(offer)
-          const traitVariant = variantFromTrait(trait)
-          const titleVariant = variantFromTitle(title)
-
-          let variant = traitVariant ?? titleVariant
-          if (!variant || !PUBLISHABLE_VARIANTS.has(variant)) {
-            skipped++
-            continue
-          }
-          // Both present and conflicting → untrustworthy, drop.
-          if (
-            traitVariant &&
-            titleVariant &&
-            traitVariant !== titleVariant
-          ) {
-            skipped++
-            continue
-          }
-          const price = Number(offer.pricePerUnit?.amount)
-          const currency = offer.pricePerUnit?.currency
-          if (!Number.isFinite(price) || price <= 0 || currency !== 'USD') {
-            skipped++
-            continue
-          }
-          // Capture seller id for dedup (identical seller+title+price copies).
-          const sellerId = item.user?.id ?? null
-          // Seller reputation — the signal the reputable-pricing model runs on.
-          // userOrderInfo.ratingCount is the seller's total reviews/orders (the
-          // "(4771)" shown on the site), populated only because the request sets
-          // includeDeliveryMedians=true. This is what "reputable (100+)" gates on.
-          const orderInfo = item.userOrderInfo ?? {}
-          const reviews = Number.isFinite(orderInfo.ratingCount)
-            ? orderInfo.ratingCount
-            : null
-          const sellerRating = Number.isFinite(orderInfo.feedbackScore)
-            ? orderInfo.feedbackScore
-            : null
-          listings.push({
-            slug: pet.slug,
-            name: pet.name,
-            variant,
-            priceUsd: price,
-            title,
-            trait,
-            sellerId,
-            reviews,
-            sellerRating,
-            accountAgeDays: age != null ? Math.round(age) : null,
+          const cleaned = cleanEldoradoOffer(item, {
+            petName: pet.name,
+            nowMs,
+            minAccountAgeDays: opts.minAccountAgeDays,
           })
+          if (!cleaned.ok) {
+            skipped++
+            continue
+          }
+          listings.push({ slug: pet.slug, name: pet.name, ...cleaned.listing })
           petListings++
           matched++
         }
@@ -456,23 +186,103 @@ async function main() {
     }
     if (i < targets.length - 1) await sleep(opts.delayMs)
   }
+  return { listings, matched, skipped }
+}
+
+/** Crawl mode: one walk of the Pets category, kept for catalog pets only. */
+async function collectByCrawl(targets, opts) {
+  const crawl = await crawlEldoradoPets({
+    delayMs: opts.delayMs,
+    maxPages: opts.crawlMaxPages,
+    minAccountAgeDays: opts.minAccountAgeDays,
+    log: (m) => console.log(m),
+  })
+  const listings = []
+  let matched = 0
+  for (const pet of targets) {
+    const group = crawl.byName.get(eldoradoKeyFor(pet.name))
+    if (!group) continue
+    for (const l of group.listings) {
+      listings.push({ slug: pet.slug, name: pet.name, ...l })
+      matched++
+    }
+  }
+  const rejected = Object.values(crawl.rejected).reduce((a, b) => a + b, 0)
+  const petKeys = new Set(targets.map((p) => eldoradoKeyFor(p.name)))
+  let notInCatalog = 0
+  for (const [key, g] of crawl.byName) if (!petKeys.has(key)) notInCatalog += g.listings.length
+  console.log(
+    `  crawl: ${crawl.pagesFetched}/${crawl.totalPages} pages, ${crawl.recordCount} offers, ` +
+      `${crawl.uniqueOffers} unique, ${crawl.duplicates} duplicates, ${crawl.errors.length} page errors, stopped: ${crawl.stoppedBy}`,
+  )
+  if (crawl.stoppedBy !== 'complete') {
+    // A truncated crawl would make the importer retire listings it never saw.
+    throw new Error(`crawl incomplete (${crawl.stoppedBy}) — not writing a partial feed`)
+  }
+  return {
+    listings,
+    matched,
+    skipped: rejected + notInCatalog,
+    crawlStats: {
+      pages: crawl.pagesFetched,
+      total_pages: crawl.totalPages,
+      offers_reported: crawl.recordCount,
+      unique_offers: crawl.uniqueOffers,
+      duplicates: crawl.duplicates,
+      page_errors: crawl.errors.length,
+      rejected: crawl.rejected,
+      listings_not_in_catalog: notInCatalog,
+    },
+  }
+}
+
+async function main() {
+  const opts = parseArgs(process.argv.slice(2))
+  console.log(`Adopt Me cash collector — Eldorado (gameId ${GAME_ID}) mode=${opts.crawl ? 'crawl' : 'per-pet'}`)
+  console.log(
+    `  limit=${opts.limit || 'all'} maxPages=${opts.crawl ? opts.crawlMaxPages : opts.maxPages} delay=${opts.delayMs}ms\n`,
+  )
+
+  // Which pets to price — from our catalog. Paged: one PostgREST response stops
+  // at 1000 rows and the cut is silent.
+  const pets = []
+  for (let from = 0; ; from += 1000) {
+    let query = sb.from('adopt_me_pets').select('slug,name').eq('is_active', true)
+    if (opts.onlyPublished) query = query.eq('has_page', true)
+    if (opts.slugs) query = query.in('slug', opts.slugs)
+    const { data, error } = await query.order('name').order('slug').range(from, from + 999)
+    if (error) throw new Error(`load pets: ${error.message}`)
+    pets.push(...(data ?? []))
+    if (!data || data.length < 1000) break
+  }
+  const targets = opts.limit > 0 ? pets.slice(0, opts.limit) : pets
+
+  const started = Date.now()
+  const { listings, matched, skipped, crawlStats } = opts.crawl
+    ? await collectByCrawl(targets, opts)
+    : await collectPerPet(targets, opts)
 
   const feed = {
     source: 'eldorado',
     game_id: GAME_ID,
     collector_version: COLLECTOR_VERSION,
+    mode: opts.crawl ? 'crawl' : 'per-pet',
     collected_at: new Date().toISOString(),
+    duration_sec: Math.round((Date.now() - started) / 1000),
     pet_count: targets.length,
     listing_count: listings.length,
     matched,
     skipped,
+    ...(crawlStats ? { crawl: crawlStats } : {}),
     listings,
   }
 
   const outPath = resolve(process.cwd(), opts.outputPath)
   await mkdir(dirname(outPath), { recursive: true })
   await writeFile(outPath, JSON.stringify(feed, null, 2))
-  console.log(`\nWrote ${listings.length} clean listings (${matched} matched / ${skipped} skipped) → ${opts.outputPath}`)
+  console.log(
+    `\nWrote ${listings.length} clean listings (${matched} matched / ${skipped} skipped) in ${feed.duration_sec}s → ${opts.outputPath}`,
+  )
 
   if (opts.send) {
     console.log('\n--send: handing feed to the cash importer…')

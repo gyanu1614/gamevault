@@ -12,9 +12,12 @@
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
+import { TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp'
+import { TrendDownIcon } from '@phosphor-icons/react/dist/ssr/TrendDown'
 import { cn } from '@/lib/utils'
-import { sabCard } from '@/lib/sab/theme'
+import { HubSection } from '@/components/values/HubSection'
+import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_LABEL } from '@/components/values/styles'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
@@ -161,7 +164,7 @@ export default async function PriceIndexPage({
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -173,22 +176,20 @@ export default async function PriceIndexPage({
         <HubNav data={hubNav} />
         {/* pt clears the fixed HubNav. */}
         <div className={`mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#4FB477]">
-            DropMarket value database
-          </p>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-[#F1F3F1] sm:text-[32px]">
+          <p className={`mb-2 ${VALUE_LABEL}`}>DropMarket Value Database</p>
+          <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[32px]">
             Steal a Brainrot Price Index — {monthYear}
           </h1>
           {/* Answer-first, dated, quotable lead (citation bait). */}
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#C6CEC9]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
             The most valuable Steal a Brainrot pets and the biggest price movers this week, compiled
             from live DropMarket marketplace data as of {today}. As of {today}, the most valuable
             Brainrot is{' '}
-            <strong className="font-semibold text-[#F1F3F1]">
+            <strong className="font-semibold text-text-primary">
               {topValues[0]?.name ?? '—'}
             </strong>{' '}
             at{' '}
-            <strong className="font-semibold text-[#F1F3F1]">
+            <strong className="font-semibold text-text-primary">
               {topValues[0] ? formatCash(topValues[0].priceUsd) : '—'}
             </strong>
             .
@@ -198,100 +199,93 @@ export default async function PriceIndexPage({
 
       <div className="relative z-10 mx-auto w-full max-w-4xl space-y-6 px-4 sm:px-6 lg:px-8">
         {/* Top values ranking. */}
-        <section className={cn(sabCard, 'p-5 sm:p-6')}>
-          <h2 className="text-lg font-semibold text-[#F1F3F1]">Most valuable Brainrots</h2>
-          <ol className="mt-4 divide-y divide-white/[0.06] border-y border-white/[0.06]">
+        <HubSection title="Most valuable Brainrots">
+          {/* Hairlines BETWEEN rows only — the card itself has no outline. */}
+          <ol className="divide-y divide-white/[0.07]">
             {topValues.map((v, i) => (
               <li key={v.slug} className="flex items-center gap-3 py-2.5">
-                <span className="w-6 shrink-0 text-[13px] font-bold tabular-nums text-[#6D7A72]">
+                <span className="w-6 shrink-0 text-[13px] font-semibold tabular-nums text-text-tertiary">
                   {i + 1}
                 </span>
                 <Link
                   href={`/steal-a-brainrot/values/${v.slug}`}
-                  className="min-w-0 flex-1 truncate text-[14px] font-medium text-[#F1F3F1] hover:text-[#4FB477]"
+                  className="min-w-0 flex-1 truncate text-[14px] font-medium text-text-primary transition-colors hover:text-text-secondary"
                 >
                   {v.name}
                 </Link>
-                <span className="shrink-0 text-[11px] uppercase tracking-wide text-[#6D7A72]">
+                <span className="shrink-0 text-[11px] font-medium text-text-tertiary">
                   {v.rarity}
                 </span>
-                <span className="shrink-0 font-mono text-[14px] font-semibold tabular-nums text-[#4FB477]">
+                <span className="shrink-0 text-[14px] font-semibold tabular-nums text-lime-text">
                   {formatCash(v.priceUsd)}
                 </span>
               </li>
             ))}
           </ol>
-        </section>
+        </HubSection>
 
         {/* Movers — real once >=2 days of history; graceful note until then. */}
-        <section className={cn(sabCard, 'p-5 sm:p-6')}>
-          <h2 className="text-lg font-semibold text-[#F1F3F1]">Biggest movers this week</h2>
+        <HubSection title="Biggest movers this week">
           {movers.gainers.length === 0 && movers.losers.length === 0 ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-[#9BA8A0]">
+            <p className="text-[13px] leading-relaxed text-text-secondary">
               Weekly price movements appear here once the index has collected at least two days of
               history (currently {movers.days} day{movers.days === 1 ? '' : 's'}). Prices are captured
               daily — check back soon.
             </p>
           ) : (
-            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-6 pt-1 sm:grid-cols-2">
               <MoverList title="Top gainers" icon="up" moves={movers.gainers} />
               <MoverList title="Top losers" icon="down" moves={movers.losers} />
             </div>
           )}
-        </section>
+        </HubSection>
 
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/steal-a-brainrot/values"
-            className="inline-flex items-center gap-2 bg-[#1B6B3F] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f7a48]"
-          >
+          <Link href="/steal-a-brainrot/values" className={VALUE_BTN_SECONDARY}>
             See the full value list
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRightIcon size={15} weight="bold" aria-hidden />
           </Link>
-          <Link
-            href="/steal-a-brainrot/values/methodology"
-            className="inline-flex items-center gap-2 border border-[#26332C] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-[#F1F3F1] transition hover:border-[#2A3A31] hover:bg-white/[0.06]"
-          >
+          <Link href="/steal-a-brainrot/values/methodology" className={VALUE_BTN_SECONDARY}>
             How these values are calculated
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRightIcon size={15} weight="bold" aria-hidden />
           </Link>
         </div>
 
         <ContentDisclaimer gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" />
       </div>
-          <HubFooter
+      <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
         tools={hubNav.tools}
         itemsHref={hubNav.itemsHref}
         accountsHref={hubNav.accountsHref}
       />
-</main>
+    </main>
   )
 }
 
 function MoverList({ title, icon, moves }: { title: string; icon: 'up' | 'down'; moves: Mover[] }) {
-  const Icon = icon === 'up' ? TrendingUp : TrendingDown
-  const color = icon === 'up' ? 'text-[#4FB477]' : 'text-[#E06B6B]'
+  const Icon = icon === 'up' ? TrendUpIcon : TrendDownIcon
+  const color = icon === 'up' ? 'text-success' : 'text-error'
   return (
     <div>
       <h3 className={cn('flex items-center gap-1.5 text-[13px] font-semibold', color)}>
-        <Icon className="h-4 w-4" />
+        <Icon size={16} weight="bold" aria-hidden />
         {title}
       </h3>
       <ul className="mt-2 space-y-1.5">
         {moves.length === 0 ? (
-          <li className="text-[13px] text-[#6D7A72]">None this week.</li>
+          <li className="text-[13px] text-text-tertiary">None this week.</li>
         ) : (
           moves.map((m) => (
             <li key={m.slug} className="flex items-center justify-between gap-3">
               <Link
                 href={`/steal-a-brainrot/values/${m.slug}`}
-                className="min-w-0 truncate text-[13.5px] text-[#F1F3F1] hover:text-[#4FB477]"
+                className="min-w-0 truncate text-[13.5px] text-text-primary transition-colors hover:text-text-secondary"
               >
                 {m.name}
               </Link>
-              <span className={cn('shrink-0 font-mono text-[13px] font-semibold tabular-nums', color)}>
+              <span className={cn('shrink-0 text-[13px] font-semibold tabular-nums', color)}>
                 {m.pct > 0 ? '+' : ''}
                 {m.pct.toFixed(1)}%
               </span>

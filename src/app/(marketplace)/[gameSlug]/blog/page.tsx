@@ -6,8 +6,7 @@
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { sabCard } from '@/lib/sab/theme'
+import { HUB_GROUND, VALUE_SURFACE } from '@/components/values/styles'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
@@ -107,7 +106,7 @@ const CARD_DATE = new Intl.DateTimeFormat('en-GB', {
 
 function formatCardDate(iso: string): string {
   const d = new Date(iso)
-  return Number.isFinite(d.getTime()) ? CARD_DATE.format(d).toUpperCase() : ''
+  return Number.isFinite(d.getTime()) ? CARD_DATE.format(d) : ''
 }
 
 export async function generateMetadata({
@@ -185,10 +184,10 @@ export default async function GameBlogIndex({
   }))
 
   return (
-    // Same shell as the Values page: opaque #0C0F0E base, shared backdrop with
+    // Same shell as the Values page: opaque hub ground, shared backdrop with
     // the header + sub-nav inside it. The hero content floats on top exactly as
     // Values does, so the navbar reads over the faded (dark) part of the image.
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       {/* Single-row shared hub nav (game switcher + tools + storefront),
           inside the backdrop so the scrim keeps it legible at top of page. */}
       <SabHeroBackdrop>
@@ -249,9 +248,9 @@ export default async function GameBlogIndex({
         )}
 
         {posts.length === 0 ? (
-          <div className={cn(sabCard, 'mt-12 px-6 py-14 text-center sm:mt-16')}>
-            <p className="text-[15px] font-semibold text-[#F1F3F1]">No guides yet</p>
-            <p className="mt-2 text-[13px] text-[#9BA8A0]">
+          <div className={`${VALUE_SURFACE} mt-12 px-6 py-14 text-center sm:mt-16`}>
+            <p className="text-[15px] font-semibold text-text-primary">No guides yet</p>
+            <p className="mt-2 text-[13px] text-text-secondary">
               Check back soon — {game.name} guides are on the way.
             </p>
           </div>
@@ -293,13 +292,13 @@ export default async function GameBlogIndex({
             are researching how to sell/trade); price/tool pages carry buy. */}
         <SabSellerCta gameSlug={gameSlug} gameName={game.name} src={`${gameSlug}-blog-index`} />
       </div>
-          <HubFooter
+      <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
         tools={hubNav.tools}
         itemsHref={hubNav.itemsHref}
         accountsHref={hubNav.accountsHref}
       />
-</main>
+    </main>
   )
 }

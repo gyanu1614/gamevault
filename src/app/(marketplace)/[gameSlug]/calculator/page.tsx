@@ -18,6 +18,7 @@ import CalculatorClient, {
 } from './_CalculatorClient'
 import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
 import { getValueStock } from '@/lib/value-listings/stock-server'
+import { HUB_GROUND } from '@/components/values/styles'
 
 export const revalidate = 3600
 /**
@@ -369,7 +370,7 @@ export default async function SabCalculatorPage({ params }: PageProps) {
   ])
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`}>
       <SabHeroBackdrop height={420}>
       <HubNav data={hubNav} />
       <JsonLd
@@ -426,13 +427,13 @@ export default async function SabCalculatorPage({ params }: PageProps) {
       <CalculatorSeo monthYear={monthYear} topValues={topValues} lastUpdated={lastUpdated} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />
       </SabHeroBackdrop>
-          <HubFooter
+      <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
         tools={hubNav.tools}
         itemsHref={hubNav.itemsHref}
         accountsHref={hubNav.accountsHref}
       />
-</main>
+    </main>
   )
 }

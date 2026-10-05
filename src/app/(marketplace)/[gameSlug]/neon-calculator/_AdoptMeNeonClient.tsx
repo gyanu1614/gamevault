@@ -13,15 +13,20 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import type { CalcPet, Variant } from '../calculator/_adoptMeCalcTypes'
-import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
+import { ItemPickerDialog } from '@/components/values/ItemPickerDialog'
+import { ValueArt } from '@/components/values/ValueArt'
+import { VALUE_SURFACE, VALUE_SURFACE_LINK, VALUE_TILE } from '@/components/values/styles'
+import { rarityMeta } from '@/lib/values/rarity'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
 export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
   const [slug, setSlug] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
+  // Fresh picker search every time it opens.
+  const [pickerSession, setPickerSession] = useState(0)
   const pet = useMemo(() => pets.find((p) => p.slug === slug) ?? null, [pets, slug])
 
   const cash = (v: Variant) => pet?.values[v]?.cashUsd ?? null
@@ -39,30 +44,31 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
       {/* Pet selector */}
       <button
         type="button"
-        onClick={() => setPicking(true)}
-        className="flex w-full items-center justify-between gap-3 border border-[#1E2723] bg-[#0F1311] px-4 py-3.5 text-left transition hover:border-[#2A3A31]"
+        onClick={() => { setPickerSession((n) => n + 1); setPicking(true) }}
+        className={`${VALUE_SURFACE_LINK} flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
       >
         <span className="flex items-center gap-3">
-          {pet?.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote pet art
-            <img src={pet.imageUrl} alt="" className="h-9 w-9 object-contain" />
+          {pet ? (
+            <ValueArt src={pet.imageUrl} alt="" size={36} />
           ) : (
-            <span className="flex h-9 w-9 items-center justify-center border border-[#1E2723] bg-black/20 text-[#6D7A72]"><Search className="h-4 w-4" /></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/[0.06] text-text-tertiary">
+              <MagnifyingGlassIcon size={16} weight="bold" aria-hidden />
+            </span>
           )}
-          <span className="text-[15px] font-semibold text-[#E6EAE7]">{pet ? pet.name : 'Choose a pet'}</span>
+          <span className="text-[15px] font-semibold text-text-primary">{pet ? pet.name : 'Choose a pet'}</span>
         </span>
-        <span className="text-[13px] text-[#8B978F]">{pet ? 'change' : 'search'}</span>
+        <span className="text-[13px] text-text-secondary">{pet ? 'change' : 'search'}</span>
       </button>
 
       {pet && (
         <>
           {/* The Neon math, stated plainly. */}
-          <div className="border border-[#1E2723] bg-[#0F1311] p-4">
-            <p className="text-[13px] leading-relaxed text-[#C6CEC9]">
-              To make a <span className="font-semibold text-[#F1F3F1]">Neon {pet.name}</span> you merge{' '}
-              <span className="font-semibold text-[#F1F3F1]">4 full-grown</span> copies. A{' '}
-              <span className="font-semibold text-[#F1F3F1]">Mega Neon</span> is 4 Neons —{' '}
-              <span className="font-semibold text-[#F1F3F1]">16 base pets</span> in total.
+          <div className={`${VALUE_SURFACE} p-4`}>
+            <p className="text-[13px] leading-relaxed text-text-secondary">
+              To make a <span className="font-semibold text-text-primary">Neon {pet.name}</span> you merge{' '}
+              <span className="font-semibold text-text-primary">4 full-grown</span> copies. A{' '}
+              <span className="font-semibold text-text-primary">Mega Neon</span> is 4 Neons —{' '}
+              <span className="font-semibold text-text-primary">16 base pets</span> in total.
             </p>
           </div>
 
@@ -82,7 +88,7 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
             buyCost={mega}
           />
 
-          <p className="text-[12px] leading-relaxed text-[#6D7A72]">
+          <p className="text-[12px] leading-relaxed text-text-tertiary">
             Build cost is the Normal cash price times the number of base pets, and
             ignores potions and the time to grow each pet. Buying is often cheaper
             than building once you count that effort — this shows the raw money side.
@@ -90,13 +96,13 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
         </>
       )}
 
-      {picking && (
-        <PetPicker
-          pets={pets}
-          onPick={(s) => { setSlug(s); setPicking(false) }}
-          onClose={() => setPicking(false)}
-        />
-      )}
+      <PetPicker
+        key={pickerSession}
+        open={picking}
+        pets={pets}
+        onPick={(s) => { setSlug(s); setPicking(false) }}
+        onClose={() => setPicking(false)}
+      />
     </div>
   )
 }
@@ -118,18 +124,17 @@ function CostCard({
     buildCost != null && buyCost != null ? Math.abs(buildCost - buyCost) : null
 
   return (
-    <div className="border border-[#1E2723] bg-[#0F1311]">
-      <div className="flex items-center justify-between border-b border-[#1E2723] px-4 py-2.5">
-        <span className="text-[14px] font-semibold text-[#F1F3F1]">{title}</span>
-        <span className="text-[12px] text-[#8B978F]">needs {need}</span>
+    <div className={VALUE_SURFACE}>
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2.5">
+        <span className="text-[14px] font-semibold text-text-primary">{title}</span>
+        <span className="text-[12px] text-text-secondary">needs {need}</span>
       </div>
-      <div className="grid sm:grid-cols-2">
+      <div className="grid gap-2 p-2 sm:grid-cols-2">
         <Path
           label="Build it"
           hint="4 or 16 base pets × Normal price"
           cost={buildCost}
           highlight={cheaper === 'build'}
-          bordered
         />
         <Path
           label="Buy it"
@@ -139,9 +144,9 @@ function CostCard({
         />
       </div>
       {cheaper && saving != null && (
-        <p className="border-t border-[#1A211A] px-4 py-2.5 text-[13px] text-[#C6CEC9]">
-          <span className="font-semibold text-[#8FBF9C]">{cheaper === 'buy' ? 'Buying' : 'Building'}</span>{' '}
-          is cheaper by <span className="font-mono font-semibold text-[#F1F3F1]">{USD.format(saving)}</span>.
+        <p className="border-t border-white/[0.07] px-4 py-2.5 text-[13px] text-text-secondary">
+          <span className="font-semibold text-[#54DDBE]">{cheaper === 'buy' ? 'Buying' : 'Building'}</span>{' '}
+          is cheaper by <span className="font-semibold tabular-nums text-text-primary">{USD.format(saving)}</span>.
         </p>
       )}
     </div>
@@ -153,39 +158,37 @@ function Path({
   hint,
   cost,
   highlight,
-  bordered,
 }: {
   label: string
   hint: string
   cost: number | null
   highlight?: boolean
-  bordered?: boolean
 }) {
   return (
-    <div className={`px-4 py-3.5 ${bordered ? 'border-b border-[#1A211A] sm:border-b-0 sm:border-r' : ''} ${highlight ? 'bg-[#0E1611]' : ''}`}>
+    <div className={`px-3.5 py-3 ${highlight ? 'rounded-md bg-[#54DDBE]/[0.08]' : VALUE_TILE}`}>
       <div className="flex items-center gap-2">
-        <span className="text-[13px] font-medium text-[#C6CEC9]">{label}</span>
-        {highlight && <span className="bg-[#14432A] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#8FBF9C]">cheaper</span>}
+        <span className="text-[13px] font-medium text-text-primary">{label}</span>
+        {highlight && <span className="rounded bg-[#54DDBE]/[0.16] px-1.5 py-0.5 text-[10px] font-semibold text-[#54DDBE]">cheaper</span>}
       </div>
-      <p className="text-[12px] text-[#6D7A72]">{hint}</p>
-      <p className="mt-1.5 font-mono text-[20px] font-bold tabular-nums text-[#E6EAE7]">
-        {cost != null ? USD.format(cost) : <span className="text-[14px] font-normal text-[#6D7A72]">no cash data</span>}
+      <p className="text-[12px] text-text-tertiary">{hint}</p>
+      <p className="mt-1.5 text-[20px] font-bold tabular-nums text-text-primary">
+        {cost != null ? USD.format(cost) : <span className="text-[14px] font-normal text-text-tertiary">no cash data</span>}
       </p>
     </div>
   )
 }
 
 function PetPicker({
+  open,
   pets,
   onPick,
   onClose,
 }: {
+  open: boolean
   pets: CalcPet[]
   onPick: (slug: string) => void
   onClose: () => void
 }) {
-  // Phones: don't pop the keyboard over the list (see useCoarsePointer).
-  const coarse = useCoarsePointer()
   const [q, setQ] = useState('')
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -193,29 +196,20 @@ function PetPicker({
   }, [q, pets])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-[10vh] backdrop-blur-sm" onClick={onClose}>
-      <div className="animate-verdict w-full max-w-lg border border-[#1E2723] bg-[#0E1211] shadow-[0_28px_60px_-20px_rgba(0,0,0,0.9)]" onClick={(e) => e.stopPropagation()}>
-        <style>{`@keyframes amwfl-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } } .animate-verdict { animation: amwfl-in 240ms cubic-bezier(0.16,1,0.3,1); }`}</style>
-        <div className="flex items-center gap-2 border-b border-[#1E2723] px-4 py-3">
-          <Search className="h-4 w-4 text-[#6D7A72]" />
-          <input autoFocus={!coarse} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a pet…" className="w-full bg-transparent text-[16px] text-[#F1F3F1] outline-none placeholder:text-[#6D7A72]" />
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[#6D7A72] hover:text-[#F1F3F1]"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="max-h-[50vh] overflow-y-auto">
-          {filtered.map((p) => (
-            <button key={p.slug} type="button" onClick={() => onPick(p.slug)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-white/[0.04]">
-              {p.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- remote pet art
-                <img src={p.imageUrl} alt="" className="h-8 w-8 shrink-0 object-contain" />
-              ) : (
-                <span className="h-8 w-8 shrink-0 border border-[#1E2723] bg-black/20" />
-              )}
-              <span className="text-[14px] text-[#E6EAE7]">{p.name}</span>
-            </button>
-          ))}
-          {filtered.length === 0 && <div className="px-4 py-8 text-center text-[13px] text-[#6D7A72]">No pets match.</div>}
-        </div>
-      </div>
-    </div>
+    <ItemPickerDialog
+      open={open}
+      onClose={onClose}
+      title="Choose A Pet"
+      items={filtered.map((p) => {
+        const r = rarityMeta('adopt-me', p.rarity)
+        return { key: p.slug, name: p.name, imageUrl: p.imageUrl, sub: r.label, subColor: r.color }
+      })}
+      onPick={onPick}
+      query={q}
+      onQueryChange={setQ}
+      searchPlaceholder="Search a pet…"
+      searchLabel="Search pets"
+      emptyText="No pets match."
+    />
   )
 }

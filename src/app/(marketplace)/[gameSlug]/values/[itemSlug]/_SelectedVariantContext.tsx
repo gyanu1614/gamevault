@@ -8,7 +8,7 @@
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { Variant } from './_adoptMePetData'
+import type { Variant } from '../../calculator/_adoptMeCalcTypes'
 
 interface Ctx {
   selectedCode: Variant

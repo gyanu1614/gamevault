@@ -17,9 +17,20 @@
  * Pets are set is_active=true once they carry values, so the value LIST can
  * show them. The per-pet PAGE stays gated behind has_page (needs a description).
  *
+ * NEW-PET GATE (owner rule 2026-10-04): a pet is listed only when one of its
+ * variants has a real reputable cash price above $1. The feed now carries the
+ * WHOLE catalog (~791 pets), so this importer never adds a pet that is not
+ * already in adopt_me_pets unless it is approved:
+ *   --qualifying <report.json>  add new pets the dry-run report marks qualifies
+ *                               (scripts/adoptme-catalog-dryrun.mjs)
+ *   --allow-new                 add every new pet in the feed (explicit opt-in)
+ * Existing pets are refreshed exactly as before, so the weekly catalog job
+ * keeps working and cannot flood the catalog.
+ *
  * Usage:
  *   node scripts/import-adoptmevalues.mjs [feed.json]         # dry run (default)
  *   node scripts/import-adoptmevalues.mjs [feed.json] --write # actually upsert
+ *   node scripts/import-adoptmevalues.mjs [feed.json] --qualifying data/adopt-me-catalog-dryrun/<date>.json [--write]
  */
 
 import { readFileSync } from 'node:fs'
@@ -133,29 +144,81 @@ function buildVariantRows(petId, tradeValues) {
   return rows
 }
 
+/** Every adopt_me_pets slug, paged (PostgREST caps one response at 1000 rows). */
+async function existingSlugs() {
+  const slugs = new Set()
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('adopt_me_pets')
+      .select('id,slug')
+      .order('id', { ascending: true })
+      .range(from, from + 999)
+    if (error) throw new Error(`load existing pets: ${error.message}`)
+    for (const r of data ?? []) slugs.add(r.slug)
+    if (!data || data.length < 1000) break
+  }
+  return slugs
+}
+
+function parseArgs(argv) {
+  const o = { write: false, allowNew: false, qualifying: null, feed: null }
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i]
+    if (a === '--write') o.write = true
+    else if (a === '--allow-new') o.allowNew = true
+    else if (a === '--qualifying') o.qualifying = argv[++i]
+    else if (!a.startsWith('--') && !o.feed) o.feed = a
+  }
+  return o
+}
+
 async function main() {
-  const args = process.argv.slice(2)
-  const write = args.includes('--write')
-  const feedPath = resolve(
-    process.cwd(),
-    args.find((a) => !a.startsWith('--')) ?? 'data/adopt-me-feeds/adoptmevalues-latest.json',
-  )
+  const opts = parseArgs(process.argv.slice(2))
+  const write = opts.write
+  const feedPath = resolve(process.cwd(), opts.feed ?? 'data/adopt-me-feeds/adoptmevalues-latest.json')
 
   const feed = JSON.parse(readFileSync(feedPath, 'utf8'))
   console.log(`Importer — ${feed.pets.length} pets from ${feed.source} (${feed.collected_at})`)
   console.log(write ? '  MODE: --write (upserting)\n' : '  MODE: dry run (pass --write to persist)\n')
 
+  // New-pet gate: which slugs may be ADDED (existing ones are always refreshed).
+  const known = await existingSlugs()
+  let approvedNew = null // null = none approved
+  if (opts.qualifying) {
+    const report = JSON.parse(readFileSync(resolve(process.cwd(), opts.qualifying), 'utf8'))
+    approvedNew = new Set((report.pets ?? []).filter((p) => p.qualifies).map((p) => p.slug))
+  }
+  const pets = feed.pets.filter((p) => {
+    if (known.has(p.slug)) return true
+    if (opts.allowNew) return true
+    return approvedNew?.has(p.slug) ?? false
+  })
+  const gated = feed.pets.length - pets.length
+  console.log(
+    `  ${known.size} pets already in the DB; ${pets.length} to import ` +
+      `(${pets.filter((p) => !known.has(p.slug)).length} new), ${gated} new pets held back by the gate` +
+      (opts.allowNew ? ' (--allow-new)' : opts.qualifying ? ` (--qualifying ${opts.qualifying})` : ' (no --qualifying)') +
+      '\n',
+  )
+
   let inserted = 0
   let updated = 0
   let valueRows = 0
 
-  for (const pet of feed.pets) {
+  for (const pet of pets) {
     // --- upsert the pet row (by slug) ---
+    // Obtainability: curated override, else the enriched value. An existing pet
+    // with no enriched value keeps what it has (an un-enriched refresh used to
+    // reset every pet to 'obtainable').
+    const obtainability =
+      KNOWN_OBTAINABILITY[pet.slug] ??
+      pet.obtainability ??
+      (known.has(pet.slug) ? undefined : 'obtainable')
     const petPayload = {
       slug: pet.slug,
       name: pet.name,
       rarity: pet.rarity,
-      obtainability: KNOWN_OBTAINABILITY[pet.slug] ?? pet.obtainability ?? 'obtainable',
+      ...(obtainability ? { obtainability } : {}),
       image_url: pet.image_url,
       // demand_rank deliberately omitted — the source's rank is a
       // position-within-rarity artifact, not real demand (see note above).
@@ -166,7 +229,9 @@ async function main() {
     }
 
     if (!write) {
-      console.log(`  [dry] ${pet.name} (${pet.rarity}) + ${ALL_VARIANTS.length} variant rows`)
+      console.log(
+        `  [dry] ${known.has(pet.slug) ? 'refresh' : 'NEW    '} ${pet.name} (${pet.rarity}) + ${ALL_VARIANTS.length} variant rows`,
+      )
       valueRows += ALL_VARIANTS.length
       continue
     }
@@ -222,11 +287,13 @@ async function main() {
       const { error } = await sb.from('adopt_me_pet_values').insert(toInsert)
       valErr = valErr || error
     }
-    // Existing rows: touch ONLY the trade columns — never the cash columns.
+    // Existing rows: touch ONLY trade_value. is_estimated belongs to the cash
+    // pipeline too (the reprice sets it false on a real price) — writing it
+    // here flipped every priced row back to "estimated" until the next reprice.
     for (const r of toUpdate) {
       const { error } = await sb
         .from('adopt_me_pet_values')
-        .update({ trade_value: r.trade_value, is_estimated: r.is_estimated })
+        .update({ trade_value: r.trade_value })
         .eq('pet_id', upserted.id)
         .eq('variant', r.variant)
       valErr = valErr || error

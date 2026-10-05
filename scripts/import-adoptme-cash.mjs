@@ -105,8 +105,19 @@ async function main() {
     `  ${totalListings} listings total  ${write ? 'MODE: --write' : 'MODE: dry run'}\n`,
   )
 
-  const { data: pets } = await sb.from('adopt_me_pets').select('id,slug')
-  const idBySlug = new Map((pets ?? []).map((p) => [p.slug, p.id]))
+  // Paged: one PostgREST response stops at 1000 rows, silently.
+  const pets = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('adopt_me_pets')
+      .select('id,slug')
+      .order('id', { ascending: true })
+      .range(from, from + 999)
+    if (error) throw new Error(`load pets: ${error.message}`)
+    pets.push(...(data ?? []))
+    if (!data || data.length < 1000) break
+  }
+  const idBySlug = new Map(pets.map((p) => [p.slug, p.id]))
 
   // Build the raw rows, deduping identical (source, seller, variant, price)
   // copies up front so the batch itself carries no duplicates (the unique

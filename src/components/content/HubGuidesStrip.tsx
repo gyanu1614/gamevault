@@ -10,17 +10,19 @@
  * whose content library is still empty renders nothing (no dead section). The
  * anchor is the post TITLE (keyword-rich, unique per card) — never "read more".
  *
- * Each card uses the post's cover image as a DARKENED background (a forest-dark
- * gradient scrim over it) so the cards look rich while the text stays legible.
- * Posts with no cover fall back to a flat near-black card.
+ * Each card is the values-hub clickable surface (VALUE_SURFACE_LINK: 8px,
+ * card gradient, no outline) with the post's cover image as a DARKENED
+ * background (a near-black scrim over it) so the cards look rich while the text
+ * stays legible. Posts with no cover fall back to the plain card gradient.
  */
 
 import Link from '@/components/navigation/AppLink'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
+import { VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 
 const POST_TYPE_LABEL: Record<string, string> = {
-  value: 'Value list',
-  seller: 'Seller guide',
+  value: 'Value List',
+  seller: 'Seller Guide',
   guide: 'Guide',
 }
 
@@ -40,7 +42,7 @@ export async function HubGuidesStrip({
 
   return (
     <section className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>
-      <h2 className="mb-4 text-[22px] font-bold tracking-tight text-[#F2F6F0]">
+      <h2 className="mb-4 text-[22px] font-bold tracking-tight text-text-primary">
         {heading}
       </h2>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -48,7 +50,7 @@ export async function HubGuidesStrip({
           <Link
             key={p.slug}
             href={`/${gameSlug}/blog/${p.slug}`}
-            className="group relative flex min-h-[180px] flex-col justify-end overflow-hidden border border-[#1E2723] bg-[#0B0F0C] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2F6B46]"
+            className={`group relative flex min-h-[180px] flex-col justify-end overflow-hidden p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
           >
             {/* Cover image background + dark scrim (only when a cover exists).
                 Plain <img> to match how the article page renders covers and to
@@ -60,16 +62,16 @@ export async function HubGuidesStrip({
                   src={p.cover}
                   alt=""
                   loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                 />
-                {/* Forest-dark gradient — heavier at the bottom where the text
+                {/* Near-black gradient — heavier at the bottom where the text
                     sits, so the copy always reads regardless of the image. */}
                 <span
                   aria-hidden
                   className="absolute inset-0"
                   style={{
                     background:
-                      'linear-gradient(180deg, rgba(11,15,12,0.55) 0%, rgba(11,15,12,0.80) 55%, rgba(11,15,12,0.94) 100%)',
+                      'linear-gradient(180deg, rgba(22,23,27,0.55) 0%, rgba(22,23,27,0.80) 55%, rgba(22,23,27,0.94) 100%)',
                   }}
                 />
               </>
@@ -78,10 +80,10 @@ export async function HubGuidesStrip({
             {/* Content — above the image + scrim. Eyebrow + title only; the
                 excerpt was a smaller, mismatched face that cluttered the card. */}
             <div className="relative z-10 flex flex-col gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#8FBF9C]">
+              <span className={VALUE_LABEL}>
                 {POST_TYPE_LABEL[p.postType] ?? 'Guide'}
               </span>
-              <span className="text-[15px] font-semibold leading-snug text-[#F1F5EF]">
+              <span className="text-[15px] font-semibold leading-snug text-text-primary">
                 {p.title}
               </span>
             </div>

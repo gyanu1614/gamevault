@@ -2117,130 +2117,131 @@
   }
 }
 
-/* ─── Toast Customization (V17f — Vercel/Linear style) ───────────
-   Flat dark surface, slim 1px border, no accent strip, no gradient
-   wash. The colored icon (sonner ships with circle-check / x-circle
-   / triangle / info SVGs) carries 100% of the type signal — that's
-   what Vercel + Linear do. Title and description sit in a tight
-   stack; nothing else competes for attention.
+/* ─── Toast (card-surface system, 2026-10-04) ────────────────────
+   The house card: near-black gradient a step lighter than MARKET_CARD
+   so it lifts off the cards it floats over, soft drop shadow, inner
+   top edge, NO outline, 8px corners. The type lives in a tinted icon
+   tile (status tokens); title + optional description stack beside it.
+   Scoped to [data-styled="true"] so toast.custom() content (which
+   brings its own card) is not wrapped in a second surface.
    ─────────────────────────────────────────────────────────────── */
 
-.toast-reduced-glow[data-sonner-toast] {
-  /* Forest glass card: translucent deep-green gradient over blur with
-     the house 3D recipe (top light, bottom shade) — reads as OURS, not
-     sonner's default black sliver. Bottom-right via the Toaster mount. */
-  border-radius: 14px !important;
-  background: linear-gradient(
-    180deg,
-    rgba(27, 94, 58, 0.4) 0%,
-    rgba(16, 34, 23, 0.94) 52%,
-    rgba(10, 17, 12, 0.97) 100%
-  ) !important;
-  backdrop-filter: blur(14px) saturate(1.15);
-  -webkit-backdrop-filter: blur(14px) saturate(1.15);
-  border: 1px solid rgba(163, 230, 53, 0.16) !important;
+.dm-toast[data-sonner-toast][data-styled="true"] {
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #26272D 0%, #1D1E23 100%) !important;
+  border: 0 !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
-    0 18px 44px -14px rgba(0, 0, 0, 0.7) !important;
-  color: #eef2ec !important;
-  padding: 15px 44px 15px 16px !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 40px -14px rgba(0, 0, 0, 0.75),
+    0 2px 6px -2px rgba(0, 0, 0, 0.4) !important;
+  color: var(--color-text-primary) !important;
+  padding: 12px 44px 12px 12px !important;
   gap: 12px !important;
-  min-height: 58px;
+  min-height: 56px;
   align-items: center !important;
   font-family: var(--font-inter), -apple-system, sans-serif !important;
 }
 
-/* Icon — tight square with a tinted bg matching the type. Mirrors
-   the Vercel toast's small status puck rather than the strip-on-edge
-   approach we had. */
-.toast-reduced-glow[data-sonner-toast] [data-icon] {
-  width: 20px !important;
-  height: 20px !important;
+/* Icon tile — 32px rounded square tinted by type. */
+.dm-toast[data-sonner-toast] [data-icon] {
+  width: 32px !important;
+  height: 32px !important;
   margin: 0 !important;
   flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-secondary);
 }
-.toast-reduced-glow[data-sonner-toast] [data-icon] > svg {
-  width: 20px !important;
-  height: 20px !important;
+.dm-toast[data-sonner-toast] [data-icon] > svg {
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0 !important;
+}
+.dm-toast[data-sonner-toast][data-type="success"] [data-icon] {
+  background: var(--color-success-bg) !important;
+  color: var(--color-success) !important;
+}
+.dm-toast[data-sonner-toast][data-type="error"] [data-icon] {
+  background: var(--color-error-bg) !important;
+  color: var(--color-error) !important;
+}
+.dm-toast[data-sonner-toast][data-type="warning"] [data-icon] {
+  background: var(--color-warning-bg) !important;
+  color: var(--color-warning) !important;
+}
+.dm-toast[data-sonner-toast][data-type="info"] [data-icon] {
+  background: var(--color-info-bg) !important;
+  color: var(--color-info) !important;
 }
 
-/* Type colors — applied to the icon only. No surface tint. */
-.toast-reduced-glow[data-sonner-toast][data-type="success"] [data-icon] {
-  color: #b3ff3b !important;
-}
-.toast-reduced-glow[data-sonner-toast][data-type="error"] [data-icon] {
-  color: #ff6b6b !important;
-}
-.toast-reduced-glow[data-sonner-toast][data-type="warning"] [data-icon] {
-  color: #f0b86e !important;
-}
-.toast-reduced-glow[data-sonner-toast][data-type="info"] [data-icon] {
-  color: #7aa8ff !important;
-}
-
-/* Typography — title is the only line most toasts have; we keep
-   description visible but quieter and only when present. */
-.toast-reduced-glow[data-sonner-toast] [data-content] {
+/* Text stack. */
+.dm-toast[data-sonner-toast] [data-content] {
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
   padding: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0;
 }
-.toast-reduced-glow[data-sonner-toast] [data-title] {
+.dm-toast[data-sonner-toast] [data-title] {
   font-weight: 600 !important;
   font-size: 14px !important;
   line-height: 1.35 !important;
   letter-spacing: -0.005em !important;
-  color: #f4f5f7 !important;
+  color: var(--color-text-primary) !important;
 }
-.toast-reduced-glow[data-sonner-toast] [data-description] {
+.dm-toast[data-sonner-toast] [data-description] {
   font-size: 12.5px !important;
   line-height: 1.4 !important;
-  color: #9a9da6 !important;
+  color: var(--color-text-secondary) !important;
 }
 
-/* Close button — ALWAYS visible and actually pressable: a 26px
-   ghost circle centered on the right edge (was 18px hover-only). */
-.toast-reduced-glow[data-sonner-toast] [data-close-button] {
+/* Close — borderless 26px square on the right edge, always visible
+   (touch has no hover); fills on hover. */
+.dm-toast[data-sonner-toast] [data-close-button] {
   position: absolute !important;
   left: auto !important;
-  right: 10px !important;
+  right: 9px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   width: 26px !important;
   height: 26px !important;
-  border-radius: 99px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--color-text-tertiary) !important;
   opacity: 1;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color 120ms ease, background-color 120ms ease;
 }
-.toast-reduced-glow[data-sonner-toast] [data-close-button]:hover {
-  color: #ffffff !important;
-  background: rgba(163, 230, 53, 0.18) !important;
-  border-color: rgba(163, 230, 53, 0.3) !important;
+.dm-toast[data-sonner-toast] [data-close-button]:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
-.toast-reduced-glow[data-sonner-toast] [data-close-button] > svg {
+.dm-toast[data-sonner-toast] [data-close-button]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--color-focus-ring) !important;
+}
+.dm-toast[data-sonner-toast] [data-close-button] > svg {
   width: 13px !important;
   height: 13px !important;
 }
 
-/* Action button — keeps the lime brand for the primary action so
-   "Undo" / "Retry" stays on-brand without making the whole toast
-   colored. */
-.toast-reduced-glow[data-sonner-toast] [data-button] {
-  background: #b3ff3b !important;
-  color: #0a0a0d !important;
+/* Action — the brand's primary fill, flat. */
+.dm-toast[data-sonner-toast] [data-button] {
+  background: var(--color-accent-default) !important;
+  color: var(--color-text-inverse) !important;
   font-weight: 600 !important;
   font-size: 12.5px !important;
   border-radius: 6px !important;
-  padding: 5px 10px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
   border: 0 !important;
 }
-.toast-reduced-glow[data-sonner-toast] [data-button]:hover {
-  background: #c4ff5e !important;
+.dm-toast[data-sonner-toast] [data-button]:hover {
+  background: var(--color-accent-hover) !important;
 }
 
 /* ─── Hero Text Gradient Animation ───────────────────────────── */

@@ -8,14 +8,19 @@
  *
  * Every card is a real, published pet with a real price (from getHubTopValues);
  * the two stat chips come from the same HubStat rows the compact strip uses.
- * Modern hover: a per-card cursor-tracking glow + a border-reveal (mask
- * composited) — never a flat background swap. Reduced-motion users get static
- * cards. Renders nothing when there's no data.
+ * Card-surface system: raised cards, no outlines; hover lifts the card and a
+ * soft neutral glow follows the cursor (hidden for reduced motion). Renders
+ * nothing when there's no data.
  */
 
 import Link from '@/components/navigation/AppLink'
 import { motion, useMotionTemplate, useMotionValue } from 'framer-motion'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
+import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
+import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
+import { VALUE_BTN_SECONDARY, VALUE_LABEL, VALUE_SURFACE, VALUE_SURFACE_LINK } from '@/components/values/styles'
+import { VARIANT_LABEL, type Variant } from '../calculator/_adoptMeCalcTypes'
+import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { HubStat, HubTeaserItem } from './_hubData'
 
 /** Mosaic footprint per collage position — a deliberate, hand-tuned rhythm so
@@ -52,11 +57,8 @@ export function MarketSnapshotBento({
 
   return (
     <div className="bhh-anim [animation-delay:90ms]">
-      <div className="mb-3 flex items-center gap-2 text-caption font-bold uppercase tracking-[0.14em] text-[#CFE0D6]">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3FA96A] opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
-        </span>
+      <div className="mb-3 flex items-center gap-2 text-[13px] font-medium text-text-secondary">
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
         Live Market
       </div>
 
@@ -90,12 +92,14 @@ export function MarketSnapshotBento({
         )}
         <Link
           href={valuesHref}
-          className="group/see ml-auto inline-flex items-center gap-2 self-center border border-[#2C3A31] bg-white/[0.03] px-4 py-2.5 text-body-sm font-semibold text-[#CFE0D6] transition hover:border-[#2F6B46] hover:bg-white/[0.06] hover:text-white"
+          className={`group/see ml-auto self-center ${VALUE_BTN_SECONDARY}`}
         >
           See The Full Value List
-          <ArrowForwardIcon
-            sx={{ fontSize: 16 }}
-            className="transition-transform group-hover/see:translate-x-0.5"
+          <ArrowRightIcon
+            size={16}
+            weight="bold"
+            aria-hidden
+            className="transition-transform group-hover/see:translate-x-0.5 motion-reduce:transition-none"
           />
         </Link>
       </div>
@@ -105,8 +109,8 @@ export function MarketSnapshotBento({
 
 /**
  * One pet in the collage. Art fills the cell; name + price sit on a bottom
- * gradient. Cursor-tracking glow + border-reveal on hover (mask-composited),
- * static under reduced motion.
+ * gradient. A soft neutral glow follows the cursor on hover (hidden under
+ * reduced motion).
  */
 function PetCell({
   pet,
@@ -121,32 +125,18 @@ function PetCell({
 }) {
   const tx = useMotionValue(-200)
   const ty = useMotionValue(-200)
-  const fill = useMotionTemplate`radial-gradient(140px circle at ${tx}px ${ty}px, rgba(79,180,119,0.14), transparent 60%)`
-  const ring = useMotionTemplate`radial-gradient(140px circle at ${tx}px ${ty}px, rgba(96,201,132,0.6), transparent 60%)`
+  const fill = useMotionTemplate`radial-gradient(140px circle at ${tx}px ${ty}px, rgba(255,255,255,0.07), transparent 60%)`
 
   return (
     <Link
       href={href}
-      className={`group/cell relative overflow-hidden border border-white/10 bg-[#0E1211]/55 backdrop-blur-md transition-colors duration-300 hover:border-[#2F6B46] ${span}`}
+      className={`group/cell relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK} ${span}`}
       onMouseMove={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
         tx.set(e.clientX - r.left)
         ty.set(e.clientY - r.top)
       }}
     >
-      {/* Border-reveal — lights only the edge nearest the cursor. */}
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity duration-300 group-hover/cell:opacity-100 motion-reduce:hidden"
-        style={{
-          background: ring,
-          padding: '1px',
-          WebkitMask:
-            'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-        }}
-      />
       {/* Soft fill glow that follows the cursor. */}
       <motion.span
         aria-hidden
@@ -173,20 +163,20 @@ function PetCell({
         className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-2/3"
         style={{
           background:
-            'linear-gradient(180deg, transparent 0%, rgba(6,9,8,0.62) 82%)',
+            'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 82%)',
         }}
       />
       <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-2 px-2.5 pb-2">
         <div className="min-w-0">
           <p
-            className={`truncate font-bold text-white ${
+            className={`truncate font-semibold text-text-primary ${
               big ? 'text-body' : 'text-caption'
             }`}
           >
             {pet.name}
           </p>
           <p
-            className={`font-mono font-bold text-[#7FE0A0] ${
+            className={`font-semibold tabular-nums text-text-primary ${
               big ? 'text-body-sm' : 'text-[11px]'
             }`}
           >
@@ -200,50 +190,23 @@ function PetCell({
 }
 
 /**
- * Variant tag for a pet's price (which form the value is for — FR, NFR, …).
- * Styled like an app-icon glyph: a rounded-square tile with a forest gradient,
- * a top inner highlight for depth, and a thick white letterform — matching the
- * house logo treatment while staying on the forest palette.
+ * Variant tag for a pet's price (which form the value is for — FR, NFR, …):
+ * a flat dark tag with the variant's own colour dot (the shared Adopt Me
+ * variant colours), full name in the tooltip.
  */
 function VariantBadge({ code, big }: { code: string; big?: boolean }) {
+  const upper = code.toUpperCase()
   return (
     <span
-      title={variantTitle(code)}
-      className={`relative inline-flex shrink-0 select-none items-center justify-center rounded-[5px] font-extrabold leading-none text-white shadow-[0_2px_5px_rgba(0,0,0,0.45)] ring-1 ring-white/15 ${
-        big ? 'h-6 min-w-6 px-1.5 text-[12px]' : 'h-5 min-w-5 px-1 text-[10px]'
+      title={VARIANT_LABEL[upper as Variant] ?? code}
+      className={`inline-flex shrink-0 select-none items-center gap-1 rounded bg-black/55 font-semibold leading-none text-text-primary backdrop-blur-sm ${
+        big ? 'h-6 px-1.5 text-[12px]' : 'h-5 px-1 text-[10px]'
       }`}
-      style={{
-        background:
-          'linear-gradient(160deg, #3FB877 0%, #2E7D4F 55%, #24603E 100%)',
-      }}
     >
-      {/* Top-edge sheen — the subtle glossy highlight the logo tile has. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[5px]"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.28), transparent)',
-        }}
-      />
-      <span className="relative tracking-[0.02em]">{code}</span>
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: variantColor(upper) }} />
+      {code}
     </span>
   )
-}
-
-/** Human-readable name for a variant code, for the badge's tooltip. */
-function variantTitle(code: string): string {
-  const map: Record<string, string> = {
-    N: 'Normal',
-    F: 'Fly',
-    R: 'Ride',
-    FR: 'Fly Ride',
-    NEON: 'Neon',
-    NFR: 'Neon Fly Ride',
-    MEGA: 'Mega Neon',
-    MFR: 'Mega Neon Fly Ride',
-  }
-  return map[code.toUpperCase()] ?? code
 }
 
 /** A compact supporting stat below the collage (highest value / trending). */
@@ -262,32 +225,37 @@ function StatChip({
 }) {
   const body = (
     <>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8A978E]">
-        {label}
-      </p>
+      <p className={VALUE_LABEL}>{label}</p>
       <p className="mt-1 flex items-baseline gap-1.5">
-        <span className="truncate text-[20px] font-extrabold leading-none text-[#F2F6F0]">
+        <span className="truncate text-[20px] font-bold leading-none text-text-primary">
           {value}
         </span>
         {sub && (
           <span
-            className={`font-mono text-body-sm font-bold ${
-              trend === 'down' ? 'text-[#E0736B]' : 'text-[#5BC77E]'
+            className={`flex items-center gap-0.5 text-body-sm font-semibold tabular-nums ${
+              trend === 'down' ? 'text-error' : 'text-success'
             }`}
           >
-            {trend === 'down' ? '▼' : '▲'} {sub.replace(/^[+-]/, '')}
+            {trend === 'down' ? (
+              <CaretDownIcon size={12} weight="fill" aria-label="Down" />
+            ) : (
+              <CaretUpIcon size={12} weight="fill" aria-label="Up" />
+            )}
+            {sub.replace(/^[+-]/, '')}
           </span>
         )}
       </p>
     </>
   )
-  const cls =
-    'min-w-[140px] flex-1 border border-white/10 bg-[#0E1211]/55 backdrop-blur-md px-4 py-3 transition-colors duration-300 hover:border-[#2F6B46]'
+  const cls = 'min-w-[140px] flex-1 px-4 py-3'
   return href ? (
-    <Link href={href} className={cls}>
+    <Link
+      href={href}
+      className={`${cls} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
+    >
       {body}
     </Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <div className={`${cls} ${VALUE_SURFACE}`}>{body}</div>
   )
 }

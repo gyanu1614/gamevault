@@ -65,11 +65,12 @@ export function SwooshLink({
     [href, reduce, router],
   )
 
-  // Values-bound cover leans forest-green; marketplace-bound stays near-black.
+  // Both covers sit on the marketplace ground (card-surface greys); the
+  // values-bound one lifts a step lighter so the switch still reads.
   const background =
     to === 'values'
-      ? 'linear-gradient(120deg, #0C0F0E 0%, #10231A 48%, #1B6B3F 100%)'
-      : 'linear-gradient(120deg, #060807 0%, #0C0F0E 55%, #141a17 100%)'
+      ? 'linear-gradient(120deg, var(--color-bg-base) 0%, var(--color-bg-raised) 55%, var(--color-bg-raised-hover) 100%)'
+      : 'linear-gradient(120deg, #101114 0%, var(--color-bg-base) 55%, var(--color-bg-raised) 100%)'
 
   return (
     <>
@@ -131,14 +132,14 @@ export function SwooshLink({
                       {to === 'values' && (
                         <>
                           <span className="mx-2.5 font-normal text-white/25">|</span>
-                          <span className="text-[#4FB477]">Values</span>
+                          <span className="text-lime-text">Values</span>
                         </>
                       )}
                     </span>
                   </div>
 
                   {/* Thin progress shimmer under the lockup. */}
-                  <span className="relative h-[3px] w-28 overflow-hidden rounded-full bg-white/12">
+                  <span className="relative h-[3px] w-28 overflow-hidden rounded-full bg-white/[0.12]">
                     <motion.span
                       className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-white/85"
                       initial={{ x: '-120%' }}

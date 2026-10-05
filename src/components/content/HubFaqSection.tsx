@@ -7,7 +7,7 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
  * pattern can't drift page-to-page:
  *   - separated from the content above by a hairline + generous top space
  *   - a CENTERED title (text-heading) with an optional centered subtitle
- *   - the FaqCards accordion in the game's square/forest geometry
+ *   - the FaqCards accordion in the hub geometry (card surface, no outline)
  *   - an optional centered CTA below the accordion
  *
  * Emit the matching FAQPage JSON-LD from the page (schema must mirror the
@@ -26,12 +26,12 @@ export function HubFaqSection({
   footer?: ReactNode
 }) {
   return (
-    <section className="mt-16 border-t border-[#1A211A] pt-12">
-      <h2 className="text-center text-heading font-bold tracking-tight text-[#F2F6F0]">
+    <section className="mt-16 border-t border-white/[0.07] pt-12">
+      <h2 className="text-center text-heading font-bold tracking-tight text-text-primary">
         {title}
       </h2>
       {subtitle && (
-        <p className="mx-auto mt-3 max-w-2xl text-center text-body-sm text-[#98A398]">
+        <p className="mx-auto mt-3 max-w-2xl text-center text-body-sm text-text-secondary">
           {subtitle}
         </p>
       )}
