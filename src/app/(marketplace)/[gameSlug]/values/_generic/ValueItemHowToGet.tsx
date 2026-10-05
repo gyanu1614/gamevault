@@ -126,7 +126,7 @@ export function ValueItemHowToGet({
         {/* The two ways, as two plain rows on the same card (no card-in-card):
             the free way, then buy it. */}
         <FreeWayRow way={ways.free} />
-        <HowToGetFastWay way={ways.fast} name={itemName} shortName={shortName} buy={buy} />
+        <HowToGetFastWay way={ways.fast} name={itemName} buy={buy} />
 
       </div>
 

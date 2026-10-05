@@ -308,26 +308,24 @@ const FAST_GREEN = '63,217,134'
 const FAST_COLS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' }
 
 /**
- * How To Get, row 2 — "Buy It": DropMarket → buy → delivered in minutes, then
- * one button. Owner, 2026-10-05: the button always reads "Buy MM2 Items"; it
- * opens this item's listings when we stock it, otherwise the game's items
+ * How To Get, row 2 — "Buy It for Cheap": DropMarket → buy → delivered in
+ * minutes, then one button. Owner, 2026-10-05: the button reads "Buy <item>";
+ * it opens this item's listings when we stock it, otherwise the game's items
  * page. Client-side only for the live stock (useBuyCta); the text is in the
  * server HTML. Step 1 links to the same place as the button.
  */
 export function HowToGetFastWay({
   way,
   name,
-  shortName,
   buy,
 }: {
   way: { heading: string; steps: WayStep[]; total: { label: string; value: string | null; detail: string } }
   name: string
-  shortName: string
   buy: ItemBuy
 }) {
   const cta = useItemCta(buy, name)
   const href = cta.state === 'none' ? `/${buy.gameSlug}/${buy.categorySlug}` : cta.href
-  const label = `Buy ${shortName} Items`
+  const label = `Buy ${name}`
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
       <WaySectionHead n={2} title={way.heading} tone="green" />
