@@ -28,7 +28,7 @@ describe('value-list item copy', () => {
 
   it('gives a dated, listing-backed price sentence', () => {
     expect(priceSentence(harvester)).toBe(
-      'As of October 5, 2026, the cheapest Harvester from a reputable seller costs $7.20, and the typical market price is $7.55, across 63 live listings.',
+      'As of October 5, 2026, Harvester is worth about $7.55 in MM2 — its verified market price — and starts at $7.20 from professional sellers.',
     )
     expect(priceSentence({ ...harvester, cheapestUsd: null })).toBeNull()
   })

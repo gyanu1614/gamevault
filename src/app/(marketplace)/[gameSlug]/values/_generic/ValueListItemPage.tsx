@@ -148,8 +148,13 @@ export default async function ValueListItemPage({
           <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-display">
             {item.name} Value in {hub.shortName}
           </h1>
-          <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
-            What {item.name} sells for in real money — from live listings by reputable sellers.
+          {/* The answer, right under the H1: what it is, the chroma link, and
+              what it's worth — plain server text, the first thing a crawler
+              and an answer engine read. */}
+          <p className="mt-4 text-body leading-7 text-text-secondary">
+            {aboutSentence(copy)}
+            {chromaSentence(copy) ? ` ${chromaSentence(copy)}` : ''}
+            {priceSentence(copy) ? ` ${priceSentence(copy)}` : ''}
           </p>
         </div>
 
@@ -224,7 +229,6 @@ async function ItemBody({
   const price = item.price
   const cheapestUsd = price?.cheapestUsd ?? null
   const marketUsd = price?.averageUsd ?? null
-  const listedNow = price?.sampleSize ?? 0
 
   // Standard ↔ Chroma, only when the other form has a page to go to.
   const forms: ItemForm[] | null =
@@ -245,7 +249,7 @@ async function ItemBody({
   stats.push({ label: 'Type', value: typeLabel })
   if (item.origin) stats.push({ label: 'Origin', value: item.origin })
   if (item.releaseYear) stats.push({ label: 'Released', value: String(item.releaseYear) })
-  stats.push({ label: 'Listed Now', value: listedNow > 0 ? listedNow.toLocaleString('en-US') : 'None' })
+  stats.push({ label: 'Sold By', value: 'Professional Sellers' })
 
   const series = [item, ...(counterpart ? [counterpart] : [])].map((f) => ({
     key: f.slug,
@@ -274,7 +278,6 @@ async function ItemBody({
   const similarTitle = `Similar ${rarity.label || ''} ${allSameType ? plural(typeLabel) : theme.itemNounPlural}`.replace(/\s+/g, ' ')
 
   const imageCredit = parseImageAttribution(item.imageAttribution)
-  const chromaLine = chromaSentence(copy)
 
   return (
     <>
@@ -310,21 +313,17 @@ async function ItemBody({
       />
 
       <div className="relative mx-auto w-full max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
-        <section>
-          <h2 className="mb-5 text-heading font-bold tracking-tight text-text-primary">About The {item.name}</h2>
+        <section aria-labelledby="item-worth-title">
+          <h2 id="item-worth-title" className="mb-5 text-heading font-bold tracking-tight text-text-primary">
+            How Much Is {item.name} Worth in {hub.shortName}?
+          </h2>
           <ValueListAboutStats
             name={item.name}
             cheapestUsd={cheapestUsd}
             marketUsd={marketUsd}
-            listedNow={listedNow}
             confidence={price?.confidenceLabel ?? null}
             buy={buy}
           />
-          {/* Answer-first, dated, quotable — plain server text for crawlers. */}
-          <p className="mt-6 text-body leading-7 text-text-secondary">
-            {aboutSentence(copy)} {chromaLine ? `${chromaLine} ` : ''}
-            {priceSentence(copy)}
-          </p>
         </section>
 
         <ValueItemHowToGet
