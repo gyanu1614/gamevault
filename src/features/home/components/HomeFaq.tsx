@@ -19,6 +19,7 @@ import Link from '@/components/navigation/AppLink'
 
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
+import { CANCEL_REQUEST_MIN_DELIVERY_HOURS } from '@/lib/legal/protection-windows'
 
 const ITEMS = [
   {
@@ -31,7 +32,7 @@ const ITEMS = [
   },
   {
     q: 'What if my item is late or never arrives?',
-    a: 'Once the seller\u2019s delivery time passes you can open a dispute straight from your order, and our team steps in. If that delivery time is longer than 12 hours, you can cancel and take a refund instead of waiting.',
+    a: `Once the seller\u2019s delivery time passes you can open a dispute straight from your order, and our team steps in. If that delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, you can ask to cancel and take a refund instead of waiting.`,
   },
   {
     q: 'What if the item is not what was described?',
@@ -43,7 +44,7 @@ const ITEMS = [
   },
   {
     q: 'What can I buy, and how do I pay?',
-    a: 'In-game currency, items and accounts, across every game we support. Pay by card and local methods through Payssion, or in crypto through CoinGate and BTCPay.',
+    a: 'In-game currency, items and accounts, across every game we support. Pay with local payment methods through Payssion, or in crypto through BTCPay.',
   },
 ]
 

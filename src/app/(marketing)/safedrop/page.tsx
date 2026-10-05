@@ -26,6 +26,26 @@ import Link from '@/components/navigation/AppLink'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
+import {
+  COMPLETION_HOLD_HOURS,
+  DISPUTE_WINDOW_DAYS,
+  DISPUTE_WINDOW_LABEL,
+  PROTECTION_WINDOW_HOURS as WIN,
+  hoursAsDays,
+  hoursAsDaysTitle,
+  protectionWindowSummary,
+} from '@/lib/legal/protection-windows'
+
+/*
+ * FAQ answers that quote windows are built from @/lib/legal/protection-windows,
+ * the same module the legal pack renders from, so this page, its JSON-LD and
+ * the SafeDrop Protection Terms always state the same numbers.
+ */
+const FAQ_WINDOWS = `${protectionWindowSummary()} Raise any issue within the window and you're covered.`
+const FAQ_COVERS = `SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the account's ${hoursAsDays(WIN.account)} protection window. It doesn't cover a change of mind, publisher bans after delivery outside that window, or deals made off-platform.`
+const FAQ_AFTER_CONFIRM = `Yes, if something is wrong. For ${DISPUTE_WINDOW_LABEL} from delivery you can still open a dispute from your order, even after you confirm it or it completes automatically. Confirming tells us you received your order as described, so check it carefully first: our team decides a later claim on the evidence.`
+const FAQ_FEE = 'SafeDrop Protection is included free on every order. There is nothing to upgrade.'
+const FAQ_SELLER_PAID = `Your sale proceeds are credited to your Seller Balance when the order completes. They can be withdrawn ${COMPLETION_HOLD_HOURS} hours after the buyer confirms delivery, or straight away when the order completes automatically at the end of its protection window. A dispute opened within ${DISPUTE_WINDOW_LABEL} of delivery sets that order's amount aside until it is decided.`
 
 export const metadata: Metadata = {
   title: 'SafeDrop Protection',
@@ -58,7 +78,7 @@ export default function SafeDropPage() {
         "name": "How long do I have to check my order?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Each category has its own protection window: 48 hours for currency and top-ups, 72 hours for items and boosting, and 5, 7, or 14 days for accounts depending on the account's risk band. Raise any issue within the window and you're covered."
+          "text": FAQ_WINDOWS
         }
       },
       {
@@ -66,7 +86,7 @@ export default function SafeDropPage() {
         "name": "What does SafeDrop cover?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the warranty terms in our Risk Disclosure. It doesn't cover a change of mind, publisher bans after delivery outside warranty terms, or deals made off-platform."
+          "text": FAQ_COVERS
         }
       },
       {
@@ -74,7 +94,7 @@ export default function SafeDropPage() {
         "name": "Can I get a refund after confirming delivery?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Confirming delivery tells us you received your order as described, so refunds are generally no longer available afterwards unless you can show the seller acted fraudulently. Always check your order carefully before confirming."
+          "text": FAQ_AFTER_CONFIRM
         }
       },
       {
@@ -90,7 +110,7 @@ export default function SafeDropPage() {
         "name": "Is there a fee for SafeDrop?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Standard SafeDrop protection is included free on every order. Optional Enhanced and Premium warranty tiers with longer coverage are available at checkout."
+          "text": FAQ_FEE
         }
       },
       {
@@ -98,7 +118,7 @@ export default function SafeDropPage() {
         "name": "When do sellers get paid?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes."
+          "text": FAQ_SELLER_PAID
         }
       }
     ]
@@ -224,7 +244,7 @@ export default function SafeDropPage() {
                   <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-lime-text" />
                   <span className="text-sm text-gray-300">
                     An account is recovered by its previous owner within the
-                    warranty terms in our Risk Disclosure
+                    account protection window
                   </span>
                 </div>
               </div>
@@ -247,8 +267,8 @@ export default function SafeDropPage() {
                 <div className="flex items-start gap-2">
                   <XCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
                   <span className="text-sm text-gray-300">
-                    Publisher bans or suspensions after delivery, outside
-                    warranty terms
+                    Publisher bans or suspensions after delivery, outside the
+                    account protection window
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
@@ -278,15 +298,19 @@ export default function SafeDropPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
-            <ProtectionWindowCard iconSlug="currency" category="Currency" window="48 Hours" />
-            <ProtectionWindowCard iconSlug="items" category="Items" window="72 Hours" />
-            <ProtectionWindowCard iconSlug="top-up" category="Top-Ups" window="48 Hours" />
-            <ProtectionWindowCard iconSlug="boosting" category="Boosting" window="72 Hours" />
+            <ProtectionWindowCard iconSlug="currency" category="Currency" window={hoursAsDaysTitle(WIN.currency)} />
+            <ProtectionWindowCard iconSlug="items" category="Items" window={hoursAsDaysTitle(WIN.items)} />
+            <ProtectionWindowCard iconSlug="top-up" category="Top-Ups" window={hoursAsDaysTitle(WIN.top_up)} />
+            <ProtectionWindowCard
+              iconSlug="boosting"
+              category="Boosting"
+              window={hoursAsDaysTitle(WIN.service)}
+              note="From completion"
+            />
             <ProtectionWindowCard
               iconSlug="accounts"
               category="Accounts"
-              window="5–14 Days"
-              note="5, 7, or 14 days by risk band"
+              window={hoursAsDaysTitle(WIN.account)}
               className="col-span-2 md:col-span-1"
             />
           </div>
@@ -365,8 +389,8 @@ export default function SafeDropPage() {
             </h3>
             <p className="text-gray-300 mb-4 max-w-2xl mx-auto">
               You&apos;re paid out after the buyer confirms delivery or the
-              protection window closes — payout guaranteed once the window
-              closes.
+              protection window closes — payout guaranteed once the{' '}
+              {DISPUTE_WINDOW_DAYS}-day dispute window closes.
             </p>
             <p className="text-gray-400 text-sm max-w-2xl mx-auto">
               Your sale proceeds are credited to your Seller Balance once the
@@ -395,17 +419,17 @@ export default function SafeDropPage() {
 
             <FAQItem
               question="How long do I have to check my order?"
-              answer="Each category has its own protection window: 48 hours for currency and top-ups, 72 hours for items and boosting, and 5, 7, or 14 days for accounts depending on the account's risk band. Raise any issue within the window and you're covered."
+              answer={FAQ_WINDOWS}
             />
 
             <FAQItem
               question="What does SafeDrop cover?"
-              answer="SafeDrop covers orders that aren't delivered, items that aren't as described, and accounts recovered by their previous owner within the warranty terms in our Risk Disclosure. It doesn't cover a change of mind, publisher bans after delivery outside warranty terms, or deals made off-platform."
+              answer={FAQ_COVERS}
             />
 
             <FAQItem
               question="Can I get a refund after confirming delivery?"
-              answer="Confirming delivery tells us you received your order as described, so refunds are generally no longer available afterwards unless you can show the seller acted fraudulently. Always check your order carefully before confirming."
+              answer={FAQ_AFTER_CONFIRM}
             />
 
             <FAQItem
@@ -415,12 +439,12 @@ export default function SafeDropPage() {
 
             <FAQItem
               question="Is there a fee for SafeDrop?"
-              answer="Standard SafeDrop protection is included free on every order. Optional Enhanced and Premium warranty tiers with longer coverage are available at checkout."
+              answer={FAQ_FEE}
             />
 
             <FAQItem
               question="When do sellers get paid?"
-              answer="Your sale proceeds are credited to your Seller Balance once the buyer confirms delivery or the protection window closes."
+              answer={FAQ_SELLER_PAID}
             />
           </div>
         </div>

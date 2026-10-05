@@ -1,3 +1,4 @@
+import { CANCEL_REQUEST_MIN_DELIVERY_HOURS } from '@/lib/orders/cancel-request-eligibility'
 /**
  * /support help content: the topic cards, the FAQ, and the client-side help
  * search over both. Plain data + pure functions — safe for server and client.
@@ -134,8 +135,9 @@ export const HELP_FAQ: HelpFaq[] = [
     id: 'late-order',
     topic: 'orders',
     q: 'What if my order is late or never arrives?',
-    // Refund & Dispute Policy §12.2.
-    a: 'Each listing states the seller’s delivery time. If the seller does not deliver within it — and in any event within 24 hours of the order being accepted — the order is cancelled automatically and you are refunded in full as store credit, service fee included. A refund to your original payment method is available instead on request from the order page.',
+    // Homepage FAQ copy (HomeFaq) — what the order flow actually does (no
+    // automatic cancellation exists; see Refund & Dispute Policy §4.1).
+    a: `Each listing states the seller’s delivery time. Once it passes you can open a dispute straight from your order, and our team steps in. If that delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, you can ask to cancel and take a refund instead of waiting.`,
     keywords: ['delivery', 'not received', 'missing', 'cancel', 'waiting', 'item'],
   },
   {

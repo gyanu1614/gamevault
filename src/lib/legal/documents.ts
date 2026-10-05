@@ -13,20 +13,54 @@
  *
  * ⚠️ NOT LEGAL ADVICE — solicitor sign-off pending on the pack (see
  * per-doc comments + the Solicitor Enquiry Pack). Fee schedule (Fees)
- * is published, effective at public launch.
+ * is published and in force.
+ *
+ * 4 Oct 2026 (v1.1, owner instruction "fix all the legal content gaps,
+ * remove CoinGate"): CoinGate / Tazapay removed; processors named from
+ * ./payment-processors; every protection, dispute and payout number
+ * rendered from ./protection-windows (the values the money layer
+ * enforces); Buyer Terms restructured; Privacy, Cookie, Complaints, IP,
+ * Prohibited, Acceptable Use, Trust & Safety, Company Information filled
+ * out. Per-document dates: `lastUpdated` / `version` on each changed doc.
  */
+
+import {
+  CANCEL_REQUEST_MIN_DELIVERY_HOURS,
+  COMPLETION_HOLD_HOURS,
+  DISPUTE_DECISION_DAYS,
+  DISPUTE_EVIDENCE_HOURS,
+  DISPUTE_WINDOW_DAYS,
+  PAYOUT_DETAILS_FREEZE_HOURS,
+  PROTECTION_WINDOW_HOURS as WIN,
+  SELLER_RESPONSE_HOURS,
+  WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS,
+  hoursAsDays,
+} from './protection-windows'
+import {
+  PAYMENT_PROCESSORS,
+  PAYMENT_PROCESSORS_PHRASE,
+  PAYOUT_PROVIDERS,
+} from './payment-processors'
 
 export const LEGAL_ENTITY = {
   name: 'DropMarket Ltd',
   companyNumber: '17309867',
-  registeredOffice:
-    '82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE',
+  /** Identical to the site footer (src/components/footer.tsx). */
+  registeredOffice: '82A James Carter Road, Mildenhall, Suffolk, IP28 7DE, United Kingdom',
+  vatNumber: '287522083',
+  phone: '+44 7476 562276',
   jurisdiction: 'England & Wales',
   website: 'dropmarket.gg',
   email: 'support@dropmarket.gg',
   effectiveDate: '1 July 2026',
+  /** Default for documents that carry no `lastUpdated` of their own. */
   lastUpdated: '12 July 2026',
+  /** Default for documents that carry no `version` of their own. */
+  version: 'v1.0',
 } as const
+
+/** The date every document changed in the 4 Oct 2026 round carries. */
+const UPDATED_2026_10_04 = { lastUpdated: '4 October 2026', version: 'v1.1' } as const
 
 export type LegalBlock =
   | { t: 'p'; md: string }
@@ -44,12 +78,85 @@ export interface LegalDoc {
   title: string
   /** Meta description + card blurb. */
   description: string
+  /** This document's own "Last Updated" (falls back to LEGAL_ENTITY.lastUpdated). */
+  lastUpdated?: string
+  /** This document's own version label (falls back to LEGAL_ENTITY.version). */
+  version?: string
   sections: LegalSection[]
 }
 
 const p = (md: string): LegalBlock => ({ t: 'p', md })
 const ul = (items: string[]): LegalBlock => ({ t: 'ul', items })
 const note = (md: string): LegalBlock => ({ t: 'note', md })
+
+// ── Shared facts, written once ─────────────────────────────────────────────
+const E = LEGAL_ENTITY
+/** "DropMarket Ltd · Company No. … · Registered in England & Wales · <office> · support@…" */
+const ENTITY_LINE = `${E.name} · Company No. ${E.companyNumber} · Registered in ${E.jurisdiction} · ${E.registeredOffice} · ${E.email}`
+const DISPUTE_WINDOW = `${DISPUTE_WINDOW_DAYS} days from delivery`
+const HOLD = `${COMPLETION_HOLD_HOURS} hours`
+/** Contact section shared by the documents that carry one in their own text. */
+const contactSection = (h: string, lead: string): LegalSection => ({
+  h,
+  blocks: [
+    p(`${lead} Email **${E.email}** or call **${E.phone}**. You can also write to us at our registered office: ${E.registeredOffice}.`),
+    p(`${E.name} · Company No. ${E.companyNumber} · Registered in ${E.jurisdiction} · VAT No. ${E.vatNumber}.`),
+  ],
+})
+/** Governing-law section matching Terms of Use Section 20. */
+const governingLawSection = (h: string, what: string): LegalSection => ({
+  h,
+  blocks: [
+    p(
+      `${what} and any non-contractual obligations arising from them are governed by the law of **England and Wales**. The **courts of England and Wales** have exclusive jurisdiction, except that a consumer resident elsewhere keeps any mandatory protections and jurisdiction rights of their local law. Nothing here requires arbitration.`,
+    ),
+  ],
+})
+
+/** "processes payments …" → "Processes payments …" for table cells. */
+const sentence = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1)
+/** The personal data each payment provider receives (Privacy Policy recipients table). */
+const PROCESSOR_DATA: Record<string, string> = {
+  Payssion: 'Order reference, amount, payment method, and the details you enter on Payssion’s payment page',
+  'BTCPay Server': 'Order reference, amount, payment address and transaction ID',
+  Payoneer: 'Payoneer account email and payout amount',
+}
+
+// ── Reporting, statements of reasons, appeals, Online Safety Act ─────────────
+// Shared by the Prohibited Items, Acceptable Use and Trust & Safety documents
+// so the three never describe the process differently.
+const reportingSection = (h: string): LegalSection => ({
+  h,
+  blocks: [
+    p(
+      `Report a listing, user, review or message that you think breaks our rules or the law by emailing **${E.email}** with the link to it and a short description of the problem. For an active Order you can also raise it in the Order chat or open a dispute. If you think a child is at risk, contact the police first; child sexual abuse material can also be reported to the Internet Watch Foundation (iwf.org.uk).`,
+    ),
+    p(
+      'We review reports as soon as we can and act quickly on anything that appears illegal. Depending on what we find, we may remove or hide content, restrict features, suspend or close an account, withhold payouts under the Seller Agency Agreement, or report the matter to the authorities where the law requires it.',
+    ),
+  ],
+})
+
+const appealsSection = (h: string): LegalSection => ({
+  h,
+  blocks: [
+    p(
+      '**Statement of reasons.** When we remove or restrict a listing or other content, or suspend, restrict or close an account, we tell the user affected what we did, which rule it relates to and the main facts we relied on, unless the law or the need to prevent fraud stops us.',
+    ),
+    p(
+      `**Appeals.** You can appeal within **14 days** by replying to that message or emailing ${E.email} with “Appeal” in the subject and anything you want us to consider. Where we can, someone who was not involved in the original decision reviews the appeal, and we aim to reply within **7 days**. If we got it wrong, we reverse the decision. Appealing does not stop you using the Complaints process or your legal rights.`,
+    ),
+  ],
+})
+
+const onlineSafetySection = (h: string): LegalSection => ({
+  h,
+  blocks: [
+    p(
+      'Users can post listings, reviews and messages that other users see, so DropMarket is a user-to-user service under the **Online Safety Act 2023**. The Platform is for adults: you must be 18 or over to use it (Terms of Use, Section 3). We take proportionate steps against illegal content: identity verification before anyone can sell, review of new sellers’ listings, the reporting route in this document, and prompt removal of illegal content once we know about it. Content harmful to children is prohibited.',
+    ),
+  ],
+})
 
 export const LEGAL_DOCS: LegalDoc[] = [
   /**
@@ -86,7 +193,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'terms',
     title: 'Terms of Use',
     description:
-      'The master terms governing use of the DropMarket platform: our venue role, SafeDrop payments through a licensed PSP, eligibility, accounts, consumer rights, liability, and governing law.',
+      'The master terms governing use of the DropMarket platform: our venue role, SafeDrop Protection and payments, eligibility, accounts, consumer rights, liability, and governing law.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         h: '1. Introduction',
@@ -104,7 +212,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '1.4. **Summary of how money moves (binding description).** Each sale on the Platform is a contract between the Buyer and the Seller. DropMarket acts as the **disclosed commercial agent of the Seller**, appointed under the Seller Agency Agreement, with authority to conclude the sale and to **collect the Buyer’s payment in the name of and on behalf of the Seller**. The Buyer’s payment obligation to the Seller is **fully discharged when DropMarket (or its payment processor on DropMarket’s behalf) receives the Buyer’s payment in full**. From that moment, the amounts collected (less DropMarket’s fees and any amounts due under the Policies) are owed by DropMarket to the Seller as their agent, recorded in the Seller Balance, and paid out per Section 9. **DropMarket is not a bank, e-money issuer, or authorised payment institution; it collects payments solely as commercial agent of Sellers under the agency exclusion in the Payment Services Regulations 2017.**',
           ),
           p(
-            '1.5. The PSP(s) currently used, and their regulatory status, are identified at checkout and on the Fees & Charges page. Payment processing is subject to the PSP’s own terms, which you accept when transacting.',
+            `1.5. The payment methods available to you are shown at checkout, and ${PAYMENT_PROCESSORS_PHRASE} are listed on the Fees & Charges page. Payments processed by a third-party provider are also subject to that provider’s own terms, which you accept when transacting.`,
           ),
         ],
       },
@@ -120,8 +228,9 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '“**Listing**” — an offer to sell an item or service published by a Seller.',
             '“**Order**” — a Buyer’s purchase of a Listing.',
             '“**SafeDrop**” — DropMarket’s protection programme described in the SafeDrop Protection Terms: a refund guarantee for non-delivery or material misdescription, and the payout-timing rules applied to Sellers.',
-            '“**Payment Processor**” / “**PSP**” — the licensed third-party providers through which DropMarket accepts card and crypto payments and executes payouts.',
-            '“**Protection Window**” — the per-category period after delivery in which a Buyer must confirm delivery or open a dispute (see Refund & Dispute Policy).',
+            '“**Payment Processor**” / “**PSP**” — the providers through which DropMarket accepts payments and executes payouts, as listed on the Fees & Charges page (including, for crypto payments, the BTCPay Server software DropMarket hosts itself).',
+            '“**Protection Window**” — the per-category period after delivery at the end of which an Order the Buyer has not confirmed or disputed completes automatically (see the SafeDrop Protection Terms).',
+            `“**Dispute Window**” — the **${DISPUTE_WINDOW}** in which a Buyer may open a dispute, whether or not the Order has completed (see the Refund & Dispute Policy).`,
             '“**Seller Balance**” — the record in a Seller’s Account of amounts DropMarket owes the Seller as their commercial agent following completed sales, net of fees and deductions under the Policies.',
             '“**Platform Content**” — all content made available by DropMarket on the Platform (text, graphics, logos, software, data, and design).',
           ]),
@@ -214,7 +323,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '7.1. **Venue only.** We provide the Platform and tools; we do not manufacture, inspect, warehouse, or deliver items, and we do not guarantee the existence, quality, safety, legality, or description of any Listing, the truth or accuracy of Seller content, the ability of any Seller to deliver, or the ability of any Buyer to pay.',
           ),
           p(
-            '7.2. **Binding sales.** When a Buyer places an Order for a Listing, a binding contract of sale is formed between Buyer and Seller on the terms of the Listing and this Agreement. Sellers must deliver promptly per the Seller Agency Agreement; Buyers must confirm delivery or raise a dispute within the Protection Window.',
+            '7.2. **Binding sales.** When a Buyer places an Order for a Listing, a binding contract of sale is formed between Buyer and Seller on the terms of the Listing and this Agreement. Sellers must deliver promptly per the Seller Agency Agreement; Buyers should confirm delivery or raise a dispute within the Protection Window, and may raise a dispute at any time until the Dispute Window closes.',
           ),
           p(
             '7.3. **Transaction risks.** Buying and selling gaming virtual goods involves risks, including: misdescribed or defective items; delayed or failed delivery; account recovery by a prior owner; publisher enforcement (Section 8); fraud by counterparties acting under false pretences; and price volatility of crypto assets. **You use the Platform at your own risk and assume these transaction risks**, subject always to your statutory rights (Section 10) and the protections in the SafeDrop Protection Terms and Refund & Dispute Policy.',
@@ -242,19 +351,19 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '9. SafeDrop, payments, payouts and crypto',
         blocks: [
           p(
-            '9.1. **All Orders are covered by SafeDrop.** The Buyer pays DropMarket (as the Seller’s commercial agent) at checkout via the available payment methods. Sellers are paid out only after delivery is confirmed, the Protection Window lapses, or a dispute resolves in their favour, per the SafeDrop Protection Terms. If an Order is not delivered or is not as described, the Buyer is entitled to a refund per the Refund & Dispute Policy.',
+            '9.1. **All Orders are covered by SafeDrop.** The Buyer pays DropMarket (as the Seller’s commercial agent) at checkout via the available payment methods. If an Order is not delivered or is not as described, the Buyer is entitled to a refund per the Refund & Dispute Policy. When sale proceeds become available to the Seller is set out in Section 9.3 and the SafeDrop Protection Terms.',
           ),
           p(
             '9.2. **Discharge.** The Buyer’s payment obligation to the Seller is fully discharged when DropMarket (or its payment processor on DropMarket’s behalf) receives the Buyer’s payment in full.',
           ),
           p(
-            '9.3. **Seller Balance and payouts.** After the Protection Window closes (or the dispute resolves in the Seller’s favour), the net sale proceeds are credited to the Seller Balance. The Seller may request a payout from their Account at any time; payouts are made to the Seller’s verified payout method. A minimum payout amount and payout fees apply (see Fees & Charges). We may delay payouts pending verification, dispute resolution, chargeback exposure, or as required by law. Seller Balances do not accrue interest.',
+            `9.3. **Seller Balance and payouts.** When an Order completes (the Buyer confirms delivery, the Protection Window closes without a dispute, or a dispute resolves in the Seller’s favour), the net sale proceeds become available in the Seller Balance: **${HOLD} after the Buyer confirms**, or at once when the Order completes automatically. A dispute opened within the Dispute Window sets that Order’s amount aside until it is decided. The Seller may then request a payout from their Account; payouts are made to the Seller’s verified payout method. A minimum payout amount and payout fees apply (see Fees & Charges). We may delay payouts pending verification, dispute resolution, chargeback exposure, or as required by law. Seller Balances do not accrue interest.`,
           ),
           p(
             '9.4. **Refunds.** Approved refunds are issued as store credit to your Store Balance by default (in full where the Seller or the Platform is at fault; the item price where you cancel a paid Order yourself), with refunds to the original payment method available on request from the order page, per the Refund & Dispute Policy. Store credit is a non-transferable credit against future purchases on the Platform, spendable with no service fee, and is not redeemable for cash except as set out in that Policy; it is not e-money and no interest accrues.',
           ),
           p(
-            '9.5. **Crypto payments.** Where crypto/stablecoin payment is offered, payments are processed and converted to fiat by our licensed crypto payment processor before settlement; DropMarket does not itself custody cryptoassets. **Crypto transactions are irreversible once broadcast**; send exactly the displayed amount on the displayed network within the displayed time. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the processor’s rules and the Refund & Dispute Policy; recovery may be impossible and reasonable recovery costs may be deducted where recovery is attempted.',
+            '9.5. **Crypto payments.** Where crypto/stablecoin payment is offered, it is received through BTCPay Server, payment software DropMarket hosts itself; the price is set in US dollars and the crypto amount to send is shown at checkout. **Crypto transactions are irreversible once broadcast**; send exactly the displayed amount on the displayed network within the displayed time. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the payment page’s instructions and the Refund & Dispute Policy; recovery may be impossible and reasonable recovery costs may be deducted where recovery is attempted.',
           ),
           p(
             '9.6. **Card payments.** Card payments (where available) are subject to card-scheme rules, including chargeback rules — see the Chargeback & Payment Policy.',
@@ -296,7 +405,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '12. User disputes, reversals, and recovery',
         blocks: [
           p(
-            '12.1. **Platform-first dispute process.** Buyer–Seller disputes about an Order must be raised through the Platform’s dispute process within the Protection Window (see Refund & Dispute Policy). We investigate transaction disputes (delivery, description) — we do not adjudicate the general quality, safety, or legality of items beyond their Listing description. Users agree to cooperate with the process and not to escalate to external channels in respect of an open, pending dispute before the process completes; this does not limit any User’s legal rights, statutory complaints channels, or recourse to the courts or to their payment provider.',
+            '12.1. **Platform-first dispute process.** Buyer–Seller disputes about an Order must be raised through the Platform’s dispute process within the Dispute Window (see Refund & Dispute Policy). We investigate transaction disputes (delivery, description) — we do not adjudicate the general quality, safety, or legality of items beyond their Listing description. Users agree to cooperate with the process and not to escalate to external channels in respect of an open, pending dispute before the process completes; this does not limit any User’s legal rights, statutory complaints channels, or recourse to the courts or to their payment provider.',
           ),
           p(
             '12.2. **Outcomes.** Dispute outcomes may include: payout to the Seller; full or partial refund to Buyer; redelivery; or cancellation. Outcomes are implemented through our payment systems.',
@@ -427,32 +536,103 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '22. Contact',
         blocks: [
           p(
-            'DropMarket Ltd · Company No. 17309867 · Registered in England & Wales · 82a James Carter Road, Mildenhall, Bury St. Edmunds, IP28 7DE, United Kingdom · support@dropmarket.gg',
+            ENTITY_LINE,
           ),
         ],
       },
     ],
   },
 
+  /**
+   * Buyer Terms — v1.1 (4 Oct 2026): numbered structure, governing law and
+   * contact added; payout-timing sentence replaced by Order-state wording
+   * (no-escrow rule: confirmation completes the ORDER, it is not a payment
+   * event); dispute window aligned with order_dispute_open (7 days from
+   * delivery, completed or not) and Refund & Dispute Policy Section 5.
+   */
   {
     slug: 'buyer-terms',
     title: 'Buyer Terms',
     description:
-      'How SafeDrop protects buyers: what is covered, what is not, protection windows, and how your statutory rights sit alongside the platform protection.',
+      'How SafeDrop protects buyers: what is covered, what is not, protection and dispute windows, refunds, and how your statutory rights sit alongside the platform protection.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
+        h: '1. About these Buyer Terms',
         blocks: [
           p(
-            'Every Order is covered by **SafeDrop Protection**: if your Order is not delivered or is not as described, you get your money back (see the Refund & Dispute Policy). Sellers are credited only after you **Confirm Delivery** or the **Protection Window** for the category expires. Inspect the item and either confirm or open a dispute — you can open a dispute for **7 days from delivery**, even after the Order has completed.',
+            '1.1. These Buyer Terms apply whenever you buy on DropMarket. They form part of the Terms of Use and should be read with the SafeDrop Protection Terms and the Refund & Dispute Policy. Words with capitals (Order, Listing, Protection Window, Dispute Window) have the meanings given in the Terms of Use.',
           ),
+          p(
+            '1.2. Each purchase is a contract between you and the Seller. DropMarket runs the marketplace and acts as the Seller’s commercial agent to take your payment; your payment obligation to the Seller is complete when DropMarket receives your payment in full (Terms of Use, Section 1.4).',
+          ),
+        ],
+      },
+      {
+        h: '2. SafeDrop Protection',
+        blocks: [
+          p(
+            '2.1. Every Order is covered by **SafeDrop Protection** at no extra cost: if your Order is not delivered or is not as described, you get your money back (see the Refund & Dispute Policy).',
+          ),
+        ],
+      },
+      {
+        h: '3. Checking and confirming your Order',
+        blocks: [
+          p(
+            '3.1. When the Seller marks your Order delivered, inspect the item and either **Confirm Delivery** or open a dispute. Confirm Delivery when you have what you ordered: the Order is then complete.',
+          ),
+          p(
+            `3.2. If you do neither, the Order completes automatically when the **Protection Window** for its category ends: ${hoursAsDays(WIN.currency)} for in-game currency, top-ups and gift cards, ${hoursAsDays(WIN.items)} for items, ${hoursAsDays(WIN.service)} after completion for boosting and coaching, and ${hoursAsDays(WIN.account)} for game accounts, each counted from delivery.`,
+          ),
+        ],
+      },
+      {
+        h: '4. Disputes',
+        blocks: [
+          p(
+            `4.1. You can open a dispute from the Order page for **${DISPUTE_WINDOW}**, even after the Order has completed (whether you confirmed it or it completed automatically). If the Seller has not delivered, you can open a dispute once the Seller’s stated delivery time has passed.`,
+          ),
+          p(
+            '4.2. Disputes follow the process in the Refund & Dispute Policy, Section 5. Keep all communication and delivery inside the Order chat: it is the evidence your claim is decided on.',
+          ),
+        ],
+      },
+      {
+        h: '5. What is covered and what is not',
+        blocks: [
           ul([
             '**Covered:** non-delivery; items materially not as described; (for accounts) ban / recovery / clawback within the account Protection Window caused by the Seller or prior owner.',
             '**Not covered:** change of mind after supply has begun with your consent; misuse; losses caused by your own acts or failure to secure an account (change email/password, enable 2FA immediately).',
-            '**Friendly-fraud:** initiating a chargeback while a SafeDrop dispute could resolve the matter, or after receiving the item, is a breach of these Terms and may lead to account termination and recovery of resulting losses.',
-            '**Your statutory rights** (where you are a consumer buying from a trader Seller) are unaffected and sit alongside SafeDrop.',
           ]),
         ],
       },
+      {
+        h: '6. Refunds',
+        blocks: [
+          p(
+            '6.1. Approved refunds are credited to your Store Balance as store credit by default, and you can ask from the Order page for a refund to your original payment method instead. The amount, timing and conditions are set out in the Refund & Dispute Policy, Section 7.',
+          ),
+        ],
+      },
+      {
+        h: '7. Chargebacks and friendly fraud',
+        blocks: [
+          p(
+            '7.1. **Friendly-fraud:** initiating a chargeback while a SafeDrop dispute could resolve the matter, or after receiving the item, is a breach of these Terms and may lead to account termination and recovery of resulting losses. This does not affect your right to dispute a genuinely unauthorised payment with your bank or payment provider.',
+          ),
+        ],
+      },
+      {
+        h: '8. Your statutory rights',
+        blocks: [
+          p(
+            '8.1. **Your statutory rights** (where you are a consumer buying from a trader Seller) are unaffected and sit alongside SafeDrop. Nothing in these Buyer Terms limits rights that cannot lawfully be excluded.',
+          ),
+        ],
+      },
+      governingLawSection('9. Governing law and jurisdiction', '9.1. These Buyer Terms'),
+      contactSection('10. Contact', '10.1. Questions about an Order: use the Order chat for an active Order, or contact us.'),
     ],
   },
 
@@ -619,20 +799,24 @@ export const LEGAL_DOCS: LegalDoc[] = [
    * Wording discipline: buyer-facing text promises OUTCOMES (refund,
    * money back); seller-facing text describes PAYOUT TIMING. No custody
    * verbs — this preserves the commercial-agent exclusion. Pending
-   * solicitor sign-off: CRA-interaction clause (§6); publisher-risk
-   * coverage vs warranty payout caps (§3.2).
+   * solicitor sign-off: CRA-interaction clause (§6).
+   * v1.1 (4 Oct 2026): windows rendered from ./protection-windows; the
+   * non-delivery route matches the code (overdue dispute / cancellation
+   * request, no automatic cancellation); warranty upgrades removed (none
+   * are sold); governing law + contact added.
    */
   {
     slug: 'safedrop',
     title: 'SafeDrop Protection Terms',
     description:
       'How SafeDrop Protection works: what’s covered, category protection windows, how disputes are decided, and when sellers are paid out.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         h: '1. What SafeDrop is',
         blocks: [
           p(
-            '1.1. **SafeDrop is DropMarket’s protection programme.** Every Order placed on DropMarket is automatically covered: there is nothing to opt into and no extra step at checkout (optional extended warranty upgrades are described on the Fees & Charges page).',
+            '1.1. **SafeDrop is DropMarket’s protection programme.** Every Order placed on DropMarket is automatically covered: there is nothing to opt into, no extra step at checkout and no paid upgrade.',
           ),
           p(
             '1.2. **The promise, in one sentence:** *if your Order is not delivered, or is not as described in the Listing, you get your money back.*',
@@ -646,10 +830,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '2. What SafeDrop covers',
         blocks: [
           p(
-            '2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time (maximum 24 hours). The Order cancels automatically and you are refunded — instantly and in full, service fee included, as store credit to your Store Balance, or to your original payment method on request from the order page (see the Refund & Dispute Policy, Section 7).',
+            `2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time. Once that time has passed you can open a dispute from the Order page; where the stated delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer you can instead ask us to cancel the Order. If the Order is cancelled for non-delivery you are refunded in full, service fee included, as store credit to your Store Balance, or to your original payment method on request from the order page (see the Refund & Dispute Policy, Sections 7 and 12).`,
           ),
           p(
-            '2.2. **Not as described.** The item or service you receive materially differs from the Listing (wrong item, missing described features, incorrect account attributes, undisclosed defects). Raise a dispute within your Protection Window and, if upheld, you receive a full refund or redelivery.',
+            '2.2. **Not as described.** The item or service you receive materially differs from the Listing (wrong item, missing described features, incorrect account attributes, undisclosed defects). Raise a dispute within the Dispute Window (Section 2.5) and, if upheld, you receive a full refund or redelivery.',
           ),
           p(
             '2.3. **Category Protection Windows.** The period after delivery in which you must confirm the Order or open a dispute:',
@@ -658,18 +842,18 @@ export const LEGAL_DOCS: LegalDoc[] = [
             t: 'table',
             head: ['Category', 'Protection Window'],
             rows: [
-              ['In-game currency', '1 day'],
-              ['Items', '3 days'],
-              ['Top-ups / gift cards', '1 day'],
-              ['Boosting / coaching', '3 days after completion'],
-              ['Game accounts', '5 days'],
+              ['In-game currency', hoursAsDays(WIN.currency)],
+              ['Items', hoursAsDays(WIN.items)],
+              ['Top-ups / gift cards', hoursAsDays(WIN.top_up)],
+              ['Boosting / coaching', `${hoursAsDays(WIN.service)} after completion`],
+              ['Game accounts', hoursAsDays(WIN.account)],
             ],
           },
           p(
             '2.4. If you take no action before your Protection Window closes, the Order completes automatically. This does not affect your statutory rights (Section 6).',
           ),
           p(
-            '2.5. **Dispute window.** Whether or not the Order has completed, you can open a dispute for **7 days from delivery**. Disputes opened after the Order completed set the Seller’s amount aside while we review; a refund decided in your favour is credited in full to your Store Balance.',
+            `2.5. **Dispute Window.** Whether or not the Order has completed, you can open a dispute for **${DISPUTE_WINDOW}**. Disputes opened after the Order completed set the Seller’s amount aside while we review; a refund decided in your favour is credited in full to your Store Balance.`,
           ),
         ],
       },
@@ -677,10 +861,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '3. What SafeDrop does not cover',
         blocks: [
           p(
-            '3.1. Change of mind after delivery of a conforming item; in-game outcomes (bans, nerfs, publisher actions) occurring after delivery, except where an account warranty applies (see Fees & Charges — Warranties); buyer-caused changes (you changed the login, played on the account, or altered it before claiming non-conformity); items lost through your own credential sharing; and losses from off-platform dealing.',
+            '3.1. Change of mind after delivery of a conforming item; in-game outcomes (bans, nerfs, publisher actions) occurring after delivery, except as set out in Section 3.2; buyer-caused changes (you changed the login, played on the account, or altered it before claiming non-conformity); items lost through your own credential sharing; and losses from off-platform dealing.',
           ),
           p(
-            '3.2. **Publisher enforcement risk** (account recovery by a previous owner, publisher bans) is covered only during the account Protection Window or a purchased extended warranty, per the Refund & Dispute Policy.',
+            `3.2. **Publisher enforcement risk** (account recovery by a previous owner, publisher bans) is covered only where the Seller or a previous owner caused it and it happens within the account Protection Window (${hoursAsDays(WIN.account)} from delivery), per the Refund & Dispute Policy.`,
           ),
         ],
       },
@@ -688,7 +872,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '4. How disputes work (summary)',
         blocks: [
           p(
-            '4.1. Contact the Seller in the Order chat → the Seller has 12 hours to resolve → escalate to a Dispute → both parties have **24 hours** to submit evidence in the Order chat → our Resolution Team decides, normally within 3 days. Full process: Refund & Dispute Policy, Section 5.',
+            `4.1. Contact the Seller in the Order chat → the Seller has ${SELLER_RESPONSE_HOURS} hours to resolve → escalate to a Dispute → both parties have **${DISPUTE_EVIDENCE_HOURS} hours** to submit evidence in the Order chat → our Resolution Team decides, normally within ${DISPUTE_DECISION_DAYS} days. Full process: Refund & Dispute Policy, Section 5.`,
           ),
           p(
             '4.2. Keep all communication and delivery inside the Order chat — it is the evidence record your claim is decided on.',
@@ -699,13 +883,13 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '5. What SafeDrop means for Sellers',
         blocks: [
           p(
-            '5.1. **Payout timing.** Sale proceeds are credited to your Seller Balance when the Buyer confirms delivery (withdrawable 24 hours later) or when the Protection Window closes (withdrawable at once), or when a dispute resolves in your favour. A dispute opened within the 7-day dispute window sets that Order’s amount aside until it is decided — see the Terms of Use, Section 9, and your Seller Agency Agreement.',
+            `5.1. **Payout timing.** Sale proceeds are credited to your Seller Balance when the Buyer confirms delivery (withdrawable ${HOLD} later) or when the Protection Window closes (withdrawable at once), or when a dispute resolves in your favour. A dispute opened within the ${DISPUTE_WINDOW_DAYS}-day Dispute Window sets that Order’s amount aside until it is decided — see the Terms of Use, Section 9, and your Seller Agency Agreement.`,
           ),
           p(
-            '5.2. **Guaranteed payout.** Once the Protection Window has closed without an upheld claim, your payout entitlement for that Order is final, except in cases of fraud, chargeback recovery under the Seller Agency Agreement, or breach of the Prohibited Items Policy.',
+            '5.2. **Guaranteed payout.** Once the Dispute Window has closed without an open or upheld claim, your payout entitlement for that Order is final, except in cases of fraud, chargeback recovery under the Seller Agency Agreement, or breach of the Prohibited Items Policy.',
           ),
           p(
-            '5.3. Deliver within your stated time, document delivery in the Order chat, and respond to disputes within the 12-hour grace period — these three habits resolve nearly all claims in the Seller’s favour where delivery genuinely occurred.',
+            `5.3. Deliver within your stated time, document delivery in the Order chat, and respond to disputes within the ${SELLER_RESPONSE_HOURS}-hour grace period — these three habits resolve nearly all claims in the Seller’s favour where delivery genuinely occurred.`,
           ),
         ],
       },
@@ -725,6 +909,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
           ),
         ],
       },
+      governingLawSection('8. Governing law and jurisdiction', '8.1. These SafeDrop Protection Terms'),
+      contactSection('9. Contact', '9.1. Questions about SafeDrop or a claim: use the Order chat for an active Order, or contact us.'),
     ],
   },
 
@@ -733,6 +919,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Refund & Dispute Policy',
     description:
       'When refunds apply, category protection windows, the five-stage dispute process, store-credit and cash refund mechanics, and how chargebacks are handled.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
@@ -748,10 +935,13 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '1.1. DropMarket is a **venue** connecting independent Buyers and Sellers of gaming digital goods and services. Each sale is a contract between the Buyer and the Seller; DropMarket is not the seller of any item.',
           ),
           p(
-            '1.2. Every Order is covered by **SafeDrop Protection**: if your Order is not delivered, or is not as described, you are entitled to a refund under this Policy. Sellers are paid out only after delivery is confirmed, the Protection Window expires, or a dispute is resolved in their favour.',
+            '1.2. Every Order is covered by **SafeDrop Protection**: if your Order is not delivered, or is not as described, you are entitled to a refund under this Policy.',
           ),
           p(
-            '1.3. **The default rule:** all sales are final once delivery is confirmed by the Buyer, **except** where the item is not delivered, is materially not as described, or where the Buyer has non-excludable statutory rights (Consumer Rights Act 2015). This policy explains exactly when a refund applies, how to claim one, and how disputes are decided.',
+            `1.3. **The default rule:** all sales are final once delivery is confirmed by the Buyer, **except** where the item is not delivered, is materially not as described (raised within the Dispute Window of ${DISPUTE_WINDOW}), or where the Buyer has non-excludable statutory rights (Consumer Rights Act 2015). This policy explains exactly when a refund applies, how to claim one, and how disputes are decided.`,
+          ),
+          p(
+            `1.4. **For Sellers: when sale proceeds become available.** The Buyer’s payment discharges the Buyer’s debt to the Seller when DropMarket receives it (Terms of Use, Section 1.4). The net proceeds become available in the Seller Balance when the Order completes: **${HOLD} after the Buyer confirms delivery**, or **at once** when the Order completes automatically at the end of its Protection Window or a dispute is decided in the Seller’s favour. A dispute opened within the Dispute Window sets that Order’s amount aside until it is decided. Withdrawals then follow the Fees & Charges page: new sellers can withdraw ${WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS} days after approval, and changing payout details pauses withdrawals for ${PAYOUT_DETAILS_FREEZE_HOURS} hours.`,
           ),
         ],
       },
@@ -759,7 +949,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '2. Protection Windows by category',
         blocks: [
           p(
-            'Every Order carries a Protection Window — the period after delivery in which a Buyer must confirm delivery or open a dispute. Windows differ by category because the risk profile differs.',
+            'Every Order carries a Protection Window: the period after delivery in which the Buyer should check the Order and confirm it or open a dispute. If the Buyer does neither, the Order completes automatically when the window ends. Windows differ by category because the risk profile differs.',
           ),
           {
             t: 'table',
@@ -767,30 +957,30 @@ export const LEGAL_DOCS: LegalDoc[] = [
             rows: [
               [
                 'Game accounts',
-                '5 days from delivery',
+                `${hoursAsDays(WIN.account)} from delivery`,
                 'Covers ban / recovery / clawback caused by the Seller or a prior owner.',
               ],
               [
                 'In-game currency / gold',
-                '1 day from delivery',
+                `${hoursAsDays(WIN.currency)} from delivery`,
                 'Short window; value is consumed on use.',
               ],
-              ['In-game items', '3 days from delivery', 'Non-delivery / not-as-described.'],
-              ['Top-ups / gift cards', '1 day from delivery', 'Non-delivery / not-as-described.'],
+              ['In-game items', `${hoursAsDays(WIN.items)} from delivery`, 'Non-delivery / not-as-described.'],
+              ['Top-ups / gift cards', `${hoursAsDays(WIN.top_up)} from delivery`, 'Non-delivery / not-as-described.'],
               [
                 'Boosting / coaching',
-                'Service duration + 3 days',
+                `${hoursAsDays(WIN.service)} after the Seller marks the service complete`,
                 'Performance/completion-based; protects deliverables, not competitive outcomes.',
               ],
               [
                 'Digital game keys',
-                'Before reveal/redemption only',
+                `${hoursAsDays(WIN.gift_card)} from delivery`,
                 'Non-refundable once revealed/redeemed unless invalid, duplicated, or not as described.',
               ],
             ],
           },
           p(
-            'If a Buyer takes no action before the Window closes, the Order completes automatically and the Seller is credited. A dispute can still be opened for 7 days from delivery; the Seller’s amount for that Order is set aside while it is reviewed — subject always to the statutory rights in Section 8.',
+            `If a Buyer takes no action before the Window closes, the Order completes automatically. A dispute can still be opened for ${DISPUTE_WINDOW} (the **Dispute Window**); the Seller’s amount for that Order is set aside while it is reviewed — subject always to the statutory rights in Section 8.`,
           ),
         ],
       },
@@ -798,7 +988,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '3. When a refund IS available (eligibility)',
         blocks: [
           p(
-            'An Order may be refunded, in full or in part, where one or more of the following applies and is raised within the Protection Window:',
+            'An Order may be refunded, in full or in part, where one or more of the following applies and is raised within the Dispute Window (or, for non-delivery, once the Seller’s stated delivery time has passed):',
           ),
           ul([
             '**Non-delivery** — the Seller failed to deliver, or failed to deliver in full, within the guaranteed delivery time stated on the listing.',
@@ -825,7 +1015,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '**Buyer negligence at checkout** — the Buyer provided wrong information (e.g. incorrect game, server, account name, region, or top-up ID) or failed to verify listing details before purchase.',
             '**Buyer-caused account changes** — for “not as described” account claims, the Buyer changed the login details, played on the account, made purchases on it, or otherwise altered it after delivery.',
             '**Buyer-caused ban** — the account was banned or restricted due to the Buyer’s own actions after delivery (e.g. botting, use of cheats, toxic behaviour, or contacting the game developer).',
-            '**Window expired** — the issue was not raised within the applicable Protection Window and no statutory right applies.',
+            '**Window expired** — the issue was not raised within the Dispute Window and no statutory right applies.',
             '**Consumed / redeemed** — the item’s value was consumed or the key was revealed/redeemed, and no fault existed at the point of delivery.',
             '**Device/requirements** — the Buyer’s device or account does not meet the minimum requirements stated in the listing.',
             '**Off-platform dealing** — the transaction, or part of it, was conducted or completed outside DropMarket, defeating SafeDrop protection.',
@@ -841,16 +1031,16 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '**Stage 1 — Contact the Seller (fastest route).** Raise the issue in the Order chat and give the Seller the chance to fix it (redeliver, correct, or agree a refund). Provide clear evidence at this stage (see Section 6). Many issues are resolved here without a formal dispute.',
           ),
           p(
-            '**Stage 2 — Seller grace period.** The Seller has **12 hours** to respond and attempt a resolution before the matter can be escalated.',
+            `**Stage 2 — Seller grace period.** The Seller has **${SELLER_RESPONSE_HOURS} hours** to respond and attempt a resolution before the matter can be escalated.`,
           ),
           p(
-            '**Stage 3 — Raise a Dispute.** If the Seller is unresponsive, uncooperative, or the issue is unresolved, open a formal Dispute from the Order page (available while the Order is within its Protection Window and not yet Completed). The Seller is not paid out while the Dispute is open.',
+            `**Stage 3 — Raise a Dispute.** If the Seller is unresponsive, uncooperative, or the issue is unresolved, open a formal Dispute from the Order page. You can do this for **${DISPUTE_WINDOW}**, including after the Order has completed (whether you confirmed it or it completed automatically); for non-delivery, you can do it once the Seller’s stated delivery time has passed. While a Dispute is open the Order cannot complete, and if it had already completed, the Order’s amount is set aside in the Seller Balance until the Dispute is decided.`,
           ),
           p(
-            '**Stage 4 — Evidence & cooperation window.** Both parties have **24 hours** to submit evidence in the Order chat and cooperate toward a resolution. If a party fails to engage within the stated window, the Dispute may be decided against the non-responding party.',
+            `**Stage 4 — Evidence & cooperation window.** Both parties have **${DISPUTE_EVIDENCE_HOURS} hours** to submit evidence in the Order chat and cooperate toward a resolution. If a party fails to engage within the stated window, the Dispute may be decided against the non-responding party.`,
           ),
           p(
-            '**Stage 5 — Decision by DropMarket.** Our Resolution Team reviews the evidence and makes a fair, final determination. Most Disputes are resolved within **3 days**. Outcomes may include: payout to the Seller; full or partial refund to the Buyer; redelivery; or cancellation. The outcome is implemented through our payment systems.',
+            `**Stage 5 — Decision by DropMarket.** Our Resolution Team reviews the evidence and makes a fair, final determination. Most Disputes are resolved within **${DISPUTE_DECISION_DAYS} days**. Outcomes may include: payout to the Seller; full or partial refund to the Buyer; redelivery; or cancellation. The outcome is implemented through our payment systems.`,
           ),
         ],
       },
@@ -894,10 +1084,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '9. Crypto refund mechanics',
         blocks: [
           p(
-            '9.1. **Crypto payments are irreversible once broadcast.** Where an Order was paid in crypto/stablecoin, approved cash refunds are made via our crypto payment processor in crypto/stablecoin (or as store credit) at the value received, and may be subject to exchange-rate variation between purchase and refund.',
+            '9.1. **Crypto payments are irreversible once broadcast.** Where an Order was paid in crypto/stablecoin (received through BTCPay Server, the payment software DropMarket hosts), approved cash refunds are made in crypto/stablecoin to an address you provide (or as store credit) at the US-dollar value received, and the crypto amount may differ from what you sent because of exchange-rate movement between purchase and refund.',
           ),
           p(
-            '9.2. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the processor’s rules; recovery may be impossible, and reasonable recovery costs may be deducted where recovery is attempted.',
+            '9.2. Underpayments, overpayments, wrong-network transfers, and late payments are handled per the instructions on the payment page; recovery may be impossible, and reasonable recovery costs may be deducted where recovery is attempted.',
           ),
         ],
       },
@@ -933,10 +1123,10 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '12. Cancellations before delivery',
         blocks: [
           p(
-            '12.1. A Buyer may request cancellation before the Seller has begun preparing/delivering the Order. Once the Seller has begun delivery, cancellation is subject to the Seller’s acceptance or the outcome of a Dispute.',
+            `12.1. **Cancellation requests.** Where the Listing’s stated delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, a Buyer may ask DropMarket to cancel the Order from the Order page while it has not been marked delivered, starting one hour after payment. We review each request; the Seller may also cancel an Order it cannot fulfil. Once the Order is marked delivered, cancellation is subject to the outcome of a Dispute.`,
           ),
           p(
-            '12.2. **Automatic cancellation for non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within the stated delivery time — and in any event within a maximum of **24 hours** of Order acceptance — the Order is cancelled automatically. The Buyer is notified on screen and refunded **instantly in full as store credit**, service fee included (see Section 7). A refund to the original payment method is available instead on request from the order page, per Section 7.',
+            '12.2. **Non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within that time, the Buyer can open a Dispute from the Order page (or, for longer delivery times, request cancellation under 12.1). An Order cancelled for non-delivery is refunded **in full as store credit**, service fee included (see Section 7), and the Buyer is notified on screen. A refund to the original payment method is available instead on request from the order page, per Section 7.',
           ),
         ],
       },
@@ -955,7 +1145,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '14. Contact',
         blocks: [
           p(
-            'Questions about a refund or dispute: support@dropmarket.gg (or the Order chat for an active Order). DropMarket Ltd · Company No. 17309867 · Registered in England & Wales · 82a James Carter Road, Mildenhall, Bury St. Edmunds, IP28 7DE.',
+            `Questions about a refund or dispute: ${E.email} (or the Order chat for an active Order). ${ENTITY_LINE}.`,
           ),
         ],
       },
@@ -966,7 +1156,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'prohibited',
     title: 'Prohibited Items & Conduct Policy',
     description:
-      'What may be traded on DropMarket, what is banned outright, and the publisher-EULA and account-security acknowledgements every user accepts.',
+      'What may be traded on DropMarket, what is banned outright, the publisher-EULA and account-security acknowledgements every user accepts, and how to report a breach or appeal a decision.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         h: 'Permitted (subject to publisher terms and law)',
@@ -995,14 +1186,17 @@ export const LEGAL_DOCS: LegalDoc[] = [
           ),
         ],
       },
+      reportingSection('Reporting a breach'),
+      appealsSection('Statement of reasons and appeals'),
+      onlineSafetySection('Online Safety Act 2023'),
     ],
   },
-
   {
     slug: 'acceptable-use',
     title: 'Acceptable Use Policy',
     description:
-      'The conduct rules for using DropMarket: no off-platform payments, no scraping or bots, no fake reviews, no security abuse.',
+      'The conduct rules for using DropMarket: no off-platform payments, no scraping or bots, no fake reviews, no security abuse, and how to report a breach or appeal a decision.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
@@ -1018,19 +1212,29 @@ export const LEGAL_DOCS: LegalDoc[] = [
           p('Breach may lead to content removal, suspension, withheld payouts and legal action.'),
         ],
       },
+      reportingSection('Reporting a breach'),
+      appealsSection('Statement of reasons and appeals'),
     ],
   },
-
+  /**
+   * Privacy Policy — v1.1 (4 Oct 2026): processors named from the code
+   * (Supabase, Vercel, Resend, Sentry, Didit, Payssion, BTCPay on Hetzner,
+   * Payoneer, Trustpilot); CoinGate / Tazapay removed; retention table
+   * (AML 5 years = AML / KYC Policy; tax records 6 years); rights + ICO.
+   * No ICO registration number is claimed: none is on record.
+   */
   {
     slug: 'privacy',
     title: 'Privacy Policy',
     description:
-      'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, transfers and your rights.',
+      'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, the providers we use, how long we keep data, transfers and your rights.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
+        h: 'Who we are',
         blocks: [
           p(
-            '**Controller:** DropMarket Ltd, 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE. **Contact:** support@dropmarket.gg.',
+            `**Controller:** ${E.name} (Company No. ${E.companyNumber}), ${E.registeredOffice}. **Contact:** ${E.email} or ${E.phone}.`,
           ),
         ],
       },
@@ -1038,7 +1242,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Categories of personal data',
         blocks: [
           p(
-            'Identity and contact data; account credentials; **KYC data** (ID documents; selfie/liveness/biometric verification via provider); transaction, order and payout data; device, cookie and usage data; on-platform communications and chat; dispute records.',
+            'Identity and contact data (name, username, email address, phone number where given); account credentials (passwords are stored only in hashed form by our sign-in provider); **KYC data** (ID documents; selfie/liveness/biometric verification via provider; sanctions and PEP screening results); tax-identification data Sellers give for platform reporting; transaction, order and payout data (payout details are stored encrypted); device, cookie and usage data; on-platform communications and chat; dispute records.',
           ),
         ],
       },
@@ -1049,15 +1253,31 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '**Performance of a contract** — operating your account and the marketplace, processing Orders.',
             '**Legal obligation** — AML/KYC checks, sanctions screening, tax and platform reporting to HMRC, statutory record-keeping.',
             '**Legitimate interests** — fraud prevention, Platform security, service improvement, dispute handling (balanced against your rights).',
-            '**Consent** — non-essential cookies and any direct marketing (withdrawable at any time).',
+            '**Consent** — any non-essential cookies (we currently use none; see the Cookie Policy) and any direct marketing (withdrawable at any time).',
           ]),
         ],
       },
       {
         h: 'Recipients',
         blocks: [
+          p('We share personal data only with the providers below, each for the job described, and only as much as that job needs. We do not sell personal data.'),
+          {
+            t: 'table',
+            head: ['Recipient', 'What they do for us', 'Data involved'],
+            rows: [
+              ['Supabase', 'Database, sign-in and file storage for the Platform', 'Account, Order, chat, dispute and verification-status data; uploaded files'],
+              ['Vercel', 'Hosts the website and provides cookieless, aggregated page analytics', 'Request data such as IP address, browser and pages visited'],
+              ['Resend', 'Sends account and Order emails', 'Name, email address and the content of the email'],
+              ['Sentry', 'Error monitoring', 'Technical details of errors (page, browser and device type)'],
+              ['Didit', 'Identity verification and sanctions / PEP / adverse-media screening for Sellers', 'ID document, selfie and liveness check, name, date of birth, address'],
+              ...PAYMENT_PROCESSORS.map((x) => [x.name, sentence(x.role), PROCESSOR_DATA[x.name] ?? 'Order reference and amount']),
+              ['Hetzner Online (Germany)', 'Hosts the server that runs BTCPay Server', 'Order reference, amount, payment address and transaction ID'],
+              ...PAYOUT_PROVIDERS.map((x) => [x.name, sentence(x.role), PROCESSOR_DATA[x.name] ?? 'Payout amount']),
+              ['Trustpilot', 'Invites you to review a completed Order', 'Name, email address and Order reference'],
+            ],
+          },
           p(
-            'Payment partners — **CoinGate (UAB “Decentralized”, Lithuania)** and **Tazapay** (planned); **KYC/verification provider** (which screens against sanctions/PEP/adverse-media lists); hosting and IT sub-processors; professional advisers; and regulators or authorities where legally required (HMRC, ICO, NCA, law enforcement).',
+            'We also share data with professional advisers (such as lawyers and accountants), and with regulators or authorities where the law requires it (HMRC, ICO, NCA, law enforcement).',
           ),
         ],
       },
@@ -1065,32 +1285,67 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'International transfers',
         blocks: [
           p(
-            'Because Users and providers operate outside the UK, personal data is transferred internationally (including to the EEA, e.g., Lithuania). Transfers rely on **UK adequacy regulations** where available, or the **UK International Data Transfer Agreement (IDTA)** / the UK Addendum to the EU SCCs, with appropriate safeguards; a copy of the safeguards can be requested at support@dropmarket.gg.',
+            `Some of these providers process data outside the UK (for example in the EEA or the United States). Where they do, transfers rely on **UK adequacy regulations** where available, or the **UK International Data Transfer Agreement (IDTA)** / the UK Addendum to the EU SCCs, with appropriate safeguards; a copy of the safeguards can be requested at ${E.email}.`,
           ),
         ],
       },
       {
         h: 'Retention',
         blocks: [
-          p(
-            'KYC/AML records: retained for the statutory period after the business relationship ends. Transaction and accounting records: retained for the period required by tax law. Account data: retained while your account is active and for a reasonable period afterwards. Specific periods are applied per data category.',
-          ),
+          p('We keep personal data only for as long as we need it. Where a dispute, investigation or legal claim is open, we keep the related data until it is resolved.'),
+          {
+            t: 'table',
+            head: ['Data', 'How long we keep it'],
+            rows: [
+              ['Account and profile data', 'While your account is open. After you close it, we delete or anonymise it within a reasonable period, except data we must keep under the rows below.'],
+              ['Identity verification (KYC) and AML records', '5 years after our relationship with you ends, in line with UK anti-money-laundering record-keeping rules (see the AML / KYC Policy).'],
+              ['Orders, payments, payouts and platform-reporting data', '6 years from the end of the financial year they relate to, as UK tax law requires.'],
+              ['Order chat and dispute records', 'As long as we keep the related Order record, because they are the evidence for disputes, refunds and chargebacks.'],
+              ['Support emails', 'As long as needed to deal with your request and any follow-up, unless they form part of an Order or complaint record.'],
+              ['Error and security logs', 'For the short periods set by our providers’ retention settings, after which they are deleted automatically.'],
+            ],
+          },
         ],
       },
       {
         h: 'Your rights',
         blocks: [
+          p('Under UK data-protection law you have the right to:'),
+          ul([
+            'access the personal data we hold about you and get a copy of it;',
+            'have inaccurate data corrected;',
+            'have data erased, where we have no lawful reason to keep it;',
+            'restrict how we use your data;',
+            'receive data you gave us in a portable format;',
+            'object to processing based on legitimate interests, and to direct marketing at any time;',
+            'not be subject to a decision based solely on automated processing that significantly affects you, and to ask for a human review;',
+            'withdraw consent at any time, where we rely on consent.',
+          ]),
           p(
-            'Access, rectification, erasure, restriction, portability, objection, and rights regarding automated decision-making. Exercise them via support@dropmarket.gg. You may complain to the **ICO** (ico.org.uk).',
+            `To use these rights, email ${E.email} from the email address on your account. We reply within **one month**; for complex or numerous requests we may extend this by up to two further months and will tell you why. We may need to confirm your identity first. Using your rights is free unless a request is clearly unfounded or excessive.`,
           ),
         ],
       },
       {
-        h: 'Complaints duty (2026)',
+        h: 'Complaints',
         blocks: [
           p(
             'In line with the Data (Use and Access) Act 2025 (DPA 2018 s.164A, effective 19 June 2026), we acknowledge data-protection complaints within **30 days** and respond without undue delay.',
           ),
+          p(
+            'You also have the right to complain to the **Information Commissioner’s Office (ICO)**, the UK data-protection regulator: ico.org.uk/make-a-complaint or 0303 123 1113. We would appreciate the chance to deal with your concern first.',
+          ),
+        ],
+      },
+      {
+        h: 'Children',
+        blocks: [
+          p('The Platform is for adults: you must be 18 or over to use it. We do not knowingly collect children’s personal data; if we learn that we have, we delete it.'),
+        ],
+      },
+      {
+        h: 'Cookies',
+        blocks: [
           p(
             'Cookies: see the Cookie Policy. This policy reflects UK data-protection law as amended by the DUAA 2025, with all data-protection provisions in force as confirmed by the ICO on 19 June 2026.',
           ),
@@ -1098,19 +1353,84 @@ export const LEGAL_DOCS: LegalDoc[] = [
       },
     ],
   },
-
+  /**
+   * Cookie Policy — v1.1 (4 Oct 2026): the tables list what the code sets
+   * (Supabase auth cookies via @supabase/ssr defaults; browser-storage keys
+   * from src/hooks/use-auth.tsx, the sell wizard, seller application,
+   * signup-to-sell, seller checklist, payment-return handler, stale-build).
+   * There is no consent banner and no non-essential cookie, so the policy
+   * no longer refers to a "cookie settings link". Re-check these tables
+   * whenever a cookie or storage key is added.
+   */
   {
     slug: 'cookies',
     title: 'Cookie Policy',
     description:
-      'The cookies and similar technologies DropMarket uses, the consent model, and how to change your choices at any time.',
+      'The cookies and browser storage DropMarket uses, what each one is for and how long it lasts, and how to control them.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
           p(
-            'We use **strictly necessary** cookies (no consent required) and, **only with your consent**, functional, analytics and advertising cookies. Before any non-essential cookie is set, we present a consent banner with **equal-prominence “Accept all” and “Reject all”** options; you can change your choice at any time via the cookie settings link.',
+            'This policy explains the cookies and similar technologies (such as your browser’s local and session storage) that DropMarket uses. We use **strictly necessary** cookies, which keep you signed in and secure, and **functional** browser storage that remembers things you asked for, such as a draft listing. We do **not** use advertising cookies or analytics cookies.',
           ),
-          p('Categories: *strictly necessary; functional; analytics; advertising.*'),
+        ],
+      },
+      {
+        h: 'Cookies we set',
+        blocks: [
+          {
+            t: 'table',
+            head: ['Name', 'Purpose', 'Duration', 'Type'],
+            rows: [
+              ['sb-[project]-auth-token (may be split into .0, .1 parts)', 'Keeps you signed in and secures your session (Supabase authentication)', 'Up to 400 days, or until you sign out', 'Strictly necessary'],
+              ['sb-[project]-auth-token-code-verifier', 'Completes a sign-in, email-confirmation or password-reset link securely', 'Until that step completes', 'Strictly necessary'],
+            ],
+          },
+        ],
+      },
+      {
+        h: 'Browser storage we use',
+        blocks: [
+          {
+            t: 'table',
+            head: ['Key', 'Purpose', 'Duration', 'Type'],
+            rows: [
+              ['gamevault_user_profile, gamevault_seller_status, gamevault_seller_app_status', 'Remembers your profile and seller status so pages open signed in without a flash', 'Until you sign out', 'Functional'],
+              ['dm_pending_signup_avatar', 'Holds the avatar you picked at sign-up until your account is ready', 'Removed once uploaded', 'Functional'],
+              ['dm_seller_app_draft_v1', 'Saves your seller application draft on this device', 'Until you submit or clear it', 'Functional'],
+              ['gv_sell_recent_games', 'Remembers the games you recently listed in', 'Until you clear site data', 'Functional'],
+              ['dm-seller-onboarding-dismissed, dm-seller-onboarding-shared', 'Remembers that you closed or used the seller checklist', 'Until you clear site data', 'Functional'],
+              ['gv_sell_wizard_snapshot', 'Keeps your listing draft if the page reloads', 'Until you close the tab', 'Functional'],
+              ['dm.signup-to-sell', 'Keeps your place in the sign-up-to-sell steps', 'Until you close the tab', 'Functional'],
+              ['paid-return:[order]', 'Shows the right message when you come back from a payment page', 'Until you close the tab', 'Strictly necessary'],
+              ['dm.stale-build-reload', 'Reloads the page once when a new version of the site is released', 'Until you close the tab', 'Strictly necessary'],
+            ],
+          },
+        ],
+      },
+      {
+        h: 'Analytics and error monitoring',
+        blocks: [
+          p(
+            'We count page views with Vercel Web Analytics, which sets no cookies and stores nothing on your device; it reports aggregated visit data. Our error monitoring (Sentry) also sets no cookies.',
+          ),
+        ],
+      },
+      {
+        h: 'Other sites',
+        blocks: [
+          p(
+            'Payment pages run by our payment processors, and sites we link to (such as Trustpilot or Discord), set their own cookies under their own policies.',
+          ),
+        ],
+      },
+      {
+        h: 'Your choices',
+        blocks: [
+          p(
+            'Because we only use strictly necessary cookies and storage that does what you asked for, we do not show a cookie banner. You can block or delete cookies and site data at any time in your browser settings; if you block the sign-in cookies, you will not be able to sign in. If we ever add a non-essential cookie, we will ask for your consent first, with equally prominent “Accept” and “Reject” options, and give you a way to change your choice.',
+          ),
           p(
             'This reflects PECR as updated by the Data (Use and Access) Act 2025 (in force from 5 February 2026) and the ICO’s finalised storage-and-access-technologies guidance (April 2026).',
           ),
@@ -1118,7 +1438,6 @@ export const LEGAL_DOCS: LegalDoc[] = [
       },
     ],
   },
-
   /**
    * AML position paragraph restated for Model C (12 Jul 2026): commercial-
    * agent exclusion rationale replaces the PSP-holds-funds rationale.
@@ -1129,13 +1448,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'aml',
     title: 'AML / KYC Policy',
     description:
-      'Anti-money-laundering and know-your-customer arrangements: the licensed PSP’s regulated role and DropMarket’s supporting risk-based programme.',
+      'Anti-money-laundering and know-your-customer arrangements: the payment providers’ role, DropMarket’s risk-based programme, record keeping and DropMarket’s regulatory position.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
-        h: 'Licensed payment providers',
+        h: 'Payment providers',
         blocks: [
           p(
-            'CoinGate (UAB “Decentralized”) holds a MiCA CASP authorisation and a payment-institution licence and performs regulated AML/CTF and sanctions functions on the payment leg; Tazapay (planned) is a licensed payment institution.',
+            `Buyers pay through ${PAYMENT_PROCESSORS_PHRASE}. Payssion processes local payment methods and applies its own AML and sanctions checks to the payments it handles. Crypto payments are received through BTCPay Server, payment software DropMarket hosts itself, so DropMarket’s own programme below applies to them. Seller payouts through Payoneer are also subject to Payoneer’s own checks.`,
           ),
         ],
       },
@@ -1148,16 +1468,23 @@ export const LEGAL_DOCS: LegalDoc[] = [
         ],
       },
       {
+        h: 'Record keeping',
+        blocks: [
+          p(
+            'We keep identity-verification records, and the records of transactions and monitoring, for **5 years** after the business relationship ends (or after the date of a one-off transaction), in line with regulation 40 of the Money Laundering Regulations 2017. After that we delete them, unless the law requires us to keep them longer or they are needed for legal proceedings.',
+          ),
+        ],
+      },
+      {
         h: 'Position on DropMarket’s own status',
         blocks: [
           p(
-            'DropMarket collects Buyers’ payments solely as each Seller’s **disclosed commercial agent** under the agency exclusion in the Payment Services Regulations 2017 and is not itself an authorised payment institution. Card and crypto payments are processed by the licensed providers above, and crypto is converted to fiat by the processor before settlement, so DropMarket does not carry on a regulated cryptoasset payment activity. DropMarket handles **no cash**, so it does **not** meet the “high value dealer” trigger in MLR 2017 reg. 14(1)(a) (HMRC confirms card and bank-transfer payments are not relevant HVD payments).',
+            'DropMarket collects Buyers’ payments solely as each Seller’s **disclosed commercial agent** under the agency exclusion in the Payment Services Regulations 2017 and is not itself an authorised payment institution. Local payment methods are processed by Payssion; crypto payments are received through BTCPay Server, which DropMarket hosts, and every Order is priced and recorded in US dollars. DropMarket handles **no cash**, so it does **not** meet the “high value dealer” trigger in MLR 2017 reg. 14(1)(a) (HMRC confirms card and bank-transfer payments are not relevant HVD payments).',
           ),
         ],
       },
     ],
   },
-
   {
     slug: 'risk',
     title: 'Risk Disclosure',
@@ -1185,14 +1512,14 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'fees',
     title: 'Fees & Charges',
     description:
-      'DropMarket’s commission and service fees, all-inclusive buyer pricing, and payout timing.',
+      'DropMarket’s commission and service fees, all-inclusive buyer pricing, the payment processors we use, and payout timing.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
           p(
             'DropMarket charges Sellers a **commission (take rate)** on each completed sale and charges Buyers itemised **marketplace and processing fees**, all **disclosed before listing and at checkout**. Buyers always see **all-inclusive prices** (no drip pricing). Payout timing follows the applicable Protection Window and PSP settlement. PSP processing, FX, and payout fees are shown before you transact.',
           ),
-          note('This schedule takes effect at public launch.'),
         ],
       },
       {
@@ -1225,28 +1552,34 @@ export const LEGAL_DOCS: LegalDoc[] = [
         ],
       },
       {
+        h: 'Payment processors',
+        blocks: [
+          p(`Buyers’ payments are processed by ${PAYMENT_PROCESSORS_PHRASE}:`),
+          ul(PAYMENT_PROCESSORS.map((x) => `**${x.name}**: ${sentence(x.role)}.`)),
+          p('Seller payouts are made in crypto, or through:'),
+          ul(PAYOUT_PROVIDERS.map((x) => `**${x.name}**: ${sentence(x.role)}.`)),
+        ],
+      },
+      {
         h: 'Withdrawals',
         blocks: [
           ul([
             '**Crypto payouts (USDT, USDC, BTC, ETH):** 3% + $5 per payout; minimum withdrawal $50.',
             '**Payoneer payouts:** 3% per payout with a $5 minimum fee; minimum withdrawal $100.',
-            '**When a sale becomes withdrawable:** 24 hours after the Buyer confirms receipt, or immediately when the Order completes automatically at the end of its SafeDrop Protection window.',
-            '**New sellers:** withdrawals open 30 days after your seller account is approved.',
-            '**Payout details:** changing your payout address or Payoneer email pauses withdrawals for 48 hours. One withdrawal may be in progress at a time.',
+            `**When a sale becomes withdrawable:** ${HOLD} after the Buyer confirms receipt, or immediately when the Order completes automatically at the end of its SafeDrop Protection window.`,
+            `**New sellers:** withdrawals open ${WITHDRAWAL_MIN_ACCOUNT_AGE_DAYS} days after your seller account is approved.`,
+            `**Payout details:** changing your payout address or Payoneer email pauses withdrawals for ${PAYOUT_DETAILS_FREEZE_HOURS} hours. One withdrawal may be in progress at a time.`,
             '**Disputes:** while a dispute is open on an Order, that Order’s amount is set aside from your balance; a refund decided against you is deducted, and your balance may go below zero until later sales cover it.',
           ]),
           p('The live schedule, read from the same table the withdrawal page quotes from, is on the [Seller Fees page](/sell/fees).'),
         ],
       },
       {
-        h: 'Warranty tiers (beta)',
+        h: 'Warranties',
         blocks: [
-          ul([
-            '**In-game items — lifetime warranty:** 5% / 8% / 10% of the item price, by price band.',
-            '**Game accounts — 14-day protection:** included free on every account order.',
-            '**Game accounts — extended warranty:** 1 month +4%; 6 months +8%; lifetime at the item bands (5/8/10%).',
-          ]),
-          note('Warranty tiers are in beta; payout caps to be published.'),
+          p(
+            `DropMarket does not currently sell warranty upgrades. Every Order, including game accounts, is covered by SafeDrop Protection at no extra cost. For game accounts, a recovery, ban or clawback caused by the Seller or a previous owner is covered if it happens within the account Protection Window (**${hoursAsDays(WIN.account)} from delivery**); see the SafeDrop Protection Terms.`,
+          ),
         ],
       },
     ],
@@ -1256,33 +1589,63 @@ export const LEGAL_DOCS: LegalDoc[] = [
     slug: 'chargebacks',
     title: 'Chargeback & Payment Policy',
     description:
-      'How crypto and card payments behave: irreversibility, chargeback rules, seller liability, and friendly-fraud.',
+      'How crypto and local-method payments behave: irreversibility, chargeback and reversal rules, seller liability, and friendly-fraud.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
           ul([
-            '**Crypto (CoinGate) — now:** payments are **irreversible; no chargebacks**. Refunds, if approved, are made via the PSP under the Refund & Dispute Policy.',
-            '**Cards (Tazapay) — planned:** subject to **card-scheme chargeback rules**; a longer hold may apply to a Seller’s first card-funded payouts; Sellers bear chargeback liability via reserves and clawbacks.',
+            '**Crypto (received through BTCPay Server):** payments are **irreversible; no chargebacks**. Refunds, if approved, are made under the Refund & Dispute Policy.',
+            '**Local payment methods (processed by Payssion):** some methods let the payer dispute or reverse a payment through their bank or payment provider, under that method’s own rules. Where a reversal results from a Seller’s failure to deliver, misdescription, breach or fraud, the Seller bears it through reserves and clawbacks under the Seller Agency Agreement.',
             'Initiating a chargeback instead of using the SafeDrop dispute process (“friendly fraud”) breaches the Terms.',
           ]),
+          p(`The current list of payment processors is on the Fees & Charges page.`),
         ],
       },
     ],
   },
-
   {
     slug: 'complaints',
     title: 'Complaints Handling / Dispute Resolution',
     description:
-      'How to raise a complaint, our response standards, and Alternative Dispute Resolution for consumers.',
+      'How to raise a complaint, our response times, how to escalate, and your options if you are still not satisfied.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
+        h: '1. How to complain',
         blocks: [
           p(
-            'Raise complaints to **support@dropmarket.gg**. We acknowledge promptly and aim to resolve within a reasonable period.',
+            `Email **${E.email}** with “Complaint” in the subject, or call **${E.phone}**. Tell us your username, any Order number, what went wrong and what you would like us to do. For a problem with an active Order, use the Order chat or open a dispute first: that is the fastest route (see the Refund & Dispute Policy).`,
+          ),
+        ],
+      },
+      {
+        h: '2. Our response times',
+        blocks: [
+          ul([
+            '**First reply:** our support team usually replies within a few hours.',
+            '**Acknowledgement:** we acknowledge every complaint within **2 business days**.',
+            '**Final response:** we send our final written response within **8 weeks** of receiving the complaint. If we cannot meet that, we will tell you why and when to expect it.',
+          ]),
+        ],
+      },
+      {
+        h: '3. Escalation',
+        blocks: [
+          ul([
+            '**Stage 1, Support:** the support team investigates and replies with what we will do.',
+            '**Stage 2, Review:** if you are unhappy with that answer, reply asking for a review. Someone senior who was not involved looks at the complaint again and sends our final response.',
+          ]),
+        ],
+      },
+      {
+        h: '4. If you are still not satisfied',
+        blocks: [
+          p(
+            'Our final response will explain your options. If you are a consumer you can get free advice from **Citizens Advice** (citizensadvice.org.uk, consumer helpline 0808 223 1133), and you can bring a claim through the **small claims track** of the county court (in England and Wales, online at gov.uk/make-court-claim-for-money). Data-protection complaints can also go to the ICO (see the Privacy Policy).',
           ),
           p(
-            '**Alternative Dispute Resolution (ADR):** if a consumer complaint remains unresolved after our internal process, we will tell the consumer the name and website of a relevant **certified ADR entity** and whether we agree to use it, as required by the Alternative Dispute Resolution for Consumer Disputes Regulations 2015. The EU ODR platform is no longer available to UK traders (post-Brexit), so it is not referenced.',
+            '**Alternative Dispute Resolution (ADR):** DropMarket is not currently a member of an ADR scheme. If we cannot settle a consumer complaint through our internal process, our final response will say so, name a certified ADR entity that could deal with it, and say whether we agree to use it, as the Alternative Dispute Resolution for Consumer Disputes Regulations 2015 require. The EU ODR platform is no longer available to UK traders (post-Brexit), so it is not referenced.',
           ),
           p(
             'Data-protection complaints follow the 30-day acknowledgement standard set out in the Privacy Policy.',
@@ -1291,19 +1654,24 @@ export const LEGAL_DOCS: LegalDoc[] = [
       },
     ],
   },
-
   {
     slug: 'ip',
     title: 'IP / Copyright / Notice-and-Takedown Policy',
     description:
-      'How rights holders report infringing listings and how DropMarket handles removal under English law.',
+      'How rights holders report infringing listings, how DropMarket handles removal, and how sellers can send a counter-notice, under English law.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
           p(
             'DropMarket respects intellectual property. There is **no UK statutory DMCA**; under the Electronic Commerce (EC Directive) Regulations 2002 a host must act **expeditiously on actual knowledge** of unlawful content.',
           ),
-          p('Rights holders may report an infringing Listing to **support@dropmarket.gg** including:'),
+        ],
+      },
+      {
+        h: '1. Reporting infringement',
+        blocks: [
+          p(`Rights holders may report an infringing Listing to **${E.email}** including:`),
           ul([
             'Your identity and authority to act.',
             'Identification of the protected work.',
@@ -1311,6 +1679,34 @@ export const LEGAL_DOCS: LegalDoc[] = [
             'A good-faith statement that the use is unauthorised.',
             'A statement that the information provided is accurate.',
           ]),
+        ],
+      },
+      {
+        h: '2. What we do with a notice',
+        blocks: [
+          p(
+            'We acknowledge a complete notice within **2 business days** and aim to decide on it within **5 business days**. If the notice is valid, we remove or disable the Listing and tell the Seller why, with the details of the complaint (we may leave out the rights holder’s personal contact details). If a notice is incomplete, we ask for what is missing.',
+          ),
+        ],
+      },
+      {
+        h: '3. Counter-notice',
+        blocks: [
+          p(`If your Listing was removed and you believe that was a mistake, or that you have the right to sell the item, you can send a counter-notice to **${E.email}** within **14 days** of our message, including:`),
+          ul([
+            'Your name, username and contact details.',
+            'The Listing that was removed.',
+            'Why you believe the removal was a mistake, or the rights you rely on, with any evidence.',
+            'A statement that the information you provide is accurate.',
+          ]),
+          p(
+            'We send a valid counter-notice to the rights holder. If the rights holder does not tell us within **10 business days** that they have started court proceedings, we may restore the Listing. We do not decide legal disputes between rights holders and Sellers.',
+          ),
+        ],
+      },
+      {
+        h: '4. Repeat infringers and unjustified threats',
+        blocks: [
           p(
             'We review, remove infringing content, and may terminate repeat infringers. **Note:** the UK “unjustified threats” regime (Trade Marks Act s.21; equivalents for patents and designs) means trade-mark and patent complaints must be made in good faith and can attract liability if groundless.',
           ),
@@ -1318,12 +1714,12 @@ export const LEGAL_DOCS: LegalDoc[] = [
       },
     ],
   },
-
   {
     slug: 'trust-safety',
     title: 'Community Guidelines / Trust & Safety',
     description:
-      'The behaviour we expect from every user, and how DropMarket moderates content and enforces the rules.',
+      'The behaviour we expect from every user, how to report a problem, how DropMarket moderates content and enforces the rules, and how to appeal.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
@@ -1331,35 +1727,40 @@ export const LEGAL_DOCS: LegalDoc[] = [
             'Be honest; deliver exactly as described.',
             '**Communicate only on-platform.**',
             'No scams; no harassment; protect minors.',
-            'Report bad actors to support@dropmarket.gg.',
+            `Report bad actors to ${E.email}.`,
           ]),
           p(
             'Verified-seller status and public ratings support trust. DropMarket operates content-moderation, illegal-content reporting and takedown processes and may act on complaints (see the Prohibited Items & Conduct Policy). Violations lead to enforcement up to permanent removal.',
           ),
         ],
       },
+      reportingSection('Reporting a problem'),
+      appealsSection('Statement of reasons and appeals'),
+      onlineSafetySection('Online Safety Act 2023'),
     ],
   },
-
   {
     slug: 'company',
     title: 'Company Information',
     description:
-      'Statutory company disclosures for DropMarket Ltd — registration, registered office and contact details.',
+      'Statutory company disclosures for DropMarket Ltd: registration, registered office, VAT number and contact details.',
+    ...UPDATED_2026_10_04,
     sections: [
       {
         blocks: [
           p(
-            '**DropMarket Ltd**, a private company limited by shares, registered in **England & Wales**.',
+            `**${E.name}**, a private company limited by shares, registered in **${E.jurisdiction}**.`,
           ),
           ul([
-            '**Company number:** 17309867',
-            '**Registered office:** 82a James Carter Road, Mildenhall, Bury St. Edmunds, England, IP28 7DE',
-            '**Website:** dropmarket.gg',
-            '**Contact:** support@dropmarket.gg',
+            `**Company number:** ${E.companyNumber}`,
+            `**Registered office:** ${E.registeredOffice}`,
+            `**VAT number:** ${E.vatNumber}`,
+            `**Phone:** ${E.phone}`,
+            `**Website:** ${E.website}`,
+            `**Contact:** ${E.email}`,
           ]),
           p(
-            '*Disclosures made under the Companies Act 2006, the Company, Limited Liability Partnership and Business (Names and Trading Disclosures) Regulations 2015, and the Electronic Commerce (EC Directive) Regulations 2002. VAT number to be added if/when VAT-registered.*',
+            '*Disclosures made under the Companies Act 2006, the Company, Limited Liability Partnership and Business (Names and Trading Disclosures) Regulations 2015, and the Electronic Commerce (EC Directive) Regulations 2002.*',
           ),
         ],
       },
