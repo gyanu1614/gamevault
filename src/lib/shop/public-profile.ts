@@ -20,6 +20,7 @@ export const PUBLIC_SELLER_PROFILE_COLUMNS = [
   'business_name',
   'avatar_url',
   'banner_url',
+  'banner_focal_y',
   'bio',
   'created_at',
   'seller_tier',
@@ -31,7 +32,7 @@ export const PUBLIC_SELLER_PROFILE_COLUMNS = [
 // A string LITERAL (not a template) so supabase-js can type the rows; the test
 // asserts it stays in sync with PUBLIC_SELLER_PROFILE_COLUMNS.
 export const PUBLIC_SELLER_PROFILE_SELECT =
-  'id, username, shop_name, shop_slug, business_name, avatar_url, banner_url, bio, created_at, seller_tier, is_verified, founding_seller, seller_applications!seller_applications_user_id_fkey ( status )' as const
+  'id, username, shop_name, shop_slug, business_name, avatar_url, banner_url, banner_focal_y, bio, created_at, seller_tier, is_verified, founding_seller, seller_applications!seller_applications_user_id_fkey ( status )' as const
 
 /**
  * Review columns safe for the public page — moderation state is excluded.

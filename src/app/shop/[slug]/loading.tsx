@@ -1,7 +1,7 @@
 /**
  * /shop/[slug] skeleton — the storefront exactly as SellerStorefront draws
- * it: banner card with the overlapping avatar + identity row, the five-cell
- * stat strip, the tab row, the filter band and a grid of landscape offer
+ * it: ONE header card (short banner strip, overlapping avatar + identity row,
+ * hairline, five stats), the tab row, the filter band and a grid of landscape offer
  * cards. Keep it in lockstep with the page.
  */
 
@@ -16,12 +16,12 @@ export default function ShopLoading() {
   return (
     <main className="min-h-screen bg-bg-base pb-16" aria-busy="true" aria-label="Loading shop">
       <div className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8">
-        {/* Header card */}
+        {/* Header card: banner strip, identity, hairline, stats — one card */}
         <div className={cn('overflow-hidden rounded-lg', MARKET_CARD)}>
-          <div className="skeleton h-[112px] w-full rounded-none sm:h-auto sm:aspect-[15/4] sm:max-h-[300px]" />
+          <div className="skeleton h-[132px] w-full rounded-none sm:h-[172px] lg:h-[212px]" />
           <div className="px-4 pb-5 sm:px-6 sm:pb-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
-              <div className="-mt-11 h-[84px] w-[84px] shrink-0 rounded-xl bg-[#24252B] ring-4 ring-[#1F2025] sm:-mt-14 sm:h-28 sm:w-28" />
+              <div className="relative -mt-10 h-20 w-20 shrink-0 rounded-xl bg-[#24252B] shadow-[0_0_0_4px_#212228] sm:-mt-12 sm:h-24 sm:w-24" />
               <div className="min-w-0 flex-1 space-y-2.5 sm:pb-1">
                 <Bar className="h-7 w-56 max-w-full" />
                 <div className="flex flex-wrap gap-3">
@@ -33,17 +33,17 @@ export default function ShopLoading() {
               <Bar className="h-11 w-full rounded-md sm:h-10 sm:w-40" />
             </div>
           </div>
-        </div>
-
-        {/* Stat strip */}
-        <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-white/[0.07] sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className={cn('bg-[#1D1E23] px-4 py-3.5 sm:px-5 sm:py-4', i === 4 && 'col-span-2 sm:col-span-1')}>
-              <Bar className="h-3.5 w-24" />
-              <Bar className="mt-2 h-6 w-16" />
-              <Bar className="mt-1.5 h-3 w-20" />
+          <div className="px-4 sm:px-6">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-white/[0.07] py-4 sm:gap-x-6 sm:py-5 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className={cn('min-w-0 lg:px-5 lg:first:pl-0 lg:last:pr-0 xl:px-6', i === 4 && 'col-span-2 lg:col-span-1')}>
+                  <Bar className="h-3.5 w-24" />
+                  <Bar className="mt-2 h-6 w-16" />
+                  <Bar className="mt-1.5 h-3 w-20" />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
 
         {/* Tabs */}

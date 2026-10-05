@@ -7,6 +7,12 @@
  * The browser only previews and pre-checks (type, 2.5 MB, width). The real
  * gate is the server action: it re-reads the seller's CURRENT rank, validates
  * the bytes, crops to 1500 × 400 WebP and uploads with the service role.
+ *
+ * Position: the shop shows a short strip of the banner, so after picking a
+ * file (or for the saved banner) the seller drags it up / down in a frame of
+ * the shop's exact shape (BannerPositionEditor). "Save Banner" stores the
+ * position with the new file; for the saved banner, "Save Position" stores
+ * just the focal point (same server-side owner + Silver+ gate).
  */
 
 import { useRef, useState } from 'react'
@@ -20,8 +26,11 @@ import Link from '@/components/navigation/AppLink'
 import { SettingsCard, accountBtn } from '@/components/account/AccountSurface'
 import { StoreBannerArt } from '@/components/shop/StoreBannerArt'
 import { useAuth } from '@/hooks/use-auth'
-import { getMyStoreBanner, removeStoreBanner, uploadStoreBanner } from '@/lib/actions/store-banner'
+import { getMyStoreBanner, removeStoreBanner, saveStoreBannerPosition, uploadStoreBanner } from '@/lib/actions/store-banner'
+import type { MyStoreBanner } from '@/lib/shop/store-banner-service'
 import {
+  STORE_BANNER_FOCAL_DEFAULT,
+  STORE_BANNER_FRAME_ASPECT,
   STORE_BANNER_HEIGHT,
   STORE_BANNER_MAX_BYTES,
   STORE_BANNER_MIME,
@@ -31,6 +40,7 @@ import {
 import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import { tierLabel } from '@/lib/seller/tiers'
 import { cn } from '@/lib/utils'
+import { BannerPositionEditor } from './_BannerPositionEditor'
 
 const QUERY_KEY = ['store-banner'] as const
 
@@ -58,11 +68,16 @@ export function StoreBannerCard() {
 
   const inputRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ dataUrl: string; name: string } | null>(null)
-  const [busy, setBusy] = useState<'save' | 'remove' | null>(null)
+  const [busy, setBusy] = useState<'save' | 'remove' | 'position' | null>(null)
+  /** Unsaved focal point; null = the saved one. */
+  const [focal, setFocal] = useState<number | null>(null)
 
   const canUpload = data?.canUpload === true
   const previewUrl = pending?.dataUrl ?? data?.bannerUrl ?? null
   const seed = user?.id ?? 'preview'
+  const savedFocal = data?.focalY ?? STORE_BANNER_FOCAL_DEFAULT
+  const currentFocal = focal ?? (pending ? STORE_BANNER_FOCAL_DEFAULT : savedFocal)
+  const positionDirty = !pending && !!data?.bannerUrl && focal != null && focal !== savedFocal
 
   const onPick = async (file: File | undefined) => {
     if (!file) return
@@ -83,6 +98,7 @@ export function StoreBannerCard() {
         return
       }
       setPending({ dataUrl, name: file.name })
+      setFocal(STORE_BANNER_FOCAL_DEFAULT)
     } catch (err) {
       toast.error(uploadErrorMessage(err))
     }
@@ -92,14 +108,35 @@ export function StoreBannerCard() {
     if (!pending) return
     setBusy('save')
     try {
-      const res = await uploadStoreBanner(pending.dataUrl)
+      const res = await uploadStoreBanner(pending.dataUrl, currentFocal)
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      setPending(null)
+      // Refetch first, so the preview swaps straight to the stored banner.
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY })
+      setPending(null)
+      setFocal(null)
       toast.success('Banner saved. It shows on your shop within a minute.')
+    } catch (err) {
+      toast.error(uploadErrorMessage(err))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const savePosition = async () => {
+    if (!positionDirty) return
+    setBusy('position')
+    try {
+      const res = await saveStoreBannerPosition(currentFocal)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      queryClient.setQueryData<MyStoreBanner>(QUERY_KEY, (old) => (old ? { ...old, focalY: res.focalY } : old))
+      setFocal(null)
+      toast.success('Banner position saved. It shows on your shop within a minute.')
     } catch (err) {
       toast.error(uploadErrorMessage(err))
     } finally {
@@ -116,6 +153,7 @@ export function StoreBannerCard() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY })
+      setFocal(null)
       toast.success('Banner removed.')
     } catch (err) {
       toast.error(uploadErrorMessage(err))
@@ -149,8 +187,16 @@ export function StoreBannerCard() {
       footerAction={
         canUpload ? (
           <>
-            {pending ? (
-              <button type="button" onClick={() => setPending(null)} disabled={!!busy} className={accountBtn.secondary}>
+            {pending || positionDirty ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPending(null)
+                  setFocal(null)
+                }}
+                disabled={!!busy}
+                className={accountBtn.secondary}
+              >
                 Cancel
               </button>
             ) : data?.bannerUrl ? (
@@ -162,6 +208,10 @@ export function StoreBannerCard() {
             {pending ? (
               <button type="button" onClick={() => void save()} disabled={!!busy} className={accountBtn.primary}>
                 {busy === 'save' ? 'Saving…' : 'Save Banner'}
+              </button>
+            ) : positionDirty ? (
+              <button type="button" onClick={() => void savePosition()} disabled={!!busy} className={accountBtn.primary}>
+                {busy === 'position' ? 'Saving…' : 'Save Position'}
               </button>
             ) : (
               <button type="button" onClick={() => inputRef.current?.click()} disabled={!!busy} className={accountBtn.secondary}>
@@ -178,27 +228,38 @@ export function StoreBannerCard() {
       }
     >
       {isLoading ? (
-        <div className="skeleton aspect-[15/4] w-full rounded-md" aria-hidden />
+        <div className="skeleton w-full rounded-md" style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }} aria-hidden />
       ) : (
         <div className="space-y-3">
-          <StoreBannerArt
-            banner={canUpload && previewUrl ? { kind: 'custom', url: previewUrl } : { kind: 'default' }}
-            seed={seed}
-            className={cn('aspect-[15/4] w-full rounded-md', !canUpload && 'opacity-80')}
-          >
-            {!canUpload && (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm">
-                <LockSimpleIcon size={13} weight="bold" aria-hidden />
-                Default Banner
-              </span>
-            )}
-            {canUpload && pending && (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm">
-                <ImageSquareIcon size={13} weight="bold" aria-hidden />
-                Preview — Not Saved
-              </span>
-            )}
-          </StoreBannerArt>
+          {canUpload && previewUrl ? (
+            <BannerPositionEditor
+              src={previewUrl}
+              value={currentFocal}
+              onChange={setFocal}
+              disabled={!!busy}
+            >
+              {pending && (
+                <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm">
+                  <ImageSquareIcon size={13} weight="bold" aria-hidden />
+                  Preview — Not Saved
+                </span>
+              )}
+            </BannerPositionEditor>
+          ) : (
+            <StoreBannerArt
+              banner={{ kind: 'default' }}
+              seed={seed}
+              className={cn('w-full rounded-md', !canUpload && 'opacity-80')}
+              style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }}
+            >
+              {!canUpload && (
+                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm">
+                  <LockSimpleIcon size={13} weight="bold" aria-hidden />
+                  Default Banner
+                </span>
+              )}
+            </StoreBannerArt>
+          )}
 
           {!canUpload && data && (
             <p className="flex items-start gap-2 rounded-md bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-text-secondary">

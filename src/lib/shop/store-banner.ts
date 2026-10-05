@@ -28,6 +28,75 @@ export const STORE_BANNER_HEIGHT = 400
 /** Narrower than this and the banner is visibly soft on a desktop shop. */
 export const STORE_BANNER_MIN_WIDTH = 800
 
+// ─── Display + focal point ──────────────────────────────────────────────────
+
+/**
+ * The public header strip, in CSS px: phone / tablet / desktop heights, and
+ * the widest content box it is drawn in (max-w-7xl minus lg padding). The
+ * settings editor frames the banner at the WIDEST desktop shape, where the
+ * vertical crop is deepest, so the slice the seller picks is what visitors
+ * see (narrower screens show the same focal point with a little more).
+ */
+export const STORE_BANNER_DISPLAY = {
+  phoneHeight: 132,
+  tabletHeight: 172,
+  desktopHeight: 212,
+  desktopMaxWidth: 1216,
+} as const
+/** Aspect (w / h) of the settings editor frame. */
+export const STORE_BANNER_FRAME_ASPECT = STORE_BANNER_DISPLAY.desktopMaxWidth / STORE_BANNER_DISPLAY.desktopHeight
+/** Aspect of the stored image. */
+export const STORE_BANNER_ASPECT = 1500 / 400
+
+/** Vertical focal point, 0 (top) – 100 (bottom). 50 = centred. */
+export const STORE_BANNER_FOCAL_DEFAULT = 50
+/** Keyboard step in the editor (arrow keys). */
+export const STORE_BANNER_FOCAL_STEP = 5
+
+/**
+ * Lenient: any stored / client value → an integer 0–100 (non-numbers and
+ * NaN → centred). For rendering and for the editor's live value.
+ */
+export function clampBannerFocalY(value: unknown): number {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN
+  if (!Number.isFinite(n)) return STORE_BANNER_FOCAL_DEFAULT
+  return Math.min(100, Math.max(0, Math.round(n)))
+}
+
+/**
+ * Strict: what the server action accepts. A finite NUMBER within 0–100
+ * (rounded to an integer); anything else is refused, never silently clamped.
+ */
+export function parseBannerFocalY(value: unknown): { ok: true; value: number } | { ok: false; error: string } {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) {
+    return { ok: false, error: 'Banner position must be between 0 and 100.' }
+  }
+  return { ok: true, value: Math.round(value) }
+}
+
+/** CSS `object-position` for a focal point. */
+export function bannerObjectPosition(focalY: unknown): string {
+  return `50% ${clampBannerFocalY(focalY)}%`
+}
+
+/**
+ * Editor geometry: with the image drawn full-width at its own aspect inside
+ * the frame, how far (px) it can travel up, and the translate for a focal
+ * point (0 → top edge visible, 100 → bottom edge visible). Matches
+ * `object-fit: cover` + `object-position: 50% y%` whenever the frame is
+ * wider than the image's aspect (always true for the desktop strip).
+ */
+export function bannerTravel(frameWidth: number, frameAspect = STORE_BANNER_FRAME_ASPECT, imageAspect = STORE_BANNER_ASPECT): number {
+  if (!(frameWidth > 0)) return 0
+  return Math.max(0, frameWidth / imageAspect - frameWidth / frameAspect)
+}
+export function focalToOffset(focalY: number, travel: number): number {
+  return travel > 0 ? -(clampBannerFocalY(focalY) / 100) * travel : 0
+}
+export function offsetToFocal(offset: number, travel: number): number {
+  return travel > 0 ? clampBannerFocalY((-offset / travel) * 100) : STORE_BANNER_FOCAL_DEFAULT
+}
+
 /** True when this rank may upload (and show) a custom store banner. */
 export function canUploadStoreBanner(tier: string | null | undefined): boolean {
   if (!isValidTier(tier)) return false
@@ -51,15 +120,15 @@ export function isStoreBannerUrl(
   return !/["'()\s<>\\]/.test(url)
 }
 
-export type ResolvedStoreBanner = { kind: 'custom'; url: string } | { kind: 'default' }
+export type ResolvedStoreBanner = { kind: 'custom'; url: string; focalY: number } | { kind: 'default' }
 
 /** The render rule: custom only for a Silver+ seller with a banner in our bucket. */
 export function resolveStoreBanner(
-  input: { bannerUrl: string | null | undefined; tier: string | null | undefined },
+  input: { bannerUrl: string | null | undefined; tier: string | null | undefined; focalY?: unknown },
   supabaseUrl?: string,
 ): ResolvedStoreBanner {
   if (canUploadStoreBanner(input.tier) && isStoreBannerUrl(input.bannerUrl, supabaseUrl ?? process.env.NEXT_PUBLIC_SUPABASE_URL)) {
-    return { kind: 'custom', url: input.bannerUrl }
+    return { kind: 'custom', url: input.bannerUrl, focalY: clampBannerFocalY(input.focalY) }
   }
   return { kind: 'default' }
 }
