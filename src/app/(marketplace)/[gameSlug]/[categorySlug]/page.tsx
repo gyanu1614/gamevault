@@ -12,6 +12,7 @@ import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import Image from 'next/image'
 import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
@@ -296,14 +297,23 @@ const getCurrencyShell = cache(getCurrencyShellUncached)
 const getAllGameCategories = unstable_cache(
   async (gameId: string): Promise<GameCategory[]> => {
     const supabase = createAnonClient()
-    const { data } = await supabase
-      .from('game_categories')
-      .select('id, name, slug')
-      .eq('game_id', gameId)
-      .eq('is_enabled', true)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true }) as any
-    return (data || []) as GameCategory[]
+    const [{ data }, { data: currencyCfg }] = await Promise.all([
+      supabase
+        .from('game_categories')
+        .select('id, name, slug, type')
+        .eq('game_id', gameId)
+        .eq('is_enabled', true)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true }) as any,
+      supabase
+        .from('category_configs')
+        .select('config')
+        .eq('game_id', gameId)
+        .eq('category_type', 'currency')
+        .maybeSingle() as any,
+    ])
+    // The currency tab reads like its page title ("Gems", not "Currency").
+    return withCurrencyNavLabel((data || []) as GameCategory[], currencyCfg?.config?.unit_label)
   },
   ['game-categories-nav'],
   { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
