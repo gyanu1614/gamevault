@@ -67,6 +67,12 @@ describe('listingEventUrls', () => {
     expect(listingEventUrls('published', snap({ slug: null }))).toEqual(['/valorant/buy-vp', '/valorant'])
     expect(listingEventUrls('published', snap({ gameSlug: null }))).toEqual([])
   })
+
+  it('never submits a currency listing URL (it has no page; the currency page is submitted)', () => {
+    expect(listingEventUrls('published', snap({ categoryType: 'currency' }))).toEqual(['/valorant/buy-vp', '/valorant'])
+    expect(listingEventUrls('edited', snap({ categoryType: 'currency' }))).toEqual(['/valorant/buy-vp'])
+    expect(listingEventUrls('edited', snap({ categoryType: 'items' }))).toEqual(['/valorant/buy-vp/vp-1000', '/valorant/buy-vp'])
+  })
 })
 
 describe('submitListingChanges', () => {

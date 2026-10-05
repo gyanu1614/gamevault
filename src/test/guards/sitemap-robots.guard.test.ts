@@ -22,7 +22,7 @@ const emitted = buildSitemap(sitemapFixture()).map((e) => e.url)
 describe('every URL the sitemap emits is allowed by robots()', () => {
   it('the fixture is rich enough to mean something (every page type present)', () => {
     expect(emitted.length).toBeGreaterThan(40)
-    for (const fragment of ['/valorant/buy-vp/', '/values/', '/blog/', '/sell', '/calculator', '/buy/']) {
+    for (const fragment of ['/steal-a-brainrot/buy-items/', '/values/', '/blog/', '/sell', '/calculator', '/buy/']) {
       expect(emitted.some((u) => u.includes(fragment)), `no sitemap URL contains ${fragment}`).toBe(true)
     }
   })
@@ -44,7 +44,9 @@ const PAGE_TYPES: [string, string][] = [
   ['home', SITEMAP_BASE],
   ['game hub', `${SITEMAP_BASE}/valorant`],
   ['category', `${SITEMAP_BASE}/valorant/buy-vp`],
-  ['listing', `${SITEMAP_BASE}/valorant/buy-vp/vp-1000`],
+  // An item listing: currency listings have no page of their own (they 308
+  // to the currency page), so the sitemap never lists them.
+  ['listing', `${SITEMAP_BASE}/steal-a-brainrot/buy-items/sab-item`],
   ['values hub', `${SITEMAP_BASE}/steal-a-brainrot/values`],
   ['value item', `${SITEMAP_BASE}/steal-a-brainrot/values/cavallo-virtuoso`],
   ['blog post (game)', `${SITEMAP_BASE}/valorant/blog/vp-guide`],

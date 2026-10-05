@@ -26,6 +26,7 @@ import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import { priceUnit, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 import { quickAmounts, typeKey, type KeypadKey } from '@/lib/currency/quantity-entry'
+import { formatUnitPrice } from '@/lib/currency/price-format'
 import type { Offer } from './_currencyData'
 
 const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'back']
@@ -242,7 +243,7 @@ export function PhoneBuySheet({
                 )}
               </AnimatePresence>
               <span className="shrink-0 tabular-nums text-text-secondary">
-                ${unit.toFixed(4)} / {per}
+                {formatUnitPrice(unit)} / {per}
               </span>
             </div>
 

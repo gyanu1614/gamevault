@@ -11,9 +11,11 @@
  *   • SectionHeader           → _CurrencyPageClient.tsx :: SectionHeader
  *   • HeroCard wrapper        → _CurrencyPageClient.tsx :: HeroCard
  *   • SectionCard ("raised")  → _CurrencyPageClient.tsx :: SectionCard
- *   • SellerRow article       → _CurrencyPageClient.tsx :: SellerRow
+ *   • SellerRow article       → components/marketplace/CurrencySellerRow.tsx
  *   • Main wrapper            → _CurrencyPageClient.tsx :: return()
  */
+
+import { MARKET_CARD } from '@/lib/ui/surfaces'
 
 function Block({ className = '' }: { className?: string }) {
   return (
@@ -126,12 +128,12 @@ function HeroCardSkeleton() {
   )
 }
 
-/* ── SellerRow skeleton — mirrors the real <article> wrapper:
-      overflow-hidden rounded-lg bg-bg-raised
-      with relative > flex content + p-4 sm:p-5 inner padding. */
+/* ── SellerRow skeleton — mirrors the shared CurrencySellerRow
+      (src/components/marketplace/CurrencySellerRow.tsx): marketplace card,
+      flex content + p-4 sm:p-5, Select-sized action, phone strip below. */
 function SellerRowSkeleton() {
   return (
-    <article className="overflow-hidden rounded-lg bg-bg-raised">
+    <article className={`overflow-hidden rounded-lg ${MARKET_CARD}`}>
       <div className="relative">
         <div className="relative z-10 flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
           {/* Seller chunk (avatar size=40 → h-10 w-10) */}
@@ -170,11 +172,14 @@ function SellerRowSkeleton() {
             </div>
           </div>
 
-          {/* Select btn + caret */}
-          <div className="flex shrink-0 items-center gap-2">
-            <Block className="h-10 w-20 rounded-lg" />
-            <Block className="h-9 w-9 rounded-lg" />
-          </div>
+          {/* Select / Yours — same 84px box on every row */}
+          <Block className="h-10 w-[84px] shrink-0 rounded-md" />
+        </div>
+        {/* Phone strip: price + metrics */}
+        <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] px-4 py-2.5 sm:hidden">
+          <Block className="h-3 w-24" />
+          <Block className="h-3 w-20" />
+          <Block className="h-3 w-16" />
         </div>
       </div>
     </article>

@@ -15,6 +15,7 @@
 
 import React from 'react'
 import { SITE_URL } from '@/config/site'
+import { DISCORD_INVITE_URL } from '@/lib/config/social'
 
 /** Absolute canonical URL from a site-relative path. */
 function absoluteUrl(path: string): string {
@@ -64,7 +65,7 @@ export function organization() {
     },
     sameAs: [
       'https://twitter.com/dropmarket',
-      'https://discord.gg/dropmarket',
+      DISCORD_INVITE_URL,
       'https://github.com/dropmarket',
     ],
   }

@@ -27,21 +27,18 @@
  * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
-import { Check, Clock, Flame, Package, SlidersHorizontal, Star, Zap, type LucideIcon  } from 'lucide-react'
+import { Check, Clock, Flame, SlidersHorizontal, Star, Zap, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { NumberField } from '@/components/ui/number-field'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
-import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
-import { SellerStats } from '@/components/seller/SellerStats'
 import { MobileSlider } from '@/components/ui/mobile-slider'
-import { Button } from '@/components/ui/button'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { FaqCards } from '@/components/marketplace/FaqCards'
@@ -53,6 +50,11 @@ import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
+import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
+import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
+import { CurrencySellerRow, SellerIdentity, type SellerIdentityData } from '@/components/marketplace/CurrencySellerRow'
 
 export interface BundleOffer {
   listingId: string
@@ -200,6 +202,32 @@ export default function BundleCurrencyPageClient({
       .sort((a, b) => a.pricePerBundle - b.pricePerBundle)
   }, [data.offers, bundleId, region, platform])
 
+  // Currency offer links (`?seller=&offer=` — the listing URL 308s here, and
+  // My Offers / store / cards link here directly): pin that seller's offer by
+  // selecting its bundle, region and platform. Read after hydration through
+  // SearchParamsBridge so the page stays static. A dead or unknown link
+  // matches nothing and the normal recommended pick stays.
+  const appliedLinkRef = useRef<string | null>(null)
+  const applyOfferLink = useCallback(
+    (params: URLSearchParams) => {
+      const link = readCurrencyOfferLink(params)
+      const key = `${link.offerId ?? ''}|${link.sellerSlug ?? ''}`
+      if (key === '|' || appliedLinkRef.current === key) return
+      appliedLinkRef.current = key
+      const offer = findLinkedOffer(data.offers, link, {
+        id: (o) => o.listingId,
+        sellerSlug: (o) => o.sellerSlug,
+        price: (o) => o.pricePerBundle,
+      })
+      if (!offer) return
+      setBundleId(offer.bundleId)
+      if (offer.region && data.regions.some((r) => r.value === offer.region)) setRegion(offer.region)
+      if (offer.platform && data.platforms.some((p) => p.value === offer.platform)) setPlatform(offer.platform)
+      setPickedListingId(offer.listingId)
+    },
+    [data.offers, data.regions, data.platforms],
+  )
+
   const bestOffer = offersForSelection[0] ?? null
   // V19/P24/P7.k — Active offer the right-side panel renders. When
   // the buyer clicks Select on another row, swap to that listing;
@@ -255,6 +283,7 @@ export default function BundleCurrencyPageClient({
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
     <main className="relative isolate min-h-screen pb-24">
+      <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:px-8">
@@ -929,41 +958,8 @@ function KeyValue({
 /* ── Seller stats chip ─────────────────────────────────────────── */
 
 function SellerStatsChip({ offer }: { offer: BundleOffer }) {
-  const inner = (
-    <div className="flex items-center gap-2.5">
-      {offer.sellerAvatarUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={offer.sellerAvatarUrl}
-          alt=""
-          className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
-        />
-      ) : (
-        <div
-          aria-hidden
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-overlay text-[13px] font-bold text-text-primary ring-1 ring-border-subtle"
-        >
-          {offer.sellerName.slice(0, 1).toUpperCase()}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1">
-          <span className="truncate text-[13.5px] font-semibold text-text-primary">
-            {offer.sellerName}
-          </span>
-          {offer.verified && <VerifiedBadge size={14} />}
-        </div>
-        <SellerStats
-          ratingPercent={offer.rating}
-          reviews={offer.reviews}
-          sales={offer.sales}
-          tier={offer.sellerTier}
-          className="mt-0.5 text-[11.5px]"
-        />
-      </div>
-    </div>
-  )
-
+  // D1 — the same two-line identity as the Other Sellers rows.
+  const inner = <SellerIdentity seller={identityOf(offer)} size={36} />
   if (!offer.sellerSlug) {
     return <div>{inner}</div>
   }
@@ -977,6 +973,18 @@ function SellerStatsChip({ offer }: { offer: BundleOffer }) {
   )
 }
 
+function identityOf(offer: BundleOffer): SellerIdentityData {
+  return {
+    name: offer.sellerName,
+    avatarUrl: offer.sellerAvatarUrl,
+    verified: offer.verified,
+    rating: offer.rating,
+    reviews: offer.reviews,
+    sales: offer.sales,
+    tier: offer.sellerTier,
+  }
+}
+
 /* ── Other Seller row ──────────────────────────────────────────── */
 
 function SellerRow({
@@ -988,93 +996,20 @@ function SellerRow({
   isOwn: boolean
   onSelect: () => void
 }) {
+  // D1 (2026-10-04) — the shared row, same as the flexible currency page.
   return (
-    <Card className="group relative overflow-hidden border-0 bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-12px_rgba(0,0,0,0.7)]">
-      <div className="relative flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
-        {/* Seller — leads the row, clickable chip → /shop/{slug} */}
-        <div className="min-w-0 flex-1">
-          <SellerChip offer={offer} />
-          <SellerStats
-            ratingPercent={offer.rating}
-            reviews={offer.reviews}
-            sales={offer.sales}
-            tier={offer.sellerTier}
-            className="mt-1.5 text-[12.5px]"
-          />
-        </div>
-
-        {/* V19/P24/P7.h — Stock + Delivery metric columns, desktop
-            only. Mirrors the flexible Robux page's row geometry so
-            buyers see consistent data across both flows. */}
-        <div className="hidden items-center gap-5 sm:flex">
-          <MetricCol
-            icon={Package}
-            label="Stock"
-            value={offer.stock.toLocaleString('en-US')}
-            width={100}
-          />
-          <MetricCol
-            icon={Clock}
-            label="Delivery"
-            value={offer.deliveryLabel}
-            width={110}
-          />
-          <span aria-hidden className="h-10 w-px bg-border-subtle" />
-        </div>
-
-        {/* Price + CTA */}
-        <div className="shrink-0 text-right">
-          <div className="text-[18px] font-bold tabular-nums text-text-primary sm:text-[20px]">
-            {formatPrice(offer.pricePerBundle)}
-          </div>
-          {isOwn ? (
-            <Button
-              disabled
-              size="sm"
-              variant="outline"
-              className="mt-1.5 h-9 px-4"
-            >
-              Yours
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              onClick={onSelect}
-              className="mt-1.5 h-9 bg-white/[0.08] px-4 font-semibold text-text-primary hover:bg-white/[0.14]"
-            >
-              Select
-            </Button>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-/* ── Metric column for Other Sellers row ───────────────────────── */
-
-function MetricCol({
-  icon: Icon,
-  label,
-  value,
-  width,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  width: number
-}) {
-  return (
-    <div style={{ width }} className="shrink-0">
-      <div className="flex items-center gap-1 text-[12px] text-text-tertiary">
-        <Icon className="h-3 w-3" />
-        {label}
-      </div>
-      <div className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-text-primary">
-        {value}
-      </div>
-    </div>
+    <CurrencySellerRow
+      seller={identityOf(offer)}
+      sellerHref={offer.sellerSlug ? `/shop/${offer.sellerSlug}` : null}
+      metrics={[
+        { icon: Inventory2RoundedIcon, label: 'Stock', value: offer.stock.toLocaleString('en-US'), width: 100 },
+        { icon: ScheduleRoundedIcon, label: 'Delivery', value: offer.deliveryLabel, width: 110 },
+      ]}
+      price={formatPrice(offer.pricePerBundle)}
+      priceCaption="per bundle"
+      isOwn={isOwn}
+      onSelect={onSelect}
+    />
   )
 }
 
@@ -1107,68 +1042,6 @@ function FilterChips({
       layoutId="bundle-sort-pill"
       ariaLabel="Sort sellers"
     />
-  )
-}
-
-/* ── Reusable seller chip — avatar + name + verified -> /shop/{slug} ── */
-
-function SellerChip({
-  offer,
-  size = 'md',
-}: {
-  offer: BundleOffer
-  size?: 'md' | 'lg'
-}) {
-  const avatarSize = size === 'lg' ? 36 : 28
-  const nameClass =
-    size === 'lg'
-      ? 'truncate text-[14px] font-semibold text-text-primary'
-      : 'truncate text-[13.5px] font-semibold text-text-primary'
-
-  const inner = (
-    <>
-      {offer.sellerAvatarUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={offer.sellerAvatarUrl}
-          alt=""
-          className="shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
-          style={{ width: avatarSize, height: avatarSize }}
-        />
-      ) : (
-        <div
-          aria-hidden
-          className="flex shrink-0 items-center justify-center rounded-full bg-bg-overlay font-bold text-text-primary ring-1 ring-border-subtle"
-          style={{
-            width: avatarSize,
-            height: avatarSize,
-            fontSize: Math.round(avatarSize * 0.42),
-          }}
-        >
-          {offer.sellerName.slice(0, 1).toUpperCase()}
-        </div>
-      )}
-      <span className={nameClass}>{offer.sellerName}</span>
-      {offer.verified && (
-        <VerifiedBadge size={size === 'lg' ? 15 : 14} />
-      )}
-    </>
-  )
-
-  // Falls back to non-link when we don't have a username (legacy data).
-  if (!offer.sellerSlug) {
-    return (
-      <div className="inline-flex min-w-0 items-center gap-2">{inner}</div>
-    )
-  }
-
-  return (
-    <Link
-      href={`/shop/${offer.sellerSlug}`}
-      className="group inline-flex min-w-0 items-center gap-2 rounded-full transition-colors hover:text-lime-text"
-    >
-      {inner}
-    </Link>
   )
 }
 

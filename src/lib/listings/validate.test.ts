@@ -163,3 +163,115 @@ describe('insert statuses', () => {
     expect([...INSERT_STATUSES]).toEqual(['draft', 'active'])
   })
 })
+
+/**
+ * D2 (2026-10-04) — "price must be at most $10 per unit for this game" on
+ * every bundle listing above $10 (Fortnite 12,500 V-Bucks, 99 Nights 1400
+ * Diamonds). The configs below are the prod blobs read on 2026-10-04: the
+ * admin form saved DEFAULT_CURRENCY_CONFIG's hidden `price_ceiling: 10`, and
+ * resolvePrice applied it to the bundle price as if it were a per-unit price.
+ */
+describe('D2 — bundle prices are judged per bundle; a cap applies only when an admin set one', () => {
+  const bundleListing = { ...base, title: '', quantity: 3, min_quantity: 1 }
+  const FORTNITE = {
+    categoryType: 'currency' as const,
+    currencyConfig: {
+      price_floor: 10,
+      price_ceiling: 10,
+      min_quantity: 100,
+      bundles: [{ id: 'vb-12500', name: '12,500 V-Bucks', amount: 12500 }],
+    },
+  }
+  const NIGHTS = {
+    categoryType: 'currency' as const,
+    currencyConfig: {
+      price_floor: 1,
+      price_ceiling: 10,
+      min_quantity: 100,
+      bundles: [{ id: 'd-1400', name: '1400 Diamonds', amount: 1400 }],
+    },
+  }
+
+  it('Fortnite 12,500 V-Bucks at $64.99 and 99 Nights 1400 Diamonds at $16.49 publish', () => {
+    expect(validateListingWrite({ ...bundleListing, price: 64.99, bundle_id: 'vb-12500' }, FORTNITE)).toMatchObject({ ok: true, value: { price: 64.99 } })
+    expect(validateListingWrite({ ...bundleListing, price: 16.49, bundle_id: 'd-1400' }, NIGHTS)).toMatchObject({ ok: true, value: { price: 16.49 } })
+  })
+
+  it('a bundle with a per-unit-style ceiling still passes: the per-unit cap never applies to a bundle', () => {
+    const withUnitCap = { ...NIGHTS, currencyConfig: { ...NIGHTS.currencyConfig, price_ceiling: 0.02, price_max: 0.02 } }
+    expect(validateListingWrite({ ...bundleListing, price: 16.49, bundle_id: 'd-1400' }, withUnitCap)).toMatchObject({ ok: true })
+  })
+
+  it('an explicit per-bundle maximum is enforced, in plain words', () => {
+    const capped = { ...NIGHTS, currencyConfig: { ...NIGHTS.currencyConfig, bundle_price_max: 15 } }
+    const res = validateListingWrite({ ...bundleListing, price: 16.49, bundle_id: 'd-1400' }, capped)
+    expect(res).toMatchObject({ ok: false })
+    expect(!res.ok && res.error).toMatch(/at most \$15\.00 per bundle/)
+  })
+
+  it('the per-bundle minimum (legacy floor) still applies', () => {
+    const res = validateListingWrite({ ...bundleListing, price: 0.5, bundle_id: 'd-1400' }, NIGHTS)
+    expect(res).toMatchObject({ ok: false })
+    expect(!res.ok && res.error).toMatch(/at least \$1\.00 per bundle/)
+  })
+
+  it('flexible over an admin-set maximum is still refused (per unit)', () => {
+    const FLEX_MAX = { categoryType: 'currency' as const, currencyConfig: { price_floor: 0.01, price_max: 2, quantity_granularity: 'thousand' as const, min_quantity: 1, bundles: [] } }
+    const res = validateListingWrite({ ...base, title: '', price: 2.5, quantity: 100, min_quantity: 1 }, FLEX_MAX)
+    expect(res).toMatchObject({ ok: false })
+    expect(!res.ok && res.error).toMatch(/at most \$2\.00 per K/)
+  })
+
+  it('no maximum set → no cap (the legacy $10 default is not a maximum)', () => {
+    const FLEX = { categoryType: 'currency' as const, currencyConfig: { price_floor: 1, price_ceiling: 10, quantity_granularity: 'thousand' as const, min_quantity: 1, bundles: [] } }
+    expect(validateListingWrite({ ...base, title: '', price: 25, quantity: 100, min_quantity: 1 }, FLEX)).toMatchObject({ ok: true })
+    expect(validateListingWrite({ ...base, title: '', price: 25, quantity: 100, min_quantity: 1 }, { categoryType: 'currency', currencyConfig: { min_quantity: 1, bundles: [] } })).toMatchObject({ ok: true })
+  })
+
+  it('patch: the offers-table price edit on a bundle listing uses the bundle rules', () => {
+    const ex = { quantity: 3, min_quantity: 1, is_unlimited: false, delivery_method: 'manual', bundle_id: 'vb-12500' }
+    expect(validateListingPatch({ price: 64.99 }, FORTNITE, ex)).toMatchObject({ ok: true })
+  })
+})
+
+/**
+ * D3 — Robux (prod: floor $0.0035, max $0.008 per Robux) sat entirely under
+ * the absolute $0.01 listing floor, so no Robux listing could be published or
+ * re-priced. Flexible currency is priced per unit at the column's 4 decimals;
+ * ACC-06's point (no order can cost $0) is kept by requiring the smallest
+ * order — price × minimum — to be at least $0.01.
+ */
+describe('D3 — sub-cent per-unit prices for flexible currency', () => {
+  const ROBUX = { categoryType: 'currency' as const, currencyConfig: { price_floor: 0.0035, price_ceiling: 0.008, min_quantity: 100, bundles: [] } }
+  const flex = { ...base, title: '', quantity: 10000, min_quantity: 100 }
+
+  it('a $0.0055 Robux listing with a 100 minimum publishes', () => {
+    expect(validateListingWrite({ ...flex, price: 0.0055 }, ROBUX)).toMatchObject({ ok: true, value: { price: 0.0055, min_quantity: 100 } })
+  })
+
+  it('still inside the admin range', () => {
+    expect(validateListingWrite({ ...flex, price: 0.003 }, ROBUX)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...flex, price: 0.009 }, ROBUX)).toMatchObject({ ok: false })
+  })
+
+  it('the smallest possible order must cost at least $0.01', () => {
+    const NO_RULES = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 1, bundles: [] } }
+    expect(validateListingWrite({ ...flex, price: 0.005, min_quantity: 1 }, NO_RULES)).toMatchObject({ ok: false })
+    expect(validateListingWrite({ ...flex, price: 0.005, min_quantity: 2 }, NO_RULES)).toMatchObject({ ok: true })
+    // rounds to $0.0000 at the column scale → refused, never a free listing
+    expect(validateListingWrite({ ...flex, price: 0.00004 }, NO_RULES)).toMatchObject({ ok: false })
+  })
+
+  it('items and bundles keep the absolute $0.01 floor', () => {
+    expect(validateListingWrite({ ...base, price: 0.005 }, ITEMS)).toMatchObject({ ok: false })
+    const B = { categoryType: 'currency' as const, currencyConfig: { bundles: [{ id: 'b', name: 'B', amount: 1 }] } }
+    expect(validateListingWrite({ ...base, title: '', price: 0.005, bundle_id: 'b' }, B)).toMatchObject({ ok: false })
+  })
+
+  it('patch: re-pricing a Robux listing to $0.0052 works; dropping the minimum under $0.01 total does not', () => {
+    const ex = { quantity: 10000, min_quantity: 100, is_unlimited: false, delivery_method: 'manual' }
+    expect(validateListingPatch({ price: 0.0052 }, ROBUX, ex)).toMatchObject({ ok: true, value: { price: 0.0052 } })
+    const LOOSE = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 1, bundles: [] } }
+    expect(validateListingPatch({ min_quantity: 1 }, LOOSE, { ...ex, price: 0.005 } as typeof ex)).toMatchObject({ ok: false })
+  })
+})

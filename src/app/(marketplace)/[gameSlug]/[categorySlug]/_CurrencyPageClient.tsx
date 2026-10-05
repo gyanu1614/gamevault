@@ -8,7 +8,7 @@
  * and the design handoff README for spec details.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
@@ -17,10 +17,8 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
-import * as Collapsible from '@radix-ui/react-collapsible'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
-import { Expand } from '@/components/ui/expand'
 import { PhoneBuySheet } from './_PhoneBuySheet'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
@@ -38,10 +36,15 @@ import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { BuyButton, BuySweep, FACE as BUY_FACE } from '@/components/marketplace/BuyButton'
 import { sellerStatLine } from '@/lib/seller/stat-line'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
+import { formatUnitPrice } from '@/lib/currency/price-format'
+import { CurrencySellerRow } from '@/components/marketplace/CurrencySellerRow'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function unitPrice(p: number) { return `$${p.toFixed(4)}` }
+// Per-unit price: 2–4 decimals, more only below a cent (never "$0.00").
+const unitPrice = formatUnitPrice
 function money(n: number) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 
 // V21/P7.i — Professional, fully-spelled delivery copy. Renders
@@ -164,48 +167,6 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-// V14g — Seller-row metric column (desktop). Fixed width per column so
-// every seller row aligns vertically regardless of how big the number is
-// (a seller with 100 stock and a seller with 10,000,000 stock must show
-// their value in exactly the same horizontal slot).
-function MetricCol({
-  icon: Icon, label, value, width = 110,
-}: {
-  icon: typeof StarRoundedIcon
-  label: string
-  value: string
-  /** Fixed column width in pixels. Set wide enough to fit the longest
-   *  realistic value so the column never shifts between rows. */
-  width?: number
-}) {
-  return (
-    <div
-      className="hidden shrink-0 sm:block"
-      style={{ width }}
-    >
-      <div className="flex items-center gap-1.5 text-[14px] font-bold tabular-nums text-text-primary sm:text-[15px]">
-        <Icon className="shrink-0 text-text-tertiary" style={{ fontSize: 15 }} />
-        <span className="truncate">{value}</span>
-      </div>
-      <div className="mt-0.5 text-[12px] text-text-tertiary">
-        {label}
-      </div>
-    </div>
-  )
-}
-
-// V13 — Seller-row metric chip (mobile second row). Inline with caption to
-// the right of the value, keeps the row scannable on small screens.
-function MetricChipMobile({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; label: string; value: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
-      <Icon className="text-text-tertiary" style={{ fontSize: 13 }} />
-      <span className="font-semibold tabular-nums text-text-primary">{value}</span>
-      <span className="text-text-tertiary">{label}</span>
-    </span>
-  )
-}
-
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CurrencyPageClient({
@@ -300,6 +261,28 @@ export default function CurrencyPageClient({
     }, 0)
   }
 
+  // Currency offer links (`?seller=&offer=` — the listing URL 308s here, and
+  // My Offers / store / cards link here directly): make that seller's offer
+  // the active one; qty then resets to its minimum (effect above). Read after
+  // hydration through SearchParamsBridge so the page stays static. A dead or
+  // unknown link matches nothing and the recommended pick stays.
+  const appliedLinkRef = useRef<string | null>(null)
+  const applyOfferLink = useCallback(
+    (params: URLSearchParams) => {
+      const link = readCurrencyOfferLink(params)
+      const key = `${link.offerId ?? ''}|${link.sellerSlug ?? ''}`
+      if (key === '|' || appliedLinkRef.current === key) return
+      appliedLinkRef.current = key
+      const offer = findLinkedOffer(allOffers, link, {
+        id: (o) => o.id,
+        sellerSlug: (o) => o.sellerSlug,
+        price: (o) => o.pricePerUnit,
+      })
+      if (offer) setActiveId(offer.id)
+    },
+    [allOffers],
+  )
+
   const [showBuyBar, setShowBuyBar] = useState(false)
   useEffect(() => {
     const el = heroRef.current
@@ -320,6 +303,7 @@ export default function CurrencyPageClient({
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
     <main className="relative isolate min-h-screen pb-24 pt-3 sm:pt-4">
+      <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
             with its own external title and gap, so the page reads as a
@@ -357,6 +341,7 @@ export default function CurrencyPageClient({
             onBuy={() => goToCheckout(activeOffer.id, qty)}
             buying={navigating}
             isOwnOffer={isOwnOffer}
+            picked={activeOffer.id !== data.hero.id}
           />
         </div>
 
@@ -596,7 +581,7 @@ function VariantSelector({ variant }: { variant: CurrencyPageData['currency']['v
 }
 
 function HeroCard({
-  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer,
+  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer, picked = false,
 }: {
   offer: Offer
   unitLabel: string
@@ -610,6 +595,9 @@ function HeroCard({
   /** V14m — When true, the viewer is the seller — hide Buy now and show
    *  an "own listing" notice with a link to edit it. */
   isOwnOffer: boolean
+  /** The buyer (or a seller's offer link) chose this offer over the
+   *  recommended one — the badge then reads "Selected". */
+  picked?: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const reduceMotion = useReducedMotion()
@@ -764,7 +752,7 @@ function HeroCard({
                   the Buy CTA). Warm gold pairs cleanly with the black + lime. */}
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2.5 py-1 text-[12px] font-semibold text-amber-300">
                 <StarRoundedIcon style={{ fontSize: 14 }} />
-                Recommended
+                {picked ? 'Selected' : 'Recommended'}
               </span>
             </div>
             {purchasePanel}
@@ -1032,224 +1020,109 @@ function SellerRow({
   /** What one price covers, after "per": 'M', or "R$ Robux" on unit games. */
   perLabel: string
   onSelect: () => void
-  /** V14m — When true, the viewer owns this listing — disable Select and
-   *  swap in a "Yours" badge so they don't try to buy their own offer. */
+  /** V14m — When true, the viewer owns this listing: a quiet "Yours" pill
+   *  replaces Select (the expanded panel keeps the Edit Listing link). */
   isOwn?: boolean
 }) {
-  const [open, setOpen] = useState(false)
   const hasInstructions = !!offer.blurb?.trim()
+  const delivery = offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`
 
+  // D1 (2026-10-04) — the shared row (one row for both currency pages);
+  // the expandable panel below is this page's own.
   return (
-    <Collapsible.Root open={open} onOpenChange={setOpen} asChild>
-      <article
-        className={cn(
-          // V19/P24/P7.pp — Standalone card surface (rounded-lg) since
-          // the outer SectionCard wrapper is gone. Border bumped to
-          // border-default so each row reads as its own card.
-          // Frosted-glass panel: dark translucent + blur so the hero backdrop
-          // is softened behind the row (a light 4% wash let the busy hero
-          // image show through and look muddy). Open/hover lift the fill.
-          // V49 — bundle-tile hover language: gentle lift + deeper shadow.
-          // Fill-only card (owner 2026-09-29: no outlines); open/hover step
-          // one shade lighter in the same black family.
-          'relative overflow-hidden rounded-lg transition-[background-color,transform,box-shadow] duration-200',
-          open
-            ? 'bg-bg-raised-hover'
-            : 'bg-bg-raised hover:-translate-y-0.5 hover:bg-bg-raised-hover hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]',
-        )}
-      >
-        {/* V13b/V60 — The expand trigger is a transparent overlay button
-            behind the content; the content layers are pointer-events-none
-            so every click on the row (not just a caret) reaches it. Only
-            Select / Yours restore pointer-events. The caret buttons are
-            gone — the whole row IS the toggle. Select stays a separate
-            sibling <button> to avoid button-in-button hydration errors. */}
-        <div className="relative">
-          {/* Background trigger — full-row click target for expand/collapse */}
-          <Collapsible.Trigger asChild>
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-label={open ? 'Collapse seller details' : 'Expand seller details'}
-              className="absolute inset-0 z-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-soft"
-            />
-          </Collapsible.Trigger>
+    <CurrencySellerRow
+      seller={{
+        name: offer.seller,
+        avatarUrl: offer.avatarUrl,
+        avatarHue: offer.avatarHue,
+        verified: offer.verified,
+        rating: offer.rating,
+        reviews: offer.reviews,
+        sales: offer.sales,
+        tier: offer.tier,
+      }}
+      metrics={[
+        { icon: Inventory2RoundedIcon, label: 'Stock', value: offer.stock.toLocaleString('en-US'), width: 120 },
+        { icon: TuneRoundedIcon, label: 'Minimum', value: offer.minQty.toLocaleString('en-US'), width: 100 },
+        { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery, width: 110 },
+      ]}
+      mobileMetrics={[
+        { icon: Inventory2RoundedIcon, label: 'Stock', value: `${offer.stock.toLocaleString('en-US')} ${unitLabel}` },
+        { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery },
+      ]}
+      price={unitPrice(offer.pricePerUnit)}
+      priceCaption={`per ${perLabel}`}
+      isOwn={!!isOwn}
+      onSelect={onSelect}
+      details={
+        // V60 — Full-width detail panel: the seller's own instructions +
+        // structured offer facts, then an action bar.
+        <div className="border-t border-white/[0.07] p-3.5 sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative flex-1 overflow-hidden rounded-md bg-bg-overlay p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-text-primary">
+                  Seller Instructions
+                </span>
+              </div>
+              {hasInstructions ? (
+                <p className="mt-2.5 line-clamp-5 whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary">
+                  {offer.blurb}
+                </p>
+              ) : (
+                <p className="mt-2.5 text-[13.5px] italic text-text-tertiary">
+                  This seller hasn&apos;t added instructions yet.
+                </p>
+              )}
+            </div>
 
-          {/* Foreground content — sits above the trigger via z-10. Interactive
-              elements (Select btn, caret) use pointer-events to stay clickable
-              while non-interactive parts pass clicks through to the trigger
-              underneath. */}
-          <div className="pointer-events-none relative z-10 flex items-center gap-3 p-4 sm:gap-5 sm:p-5">
-            {/* Seller — leads the row */}
-            <div className="pointer-events-none flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
-              <Avatar name={offer.seller} hue={offer.avatarHue} imageUrl={offer.avatarUrl} size={40} />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="truncate text-[14px] font-bold text-text-primary sm:text-[15px]">{offer.seller}</span>
-                  {offer.verified && <VerifiedBadge size={13} />}
-                </div>
-                <SellerStats
-                  ratingPercent={offer.rating}
-                  reviews={offer.reviews}
-                  sales={offer.sales}
-                  tier={offer.tier}
-                  className="mt-0.5 text-[11.5px] sm:text-[12.5px]"
+            <div className="relative shrink-0 overflow-hidden rounded-md bg-bg-overlay p-4 lg:w-[380px]">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-text-primary">
+                  Offer Details
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
+                <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
+                <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
+                <Fact
+                  icon={TuneRoundedIcon}
+                  label="Minimum Quantity"
+                  value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
                 />
               </div>
             </div>
-
-            {/* V14g — Fixed-width metric columns so the layout stays linear
-                across all rows. Full numbers, capitalised labels. Price
-                column is wider to fit the unit caption. */}
-            <div className="pointer-events-none hidden items-center gap-5 sm:flex">
-              <MetricCol
-                icon={Inventory2RoundedIcon}
-                label="Stock"
-                value={offer.stock.toLocaleString('en-US')}
-                width={120}
-              />
-              <MetricCol
-                icon={TuneRoundedIcon}
-                label="Minimum"
-                value={offer.minQty.toLocaleString('en-US')}
-                width={100}
-              />
-              <MetricCol
-                icon={ScheduleRoundedIcon}
-                label="Delivery"
-                value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`}
-                width={110}
-              />
-              <span aria-hidden className="h-10 w-px bg-border-subtle" />
-              <div className="w-[120px] shrink-0">
-                <div className="text-[20px] font-bold tabular-nums leading-none text-text-primary sm:text-[22px]">
-                  {unitPrice(offer.pricePerUnit)}
-                </div>
-                <div className="mt-1 text-[12px] text-text-tertiary">
-                  per {perLabel}
-                </div>
-              </div>
-            </div>
-
-            {/* Select button + caret — pointer-events restored, both are
-                real buttons so neither needs to nest inside the trigger */}
-            <div className="pointer-events-auto flex shrink-0 items-center gap-2">
-              {isOwn ? (
-                // V14m — Viewer's own listing: clearly mark with an amber
-                // "Yours" chip linking to edit. Can't select your own offer.
-                <a
-                  href={`/sell/edit/${offer.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-amber-500/10 px-4 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
-                >
-                  <Store className="h-3.5 w-3.5" />
-                  Yours
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onSelect() }}
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-white/[0.08] px-4 text-[13px] font-semibold text-text-primary transition-[background-color,transform] hover:bg-white/[0.14] active:scale-[0.97]"
-                >
-                  Select
-                </button>
-              )}
-            </div>
           </div>
 
-          {/* Mobile metric strip — second row below; click-through so the
-              full-row trigger handles taps here too. Mobile-audit —
-              flex-wrap so long delivery windows ("1-24 Hours") wrap to a
-              second line instead of getting clipped by the card's
-              overflow-hidden at 360px. */}
-          <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-white/[0.07] px-4 py-2.5 sm:hidden">
-            <span className="inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
-              <span className="font-bold tabular-nums text-text-primary">{unitPrice(offer.pricePerUnit)}</span>
-              <span className="text-text-tertiary">per {perLabel}</span>
+          {/* Action bar — CTA left, SafeDrop Protection assurance right */}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            {isOwn ? (
+              <a
+                href={`/sell/edit/${offer.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
+              >
+                Edit Listing
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onSelect() }}
+                className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
+              >
+                View Full Offer
+                <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
+              </button>
+            )}
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
+              <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
+              SafeDrop Protection: Item Guaranteed or Full Refund
             </span>
-            <MetricChipMobile icon={Inventory2RoundedIcon} label="Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
-            <MetricChipMobile icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`} />
           </div>
         </div>
-
-        {/* Force-mounted so Expand can animate the close (height + fade,
-            like the account sidebar); Radix still wires the trigger's
-            aria-controls to it. */}
-        <Collapsible.Content forceMount asChild>
-          <Expand open={open}>
-            {/* V60 — Full-width detail panel: two glass tiles (the seller's
-                own instructions + structured offer facts) over the whole row,
-                then an action bar. Replaces the old left-hugging text block. */}
-            <div className="border-t border-white/[0.07] p-3.5 sm:p-4">
-              <div className="flex flex-col gap-3 lg:flex-row">
-                {/* Seller instructions tile */}
-                <div className="relative flex-1 overflow-hidden rounded-md bg-bg-overlay p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold text-text-primary">
-                      Seller Instructions
-                    </span>
-                  </div>
-                  {hasInstructions ? (
-                    <p className="mt-2.5 line-clamp-5 whitespace-pre-line text-[13.5px] leading-relaxed text-text-secondary">
-                      {offer.blurb}
-                    </p>
-                  ) : (
-                    <p className="mt-2.5 text-[13.5px] italic text-text-tertiary">
-                      This seller hasn&apos;t added instructions yet.
-                    </p>
-                  )}
-                </div>
-
-                {/* Offer facts tile */}
-                <div className="relative shrink-0 overflow-hidden rounded-md bg-bg-overlay p-4 lg:w-[380px]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold text-text-primary">
-                      Offer Details
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                    <Fact icon={StarRoundedIcon} label="Seller" value={sellerFactText(offer)} />
-                    <Fact icon={Inventory2RoundedIcon} label="In Stock" value={`${offer.stock.toLocaleString('en-US')} ${unitLabel}`} />
-                    <Fact icon={ScheduleRoundedIcon} label="Delivery" value={offer.deliveryLabel || fmtMinutes(offer.deliveryMin, offer.deliveryMax)} />
-                    <Fact
-                      icon={TuneRoundedIcon}
-                      label="Minimum Quantity"
-                      value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Action bar — CTA left, SafeDrop Protection assurance right */}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                {isOwn ? (
-                  <a
-                    href={`/sell/edit/${offer.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex h-9 items-center gap-1 rounded-md bg-amber-500/10 px-3 text-[13px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/15"
-                  >
-                    Edit Listing
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onSelect() }}
-                    className="inline-flex h-9 items-center gap-1 rounded-md bg-white/[0.08] px-3 text-[13px] font-semibold text-text-primary transition-colors hover:bg-white/[0.14]"
-                  >
-                    View Full Offer
-                    <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
-                  </button>
-                )}
-                <span className="inline-flex items-center gap-1.5 text-[12px] text-text-tertiary">
-                  <ShieldCheck className="h-3.5 w-3.5 text-text-tertiary" aria-hidden />
-                  SafeDrop Protection: Item Guaranteed or Full Refund
-                </span>
-              </div>
-            </div>
-          </Expand>
-        </Collapsible.Content>
-      </article>
-    </Collapsible.Root>
+      }
+    />
   )
 }
 

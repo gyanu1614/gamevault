@@ -87,7 +87,8 @@ describe('getLatestListings category join', () => {
       categoryLabel: 'Bucks',
       cardType: 'currency',
       bgImage: 'https://cdn.example/bucks.png',
-      href: '/adopt-me/buy-bucks/listing-cur',
+      // Currency listings have no page: the card links the currency page.
+      href: '/adopt-me/buy-bucks?offer=cur',
     })
     expect(byId.get('acc')).toMatchObject({ categoryType: 'account', cardType: 'account' })
     expect(byId.get('itm')).toMatchObject({

@@ -1,5 +1,6 @@
 import { isMaterialValueChange } from './value-changes'
 import { submitIndexNow, type SubmitFn } from './submit'
+import { isCurrencyCategoryType } from '@/lib/listings/url'
 
 /**
  * Listing pages are submitted when a listing is PUBLISHED, MATERIALLY EDITED or
@@ -20,6 +21,8 @@ export interface ListingSnapshot {
   slug: string | null
   gameSlug: string | null
   categorySlug: string | null
+  /** game_categories.type — a currency listing has no page of its own. */
+  categoryType?: string | null
 }
 
 export type ListingEvent = 'published' | 'edited' | 'removed'
@@ -53,7 +56,12 @@ export function classifyListingChange(
 export function listingEventUrls(event: ListingEvent, s: ListingSnapshot): string[] {
   if (!s.gameSlug) return []
   const category = s.categorySlug ? `/${s.gameSlug}/${s.categorySlug}` : null
-  const listing = s.categorySlug && s.slug ? `/${s.gameSlug}/${s.categorySlug}/${s.slug}` : null
+  // Currency listings have no page of their own (the URL 308s to the currency
+  // page): submit the currency page, never the listing URL.
+  const listing =
+    s.categorySlug && s.slug && !isCurrencyCategoryType(s.categoryType)
+      ? `/${s.gameSlug}/${s.categorySlug}/${s.slug}`
+      : null
   const hub = `/${s.gameSlug}`
   const urls = event === 'edited' ? [listing, category] : [listing, category, hub]
   return urls.filter((u): u is string => !!u)
@@ -68,7 +76,7 @@ export async function snapshotListings(db: Db, ids: string[]): Promise<Map<strin
     const { data, error } = await db
       .from('listings')
       .select(
-        'id, slug, status, title, description, price, images, game:games!listings_game_id_fkey(slug), category:game_categories!listings_game_category_id_fkey(slug)',
+        'id, slug, status, title, description, price, images, game:games!listings_game_id_fkey(slug), category:game_categories!listings_game_category_id_fkey(slug, type)',
       )
       .in('id', ids)
     if (error) return null
@@ -84,6 +92,7 @@ export async function snapshotListings(db: Db, ids: string[]): Promise<Map<strin
         slug: row.slug ?? null,
         gameSlug: row.game?.slug ?? null,
         categorySlug: row.category?.slug ?? null,
+        categoryType: row.category?.type ?? null,
       })
     }
     return map

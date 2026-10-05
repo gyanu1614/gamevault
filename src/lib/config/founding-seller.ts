@@ -12,9 +12,11 @@
 
 /**
  * Invite to the founding-seller Discord community. Shown on the /early-seller
- * success state and in the welcome email — the onboarding "next step".
+ * success state and in the welcome email — the onboarding "next step". Lives
+ * in the neutral social config (also used by the footer + Organization
+ * JSON-LD); re-exported here so existing imports keep working.
  */
-export const DISCORD_INVITE_URL = 'https://discord.gg/z5ghW37JRu'
+export { DISCORD_INVITE_URL } from './social'
 
 /**
  * The founding fee perk, in words. Chip form (perk lists) and sentence form

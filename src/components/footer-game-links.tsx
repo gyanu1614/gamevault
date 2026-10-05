@@ -17,6 +17,8 @@
 
 import Link from '@/components/navigation/AppLink'
 import { getCachedGameDirectory } from '@/lib/marketplace/gameDirectoryCache'
+import { getCachedGameActivity } from '@/lib/marketplace/gameActivityCache'
+import { FOOTER_VISIBLE_GAMES, rankFooterGames } from '@/lib/marketplace/footerGameRanking'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'
 import { getGameContentTheme } from '@/lib/content/theme'
@@ -48,7 +50,10 @@ const MAX_CATS = 4
 async function getDirectory(): Promise<GameGroup[]> {
   // Cookie-free + unstable_cache (see gameDirectoryCache.ts): this renders on
   // every route, so a cookie-bound read here would force the whole app dynamic.
-  const { games, categories: cats } = await getCachedGameDirectory()
+  const [{ games, categories: cats }, activity] = await Promise.all([
+    getCachedGameDirectory(),
+    getCachedGameActivity(),
+  ])
 
   const catsByGame = new Map<string, { slug: string; label: string }[]>()
   for (const c of cats ?? []) {
@@ -57,7 +62,11 @@ async function getDirectory(): Promise<GameGroup[]> {
     catsByGame.set(c.game_id, list)
   }
 
-  return (games ?? []).map((g) => {
+  // Most trending first (orders → listings → radar → curated order); only
+  // games with an enabled category, capped (this renders on every page).
+  const ranked = rankFooterGames(games ?? [], new Set(catsByGame.keys()), activity)
+
+  return ranked.map((g) => {
     const raw = catsByGame.get(g.id) ?? []
     let gameCats: CategoryLink[] = raw
       .slice(0, MAX_CATS)
@@ -91,11 +100,12 @@ export async function FooterGameLinks() {
   const games = await getDirectory()
   if (games.length === 0) return null
 
-  // GameBoost-style default: first row visible, the rest cut off under a
+  // GameBoost-style default: first row visible (the top FOOTER_VISIBLE_GAMES
+  // by activity on desktop's 6-column grid), the rest cut off under a
   // fade with a centered "Show All" button (GamesDirectoryCollapse). The
   // grid is server-rendered inside the client shell, so every <a href>
   // stays in the initial HTML and fully crawlable while collapsed.
-  const collapsible = games.length > 6
+  const collapsible = games.length > FOOTER_VISIBLE_GAMES
 
   const grid = (
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
