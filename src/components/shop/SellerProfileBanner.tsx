@@ -6,7 +6,7 @@
  *   banner    a short strip (132 / 172 / 212 px) of the custom banner (Silver+,
  *             at the seller's focal point) or the generated art; its lower
  *             edge melts into the card (StoreBannerArt), no hard line
- *   identity  avatar overlapping the strip with a faint rank-coloured halo,
+ *   identity  avatar overlapping the strip inside a rotating rank ring (RankAvatarRing),
  *             name, blue VerifiedBadge, founding badge, rank chip, handle,
  *             member since, live presence / paused state, the primary action
  *   stats     after an inset hairline: the `stats` slot (SellerStorefront)
@@ -18,7 +18,6 @@
  */
 
 import type { ReactNode } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
 import Link from '@/components/navigation/AppLink'
 import { ChatCircleTextIcon } from '@phosphor-icons/react/dist/csr/ChatCircleText'
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple'
@@ -33,7 +32,8 @@ import { tierByKey } from '@/lib/seller/tiers'
 import { MARKET_CARD } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import type { ResolvedStoreBanner } from '@/lib/shop/store-banner'
-import { avatarHalo } from '@/lib/shop/store-header'
+import { rankRingRgb } from '@/lib/shop/store-header'
+import { RankAvatarRing } from '@/components/shop/RankAvatarRing'
 
 /** The card's top colour — the gap ring around the avatar and the online dot. */
 const CARD_TOP = `rgb(${BANNER_MELT_RGB})`
@@ -67,8 +67,7 @@ export default function SellerProfileBanner({
   stats,
 }: SellerProfileBannerProps) {
   const tier = tierByKey(sellerTier)
-  const halo = avatarHalo(tier.key)
-  const reduceMotion = useReducedMotion()
+  const ringRgb = rankRingRgb(tier.key)
   const { user } = useAuth()
   const isOwnShop = !!user && user.id === sellerId
   // Live presence, read in the browser (null until the first read).
@@ -86,32 +85,20 @@ export default function SellerProfileBanner({
       <div className="relative bg-[linear-gradient(180deg,#212228_0%,#1A1B1F_100%)]">
         <div className="px-4 pb-5 sm:px-6 sm:pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
-            {/* Avatar — overlaps the banner's melted edge, with a rank halo. */}
-            <div className="relative -mt-10 w-fit shrink-0 sm:-mt-12">
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute -inset-2.5 rounded-[22px] blur-[14px]"
-                style={{ backgroundColor: `rgba(${halo.rgb},${halo.glowAlpha})` }}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-              />
-              <div
-                className="relative h-20 w-20 overflow-hidden rounded-xl bg-[#24252B] sm:h-24 sm:w-24"
-                style={{
-                  // 4px card-coloured gap, then a 1px rank-tinted hairline.
-                  boxShadow: `0 0 0 4px ${CARD_TOP}, 0 0 0 5px rgba(${halo.rgb},${halo.ringAlpha})`,
-                }}
-              >
-                {avatarUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-text-primary">
-                    {displayName.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+            {/* Avatar — overlaps the banner's soft edge, inside the rank ring. */}
+            <div className="relative -mt-11 w-fit shrink-0 sm:-mt-14">
+              <RankAvatarRing rgb={ringRgb} gapColor={CARD_TOP}>
+                <div className="relative h-20 w-20 overflow-hidden rounded-[10px] bg-[#24252B] sm:h-24 sm:w-24">
+                  {avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-text-primary">
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </RankAvatarRing>
               {online === true && !isPaused && (
                 <span
                   aria-hidden

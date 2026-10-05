@@ -113,7 +113,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
             isPaused={isPaused}
             banner={banner}
             stats={
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-5 py-4 sm:gap-x-6 sm:py-5 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
+              <dl className="grid grid-cols-2 gap-x-5 gap-y-6 py-5 sm:gap-x-8 sm:py-6 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
                 <Stat
                   label="Positive Feedback"
                   value={breakdown.positivePercent != null ? `${breakdown.positivePercent}%` : '—'}
@@ -138,7 +138,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                   label="Rank"
                   value={
                     <span className={cn('inline-flex items-center gap-2', tier.colors.text)}>
-                      <TierIcon tier={tier.key} size={22} decorative />
+                      <TierIcon tier={tier.key} size={17} decorative />
                       {tier.label}
                     </span>
                   }
@@ -284,10 +284,10 @@ function Stat({
   return (
     // Phone / tablet: a 2-column grid on whitespace alone. lg+: one row,
     // hairlines between cells (the first is flush with the identity above).
-    <div className={cn('min-w-0 lg:px-5 lg:first:pl-0 lg:last:pr-0 xl:px-6', className)}>
-      <dt className="truncate text-[12.5px] font-medium text-text-secondary">{label}</dt>
-      <dd className="mt-1 truncate text-[20px] font-bold leading-tight tracking-[-0.01em] tabular-nums text-text-primary sm:text-[22px] lg:text-[20px] xl:text-[22px]">{value}</dd>
-      {hint && <dd className="mt-0.5 truncate text-[12px] text-text-tertiary">{hint}</dd>}
+    <div className={cn('min-w-0 lg:px-6 lg:first:pl-0 lg:last:pr-0 xl:px-8', className)}>
+      <dt className="truncate text-[12px] font-medium text-text-tertiary">{label}</dt>
+      <dd className="mt-1.5 truncate text-[17px] font-semibold leading-tight tracking-[-0.01em] tabular-nums text-text-primary">{value}</dd>
+      {hint && <dd className="mt-1 truncate text-[12px] text-text-tertiary">{hint}</dd>}
     </div>
   )
 }

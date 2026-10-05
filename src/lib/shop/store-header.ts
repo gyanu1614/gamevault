@@ -42,3 +42,21 @@ export function avatarHalo(tier: string | null | undefined): AvatarHalo {
   const quiet = def.key === 'bronze' || def.key === 'silver'
   return { rgb, ringAlpha: quiet ? 0.28 : 0.34, glowAlpha: quiet ? 0.2 : 0.26 }
 }
+
+/**
+ * The avatar's rotating rank border (owner, 2026-10-05: "a good blue which
+ * rotates … bronze a bronze colour"). Richer than the halo above: this is the
+ * colour of a moving highlight on a thin ring, so it can carry full
+ * saturation without reading as a glow.
+ */
+const RING_RGB: Record<Exclude<SellerTier, 'legendary'>, string> = {
+  bronze: '205,127,50', // classic bronze
+  silver: '200,212,228', // cool silver
+  gold: '242,192,64', // gold
+  diamond: '64,168,255', // clear blue
+}
+
+export function rankRingRgb(tier: string | null | undefined): string {
+  const def = tierByKey(tier)
+  return def.key === 'legendary' ? rgbFromGlowClass(def.colors.glow) ?? '198,255,61' : RING_RGB[def.key]
+}
