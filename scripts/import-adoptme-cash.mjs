@@ -119,7 +119,12 @@ async function main() {
   }
   const idBySlug = new Map(pets.map((p) => [p.slug, p.id]))
 
-  // Build the raw rows, deduping identical (source, seller, variant, price)
+  // One timestamp for the whole run: every row written now carries it, and the
+  // retire step below ends only rows older than it. (A "now - 60 s" cutoff
+  // retired this run's own rows whenever the upserts took longer than a minute.)
+  const runStartedAt = new Date().toISOString()
+
+  // Build the raw rows, deduping identical (pet, source, seller, variant, price)
   // copies up front so the batch itself carries no duplicates (the unique
   // constraint would collapse them anyway, but a clean batch is clearer).
   const rows = []
@@ -147,7 +152,10 @@ async function main() {
       if (!Number.isFinite(price) || price <= 0) continue
 
       const sellerId = l.sellerId != null ? String(l.sellerId) : null
-      const dedupKey = `${source}|${sellerId ?? '?'}|${l.variant}|${price}`
+      // The pet is part of the key: the same seller selling two different pets
+      // at the same variant + price is two listings, not a duplicate (dropping
+      // the pet collapsed 9,444 listings on 2026-10-05).
+      const dedupKey = `${petId}|${source}|${sellerId ?? '?'}|${l.variant}|${Math.round(price * 100) / 100}`
       if (seen.has(dedupKey)) {
         deduped++
         continue
@@ -171,7 +179,7 @@ async function main() {
         seller_id: sellerId,
         title: l.title ?? null,
         listing_status: 'active',
-        collected_at: new Date().toISOString(),
+        collected_at: runStartedAt,
         ended_at: null,
       })
     }
@@ -219,7 +227,7 @@ async function main() {
   // price but its history survives. Only touch pet+source pairs we actually
   // observed — never retire a source this run didn't cover.
   let retired = 0
-  const cutoff = new Date(Date.now() - 60_000).toISOString() // rows not just written
+  const cutoff = runStartedAt // everything this run wrote carries runStartedAt
   for (const petSource of seenPetSource) {
     const [petId, source] = petSource.split('|')
     const { data, error } = await sb
