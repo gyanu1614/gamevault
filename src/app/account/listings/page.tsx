@@ -74,6 +74,8 @@ import { cn } from '@/lib/utils'
 // ─── Offer sections ──────────────────────────────────────────────────────────
 
 import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
+import { listingUrl } from '@/lib/listings/url'
+import { sellerShopSlug, type SellerIdentityInput } from '@/lib/seller/identity'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { ScrollRow } from '@/components/ui/scroll-row'
 import { listingUnits, type QuantityGranularity } from '@/lib/currency/quantity-unit'
@@ -203,9 +205,20 @@ function displayTitle(l: Listing, type: OfferType): string {
   return stripped || l.title
 }
 
-/** Public listing URL (mirrors the marketplace route shape). */
-function publicPath(l: Listing): string {
-  return `/${l.game?.slug ?? ''}/${l.category?.slug ?? ''}/${(l.slug && l.slug.trim()) || l.id}`
+/** Public listing URL — the shared builder: item/account offers get their
+ *  listing page, currency offers the game's currency page with this seller's
+ *  offer pinned (currency listings have no single-listing page). */
+function publicPath(l: Listing, sellerSlug: string | null): string {
+  const type = classifyOfferType(l.category?.type ?? undefined, l.category?.slug)
+  return listingUrl({
+    id: l.id,
+    slug: (l.slug && l.slug.trim()) || l.id,
+    game: l.game ?? null,
+    category: l.category
+      ? { slug: l.category.slug, type: type === 'currency' ? 'currency' : (l.category.type ?? null) }
+      : null,
+    seller: sellerSlug ? { shop_slug: sellerSlug } : null,
+  })
 }
 
 const SORTS = [
@@ -341,6 +354,9 @@ const LISTING_FILTER_DEFAULTS = {
 function OffersContent() {
   const router = useRouter()
   const { user } = useAuth()
+  // The viewer IS the seller here — their shop slug names the seller on
+  // currency offer links (`?seller=`).
+  const mySellerSlug = sellerShopSlug(user?.profile as SellerIdentityInput | undefined)
   const searchParams = useSearchParams()
 
   const type: OfferType = (() => {
@@ -567,7 +583,7 @@ function OffersContent() {
     }
   }
   const copyUrl = (l: Listing) => {
-    void navigator.clipboard?.writeText(`${window.location.origin}${publicPath(l)}`)
+    void navigator.clipboard?.writeText(`${window.location.origin}${publicPath(l, mySellerSlug)}`)
     toast.success('Public link copied')
   }
   const ids = () => Array.from(selected)
@@ -635,7 +651,7 @@ function OffersContent() {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l), '_blank')}>
+        <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l, mySellerSlug), '_blank')}>
           <ExternalLink className="h-4 w-4" /> View Public Offer
         </DropdownMenuItem>
         <DropdownMenuItem className={ITEM_CLS} onClick={() => copyUrl(l)}>

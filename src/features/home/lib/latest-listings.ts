@@ -1,6 +1,7 @@
 // Cookie-free: the homepage is static (ISR). The cookie client calls
 // cookies(), which would force it to render per request.
 import { createAnonClient } from '@/lib/supabase/anon'
+import { listingUrl } from '@/lib/listings/url'
 
 export interface LatestListing {
   id: string
@@ -72,7 +73,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
       `id, title, price, images, slug, created_at, quantity, delivery_time,
        game:games!inner(id, slug, name, is_active, image_url),
        category:game_categories!listings_game_category_id_fkey!inner(slug, name, type),
-       seller:public_profiles!listings_seller_id_fkey!inner(is_test)`,
+       seller:public_profiles!listings_seller_id_fkey!inner(is_test, username, shop_slug)`,
     )
     .eq('status', 'active')
     .eq('seller.is_test', false)
@@ -91,6 +92,7 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     delivery_time: string | null
     game: { id: string; slug: string; name: string; image_url: string | null }
     category: { slug: string; name: string; type: string }
+    seller: { username: string | null; shop_slug: string | null } | null
   }
 
   const rows = (data ?? []) as unknown as Row[]
@@ -130,8 +132,9 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     gameName: row.game.name,
     categoryType: row.category.type,
     categoryLabel: row.category.name || row.category.slug,
-    // Listing detail route: /{game}/{category}/{listing}
-    href: `/${row.game.slug}/${row.category.slug}/${row.slug ?? row.id}`,
+    // Listing detail route /{game}/{category}/{listing} — or, for currency
+    // (no listing page), the currency page with this seller's offer pinned.
+    href: listingUrl({ ...row, slug: row.slug ?? row.id }),
     listedAt: row.created_at,
     cardType: cardTypeFor(row.category.type),
     quantity: row.quantity ?? null,

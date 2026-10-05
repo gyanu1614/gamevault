@@ -53,7 +53,10 @@ export const getCachedGameDirectory = unstable_cache(
         .select('id, slug, name, image_url, is_active, sort_order')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-        .limit(24),
+        // The whole active pool (a few hundred tiny rows): the footer ranks it
+        // by marketplace activity (footerGameRanking.ts) and keeps the top
+        // FOOTER_MAX_GAMES — a sort_order cap here would hide trending games.
+        .limit(1000),
       supabase
         .from('game_categories')
         .select('game_id, slug, name, type, sort_order, is_enabled')

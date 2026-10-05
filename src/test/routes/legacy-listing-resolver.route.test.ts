@@ -51,8 +51,15 @@ describe('ROUTE-006 — /listings/[id] is a server resolver', () => {
 })
 
 describe('ROUTE-006 — link sources point at the canonical URL', () => {
+  // The storefront renders the shared marketplace ItemCard (canonical
+  // /{game}/{category}/{slug} href from listingToOffer) — no shop-local card.
+  it('src/components/shop/StoreOffers.tsx links through the shared ItemCard', () => {
+    const s = readFileSync('src/components/shop/StoreOffers.tsx', 'utf8')
+    expect(s).toMatch(/<ItemCard\b/)
+    expect(s).not.toMatch(/\/listings\//)
+  })
+
   for (const file of [
-    'src/components/shop/SellerStorefront.tsx',
     'src/components/listing-card.tsx',
   ]) {
     it(`${file} no longer hardcodes /listings/\${id}`, () => {

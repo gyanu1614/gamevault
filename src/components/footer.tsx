@@ -21,6 +21,7 @@ import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
+import { DISCORD_INVITE_URL } from '@/lib/config/social'
 
 /* ── Company details (UK e-commerce law + payment-provider requirement) ── */
 
@@ -257,7 +258,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
                 Live Chat
               </Link>
               <a
-                href="https://discord.gg/dropmarket"
+                href={DISCORD_INVITE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-[rgba(88,101,242,0.35)] bg-[rgba(88,101,242,0.14)] px-4 py-2.5 text-[13.5px] font-medium text-white transition-colors hover:bg-[rgba(88,101,242,0.24)]"

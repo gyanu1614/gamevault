@@ -29,6 +29,7 @@ import { cache } from 'react'
 
 import { createClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/ids'
+import { listingUrl } from '@/lib/listings/url'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -56,9 +57,11 @@ const resolveListing = cache(async function resolveListing(id: string) {
     .from('listings')
     .select(
       `
+      id,
       slug,
       game:games!listings_game_id_fkey(slug),
-      category:game_categories!listings_game_category_id_fkey(slug)
+      category:game_categories!listings_game_category_id_fkey(slug, type),
+      seller:public_profiles!listings_seller_id_fkey(username, shop_slug)
     `,
     )
     .eq('id', id)
@@ -73,7 +76,9 @@ const resolveListing = cache(async function resolveListing(id: string) {
   // three there is no canonical URL to send anyone to.
   if (!listingSlug || !gameSlug || !categorySlug) return null
 
-  return { gameSlug, categorySlug, listingSlug }
+  // The shared builder: the listing page, or — for a currency listing, which
+  // has no listing page — the currency page with the seller's offer pinned.
+  return { gameSlug, categorySlug, listingSlug, href: listingUrl(data) }
 })
 
 /**
@@ -88,10 +93,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Listing Not Found', robots: { index: false, follow: false } }
   }
 
-  const { gameSlug, categorySlug, listingSlug } = resolved
   return {
     robots: { index: false, follow: true },
-    alternates: { canonical: `/${gameSlug}/${categorySlug}/${listingSlug}` },
+    alternates: { canonical: resolved.href },
   }
 }
 
@@ -102,6 +106,5 @@ export default async function LegacyListingRedirect({ params }: PageProps) {
   // A real 404 with a real status code — not a 200 with an error card.
   if (!resolved) notFound()
 
-  const { gameSlug, categorySlug, listingSlug } = resolved
-  permanentRedirect(`/${gameSlug}/${categorySlug}/${listingSlug}`)
+  permanentRedirect(resolved.href)
 }

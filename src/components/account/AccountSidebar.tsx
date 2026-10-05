@@ -26,6 +26,7 @@ import {
   Ban,
   ChevronDown,
 } from 'lucide-react'
+import { MedalIcon } from '@phosphor-icons/react/dist/csr/Medal'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 interface NavItem {
@@ -157,6 +158,8 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
       ] },
     { label: 'Messages',    href: '/account/messages',   icon: MessageSquare, badge: unreadCount ? unreadCount.toString() : undefined, requiresSeller: true, showForBuyer: false, showForSeller: true },
     { label: 'Wallet',      href: '/account/wallet',     icon: Wallet,          requiresSeller: true, showForBuyer: false, showForSeller: true },
+    // Seller rank ladder (volume tiers → fee + perks). Same drawer tree on phones.
+    { label: 'Tiers',       href: '/account/tiers',      icon: MedalIcon,       requiresSeller: true, showForBuyer: false, showForSeller: true },
   ]
 
   const getAccountToolItems = (): NavItem[] => {

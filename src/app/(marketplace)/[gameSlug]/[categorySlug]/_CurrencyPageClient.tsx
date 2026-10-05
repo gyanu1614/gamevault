@@ -8,7 +8,7 @@
  * and the design handoff README for spec details.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { useAuth } from '@/hooks/use-auth'
@@ -38,6 +38,8 @@ import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { BuyButton, BuySweep, FACE as BUY_FACE } from '@/components/marketplace/BuyButton'
 import { sellerStatLine } from '@/lib/seller/stat-line'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -300,6 +302,28 @@ export default function CurrencyPageClient({
     }, 0)
   }
 
+  // Currency offer links (`?seller=&offer=` — the listing URL 308s here, and
+  // My Offers / store / cards link here directly): make that seller's offer
+  // the active one; qty then resets to its minimum (effect above). Read after
+  // hydration through SearchParamsBridge so the page stays static. A dead or
+  // unknown link matches nothing and the recommended pick stays.
+  const appliedLinkRef = useRef<string | null>(null)
+  const applyOfferLink = useCallback(
+    (params: URLSearchParams) => {
+      const link = readCurrencyOfferLink(params)
+      const key = `${link.offerId ?? ''}|${link.sellerSlug ?? ''}`
+      if (key === '|' || appliedLinkRef.current === key) return
+      appliedLinkRef.current = key
+      const offer = findLinkedOffer(allOffers, link, {
+        id: (o) => o.id,
+        sellerSlug: (o) => o.sellerSlug,
+        price: (o) => o.pricePerUnit,
+      })
+      if (offer) setActiveId(offer.id)
+    },
+    [allOffers],
+  )
+
   const [showBuyBar, setShowBuyBar] = useState(false)
   useEffect(() => {
     const el = heroRef.current
@@ -320,6 +344,7 @@ export default function CurrencyPageClient({
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
     <main className="relative isolate min-h-screen pb-24 pt-3 sm:pt-4">
+      <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
             with its own external title and gap, so the page reads as a
@@ -357,6 +382,7 @@ export default function CurrencyPageClient({
             onBuy={() => goToCheckout(activeOffer.id, qty)}
             buying={navigating}
             isOwnOffer={isOwnOffer}
+            picked={activeOffer.id !== data.hero.id}
           />
         </div>
 
@@ -596,7 +622,7 @@ function VariantSelector({ variant }: { variant: CurrencyPageData['currency']['v
 }
 
 function HeroCard({
-  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer,
+  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer, picked = false,
 }: {
   offer: Offer
   unitLabel: string
@@ -610,6 +636,9 @@ function HeroCard({
   /** V14m — When true, the viewer is the seller — hide Buy now and show
    *  an "own listing" notice with a link to edit it. */
   isOwnOffer: boolean
+  /** The buyer (or a seller's offer link) chose this offer over the
+   *  recommended one — the badge then reads "Selected". */
+  picked?: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const reduceMotion = useReducedMotion()
@@ -764,7 +793,7 @@ function HeroCard({
                   the Buy CTA). Warm gold pairs cleanly with the black + lime. */}
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2.5 py-1 text-[12px] font-semibold text-amber-300">
                 <StarRoundedIcon style={{ fontSize: 14 }} />
-                Recommended
+                {picked ? 'Selected' : 'Recommended'}
               </span>
             </div>
             {purchasePanel}

@@ -27,7 +27,7 @@
  * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
@@ -53,6 +53,8 @@ import type { CurrencyFaq, CurrencyStep } from './_CurrencyMeta'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { BuyButton } from '@/components/marketplace/BuyButton'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
 
 export interface BundleOffer {
   listingId: string
@@ -200,6 +202,32 @@ export default function BundleCurrencyPageClient({
       .sort((a, b) => a.pricePerBundle - b.pricePerBundle)
   }, [data.offers, bundleId, region, platform])
 
+  // Currency offer links (`?seller=&offer=` — the listing URL 308s here, and
+  // My Offers / store / cards link here directly): pin that seller's offer by
+  // selecting its bundle, region and platform. Read after hydration through
+  // SearchParamsBridge so the page stays static. A dead or unknown link
+  // matches nothing and the normal recommended pick stays.
+  const appliedLinkRef = useRef<string | null>(null)
+  const applyOfferLink = useCallback(
+    (params: URLSearchParams) => {
+      const link = readCurrencyOfferLink(params)
+      const key = `${link.offerId ?? ''}|${link.sellerSlug ?? ''}`
+      if (key === '|' || appliedLinkRef.current === key) return
+      appliedLinkRef.current = key
+      const offer = findLinkedOffer(data.offers, link, {
+        id: (o) => o.listingId,
+        sellerSlug: (o) => o.sellerSlug,
+        price: (o) => o.pricePerBundle,
+      })
+      if (!offer) return
+      setBundleId(offer.bundleId)
+      if (offer.region && data.regions.some((r) => r.value === offer.region)) setRegion(offer.region)
+      if (offer.platform && data.platforms.some((p) => p.value === offer.platform)) setPlatform(offer.platform)
+      setPickedListingId(offer.listingId)
+    },
+    [data.offers, data.regions, data.platforms],
+  )
+
   const bestOffer = offersForSelection[0] ?? null
   // V19/P24/P7.k — Active offer the right-side panel renders. When
   // the buyer clicks Select on another row, swap to that listing;
@@ -255,6 +283,7 @@ export default function BundleCurrencyPageClient({
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
     <main className="relative isolate min-h-screen pb-24">
+      <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
         <div className="relative mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:px-8">
