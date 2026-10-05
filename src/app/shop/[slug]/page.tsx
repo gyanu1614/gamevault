@@ -30,6 +30,7 @@ import {
   type StoreReview,
 } from '@/lib/shop/storefront-model'
 import { resolveStoreBanner } from '@/lib/shop/store-banner'
+import { currencyOfferTitle, type CurrencyTitleConfig } from '@/lib/orders/display-title'
 
 // Public page — use service role to bypass RLS on seller_applications
 function getServiceClient() {
@@ -229,7 +230,7 @@ export default async function SellerShopPage({ params }: PageProps) {
       .select(
         `
         id, slug, title, price, original_price, delivery_time, quantity,
-        is_unlimited, images, template_data, created_at, sales,
+        is_unlimited, images, template_data, created_at, sales, bundle_id,
         game:games(id, name, slug),
         category:game_categories!listings_game_category_id_fkey(slug, name, type)
       `,
@@ -283,14 +284,43 @@ export default async function SellerShopPage({ params }: PageProps) {
   }
 
   const rows = (listingsRes.data ?? []) as unknown as ShopListingRow[]
+  // Currency offers are named by what they sell ("2,800 V-Bucks"), which
+  // lives in the game's currency config (bundles, unit label): one read for
+  // the currency games on this shop.
+  const currencyGameIds = [
+    ...new Set(rows.filter((r) => r.category?.type === 'currency' && r.game?.id).map((r) => r.game!.id)),
+  ]
+  const currencyConfigs = new Map<string, CurrencyTitleConfig>()
+  if (currencyGameIds.length > 0) {
+    const { data } = await supabase
+      .from('category_configs')
+      .select('game_id, config')
+      .eq('category_type', 'currency')
+      .in('game_id', currencyGameIds)
+    for (const c of (data ?? []) as Array<{ game_id: string; config: CurrencyTitleConfig | null }>) {
+      if (c.config) currencyConfigs.set(c.game_id, c.config)
+    }
+  }
+
   const offers: StoreOffer[] = rows
     .filter((r) => r.game?.slug)
     .map((r) => {
       const offer = listingToOffer({ ...r, seller: cardSeller } as RawListing, EMPTY_TAXONOMY)
       const categoryName = r.category?.name?.trim() || 'Other'
+      const name =
+        r.category?.type === 'currency'
+          ? currencyOfferTitle({
+              title: r.title,
+              isCurrency: true,
+              gameName: r.game!.name,
+              categoryName: r.category?.name,
+              currencyConfig: currencyConfigs.get(r.game!.id),
+              bundleId: r.bundle_id,
+            }) || offer.name
+          : offer.name
       return {
         // Top line of the card: "Game · Category" (no per-game taxonomy here).
-        offer: { ...offer, breadcrumb: [r.game!.name, categoryName] },
+        offer: { ...offer, name, breadcrumb: [r.game!.name, categoryName] },
         game: { id: r.game!.id, slug: r.game!.slug, name: r.game!.name },
         category: { slug: r.category?.slug ?? 'other', name: categoryName, type: r.category?.type ?? null },
         createdAt: r.created_at,
@@ -351,6 +381,7 @@ interface ShopListingRow {
   template_data: Record<string, unknown> | null
   created_at: string
   sales: number | null
+  bundle_id: string | null
   game: { id: string; name: string; slug: string } | null
   category: { slug: string | null; name: string | null; type: string | null } | null
 }
