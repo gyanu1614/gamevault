@@ -88,3 +88,7 @@ No item is `seasonal`. MM2 event items do not come back in later events: each Ha
 - Laser (Vintage) is a different item from the Godly Laser in Gun Box 3. Its MM1 price is shown in Points only, because the wiki gives two Cash prices (15 and 20).
 - The Vintage weapons (Laser, Phaser, Ghost, Blood, Shadow, Cowboy, Golden, Splitter, Prince, America) came from the Murder Mystery 1 shop. MM1 was replaced by MM2 on Dec 25, 2014.
 - Fire pets and Chroma Fire pets are Godly **pets**, not weapons. The note says so.
+
+## Correction 2026-10-05 (from the box research)
+- Common Egg Fire pets: the in-game "Chances Per Item" screen (screenshot: https://x.com/Colbemo/status/2094849366645203424) splits the 0.2% Godly tier across 7 pets → about 0.029% each; one Chroma line at 0.004% is shared by the 7 Chroma Fire pets → about 0.00057% each. The wiki's 0.2% per pet was wrong.
+- Mystery Box 2 (Lightbringer, Darkbringer, their Chromas): the wiki says 0.2% each, but under the in-game split rule it could be 0.1% each; no screenshot of this box, so no rate is quoted (odds removed).

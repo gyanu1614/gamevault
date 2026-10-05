@@ -219,9 +219,8 @@
     "status": "obtainable",
     "method": "Unboxed from Mystery Box 2 in the in-game Shop.",
     "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
-    "odds": "0.2% per spin",
     "released": "March 2020 update",
-    "note": "Chroma Lightbringer drops from the same box at 0.004%. Darkbringer is the other Godly in Mystery Box 2 (also 0.2%).",
+    "note": "Mystery Box 2 holds two Godlies (Lightbringer and Darkbringer) and their Chromas. The wiki lists 0.2% each, but the in-game odds screen splits a tier between its items, and we could not confirm this box, so we don’t quote a rate.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Lightbringer",
       "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_2",
@@ -497,9 +496,8 @@
     "status": "obtainable",
     "method": "Unboxed from Mystery Box 2 in the in-game Shop.",
     "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
-    "odds": "0.2% per spin",
     "released": "March 2020 update",
-    "note": "Chroma Darkbringer drops from the same box at 0.004%. Lightbringer is the other Godly in Mystery Box 2 (also 0.2%).",
+    "note": "Mystery Box 2 holds two Godlies (Lightbringer and Darkbringer) and their Chromas. The wiki lists 0.2% each, but the in-game odds screen splits a tier between its items, and we could not confirm this box, so we don’t quote a rate.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Darkbringer",
       "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_2",
@@ -668,9 +666,8 @@
     "status": "obtainable",
     "method": "Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
-    "odds": "0.004% per spin",
     "released": "March 2020 update",
-    "note": "The regular Lightbringer drops from the same box at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "Mystery Box 2 holds two Godlies (Lightbringer and Darkbringer) and their Chromas. The wiki lists 0.2% each, but the in-game odds screen splits a tier between its items, and we could not confirm this box, so we don’t quote a rate.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Lightbringer",
       "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_2",
@@ -1387,9 +1384,8 @@
     "status": "obtainable",
     "method": "Unboxed from Mystery Box 2 in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins, 100 Diamonds or 1 Mystery Key per spin",
-    "odds": "0.004% per spin",
     "released": "March 2020 update",
-    "note": "The regular Darkbringer drops from the same box at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "Mystery Box 2 holds two Godlies (Lightbringer and Darkbringer) and their Chromas. The wiki lists 0.2% each, but the in-game odds screen splits a tier between its items, and we could not confirm this box, so we don’t quote a rate.",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Darkbringer",
       "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_2",
@@ -2703,13 +2699,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Cat hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Cat",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -2720,13 +2717,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Bat hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bat",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3001,13 +2999,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Fox hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Fox",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3018,13 +3017,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Bunny hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Bunny",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3035,13 +3035,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Bear hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bear",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3052,13 +3053,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Bunny hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Bunny",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3069,13 +3071,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Pig hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Pig",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3150,13 +3153,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Dog hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Dog",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3167,13 +3171,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Cat hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Cat",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3184,13 +3189,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop (Chroma drop).",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.004% per hatch",
+    "odds": "0.00057% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "The regular Fire Fox hatches from the same egg at 0.2%; the Chroma is about 50x rarer, so most players trade or buy it.",
+    "note": "The Common Egg has one Chroma line at 0.004% shared by its 7 Fire pets, so a specific Chroma Fire pet is about 0.00057% per hatch (in-game \"Chances Per Item\" screen).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Chroma_Fire_Fox",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3217,13 +3223,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Bat hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Bat",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3295,13 +3302,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Bear hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Bear",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3312,13 +3320,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Pig hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Pig",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
@@ -3329,13 +3338,14 @@
     "status": "obtainable",
     "method": "Hatched from the Common Egg in the in-game Shop.",
     "costs": "1,000 Coins or 100 Diamonds per hatch",
-    "odds": "0.2% per hatch",
+    "odds": "0.029% per hatch",
     "released": "2019 (Season 1 update)",
-    "note": "A Godly pet. Chroma Fire Dog hatches from the same egg at 0.004%.",
+    "note": "The Common Egg splits its 0.2% Godly chance evenly across 7 Fire pets, so a specific one is about 0.029% per hatch (in-game \"Chances Per Item\" screen, Sep 2026).",
     "sources": [
       "https://murder-mystery-2.fandom.com/wiki/Fire_Dog",
       "https://murder-mystery-2.fandom.com/wiki/Common_Egg",
-      "https://murder-mystery-2.fandom.com/wiki/Shop"
+      "https://murder-mystery-2.fandom.com/wiki/Shop",
+      "https://x.com/Colbemo/status/2094849366645203424"
     ],
     "confidence": "high",
     "checked_at": "2026-10-05"
