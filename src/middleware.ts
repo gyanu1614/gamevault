@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createMiddlewareClient } from '@/lib/supabase/middleware'
 import { isProtectedPath } from '@/lib/auth/protected-routes'
+import {
+  becomeSellerRedirect,
+  hasSupabaseSessionCookie,
+  isBecomeSellerRoute,
+} from '@/lib/auth/become-seller-redirect'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -8,6 +13,31 @@ export async function middleware(request: NextRequest) {
   // Forward pathname to server components (used by admin layout for MFA gate)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
+
+  // "Become a seller" entry points (values CTAs, /{game}/sell, the sell-choice
+  // modal) — an account that already sells goes straight to the listing
+  // wizard. Only signed-in visitors pay for the lookup; anonymous ones (no
+  // Supabase auth cookie) fall straight through.
+  if (
+    isBecomeSellerRoute(pathname) &&
+    hasSupabaseSessionCookie(request.cookies.getAll().map((c) => c.name))
+  ) {
+    try {
+      const { supabase } = createMiddlewareClient(request)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: kindRaw } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>)(
+          'sell_access_kind',
+          { p_user: user.id },
+        )
+        const target = becomeSellerRedirect(typeof kindRaw === 'string' ? kindRaw : null)
+        if (target) return NextResponse.redirect(new URL(target, request.url))
+      }
+    } catch (error) {
+      // Never block the page on this convenience redirect.
+      console.error('Middleware become-seller redirect error:', error)
+    }
+  }
 
   // Routes requiring authentication — single source of truth shared with the
   // logout handler (src/lib/auth/protected-routes.ts). Broadened from the old
