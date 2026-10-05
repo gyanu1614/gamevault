@@ -81,7 +81,11 @@ const SEED: Record<string, any[]> = {
 }
 const recorder = createSupabaseRecorder(SEED)
 recorder.client.rpc = async () => ({ data: null, error: null })
-vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
+vi.mock('@/lib/supabase/anon', () => ({
+  createAnonClient: () => recorder.client,
+  // Values reads go through the tagged client (lib/values/read-client.ts).
+  createTaggedAnonClient: () => recorder.client,
+}))
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => recorder.client }))
 
 // Each route test imports the REAL page module (and its component tree) on first

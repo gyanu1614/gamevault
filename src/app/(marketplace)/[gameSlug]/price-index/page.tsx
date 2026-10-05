@@ -18,7 +18,7 @@ import { TrendDownIcon } from '@phosphor-icons/react/dist/ssr/TrendDown'
 import { cn } from '@/lib/utils'
 import { HubSection } from '@/components/values/HubSection'
 import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_LABEL } from '@/components/values/styles'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
@@ -50,7 +50,7 @@ type TopValue = { slug: string; name: string; rarity: string; priceUsd: number }
 type Mover = { slug: string; name: string; from: number; to: number; pct: number }
 
 async function getTopValues(): Promise<TopValue[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('steal-a-brainrot')
   const { data } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,market_value_usd,mutation_slug')
@@ -73,7 +73,7 @@ async function getTopValues(): Promise<TopValue[]> {
  * Returns [] when there's <2 distinct dates (page shows a "collecting" note).
  */
 async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[]; days: number }> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('steal-a-brainrot')
   const { data: mut } = await supabase
     .from('sab_mutations')
     .select('id')

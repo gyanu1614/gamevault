@@ -4,7 +4,9 @@
  * Mirrors the SAB Eldorado collector, adapted to Adopt Me:
  *   - gameId 201 (SAB was 259), category CustomItem
  *   - variant comes from the offer's structured "Traits" attribute, not the
- *     title — cleaner than SAB's title parsing
+ *     title — cleaner than SAB's title parsing. Eldorado's codes: None, F, R,
+ *     FR / N (= NEON), NF, NR, NFR / M (= Mega Neon), MF, MR, MFR. The
+ *     single-potion neon/mega combos have no ladder column and are dropped.
  *
  * For each pet in adopt_me_pets it queries the offers API filtered by the
  * CANONICAL pet identity (tradeEnvironmentValue2 = the exact Item Name), walks
@@ -52,7 +54,7 @@ import {
 } from './lib/adoptme-eldorado.mjs'
 
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/eldorado-cash-latest.json'
-const COLLECTOR_VERSION = 2 // 2 = shared cleaning lib + shape-tolerant trait/Item name
+const COLLECTOR_VERSION = 3 // 3 = Eldorado trait N is NEON (was Normal); NF/NR/MF/MR combo forms dropped
 
 function loadEnv() {
   // No-op when .env.local is absent (CI uses GitHub-secret env vars).

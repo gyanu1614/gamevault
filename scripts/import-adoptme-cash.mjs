@@ -61,11 +61,10 @@ const PUBLISHABLE_VARIANTS = new Set([
 ])
 
 // The cash feeds to pool. Any that exist are merged; each listing keeps its own
-// source so the cron can weigh/label per marketplace.
-const DEFAULT_FEEDS = [
-  'data/adopt-me-feeds/eldorado-cash-latest.json',
-  'data/adopt-me-feeds/u7buy-cash-latest.json',
-]
+// source so the cron can weigh/label per marketplace. u7buy is not pooled any
+// more: its listings carry no review counts, so the reputable pricer dropped
+// every one (it never moved a price) — a stale u7buy file would only add noise.
+const DEFAULT_FEEDS = ['data/adopt-me-feeds/eldorado-cash-latest.json']
 
 function readFeedIfExists(path) {
   try {

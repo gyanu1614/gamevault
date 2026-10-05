@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { getCachedGridPrices } from '@/lib/sab/priceCache'
 import { JsonLd, breadcrumbList, itemList, faqPage } from '@/lib/seo/jsonld'
 import { ValuesSeo, valuesFaq } from './_ValuesSeo'
@@ -206,7 +206,7 @@ export interface MoverItem {
  * the section self-hides rather than inventing movement.
  */
 async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('steal-a-brainrot')
 
   const since = new Date()
   since.setUTCDate(since.getUTCDate() - 8)
@@ -270,7 +270,7 @@ async function getBiggestMovers(limit = 3): Promise<MoverItem[]> {
 }
 
 async function getBrainrots(): Promise<BrainrotDirectoryItem[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('steal-a-brainrot')
 
   // Default-mutation prices + all priced mutations come from the cached, tagged
   // reader (sab_price_display, indexed → ~5ms). Tagged so the whole grid

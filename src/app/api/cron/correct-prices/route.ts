@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
   // Prices just changed (sab_price_display was refreshed inside the SAB run).
   // Revalidate the price-tagged ISR pages so they re-read the fresh snapshot on
   // their next request instead of serving up to an hour of stale cache. Reads
-  // opt in via getCachedPrices() (unstable_cache + PRICE_CACHE_TAG); untagged
-  // pages still refresh on their normal 1h ISR cycle.
+  // opt in via getCachedGridPrices() (tagged fetch carrying PRICE_CACHE_TAG,
+  // lib/sab/priceCache.ts); the values publish step covers the rest.
   try {
     revalidateTag(PRICE_CACHE_TAG)
   } catch (error) {

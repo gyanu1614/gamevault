@@ -12,8 +12,10 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { RepriceOptions, RepriceResult } from '@/lib/pricing/registry'
 import {
-  correctAdoptMePrices,
+  planAdoptMeCorrection,
+  type AdoptMeLadderFlag,
   type AdoptMeVariantCorrection,
+  type StoredAdoptMePrice,
 } from '@/lib/pricing/adopt-me-correction'
 import type { RawListing } from '@/lib/pricing/reputable-adapter'
 import { fetchAllRows } from '@/lib/db/fetch-all'
@@ -76,8 +78,6 @@ export async function runAdoptMeCorrection(
     reviews: toNumber(row.reviews),
   }))
 
-  const corrections: AdoptMeVariantCorrection[] = correctAdoptMePrices(listings)
-
   // What the pages show today, so only rows that actually moved are written
   // (T1). A crawl that re-confirms the same price must not rewrite the row —
   // it used to UPDATE every priced pet-variant, one request each, every run.
@@ -100,6 +100,17 @@ export async function runAdoptMeCorrection(
   }
   const existing = new Map<string, ValueRow>()
   for (const row of existingData ?? []) existing.set(`${row.pet_id}:${row.variant}`, row)
+
+  // The pet's whole published ladder goes into the sanity check: this run's
+  // prices plus every OBSERVED price already on a page. A stored value that
+  // inverts against today's evidence (caterpillar N $59.54 left over from the
+  // Neon-as-Normal run) is unpublished, not kept just because nothing
+  // re-priced it.
+  const plan = planAdoptMeCorrection(listings, storedObservedPrices(existing.values()))
+  const corrections: AdoptMeVariantCorrection[] = plan.corrections
+  if (plan.placeholdersDropped) {
+    console.log(`Adopt Me: ignored ${plan.placeholdersDropped} placeholder listing(s) >10x the next offer`)
+  }
 
   // Update each priced pet+variant whose numbers differ. cash_value_usd is set
   // to the market (average) so the existing values page / snapshot keep
@@ -177,11 +188,17 @@ export async function runAdoptMeCorrection(
     historyReconciled += batch.length
   }
 
+  // Ladder inversions: log every withheld form, and unpublish the ones that
+  // still carry an observed price on the page (a stale value, or a fresh
+  // outlier whose previous run's price would otherwise stay up).
+  const unpublished = await unpublishLadderOutliers(admin, plan.flagged, existing, startedAt)
+
   // Everything the pet pages display after this run (T1 publish step).
   const publishedPrices = await adoptMePublishedPrices(admin, existing)
 
   console.log(
-    `✅ Adopt Me corrections: ${updated} written, ${unchanged} unchanged, of ${corrections.length} pet-variants priced from ${rawRows.length} active listings`,
+    `✅ Adopt Me corrections: ${updated} written, ${unchanged} unchanged, of ${corrections.length} pet-variants priced from ${rawRows.length} active listings; ` +
+      `${plan.flagged.length} ladder outlier(s) withheld, ${unpublished} stored price(s) unpublished`,
   )
 
   return {
@@ -190,8 +207,85 @@ export async function runAdoptMeCorrection(
     candidates: corrections.length,
     active_listings: rawRows.length,
     history_reconciled: historyReconciled,
+    ladder_flagged: plan.flagged.length,
+    ladder_unpublished: unpublished,
+    placeholders_dropped: plan.placeholdersDropped,
     publishedPrices,
   }
+}
+
+/** Observed (is_estimated = false) prices on the pages now, for the ladder check. */
+export function storedObservedPrices(rows: Iterable<ValueRow>): StoredAdoptMePrice[] {
+  const out: StoredAdoptMePrice[] = []
+  for (const row of rows) {
+    const average = toNumber(row.average_usd) ?? toNumber(row.cash_value_usd)
+    if (row.is_estimated !== false || average == null) continue
+    out.push({
+      petId: row.pet_id,
+      variant: row.variant,
+      averageUsd: average,
+      cheapestUsd: toNumber(row.cheapest_usd),
+      reputableCount: toNumber(row.reputable_count),
+    })
+  }
+  return out
+}
+
+/** The row a ladder outlier is reset to: no cash price, back to estimate-pending. */
+export const UNPUBLISHED_VALUE: Omit<ValueRow, 'pet_id' | 'variant'> = {
+  cash_value_usd: null,
+  cheapest_usd: null,
+  average_usd: null,
+  reputable_count: null,
+  listings_tracked: 0,
+  confidence: 'low',
+  is_estimated: true,
+}
+
+/**
+ * Log each flagged form; clear the ones whose row still shows an OBSERVED
+ * price (estimates are left alone) and drop TODAY's history point for them,
+ * so the sparkline doesn't keep the inverted value. Earlier days stay — they
+ * record what the page showed then.
+ */
+async function unpublishLadderOutliers(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  flagged: AdoptMeLadderFlag[],
+  existing: Map<string, ValueRow>,
+  startedAt: string,
+): Promise<number> {
+  const historyDate = startedAt.slice(0, 10)
+  let cleared = 0
+  for (const f of flagged) {
+    const key = `${f.petId}:${f.variant}`
+    const before = existing.get(key)
+    const observed = before?.is_estimated === false && toNumber(before.cash_value_usd) != null
+    console.warn(
+      `Adopt Me ladder: ${f.petId}/${f.variant} $${f.averageUsd.toFixed(2)} ` +
+        `(${f.fresh ? 'this run' : 'stored'}) out of order — above [${f.above.join(',')}] below [${f.below.join(',')}]` +
+        (observed ? ' → unpublished' : ' → withheld'),
+    )
+    if (!before || !observed) continue
+    const { error } = await (admin as any)
+      .from('adopt_me_pet_values')
+      .update({ ...UNPUBLISHED_VALUE, last_priced_at: startedAt })
+      .eq('pet_id', f.petId)
+      .eq('variant', f.variant)
+    if (error) {
+      console.error(`Adopt Me unpublish ${key}: ${error.message}`)
+      continue
+    }
+    cleared += 1
+    existing.set(key, { ...before, ...UNPUBLISHED_VALUE })
+    const { error: historyError } = await (admin as any)
+      .from('adopt_me_price_history')
+      .delete()
+      .eq('pet_id', f.petId)
+      .eq('variant', f.variant)
+      .eq('history_date', historyDate)
+    if (historyError) console.error(`Adopt Me unpublish history ${key}: ${historyError.message}`)
+  }
+  return cleared
 }
 
 type ValueRow = {

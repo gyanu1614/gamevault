@@ -35,19 +35,33 @@ export const SCAM_WORDS =
 /** Every form on our 8-step ladder is publishable (trait-primary detection). */
 export const PUBLISHABLE_VARIANTS = new Set(['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR'])
 
-// Eldorado Traits code → our variant. "M" is Eldorado's Mega Neon code. Combo
-// forms (NR, MR, MF, NF) have no column on our ladder and stay unmapped.
+// Eldorado Traits code → our variant. Eldorado's options are a 3 × 4 grid:
+//   None  F   R   FR      (no neon)
+//   N     NF  NR  NFR     (N = NEON — not Normal)
+//   M     MF  MR  MFR     (M = Mega Neon)
+// "None" is the plain pet, but sellers also file Neons/FRs there, so a None
+// listing takes its variant from the title (and is dropped without one).
+// Until 2026-10-05 "N" was mapped to Normal: every "N Caterpillar" (a Neon)
+// priced the Normal column — caterpillar N $59.54 against a ~$14 Normal.
 export const TRAIT_TO_VARIANT = {
-  N: 'N',
   F: 'F',
   R: 'R',
   FR: 'FR',
+  N: 'NEON',
   NEON: 'NEON',
   NFR: 'NFR',
-  MEGA: 'MEGA',
   M: 'MEGA',
+  MEGA: 'MEGA',
   MFR: 'MFR',
 }
+
+/**
+ * Neon/Mega + ONE potion (Neon Fly, Neon Ride, Mega Fly, Mega Ride). Real
+ * Eldorado forms with no column on our 8-step ladder. A listing tagged with
+ * one is dropped outright — falling through to the title priced "Neon Ride
+ * X" as a plain Ride and "Mega Neon Ride X" as a plain Mega.
+ */
+export const COMBO_TRAITS = new Set(['NF', 'NR', 'MF', 'MR'])
 
 export const DEFAULT_MIN_ACCOUNT_AGE_DAYS = 120
 
@@ -109,7 +123,7 @@ export function traitValue(offer) {
   return typeof v === 'string' ? v : v.name ?? v.id ?? null
 }
 
-/** Map an Eldorado trait code to our variant, or null if unmapped/None. */
+/** Map an Eldorado trait code to our variant, or null if unmapped/None/combo. */
 export function variantFromTrait(trait) {
   if (!trait) return null
   const key = String(trait).trim().toUpperCase()
@@ -117,22 +131,62 @@ export function variantFromTrait(trait) {
   return TRAIT_TO_VARIANT[key] ?? null
 }
 
+/** True for a Neon/Mega + single-potion trait code (NF, NR, MF, MR). */
+export function isComboTrait(trait) {
+  return trait != null && COMBO_TRAITS.has(String(trait).trim().toUpperCase())
+}
+
 /**
  * Infer the variant from a listing title. Most specific first; null when the
- * title gives no clear signal (we never guess).
+ * title gives no clear signal (we never guess) or names a combo form (Neon
+ * Ride, Mega Neon Fly …) that has no ladder column. `petName` is cut out
+ * first so a pet's own name ("Bluebottle Fly") never reads as a potion.
+ *
+ * @param {string} title
+ * @param {string | null} [petName]
+ * @returns {string | null}
  */
-export function variantFromTitle(title) {
-  const t = ` ${String(title).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ')} `
+export function variantFromTitle(title, petName = null) {
+  let t = ` ${normalizeName(title)} `
+  const np = normalizeName(petName)
+  if (np) t = t.split(` ${np} `).join(' ')
   const has = (re) => re.test(t)
-  if (has(/\bmfr\b/) || has(/\bmega fly ride\b/) || has(/\bmega neon fly ride\b/)) return 'MFR'
-  if (has(/\bnfr\b/) || has(/\bneon fly ride\b/)) return 'NFR'
-  if (has(/\bmega neon\b/) || (has(/\bmega\b/) && !has(/\bfr\b|fly ride/))) return 'MEGA'
-  if (has(/\bneon\b/) && !has(/\bfr\b|fly ride|fly|ride/)) return 'NEON'
-  if (has(/\bfr\b/) || has(/\bfly ride\b/)) return 'FR'
-  if (has(/\bfly\b/) && !has(/\bride\b/)) return 'F'
-  if (has(/\bride\b/) && !has(/\bfly\b/)) return 'R'
+  const fly = has(/\b(fly|flyable|flying)\b/)
+  const ride = has(/\b(ride|rideable|ridable|riding)\b/)
+  const flyRide = has(/\bfr\b|\brf\b|fly (and |n )?ride/)
+  const neon = has(/\bneon\b/)
+  const mega = has(/\bmega\b/)
+  if (has(/\bmfr\b/) || (mega && flyRide)) return 'MFR'
+  if (has(/\b(nfr|nrf)\b/) || (neon && flyRide)) return 'NFR'
+  // Neon/Mega with ONE potion is a combo form (NF/NR/MF/MR) — no column.
+  if (has(/\b(nf|nr|mf|mr)\b/)) return null
+  if (mega) return fly || ride ? null : 'MEGA'
+  if (neon) return fly || ride ? null : 'NEON'
+  if (flyRide) return 'FR'
+  if (fly && !ride) return 'F'
+  if (ride && !fly) return 'R'
   if (has(/\bnormal\b/) || has(/\bno potion\b/) || has(/\bdefault\b/)) return 'N'
   return null
+}
+
+/**
+ * The variant for one listing from its structured trait + title: TRAIT-PRIMARY,
+ * title fallback; a combo trait, no signal, or a trait/title disagreement is a
+ * reject. Shared by the cleaner and by any re-derivation of a cached crawl.
+ *
+ * @param {{ trait: string | null | undefined, title: string, petName?: string | null }} input
+ * @returns {{ variant: string } | { variant: null, reason: string }}
+ */
+export function resolveListingVariant({ trait, title, petName = null }) {
+  if (isComboTrait(trait)) return { variant: null, reason: 'combo-variant' }
+  const traitVariant = variantFromTrait(trait)
+  const titleVariant = variantFromTitle(title, petName)
+  const variant = traitVariant ?? titleVariant
+  if (!variant || !PUBLISHABLE_VARIANTS.has(variant)) return { variant: null, reason: 'no-variant' }
+  if (traitVariant && titleVariant && traitVariant !== titleVariant) {
+    return { variant: null, reason: 'variant-conflict' }
+  }
+  return { variant }
 }
 
 /** Account age in days from an ISO createdDate, or null if unknown. */
@@ -174,15 +228,11 @@ export function cleanEldoradoOffer(item, {
   const age = accountAgeDays(item.user?.createdDate, nowMs)
   if (age != null && age < minAccountAgeDays) return { ok: false, reason: 'new-account' }
 
-  // Variant: TRAIT-PRIMARY, title fallback; both present and disagreeing → drop.
+  // Variant: TRAIT-PRIMARY, title fallback; combo / none / disagreement → drop.
   const trait = traitValue(offer)
-  const traitVariant = variantFromTrait(trait)
-  const titleVariant = variantFromTitle(title)
-  const variant = traitVariant ?? titleVariant
-  if (!variant || !PUBLISHABLE_VARIANTS.has(variant)) return { ok: false, reason: 'no-variant' }
-  if (traitVariant && titleVariant && traitVariant !== titleVariant) {
-    return { ok: false, reason: 'variant-conflict' }
-  }
+  const resolved = resolveListingVariant({ trait, title, petName: petName ?? itemNameOf(offer) })
+  if (!resolved.variant) return { ok: false, reason: resolved.reason }
+  const variant = resolved.variant
 
   const price = Number(offer.pricePerUnit?.amount)
   const currency = offer.pricePerUnit?.currency

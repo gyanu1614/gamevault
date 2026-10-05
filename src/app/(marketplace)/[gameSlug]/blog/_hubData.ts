@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
@@ -42,7 +42,7 @@ export async function getHubCalcExample(
 ): Promise<HubCalcExample | null> {
   if (gameSlug !== 'adopt-me') return null
 
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient(gameSlug)
   const [petsRes, valsRes] = await Promise.all([
     fetchAllRows<any>((from, to) =>
       (supabase as any)
@@ -143,7 +143,7 @@ export interface HubStat {
 export async function getHubStatStrip(gameSlug: string): Promise<HubStat[]> {
   if (gameSlug !== 'adopt-me') return []
 
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient(gameSlug)
 
   const [petsRes, valsRes, histRes] = await Promise.all([
     fetchAllRows<any>((from, to) =>
@@ -301,7 +301,7 @@ export async function getHubTopValues(
   if (gameSlug === 'adopt-me') return getAdoptMeTopValues(limit)
   if (gameSlug !== 'steal-a-brainrot') return []
 
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient(gameSlug)
 
   const [catalogRes, priceRes] = await Promise.all([
     (supabase as any)
@@ -382,7 +382,7 @@ export async function getHubTopValues(
  * to a real page.
  */
 async function getAdoptMeTopValues(limit: number): Promise<HubTeaserItem[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('adopt-me')
 
   const [petsRes, valuesRes] = await Promise.all([
     fetchAllRows<any>((from, to) =>

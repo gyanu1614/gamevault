@@ -8,6 +8,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { HUB_GROUND, VALUE_SURFACE } from '@/components/values/styles'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
@@ -73,7 +74,7 @@ const getGame = cache(async function getGame(gameSlug: string): Promise<HubGame 
  */
 async function getPricedItemCount(gameSlug: string): Promise<number> {
   if (gameSlug !== 'steal-a-brainrot') return 0
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient(gameSlug)
   const { count, error } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_id', { count: 'exact' })

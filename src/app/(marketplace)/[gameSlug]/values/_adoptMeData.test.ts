@@ -58,6 +58,8 @@ function query(table: string) {
 
 vi.mock('@/lib/supabase/anon', () => ({
   createAnonClient: () => ({ from: (table: string) => query(table) }),
+  // The loaders read through the tagged client (lib/values/read-client.ts).
+  createTaggedAnonClient: () => ({ from: (table: string) => query(table) }),
 }))
 
 function seed(petCount: number) {

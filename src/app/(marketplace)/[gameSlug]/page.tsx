@@ -14,6 +14,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { isGameHubIndexable } from '@/lib/games/indexability'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
 import { stripBrand } from '@/lib/seo/title'
@@ -178,7 +179,8 @@ export type SabTopValue = {
 
 // Top brainrots by live default cash value, for the SAB landing carousel.
 async function getSabTopValues(): Promise<SabTopValue[]> {
-  const supabase = createAnonClient()
+  // A price list: cached under the SAB list tags so a publish refreshes it.
+  const supabase = createValueListReadClient('steal-a-brainrot')
   const { data: rows } = await (supabase as any)
     .from('sab_price_display')
     .select('brainrot_slug,brainrot_name,rarity,image_url,market_value_usd,mutation_slug')
