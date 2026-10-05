@@ -74,6 +74,24 @@ describe('which URLs are listed', () => {
     expect(all).not.toContain(`${BASE}/steal-an-egg/values/thin-egg`)
   })
 
+  it('lists a value-list hub item (MM2) only when it has a page: high tier, priced, enough listings', () => {
+    const all = urls({
+      pipelineItems: [
+        { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
+        { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 37 },
+        { gameSlug: 'murder-mystery-2', slug: 'default-knife', rarity: 'Common', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 80 },
+        { gameSlug: 'murder-mystery-2', slug: 'thin-godly', rarity: 'Godly', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 2 },
+      ],
+    })
+    expect(all).toContain(`${BASE}/murder-mystery-2/values`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/methodology`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/harvester`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/chroma-fang`)
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/default-knife`) // commons: list rows, no page
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/thin-godly`) // < 3 listings: noindex
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/calculator`) // Step 3
+  })
+
   it('lists SAB and Adopt Me value items, and the hub pages their theme enables', () => {
     const all = urls()
     expect(all).toContain(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)

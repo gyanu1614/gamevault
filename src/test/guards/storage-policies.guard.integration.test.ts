@@ -44,6 +44,9 @@ const BUCKETS = {
   'store-banners': { public: true },
   // Game hero backgrounds (20261005000116): public read, service-role writes.
   'game-heroes': { public: true },
+  // Values catalogue art copied from wikis (20261005004438, MM2): public read,
+  // service-role writes only (scripts/copy-values-images.mjs).
+  'values-items': { public: true },
 } as const
 
 let svc: SupabaseClient

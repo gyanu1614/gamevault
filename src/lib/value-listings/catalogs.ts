@@ -8,8 +8,12 @@
 import type { ValueCatalog } from './match'
 import type { SimilarCandidate } from './stock'
 
-/** Games whose value pages use the generic `values_items` pipeline. */
-export const VALUES_PIPELINE_GAMES: ReadonlySet<string> = new Set(['steal-an-egg'])
+/**
+ * Games whose value pages use the generic `values_items` pipeline. MM2's
+ * catalogue rows only exist once the wiki import has run on that database, so
+ * until then its catalogue is empty and nothing links.
+ */
+export const VALUES_PIPELINE_GAMES: ReadonlySet<string> = new Set(['steal-an-egg', 'murder-mystery-2'])
 
 export const VALUE_CATALOG_GAMES: readonly string[] = ['steal-a-brainrot', 'adopt-me', ...VALUES_PIPELINE_GAMES]
 

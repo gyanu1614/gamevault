@@ -65,6 +65,7 @@ export function ValuesSeo({
   methodologyHref = `/${gameSlug}/values/methodology`,
   calculatorHref = `/${gameSlug}/calculator`,
   intro,
+  faq,
 }: {
   gameSlug: string
   gameName: string
@@ -72,16 +73,23 @@ export function ValuesSeo({
   unit: string
   buyHref: string
   methodologyHref?: string
-  calculatorHref?: string
+  /** null = the game has no calculator: no calculator link anywhere. */
+  calculatorHref?: string | null
   /**
    * Optional game-specific intro sections (heading + body). When omitted, the
    * default generic three-paragraph package renders. Adopt Me passes a warmer,
    * plain-English version; SAB keeps the default.
    */
   intro?: { heading: string; body: React.ReactNode }[]
+  /**
+   * Game-specific FAQ. The page MUST emit the same items as FAQPage schema.
+   * Defaults to valuesFaq(), which talks about trade value and the calculator
+   * — wrong for a game without one.
+   */
+  faq?: ValuesFaqItem[]
 }) {
   const u = unit.toLowerCase()
-  const faqItems = valuesFaq({ gameName, unit })
+  const faqItems = faq ?? valuesFaq({ gameName, unit })
 
   const defaultIntro: { heading: string; body: React.ReactNode }[] = [
     {
@@ -93,13 +101,18 @@ export function ValuesSeo({
           daily. Instead of static &quot;value points&quot; that go stale within days of an
           update, each price is a real cash value you can act on — so you never overpay, get
           lowballed, or accept a bad trade. Search any {u} to see its current value, price
-          range, and daily trend, or check a full swap in the{' '}
-          <Link
-            href={calculatorHref}
-            className={VALUES_SEO_LINK}
-          >
-            {gameName} WFL calculator
-          </Link>
+          range, and daily trend
+          {calculatorHref ? (
+            <>
+              , or check a full swap in the{' '}
+              <Link
+                href={calculatorHref}
+                className={VALUES_SEO_LINK}
+              >
+                {gameName} WFL calculator
+              </Link>
+            </>
+          ) : null}
           .
         </>
       ),
@@ -166,13 +179,15 @@ export function ValuesSeo({
         subtitle={`Everything about how ${gameName} values work, update, and translate to real money.`}
         items={faqItems}
         footer={
-          <Link
-            href={calculatorHref}
-            className={VALUE_BTN_SECONDARY}
-          >
-            Open the {gameName} calculator
-            <ArrowRightIcon size={16} weight="bold" aria-hidden />
-          </Link>
+          calculatorHref ? (
+            <Link
+              href={calculatorHref}
+              className={VALUE_BTN_SECONDARY}
+            >
+              Open the {gameName} calculator
+              <ArrowRightIcon size={16} weight="bold" aria-hidden />
+            </Link>
+          ) : undefined
         }
       />
     </div>

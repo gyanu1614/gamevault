@@ -116,3 +116,7 @@ art/cs2/
 data/value-ref-unmatched-*.csv
 # GSC report output (pnpm gsc:index-report / gsc:search-report) — never committed
 docs/audit/gsc/
+# Generic values pipeline: crawl feeds, wiki cache/catalogue, dry-run reports
+data/values-feeds/
+data/values-catalogue/
+data/mm2-dryrun/

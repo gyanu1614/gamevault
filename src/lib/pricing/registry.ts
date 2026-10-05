@@ -18,6 +18,7 @@
 import { runSabCorrection } from '@/lib/pricing/games/sab'
 import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
 import { runStealAnEggCorrection } from '@/lib/pricing/games/steal-an-egg'
+import { runMurderMystery2Correction } from '@/lib/pricing/games/murder-mystery-2'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
 
 export type RepriceOptions = {
@@ -58,6 +59,14 @@ export const PRICING_GAMES: PricingGame[] = [
     key: 'steal-an-egg',
     gameSlug: 'steal-an-egg',
     run: (options) => runStealAnEggCorrection('steal-an-egg', options),
+  },
+  // Murder Mystery 2: generic pipeline, MM2 policy (pets priced, sets not yet,
+  // placeholder trim). Its daily job is gated off until the migration is
+  // pushed — see values-pricing-daily.yml.
+  {
+    key: 'murder-mystery-2',
+    gameSlug: 'murder-mystery-2',
+    run: (options) => runMurderMystery2Correction(options),
   },
 ]
 

@@ -32,7 +32,8 @@ export function ValueItemHero({
   anchorRef?: Ref<HTMLDivElement>
   /** Per-item accent (mutation / variant colour): glow + eyebrow. */
   accent?: string
-  art?: { src: string | null; alt: string; pixelated?: boolean } | null
+  /** `caption`: a small line under the art (e.g. a CC-BY-SA image credit). */
+  art?: { src: string | null; alt: string; pixelated?: boolean; caption?: ReactNode } | null
   eyebrow?: ReactNode
   title: ReactNode
   titleAs?: 'h1' | 'h2'
@@ -72,10 +73,13 @@ export function ValueItemHero({
         >
           {art && (
             <div
-              className="mx-auto flex items-center justify-center lg:mx-0"
+              className="mx-auto flex flex-col items-center justify-center lg:mx-0"
               style={accent ? { background: `radial-gradient(closest-side, ${accent}1F, transparent 72%)` } : undefined}
             >
               <ValueArt src={art.src} alt={art.alt} size={168} pixelated={art.pixelated} priority />
+              {art.caption && (
+                <div className="mt-2 max-w-[176px] text-center text-[10.5px] leading-snug text-text-tertiary">{art.caption}</div>
+              )}
             </div>
           )}
 

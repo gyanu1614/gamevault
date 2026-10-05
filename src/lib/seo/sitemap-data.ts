@@ -22,12 +22,13 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
       ),
       fetchAllRows<{
         slug: string
+        rarity: string | null
         games: { slug: string } | null
         values_prices: { price_changed_at: string | null; sample_size: number | null } | null
       }>((from, to) =>
         db
           .from('values_items')
-          .select('id, slug, games!inner(slug), values_prices!inner(price_changed_at, sample_size)')
+          .select('id, slug, rarity, games!inner(slug), values_prices!inner(price_changed_at, sample_size)')
           .eq('is_enabled', true)
           .eq('is_priced', true)
           .order('id')
@@ -55,6 +56,7 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
       .map((r) => ({
         gameSlug: r.games!.slug,
         slug: r.slug,
+        rarity: r.rarity ?? null,
         priceChangedAt: r.values_prices?.price_changed_at ?? null,
         sampleSize: r.values_prices?.sample_size ?? null,
       })),

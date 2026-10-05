@@ -169,6 +169,7 @@ export function productAggregate({
   highPrice,
   offerCount,
   url,
+  image,
 }: {
   name: string
   description: string
@@ -178,12 +179,15 @@ export function productAggregate({
   offerCount: number
   /** Optional site-relative path of the page carrying the offers. */
   url?: string
+  /** Optional absolute image URL of the product. */
+  image?: string | null
 }) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name,
     description,
+    ...(image ? { image: [image] } : {}),
     brand: { '@type': 'Brand', name: brand },
     offers: {
       '@type': 'AggregateOffer',

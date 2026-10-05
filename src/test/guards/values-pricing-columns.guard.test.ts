@@ -20,7 +20,8 @@ const MIGRATION = path.join(
   ROOT,
   'supabase/migrations/20260918225751_values_generic_pipeline.sql',
 )
-const MODULE = path.join(ROOT, 'src/lib/pricing/games/steal-an-egg.ts')
+// The shared writer for every values_* game (Steal an Egg, MM2, …).
+const MODULE = path.join(ROOT, 'src/lib/pricing/games/values-pipeline.ts')
 
 const sql = fs.readFileSync(MIGRATION, 'utf8')
 const moduleSource = fs.readFileSync(MODULE, 'utf8')

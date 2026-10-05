@@ -10080,60 +10080,84 @@ export type Database = {
       values_items: {
         Row: {
           area: string | null
+          base_item_id: string | null
           bracket_max: number | null
           bracket_min: number | null
           created_at: string
           game_id: string
+          how_to_get: Json | null
           id: string
+          image_attribution: string | null
           image_url: string | null
           income_per_sec: number | null
           is_enabled: boolean
           is_priced: boolean
+          item_type: string | null
           kind: string
           name: string
+          obtain: Json
+          origin: string | null
           rarity: string | null
+          release_year: number | null
           slug: string
           sort_order: number
           source_item_id: string | null
           updated_at: string
+          wiki_title: string | null
         }
         Insert: {
           area?: string | null
+          base_item_id?: string | null
           bracket_max?: number | null
           bracket_min?: number | null
           created_at?: string
           game_id: string
+          how_to_get?: Json | null
           id?: string
+          image_attribution?: string | null
           image_url?: string | null
           income_per_sec?: number | null
           is_enabled?: boolean
           is_priced?: boolean
+          item_type?: string | null
           kind: string
           name: string
+          obtain?: Json
+          origin?: string | null
           rarity?: string | null
+          release_year?: number | null
           slug: string
           sort_order?: number
           source_item_id?: string | null
           updated_at?: string
+          wiki_title?: string | null
         }
         Update: {
           area?: string | null
+          base_item_id?: string | null
           bracket_max?: number | null
           bracket_min?: number | null
           created_at?: string
           game_id?: string
+          how_to_get?: Json | null
           id?: string
+          image_attribution?: string | null
           image_url?: string | null
           income_per_sec?: number | null
           is_enabled?: boolean
           is_priced?: boolean
+          item_type?: string | null
           kind?: string
           name?: string
+          obtain?: Json
+          origin?: string | null
           rarity?: string | null
+          release_year?: number | null
           slug?: string
           sort_order?: number
           source_item_id?: string | null
           updated_at?: string
+          wiki_title?: string | null
         }
         Relationships: [
           {
@@ -10268,9 +10292,12 @@ export type Database = {
           parse_status: string
           price_usd: number | null
           quantity: number
+          seller_ref: string | null
           seller_reviews: number | null
           source: string
+          source_item_key: string | null
           source_offer_id: string
+          source_variant: string | null
           title: string
         }
         Insert: {
@@ -10283,9 +10310,12 @@ export type Database = {
           parse_status?: string
           price_usd?: number | null
           quantity?: number
+          seller_ref?: string | null
           seller_reviews?: number | null
           source: string
+          source_item_key?: string | null
           source_offer_id: string
+          source_variant?: string | null
           title: string
         }
         Update: {
@@ -10298,9 +10328,12 @@ export type Database = {
           parse_status?: string
           price_usd?: number | null
           quantity?: number
+          seller_ref?: string | null
           seller_reviews?: number | null
           source?: string
+          source_item_key?: string | null
           source_offer_id?: string
+          source_variant?: string | null
           title?: string
         }
         Relationships: [

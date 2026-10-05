@@ -19,13 +19,16 @@ import { HubHero } from '@/components/content/HubHero'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 import GenericValuesHubPage from './_generic/ValuesHubPage'
+import ValueListPage from './_generic/ValueListPage'
+import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
+import { valueListHub } from '@/lib/values/hub-config'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { ValueArt } from '@/components/values/ValueArt'
 import { RarityLabel } from '@/components/values/ValueCard'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { rarityMeta } from '@/lib/values/rarity'
-import { stripBrand } from '@/lib/seo/title'
+import { socialTitle, stripBrand } from '@/lib/seo/title'
 
 export const revalidate = 3600
 /**
@@ -35,11 +38,12 @@ export const revalidate = 3600
  */
 export const dynamicParams = false
 
-/**
- * Games served by the generic values_* pipeline rather than a per-game reader.
- * SAB and Adopt Me still use their own tables until Phase 2 migrates them.
+/*
+ * Games served by the generic values_* pipeline (VALUES_PIPELINE_GAMES, shared
+ * with the listing matcher) render through config-driven pages: a value-LIST
+ * hub (valueListHub: Murder Mystery 2) or Steal an Egg's sectioned hub. SAB
+ * and Adopt Me still use their own tables until Phase 2 migrates them.
  */
-const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
@@ -109,6 +113,25 @@ export async function generateMetadata({
         url: '/adopt-me/values',
         type: 'website',
       },
+    }
+  }
+
+  // Value-list hubs (MM2): "<short> value list (Month Year)" — the head term.
+  const listHub = hasHubPage(gameSlug, 'values') ? valueListHub(gameSlug) : null
+  if (listHub) {
+    const theme = getGameContentTheme(gameSlug)
+    const monthYear = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+    const title = `${listHub.shortName} Value List (${monthYear}) — ${theme.name} Prices in USD`
+    const description = `${theme.name} value list for ${monthYear}: what every Godly, Ancient, Vintage and Chroma actually sells for in real money, from live listings by reputable sellers. Updated daily — no value points.`
+    return {
+      title,
+      description,
+      alternates: { canonical: `/${gameSlug}/values` },
+      openGraph: { title: socialTitle(title), description, url: `/${gameSlug}/values`, type: 'website' },
     }
   }
 
@@ -464,9 +487,15 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
   }
 
   // Games on the generic values_* pipeline render through the shared hub
-  // components — no per-game page component.
+  // components — no per-game page component. dynamicParams = false closes the
+  // set, but Vercel does not enforce it: gate on the hub config too.
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
-    return <GenericValuesHubPage gameSlug={gameSlug} />
+    if (!hasHubPage(gameSlug, 'values')) notFound()
+    return valueListHub(gameSlug) ? (
+      <ValueListPage gameSlug={gameSlug} />
+    ) : (
+      <GenericValuesHubPage gameSlug={gameSlug} />
+    )
   }
 
   if (!hasHubPage(gameSlug, 'values')) {
