@@ -1,5 +1,5 @@
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -65,7 +65,7 @@ export default async function AdoptMeCalculatorPage() {
         }}
       />
 
-      <SabHeroBackdrop height={280}>
+      <GameHeroBackdrop gameSlug="adopt-me" size="hub">
         <HubNav data={hubNav} calcMode="trade" />
         <TrackOnMount event={{ event: 'value_view', surface: 'calculator', game: 'adopt-me' }} />
 
@@ -116,7 +116,7 @@ export default async function AdoptMeCalculatorPage() {
             <FaqCards items={ADOPT_ME_CALC_FAQ} square defaultOpen={0} className="mt-6" />
           </section>
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <HubFooter
         gameName={hubNav.current.name}

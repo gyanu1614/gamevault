@@ -22,7 +22,7 @@ import { createValueListReadClient } from '@/lib/values/read-client'
 import { formatCash } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -172,7 +172,7 @@ export default async function PriceIndexPage({
           { name: 'Price Index', path: '/steal-a-brainrot/price-index' },
         ])}
       />
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
         {/* pt clears the fixed HubNav. */}
         <div className={`mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
@@ -195,7 +195,7 @@ export default async function PriceIndexPage({
             .
           </p>
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <div className="relative z-10 mx-auto w-full max-w-4xl space-y-6 px-4 sm:px-6 lg:px-8">
         {/* Top values ranking. */}

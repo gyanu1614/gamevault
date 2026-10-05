@@ -38,6 +38,11 @@ export function BannerPositionEditor({
   onChange,
   disabled = false,
   children,
+  frameAspect = STORE_BANNER_FRAME_ASPECT,
+  imageAspect = STORE_BANNER_ASPECT,
+  overlay,
+  label = 'Banner Position',
+  imageClassName,
 }: {
   /** The image to position (saved banner URL or an unsaved data URL). */
   src: string
@@ -47,6 +52,16 @@ export function BannerPositionEditor({
   disabled?: boolean
   /** Overlays (status chips). */
   children?: ReactNode
+  /** Frame shape (w / h). Defaults to the store banner strip. */
+  frameAspect?: number
+  /** The image's own shape (w / h). Defaults to the stored 15 : 4 banner. */
+  imageAspect?: number
+  /** Layers drawn over the image (defaults to the shop's soft lower edge). */
+  overlay?: ReactNode
+  /** Accessible name of the slider. */
+  label?: string
+  /** Extra classes on the <img> (e.g. the hero night filter). */
+  imageClassName?: string
 }) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [travel, setTravel] = useState(0)
@@ -60,12 +75,12 @@ export function BannerPositionEditor({
   useIsoLayoutEffect(() => {
     const el = frameRef.current
     if (!el) return
-    const measure = () => setTravel(bannerTravel(el.clientWidth))
+    const measure = () => setTravel(bannerTravel(el.clientWidth, frameAspect, imageAspect))
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [frameAspect, imageAspect])
 
   // On resize: place the image for the current value, no animation.
   useIsoLayoutEffect(() => {
@@ -111,7 +126,7 @@ export function BannerPositionEditor({
       ref={frameRef}
       role="slider"
       tabIndex={disabled ? -1 : 0}
-      aria-label="Banner Position"
+      aria-label={label}
       aria-orientation="vertical"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -125,11 +140,11 @@ export function BannerPositionEditor({
         // A vertical drag owns vertical touch; horizontal pans still scroll.
         canDrag && ['touch-pan-x', dragging ? 'cursor-grabbing' : 'cursor-grab'],
       )}
-      style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }}
+      style={{ aspectRatio: String(frameAspect) }}
     >
       <motion.div
         className="absolute inset-x-0 top-0 will-change-transform"
-        style={{ y, aspectRatio: String(STORE_BANNER_ASPECT) }}
+        style={{ y, aspectRatio: String(imageAspect) }}
         drag={canDrag ? 'y' : false}
         dragConstraints={{ top: -travel, bottom: 0 }}
         dragElastic={0.12}
@@ -146,12 +161,13 @@ export function BannerPositionEditor({
           src={src}
           alt=""
           draggable={false}
-          className="pointer-events-none h-full w-full object-cover object-center"
+          className={cn('pointer-events-none h-full w-full object-cover object-center', imageClassName)}
         />
       </motion.div>
 
-      {/* The same soft lower edge the shop draws, so the preview is honest. */}
-      <BannerMelt src={null} />
+      {/* The same soft lower edge the shop draws (or the caller's own
+          layers), so the preview is honest. */}
+      {overlay ?? <BannerMelt src={null} />}
 
       {canDrag && (
         <span

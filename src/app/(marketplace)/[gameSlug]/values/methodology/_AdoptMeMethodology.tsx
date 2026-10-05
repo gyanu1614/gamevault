@@ -4,7 +4,7 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { HubSection } from '@/components/values/HubSection'
 import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_LABEL } from '@/components/values/styles'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
-import { SabHeroBackdrop } from '../_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -62,7 +62,7 @@ export default async function AdoptMeMethodology() {
       />
       <JsonLd data={faqPage(ADOPT_ME_METHODOLOGY_FAQ)} />
 
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug="adopt-me" size="hub">
         <HubNav data={hubNav} />
 
         <div className={`mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
@@ -83,7 +83,7 @@ export default async function AdoptMeMethodology() {
             page explains exactly how, so you can trust the number and cite it.
           </p>
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <div className="relative z-10 mx-auto w-full max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
         <HubSection title="Trade value vs cash value — why we show both">

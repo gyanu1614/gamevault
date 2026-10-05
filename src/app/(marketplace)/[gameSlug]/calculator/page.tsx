@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -371,7 +371,7 @@ export default async function SabCalculatorPage({ params }: PageProps) {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
-      <SabHeroBackdrop height={420}>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
       <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
@@ -426,7 +426,7 @@ export default async function SabCalculatorPage({ params }: PageProps) {
 
       <CalculatorSeo monthYear={monthYear} topValues={topValues} lastUpdated={lastUpdated} />
       <JsonLd data={faqPage(CALCULATOR_FAQ)} />
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

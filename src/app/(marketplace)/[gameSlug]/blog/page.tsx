@@ -12,7 +12,7 @@ import { createValueListReadClient } from '@/lib/values/read-client'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -191,7 +191,7 @@ export default async function GameBlogIndex({
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
       {/* Single-row shared hub nav (game switcher + tools + storefront),
           inside the backdrop so the scrim keeps it legible at top of page. */}
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
 
         <JsonLd
@@ -227,11 +227,11 @@ export default async function GameBlogIndex({
           pets={heroPets}
           hasCalculator={hubNav.tools.includes('calculator')}
         />
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       {/* No z-index here (matches Values): a z-10 wrapper created a stacking
-          context that beat the fixed header — which sits in SabHeroBackdrop's
-          own z-10 context earlier in the DOM — letting cards scroll over the
+          context that beat the fixed header — which sits in GameHeroBackdrop's
+          own z-20 layer earlier in the DOM — letting cards scroll over the
           navbar. Plain flow keeps the header on top. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
         {/* The stat strip now lives inside the hero's Market Snapshot card. */}

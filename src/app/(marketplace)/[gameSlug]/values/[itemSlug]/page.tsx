@@ -16,7 +16,7 @@ import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { StatRow } from '@/components/values/HubSection'
 import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_SURFACE } from '@/components/values/styles'
 import { formatCash } from '@/lib/sab/format'
-import { SabHeroBackdrop } from '../_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -643,7 +643,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
-      <SabHeroBackdrop height={560}>
+      <GameHeroBackdrop gameSlug={gameSlug} size="tall">
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -834,7 +834,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           </Link>
         </div>
       </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
           <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

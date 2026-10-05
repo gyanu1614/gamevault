@@ -2,7 +2,7 @@ import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import { ValuesSeo, valuesFaq, VALUES_SEO_LINK as linkCls } from './_ValuesSeo'
-import { SabHeroBackdrop } from './_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -89,7 +89,7 @@ export default async function AdoptMeValuesPage() {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug="adopt-me" size="hub">
         <HubNav data={hubNav} />
         <JsonLd
           data={breadcrumbList([
@@ -138,10 +138,10 @@ export default async function AdoptMeValuesPage() {
           />
         </section>
 
-        {/* The list MUST live inside SabHeroBackdrop: the backdrop is an
-            absolutely-positioned band and only its `relative z-10` children
-            stack above it. A section placed after </SabHeroBackdrop> fell under
-            the band's dark overlay, hiding the variant selector and search. */}
+        {/* The list MUST live inside GameHeroBackdrop: the backdrop is an
+            absolutely-positioned band and only its `relative z-20` children
+            stack above it. A section placed after the backdrop fell under the
+            band's dark overlay, hiding the variant selector and search. */}
         <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           {pets.length === 0 ? (
             <ValuesEmptyState
@@ -178,7 +178,7 @@ export default async function AdoptMeValuesPage() {
             heading="Guides For Pricing & Trading Adopt Me"
           />
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <HubFooter
         gameName={hubNav.current.name}

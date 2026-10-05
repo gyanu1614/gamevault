@@ -42,6 +42,12 @@ function getAdminSupabase() {
 export interface GameDetail {
   /** Wide banner behind the blog CTA. Present once the migration is applied. */
   blog_cta_image_url?: string | null
+  /** Hero background (20261005000116). Present once that migration is applied. */
+  hero_bg_url?: string | null
+  hero_bg_srcset?: unknown
+  hero_bg_blur?: string | null
+  hero_bg_focal_y?: number | null
+  hero_bg_updated_at?: string | null
   id: string
   name: string
   slug: string
@@ -129,6 +135,16 @@ export async function fetchGameById(id: string): Promise<GameDetail | null> {
   // blog_cta_image_url arrives in a hand-applied migration. Selecting a column
   // that doesn't exist fails the WHOLE query, which would take the game editor
   // down rather than just hiding one field — so ask for it, and fall back.
+  // Same for the hero background columns (20261005000116): newest set first.
+  const withHero = await supabase
+    .from('games')
+    .select(
+      `${base}, blog_cta_image_url, hero_bg_url, hero_bg_srcset, hero_bg_blur, hero_bg_focal_y, hero_bg_updated_at`,
+    )
+    .eq('id', id)
+    .maybeSingle()
+  if (!withHero.error && withHero.data) return withHero.data as GameDetail
+
   const withBanner = await supabase
     .from('games')
     .select(`${base}, blog_cta_image_url`)

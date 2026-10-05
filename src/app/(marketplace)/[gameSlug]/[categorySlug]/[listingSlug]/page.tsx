@@ -9,6 +9,7 @@ import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import ListingDetailSkeleton from './_ListingDetailSkeleton'
@@ -305,9 +306,11 @@ export default async function ListingDetailRoute({ params }: PageProps) {
   if (!(await getListing(listingSlug))) notFound()
 
   return (
-    <Suspense fallback={<ListingDetailSkeleton />}>
-      <ListingDetailPage params={params} />
-    </Suspense>
+    <GameHeroBackdrop gameSlug={gameSlug} size="market">
+      <Suspense fallback={<ListingDetailSkeleton />}>
+        <ListingDetailPage params={params} />
+      </Suspense>
+    </GameHeroBackdrop>
   )
 }
 

@@ -20,7 +20,7 @@ import { SITE_URL } from '@/config/site'
 import { IconListDetails, IconCalculator, IconTag, IconArrowUpRight } from '@tabler/icons-react'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
 import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
-import { SabHeroBackdrop } from '../../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -221,7 +221,7 @@ export default async function GameBlogArticle({
       />
 
       {/* Shared hub nav inside the backdrop so the scrim keeps it legible. */}
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
 
         {/* HERO — category, title, lead, byline. No visible breadcrumb (the
@@ -278,7 +278,7 @@ export default async function GameBlogArticle({
             </div>
           </div>
         </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       {/* BODY — sticky TOC sidebar + prose column. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8">
