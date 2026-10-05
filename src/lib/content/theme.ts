@@ -343,6 +343,51 @@ const THEMES: Record<string, GameContentTheme> = {
     variantNoun: 'Variant',
     footerTools: false,
   },
+  'murder-mystery-2': {
+    name: 'Murder Mystery 2',
+    initials: 'MM2',
+    // Muted blood red — the game's identity, distinct from SAB's forest,
+    // Steal an Egg's gold and Adopt Me's violet. Blog-hub hero only: value
+    // pages keep the neutral chrome (rarity colours are the accents there).
+    accent: '#C9504A',
+    accentText: '#E3A29C',
+    accentBorder: '#3A1E1C',
+    accentDeep: '#150B0A',
+    onAccent: '#140606',
+    ambient: ambientFor('201,80,74', 120, 42),
+    heroTitle: 'MM2 Value List',
+    // Honest lead: real-money prices from live listings — never community
+    // "value points" (no licence, and not what an item sells for).
+    heroLead:
+      'What every Murder Mystery 2 knife, gun and pet is worth in real money — priced daily from live listings by reputable sellers, not community value points.',
+    heroAbout:
+      'Murder Mystery 2 is a Roblox social-deduction game where knives, guns and pets come from boxes, events and battle passes. Value sits almost entirely in Godlies, Ancients, Vintages and Chromas: event items never come back, so supply only shrinks, and a Chroma can sell for many times its base weapon. These pages track what those items actually sell for in US dollars.',
+    // Real MM2 items; no calculator at launch (Step 3), so the promo only
+    // shows the two sides without a dollar verdict.
+    calculatorExample: {
+      offer: 'Harvester · Ancient',
+      give: 'Chroma Fang · Chroma',
+      letter: 'F',
+      verdict: 'Compare both sides in USD',
+      qualifier: 'Priced from live listings',
+    },
+    // Step 2 ships the value list, item pages and methodology. The calculator
+    // (Trade Checker + Inventory Worth), price index and blog come later.
+    pages: {
+      values: true,
+      calculator: false,
+      priceIndex: false,
+      methodology: true,
+      blog: false,
+    },
+    navTools: ['values'],
+    itemNoun: 'Item',
+    itemNounPlural: 'Items',
+    // Chroma is its own item with its own price (chroma-fang → fang), not a
+    // variant axis, so variant UI is omitted.
+    variantNoun: null,
+    footerTools: false,
+  },
 }
 
 export function getGameContentTheme(gameSlug: string): GameContentTheme {

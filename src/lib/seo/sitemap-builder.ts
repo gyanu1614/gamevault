@@ -8,6 +8,7 @@ import {
   isValueItemIndexable,
 } from '@/lib/games/indexability'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
+import { valueItemHasPage } from '@/lib/values/hub-config'
 import { computeCategoryPages } from '@/lib/seo/category-index'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
@@ -50,7 +51,14 @@ export interface SitemapInput {
   pausedSellerIds: ReadonlySet<string>
   sabBrainrots: { slug: string; updated_at: string | null }[]
   adoptMePets: { slug: string; updated_at: string | null }[]
-  pipelineItems: { gameSlug: string; slug: string; priceChangedAt: string | null; sampleSize: number | null }[]
+  pipelineItems: {
+    gameSlug: string
+    slug: string
+    /** values_items.rarity — a value-list hub pages only its high tiers. */
+    rarity?: string | null
+    priceChangedAt: string | null
+    sampleSize: number | null
+  }[]
   gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null }[]
   /** Every blog post (for the index page's date). */
   posts: { publishedAt: string }[]
@@ -161,7 +169,10 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
     'adopt-me': input.adoptMePets,
   }
   for (const i of input.pipelineItems) {
-    // Same rule as the item page's own robots meta: priced and backed by enough live listings.
+    // Same rules as the item page: it must exist (valueItemHasPage — a value-list
+    // hub has pages for its high tiers only), and its robots meta: priced and
+    // backed by enough live listings.
+    if (!valueItemHasPage(i.gameSlug, { rarity: i.rarity ?? null, priced: true })) continue
     if (!isValueItemIndexable({ priced: true, sampleSize: i.sampleSize })) continue
     ;(itemsByGame[i.gameSlug] ??= []).push({ slug: i.slug, updated_at: i.priceChangedAt })
   }

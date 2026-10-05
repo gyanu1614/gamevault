@@ -27,6 +27,17 @@ export interface ValueItem {
   bracketMax: number | null
   sortOrder: number
   sourceItemId: string | null
+  /** MM2-style taxonomy (knife|gun|pet|misc|set); null for Steal an Egg. */
+  itemType: string | null
+  /** A chroma row's base item (chroma-fang → fang). */
+  baseItemId: string | null
+  releaseYear: number | null
+  /** Human label of where it came from ("Knife Box 2", "Halloween Event 2021"). */
+  origin: string | null
+  /** Structured how-to-get sources (values_items.obtain). */
+  obtain: ValueObtainSource[]
+  /** CC-BY-SA credit for art copied from a wiki. */
+  imageAttribution: string | null
   /** Null when nothing is published for this item — render "no price yet". */
   price: {
     cheapestUsd: number | null
@@ -38,6 +49,18 @@ export interface ValueItem {
     confidenceLabel: string | null
     priceChangedAt: string | null
   } | null
+}
+
+/** One way to get an item (values_items.obtain, migration 20261005004438). */
+export interface ValueObtainSource {
+  kind: string
+  name: string | null
+  year: number | null
+  method?: string | null
+  cost: { amount: number; currency: string } | null
+  odds_pct: number | null
+  still_obtainable: boolean | null
+  wiki_page?: string | null
 }
 
 type ItemRow = {
@@ -54,6 +77,12 @@ type ItemRow = {
   bracket_max: number | string | null
   sort_order: number
   source_item_id: string | null
+  item_type: string | null
+  base_item_id: string | null
+  release_year: number | null
+  origin: string | null
+  obtain: unknown
+  image_attribution: string | null
 }
 
 type PriceRow = {
@@ -126,7 +155,7 @@ export async function getValueItems(
       let q = (supabase as any)
         .from('values_items')
         .select(
-          'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id',
+          'id,kind,slug,name,rarity,area,income_per_sec,image_url,is_priced,bracket_min,bracket_max,sort_order,source_item_id,item_type,base_item_id,release_year,origin,obtain,image_attribution',
         )
         .eq('game_id', gameId)
         .eq('is_enabled', true)
@@ -163,6 +192,12 @@ export async function getValueItems(
       bracketMax: num(row.bracket_max),
       sortOrder: row.sort_order,
       sourceItemId: row.source_item_id,
+      itemType: row.item_type ?? null,
+      baseItemId: row.base_item_id ?? null,
+      releaseYear: row.release_year ?? null,
+      origin: row.origin ?? null,
+      obtain: Array.isArray(row.obtain) ? (row.obtain as ValueObtainSource[]) : [],
+      imageAttribution: row.image_attribution ?? null,
       price: p
         ? {
             cheapestUsd: num(p.cheapest_usd),
@@ -211,4 +246,128 @@ export async function getValuesFreshness(gameSlug: string): Promise<{
     if (at && (lastChangedAt == null || at > lastChangedAt)) lastChangedAt = at
   }
   return { lastChangedAt, listingCount, sourceCount, pricedItems: priced.length }
+}
+
+/** One day of an item's price history (values_price_history). */
+export interface ValueHistoryPoint {
+  date: string
+  cheapestUsd: number | null
+  averageUsd: number | null
+  sampleSize: number
+}
+
+type HistoryRow = {
+  item_id: string
+  history_date: string
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
+  sample_size: number | null
+}
+
+const HISTORY_COLS = 'item_id,history_date,cheapest_usd,average_usd,sample_size'
+
+/** The number a trend is measured on: the market (average) price, else the floor. */
+export function trendValue(p: Pick<ValueHistoryPoint, 'averageUsd' | 'cheapestUsd'>): number | null {
+  const v = p.averageUsd ?? p.cheapestUsd
+  return v != null && v > 0 ? v : null
+}
+
+/**
+ * Change over the last `days` per item, in percent, keyed by item id — the
+ * list cards' trend and the "Movers" sort. Compares each item's price on the
+ * NEWEST history day with its price on the OLDEST day inside the window.
+ *
+ * Honest by construction: with fewer than two distinct days in the window the
+ * map is empty and the list shows no trend at all (history cannot be
+ * backfilled). Reads two days of rows, not the whole window.
+ */
+export async function getValueTrends(
+  gameSlug: string,
+  days = 7,
+): Promise<{ fromDate: string | null; toDate: string | null; pctByItem: Record<string, number> }> {
+  const empty = { fromDate: null, toDate: null, pctByItem: {} }
+  const supabase = createValuesReadClient({ gameSlug })
+  const gameId = await gameIdFor(supabase, gameSlug)
+  if (!gameId) return empty
+
+  const { data: newest } = await (supabase as any)
+    .from('values_price_history')
+    .select('history_date')
+    .eq('game_id', gameId)
+    .order('history_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const toDate: string | undefined = newest?.history_date
+  if (!toDate) return empty
+
+  const start = new Date(`${toDate}T00:00:00Z`)
+  start.setUTCDate(start.getUTCDate() - days)
+  const { data: oldest } = await (supabase as any)
+    .from('values_price_history')
+    .select('history_date')
+    .eq('game_id', gameId)
+    .gte('history_date', start.toISOString().slice(0, 10))
+    .order('history_date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  const fromDate: string | undefined = oldest?.history_date
+  if (!fromDate || fromDate === toDate) return { ...empty, toDate }
+
+  const rows = await selectAll<HistoryRow>((from, to) =>
+    (supabase as any)
+      .from('values_price_history')
+      .select(HISTORY_COLS)
+      .eq('game_id', gameId)
+      .in('history_date', [fromDate, toDate])
+      .order('item_id', { ascending: true })
+      .order('history_date', { ascending: true })
+      .range(from, to),
+  )
+
+  const first = new Map<string, number>()
+  const last = new Map<string, number>()
+  for (const r of rows) {
+    const v = trendValue({ averageUsd: num(r.average_usd), cheapestUsd: num(r.cheapest_usd) })
+    if (v == null) continue
+    ;(r.history_date === fromDate ? first : last).set(r.item_id, v)
+  }
+  const pctByItem: Record<string, number> = {}
+  for (const [id, a] of first) {
+    const b = last.get(id)
+    if (b != null) pctByItem[id] = ((b - a) / a) * 100
+  }
+  return { fromDate, toDate, pctByItem }
+}
+
+/**
+ * Daily history for one item page (the item and any sibling it compares
+ * with, e.g. its chroma/base form), oldest first, keyed by item id. Read under
+ * the ITEM's tags — never the game list tag (T1).
+ */
+export async function getValueItemHistory(
+  gameSlug: string,
+  itemSlug: string,
+  itemIds: string[],
+): Promise<Record<string, ValueHistoryPoint[]>> {
+  const out: Record<string, ValueHistoryPoint[]> = {}
+  if (itemIds.length === 0) return out
+  const supabase = createValuesReadClient({ gameSlug, itemSlug })
+  const rows = await selectAll<HistoryRow>((from, to) =>
+    (supabase as any)
+      .from('values_price_history')
+      .select(HISTORY_COLS)
+      .in('item_id', itemIds)
+      .order('item_id', { ascending: true })
+      .order('history_date', { ascending: true })
+      .range(from, to),
+  )
+  for (const r of rows) {
+    ;(out[r.item_id] ??= []).push({
+      date: r.history_date,
+      cheapestUsd: num(r.cheapest_usd),
+      averageUsd: num(r.average_usd),
+      sampleSize: r.sample_size ?? 0,
+    })
+  }
+  return out
 }

@@ -29,6 +29,7 @@ describe('content hub config', () => {
   it('publishes exactly the games that have a hub today', () => {
     expect([...CONTENT_HUB_GAME_SLUGS].sort()).toEqual([
       'adopt-me',
+      'murder-mystery-2',
       'steal-a-brainrot',
       'steal-an-egg',
     ])
@@ -68,6 +69,15 @@ describe('content hub config', () => {
         methodology: true,
         blog: false,
       },
+      // MM2 Step 2: value list + item pages + methodology. The calculator
+      // (Trade Checker / Inventory Worth) is Step 3.
+      'murder-mystery-2': {
+        values: true,
+        calculator: false,
+        priceIndex: false,
+        methodology: true,
+        blog: false,
+      },
     })
   })
 
@@ -76,6 +86,7 @@ describe('content hub config', () => {
     expect(contentHubSlugsFor('priceIndex')).toEqual(['steal-a-brainrot'])
     expect([...contentHubSlugsFor('values')].sort()).toEqual([
       'adopt-me',
+      'murder-mystery-2',
       'steal-a-brainrot',
       'steal-an-egg',
     ])

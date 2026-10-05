@@ -100,9 +100,10 @@ select g.id,
 on conflict (game_id) do nothing;
 
 -- ── 4. Public bucket for catalogue images copied from the wiki ──────────────
--- Served via /storage/v1/object/public/values-items/<game>/<slug>.<ext>. No
--- storage.objects policy: public URLs need none, and writes are service-role
--- only (scripts/copy-values-images.mjs).
+-- Served via /storage/v1/object/public/values-items/<game>/<slug>.<ext>.
+-- Writes are service-role only (scripts/copy-values-images.mjs). The read
+-- policy is what keeps the bucket's ACL reproducible from the repo (DLT-003,
+-- storage-policies guard) — same shape as game-heroes.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('values-items', 'values-items', true, 1048576,
         array['image/png', 'image/webp', 'image/jpeg', 'image/gif'])
@@ -110,6 +111,11 @@ on conflict (id) do update
   set public = excluded.public,
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists values_items_public_read on storage.objects;
+create policy values_items_public_read on storage.objects
+  for select to anon, authenticated
+  using (bucket_id = 'values-items');
 
 -- ── 5. Proof ────────────────────────────────────────────────────────────────
 do $$

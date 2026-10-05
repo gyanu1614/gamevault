@@ -23,6 +23,9 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import AdoptMeMethodology from './_AdoptMeMethodology'
 import GenericMethodologyPage from '../_generic/MethodologyPage'
+import ValueListMethodology from '../_generic/ValueListMethodology'
+import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
+import { valueListHub } from '@/lib/values/hub-config'
 import { getGameContentTheme } from '@/lib/content/theme'
 
 export const revalidate = 86400
@@ -33,8 +36,7 @@ export const revalidate = 86400
  */
 export const dynamicParams = false
 
-/** Games served by the generic values_* pipeline (see the values hub route). */
-const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
+/* Games on the generic values_* pipeline: VALUES_PIPELINE_GAMES (shared). */
 
 /**
  * Prerender the game slug(s) this route serves; every other slug notFound()s
@@ -71,6 +73,20 @@ export async function generateMetadata({
         url: '/adopt-me/values/methodology',
         type: 'article',
       },
+    }
+  }
+
+  // Value-list hubs (MM2): real money, not value points.
+  const listHub = hasHubPage(gameSlug, 'methodology') ? valueListHub(gameSlug) : null
+  if (listHub) {
+    const theme = getGameContentTheme(gameSlug)
+    const title = `How DropMarket Values ${theme.name} Items — Methodology`
+    const description = `How DropMarket prices ${theme.name} (${listHub.shortName}) items in real US dollars: live listings, reputable sellers only, cheapest vs market price, the change threshold and daily updates — no community value points.`
+    return {
+      title,
+      description,
+      alternates: { canonical: `/${gameSlug}/values/methodology` },
+      openGraph: { title, description, url: `/${gameSlug}/values/methodology`, type: 'article' },
     }
   }
 
@@ -139,7 +155,12 @@ export default async function MethodologyPage({
   // GSC counted /{game}/values/methodology for every other game as a soft
   // 404. A real 404 is the honest answer.
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
-    return <GenericMethodologyPage gameSlug={gameSlug} />
+    if (!hasHubPage(gameSlug, 'methodology')) notFound()
+    return valueListHub(gameSlug) ? (
+      <ValueListMethodology gameSlug={gameSlug} />
+    ) : (
+      <GenericMethodologyPage gameSlug={gameSlug} />
+    )
   }
 
   if (!hasHubPage(gameSlug, 'methodology')) {

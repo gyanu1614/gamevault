@@ -24,6 +24,10 @@ import { hasHubPage } from '@/lib/content/theme'
 import AdoptMePetPage from './_AdoptMePetPage'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 import GenericValueItemPage from '../_generic/ValueItemPage'
+import { isValueItemIndexable } from '@/lib/games/indexability'
+import ValueListItemPage from '../_generic/ValueListItemPage'
+import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
+import { valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItems } from '@/lib/values/data'
 import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
@@ -52,8 +56,12 @@ export const revalidate = 604800
 /** The game the sab_* tables price — the tag game of every SAB read below. */
 const SAB_GAME = 'steal-a-brainrot'
 
-/** Games served by the generic values_* pipeline (see the hub route). */
-const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
+/*
+ * Games served by the generic values_* pipeline: VALUES_PIPELINE_GAMES (shared
+ * with the listing matcher). A value-LIST hub (valueListHub: Murder Mystery 2)
+ * publishes pages only for its high-tier priced items (valueItemHasPage);
+ * Steal an Egg publishes every item.
+ */
 
 /**
  * Prerender EVERY item page at build time (Step 7a). The set used to be
@@ -75,13 +83,17 @@ export async function generateStaticParams() {
     getPublishablePetSlugs(),
   ])
   // Generic-pipeline games: prerender the PRICED items (the pages that can
-  // rank). The unpriced catalogue renders on demand into the same ISR cache.
+  // rank). Steal an Egg's unpriced catalogue renders on demand into the same
+  // ISR cache; a value-list hub's set is closed — EVERY item with a page
+  // (valueItemHasPage: priced + high-tier) is built, and the body 404s the rest.
   const pipelineParams: Array<{ gameSlug: string; itemSlug: string }> = []
   for (const slug of VALUES_PIPELINE_GAMES) {
+    if (!hasHubPage(slug, 'values')) continue
     const items = await getValueItems(slug)
     pipelineParams.push(
       ...items
         .filter((i) => i.price?.cheapestUsd != null)
+        .filter((i) => valueItemHasPage(slug, { rarity: i.rarity, priced: true }))
         .map((i) => ({ gameSlug: slug, itemSlug: i.slug })),
     )
   }
@@ -481,6 +493,45 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
+  const listHub = hasHubPage(gameSlug, 'values') ? valueListHub(gameSlug) : null
+  if (listHub) {
+    const theme = getGameContentTheme(gameSlug)
+    const item = (await getValueItems(gameSlug, { itemSlug })).find((i) => i.slug === itemSlug)
+    const price = item?.price
+    if (!item || !valueItemHasPage(gameSlug, { rarity: item.rarity, priced: price?.cheapestUsd != null })) {
+      return { title: 'Value Not Found' }
+    }
+    const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    const cheapest = price!.cheapestUsd!
+    const title = `${item.name} Value in ${listHub.shortName} (${monthYear}) — Price in USD`
+    const description = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toFixed(2)} from reputable sellers, across ${price!.sampleSize} live listings — real US dollars, updated daily, not value points.`
+    const canonical = `/${gameSlug}/values/${item.slug}`
+    return {
+      title,
+      description,
+      keywords: [
+        `${item.name} value`,
+        `${item.name} ${listHub.shortName.toLowerCase()} value`,
+        `${item.name} worth`,
+        `how much is ${item.name} worth`,
+        `${item.name} price usd`,
+        `${listHub.shortName.toLowerCase()} ${item.name} real money`,
+      ],
+      alternates: { canonical },
+      // The shared thin-content rule (the sitemap applies it too).
+      ...(isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize })
+        ? {}
+        : { robots: { index: false, follow: true } }),
+      openGraph: {
+        title: socialTitle(title),
+        description,
+        url: canonical,
+        type: 'website',
+        images: item.imageUrl ? [item.imageUrl] : [],
+      },
+    }
+  }
+
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
     const theme = getGameContentTheme(gameSlug)
     const item = (await getValueItems(gameSlug, { itemSlug })).find((i) => i.slug === itemSlug)
@@ -550,6 +601,17 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   }
 
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
+    if (!hasHubPage(gameSlug, 'values')) notFound()
+    if (valueListHub(gameSlug)) {
+      // Gate BEFORE anything streams: only priced high-tier items have a
+      // page, everything else is a real 404 (commons stay list rows).
+      const items = await getValueItems(gameSlug, { itemSlug })
+      const item = items.find((i) => i.slug === itemSlug)
+      if (!item || !valueItemHasPage(gameSlug, { rarity: item.rarity, priced: item.price?.cheapestUsd != null })) {
+        notFound()
+      }
+      return <ValueListItemPage gameSlug={gameSlug} item={item} items={items} />
+    }
     return <GenericValueItemPage gameSlug={gameSlug} itemSlug={itemSlug} />
   }
 

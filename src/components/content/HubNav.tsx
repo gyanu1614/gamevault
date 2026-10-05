@@ -153,7 +153,7 @@ export function HubNav({
         {/* ── Brand mark + game switcher ──
             shrink-0 below md (the row is already tight on a phone), flex-1 from
             md up so it claims its half and centres the tabs. */}
-        <div className="flex shrink-0 items-center gap-2 self-stretch sm:gap-3 xl:flex-1">
+        <div className="flex min-w-0 shrink items-center gap-2 self-stretch sm:gap-3 xl:flex-1">
           <Link
             href="/"
             aria-label="DropMarket home"
@@ -184,16 +184,18 @@ export function HubNav({
                 full bar height so the panel hangs straight off the bar's bottom
                 edge (attached, no gap). */}
             <PopoverAnchor asChild>
-              <div className="-ml-1.5 flex shrink-0 items-center self-stretch">
+              <div className="-ml-1.5 flex min-w-0 items-center self-stretch">
                 <Link
                   href={`/${current.slug}`}
                   aria-label={`${current.name} marketplace`}
-                  className="flex h-10 shrink-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12"
+                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12"
                 >
                   <GameMark name={current.name} imageUrl={current.imageUrl} size="trigger" />
                   {/* Game name shows on mobile too — the top/sub split frees the
-                      room the single row didn't have. Slightly smaller on phones. */}
-                  <span className="whitespace-nowrap text-[15px] font-semibold text-text-primary sm:text-[16px]">
+                      room the single row didn't have. Slightly smaller on phones,
+                      and it truncates before it can push Shop / Sell off a
+                      narrow screen ("Murder Mystery 2" did at 390 px). */}
+                  <span className="min-w-0 truncate text-[15px] font-semibold text-text-primary sm:text-[16px]">
                     {current.name}
                   </span>
                 </Link>

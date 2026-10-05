@@ -33,9 +33,29 @@ export const ADOPT_ME_RARITIES: RarityMeta[] = [
   { key: 'common', label: 'Common', color: '#9BA8A0' },
 ]
 
+/**
+ * Murder Mystery 2 — the wiki's nine tiers, rarest first. Hues follow the
+ * game's own (wiki) colours — Common grey, Uncommon cyan, Rare green,
+ * Legendary red, Godly magenta, Ancient violet, Vintage olive-gold, Unique
+ * amber — lifted for contrast on the near-black cards. Chroma is rainbow in
+ * game; it takes the one free hue (prismatic blue) so every tier reads apart.
+ */
+export const MM2_RARITIES: RarityMeta[] = [
+  { key: 'Chroma', label: 'Chroma', color: '#7AB6FF' },
+  { key: 'Ancient', label: 'Ancient', color: '#A58BFF' },
+  { key: 'Unique', label: 'Unique', color: '#F2A250' },
+  { key: 'Vintage', label: 'Vintage', color: '#D9C25A' },
+  { key: 'Godly', label: 'Godly', color: '#FF5CC8' },
+  { key: 'Legendary', label: 'Legendary', color: '#F2605C' },
+  { key: 'Rare', label: 'Rare', color: '#4FD06A' },
+  { key: 'Uncommon', label: 'Uncommon', color: '#5EE2E6' },
+  { key: 'Common', label: 'Common', color: '#A6A6A6' },
+]
+
 const BY_GAME: Record<string, RarityMeta[]> = {
   'steal-a-brainrot': SAB_RARITIES,
   'adopt-me': ADOPT_ME_RARITIES,
+  'murder-mystery-2': MM2_RARITIES,
 }
 
 /** Rarities for a game, rarest first ([] when the game has none). */

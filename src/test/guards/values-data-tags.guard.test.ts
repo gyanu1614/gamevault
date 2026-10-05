@@ -70,6 +70,7 @@ const ITEM_FILES = [
   `${HUB}/values/[itemSlug]/_adoptMePetData.ts`,
   `${HUB}/values/[itemSlug]/_AdoptMePetPage.tsx`,
   `${HUB}/values/_generic/ValueItemPage.tsx`,
+  `${HUB}/values/_generic/ValueListItemPage.tsx`,
 ]
 
 /** Functions in item-page code that may read under the list tag: build-time only. */

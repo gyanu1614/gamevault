@@ -63,6 +63,9 @@ const RENDER_MODULES = [
   'values/[itemSlug]/_AdoptMePetPage.tsx',
   'values/methodology/page.tsx',
   'values/methodology/_AdoptMeMethodology.tsx',
+  'values/_generic/ValueListPage.tsx', // value-list hubs (MM2)
+  'values/_generic/ValueListItemPage.tsx',
+  'values/_generic/ValueListMethodology.tsx',
   'calculator/page.tsx',
   'calculator/_AdoptMeCalculatorPage.tsx',
   'neon-calculator/page.tsx',
