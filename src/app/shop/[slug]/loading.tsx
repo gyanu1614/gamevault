@@ -21,7 +21,7 @@ export default function ShopLoading() {
           <div className="skeleton h-[132px] w-full rounded-none sm:h-[172px] lg:h-[212px]" />
           <div className="px-4 pb-5 sm:px-6 sm:pb-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
-              <div className="relative -mt-10 h-20 w-20 shrink-0 rounded-xl bg-[#24252B] shadow-[0_0_0_4px_#212228] sm:-mt-12 sm:h-24 sm:w-24" />
+              <div className="relative -mt-11 h-[90px] w-[90px] shrink-0 rounded-[14px] bg-[#24252B] shadow-[inset_0_0_0_5px_#212228] sm:-mt-14 sm:h-[106px] sm:w-[106px]" />
               <div className="min-w-0 flex-1 space-y-2.5 sm:pb-1">
                 <Bar className="h-7 w-56 max-w-full" />
                 <div className="flex flex-wrap gap-3">
@@ -34,11 +34,11 @@ export default function ShopLoading() {
             </div>
           </div>
           <div className="px-4 sm:px-6">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-white/[0.07] py-4 sm:gap-x-6 sm:py-5 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-6 border-t border-white/[0.07] py-5 sm:gap-x-8 sm:py-6 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-white/[0.07]">
               {Array.from({ length: 5 }, (_, i) => (
-                <div key={i} className={cn('min-w-0 lg:px-5 lg:first:pl-0 lg:last:pr-0 xl:px-6', i === 4 && 'col-span-2 lg:col-span-1')}>
-                  <Bar className="h-3.5 w-24" />
-                  <Bar className="mt-2 h-6 w-16" />
+                <div key={i} className={cn('min-w-0 lg:px-6 lg:first:pl-0 lg:last:pr-0 xl:px-8', i === 4 && 'col-span-2 lg:col-span-1')}>
+                  <Bar className="h-3 w-20" />
+                  <Bar className="mt-2 h-[18px] w-14" />
                   <Bar className="mt-1.5 h-3 w-20" />
                 </div>
               ))}

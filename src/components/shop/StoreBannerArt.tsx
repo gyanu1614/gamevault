@@ -6,7 +6,7 @@
  * so both always show the same thing.
  *
  * The lower edge MELTS into the card below instead of ending on a line
- * (owner, 2026-10-05): a blurred copy of the banner, masked in with a
+ * (owner, 2026-10-05; softened + lengthened the same day): a blurred copy of the banner, masked in with a
  * gradient so the blur grows toward the edge (a progressive blur), under an
  * eased scrim that lands exactly on the card's top colour. With
  * prefers-reduced-transparency the blur layer is dropped and the scrim alone
@@ -25,16 +25,26 @@ export const BANNER_MELT_RGB = '33,34,40'
  * where it starts. Alphas follow a smoothstep-like curve.
  */
 function scrim(rgb: string): string {
+  // Owner, 2026-10-05: the first melt went grey too quickly. The tint now
+  // stays light for most of the melt (the blur does the softening) and only
+  // closes to the card colour in the last stretch, so the edge still never
+  // shows a seam.
+  // An even S-curve over the whole melt: light at the top, no sprint at the
+  // end, landing on the card colour slightly before the edge.
   const stops: [number, number][] = [
-    [0, 0], [0.012, 12], [0.05, 22], [0.11, 32], [0.19, 42], [0.29, 52],
-    [0.41, 62], [0.55, 71], [0.69, 80], [0.82, 88], [0.93, 95], [1, 100],
+    [0, 0], [0.03, 10], [0.09, 20], [0.17, 30], [0.27, 40], [0.39, 50],
+    [0.52, 60], [0.65, 70], [0.78, 80], [0.9, 89], [0.97, 95], [1, 100],
   ]
   return `linear-gradient(180deg, ${stops.map(([a, p]) => `rgba(${rgb},${a}) ${p}%`).join(', ')})`
 }
 
-// Relative to the full banner height. Fully transparent until 50 %, i.e.
-// below where the melt box (bottom 52 %) clips it, so the clip never shows.
-const BLUR_MASK = 'linear-gradient(180deg, transparent 0%, transparent 50%, rgba(0,0,0,0.5) 76%, #000 100%)'
+// The melt covers the bottom 78 % of the banner: a long, gentle slope.
+const MELT_PCT = 78
+// Relative to the full banner height. Fully transparent until 24 %, i.e.
+// below where the melt box starts (22 %), so the clip never shows; then the
+// blur builds slowly and is complete well before the card.
+const BLUR_MASK =
+  'linear-gradient(180deg, transparent 0%, transparent 24%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.7) 58%, #000 76%)'
 const blurMaskStyle: CSSProperties = { WebkitMaskImage: BLUR_MASK, maskImage: BLUR_MASK }
 
 /**
@@ -54,21 +64,25 @@ export function BannerMelt({
   className?: string
 }) {
   return (
-    <div aria-hidden className={cn('pointer-events-none absolute inset-x-0 bottom-0 h-[52%] overflow-hidden', className)}>
+    <div
+      aria-hidden
+      className={cn('pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden', className)}
+      style={{ height: `${MELT_PCT}%` }}
+    >
       {src && (
         // Blurred duplicate, aligned to the banner (same box, bottom-anchored),
         // masked in from transparent: the blur appears to deepen toward the
         // card. Same URL as the banner, so no second download.
         <div
-          className="absolute inset-x-0 bottom-0 h-[192.3%] [@media(prefers-reduced-transparency:reduce)]:hidden"
-          style={blurMaskStyle}
+          className="absolute inset-x-0 bottom-0 [@media(prefers-reduced-transparency:reduce)]:hidden"
+          style={{ ...blurMaskStyle, height: `${(100 / MELT_PCT) * 100}%` }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- images are served unoptimized (next.config) */}
           <img
             src={src}
             alt=""
             decoding="async"
-            className="h-full w-full scale-[1.08] object-cover blur-[18px] saturate-[1.15]"
+            className="h-full w-full scale-[1.08] object-cover blur-[24px] saturate-[1.1]"
             style={{ objectPosition: bannerObjectPosition(focalY) }}
           />
         </div>
