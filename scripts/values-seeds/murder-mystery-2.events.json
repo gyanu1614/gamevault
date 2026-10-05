@@ -1,0 +1,6216 @@
+[
+  {
+    "slug": "halloween-2026",
+    "name": "Halloween 2026",
+    "season": "halloween",
+    "year": 2026,
+    "status": "upcoming",
+    "starts_on": null,
+    "ends_on": null,
+    "currency": null,
+    "format": null,
+    "summary": "Not announced yet: as of Oct 5, 2026 MM2 has given no date for Halloween 2026. Last year's Halloween event started on Oct 18, 2025.",
+    "how_items_were_obtained": "Not announced yet.",
+    "items": [],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "the-hunt-roblox-20",
+    "name": "The Hunt: Roblox 20",
+    "season": "collab",
+    "year": 2026,
+    "status": "ended",
+    "starts_on": "2026-09-17",
+    "ends_on": "2026-09-28",
+    "currency": null,
+    "format": "mixed",
+    "summary": "MM2's part in Roblox's The Hunt: Roblox 20, as the 2014 entry: three Murder Mystery 1 maps returned, a quest and a hidden quest gave Hunt badges, and a Retro Bundle of MM1-style weapons was sold.",
+    "how_items_were_obtained": "The quests (collect 50 coins; find three hidden items on the 2014 maps) gave Hunt badges and accessories, not MM2 weapons. The MM2 weapons came from the Retro Bundle (799 Robux).",
+    "items": [
+      {
+        "name": "Golden (Knife)",
+        "slug": "golden-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Shadow (Gun)",
+        "slug": "shadow-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Cowboy (Knife)",
+        "slug": "cowboy-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Laser (Knife)",
+        "slug": null,
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Phaser (Knife)",
+        "slug": null,
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Prince (Gun)",
+        "slug": null,
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      },
+      {
+        "name": "Ghost Gun (Uncommon)",
+        "slug": null,
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Sold in the Retro Bundle (799 Robux) during the event"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/The_Hunt:_Roblox_20_Event",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://roblox.fandom.com/wiki/The_Hunt:_Roblox_20"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "summer-2026",
+    "name": "Summer 2026",
+    "season": "summer",
+    "year": 2026,
+    "status": "ended",
+    "starts_on": "2026-07-23",
+    "ends_on": "2026-08-23",
+    "currency": "Shells",
+    "format": "mixed",
+    "summary": "A short summer event with a new lobby, the Pier map, daily and weekly quests, Summer Box '26 and the Beach Bundle. MM2 passed one million concurrent players at launch.",
+    "how_items_were_obtained": "Quests paid Shells that opened Summer Box '26 (Icecream and its Chroma); the Beach Bundle (3,399 Robux) held Beachy and Sands.",
+    "items": [
+      {
+        "name": "Chroma Beachy",
+        "slug": "chroma-beachy",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Beachy Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026)."
+      },
+      {
+        "name": "Chroma Icecream",
+        "slug": "chroma-icecream",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2026 Summer Box during the Summer Event 2026 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Sands",
+        "slug": "chroma-sands",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Sands Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026)."
+      },
+      {
+        "name": "Beachy",
+        "slug": "beachy",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Sold for Robux via the Beachy Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026)."
+      },
+      {
+        "name": "Icecream",
+        "slug": "icecream",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2026 Summer Box during the Summer Event 2026; the box left with the event."
+      },
+      {
+        "name": "Sands",
+        "slug": "sands",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Sold for Robux via the Sands Gamepass or the Beach Bundle during the Summer 2026 event (Jul 23 - Aug 23, 2026)."
+      },
+      {
+        "name": "Bubbles",
+        "slug": "bubbles",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Pier",
+        "slug": "pier",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Neopolitan",
+        "slug": "neopolitan",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Turtles",
+        "slug": "turtles",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Cherries",
+        "slug": "cherries",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Duckies",
+        "slug": "duckies",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Sand",
+        "slug": "sand",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the Summer Box '26"
+      },
+      {
+        "name": "Tourist",
+        "slug": "tourist",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the Summer Box '26"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/2080426292386971860"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "valentines-2026",
+    "name": "Valentine's 2026",
+    "season": "valentines",
+    "year": 2026,
+    "status": "ended",
+    "starts_on": "2026-02-13",
+    "ends_on": "2026-04-13",
+    "currency": "Heart Gems",
+    "format": "mixed",
+    "summary": "The first Valentine's event with a weapon box and chromas: daily quests paid Heart Gems for the 2026 Valentine's Box, with event quests and the Sweet Bundle.",
+    "how_items_were_obtained": "Daily quests (collecting coins) paid Heart Gems that opened the 2026 Valentine's Box (Heart Wand and its Chroma); event quests gave weapons and effects; the Sweet Bundle (3,399 Robux) held Sweet and Treat.",
+    "items": [
+      {
+        "name": "Chroma Heart Wand",
+        "slug": "chroma-heart-wand",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2026 Valentine's Box during the Valentine's Event 2026 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Sweet",
+        "slug": "chroma-sweet",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Sweet Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale."
+      },
+      {
+        "name": "Chroma Treat",
+        "slug": "chroma-treat",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Treat Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale."
+      },
+      {
+        "name": "Heart Wand",
+        "slug": "heart-wand",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2026 Valentine's Box during the Valentine's Event 2026; the box left with the event."
+      },
+      {
+        "name": "Sweet",
+        "slug": "sweet",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Sweet Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale."
+      },
+      {
+        "name": "Treat",
+        "slug": "treat",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Treat Gamepass or the Sweet Bundle during the Valentine's 2026 event; both are now off sale."
+      },
+      {
+        "name": "Cupid",
+        "slug": "cupid",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Heartbreak",
+        "slug": "heartbreak",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Yummy",
+        "slug": "yummy",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Blossom (2026)",
+        "slug": "blossom-2026",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Paws",
+        "slug": "paws",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Starry (2026)",
+        "slug": "starry-2026",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Hearts (2026)",
+        "slug": "hearts-2026",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Plaid",
+        "slug": "plaid",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Strawberries (Gun)",
+        "slug": "strawberries-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Strawberries (Knife)",
+        "slug": "strawberries-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Valentines_Event_2026",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2025",
+    "name": "Christmas 2025",
+    "season": "christmas",
+    "year": 2025,
+    "status": "ended",
+    "starts_on": "2025-12-14",
+    "ends_on": "2026-01-19",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 30-tier Snow Token battle pass ending in the godly Snowcannon, the first Daily Quests, crafting, a Christmas Box, two leaderboards and the Snowstorm Bundle. A second part, Santa's Quest, followed on Dec 20.",
+    "how_items_were_obtained": "Tiers cost 600 Snow Tokens and Snowcannon cost 100,000 at the end (with a rare Chroma Snowcannon); Snow Dagger, Ornament and their Chromas also came from the event; the 2025 Christmas Box held Frozen weapons; the Snowstorm Bundle (3,399 Robux) held Snowstorm and Blizzard; leaderboard ranks gave Unique Snow Daggers and Snowcannons.",
+    "items": [
+      {
+        "name": "Chroma Blizzard",
+        "slug": "chroma-blizzard",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Snowstorm Bundle during the Christmas 2025 event."
+      },
+      {
+        "name": "Chroma Ornament",
+        "slug": "chroma-ornament",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Event reward: giving 100 Gifts"
+      },
+      {
+        "name": "Chroma Snow Dagger",
+        "slug": "chroma-snow-dagger",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2025 Christmas Box during the Christmas Event 2025 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Snowcannon",
+        "slug": "chroma-snowcannon",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Snowcannon at tier 30 of the Christmas 2025 battle pass."
+      },
+      {
+        "name": "Chroma Snowstorm",
+        "slug": "chroma-snowstorm",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Snowstorm Bundle during the Christmas 2025 event."
+      },
+      {
+        "name": "Blizzard",
+        "slug": "blizzard",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Came in the Snowstorm Bundle, sold for Robux during the Christmas 2025 event; the bundle is now off sale."
+      },
+      {
+        "name": "Ornament",
+        "slug": "ornament",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2025."
+      },
+      {
+        "name": "Snow Dagger",
+        "slug": "snow-dagger",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2025 Christmas Box during the Christmas Event 2025; the box left with the event."
+      },
+      {
+        "name": "Snowcannon",
+        "slug": "snowcannon",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Tier 30 reward of the Christmas 2025 battle pass."
+      },
+      {
+        "name": "Snowstorm",
+        "slug": "snowstorm",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Came in the Snowstorm Bundle, sold for Robux during the Christmas 2025 event; the bundle is now off sale."
+      },
+      {
+        "name": "Bronze Snow Dagger",
+        "slug": "bronze-snow-dagger",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Snowcannon",
+        "slug": "bronze-snowcannon",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Snow Dagger",
+        "slug": "gold-snow-dagger",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Snowcannon",
+        "slug": "gold-snowcannon",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Snow Dagger",
+        "slug": "red-snow-dagger",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Snowcannon",
+        "slug": "red-snowcannon",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Snow Dagger",
+        "slug": "silver-snow-dagger",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Snowcannon",
+        "slug": "silver-snowcannon",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Frozen Gun (2025)",
+        "slug": "frozen-gun-2025",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Frozen Knife (2025)",
+        "slug": "frozen-knife-2025",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Gingercookie (Gun)",
+        "slug": "gingercookie-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Gingercookie (Knife)",
+        "slug": "gingercookie-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Polar Bear",
+        "slug": "polar-bear",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Spearmint (Gun)",
+        "slug": "spearmint-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Spearmint (Knife)",
+        "slug": "spearmint-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Gun (2025)",
+        "slug": "gingerbread-gun-2025",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gingerbread Knife (2025)",
+        "slug": "gingerbread-knife-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Ornaments (2025)",
+        "slug": "ornaments-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Sweater Gun (2025)",
+        "slug": "sweater-gun-2025",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Sweater Knife (2025)",
+        "slug": "sweater-knife-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Lights Gun (2025)",
+        "slug": "lights-gun-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Lights Knife (2025)",
+        "slug": "lights-knife-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Penguin",
+        "slug": "penguin",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: daily Quests"
+      },
+      {
+        "name": "Peppermint Gun (2025)",
+        "slug": "peppermint-gun-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Peppermint Knife (2025)",
+        "slug": "peppermint-knife-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Reindeer (2025)",
+        "slug": "reindeer-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: completing Santa's List"
+      },
+      {
+        "name": "Snowball (Gun)",
+        "slug": "snowball-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowball (Knife)",
+        "slug": "snowball-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Stickers Gun (Christmas 2025)",
+        "slug": "stickers-gun-christmas-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Christmas Box"
+      },
+      {
+        "name": "Stickers Knife (Christmas 2025)",
+        "slug": "stickers-knife-christmas-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "thanksgiving-2025",
+    "name": "Thanksgiving 2025",
+    "season": "other",
+    "year": 2025,
+    "status": "ended",
+    "starts_on": "2025-11-21",
+    "ends_on": "2025-12-14",
+    "currency": "Coins",
+    "format": "event shop",
+    "summary": "A small update between Halloween and Christmas: a shop rewrite, the Decoy perk, and three limited-time Thanksgiving items sold for coins.",
+    "how_items_were_obtained": "The Thanksgiving Stickers knife cost 1,000 Coins or 100 Diamonds in the shop; the Leaves effect and Latte toy were also limited-time shop items.",
+    "items": [
+      {
+        "name": "Stickers (Thanksgiving 2025)",
+        "slug": null,
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 1,000 Coins or 100 Diamonds"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Thanksgiving_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1992026560753467402"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2025",
+    "name": "Halloween 2025",
+    "season": "halloween",
+    "year": 2025,
+    "status": "ended",
+    "starts_on": "2025-10-18",
+    "ends_on": "2025-11-21",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "An alien-themed Halloween with a UFO lobby: a 25-tier Candy battle pass ending in the godly Raygun, a Halloween Box, a leaderboard, a new map and the Xenotech Bundle.",
+    "how_items_were_obtained": "Tiers cost 800 Candies and Raygun cost 90,000 at the end (with a rare Chroma Raygun); the 2025 Halloween Box (800 Candies or an Alien Key) held Alienbeam and its Chroma; the Xenotech Bundle (3,399 Robux) held Xenoknife and Xenoshot; leaderboard ranks gave Unique Rayguns.",
+    "items": [
+      {
+        "name": "Chroma Alienbeam",
+        "slug": "chroma-alienbeam",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2025 Halloween Box during the Halloween Event 2025 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Raygun",
+        "slug": "chroma-raygun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Raygun at tier 25 of the Halloween 2025 battle pass."
+      },
+      {
+        "name": "Alienbeam",
+        "slug": "alienbeam",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2025 Halloween Box during the Halloween Event 2025; the box left with the event."
+      },
+      {
+        "name": "Raygun",
+        "slug": "raygun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Tier 25 reward of the Halloween 2025 battle pass."
+      },
+      {
+        "name": "Xenoknife",
+        "slug": "xenoknife",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Xenoknife Gamepass (or the Xenotech Bundle) during the Halloween 2025 event; the pass is now off sale."
+      },
+      {
+        "name": "Xenoshot",
+        "slug": "xenoshot",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Xenoshot Gamepass (or the Xenotech Bundle) during the Halloween 2025 event; the pass is now off sale."
+      },
+      {
+        "name": "Bronze Raygun",
+        "slug": "bronze-raygun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Raygun",
+        "slug": "gold-raygun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Raygun",
+        "slug": "red-raygun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Raygun",
+        "slug": "silver-raygun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Energized (Gun)",
+        "slug": "energized-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Energized (Knife)",
+        "slug": "energized-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Hologram (Gun)",
+        "slug": "hologram-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Hologram (Knife)",
+        "slug": "hologram-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Xeno (Gun)",
+        "slug": "xeno-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Xeno (Knife)",
+        "slug": "xeno-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Abduction",
+        "slug": "abduction",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Eyes",
+        "slug": "eyes",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin (2025)",
+        "slug": "pumpkin-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin Patch (2025)",
+        "slug": "pumpkin-patch-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Treats (Gun)",
+        "slug": "treats-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Treats (Knife)",
+        "slug": "treats-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Candy Corn",
+        "slug": "candy-corn",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "Candy Corn Gun (2025)",
+        "slug": "candy-corn-gun-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cats (2025)",
+        "slug": "cats-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Fall",
+        "slug": "fall",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Haunted",
+        "slug": "haunted",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Lil' Alien",
+        "slug": "lil-alien",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: live Event Reward"
+      },
+      {
+        "name": "Stickers Knife (Halloween 2025)",
+        "slug": "stickers-knife-halloween-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Halloween Box"
+      },
+      {
+        "name": "UFOs (Gun)",
+        "slug": "ufos-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "UFOs (Knife)",
+        "slug": "ufos-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "summer-2025",
+    "name": "Summer 2025",
+    "season": "summer",
+    "year": 2025,
+    "status": "ended",
+    "starts_on": "2025-07-18",
+    "ends_on": "2025-10-18",
+    "currency": "Beach Balls",
+    "format": "mixed",
+    "summary": "The first Summer event run as a major update: a 25-tier battle pass, a Summer Box, the Yacht map, the Synthwave Evo gamepass and the first Summer leaderboard.",
+    "how_items_were_obtained": "Tiers cost 800 Beach Balls and the final reward was Sunset (with a rare Chroma Sunset); the 2025 Summer Box held Sunrise and its Chroma; the Synthwave Gamepass held the Evo knife; leaderboard ranks gave Unique Synthwave knives.",
+    "items": [
+      {
+        "name": "Chroma Sunrise",
+        "slug": "chroma-sunrise",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2025 Summer Box during the Summer Event 2025 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Sunset",
+        "slug": "chroma-sunset",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward when buying the Sunset at tier 25 of the Summer 2025 battle pass."
+      },
+      {
+        "name": "Sunrise",
+        "slug": "sunrise",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2025 Summer Box during the Summer Event 2025; the box left with the event."
+      },
+      {
+        "name": "Sunset",
+        "slug": "sunset",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Tier 25 reward of the Summer 2025 battle pass."
+      },
+      {
+        "name": "Blue Synthwave",
+        "slug": "blue-synthwave",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Synthwave",
+        "slug": "bronze-synthwave",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Synthwave",
+        "slug": "gold-synthwave",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Synthwave",
+        "slug": "silver-synthwave",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Aquarium (Gun)",
+        "slug": "aquarium-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Aquarium (Knife)",
+        "slug": "aquarium-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Neon (2025)",
+        "slug": "neon-2025",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Pop Art (Gun)",
+        "slug": "pop-art-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Pop Art (Knife)",
+        "slug": "pop-art-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Tropical",
+        "slug": "tropical",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Lava (Gun)",
+        "slug": "lava-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Lava (Knife)",
+        "slug": "lava-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collect 800 Beach Balls"
+      },
+      {
+        "name": "Retro",
+        "slug": "retro",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Soda Gun (Summer 2025)",
+        "slug": "soda-gun-summer-2025",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event reward: collect 800 Beach Balls"
+      },
+      {
+        "name": "Soda Knife (Summer 2025)",
+        "slug": "soda-knife-summer-2025",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Coconut Knife (Summer 2025)",
+        "slug": "coconut-knife-summer-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collect 800 Beach Balls"
+      },
+      {
+        "name": "Dolphins",
+        "slug": "dolphins",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Leaves Knife (Summer 2025)",
+        "slug": "leaves-knife-summer-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collect 800 Beach Balls"
+      },
+      {
+        "name": "Skyline",
+        "slug": "skyline",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Stickers Gun (Summer 2025)",
+        "slug": "stickers-gun-summer-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Stickers Knife (Summer 2025)",
+        "slug": "stickers-knife-summer-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collect 100 Beach Balls"
+      },
+      {
+        "name": "Striped Gun (Summer 2025)",
+        "slug": "striped-gun-summer-2025",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward (collect 800 Beach Balls and purchase the 7th tier)"
+      },
+      {
+        "name": "Striped Knife (Summer 2025)",
+        "slug": "striped-knife-summer-2025",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2025 Summer Box"
+      },
+      {
+        "name": "Synthwave",
+        "slug": "synthwave",
+        "kind": "knife",
+        "rarity": null,
+        "how": "Robux purchase: Synthwave Gamepass, an Evo knife that levels up with XP"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "easter-2025",
+    "name": "Easter 2025",
+    "season": "easter",
+    "year": 2025,
+    "status": "ended",
+    "starts_on": "2025-04-18",
+    "ends_on": "2025-05-29",
+    "currency": "Eggs",
+    "format": "mixed",
+    "summary": "A minor event with an Easter lobby and egg hunt: eggs and rare eggs unlocked Easter weapons at set totals, with the Bloom Bundle on sale.",
+    "how_items_were_obtained": "Collecting set amounts of Eggs or Rare Eggs unlocked each reward; the Bloom Bundle (3,399 Robux) held Bloom and Flora, also sold separately at 1,699 Robux each.",
+    "items": [
+      {
+        "name": "Bloom",
+        "slug": "bloom",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Bloom Gamepass (or the Bloom Bundle) during the Easter 2025 event; the pass is now off sale."
+      },
+      {
+        "name": "Flora",
+        "slug": "flora",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Flora Gamepass (or the Bloom Bundle) during the Easter 2025 event; the pass is now off sale."
+      },
+      {
+        "name": "Bunnies",
+        "slug": "bunnies",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: collecting 4,000 eggs"
+      },
+      {
+        "name": "Butterflies",
+        "slug": "butterflies",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 8 Rare Eggs"
+      },
+      {
+        "name": "Sunny",
+        "slug": "sunny",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 2,000 Eggs"
+      },
+      {
+        "name": "Decorated",
+        "slug": "decorated",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 800 Eggs"
+      },
+      {
+        "name": "Meadow",
+        "slug": "meadow",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 6 Rare Eggs"
+      },
+      {
+        "name": "Carrots (Knife)",
+        "slug": "carrots-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collecting 100 Eggs"
+      },
+      {
+        "name": "Chick",
+        "slug": "chick",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collecting 4 Rare Eggs"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Easter_Event_2025",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2024",
+    "name": "Christmas 2024",
+    "season": "christmas",
+    "year": 2024,
+    "status": "ended",
+    "starts_on": "2024-12-20",
+    "ends_on": "2025-02-01",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 20-tier Snow Token battle pass ending in the ancient Celestial, a Christmas Box, a Gifting Center, leaderboards, the Christmas In Italy map and the Australis & Borealis Bundle.",
+    "how_items_were_obtained": "Tiers cost 800 Snow Tokens and Celestial cost 98,000 at the end; Bauble and Chroma Bauble also came from the event; the 2024 Christmas Box held Constellation and its Chroma; the bundle (3,399 Robux) held Australis and Borealis; leaderboard ranks gave Unique Celestial and Constellation weapons.",
+    "items": [
+      {
+        "name": "Celestial",
+        "slug": "celestial",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Christmas 2024 battle pass."
+      },
+      {
+        "name": "Chroma Bauble",
+        "slug": "chroma-bauble",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2024."
+      },
+      {
+        "name": "Chroma Constellation",
+        "slug": "chroma-constellation",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2024 Christmas Box during the Christmas Event 2024 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Australis",
+        "slug": "australis",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Australis Gamepass (or the Aurora bundle) during the Christmas 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Bauble",
+        "slug": "bauble",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players during Christmas 2024."
+      },
+      {
+        "name": "Borealis",
+        "slug": "borealis",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Borealis Gamepass (or the Aurora bundle) during the Christmas 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Constellation",
+        "slug": "constellation",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2024 Christmas Box during the Christmas Event 2024; the box left with the event."
+      },
+      {
+        "name": "Bronze Celestial",
+        "slug": "bronze-celestial",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Constellation",
+        "slug": "bronze-constellation",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Celestial",
+        "slug": "gold-celestial",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Constellation",
+        "slug": "gold-constellation",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Celestial",
+        "slug": "red-celestial",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Constellation",
+        "slug": "red-constellation",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Celestial",
+        "slug": "silver-celestial",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Constellation",
+        "slug": "silver-constellation",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Nightsky",
+        "slug": "nightsky",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Nightstar",
+        "slug": "nightstar",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Frostflame (Gun)",
+        "slug": "frostflame-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Frostflame (Knife)",
+        "slug": "frostflame-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Logcutter",
+        "slug": "logcutter",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Sleigh",
+        "slug": "sleigh",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Forest",
+        "slug": "forest",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gingerheart",
+        "slug": "gingerheart",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowman (2024)",
+        "slug": "snowman-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Wrapped Gun (2024)",
+        "slug": "wrapped-gun-2024",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wrapped Knife (2024)",
+        "slug": "wrapped-knife-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Wreaths",
+        "slug": "wreaths",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Gifts (2024)",
+        "slug": "gifts-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Hot Chocolate",
+        "slug": "hot-chocolate",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Igloo (Gun)",
+        "slug": "igloo-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Igloo (Knife)",
+        "slug": "igloo-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Reindeer (2024)",
+        "slug": "reindeer-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Stickers Gun (Christmas 2024)",
+        "slug": "stickers-gun-christmas-2024",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Christmas Box"
+      },
+      {
+        "name": "Stickers Knife (Christmas 2024)",
+        "slug": "stickers-knife-christmas-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Stockings (2024)",
+        "slug": "stockings-2024",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Christmas Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2024",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2024",
+    "name": "Halloween 2024",
+    "season": "halloween",
+    "year": 2024,
+    "status": "ended",
+    "starts_on": "2024-10-16",
+    "ends_on": "2024-12-09",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "A 20-tier Candy battle pass ending in the ancient Vampire's Axe, a Halloween Box, a leaderboard, the new Vampire Hunt mode and the Spirit & Soul Bundle.",
+    "how_items_were_obtained": "Tiers cost 800 Candies and Vampire's Axe cost 98,000 at the end; the 2024 Halloween Box (800 Candies) held Vampire's Gun and its Chroma; the Spirit & Soul Bundle (3,399 Robux) held Spirit and Soul; leaderboard ranks gave Unique Vampire's Axes.",
+    "items": [
+      {
+        "name": "Vampire's Axe",
+        "slug": "vampires-axe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Halloween 2024 event pass."
+      },
+      {
+        "name": "Chroma Vampire's Gun",
+        "slug": "chroma-vampires-gun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2024 Halloween Box during the Halloween Event 2024 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Soul",
+        "slug": "soul",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Soul Gamepass (or the Spirit & Soul Bundle) during the Halloween 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Spirit",
+        "slug": "spirit",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Spirit Gamepass (or the Spirit & Soul Bundle) during the Halloween 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Vampire's Gun",
+        "slug": "vampires-gun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2024 Halloween Box during the Halloween Event 2024; the box left with the event."
+      },
+      {
+        "name": "Bronze Vampire's Axe",
+        "slug": "bronze-vampires-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Vampire's Axe",
+        "slug": "gold-vampires-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Purple Vampire's Axe",
+        "slug": "purple-vampires-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Vampire's Axe",
+        "slug": "silver-vampires-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Cursed Gun (2024)",
+        "slug": "cursed-gun-2024",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2024 Halloween Box"
+      },
+      {
+        "name": "Cursed Knife (2024)",
+        "slug": "cursed-knife-2024",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candleflame Gun (2024)",
+        "slug": "candleflame-gun-2024",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Kraken",
+        "slug": "kraken",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Ritual",
+        "slug": "ritual",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Storm",
+        "slug": "storm",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Bones Knife (2024)",
+        "slug": "bones-knife-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Clown Gun (2024)",
+        "slug": "clown-gun-2024",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Leaves (Gun)",
+        "slug": "leaves-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Monster Knife (2024)",
+        "slug": "monster-knife-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Moons Knife (2024)",
+        "slug": "moons-knife-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Witch’s Brew",
+        "slug": "witchs-brew",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Bats Gun (2024)",
+        "slug": "bats-gun-2024",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Bats Knife (2024)",
+        "slug": "bats-knife-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Halloween Box"
+      },
+      {
+        "name": "Candles Knife (2024)",
+        "slug": "candles-knife-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candy Corn Gun (2024)",
+        "slug": "candy-corn-gun-2024",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Candy Corn Knife (2024)",
+        "slug": "candy-corn-knife-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Ghosts Knife (2024)",
+        "slug": "ghosts-knife-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Halloween Box"
+      },
+      {
+        "name": "Stickers Gun (Halloween 2024)",
+        "slug": "stickers-gun-halloween-2024",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Stickers Knife (Halloween 2024)",
+        "slug": "stickers-knife-halloween-2024",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2024",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://murder-mystery-2.fandom.com/wiki/Vampire_Hunt"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "summer-2024",
+    "name": "Summer 2024",
+    "season": "summer",
+    "year": 2024,
+    "status": "ended",
+    "starts_on": "2024-07-05",
+    "ends_on": "2024-10-16",
+    "currency": "Beach Balls",
+    "format": "mixed",
+    "summary": "Beach Balls returned with a battle pass, the first Summer Box, a new Beach Resort map and the Pearls Bundle.",
+    "how_items_were_obtained": "Beach Balls collected in rounds bought pass tiers (6,000 to finish); the 2024 Summer Box held Watergun and Chroma Watergun; the Pearls Bundle (3,399 Robux) held Pearl and Pearlshine.",
+    "items": [
+      {
+        "name": "Chroma Watergun",
+        "slug": "chroma-watergun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2024 Summer Box during the Summer Event 2024 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Pearl",
+        "slug": "pearl",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Pearl Gamepass (or the Pearls Bundle) during the Summer 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Pearlshine",
+        "slug": "pearlshine",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Pearlshine Gamepass (or the Pearls Bundle) during the Summer 2024 event; the pass is now off sale."
+      },
+      {
+        "name": "Watergun",
+        "slug": "watergun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2024 Summer Box during the Summer Event 2024; the box left with the event."
+      },
+      {
+        "name": "Palms (Gun)",
+        "slug": "palms-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event reward: collect 6,000 Beach Balls"
+      },
+      {
+        "name": "Palms (Knife)",
+        "slug": "palms-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Floral (Gun)",
+        "slug": "floral-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Sharky",
+        "slug": "sharky",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: collect 2,500 Beach Balls"
+      },
+      {
+        "name": "Waves Knife (Rare)",
+        "slug": "waves-knife-rare",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Floatie",
+        "slug": "floatie",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event reward: collect 800 Beach Balls"
+      },
+      {
+        "name": "Jellyfish (Knife)",
+        "slug": "jellyfish-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Popsicle (Gun)",
+        "slug": "popsicle-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Turtle",
+        "slug": "turtle",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Balloons (Gun)",
+        "slug": "balloons-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Clownfish (Gun)",
+        "slug": "clownfish-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Clownfish (Knife)",
+        "slug": "clownfish-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collect 250 Beach Balls"
+      },
+      {
+        "name": "Sandy (Gun)",
+        "slug": "sandy-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Summer Box"
+      },
+      {
+        "name": "Starfish (Gun)",
+        "slug": "starfish-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event reward: collect 100 Beach Balls"
+      },
+      {
+        "name": "Starfish (Knife)",
+        "slug": "starfish-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2024 Summer Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2024",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "easter-2024",
+    "name": "Easter 2024",
+    "season": "easter",
+    "year": 2024,
+    "status": "ended",
+    "starts_on": "2024-04-01",
+    "ends_on": "2024-07-04",
+    "currency": "Eggs",
+    "format": "mixed",
+    "summary": "A minor event with a new lobby and an egg hunt: eggs and rare eggs from rounds unlocked Easter weapons at set totals, with the Flowerwood Bundle on sale.",
+    "how_items_were_obtained": "Collecting set amounts of Eggs or Rare Eggs unlocked each reward (eggs could not be bought); the Flowerwood Bundle (3,399 Robux) held Flowerwood and Flowerwood Gun, also sold separately at 1,699 Robux each.",
+    "items": [
+      {
+        "name": "Flowerwood",
+        "slug": "flowerwood",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Flowerwood Gamepass (or the Flowerwood Bundle); the pass is now off sale."
+      },
+      {
+        "name": "Flowerwood Gun",
+        "slug": "flowerwood-gun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Flowerwood Gun Gamepass (or the Flowerwood Bundle); the pass is now off sale."
+      },
+      {
+        "name": "Robot",
+        "slug": "robot",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Spring",
+        "slug": "spring",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Carrot Gun (2024)",
+        "slug": "carrot-gun-2024",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Carrot Knife (2024)",
+        "slug": "carrot-knife-2024",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wavy (Gun)",
+        "slug": "wavy-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wavy (Knife)",
+        "slug": "wavy-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Easter_Event_2024",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2023",
+    "name": "Christmas 2023",
+    "season": "christmas",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": "2023-12-20",
+    "ends_on": "2024-02-02",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 20-tier Snow Token battle pass ending in the ancient Gingerscope, a Christmas Box, a leaderboard, a Freeze Tag mode and the Gingerscythe Evo gamepass.",
+    "how_items_were_obtained": "Tiers cost 800 Snow Tokens and led to Gingerscope; Evergun and Chroma Evergun also came from the event; the 2023 Christmas Box held Evergreen and its Chroma; the Gingerscythe Gamepass (1,699 Robux) held the Evo knife; leaderboard ranks gave Unique Gingerscope and Gingerscythe weapons.",
+    "items": [
+      {
+        "name": "Gingerscope",
+        "slug": "gingerscope",
+        "kind": "gun",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Christmas 2023 battle pass."
+      },
+      {
+        "name": "Chroma Evergreen",
+        "slug": "chroma-evergreen",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2023 Christmas Box during the Christmas Event 2023 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Chroma Evergun",
+        "slug": "chroma-evergun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2023."
+      },
+      {
+        "name": "Evergreen",
+        "slug": "evergreen",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2023 Christmas Box during the Christmas Event 2023; the box left with the event."
+      },
+      {
+        "name": "Evergun",
+        "slug": "evergun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2023."
+      },
+      {
+        "name": "Blue Gingerscope",
+        "slug": "blue-gingerscope",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Blue Gingerscythe",
+        "slug": "blue-gingerscythe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Gingerscope",
+        "slug": "bronze-gingerscope",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Gingerscythe",
+        "slug": "bronze-gingerscythe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Gingerscope",
+        "slug": "gold-gingerscope",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Gingerscythe",
+        "slug": "gold-gingerscythe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Gingerscope",
+        "slug": "silver-gingerscope",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Gingerscythe",
+        "slug": "silver-gingerscythe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Frostfade (Gun)",
+        "slug": "frostfade-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Frostfade (Knife)",
+        "slug": "frostfade-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Neon (2023)",
+        "slug": "neon-2023",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowflake (2023)",
+        "slug": "snowflake-2023",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Snowglobe",
+        "slug": "snowglobe",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Tree Knife (2023)",
+        "slug": "tree-knife-2023",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Canes (Gun)",
+        "slug": "canes-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Canes (Knife)",
+        "slug": "canes-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Fireplace",
+        "slug": "fireplace",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowman (2023)",
+        "slug": "snowman-2023",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Stars (Gun)",
+        "slug": "stars-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Stars (Knife)",
+        "slug": "stars-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Bells",
+        "slug": "bells",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Elf (2023)",
+        "slug": "elf-2023",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Frozen Gun (2023)",
+        "slug": "frozen-gun-2023",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Frozen Knife (2023)",
+        "slug": "frozen-knife-2023",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Present (2023)",
+        "slug": "present-2023",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ribbon",
+        "slug": "ribbon",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Santa (2023)",
+        "slug": "santa-2023",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowfall (Knife)",
+        "slug": "snowfall-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Christmas Box"
+      },
+      {
+        "name": "Gingerscythe",
+        "slug": "gingerscythe",
+        "kind": "knife",
+        "rarity": null,
+        "how": "Robux purchase: Gingerscythe Gamepass (1,699 Robux), an Evo knife that levels up with XP"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "thanksgiving-2023",
+    "name": "Thanksgiving 2023",
+    "season": "other",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": "2023-11-21",
+    "ends_on": "2023-12-20",
+    "currency": "Coins",
+    "format": "mixed",
+    "summary": "MM2's first Thanksgiving event: themed knives and a toy sold for coins, plus two limited gamepasses, one with the first food-shaped godly.",
+    "how_items_were_obtained": "Two knives and a toy were bought in the shop with coins; the Turkey Gamepass held the godly Turkey; the Latte Gamepass held the legendary Latte knife and gun. Both passes left the shop when the event ended.",
+    "items": [
+      {
+        "name": "Turkey",
+        "slug": "turkey",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Turkey (Thanksgiving) Gamepass; the pass is now off sale."
+      },
+      {
+        "name": "Latte (Gun)",
+        "slug": "latte-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event reward: buying Latte Bundle"
+      },
+      {
+        "name": "Latte (Knife)",
+        "slug": "latte-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: buying Latte Bundle"
+      },
+      {
+        "name": "Pumpkin Pie",
+        "slug": "pumpkin-pie",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Scarf",
+        "slug": "scarf",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Thanksgiving_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1727705876734030157"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2023",
+    "name": "Halloween 2023",
+    "season": "halloween",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": "2023-10-17",
+    "ends_on": "2023-11-21",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "A 30-tier Candy battle pass ending in the ancient Traveler's Axe, a Halloween Box, a leaderboard, a Mystery Manor lobby and the Darkness Bundle.",
+    "how_items_were_obtained": "Tiers cost 300 Candies and Traveler's Axe cost 30,000; the 2023 Halloween Box held Traveler's Gun and its Chroma; the Darkness Bundle (3,399 Robux) held Darksword and Darkshot; the Ghoulish knife was free for owning a Roblox catalog item; leaderboard ranks gave Unique Traveler's Axes.",
+    "items": [
+      {
+        "name": "Traveler's Axe",
+        "slug": "travelers-axe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 30 reward of the Halloween 2023 battle pass."
+      },
+      {
+        "name": "Chroma Traveler's Gun",
+        "slug": "chroma-travelers-gun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2023 Halloween Box during the Halloween Event 2023 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Darkshot",
+        "slug": "darkshot",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Darkshot Gamepass (or the Darkness Bundle) during the Halloween 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Darksword",
+        "slug": "darksword",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Darksword Gamepass (or the Darkness Bundle) during the Halloween 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Traveler's Gun",
+        "slug": "travelers-gun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2023 Halloween Box during the Halloween Event 2023; the box left with the event."
+      },
+      {
+        "name": "Bronze Traveler's Axe",
+        "slug": "bronze-travelers-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Traveler's Axe",
+        "slug": "gold-travelers-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Traveler's Axe",
+        "slug": "red-travelers-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Traveler's Axe",
+        "slug": "silver-travelers-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Traveler (Gun)",
+        "slug": "traveler-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Traveler (Knife)",
+        "slug": "traveler-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Darkgun",
+        "slug": "darkgun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Darkknife",
+        "slug": "darkknife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ghastly (Gun)",
+        "slug": "ghastly-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ghastly (Knife)",
+        "slug": "ghastly-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed during the event"
+      },
+      {
+        "name": "Eclipse",
+        "slug": "eclipse",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Glowy",
+        "slug": "glowy",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Meltdown",
+        "slug": "meltdown",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Steel (Gun)",
+        "slug": "steel-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Steel (Knife)",
+        "slug": "steel-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Zombie Knife (2023)",
+        "slug": "zombie-knife-2023",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Etched",
+        "slug": "etched",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ghosts Knife (2023)",
+        "slug": "ghosts-knife-2023",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ghoulish",
+        "slug": "ghoulish",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Free in MM2 for owning Roblox's Mask of Ghoulish Despair item during the event"
+      },
+      {
+        "name": "Leaves",
+        "slug": "leaves",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Pumpkin Gun (2023)",
+        "slug": "pumpkin-gun-2023",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Spider (2023)",
+        "slug": "spider-2023",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Vines (Gun)",
+        "slug": "vines-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Halloween Box"
+      },
+      {
+        "name": "Vines (Knife)",
+        "slug": "vines-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wood",
+        "slug": "wood",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2023 Halloween Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "summer-2023",
+    "name": "Summer 2023",
+    "season": "summer",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": "2023-07-04",
+    "ends_on": "2023-10-10",
+    "currency": "Beach Balls",
+    "format": "mixed",
+    "summary": "MM2's first Summer event: Beach Balls in rounds unlocked summer weapons at set totals, with a new lobby and the Ocean Bundle.",
+    "how_items_were_obtained": "Collecting set amounts of Beach Balls unlocked each reward (they could not be bought); the Ocean Bundle (3,399 Robux) held Waves and Ocean.",
+    "items": [
+      {
+        "name": "Ocean",
+        "slug": "ocean",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Ocean Gamepass (or the Ocean/Beach Pack bundle); the pass is now off sale."
+      },
+      {
+        "name": "Waves",
+        "slug": "waves",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Waves Gamepass (or the Ocean/Beach Pack bundle) during the Summer 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Beach",
+        "slug": "beach",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: collecting 13,200 Beach Balls"
+      },
+      {
+        "name": "Floral (Knife)",
+        "slug": "floral-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 8,200 Beach Balls"
+      },
+      {
+        "name": "Sun",
+        "slug": "sun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 5,700 Beach Balls"
+      },
+      {
+        "name": "Melon (Gun)",
+        "slug": "melon-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 2,400 Beach Balls"
+      },
+      {
+        "name": "Pool Noodle",
+        "slug": "pool-noodle",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 3,200 Beach Balls"
+      },
+      {
+        "name": "Popsicle (Knife)",
+        "slug": "popsicle-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 1,600 Beach Balls"
+      },
+      {
+        "name": "Stickers Gun (Summer 2023)",
+        "slug": "stickers-gun-summer-2023",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event reward: collecting 600 Beach Balls"
+      },
+      {
+        "name": "Stickers Knife (Summer 2023)",
+        "slug": "stickers-knife-summer-2023",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collecting 200 Beach Balls"
+      },
+      {
+        "name": "Toy (Gun)",
+        "slug": "toy-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event reward: collecting 400 Beach Balls"
+      },
+      {
+        "name": "Toy (Knife)",
+        "slug": "toy-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collecting 800 Beach Balls"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "easter-2023",
+    "name": "Easter 2023",
+    "season": "easter",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": null,
+    "ends_on": "2023-05-03",
+    "currency": "Eggs",
+    "format": "mixed",
+    "summary": "A minor event that started in early April 2023 (the wiki gives Apr 1 on the event page and Apr 2 on its timeline): eggs and rare eggs in rounds unlocked Easter weapons and a pet, with the Rainbow Bundle on sale.",
+    "how_items_were_obtained": "Collecting set amounts of Eggs or Rare Eggs unlocked each reward (eggs could not be bought); the Rainbow Bundle (3,399 Robux) held the Rainbow knife and Rainbow Gun.",
+    "items": [
+      {
+        "name": "Rainbow (Godly)",
+        "slug": "rainbow-godly",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Rainbow Gamepass (or the Rainbow Bundle) during the Easter 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Rainbow Gun (Godly)",
+        "slug": "rainbow-gun-godly",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Rainbow Gun Gamepass (or the Rainbow Bundle); the pass is now off sale."
+      },
+      {
+        "name": "Chromatic (Gun)",
+        "slug": "chromatic-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Chromatic (Knife)",
+        "slug": "chromatic-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Biogel",
+        "slug": "biogel",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Nuclear",
+        "slug": "nuclear",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Painted (Knife)",
+        "slug": "painted-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 1,000 Eggs"
+      },
+      {
+        "name": "Carrot (2023)",
+        "slug": "carrot-2023",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 600 Eggs"
+      },
+      {
+        "name": "Marble",
+        "slug": "marble",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Painted (Gun)",
+        "slug": "painted-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event reward: egg Hunt Challenge"
+      },
+      {
+        "name": "Carrot Bunny",
+        "slug": "carrot-bunny",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: collecting 800 Eggs"
+      },
+      {
+        "name": "Fragile (Gun)",
+        "slug": "fragile-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event reward: collecting 200 Eggs"
+      },
+      {
+        "name": "Fragile (Knife)",
+        "slug": "fragile-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: egg Hunt Challenge"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Easter_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "valentines-2023",
+    "name": "Valentine's 2023",
+    "season": "valentines",
+    "year": 2023,
+    "status": "ended",
+    "starts_on": "2023-02-02",
+    "ends_on": "2023-03-23",
+    "currency": "Hearts",
+    "format": "mixed",
+    "summary": "A minor event: Hearts spawned with coins in rounds and unlocked Valentine's knives and a pet at set totals, alongside the Sakura Bundle.",
+    "how_items_were_obtained": "Collecting set amounts of Hearts unlocked each reward (Hearts could not be bought); the Sakura Bundle (3,399 Robux) held Sakura and Blossom.",
+    "items": [
+      {
+        "name": "Blossom",
+        "slug": "blossom",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Blossom Gamepass (or the Sakura Bundle) during the Valentine's 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Sakura",
+        "slug": "sakura",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Sakura Gamepass (or the Sakura Bundle) during the Valentine's 2023 event; the pass is now off sale."
+      },
+      {
+        "name": "Broken",
+        "slug": "broken",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: collecting 4,000 Hearts"
+      },
+      {
+        "name": "Heart",
+        "slug": "heart",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: collecting 1,000 Hearts"
+      },
+      {
+        "name": "Rose",
+        "slug": "rose",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event reward: collecting 600 Hearts"
+      },
+      {
+        "name": "Love",
+        "slug": "love",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: collecting 200 Hearts"
+      },
+      {
+        "name": "Teddy",
+        "slug": "teddy",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: collecting 800 Hearts"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Valentines_Event_2023",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2022",
+    "name": "Christmas 2022",
+    "season": "christmas",
+    "year": 2022,
+    "status": "ended",
+    "starts_on": "2022-12-21",
+    "ends_on": "2023-01-22",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 20-tier battle pass ending in the ancient Icepiercer, a Christmas Box, a leaderboard, the new Ice Castle map and the Icecrusher Evo gamepass.",
+    "how_items_were_obtained": "Tiers cost 700 Snow Tokens and Icepiercer cost 75,000 after the last tier; the 2022 Christmas Box (700 Snow Tokens or a Snow Key) held Cookiecane and its Chroma; the Icecrusher Gamepass (1,699 Robux) held the Evo knife; leaderboard ranks gave Unique Icecrusher and Icepiercer weapons.",
+    "items": [
+      {
+        "name": "Icepiercer",
+        "slug": "icepiercer",
+        "kind": "gun",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Christmas 2022 battle pass."
+      },
+      {
+        "name": "Chroma Cookiecane",
+        "slug": "chroma-cookiecane",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2022 Christmas Box during the Christmas Event 2022 (Chroma drop); the box left with the event."
+      },
+      {
+        "name": "Cookiecane",
+        "slug": "cookiecane",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2022 Christmas Box during the Christmas Event 2022; the box left with the event."
+      },
+      {
+        "name": "Gingermint",
+        "slug": "gingermint",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2022."
+      },
+      {
+        "name": "Bronze Icecrusher",
+        "slug": "bronze-icecrusher",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Icepiercer",
+        "slug": "bronze-icepiercer",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Icecrusher",
+        "slug": "gold-icecrusher",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Icepiercer",
+        "slug": "gold-icepiercer",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Icecrusher",
+        "slug": "red-icecrusher",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Icepiercer",
+        "slug": "red-icepiercer",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Icecrusher",
+        "slug": "silver-icecrusher",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Icepiercer",
+        "slug": "silver-icepiercer",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Arctic (Gun)",
+        "slug": "arctic-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Arctic (Knife)",
+        "slug": "arctic-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Gun (2022)",
+        "slug": "gingerbread-gun-2022",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gingerbread Knife (2022)",
+        "slug": "gingerbread-knife-2022",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Tree Gun (2022)",
+        "slug": "tree-gun-2022",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Tree Knife (2022)",
+        "slug": "tree-knife-2022",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Mistletoe (Gun)",
+        "slug": "mistletoe-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Mistletoe (Knife)",
+        "slug": "mistletoe-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Snowflake (Gun)",
+        "slug": "snowflake-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Snowflake (Knife)",
+        "slug": "snowflake-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Stockings Gun (2022)",
+        "slug": "stockings-gun-2022",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Stockings Knife (2022)",
+        "slug": "stockings-knife-2022",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candied (Gun)",
+        "slug": "candied-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Candied (Knife)",
+        "slug": "candied-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Coal Gun (2022)",
+        "slug": "coal-gun-2022",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Coal Knife (2022)",
+        "slug": "coal-knife-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Snowman Gun (2022)",
+        "slug": "snowman-gun-2022",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowman Knife (2022)",
+        "slug": "snowman-knife-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Stickers Gun (Christmas 2022)",
+        "slug": "stickers-gun-christmas-2022",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Christmas Box"
+      },
+      {
+        "name": "Stickers Knife (Christmas 2022)",
+        "slug": "stickers-knife-christmas-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Icecrusher",
+        "slug": "icecrusher",
+        "kind": "knife",
+        "rarity": null,
+        "how": "Robux purchase: Icecrusher Gamepass (1,699 Robux), an Evo knife that levels up with XP"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2022",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2022",
+    "name": "Halloween 2022",
+    "season": "halloween",
+    "year": 2022,
+    "status": "ended",
+    "starts_on": "2022-10-16",
+    "ends_on": "2022-11-10",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "Players picked a permanent side, Survivors or Zombies, and collected candy for their team, each with its own 20-tier pass. Also a Halloween Box, a leaderboard, two new maps and the Ghost Bundle.",
+    "how_items_were_obtained": "Tiers cost 600 Candies on the chosen team's pass (a few tiers differed by team); the 2022 Halloween Box held Elderwood Blade and its Chroma; the Ghost Bundle (3,399 Robux) held Phantom and Spectre; the Ghostly knife was free for owning a Roblox catalog item; leaderboard ranks gave Unique Elderwood Blades.",
+    "items": [
+      {
+        "name": "Chroma Elderwood Blade",
+        "slug": "chroma-elderwood-blade",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2022 Halloween Box during the Halloween Event 2022; the box left with the event."
+      },
+      {
+        "name": "Bat",
+        "slug": "bat",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Tier 20 of the Zombies reward track in the Halloween 2022 event."
+      },
+      {
+        "name": "Elderwood Blade",
+        "slug": "elderwood-blade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2022 Halloween Box during the Halloween Event 2022; the box left with the event."
+      },
+      {
+        "name": "Makeshift",
+        "slug": "makeshift",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Tier 20 of the Survivors reward track in the Halloween 2022 event."
+      },
+      {
+        "name": "Phantom",
+        "slug": "phantom",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Phantom Gamepass (or the Phantom & Spectre bundle) during the Halloween 2022 event; the pass is now off sale."
+      },
+      {
+        "name": "Spectre",
+        "slug": "spectre",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Spectre Gamepass (or the Phantom & Spectre bundle); the pass is now off sale."
+      },
+      {
+        "name": "Blue Elderwood Blade",
+        "slug": "blue-elderwood-blade",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Elderwood Blade",
+        "slug": "bronze-elderwood-blade",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Elderwood Blade",
+        "slug": "gold-elderwood-blade",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Elderwood Blade",
+        "slug": "silver-elderwood-blade",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Vampire Gun (2022)",
+        "slug": "vampire-gun-2022",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Vampire Knife (2022)",
+        "slug": "vampire-knife-2022",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Curse (Knife)",
+        "slug": "curse-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Ghostfire (Gun)",
+        "slug": "ghostfire-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Makeshift (Knife)",
+        "slug": "makeshift-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Survivors' team event pass reward"
+      },
+      {
+        "name": "Wraith (Gun)",
+        "slug": "wraith-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Wraith (Knife)",
+        "slug": "wraith-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombified Knife (2022)",
+        "slug": "zombified-knife-2022",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Zombies' team event pass reward"
+      },
+      {
+        "name": "Brains (2022)",
+        "slug": "brains-2022",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Ghostly (Knife)",
+        "slug": "ghostly-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Free in MM2 for owning Roblox's Paranormal Party Starter item during the event"
+      },
+      {
+        "name": "Hazard (Gun)",
+        "slug": "hazard-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Hazard (Knife)",
+        "slug": "hazard-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Lantern (Knife)",
+        "slug": "lantern-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Moonlight (Gun)",
+        "slug": "moonlight-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Witchbrew",
+        "slug": "witchbrew",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Apocalypse (Gun)",
+        "slug": "apocalypse-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Survivors' team event pass reward"
+      },
+      {
+        "name": "Apocalypse (Knife)",
+        "slug": "apocalypse-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Survivors' team event pass reward"
+      },
+      {
+        "name": "Candy Corn Gun (2022)",
+        "slug": "candy-corn-gun-2022",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candy Corn Knife (2022)",
+        "slug": "candy-corn-knife-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Darkness (Gun)",
+        "slug": "darkness-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Darkness (Knife)",
+        "slug": "darkness-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Eyeball (Knife)",
+        "slug": "eyeball-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Hunter",
+        "slug": "hunter",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Infected Gun (2022)",
+        "slug": "infected-gun-2022",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Zombies' team event pass reward"
+      },
+      {
+        "name": "Infected Knife (2022)",
+        "slug": "infected-knife-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Zombies' team event pass reward"
+      },
+      {
+        "name": "Stickers Knife (Halloween 2022)",
+        "slug": "stickers-knife-halloween-2022",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2022 Halloween Box"
+      },
+      {
+        "name": "Webs (Gun)",
+        "slug": "webs-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2022",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1581737355563528194"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2021",
+    "name": "Christmas 2021",
+    "season": "christmas",
+    "year": 2021,
+    "status": "ended",
+    "starts_on": "2021-12-21",
+    "ends_on": "2022-01-28",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 20-tier Snow Token pass ending in the ancient Swirly Axe, a Christmas Box, a Gifting Center, two leaderboards, a new Train Station map and the Ice Bundle.",
+    "how_items_were_obtained": "Tiers cost 800 Snow Tokens and Swirly Axe cost 80,000 at the end; the 2021 Christmas Box (800 Snow Tokens or a Snow Key) held Swirly Gun and Chroma Swirly Gun; the Ice Bundle (3,399 Robux) held Icebeam and Iceflake; leaderboard ranks gave Unique Swirly weapons.",
+    "items": [
+      {
+        "name": "Swirly Axe",
+        "slug": "swirly-axe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Christmas 2021 event."
+      },
+      {
+        "name": "Chroma Swirly Gun",
+        "slug": "chroma-swirly-gun",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2021 Christmas Box during the Christmas Event 2021; the box left with the event."
+      },
+      {
+        "name": "Icebeam",
+        "slug": "icebeam",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Icebeam Gamepass (or the Ice Bundle); the pass is now off sale."
+      },
+      {
+        "name": "Iceflake",
+        "slug": "iceflake",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Iceflake Gamepass (or the Ice Bundle); the pass is now off sale."
+      },
+      {
+        "name": "Swirly Blade",
+        "slug": "swirly-blade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2021."
+      },
+      {
+        "name": "Swirly Gun",
+        "slug": "swirly-gun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2021 Christmas Box during the Christmas Event 2021; the box left with the event."
+      },
+      {
+        "name": "Blue Swirly Axe",
+        "slug": "blue-swirly-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Blue Swirly Gun",
+        "slug": "blue-swirly-gun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Swirly Axe",
+        "slug": "bronze-swirly-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Swirly Gun",
+        "slug": "bronze-swirly-gun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Swirly Axe",
+        "slug": "gold-swirly-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Swirly Gun",
+        "slug": "gold-swirly-gun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Swirly Axe",
+        "slug": "silver-swirly-axe",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Swirly Gun",
+        "slug": "silver-swirly-gun",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Aurora Gun (2021)",
+        "slug": "aurora-gun-2021",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Aurora Knife (2021)",
+        "slug": "aurora-knife-2021",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Ice Camo",
+        "slug": "ice-camo",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Starry Gun (2021)",
+        "slug": "starry-gun-2021",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Starry Knife (2021)",
+        "slug": "starry-knife-2021",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Swirl",
+        "slug": "swirl",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cookie (Gun)",
+        "slug": "cookie-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Cookie (Knife)",
+        "slug": "cookie-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gingerbread Gun (2021)",
+        "slug": "gingerbread-gun-2021",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": null
+      },
+      {
+        "name": "Snowman Gun (2021)",
+        "slug": "snowman-gun-2021",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowman Knife (2021)",
+        "slug": "snowman-knife-2021",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Tree Knife (2021)",
+        "slug": "tree-knife-2021",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cane Gun (2021)",
+        "slug": "cane-gun-2021",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cane Knife (2021)",
+        "slug": "cane-knife-2021",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Coal Gun (2021)",
+        "slug": "coal-gun-2021",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Coal Knife (2021)",
+        "slug": "coal-knife-2021",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Giftwrap",
+        "slug": "giftwrap",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Ribbons",
+        "slug": "ribbons",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowbear",
+        "slug": "snowbear",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Stickers Gun (Christmas 2021)",
+        "slug": "stickers-gun-christmas-2021",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Christmas Box"
+      },
+      {
+        "name": "Stickers Knife (Christmas 2021)",
+        "slug": "stickers-knife-christmas-2021",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2021",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2021",
+    "name": "Halloween 2021",
+    "season": "halloween",
+    "year": 2021,
+    "status": "ended",
+    "starts_on": "2021-10-24",
+    "ends_on": "2021-11-25",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "\"Reaver's Halloween\": a 30-tier Candy pass ending in the ancient Harvester, a Halloween Box, a leaderboard and MM2's first Evo gamepass, Reaver.",
+    "how_items_were_obtained": "Tiers cost 600 Candies; Harvester cost 80,000 Candies after the last tier; the 2021 Halloween Box (600 Candies or a Reaver Key) held Candleflame and Chroma Candleflame; the Reaver Gamepass (1,699 Robux) held the Evo knife Reaver; leaderboard ranks gave the Unique Harvesters.",
+    "items": [
+      {
+        "name": "Harvester",
+        "slug": "harvester",
+        "kind": "gun",
+        "rarity": "Ancient",
+        "how": "Tier 30 reward of the Halloween 2021 event pass."
+      },
+      {
+        "name": "Chroma Candleflame",
+        "slug": "chroma-candleflame",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2021 Halloween Box during the Halloween Event 2021; the box left with the event."
+      },
+      {
+        "name": "Candleflame",
+        "slug": "candleflame",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2021 Halloween Box during the Halloween Event 2021; the box left with the event."
+      },
+      {
+        "name": "Blue Harvester",
+        "slug": "blue-harvester",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Harvester",
+        "slug": "bronze-harvester",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Harvester",
+        "slug": "gold-harvester",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Harvester",
+        "slug": "silver-harvester",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Pumpkin (2021)",
+        "slug": "red-pumpkin-2021",
+        "kind": "pet",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Skully",
+        "slug": "skully-pet",
+        "kind": "pet",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Spectral (Gun)",
+        "slug": "spectral-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Spectral (Knife)",
+        "slug": "spectral-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Green Pumpkin (2021)",
+        "slug": "green-pumpkin-2021",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Magma (Gun)",
+        "slug": "magma-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Magma (Knife)",
+        "slug": "magma-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Watcher Gun (2021)",
+        "slug": "watcher-gun-2021",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Watcher Knife (2021)",
+        "slug": "watcher-knife-2021",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Fall Camo",
+        "slug": "fall-camo",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Gothic (Gun)",
+        "slug": "gothic-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gothic (Knife)",
+        "slug": "gothic-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Shadow Pumpkin",
+        "slug": "shadow-pumpkin",
+        "kind": "pet",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Skulls (2021)",
+        "slug": "skulls-2021",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wraiths (Gun)",
+        "slug": "wraiths-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Wraiths (Knife)",
+        "slug": "wraiths-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombie Knife (2021)",
+        "slug": "zombie-knife-2021",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Aliens",
+        "slug": "aliens",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cat (Gun)",
+        "slug": "cat-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Cracks (Gun)",
+        "slug": "cracks-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Cracks (Knife)",
+        "slug": "cracks-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Haunted (2021)",
+        "slug": "haunted-2021",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Moon",
+        "slug": "moon",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin (2021)",
+        "slug": "pumpkin-2021",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Stickers (Gun)",
+        "slug": "stickers-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Stickers (Knife)",
+        "slug": "stickers-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2021 Halloween Box"
+      },
+      {
+        "name": "Reaver",
+        "slug": "reaver",
+        "kind": "knife",
+        "rarity": null,
+        "how": "Robux purchase: Reaver Gamepass (1,699 Robux), an Evo knife that levels up with XP"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2021",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1452424654505721856"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2020",
+    "name": "Christmas 2020",
+    "season": "christmas",
+    "year": 2020,
+    "status": "ended",
+    "starts_on": "2020-12-23",
+    "ends_on": "2021-01-13",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A pre-release in mid-December 2020 added a winter lobby and the Peppermint gamepass; the full event on Dec 23 brought a 20-tier pass, a Christmas Box, a leaderboard and the Cookieblade gamepass.",
+    "how_items_were_obtained": "Tiers cost 800 Snow Tokens and led to the ancient Icebreaker; the 2020 Christmas Box held Iceblaster; Peppermint and Cookieblade were 1,699 Robux event-only gamepasses; leaderboard ranks gave Unique Icebreaker and Iceblaster weapons.",
+    "items": [
+      {
+        "name": "Icebreaker",
+        "slug": "icebreaker",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 20 reward of the Christmas 2020 event."
+      },
+      {
+        "name": "Cookieblade",
+        "slug": "cookieblade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Cookieblade Gamepass; the pass is now off sale."
+      },
+      {
+        "name": "Iceblaster",
+        "slug": "iceblaster",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2020 Christmas Box during the Christmas Event 2020; the box left with the event."
+      },
+      {
+        "name": "Jinglegun",
+        "slug": "jinglegun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2020."
+      },
+      {
+        "name": "Peppermint",
+        "slug": "peppermint",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Peppermint Gamepass during the Christmas 2020 pre-release; the pass is now off sale."
+      },
+      {
+        "name": "Bronze Iceblaster",
+        "slug": "bronze-iceblaster",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Icebreaker",
+        "slug": "bronze-icebreaker",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Iceblaster",
+        "slug": "gold-iceblaster",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Icebreaker",
+        "slug": "gold-icebreaker",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Iceblaster",
+        "slug": "red-iceblaster",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Icebreaker",
+        "slug": "red-icebreaker",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Iceblaster",
+        "slug": "silver-iceblaster",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Icebreaker",
+        "slug": "silver-icebreaker",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Icecracker",
+        "slug": "icecracker",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Icedriller",
+        "slug": "icedriller",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Santa's Spirit",
+        "slug": "santas-spirit",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: completing Saint Nikilis Challenge"
+      },
+      {
+        "name": "Mr. Reindeer",
+        "slug": "mr-reindeer",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Silent Night (Gun)",
+        "slug": "silent-night-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Silent Night (Knife)",
+        "slug": "silent-night-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowflakes (2020)",
+        "slug": "snowflakes-2020",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Gun (2020)",
+        "slug": "gingerbread-gun-2020",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Knife (2020)",
+        "slug": "gingerbread-knife-2020",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wrap (Gun)",
+        "slug": "wrap-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Wrap (Knife)",
+        "slug": "wrap-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Gift Bag (Gun)",
+        "slug": "gift-bag-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Gift Bag (Knife)",
+        "slug": "gift-bag-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Mr. Snowman",
+        "slug": "mr-snowman",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ornaments (Gun)",
+        "slug": "ornaments-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ornaments (Knife)",
+        "slug": "ornaments-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Stockings",
+        "slug": "stockings",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Christmas Box"
+      },
+      {
+        "name": "Trees",
+        "slug": "trees",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Christmas Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2020",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1341807984087805956"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "rb-battles-season-2",
+    "name": "RB Battles Season 2",
+    "season": "collab",
+    "year": 2020,
+    "status": "ended",
+    "starts_on": "2020-11-16",
+    "ends_on": "2020-12-14",
+    "currency": null,
+    "format": "other",
+    "summary": "MM2's part in Roblox's RB Battles Season 2 event: three RB Battles hosts were hidden as NPCs on MM2 maps, and finding one gave an exclusive knife and badge.",
+    "how_items_were_obtained": "The RB Knife came from finding the RB Battles NPCs on the nStudio, House 2 and Factory maps.",
+    "items": [
+      {
+        "name": "RB Knife",
+        "slug": "rb-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Found on the nStudio, House 2 or Factory maps during the event"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/RB_Battles_Season_2",
+      "https://roblox.fandom.com/wiki/RB_Battles_Season_2"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2020",
+    "name": "Halloween 2020",
+    "season": "halloween",
+    "year": 2020,
+    "status": "ended",
+    "starts_on": "2020-10-26",
+    "ends_on": "2020-11-22",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "The only MM2 event released in two parts: a 30-tier Candy pass, box, leaderboard and Vampire Item Pack first, then the Piggy-style Scary Mode in early November with its own rewards.",
+    "how_items_were_obtained": "Tiers cost 600 Candies and led to the ancient Hallowscythe; the 2020 Halloween Box held Hallowgun; the Vampire Item Pack (Robux) held Vampire's Edge; Scary Mode tasks gave extra rewards; leaderboard ranks gave Unique Vampire's Edge knives.",
+    "items": [
+      {
+        "name": "Hallowscythe",
+        "slug": "hallowscythe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 30 reward of the Halloween 2020 event."
+      },
+      {
+        "name": "Hallowgun",
+        "slug": "hallowgun",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2020 Halloween Box during the Halloween Event 2020; the box left with the event."
+      },
+      {
+        "name": "Vampire's Edge",
+        "slug": "vampires-edge",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Vampire Item Pack; the pass is now off sale."
+      },
+      {
+        "name": "Blue Vampire's Edge",
+        "slug": "blue-vampires-edge",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Vampire's Edge",
+        "slug": "bronze-vampires-edge",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Vampire's Edge",
+        "slug": "gold-vampires-edge",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Vampire's Edge",
+        "slug": "silver-vampires-edge",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Red Pumpkin (2020)",
+        "slug": "red-pumpkin-2020",
+        "kind": "pet",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ripper (Gun)",
+        "slug": "ripper-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Ripper (Knife)",
+        "slug": "ripper-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Bones (2020)",
+        "slug": "bones-2020",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Ghosts (Gun)",
+        "slug": "ghosts-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Green Pumpkin (2020)",
+        "slug": "green-pumpkin-2020",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Portal (Knife)",
+        "slug": "portal-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Scarecrow",
+        "slug": "scarecrow",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Blue Pumpkin (2020)",
+        "slug": "blue-pumpkin-2020",
+        "kind": "pet",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ghosts (Knife)",
+        "slug": "ghosts-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Mummy Gun (2020)",
+        "slug": "mummy-gun-2020",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Mummy Knife (2020)",
+        "slug": "mummy-knife-2020",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Portal (Gun)",
+        "slug": "portal-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin (Knife)",
+        "slug": "pumpkin-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Bats Knife (2020)",
+        "slug": "bats-knife-2020",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: scary Mode"
+      },
+      {
+        "name": "Candle",
+        "slug": "candle",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Candy Corn Gun (2020)",
+        "slug": "candy-corn-gun-2020",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Candy Corn Knife (2020)",
+        "slug": "candy-corn-knife-2020",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Carved (Gun)",
+        "slug": "carved-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Carved (Knife)",
+        "slug": "carved-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Halloween Box"
+      },
+      {
+        "name": "Pumpkin (2020)",
+        "slug": "pumpkin-2020",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Slashed",
+        "slug": "slashed",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event reward: scary Mode"
+      },
+      {
+        "name": "Starry",
+        "slug": "starry",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event reward: scary Mode"
+      },
+      {
+        "name": "Watcher Gun (2020)",
+        "slug": "watcher-gun-2020",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Watcher Knife (2020)",
+        "slug": "watcher-knife-2020",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2020 Halloween Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2020",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1320795006270164992"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2019",
+    "name": "Christmas 2019",
+    "season": "christmas",
+    "year": 2019,
+    "status": "ended",
+    "starts_on": "2019-12-23",
+    "ends_on": "2020-01-13",
+    "currency": "Snow Tokens",
+    "format": "mixed",
+    "summary": "A 30-tier Snow Token pass ending in the ancient Logchopper, a Christmas Box, a Gifting Center, Santa's Challenge, two leaderboards, a new map and the Frostbite Item Pack.",
+    "how_items_were_obtained": "Tiers cost 600 Snow Tokens and Logchopper cost 70,000 on tier 30; the 2019 Christmas Box (600 Snow Tokens or a Snow Key) held Minty; giving 100 Gifts earned Lugercane; Santa's Challenge gave Santa's Magic; the Frostbite Item Pack (1,699 Robux) held Frostbite and Icey; Eternalcane came with MM2 merch; leaderboard ranks gave Unique Logchopper and Minty weapons.",
+    "items": [
+      {
+        "name": "Logchopper",
+        "slug": "logchopper",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 30 reward of the Christmas 2019 event."
+      },
+      {
+        "name": "Eternalcane",
+        "slug": "eternalcane",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Code redeemed from official MM2 merchandise sold during Christmas 2019; the merch sold out."
+      },
+      {
+        "name": "Frostbite",
+        "slug": "frostbite",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Frostbite Item Pack during the Christmas 2019 event; the pass is now off sale."
+      },
+      {
+        "name": "Icey",
+        "slug": "icey",
+        "kind": "pet",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Frostbite Item Pack during the Christmas 2019 event; the pass is now off sale."
+      },
+      {
+        "name": "Lugercane",
+        "slug": "lugercane",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Reward for giving 100 Gifts to other players at the Gifting Center during Christmas 2019."
+      },
+      {
+        "name": "Minty",
+        "slug": "minty",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2019 Christmas Box during the Christmas Event 2019; the box left with the event."
+      },
+      {
+        "name": "Blue Logchopper",
+        "slug": "blue-logchopper",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Blue Minty",
+        "slug": "blue-minty",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Logchopper",
+        "slug": "bronze-logchopper",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Minty",
+        "slug": "bronze-minty",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Logchopper",
+        "slug": "gold-logchopper",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Minty",
+        "slug": "gold-minty",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Logchopper",
+        "slug": "silver-logchopper",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Minty",
+        "slug": "silver-minty",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Cavern (Gun)",
+        "slug": "cavern-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Cavern (Knife)",
+        "slug": "cavern-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Rudolph Pet",
+        "slug": "rudolph-pet",
+        "kind": "pet",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Santa's Magic",
+        "slug": "santas-magic",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: completing Saint Nikilis Challenge"
+      },
+      {
+        "name": "Aurora Gun (2019)",
+        "slug": "aurora-gun-2019",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Aurora Knife (2019)",
+        "slug": "aurora-knife-2019",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candy Swirl (Gun)",
+        "slug": "candy-swirl-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candy Swirl (Knife)",
+        "slug": "candy-swirl-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Santa Pet",
+        "slug": "santa-pet",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Elf Pet (2019)",
+        "slug": "elf-pet-2019",
+        "kind": "pet",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Frozen (Gun)",
+        "slug": "frozen-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Frozen (Knife)",
+        "slug": "frozen-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Gun (2019)",
+        "slug": "gingerbread-gun-2019",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Gingerbread Knife (2019)",
+        "slug": "gingerbread-knife-2019",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Lights (Gun)",
+        "slug": "lights-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Lights (Knife)",
+        "slug": "lights-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Frosted (Gun)",
+        "slug": "frosted-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Frosted (Knife)",
+        "slug": "frosted-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Gifts (Gun)",
+        "slug": "gifts-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Gifts (Knife)",
+        "slug": "gifts-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pine (Gun)",
+        "slug": "pine-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Pine (Knife)",
+        "slug": "pine-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowflakes (Gun)",
+        "slug": "snowflakes-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowflakes (Knife)",
+        "slug": "snowflakes-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Christmas Box"
+      },
+      {
+        "name": "Snowman Pet",
+        "slug": "snowman-pet",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2019",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2019",
+    "name": "Halloween 2019",
+    "season": "halloween",
+    "year": 2019,
+    "status": "ended",
+    "starts_on": "2019-10-26",
+    "ends_on": "2019-11-16",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "A 40-tier Candy pass ending in the ancient Elderwood Scythe, a Halloween Box, a leaderboard and the Ghostly Item Pack. Players got a short window after the end to spend leftover candies.",
+    "how_items_were_obtained": "Tiers cost 1,000 Candies; Elderwood Scythe cost 80,000 Candies after the last tier; the 2019 Halloween Box (1,000 Candies or a Pumpkin Key) held Elderwood Revolver; the Ghostly Item Pack (Robux) held Ghostblade and the Ghosty pet; leaderboard ranks gave Unique Elderwood guns.",
+    "items": [
+      {
+        "name": "Elderwood Scythe",
+        "slug": "elderwood-scythe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Tier 40 reward of the Halloween 2019 event."
+      },
+      {
+        "name": "Elderwood Revolver",
+        "slug": "elderwood-revolver",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2019 Halloween Box during the Halloween Event 2019; the box left with the event."
+      },
+      {
+        "name": "Ghostblade",
+        "slug": "ghostblade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Ghostly Item Pack; the pass is now off sale."
+      },
+      {
+        "name": "Ghosty",
+        "slug": "ghosty-pet",
+        "kind": "pet",
+        "rarity": "Godly",
+        "how": "Robux purchase: Ghostly Item Pack"
+      },
+      {
+        "name": "Blue Elderwood",
+        "slug": "blue-elderwood",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Elderwood",
+        "slug": "bronze-elderwood",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Elderwood",
+        "slug": "gold-elderwood",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Elderwood",
+        "slug": "silver-elderwood",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Skulls (2019)",
+        "slug": "skulls-2019",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Vampire Bat",
+        "slug": "vampire-bat",
+        "kind": "pet",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Witched",
+        "slug": "witched",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Dungeon",
+        "slug": "dungeon",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Green Pumpkin (2019)",
+        "slug": "green-pumpkin-2019",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Monster",
+        "slug": "monster",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Red Pumpkin (2019)",
+        "slug": "red-pumpkin-2019",
+        "kind": "pet",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snakebite (Gun)",
+        "slug": "snakebite-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Snakebite (Knife)",
+        "slug": "snakebite-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Blue Pumpkin (2019)",
+        "slug": "blue-pumpkin-2019",
+        "kind": "pet",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Bones (2019)",
+        "slug": "bones-2019",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Brains (2019)",
+        "slug": "brains-2019",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Branches",
+        "slug": "branches",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombified (Gun)",
+        "slug": "zombified-gun",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombified (Knife)",
+        "slug": "zombified-knife",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Black Cat",
+        "slug": "black-cat",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Candy Corn (2019)",
+        "slug": "candy-corn-2019",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Mummified",
+        "slug": "mummified",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin (2019)",
+        "slug": "pumpkin-2019",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin Knife (2019)",
+        "slug": "pumpkin-knife-2019",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "RIP Gun",
+        "slug": "rip-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Slimy",
+        "slug": "slimy",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Webbed (Gun)",
+        "slug": "webbed-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2019 Halloween Box"
+      },
+      {
+        "name": "Webbed (Knife)",
+        "slug": "webbed-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombie Dog",
+        "slug": "zombie-dog",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2019",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1195800559288279040"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "rb-battles-season-1",
+    "name": "RB Battles Season 1",
+    "season": "collab",
+    "year": 2019,
+    "status": "ended",
+    "starts_on": "2019-09-09",
+    "ends_on": "2019-09-28",
+    "currency": null,
+    "format": "other",
+    "summary": "Roblox's first RB Battles, a YouTuber tournament played across popular games; MM2 was one of the featured games. We found no record of MM2 in-game rewards for it.",
+    "how_items_were_obtained": "No MM2 items are recorded for this event.",
+    "items": [],
+    "sources": [
+      "https://roblox.fandom.com/wiki/RB_Battles_Season_1",
+      "https://murder-mystery-2.fandom.com/wiki/RB_Battles_Season_2"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2018",
+    "name": "Christmas 2018",
+    "season": "christmas",
+    "year": 2018,
+    "status": "ended",
+    "starts_on": "2018-12-23",
+    "ends_on": "2019-01-14",
+    "currency": "Snowflake Tokens",
+    "format": "mixed",
+    "summary": "Players salvaged weapons into ornaments, hung them on Christmas trees and exchanged full trees for Snowflake Tokens, with a Christmas Box, a token leaderboard and the Icewing offer. Ginger Luger was added the day after launch.",
+    "how_items_were_obtained": "Snowflake Tokens bought items in Santa's shop or Snowflake Keys for the 2018 Christmas Box (godly: Gingerblade); the top 100 on the token leaderboard got the Unique Sugar guns; Icewing was a Robux gamepass.",
+    "items": [
+      {
+        "name": "Icewing",
+        "slug": "icewing",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Bought with Robux via the Icewing Gamepass; the pass is now off sale."
+      },
+      {
+        "name": "Chroma Gingerblade",
+        "slug": "chroma-gingerblade",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2018 Christmas Box during the Christmas Event 2018; the box left with the event."
+      },
+      {
+        "name": "Frostbird",
+        "slug": "frostbird",
+        "kind": "pet",
+        "rarity": "Godly",
+        "how": "Final (tier 100) reward of the Lumber Yard in the Christmas 2018 event."
+      },
+      {
+        "name": "Ginger Luger",
+        "slug": "ginger-luger",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Crafted during Christmas 2018 from a Gingerbread Cookie (salvaged from a Gingerblade) and a Gold Bar (salvaged from a Luger); the recipe ended with the event."
+      },
+      {
+        "name": "Gingerblade",
+        "slug": "gingerblade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2018 Christmas Box during the Christmas Event 2018; the box left with the event."
+      },
+      {
+        "name": "Blue Sugar",
+        "slug": "blue-sugar",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Sugar",
+        "slug": "bronze-sugar",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Sugar",
+        "slug": "gold-sugar",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Sugar",
+        "slug": "silver-sugar",
+        "kind": "gun",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Ginger Gun (2018)",
+        "slug": "ginger-gun-2018",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Ginger Knife (2018)",
+        "slug": "ginger-knife-2018",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Cane Gun (2018)",
+        "slug": "cane-gun-2018",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Cane Knife (2018)",
+        "slug": "cane-knife-2018",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Icicles (Gun)",
+        "slug": "icicles-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Icicles (Knife)",
+        "slug": "icicles-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Holly Gun (2018)",
+        "slug": "holly-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Holly Knife (2018)",
+        "slug": "holly-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Snowflake Gun (2018)",
+        "slug": "snowflake-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Snowflake Knife (2018)",
+        "slug": "snowflake-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Sweater Gun (2018)",
+        "slug": "sweater-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Sweater Knife (2018)",
+        "slug": "sweater-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Coal Gun (2018)",
+        "slug": "coal-gun-2018",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Coal Knife (2018)",
+        "slug": "coal-knife-2018",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Elf (2018)",
+        "slug": "elf-2018",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Santa (2018)",
+        "slug": "santa-2018",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Snowman Gun (2018)",
+        "slug": "snowman-gun-2018",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Snowman Knife (2018)",
+        "slug": "snowman-knife-2018",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Christmas Box"
+      },
+      {
+        "name": "Wrapped Gun (2018)",
+        "slug": "wrapped-gun-2018",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Wrapped Knife (2018)",
+        "slug": "wrapped-knife-2018",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Christmas Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2018",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2018",
+    "name": "Halloween 2018",
+    "season": "halloween",
+    "year": 2018,
+    "status": "ended",
+    "starts_on": "2018-10-25",
+    "ends_on": "2018-11-12",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "The first Halloween event with a tier pass: 100 tiers bought with Candies, plus a Halloween Box, a leaderboard and the Batwing offer. It was extended five days past its planned Nov 7 end.",
+    "how_items_were_obtained": "Each tier cost 100 Candies and the last tier gave a godly (Battleaxe II); Skeleton Keys opened the 2018 Halloween Box (godly: Boneblade); leaderboard ranks gave the Unique Hallow knives; Batwing was a standalone 2,499 Robux offer.",
+    "items": [
+      {
+        "name": "Batwing",
+        "slug": "batwing",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Bought with Robux via the Batwing Gamepass; the pass is now off sale."
+      },
+      {
+        "name": "Chroma Boneblade",
+        "slug": "chroma-boneblade",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Unboxed from the 2018 Halloween Box during the Halloween Event 2018; the box left with the event."
+      },
+      {
+        "name": "BattleAxe II",
+        "slug": "battleaxe-ii",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Tier 100 reward of the Halloween 2018 event."
+      },
+      {
+        "name": "Boneblade",
+        "slug": "boneblade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2018 Halloween Box during the Halloween Event 2018; the box left with the event."
+      },
+      {
+        "name": "Bronze Hallow",
+        "slug": "bronze-hallow",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event reward: finishing 3rd"
+      },
+      {
+        "name": "Gold Hallow",
+        "slug": "gold-hallow",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event reward: finishing 1st"
+      },
+      {
+        "name": "Red Hallow",
+        "slug": "red-hallow",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event reward: finish Top 100 in the Halloween Event 2018 Leaderboard"
+      },
+      {
+        "name": "Silver Hallow",
+        "slug": "silver-hallow",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event reward: finishing 2nd"
+      },
+      {
+        "name": "Ghost (Gun)",
+        "slug": "ghost-gun",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Ghost (Knife)",
+        "slug": "ghost-knife",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Toxic (Gun)",
+        "slug": "toxic-gun",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Toxic (Knife)",
+        "slug": "toxic-knife",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Vampire Gun (2018)",
+        "slug": "vampire-gun-2018",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Vampire Knife (2018)",
+        "slug": "vampire-knife-2018",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Mummy Gun (2018)",
+        "slug": "mummy-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Mummy Knife (2018)",
+        "slug": "mummy-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Potion Gun (2018)",
+        "slug": "potion-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Potion Knife (2018)",
+        "slug": "potion-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombie Gun (2018)",
+        "slug": "zombie-gun-2018",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Zombie Knife (2018)",
+        "slug": "zombie-knife-2018",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Bats Gun (2018)",
+        "slug": "bats-gun-2018",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Bats Knife (2018)",
+        "slug": "bats-knife-2018",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Blue Pumpkin (2018)",
+        "slug": "blue-pumpkin-2018",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Grave (Gun)",
+        "slug": "grave-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Grave (Knife)",
+        "slug": "grave-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Green Pumpkin (2018)",
+        "slug": "green-pumpkin-2018",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Haunted (Gun)",
+        "slug": "haunted-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Haunted (Knife)",
+        "slug": "haunted-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Pumpkin (2018)",
+        "slug": "pumpkin-2018",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Purple Pumpkin (2018)",
+        "slug": "purple-pumpkin-2018",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Red Pumpkin (2018)",
+        "slug": "red-pumpkin-2018",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      },
+      {
+        "name": "Slime (Gun)",
+        "slug": "slime-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2018 Halloween Box"
+      },
+      {
+        "name": "Slime (Knife)",
+        "slug": "slime-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Event pass reward"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2018",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/1055676021645680641",
+      "https://twitter.com/NikilisRBX/status/1061975025392250881"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2017",
+    "name": "Christmas 2017",
+    "season": "christmas",
+    "year": 2017,
+    "status": "ended",
+    "starts_on": "2017-12-25",
+    "ends_on": "2018-02-27",
+    "currency": "Snowflake Tokens",
+    "format": "mixed",
+    "summary": "Toy crafting returned: wrapped toys were traded for Snowflake Tokens and Winter Keys, with a Christmas Box, challenges, a leaderboard and a Winter Item Pack.",
+    "how_items_were_obtained": "Snowflake Tokens bought items in the token shop; Winter Keys opened the 2017 Christmas Box (godly: Winter's Edge); the Winter Item Pack (Robux) held Ice Shard and Ice Phoenix; leaderboard places gave the Unique Candy knives.",
+    "items": [
+      {
+        "name": "Frostsaber",
+        "slug": "frostsaber",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought in Santa's Workshop during Christmas 2017 for event tokens."
+      },
+      {
+        "name": "Ice Phoenix",
+        "slug": "ice-phoenix",
+        "kind": "pet",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Winter Item Pack during the Christmas 2017 event; the pass is now off sale."
+      },
+      {
+        "name": "Ice Shard",
+        "slug": "ice-shard",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Winter Item Pack; the pass is now off sale."
+      },
+      {
+        "name": "Snowflake",
+        "slug": "snowflake",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought in Santa's Workshop during Christmas 2017 for event tokens."
+      },
+      {
+        "name": "Winter's Edge",
+        "slug": "winters-edge",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2017 Christmas Box during the Christmas Event 2017; the box left with the event."
+      },
+      {
+        "name": "Blue Candy",
+        "slug": "blue-candy",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Bronze Candy",
+        "slug": "bronze-candy",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Gold Candy",
+        "slug": "gold-candy",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Silver Candy",
+        "slug": "silver-candy",
+        "kind": "knife",
+        "rarity": "Unique",
+        "how": "Event leaderboard prize"
+      },
+      {
+        "name": "Green Fire",
+        "slug": "green-fire",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Red Fire",
+        "slug": "red-fire",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: completing all Challenges"
+      },
+      {
+        "name": "Gingerbread (2017)",
+        "slug": "gingerbread-2017",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Snowy (2017)",
+        "slug": "snowy-2017",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Frosty (2017)",
+        "slug": "frosty-2017",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Sweater",
+        "slug": "sweater",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Tree Knife (2017)",
+        "slug": "tree-knife-2017",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Coal (2017)",
+        "slug": "coal-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Elf (2017)",
+        "slug": "elf-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Present",
+        "slug": "present",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Santa (2017)",
+        "slug": "santa-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Christmas Box"
+      },
+      {
+        "name": "Santa Dog",
+        "slug": "santa-dog",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: buying for 10 Snowflake Tokens"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2017",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2017",
+    "name": "Halloween 2017",
+    "season": "halloween",
+    "year": 2017,
+    "status": "ended",
+    "starts_on": "2017-10-27",
+    "ends_on": "2017-11-14",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "A Halloween Box bought with Candies, a limited Halloween Item Pack for Robux, and a trade-in for Hallow's Blade.",
+    "how_items_were_obtained": "The 2017 Halloween Box cost 100 Candies (godly: Pumpking); the Halloween Item Pack (1,299 Robux) held BattleAxe and the Traveller pet; Hallow's Blade came from trading 100 leftover 2016 Candies to the Mysterious Traveller.",
+    "items": [
+      {
+        "name": "BattleAxe",
+        "slug": "battleaxe",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Halloween Item Pack; the pass is now off sale."
+      },
+      {
+        "name": "Hallow's Blade",
+        "slug": "hallows-blade",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought from the Mysterious Traveller NPC for Candies during the Halloween 2017 event."
+      },
+      {
+        "name": "Pumpking",
+        "slug": "pumpking",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2017 Halloween Box during the Halloween Event 2017; the box left with the event."
+      },
+      {
+        "name": "Traveller",
+        "slug": "traveller-pet",
+        "kind": "pet",
+        "rarity": "Godly",
+        "how": "Bought with Robux via the Halloween Item Pack during the Halloween 2017 event; the pass is now off sale."
+      },
+      {
+        "name": "Scratch (2017)",
+        "slug": "scratch-2017",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Green Marble",
+        "slug": "green-marble",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Magma (2017)",
+        "slug": "magma-2017",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Mummy (2017)",
+        "slug": "mummy-2017",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Potion (2017)",
+        "slug": "potion-2017",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Webs",
+        "slug": "webs",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Candy Corn (2017)",
+        "slug": "candy-corn-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Ecto",
+        "slug": "ecto",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Phantom (2017)",
+        "slug": "phantom-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Halloween Box"
+      },
+      {
+        "name": "Zombie Knife (2017)",
+        "slug": "zombie-knife-2017",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2017 Halloween Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2017",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2016",
+    "name": "Christmas 2016",
+    "season": "christmas",
+    "year": 2016,
+    "status": "ended",
+    "starts_on": "2016-12-25",
+    "ends_on": "2017-01-13",
+    "currency": "Blue Tokens",
+    "format": "mixed",
+    "summary": "Players salvaged weapons into toy parts, crafted and wrapped toys, and traded them at Santa's Workshop for tokens.",
+    "how_items_were_obtained": "Blue Tokens (and Red Tokens from Game Systems) bought items at Santa's Workshop; the godly Ice Dragon was the top reward.",
+    "items": [
+      {
+        "name": "Ice Dragon",
+        "slug": "ice-dragon",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Blue Tokens during the Christmas 2016 event."
+      },
+      {
+        "name": "Elf Pet (2016)",
+        "slug": "elf-pet-2016",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: buying for 6 Blue Tokens"
+      },
+      {
+        "name": "Reindeer",
+        "slug": "reindeer",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Event reward: buying for 20 Blue Tokens"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2016",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/812902436704845824",
+      "https://twitter.com/NikilisRBX/status/819865297943412736"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2016",
+    "name": "Halloween 2016",
+    "season": "halloween",
+    "year": 2016,
+    "status": "ended",
+    "starts_on": "2016-10-28",
+    "ends_on": "2016-11-08",
+    "currency": "Candies",
+    "format": "event box",
+    "summary": "Candies replaced coins in rounds and paid for the first Halloween Box; the lobby got a Halloween makeover.",
+    "how_items_were_obtained": "The 2016 Halloween Box cost 100 Candies; its secret godly was Hallow's Edge. Candies could also be swapped for coins.",
+    "items": [
+      {
+        "name": "Hallow's Edge",
+        "slug": "hallows-edge",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2016 Halloween Box during the Halloween Event 2016; the box left with the event."
+      },
+      {
+        "name": "Scratch (2016)",
+        "slug": "scratch-2016",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Bats",
+        "slug": "bats",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Orange Marble",
+        "slug": "orange-marble",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Moons",
+        "slug": "moons",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Vampire (2016)",
+        "slug": "vampire-2016",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Wolf",
+        "slug": "wolf",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Brains (2016)",
+        "slug": "brains-2016",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Ghosty (Knife)",
+        "slug": "ghosty-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2016 Halloween Box"
+      },
+      {
+        "name": "Witch",
+        "slug": "witch",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2016 Halloween Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2016",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/792085583195729920",
+      "https://twitter.com/NikilisRBX/status/796062830567030788"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "easter-2016",
+    "name": "Easter 2016",
+    "season": "easter",
+    "year": 2016,
+    "status": "ended",
+    "starts_on": "2016-03-25",
+    "ends_on": null,
+    "currency": "Coins",
+    "format": "event shop",
+    "summary": "A minor event with five common Easter knives sold in the shop for coins. No end date is recorded.",
+    "how_items_were_obtained": "Bought in the shop: 50 coins per knife, or 212 coins for the five-knife bundle.",
+    "items": [
+      {
+        "name": "Bunny",
+        "slug": "bunny",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 50 coins (or in the 212-coin bundle)"
+      },
+      {
+        "name": "Carrot",
+        "slug": "carrot",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 50 coins (or in the 212-coin bundle)"
+      },
+      {
+        "name": "Choco",
+        "slug": "choco",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 50 coins (or in the 212-coin bundle)"
+      },
+      {
+        "name": "Egg",
+        "slug": "egg",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 50 coins (or in the 212-coin bundle)"
+      },
+      {
+        "name": "Tulip",
+        "slug": "tulip",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 50 coins (or in the 212-coin bundle)"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Easter_Event_2016",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/713487527630528513"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "valentines-2016",
+    "name": "Valentine's 2016",
+    "season": "valentines",
+    "year": 2016,
+    "status": "ended",
+    "starts_on": "2016-02-14",
+    "ends_on": null,
+    "currency": "Coins",
+    "format": "event shop",
+    "summary": "A minor event that put Valentine's knives and a pet in the shop for coins. The end date is only recorded as later in February 2016.",
+    "how_items_were_obtained": "Bought in the shop with coins: 75 coins per knife, 400 coins for the <3 pet.",
+    "items": [
+      {
+        "name": "Blossom (2016)",
+        "slug": "blossom-2016",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      },
+      {
+        "name": "Heart Pet",
+        "slug": "heart-pet",
+        "kind": "pet",
+        "rarity": "Common",
+        "how": "Bought in the shop for 400 coins"
+      },
+      {
+        "name": "Hearts (2016)",
+        "slug": "hearts-2016",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      },
+      {
+        "name": "Passion",
+        "slug": "passion",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      },
+      {
+        "name": "Roses",
+        "slug": "roses",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      },
+      {
+        "name": "Sweetheart",
+        "slug": "sweetheart",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      },
+      {
+        "name": "Valentine",
+        "slug": "valentine",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Bought in the shop for 75 coins"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Valentines_Event_2016",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/698918344519520257"
+    ],
+    "confidence": "medium",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "christmas-2015",
+    "name": "Christmas 2015",
+    "season": "christmas",
+    "year": 2015,
+    "status": "ended",
+    "starts_on": "2015-12-19",
+    "ends_on": "2016-01-08",
+    "currency": "Gifts",
+    "format": "mixed",
+    "summary": "A gift-collecting event with two Christmas crates, a godly knife for sale in Gifts and a limited Elite offer. A pre-release lobby went up on Dec 14, 2015; the full event opened Dec 19.",
+    "how_items_were_obtained": "Gifts collected in rounds opened the 2015 Christmas Knife Box or Gun Box (30 Gifts each) or bought the godly Xmas (75 Gifts); other godlies came from event recipes and the gift exchange; Green Elite came with the Elite Gamepass during the event.",
+    "items": [
+      {
+        "name": "Candy",
+        "slug": "candy",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2015 Christmas Knife Box during the Christmas Event 2015; the box left with the event."
+      },
+      {
+        "name": "Chill",
+        "slug": "chill",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Crafted during Christmas 2015 by combining a Heat with 100 Gifts; the recipe ended with the event."
+      },
+      {
+        "name": "Green Luger",
+        "slug": "green-luger",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Crafted during Christmas 2015 by combining a Luger with 75 Gifts; the recipe ended with the event."
+      },
+      {
+        "name": "Handsaw",
+        "slug": "handsaw",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Crafted during Christmas 2015 by combining a Saw with 100 Gifts; the recipe ended with the event."
+      },
+      {
+        "name": "Red Luger",
+        "slug": "red-luger",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Crafted during Christmas 2015 by combining a Luger with 75 Gifts; the recipe ended with the event."
+      },
+      {
+        "name": "Sugar",
+        "slug": "sugar",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2015 Christmas Gun Box during the Christmas Event 2015; the box left with the event."
+      },
+      {
+        "name": "Xmas",
+        "slug": "xmas",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought from the event shop during Christmas 2015."
+      },
+      {
+        "name": "Green Elite",
+        "slug": "green-elite",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Robux purchase: Elite Gamepass bought during the event (limited-time offer)"
+      },
+      {
+        "name": "Tree Gun (2015)",
+        "slug": "tree-gun-2015",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Tree Knife (2015)",
+        "slug": "tree-knife-2015",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": null
+      },
+      {
+        "name": "Cane Gun (2015)",
+        "slug": "cane-gun-2015",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Cane Knife (2015)",
+        "slug": "cane-knife-2015",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Ginger Gun (2015)",
+        "slug": "ginger-gun-2015",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Ginger Knife (2015)",
+        "slug": "ginger-knife-2015",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Nutcracker",
+        "slug": "nutcracker",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Snowman Gun (2015)",
+        "slug": "snowman-gun-2015",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Snowman Knife (2015)",
+        "slug": "snowman-knife-2015",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Snowy (2015)",
+        "slug": "snowy-2015",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Wrapped Gun (2015)",
+        "slug": "wrapped-gun-2015",
+        "kind": "gun",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Wrapped Knife (2015)",
+        "slug": "wrapped-knife-2015",
+        "kind": "knife",
+        "rarity": "Uncommon",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Elf Gun (2015)",
+        "slug": "elf-gun-2015",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Elf Knife (2015)",
+        "slug": "elf-knife-2015",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Ornament1 (Gun)",
+        "slug": "ornament1-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Ornament1 (Knife)",
+        "slug": "ornament1-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Ornament2 (Gun)",
+        "slug": "ornament2-gun",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Ornament2 (Knife)",
+        "slug": "ornament2-knife",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      },
+      {
+        "name": "Santa Gun (2015)",
+        "slug": "santa-gun-2015",
+        "kind": "gun",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Gun Box"
+      },
+      {
+        "name": "Santa Knife (2015)",
+        "slug": "santa-knife-2015",
+        "kind": "knife",
+        "rarity": "Common",
+        "how": "Unboxed from the 2015 Christmas Knife Box"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2015",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/678337869753270272",
+      "https://twitter.com/NikilisRBX/status/685595348757286912"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  },
+  {
+    "slug": "halloween-2015",
+    "name": "Halloween 2015",
+    "season": "halloween",
+    "year": 2015,
+    "status": "ended",
+    "starts_on": "2015-10-29",
+    "ends_on": "2015-11-04",
+    "currency": null,
+    "format": "quests",
+    "summary": "MM2's first ever event: a Halloween lobby and a Bingo Challenge of role-based tasks, with no boxes, pass or leaderboard.",
+    "how_items_were_obtained": "Completing a row or column of the 3x3 Bingo grid (Innocent, Sheriff and Murderer tasks) gave a reward; finishing all nine tasks gave the godly Spider.",
+    "items": [
+      {
+        "name": "Spider",
+        "slug": "spider",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Reward for completing every Bingo Challenge in the Halloween 2015 event."
+      },
+      {
+        "name": "Rupture",
+        "slug": "rupture",
+        "kind": "gun",
+        "rarity": "Legendary",
+        "how": "Event reward: bingo Challenge"
+      },
+      {
+        "name": "Web",
+        "slug": "web",
+        "kind": "knife",
+        "rarity": "Legendary",
+        "how": "Event reward: bingo Challenge"
+      },
+      {
+        "name": "Jack",
+        "slug": "jack",
+        "kind": "knife",
+        "rarity": "Rare",
+        "how": "Event reward: bingo Challenge"
+      },
+      {
+        "name": "Mummy (2015)",
+        "slug": "mummy-2015",
+        "kind": "gun",
+        "rarity": "Rare",
+        "how": "Event reward: bingo Challenge"
+      }
+    ],
+    "sources": [
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2015",
+      "https://murder-mystery-2.fandom.com/wiki/Timeline",
+      "https://twitter.com/NikilisRBX/status/661949683934302208"
+    ],
+    "confidence": "high",
+    "checked_at": "2026-10-05"
+  }
+]
