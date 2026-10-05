@@ -14,6 +14,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { isGameHubIndexable } from '@/lib/games/indexability'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { resolveGameSeo } from '@/lib/seo/templates'
@@ -74,13 +75,21 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
     return null
   }
 
-  const { data: categories, error: categoriesError } = await supabase
-    .from('game_categories')
-    .select('id, name, slug, description, icon_emoji, icon_url, type, sub_types')
-    .eq('game_id', game.id)
-    .eq('is_enabled', true)
-    .order('sort_order', { ascending: true })
-    .order('name', { ascending: true }) as any
+  const [{ data: categories, error: categoriesError }, { data: currencyCfg }] = await Promise.all([
+    supabase
+      .from('game_categories')
+      .select('id, name, slug, description, icon_emoji, icon_url, type, sub_types')
+      .eq('game_id', game.id)
+      .eq('is_enabled', true)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }) as any,
+    supabase
+      .from('category_configs')
+      .select('config')
+      .eq('game_id', game.id)
+      .eq('category_type', 'currency')
+      .maybeSingle() as any,
+  ])
 
   if (categoriesError) {
     console.error('Error fetching categories:', categoriesError)
@@ -88,7 +97,8 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
 
   return {
     ...game,
-    categories: categories || []
+    // Currency tab/card reads like its page title ("Gems", not "Currency").
+    categories: withCurrencyNavLabel((categories || []) as any[], currencyCfg?.config?.unit_label),
   }
 })
 
