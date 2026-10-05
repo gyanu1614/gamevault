@@ -15,7 +15,8 @@ import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { rarityMeta } from '@/lib/values/rarity'
-import { getValueItemHistory, trendValue, type ValueItem } from '@/lib/values/data'
+import { getValueItemHistory, getValueItemHowToGet, trendValue, type ValueItem } from '@/lib/values/data'
+import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import {
@@ -27,6 +28,7 @@ import {
 import { ValueItemHowToGet } from './ValueItemHowToGet'
 import { ValueListItemSkeleton } from './ValueListItemSkeleton'
 import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type ItemCopyInput } from './valueListItemCopy'
+import { howToGetFaq } from './valueHowToGetCopy'
 
 /**
  * Value page for one high-tier item on a value-list hub (Murder Mystery 2:
@@ -35,7 +37,7 @@ import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type 
  *
  * Section for section the Adopt Me pet page: backdrop + nav, breadcrumb, H1,
  * hero (price, buy/sell, Standard ↔ Chroma switch), Available Now, About
- * (answer-first callout + stats), How To Get (seam), price trend, similar
+ * (answer-first callout + stats), How To Get (verified facts), price trend, similar
  * items rail, FAQ, cross-links, buy CTA. One price per item — a Chroma is its
  * own item — so there is no variant context.
  */
@@ -54,7 +56,11 @@ export default async function ValueListItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const hub = valueListHub(gameSlug)!
-  const hubNav = await getHubNavData(gameSlug)
+  const [hubNav, howToGet] = await Promise.all([
+    getHubNavData(gameSlug),
+    // Verified how-to-get facts (values_items.how_to_get), under the item's tags.
+    getValueItemHowToGet(gameSlug, item.slug),
+  ])
 
   const rarity = rarityMeta(gameSlug, item.rarity)
   const typeLabel = (item.itemType && hub.itemTypeLabels[item.itemType]) || theme.itemNoun
@@ -84,7 +90,8 @@ export default async function ValueListItemPage({
       ? { name: counterpart.name, isChroma: counterpart === chroma, cheapestUsd: counterpart.price?.cheapestUsd ?? null }
       : null,
   }
-  const faq = itemFaq(copy)
+  // One FAQPage per page: the how-to-get answer joins the same list.
+  const faq = itemFaq(copy, howToGet ? howToGetFaq(item.name, hub.shortName, howToGet) : null)
   const path = `/${gameSlug}/values/${item.slug}`
 
   return (
@@ -151,6 +158,7 @@ export default async function ValueListItemPage({
             typeLabel={typeLabel}
             copy={copy}
             faq={faq}
+            howToGet={howToGet}
             sellHref={`/${gameSlug}/sell?src=${gameSlug}-item-page`}
           />
         </Suspense>
@@ -176,6 +184,7 @@ async function ItemBody({
   typeLabel,
   copy,
   faq,
+  howToGet,
   sellHref,
 }: {
   gameSlug: string
@@ -187,6 +196,7 @@ async function ItemBody({
   typeLabel: string
   copy: ItemCopyInput
   faq: { q: string; a: string }[]
+  howToGet: ValueHowToGet | null
   sellHref: string
 }) {
   const theme = getGameContentTheme(gameSlug)
@@ -312,7 +322,13 @@ async function ItemBody({
           </p>
         </section>
 
-        <ValueItemHowToGet itemName={item.name} obtain={item.obtain} />
+        <ValueItemHowToGet
+          itemName={item.name}
+          howToGet={howToGet}
+          cheapestUsd={cheapestUsd}
+          buy={buy}
+          sellHref={sellHref}
+        />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />
 

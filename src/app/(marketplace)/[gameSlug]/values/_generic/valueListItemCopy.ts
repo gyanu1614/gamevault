@@ -6,8 +6,8 @@
  *
  * Deliberately NOT said: whether an item is still obtainable (the wiki flag
  * behind `obtain.still_obtainable` is unreliable — 2017 event items read as
- * obtainable) and drop odds. Both belong to the "How To Get" section, which
- * will present the obtain sources properly.
+ * obtainable) and drop odds. Both come only from the verified how_to_get
+ * entry (valueHowToGetCopy.ts), which itemFaq takes as an argument.
  */
 
 import type { ValueObtainSource } from '@/lib/values/data'
@@ -110,7 +110,13 @@ export function priceSentence(i: ItemCopyInput): string | null {
   return `${date ? `As of ${date}, the` : 'The'} cheapest ${i.name} from a reputable seller costs ${formatUsd(i.cheapestUsd)}${market}, across ${listings}.`
 }
 
-export function itemFaq(i: ItemCopyInput): { q: string; a: string }[] {
+/**
+ * The page's FAQ (visible block + the one FAQPage schema). `howTo` is the
+ * verified "How do you get X?" entry (valueHowToGetCopy.howToGetFaq): when the
+ * item has one it takes the "Where does X come from?" slot, so the page never
+ * answers the same question twice from two sources.
+ */
+export function itemFaq(i: ItemCopyInput, howTo: { q: string; a: string } | null = null): { q: string; a: string }[] {
   const out: { q: string; a: string }[] = []
   const price = priceSentence(i)
   out.push({
@@ -120,7 +126,9 @@ export function itemFaq(i: ItemCopyInput): { q: string; a: string }[] {
       : `We do not have enough reputable listings to price ${i.name} right now. We only publish a value when at least three live listings from established sellers back it.`,
   })
   const from = originPhrase(i.obtain[0], i.origin)
-  if (from || i.releaseYear) {
+  if (howTo) {
+    out.push(howTo)
+  } else if (from || i.releaseYear) {
     out.push({
       q: `Where does ${i.name} come from?`,
       a: `${aboutSentence(i)} Besides that source, players get one by trading for it or buying it from another player.`,

@@ -278,6 +278,22 @@ export function ValueListAboutStats({
   )
 }
 
+/** The page's one Buy (+ optional Sell) pair, for server sections (How To Get). */
+export function ValueListBuyActions({
+  name,
+  buy,
+  sell,
+  className,
+}: {
+  name: string
+  buy: ItemBuy
+  sell?: { href: string; label: string } | null
+  className?: string
+}) {
+  const cta = useItemCta(buy, name)
+  return <ValueBuyActions cta={cta} itemName={name} sell={sell} className={className} />
+}
+
 /** Daily price history: this item's line; Compare adds the other form. */
 export function ValueListPriceTrend({
   series,

@@ -10085,6 +10085,7 @@ export type Database = {
           bracket_min: number | null
           created_at: string
           game_id: string
+          how_to_get: Json | null
           id: string
           image_attribution: string | null
           image_url: string | null
@@ -10111,6 +10112,7 @@ export type Database = {
           bracket_min?: number | null
           created_at?: string
           game_id: string
+          how_to_get?: Json | null
           id?: string
           image_attribution?: string | null
           image_url?: string | null
@@ -10137,6 +10139,7 @@ export type Database = {
           bracket_min?: number | null
           created_at?: string
           game_id?: string
+          how_to_get?: Json | null
           id?: string
           image_attribution?: string | null
           image_url?: string | null

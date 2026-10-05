@@ -22,6 +22,16 @@
 --   wiki_title         the Fandom page the row was imported from (the
 --                      re-import key; CC-BY-SA source).
 --   image_attribution  credit line for an image copied from the wiki.
+--   how_to_get         the item page's verified "How To Get" facts, one
+--                      object or NULL (no section): { status:
+--                      obtainable|unobtainable|unknown|seasonal, method,
+--                      costs?, odds?, released?, note?, sources[],
+--                      confidence, checked_at }. Loaded by
+--                      `pnpm values:mm2:how-to-get` from
+--                      scripts/values-seeds/murder-mystery-2.how-to-get.json,
+--                      so a re-check ships without a deploy. Separate from
+--                      `obtain` (the raw wiki parse, whose still_obtainable
+--                      flag is unreliable).
 --   kind CHECK         += 'bundle' (MM2 sets, phase 2).
 --
 -- values_raw_listings
@@ -43,7 +53,8 @@ alter table public.values_items
   add column if not exists origin            text,
   add column if not exists obtain            jsonb not null default '[]'::jsonb,
   add column if not exists wiki_title        text,
-  add column if not exists image_attribution text;
+  add column if not exists image_attribution text,
+  add column if not exists how_to_get        jsonb;
 
 alter table public.values_items drop constraint if exists values_items_item_type_check;
 alter table public.values_items add constraint values_items_item_type_check
@@ -56,6 +67,10 @@ alter table public.values_items add constraint values_items_release_year_check
 alter table public.values_items drop constraint if exists values_items_obtain_array_check;
 alter table public.values_items add constraint values_items_obtain_array_check
   check (jsonb_typeof(obtain) = 'array');
+
+alter table public.values_items drop constraint if exists values_items_how_to_get_object_check;
+alter table public.values_items add constraint values_items_how_to_get_object_check
+  check (how_to_get is null or jsonb_typeof(how_to_get) = 'object');
 
 -- A row can never be its own base.
 alter table public.values_items drop constraint if exists values_items_base_not_self_check;

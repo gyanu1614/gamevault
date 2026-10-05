@@ -1,5 +1,6 @@
 import 'server-only'
 import { createValuesReadClient } from '@/lib/values/read-client'
+import { parseHowToGet, type ValueHowToGet } from '@/lib/values/how-to-get'
 
 /**
  * Read layer for the generic values pipeline.
@@ -220,6 +221,30 @@ export async function getValueItem(
 ): Promise<ValueItem | null> {
   const all = await getValueItems(gameSlug, { itemSlug })
   return all.find((i) => i.slug === itemSlug) ?? null
+}
+
+/**
+ * One item's verified "How To Get" facts (values_items.how_to_get), or null
+ * when it has none — the item page then renders no section. Its own one-row
+ * read, under the ITEM's tags, so the list reads don't carry the column and a
+ * values revalidate refreshes it with the rest of the page.
+ */
+export async function getValueItemHowToGet(gameSlug: string, itemSlug: string): Promise<ValueHowToGet | null> {
+  const supabase = createValuesReadClient({ gameSlug, itemSlug })
+  const gameId = await gameIdFor(supabase, gameSlug)
+  if (!gameId) return null
+  const { data, error } = await (supabase as any)
+    .from('values_items')
+    .select('how_to_get')
+    .eq('game_id', gameId)
+    .eq('slug', itemSlug)
+    .eq('is_enabled', true)
+    .maybeSingle()
+  if (error) {
+    console.error('getValueItemHowToGet:', error)
+    return null
+  }
+  return parseHowToGet(data?.how_to_get)
 }
 
 /**
