@@ -218,7 +218,7 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                     />
                     <PolicyBlock
                       title="Delivery"
-                      body="Digital goods are delivered immediately after payment confirmation. Physical items ship within 1–3 business days."
+                      body="Digital goods are delivered immediately after payment confirmation."
                     />
                     <PolicyBlock
                       title="Support"

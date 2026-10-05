@@ -5,9 +5,9 @@
  *
  *   [game icon + name ▾]        [Values] [Calculator]       [Buy items][Accounts]
  *
- * - The game name opens the game switcher; picking a game goes to ITS hub
- *   home (/{slug}/blog). The current game's row also returns to hub home,
- *   so the name doubles as the "Blog/home" link — no separate Blog tab.
+ * - The game icon + name link to the game's marketplace hub (/{slug}), like
+ *   the marketplace GameSubNav; the caret beside them opens the game
+ *   switcher, where picking a game goes to ITS hub home (/{slug}/blog).
  * - Tool tabs and buy buttons are data-driven; games without a category or
  *   tool simply don't render that control.
  * - Marketplace look (card-surface system): the same translucent near-black
@@ -16,7 +16,7 @@
  *   keys + Enter, Escape / outside-click close, no page trap).
  */
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -28,7 +28,7 @@ import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { ShoppingBagIcon } from '@phosphor-icons/react/dist/csr/ShoppingBag'
 import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { VALUE_BTN_PRIMARY, VALUE_PANEL } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
@@ -178,25 +178,38 @@ export function HubNav({
               picking a game closes it. -ml-1.5 cancels the trigger's own
               padding so the game icon keeps its alignment with the brand mark. */}
           <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger
-              aria-label={`Switch game (current: ${current.name})`}
-              className={`-ml-1.5 flex h-10 shrink-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12 sm:pr-2 ${
-                open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
-              }`}
-            >
-              <GameMark name={current.name} imageUrl={current.imageUrl} size="trigger" />
-              {/* Game name shows on mobile too — the top/sub split frees the
-                  room the single row didn't have. Slightly smaller on phones. */}
-              <span className="whitespace-nowrap text-[15px] font-semibold text-text-primary sm:text-[16px]">
-                {current.name}
-              </span>
-              <CaretDownIcon
-                size={16}
-                weight="bold"
-                aria-hidden
-                className={`text-text-secondary transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
-              />
-            </PopoverTrigger>
+            {/* Icon + name link to the game hub (/{slug}) like the marketplace
+                GameSubNav; the caret beside them opens the switcher. The
+                anchor keeps the panel aligned to the whole lockup. */}
+            <PopoverAnchor asChild>
+              <div className="-ml-1.5 flex shrink-0 items-center">
+                <Link
+                  href={`/${current.slug}`}
+                  aria-label={`${current.name} marketplace`}
+                  className="flex h-10 shrink-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12"
+                >
+                  <GameMark name={current.name} imageUrl={current.imageUrl} size="trigger" />
+                  {/* Game name shows on mobile too — the top/sub split frees the
+                      room the single row didn't have. Slightly smaller on phones. */}
+                  <span className="whitespace-nowrap text-[15px] font-semibold text-text-primary sm:text-[16px]">
+                    {current.name}
+                  </span>
+                </Link>
+                <PopoverTrigger
+                  aria-label={`Switch game (current: ${current.name})`}
+                  className={`flex h-10 w-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12 ${
+                    open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <CaretDownIcon
+                    size={16}
+                    weight="bold"
+                    aria-hidden
+                    className={`text-text-secondary transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+                  />
+                </PopoverTrigger>
+              </div>
+            </PopoverAnchor>
 
             <PopoverContent
               align="start"
@@ -358,7 +371,8 @@ export function HubNav({
   )
 }
 
-/** Game logo (or a 2-3 letter monogram when a game has no art). */
+/** Game logo (or a 2-3 letter monogram when a game has no art, or its art
+ *  fails to load — never the browser's broken-image glyph). */
 function GameMark({
   name,
   imageUrl,
@@ -368,14 +382,27 @@ function GameMark({
   imageUrl: string | null | undefined
   size: 'trigger' | 'row'
 }) {
+  const [failed, setFailed] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+  // A server-rendered <img> can fail before hydration attaches onError.
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) setFailed(true)
+  }, [imageUrl])
   const box =
     size === 'trigger'
       ? 'h-[28px] w-[28px] sm:h-[34px] sm:w-[34px]'
       : 'h-[26px] w-[26px]'
-  if (imageUrl) {
+  if (imageUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- remote game logo
-      <img src={imageUrl} alt="" className={`${box} shrink-0 rounded-md object-cover`} />
+      <img
+        ref={imgRef}
+        src={imageUrl}
+        alt=""
+        onError={() => setFailed(true)}
+        className={`${box} shrink-0 rounded-md object-cover`}
+      />
     )
   }
   return (

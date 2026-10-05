@@ -753,9 +753,9 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 <div className="text-[13.5px] font-semibold text-text-primary">Blog CTA Banner</div>
                 <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">
                   Wide JPG/PNG/WebP, <strong className="font-semibold text-text-secondary">2560×640 (4:1)</strong> recommended, under 400 KB.
-                  Sits behind the &ldquo;Skip the grind&rdquo; block at the end of every guide for
-                  this game. Keep the focal point off-centre-left — the copy covers the left third
-                  under a dark scrim. Falls back to the cover art if left empty. Max 2.5 MB.
+                  The game&rsquo;s one CTA image: sits behind every Buy / Sell band for this game
+                  (values, calculators, guides, the sell page). Keep the focal point off-centre-left
+                  — the copy covers the left third under a dark scrim. Max 2.5 MB.
                 </p>
               </div>
 

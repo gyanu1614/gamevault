@@ -3,8 +3,9 @@
  * src/app/(legal) call it with a LegalDoc from src/lib/legal/documents.ts).
  *
  * Structure follows how mature marketplaces and GOV.UK present legal text:
- *   - Document header: title, summary, effective date / last updated /
- *     governing law, issuing entity, Print.
+ *   - Document header: title, summary, effective date / last updated +
+ *     version (per document, falling back to LEGAL_ENTITY) / governing law,
+ *     issuing entity, Print.
  *   - Contents: sticky "On This Page" rail on desktop with scroll-spy; a
  *     collapsed disclosure on phones. Built from the headings by toc.ts.
  *   - Body: headings carry stable #anchors with a copy-link button; the
@@ -193,7 +194,7 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
                 <MetaItem
                   icon={<ClockCounterClockwiseIcon size={15} weight="bold" />}
                   label="Last Updated"
-                  value={LEGAL_ENTITY.lastUpdated}
+                  value={`${doc.lastUpdated ?? LEGAL_ENTITY.lastUpdated} · ${doc.version ?? LEGAL_ENTITY.version}`}
                 />
                 <MetaItem
                   icon={<GlobeHemisphereWestIcon size={15} weight="bold" />}

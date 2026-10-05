@@ -4,6 +4,7 @@ import { createAnonClient } from '@/lib/supabase/anon'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
 import { getGameContentTheme, hasGameContentTheme } from '@/lib/content/theme'
+import { GAME_ICONS } from '@/features/home/lib/game-icons'
 
 /**
  * Data for the shared content-hub navbar: the game switcher list and the
@@ -50,8 +51,17 @@ const getCachedGameCategories = unstable_cache(
     return (data ?? []) as Array<{ slug: string; type: string | null }>
   },
   ['hub-nav-game-categories'],
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
 )
+
+/**
+ * A game's logo: the admin upload (games.image_url), else the static
+ * /public/games registry the marketplace GameSubNav also falls back to, else
+ * null (HubNav shows a monogram). Same data pattern for every game.
+ */
+export function hubGameIcon(slug: string, imageUrl: string | null | undefined): string | null {
+  return imageUrl?.trim() || GAME_ICONS[slug] || null
+}
 
 export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   const games = await getAllGames()
@@ -76,12 +86,12 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
     games: games.map((g) => ({
       name: g.name,
       slug: g.slug,
-      imageUrl: g.image_url,
+      imageUrl: hubGameIcon(g.slug, g.image_url),
     })),
     current: {
       name: current?.name ?? gameSlug,
       slug: gameSlug,
-      imageUrl: current?.image_url ?? null,
+      imageUrl: hubGameIcon(gameSlug, current?.image_url),
     },
     tools: getGameContentTheme(gameSlug).navTools,
     itemsHref,

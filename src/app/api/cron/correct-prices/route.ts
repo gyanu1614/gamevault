@@ -73,7 +73,11 @@ export async function GET(request: NextRequest) {
       // A held pipeline lock fails fast here: this route has a 300s budget and
       // is a manual trigger, so "held by <who> since <when>" is the useful
       // answer, not a wait.
-      results[game.key] = { ok: true, ...(await game.run({ lockWaitSeconds: 0 })) }
+      // publishedPrices is the runner's publish-step input (every item ×
+      // variant) — not response material. This manual trigger does not
+      // publish; the next runner pass diffs and revalidates.
+      const { publishedPrices: _published, ...summary } = await game.run({ lockWaitSeconds: 0 })
+      results[game.key] = { ok: true, ...summary }
     } catch (error: any) {
       anyFailed = true
       console.error(`correct-prices: ${game.key} failed:`, error)

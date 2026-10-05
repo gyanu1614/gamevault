@@ -26,7 +26,7 @@ import type { ReactNode } from 'react'
 
 import { SilverIcon } from '@/components/ui/silver-icon'
 import { BuyerSteps } from '@/features/home/components/BuyerSteps'
-import { gameCtaArt } from '@/lib/content/game-cta-art'
+import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 import { GuideBackdrop } from './GuideBackdrop'
 import { getCategoryGuide, type GuideBlock, type GuideText } from '@/content/category-guides'
 import { formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
@@ -82,6 +82,12 @@ function Block({ block }: { block: GuideBlock }) {
 }
 
 // ─── Shared content ─────────────────────────────────────────────────────────
+
+/** The game's ONE CTA image behind the "Why Buy" card (cached, cookie-free
+ *  read — the category page stays ISR). */
+async function GuideArt({ gameSlug }: { gameSlug: string }) {
+  return <GuideBackdrop gameSlug={gameSlug} src={await getGameCtaImage(gameSlug)} />
+}
 
 function plural(n: number, one: string, many: string) {
   return n === 1 ? one : many
@@ -227,7 +233,7 @@ export function CategoryGuide({
           // gap to How to Buy), so the card sits evenly between the two.
           className={`relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(233,237,242,0.07)] ${guide ? 'mt-16 sm:mt-20' : ''}`}
         >
-          <GuideBackdrop src={gameCtaArt(gameSlug)} />
+          <GuideArt gameSlug={gameSlug} />
           <div
             aria-hidden
             className="absolute inset-0"

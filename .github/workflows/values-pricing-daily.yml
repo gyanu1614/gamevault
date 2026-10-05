@@ -1,0 +1,332 @@
+name: Values Pricing Daily
+
+# ONE daily pricing window for every value game (T1, 2026-10-04). Replaces the
+# scattered per-game crons: sab-eldorado-daily (12 h), sab-g2g-daily (05:20),
+# adopt-me-daily (05:30) and steal-an-egg-values (12 h).
+#
+# Each game is its own job, so one game's failure never blocks another; the
+# workflow-level concurrency group keeps two windows from overlapping. Every
+# game ends with the same publish step:
+#
+#   pnpm reprice --game=<key> --publish
+#
+# which diffs the prices the pages now show against the last PUBLISHED
+# snapshot (|Δ| > max(3%, $0.05), src/lib/pricing/change-rule.ts) and POSTs
+# only the moved items to /api/internal/values-revalidate — that item's page,
+# plus the list pages, and nothing at all when nothing moved. Before T1, Adopt
+# Me and Steal an Egg rebuilt EVERY item page of the game on every run.
+#
+# Cadence: once a day for every game, SAB included. The 12 h SAB cadence
+# (2026-09-22) predates changed-only revalidation, and nothing reads SAB
+# prices on a sub-daily promise: the freshness guard (ROUTE-014) runs in-job
+# right after the reprice and as the 06:40 UTC Vercel cron with a 6 h
+# threshold, so the window starts at 02:10 UTC and SAB (G2G → Eldorado →
+# expire → reprice) lands by ~04:30 even on a slow day. A second daily SAB
+# run would double the ~70 runner minutes for a few hours of extra freshness
+# on a market whose prices move daily, and its changed-items revalidation
+# would mostly re-confirm the morning's numbers.
+#
+# Weekly catalogue refresh stays separate: adopt-me-weekly-catalog.yml.
+
+on:
+  schedule:
+    # 02:10 UTC daily. Off the hour: GitHub delays top-of-hour schedules most.
+    - cron: "10 2 * * *"
+  workflow_dispatch:
+    inputs:
+      games:
+        description: Which games to run
+        type: choice
+        options: [all, sab, adopt-me, steal-an-egg]
+        default: all
+      publish:
+        description: >-
+          changed = revalidate only items whose price moved (default);
+          full = whole-game refresh (after a catalogue / model change);
+          off = reprice without touching the page cache
+        type: choice
+        options: [changed, full, "off"]
+        default: changed
+      sab_max_brainrots:
+        description: "SAB Eldorado: how many brainrots to collect"
+        required: false
+        default: "420"
+      sab_max_pages:
+        description: "SAB Eldorado: offer pages per brainrot"
+        required: false
+        default: "10"
+      sab_refresh_after_hours:
+        description: "SAB Eldorado: re-crawl anything not priced within this many hours (0 = backfill only)"
+        required: false
+        default: "20"
+      sab_reset_progress:
+        description: "SAB Eldorado: restart the queue from the top (true/false)"
+        required: false
+        default: "false"
+      sab_publish_only_run_id:
+        description: >-
+          SAB recovery: re-publish a FAILED run's Eldorado feed instead of
+          crawling. Paste that run's id; its feed artifact is downloaded, the
+          final batch re-sent with publish:true, then repriced + published.
+        required: false
+        default: ""
+      g2g_max_brainrots:
+        description: "SAB G2G: how many brainrots to collect"
+        required: false
+        default: "120"
+      g2g_max_pages:
+        description: "SAB G2G: offer pages per brainrot (48 offers/page)"
+        required: false
+        default: "3"
+      sae_max_pages:
+        description: "Steal an Egg: Eldorado pages to crawl (50 listings each; 39 = all)"
+        required: false
+        default: "40"
+
+concurrency:
+  group: values-pricing-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Publish flag for every reprice step: --publish (changed), --publish=full,
+  # or nothing (off). Schedules have no inputs → changed.
+  PUBLISH_FLAG: ${{ inputs.publish == 'off' && 'none' || (inputs.publish == 'full' && '--publish=full' || '--publish') }}
+
+jobs:
+  # ── Steal a Brainrot: G2G cross-check first, then the Eldorado crawl ──────
+  sab-g2g:
+    if: >-
+      (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'sab')
+      && inputs.sab_publish_only_run_id == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # ROUTE-016: the per-item crawl-freshness lookup reads
+      # sab_market_raw_listings, which anon is denied.
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Independent second source (public JSON API, no browser). DB-driven
+      # rotation (--refresh-after-hours) — see collect-g2g-sab.mjs.
+      - name: Collect and import G2G market data
+        run: >-
+          pnpm sab:g2g:send
+          --max-brainrots ${{ inputs.g2g_max_brainrots || '120' }}
+          --max-pages ${{ inputs.g2g_max_pages || '3' }}
+          --delay-ms 1500
+          --refresh-after-hours 20
+
+      - name: Upload collection report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: g2g-sab-market-${{ github.run_id }}
+          path: data/sab-market-feeds/g2g-api-latest.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  sab:
+    needs: sab-g2g
+    # always(): a failed G2G cross-check must not cost SAB its Eldorado crawl
+    # and reprice. Skipped only when SAB was not selected.
+    if: >-
+      always()
+      && (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'sab')
+    runs-on: ubuntu-latest
+    # A full priority sweep is ~60-80 min at 420 brainrots; the reprice ~5.
+    timeout-minutes: 150
+    permissions:
+      contents: read
+      # ROUTE-017: the publish-only recovery downloads a PRIOR run's feed
+      # artifact, which needs the Actions API.
+      actions: read
+    env:
+      SAB_MARKET_IMPORT_SECRET: ${{ secrets.SAB_MARKET_IMPORT_SECRET }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # ROUTE-017 recovery: re-send a failed run's final batch with
+      # publish:true instead of re-scraping Eldorado for rows already landed.
+      - name: Download the failed run's feed (publish-only recovery)
+        if: inputs.sab_publish_only_run_id != ''
+        uses: actions/download-artifact@v5
+        with:
+          name: eldorado-sab-market-${{ inputs.sab_publish_only_run_id }}
+          path: data/sab-market-feeds
+          run-id: ${{ inputs.sab_publish_only_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-publish without crawling
+        if: inputs.sab_publish_only_run_id != ''
+        run: >-
+          pnpm sab:import:publish-only
+          data/sab-market-feeds/eldorado-api-latest.json
+
+      # Priority queue, DB-driven rotation (--refresh-after-hours, not the
+      # committed progress file). One run a day, so the queue takes up to 420
+      # brainrots not priced in the last 20 h — the whole curated tradeable
+      # set daily (was 210 per run at 6 h, twice a day).
+      - name: Collect and import Eldorado market data (priority queue)
+        if: inputs.sab_publish_only_run_id == ''
+        run: >-
+          pnpm sab:eldorado:send
+          --max-brainrots ${{ inputs.sab_max_brainrots || '420' }}
+          --max-pages ${{ inputs.sab_max_pages || '10' }}
+          --samples-per-variant 25
+          --delay-ms 1500
+          --refresh-after-hours ${{ inputs.sab_refresh_after_hours || '20' }}
+          ${{ (inputs.sab_reset_progress == 'true') && '--reset-progress' || '' }}
+
+      # "Popular" tab ordering from Eldorado's popularity feed. Non-fatal.
+      - name: Refresh Popular ranking
+        if: inputs.sab_publish_only_run_id == ''
+        continue-on-error: true
+        run: pnpm sab:eldorado:popularity
+
+      # Listing lifecycle on the runner, BEFORE the reprice so ended listings
+      # leave the evidence set this cycle. NOT continue-on-error: a silent
+      # lifecycle failure is how ended_at stayed null on 16k rows for months.
+      - name: Expire vanished SAB listings
+        if: inputs.sab_publish_only_run_id == ''
+        run: pnpm sab:expire
+
+      # Reprice + publish on the runner. The import's own revalidation call is
+      # now an acknowledgement (sab-market-revalidate defers here), so this is
+      # the step that moves SAB pages — corrected prices, changed items only.
+      # NOT continue-on-error: a failed reprice or publish must fail the job.
+      - name: Reprice SAB and publish changed prices
+        run: pnpm reprice --game=sab ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
+
+      # Freshness guard (ROUTE-014), LAST, against the state this run produced.
+      # NOT continue-on-error: a stale hop must fail the run.
+      - name: Check SAB pipeline freshness
+        run: |
+          code=$(curl -s -o /tmp/freshness.json -w "%{http_code}" -m 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${PUBLIC_API_URL}/api/cron/check-sab-freshness")
+          cat /tmp/freshness.json
+          echo
+          [ "$code" = "200" ] || { echo "::error::freshness check failed (HTTP $code)"; exit 1; }
+
+      - name: Upload collection report
+        if: always() && inputs.sab_publish_only_run_id == ''
+        uses: actions/upload-artifact@v5
+        with:
+          # Name is load-bearing: the publish-only recovery above downloads it.
+          name: eldorado-sab-market-${{ github.run_id }}
+          path: data/sab-market-feeds/eldorado-api-latest.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ── Adopt Me: one Eldorado category crawl (~26 min, independent of pet count) ─
+  adopt-me:
+    if: >-
+      (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'adopt-me')
+      && inputs.sab_publish_only_run_id == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # One paged walk of the whole Adopt Me "Pets" item type, grouped by pet,
+      # instead of one search per pet (the old per-pet mode scaled with the
+      # catalogue: ~800 pets = ~800 searches). Refuses to write a truncated
+      # feed, so the importer never retires listings it did not see.
+      #
+      # u7buy is no longer collected: it reports no seller review counts, and
+      # the reputable model drops every listing without one, so it never
+      # moved a price. Its old rows stay in the raw table, inert.
+      - name: Collect Eldorado cash listings (category crawl)
+        run: pnpm adoptme:cash:eldorado:crawl
+
+      - name: Import raw listings to Supabase
+        run: pnpm adoptme:cash:import data/adopt-me-feeds/eldorado-cash-latest.json
+
+      # NOT continue-on-error: a failed reprice or publish must fail the job.
+      - name: Reprice Adopt Me and publish changed prices
+        run: pnpm reprice --game=adopt-me ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
+
+      - name: Upload feed (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: adopt-me-cash-feeds-${{ github.run_id }}
+          path: data/adopt-me-feeds/eldorado-cash-latest.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ── Steal an Egg: generic values_* pipeline ───────────────────────────────
+  steal-an-egg:
+    if: >-
+      (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'steal-an-egg')
+      && inputs.sab_publish_only_run_id == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Collect Eldorado listings and upsert raw rows
+        run: >-
+          node scripts/collect-eldorado-sae.mjs
+          --max-pages ${{ inputs.sae_max_pages || '40' }}
+          --write
+
+      - name: Upload the collected feed (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: sae-market-${{ github.run_id }}
+          path: data/sae-market-feeds/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # NOT continue-on-error: a failed reprice or publish must fail the job.
+      - name: Reprice Steal An Egg and publish changed prices
+        run: pnpm reprice --game=steal-an-egg ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}

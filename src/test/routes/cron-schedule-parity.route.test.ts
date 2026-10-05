@@ -37,13 +37,14 @@ const WORKFLOW_DIR = '.github/workflows'
  * repricing, which is why the registry keys are asserted below too.
  */
 const RUNNER_SCHEDULED: Record<string, { workflow: string; step: string }[]> = {
+  // One shared daily pricing window for every value game (T1, 2026-10-04).
   '/api/cron/correct-prices': [
-    { workflow: 'sab-eldorado-daily.yml', step: 'pnpm reprice --game=sab' },
-    { workflow: 'adopt-me-daily.yml', step: 'pnpm reprice --game=adopt-me' },
-    { workflow: 'steal-an-egg-values.yml', step: 'pnpm reprice --game=steal-an-egg' },
+    { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=sab' },
+    { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=adopt-me' },
+    { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=steal-an-egg' },
   ],
   '/api/cron/expire-sab-listings': [
-    { workflow: 'sab-eldorado-daily.yml', step: 'pnpm sab:expire' },
+    { workflow: 'values-pricing-daily.yml', step: 'pnpm sab:expire' },
   ],
   // Checkout fix round B: the payment reconciler runs every 15 min from a
   // GitHub Actions workflow (Vercel Hobby rejects sub-daily cron). NEVER in

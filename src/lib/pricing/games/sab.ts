@@ -12,7 +12,8 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import type { RepriceOptions } from '@/lib/pricing/registry'
+import type { RepriceOptions, RepriceResult } from '@/lib/pricing/registry'
+import type { PublishedPrice } from '@/lib/pricing/change-rule'
 import {
   SAB_PIPELINE_LOCK,
   defaultHolder,
@@ -265,7 +266,7 @@ const REPRICE_LOCK_TTL_SECONDS = 45 * 60
  */
 export async function runSabCorrection(
   options: RepriceOptions = {},
-): Promise<Record<string, unknown>> {
+): Promise<RepriceResult> {
   const admin = createServiceRoleClient()
   const waitSeconds =
     options.lockWaitSeconds ??
@@ -286,7 +287,7 @@ export async function runSabCorrection(
 async function runSabCorrectionUnlocked(
   admin: ReturnType<typeof createServiceRoleClient>,
   options: RepriceOptions,
-): Promise<Record<string, unknown>> {
+): Promise<RepriceResult> {
   const full = options.full === true
   const startedAt = new Date().toISOString()
 
@@ -710,7 +711,15 @@ async function runSabCorrectionUnlocked(
     console.log(`✅ sab_price_display refreshed: ${displayRefreshed} rows`)
   }
 
+  // Everything the item pages display now (T1 publish step). Read back from
+  // sab_price_display rather than built from `corrections`, because the
+  // display is what the pages render (it also folds in the crawl's published
+  // estimates). Headline numbers only — the low/high range is min/max of the
+  // listings and jumps on every new outlier, so it never decides a rebuild.
+  const publishedPrices = await sabPublishedPrices(admin)
+
   return {
+    publishedPrices,
     evidence_refreshed: evidenceRefreshed,
     corrected: corrections.length,
     rows_written: rowsWritten,
@@ -723,4 +732,50 @@ async function runSabCorrectionUnlocked(
     display_refreshed: displayRefreshed,
     breakdown: summary,
   }
+}
+
+type DisplayRow = {
+  brainrot_slug: string | null
+  mutation_slug: string | null
+  market_value_usd: number | string | null
+  cheapest_usd: number | string | null
+  average_usd: number | string | null
+}
+
+const displayNumber = (v: number | string | null): number | null => {
+  if (v == null) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
+async function sabPublishedPrices(
+  admin: ReturnType<typeof createServiceRoleClient>,
+): Promise<PublishedPrice[]> {
+  const out: PublishedPrice[] = []
+  for (let page = 0; ; page += 1) {
+    const from = page * PAGE_SIZE
+    const { data, error } = await (admin as any)
+      .from('sab_price_display')
+      .select('brainrot_slug,mutation_slug,market_value_usd,cheapest_usd,average_usd')
+      // Unique order, so page seams neither skip nor repeat rows.
+      .order('brainrot_slug', { ascending: true })
+      .order('mutation_slug', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(`sab_price_display read: ${error.message}`)
+    const rows = (data ?? []) as DisplayRow[]
+    for (const r of rows) {
+      if (!r.brainrot_slug) continue
+      const market = displayNumber(r.market_value_usd)
+      const cheapest = displayNumber(r.cheapest_usd)
+      const average = displayNumber(r.average_usd)
+      if (market == null && cheapest == null && average == null) continue
+      out.push({
+        itemSlug: r.brainrot_slug,
+        variant: r.mutation_slug ?? 'default',
+        prices: { market, cheapest, average },
+      })
+    }
+    if (rows.length < PAGE_SIZE) break
+  }
+  return out
 }

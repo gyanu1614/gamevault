@@ -394,8 +394,9 @@ function ValuesDirectoryClientInner({
         </div>
 
         {/* Popular is itself an ordering, so the sort control would contradict
-            it — hidden in that view rather than shown doing nothing. */}
-        {effectiveView !== 'popular' ? (
+            it — hidden in that view rather than shown doing nothing. Its note
+            sits on the results row below, keeping this toolbar one row. */}
+        {effectiveView !== 'popular' && (
           <div className="w-full shrink-0 sm:w-52">
             <ValueSelect
               value={sort}
@@ -405,13 +406,6 @@ function ValuesDirectoryClientInner({
               icon={<SortAscendingIcon size={16} weight="bold" />}
             />
           </div>
-        ) : (
-          /* Desktop only: on a phone this note landed as its own orphan line
-             between the filters and the tiles, and the Popular tile already
-             says what the ordering is. */
-          <p className="hidden h-12 w-52 shrink-0 items-center text-[12.5px] leading-snug text-text-tertiary sm:flex">
-            Popular blends marketplace demand with cash value
-          </p>
         )}
       </div>
 
@@ -437,6 +431,13 @@ function ValuesDirectoryClientInner({
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
             <span className="text-[12px] font-medium text-text-tertiary">Priced From Real Sales</span>
           </span>
+          {/* Desktop only: on a phone this note was an orphan line, and the
+              Popular tile already says what the ordering is. */}
+          {effectiveView === 'popular' && (
+            <span className="ml-2.5 hidden align-middle text-[12px] text-text-tertiary sm:inline">
+              Popular blends marketplace demand with cash value
+            </span>
+          )}
         </p>
 
         {filtersActive && (
@@ -550,7 +551,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
             ariaLabel={`Mutation: ${pillLabel}. Choose mutation`}
           />
         ) : (
-          <div className="flex h-9 items-center justify-center text-[12px] font-medium text-text-disabled">
+          <div className="flex h-8 items-center justify-center text-[12px] font-medium text-text-disabled">
             No Mutations
           </div>
         )

@@ -18,6 +18,7 @@
 import { runSabCorrection } from '@/lib/pricing/games/sab'
 import { runAdoptMeCorrection } from '@/lib/pricing/games/adopt-me'
 import { runStealAnEggCorrection } from '@/lib/pricing/games/steal-an-egg'
+import type { PublishedPrice } from '@/lib/pricing/change-rule'
 
 export type RepriceOptions = {
   /** Recompute and rewrite every item, ignoring the incremental check. */
@@ -31,18 +32,31 @@ export type RepriceOptions = {
   lockWaitSeconds?: number
 }
 
+/**
+ * A run's summary (logged as JSON) plus, for the publish step, the prices the
+ * game's pages now display — every item × variant, not just this run's
+ * writes. src/lib/pricing/publish.ts diffs them against the last published
+ * snapshot to decide which item pages to revalidate (T1).
+ */
+export type RepriceResult = Record<string, unknown> & {
+  publishedPrices?: PublishedPrice[]
+}
+
 export type PricingGame = {
   key: string
-  run: (options?: RepriceOptions) => Promise<Record<string, unknown>>
+  /** The page slug: /<gameSlug>/values/<item>. */
+  gameSlug: string
+  run: (options?: RepriceOptions) => Promise<RepriceResult>
 }
 
 export const PRICING_GAMES: PricingGame[] = [
-  { key: 'sab', run: (options) => runSabCorrection(options) },
-  { key: 'adopt-me', run: (options) => runAdoptMeCorrection(options) },
+  { key: 'sab', gameSlug: 'steal-a-brainrot', run: (options) => runSabCorrection(options) },
+  { key: 'adopt-me', gameSlug: 'adopt-me', run: (options) => runAdoptMeCorrection(options) },
   // Steal An Egg runs on the generic values_* pipeline; same shared reputable
   // model, so it needs no new pricing maths.
   {
     key: 'steal-an-egg',
+    gameSlug: 'steal-an-egg',
     run: (options) => runStealAnEggCorrection('steal-an-egg', options),
   },
 ]

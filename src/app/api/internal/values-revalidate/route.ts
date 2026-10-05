@@ -4,32 +4,36 @@ import {
   internalJson,
 } from '@/lib/security/internal-route-auth'
 import { CONTENT_HUB_GAME_SLUGS, hasHubPage } from '@/lib/content/theme'
-import { valuesTag } from '@/lib/values/revalidation'
+import { parseChangedSlugs, valueItemPriceTag, valuesTag } from '@/lib/values/revalidation'
 import { submitChangedValuePages } from '@/lib/seo/indexnow'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 /**
- * Revalidate a game's price pages after a crawl republishes prices.
- *
- * Uses the shared internal-route auth from Step 2 (rate limit → configured-
- * secret check → constant-time compare) rather than re-implementing it, which
- * is what sab-market-revalidate did before that helper existed.
- *
- * Scoped by `?game=<slug>`: the hub-level pages by path, the item pages by
- * the `values:<game>` TAG every item render anchors to (lib/values/
- * revalidation). Not by path: `'/<game>/values/[itemSlug]'` matches nothing
- * (a page is tagged with its route pattern and its concrete pathname — a
- * silent no-op, which this route shipped with), and the route-pattern form
- * `/[gameSlug]/values/[itemSlug]` would drop every game's pages on every
- * crawl. So a Steal An Egg run never invalidates SAB's cache.
- *
- * Step 7a: this call is the primary refresh for the value pages (their
- * time-based `revalidate` is a 24 h safety net), so it also covers the
- * calculator and price-index where the game publishes them. The runner-side
- * pricing job (reprice.mjs) POSTs here after each run:
+ * The ONE revalidation contract for every value game's pricing run (T1,
+ * 2026-10-04). The runner (scripts/reprice.mjs --publish) diffs the prices the
+ * pages show against the last published snapshot, with the shared threshold
+ * (src/lib/pricing/change-rule.ts: |Δ| > max(3%, $0.05)), and sends ONLY the
+ * items that moved:
  *
  *   POST /api/internal/values-revalidate?game=<slug>
  *   x-values-revalidate-secret: $VALUES_REVALIDATE_SECRET
+ *   { "changedSlugs": ["owl", "frost-dragon"] }
+ *
+ *   • each changed item  → revalidateTag(price:<game>:<item>) — that page only
+ *   • any item changed   → the price LISTS by path (values hub, calculator,
+ *                          price-index): they rank every item by price
+ *   • nothing changed    → nothing revalidated (logged). The common case.
+ *
+ * `?full=1` (same auth) is the manual escape hatch: the whole-game
+ * `values:<game>` tag plus every hub path — what every run did before T1, at
+ * ~50 ISR write units per item page. Use it after a catalogue edit or a
+ * pricing-model change, not on a schedule.
+ *
+ * A request with neither is a 400, so an old caller can never silently turn
+ * into a whole-game refresh again (or into a no-op).
+ *
+ * Auth: the shared internal-route helper (rate limit → configured-secret check
+ * → constant-time compare).
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,7 +45,8 @@ export async function POST(request: Request): Promise<Response> {
   })
   if (!auth.ok) return auth.response
 
-  const gameSlug = new URL(request.url).searchParams.get('game')?.trim() ?? ''
+  const url = new URL(request.url)
+  const gameSlug = url.searchParams.get('game')?.trim() ?? ''
 
   if (!gameSlug || !CONTENT_HUB_GAME_SLUGS.includes(gameSlug)) {
     return internalJson(
@@ -50,42 +55,86 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
-  const revalidated: string[] = []
+  const full = url.searchParams.get('full') === '1'
+  let changedSlugs: string[] | null = null
+  if (!full) {
+    let body: unknown = null
+    try {
+      body = await request.json()
+    } catch {
+      // No / non-JSON body — handled below.
+    }
+    changedSlugs = parseChangedSlugs(body)
+    if (changedSlugs === null) {
+      return internalJson(
+        {
+          ok: false,
+          error:
+            'Send {"changedSlugs": [...]} (the items whose price moved), or ?full=1 for a whole-game refresh',
+        },
+        400,
+      )
+    }
+  }
 
-  if (hasHubPage(gameSlug, 'values')) {
-    revalidatePath(`/${gameSlug}/values`)
-    revalidated.push(`/${gameSlug}/values`)
-    // Every item page of THIS game, by tag (see header).
-    revalidateTag(valuesTag(gameSlug))
-    revalidated.push(valuesTag(gameSlug))
+  const revalidated: string[] = []
+  const listPaths = (): void => {
+    if (hasHubPage(gameSlug, 'values')) {
+      revalidatePath(`/${gameSlug}/values`)
+      revalidated.push(`/${gameSlug}/values`)
+    }
+    if (hasHubPage(gameSlug, 'calculator')) {
+      revalidatePath(`/${gameSlug}/calculator`)
+      revalidated.push(`/${gameSlug}/calculator`)
+    }
+    if (hasHubPage(gameSlug, 'priceIndex')) {
+      revalidatePath(`/${gameSlug}/price-index`)
+      revalidated.push(`/${gameSlug}/price-index`)
+    }
   }
-  if (hasHubPage(gameSlug, 'methodology')) {
-    // The methodology page quotes live counts, so it goes stale with the rest.
-    revalidatePath(`/${gameSlug}/values/methodology`)
-    revalidated.push(`/${gameSlug}/values/methodology`)
+
+  if (full) {
+    listPaths()
+    if (hasHubPage(gameSlug, 'values')) {
+      // Every item page of THIS game, by tag. Not by path: the concrete
+      // '/<game>/values/[itemSlug]' matches nothing, and the route pattern
+      // drops every game's pages.
+      revalidateTag(valuesTag(gameSlug))
+      revalidated.push(valuesTag(gameSlug))
+    }
+    if (hasHubPage(gameSlug, 'methodology')) {
+      // Quotes live counts; refreshed on a full pass, else its 24 h window.
+      revalidatePath(`/${gameSlug}/values/methodology`)
+      revalidated.push(`/${gameSlug}/values/methodology`)
+    }
+  } else if (changedSlugs && changedSlugs.length > 0) {
+    for (const slug of changedSlugs) {
+      const tag = valueItemPriceTag(gameSlug, slug)
+      revalidateTag(tag)
+      revalidated.push(tag)
+    }
+    listPaths()
+  } else {
+    console.log(`[values-revalidate] ${gameSlug}: 0 changed items — nothing revalidated`)
   }
-  if (hasHubPage(gameSlug, 'calculator')) {
-    // Cash tab + value table read the same prices.
-    revalidatePath(`/${gameSlug}/calculator`)
-    revalidated.push(`/${gameSlug}/calculator`)
-  }
-  if (hasHubPage(gameSlug, 'priceIndex')) {
-    revalidatePath(`/${gameSlug}/price-index`)
-    revalidated.push(`/${gameSlug}/price-index`)
-  }
+
+  const changedCount = full ? null : (changedSlugs?.length ?? 0)
 
   // IndexNow: submit only the value pages whose cash value really moved against
-  // the game's previous daily snapshot. Steal a Brainrot is left to its own daily
-  // snapshot cron (which runs the same comparison); doing it here too would
-  // submit the same pages twice a day. Production only, never throws.
+  // the game's previous daily snapshot. Skipped when nothing moved past the
+  // publish threshold (IndexNow's own bar is higher: 5% / $0.25). Steal a
+  // Brainrot is left to its own daily snapshot cron, which runs the same
+  // comparison. Production only, never throws.
   const indexNowChanged =
-    gameSlug === 'steal-a-brainrot'
+    gameSlug === 'steal-a-brainrot' || changedCount === 0
       ? 0
       : await submitChangedValuePages(createServiceRoleClient(), gameSlug)
 
   return internalJson({
     ok: true,
     game: gameSlug,
+    mode: full ? 'full' : 'changed-items',
+    changed_count: changedCount,
     revalidated,
     indexnow_changed: indexNowChanged,
     revalidated_at: new Date().toISOString(),

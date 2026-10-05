@@ -20,6 +20,7 @@ import { stripBrand } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import GameSubNav from '@/components/marketplace/GameSubNav'
 import { SabLanding } from './values/_SabLanding'
+import { getGameIcon } from '@/features/home/lib/game-icons'
 import { SabNavExtras } from './values/_SabNavExtras'
 import { loadItemsTaxonomy, listingToOffer } from './[categorySlug]/_itemsData'
 import type { ItemOffer } from './[categorySlug]/_itemsTypes'
@@ -317,7 +318,8 @@ export default async function GameBrowsePage({ params }: PageProps) {
         <SabLanding
           gameSlug={gameSlug}
           gameName={game.name}
-          gameImageUrl={game.image_url}
+          // Same logo fallback as GameSubNav + HubNav (admin upload → static).
+          gameImageUrl={game.image_url || getGameIcon(gameSlug)}
           listingCount={sabListings.itemOffers.length + sabListings.accountOffers.length}
           minPriceUsd={sabListings.minPriceUsd}
           topValues={sabTopValues}

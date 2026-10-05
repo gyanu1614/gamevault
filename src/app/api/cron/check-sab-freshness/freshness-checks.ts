@@ -54,6 +54,13 @@ export type FreshnessCheck = {
  *    every 3 hours (.github/workflows/sab-eldorado-daily.yml) and the import
  *    edge function refreshes the evidence snapshot at the end of every run, so
  *    both hops have a 3h cadence and a 6h threshold.
+ *
+ *    T1 (2026-10-04): the crawl is now ONCE a day, in the shared pricing
+ *    window (.github/workflows/values-pricing-daily.yml, 02:10 UTC, done by
+ *    ~04:30). The 6h threshold is kept on purpose: both places this check
+ *    runs read it right after the crawl — in-job straight after the reprice,
+ *    and the daily Vercel cron at 06:40 UTC, ~2–4h after the window — so
+ *    "older than 6h" still means "today's run did not land".
  *  - sab_price_display advances from the same crawl: the reprice runs as a
  *    runner step right after every collect (pnpm reprice --game=sab), so it has
  *    the crawl's 3h cadence and the same 6h threshold. There is no daily Vercel

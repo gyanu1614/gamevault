@@ -2,9 +2,11 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { categoryListingsTag } from '@/lib/revalidation/listings'
+import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { valuesTag } from '@/lib/values/revalidation'
+import { valueItemStockTag, valueStockTag } from './tags'
 import { aggregateStock } from './stock'
 import { loadValueCatalog, type LoadedCatalog } from './catalogs'
 import { matchListingToValueItem } from './match'
@@ -16,15 +18,16 @@ import type { ItemStock } from './buy-state'
  * the STORED link (`listings.value_item_slug` / `value_variant`, set by
  * value-listings/link.ts).
  *
- * Freshness: tagged with the game's items-pair listings tag, which every
- * listing mutation already revalidates through `revalidateListingSurfaces`,
- * plus `valueStockTag(game)` for the nightly reconcile. Cookie-free (anon),
- * so value pages stay ISR.
+ * Freshness: the per-GAME read is tagged with the game's items-pair listings
+ * tag, which every listing mutation already revalidates through
+ * `revalidateListingSurfaces`, plus `valueStockTag(game)` for the nightly
+ * reconcile. The value ITEM page reads its own per-ITEM slice
+ * (getValueItemListings) under `valueItemStockTag(game, item)` only — so one
+ * listing change rebuilds one item page, not all ~500 of the game (T1).
+ * Cookie-free (anon), so value pages stay ISR.
  */
 
-export function valueStockTag(gameSlug: string): string {
-  return `value-stock:${gameSlug}`
-}
+export { valueItemStockTag, valueStockTag }
 
 export const VALUE_LISTING_SELECT = `
   id, slug, title, price, original_price, delivery_time,
@@ -72,45 +75,84 @@ export const getItemsPair = unstable_cache(
     return { gameId: game.id, gameName: game.name, gameImageUrl: game.image_url ?? null, pairId: pair.id, categorySlug: pair.slug }
   },
   ['value-items-pair'],
-  { revalidate: 86400 },
+  // 7 days + the directory tag (admin game/category edits, nightly backstop):
+  // value item pages call this, and a shorter window here would cap their
+  // 7-day ISR interval at it — Next uses the minimum across a render's reads.
+  { revalidate: 604800, tags: [GAME_DIRECTORY_TAG] },
 )
+
+/** Live, linked listings of the game — all of them, or one item's. */
+async function readValueListings(
+  gameSlug: string,
+  pair: ItemsPair,
+  itemSlug: string | null,
+): Promise<ValueListingRow[]> {
+  const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
+  const hidden = [...new Set([...paused, ...test])]
+  let q: any = (createAnonClient() as any)
+    .from('listings')
+    .select(VALUE_LISTING_SELECT)
+    .eq('game_id', pair.gameId)
+    .eq('status', 'active')
+  q = itemSlug ? q.eq('value_item_slug', itemSlug) : q.not('value_item_slug', 'is', null)
+  q = q.order('price', { ascending: true }).limit(2000)
+  if (hidden.length) q = q.not('seller_id', 'in', `(${hidden.join(',')})`)
+  const { data, error } = await q
+  if (error) {
+    console.error('[value-listings] stock read failed', error.message)
+    return []
+  }
+  const rows = (data ?? []) as ValueListingRow[]
+  // Re-check each stored link against today's matcher: a link written by
+  // an older matcher ("Fairy Bat Dragon NFR" → Bat Dragon) stays in the
+  // row until the listing is edited, but must never show on the item page.
+  const catalog = await getValueCatalog(gameSlug)
+  if (!catalog) return rows
+  return rows.filter(
+    (r) =>
+      matchListingToValueItem({ title: String(r.title ?? ''), templateData: r.template_data }, catalog.catalog)
+        ?.itemSlug === r.value_item_slug,
+  )
+}
 
 /** Every live, linked listing of the game (card columns included). */
 export async function getValueListings(gameSlug: string): Promise<{ pair: ItemsPair; rows: ValueListingRow[] } | null> {
   const pair = await getItemsPair(gameSlug)
   if (!pair) return null
   const rows = await unstable_cache(
-    async (): Promise<ValueListingRow[]> => {
-      const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
-      const hidden = [...new Set([...paused, ...test])]
-      let q: any = (createAnonClient() as any)
-        .from('listings')
-        .select(VALUE_LISTING_SELECT)
-        .eq('game_id', pair.gameId)
-        .eq('status', 'active')
-        .not('value_item_slug', 'is', null)
-        .order('price', { ascending: true })
-        .limit(2000)
-      if (hidden.length) q = q.not('seller_id', 'in', `(${hidden.join(',')})`)
-      const { data, error } = await q
-      if (error) {
-        console.error('[value-listings] stock read failed', error.message)
-        return []
-      }
-      const rows = (data ?? []) as ValueListingRow[]
-      // Re-check each stored link against today's matcher: a link written by
-      // an older matcher ("Fairy Bat Dragon NFR" → Bat Dragon) stays in the
-      // row until the listing is edited, but must never show on the item page.
-      const catalog = await getValueCatalog(gameSlug)
-      if (!catalog) return rows
-      return rows.filter(
-        (r) =>
-          matchListingToValueItem({ title: String(r.title ?? ''), templateData: r.template_data }, catalog.catalog)
-            ?.itemSlug === r.value_item_slug,
-      )
-    },
+    async (): Promise<ValueListingRow[]> => readValueListings(gameSlug, pair, null),
     ['value-listings', 'whole-name-v2', gameSlug, pair.pairId],
     { revalidate: 86400, tags: [valueStockTag(gameSlug), categoryListingsTag(pair.pairId), valuesTag(gameSlug)] },
+  )()
+  return { pair, rows }
+}
+
+/**
+ * ONE item's live listings, for that item's value page (buy button +
+ * "Available Now"). Tagged with the item's own stock tag — revalidated by the
+ * listing mutation seam for listings linked to this item — and the game's
+ * content tag (catalogue edits, `?full=1`). Deliberately NOT the items-pair
+ * category tag or the per-game stock tag: both fire for any listing of the
+ * game, and every item page carrying them rebuilt on every listing change.
+ *
+ * `revalidate` (1 day) is the backstop for what the seam cannot name: a
+ * HARD-deleted listing (the row is gone before the seam reads it) and a relink
+ * (a listing edited from item A to item B refreshes B; A drops it within the
+ * day). Same staleness bound as the old nightly per-game reconcile. Note it
+ * also caps the item page's ISR interval at 1 day (Next takes the minimum
+ * across a render's reads); passing the deleted listing's item to the seam
+ * from the delete paths would let this go to 7 days.
+ */
+export async function getValueItemListings(
+  gameSlug: string,
+  itemSlug: string,
+): Promise<{ pair: ItemsPair; rows: ValueListingRow[] } | null> {
+  const pair = await getItemsPair(gameSlug)
+  if (!pair) return null
+  const rows = await unstable_cache(
+    async (): Promise<ValueListingRow[]> => readValueListings(gameSlug, pair, itemSlug),
+    ['value-item-listings', 'whole-name-v2', gameSlug, pair.pairId, itemSlug],
+    { revalidate: 86400, tags: [valueItemStockTag(gameSlug, itemSlug), valuesTag(gameSlug)] },
   )()
   return { pair, rows }
 }

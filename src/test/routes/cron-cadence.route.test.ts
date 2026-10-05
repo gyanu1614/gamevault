@@ -1,6 +1,9 @@
 /**
- * Cadence policy (Gyanu, 2026-09-22): price data refreshes every 12 h; every
- * other schedule is daily.
+ * Cadence policy: every value game is priced ONCE a day, in one shared window
+ * (values-pricing-daily.yml; T1, 2026-10-04 — owner: minimum ISR writes and
+ * Vercel CPU, scaling to ~10 games). It was 12 h for SAB and Steal an Egg
+ * (2026-09-22) before revalidation became changed-items-only. Every other
+ * schedule is daily too, except the money paths below.
  *
  * Each crawl used to mark every one of a game's ~500 value item pages stale,
  * so an 8×/day cadence was ~80% of the monthly ISR budget (build audit §4).
@@ -19,14 +22,6 @@ const WORKFLOW_DIR = '.github/workflows'
 
 /** Workflows allowed to run more often than daily, with the reason. */
 const SUB_DAILY: Record<string, { maxPerDay: number; why: string }> = {
-  'sab-eldorado-daily.yml': {
-    maxPerDay: 2,
-    why: 'price data — 12 h cadence',
-  },
-  'steal-an-egg-values.yml': {
-    maxPerDay: 2,
-    why: 'price data — 12 h cadence',
-  },
   'auto-complete-orders.yml': {
     // Money path: the SafeDrop Protection window closes at an exact hour and
     // the seller's credit is due then; a daily sweep would hold it up to 23 h.
@@ -103,14 +98,23 @@ describe('cron cadence', () => {
     ).toEqual([])
   })
 
-  it('the price pipelines are actually on the 12 h cadence', () => {
-    // Not just "at most 2× a day" — that would pass if someone made them
-    // daily and quietly halved price freshness.
-    for (const file of ['sab-eldorado-daily.yml', 'steal-an-egg-values.yml']) {
-      const crons = cronsOf(readFileSync(join(WORKFLOW_DIR, file), 'utf8'))
-      expect(crons.some((c) => /\*\/12/.test(c)), `${file} is not on a 12 h cron`).toBe(
-        true,
-      )
+  it('every value game is priced in ONE daily window, with no per-game schedules left', () => {
+    // Not just "at most once a day" — that would pass with the window gone.
+    const window = readFileSync(join(WORKFLOW_DIR, 'values-pricing-daily.yml'), 'utf8')
+    const crons = cronsOf(window)
+    expect(crons).toHaveLength(1)
+    expect(runsPerDay(crons[0])).toBe(1)
+    for (const step of ['--game=sab', '--game=adopt-me', '--game=steal-an-egg']) {
+      expect(window, `values-pricing-daily.yml must reprice ${step}`).toContain(`pnpm reprice ${step}`)
+    }
+    // The scattered per-game crons it replaced must not come back beside it.
+    for (const retired of [
+      'sab-eldorado-daily.yml',
+      'sab-g2g-daily.yml',
+      'adopt-me-daily.yml',
+      'steal-an-egg-values.yml',
+    ]) {
+      expect(files, `${retired} was folded into values-pricing-daily.yml`).not.toContain(retired)
     }
   })
 

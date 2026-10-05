@@ -1,5 +1,10 @@
 # Per-game CTA background heroes
 
+> Since 2026-10-04 the admin upload wins: **Admin → Games → (game) → Blog CTA
+> Banner** (`games.blog_cta_image_url`) is the ONE CTA image for that game on
+> every band (buy, sell, /sell, blog, category guide). A file here is only the
+> fallback when no banner is uploaded (`src/lib/content/game-cta-art.ts`).
+
 Drop an image here named after the game's slug and it becomes the background of
 the "Skip the grind — buy the … item you want" band at the bottom of EVERY page
 in that game's content hub (blog, values, per-pet, calculator …).

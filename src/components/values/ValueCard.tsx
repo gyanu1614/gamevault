@@ -43,28 +43,28 @@ export function ValueCard({
 }) {
   return (
     <div className={`group relative isolate flex flex-col overflow-hidden ${VALUE_SURFACE_LINK}`}>
-      <div className="flex min-h-[18px] items-center justify-between gap-2 px-3 pt-3">
+      <div className="flex min-h-[18px] items-center justify-between gap-2 px-3 pt-2.5">
         <span className="flex min-w-0 items-center gap-1.5">{headerLeft}</span>
         <span className="min-w-0 truncate">{headerRight}</span>
       </div>
 
       <Body href={href} className="flex flex-1 flex-col">
-        <div className="flex h-[112px] items-center justify-center px-3 pt-1">
+        <div className="flex h-[86px] items-center justify-center px-3 pt-1">
           <ValueArt
             src={imageSrc}
             alt={imageAlt}
-            size={96}
+            size={74}
             pixelated={pixelated}
             className="transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         </div>
-        <div className="px-3 pb-2.5 pt-1.5 text-center">
-          <div className="truncate text-[15px] font-medium tracking-[-0.01em] text-text-primary">{name}</div>
-          {sub && <div className="mt-0.5 truncate text-[12px] font-medium">{sub}</div>}
+        <div className="px-3 pb-2 pt-1 text-center">
+          <div className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.01em] text-text-primary">{name}</div>
+          {sub && <div className="truncate text-[12px] font-medium leading-4">{sub}</div>}
         </div>
       </Body>
 
-      {control && <div className="px-3 pb-3">{control}</div>}
+      {control && <div className="px-3 pb-2.5">{control}</div>}
 
       <Body href={href} className="mt-auto block">{footer}</Body>
 
@@ -121,7 +121,7 @@ export function PriceStatPair({
 }) {
   if (empty) {
     return (
-      <div className="border-t border-white/[0.07] bg-[#17181C] px-2 py-3.5 text-center text-[12px] font-medium text-text-tertiary">
+      <div className="border-t border-white/[0.07] bg-[#17181C] px-2 py-3 text-center text-[12px] font-medium text-text-tertiary">
         {empty}
       </div>
     )
@@ -130,11 +130,11 @@ export function PriceStatPair({
     <div className="flex border-t border-white/[0.07] bg-[#17181C]">
       {stats.map((s, i) => (
         <div key={s.label} className="flex flex-1">
-          {i > 0 && <div aria-hidden className="my-2.5 w-px bg-white/[0.07]" />}
-          <div className="min-w-0 flex-1 px-1.5 py-2.5 text-center">
+          {i > 0 && <div aria-hidden className="my-2 w-px bg-white/[0.07]" />}
+          <div className="min-w-0 flex-1 px-1.5 py-2 text-center">
             <div className={VALUE_LABEL}>{s.label}</div>
             <div
-              className="mt-0.5 truncate text-[17px] font-semibold tabular-nums tracking-[-0.01em]"
+              className="truncate text-[16px] font-semibold leading-6 tabular-nums tracking-[-0.01em]"
               style={{ color: s.color ?? 'var(--color-text-primary)' }}
             >
               {s.value ?? '-'}
@@ -171,7 +171,7 @@ export function VariantPill({
       }}
       aria-label={ariaLabel}
       aria-expanded={expanded}
-      className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-bg-overlay px-3 text-[13px] font-semibold text-text-primary transition-[background-color,transform] hover:bg-bg-overlay-2 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className="flex h-8 w-full items-center justify-center gap-2 rounded-md bg-bg-overlay px-3 text-[13px] font-semibold text-text-primary transition-[background-color,transform] hover:bg-bg-overlay-2 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
       {color && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />}
       <span className="truncate">{label}</span>

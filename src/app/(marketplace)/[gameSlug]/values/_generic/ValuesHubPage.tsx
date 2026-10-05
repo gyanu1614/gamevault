@@ -1,4 +1,3 @@
-import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList, itemList } from '@/lib/seo/jsonld'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -6,7 +5,9 @@ import { HubHero } from '@/components/content/HubHero'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme } from '@/lib/content/theme'
-import { HUB_GROUND, VALUE_SURFACE_LINK } from '@/components/values/styles'
+import { HUB_GROUND } from '@/components/values/styles'
+import { PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
+import { rarityMeta } from '@/lib/values/rarity'
 import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { getValueItems, getValuesFreshness, type ValueItem } from '@/lib/values/data'
 
@@ -43,54 +44,46 @@ function formatIncome(perSec: number): string {
   return `${perSec}/s`
 }
 
-function PriceCell({ item }: { item: ValueItem }) {
+/**
+ * One item on the SHARED ValueCard (same card as SAB + Adopt Me; only the
+ * values differ): area + rarity header → art + name (income as the sub line)
+ * → Cheapest / Average footer, "No Price Yet" when nothing is published.
+ */
+function ItemCard({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
   const p = item.price
-  if (!p || p.cheapestUsd == null) {
-    return <span className="shrink-0 text-[12px] font-medium text-text-disabled">No Price Yet</span>
-  }
+  const rarity = item.rarity ? rarityMeta(gameSlug, item.rarity) : null
+  const priced = p != null && p.cheapestUsd != null
   return (
-    <span className="flex shrink-0 flex-col items-end gap-0.5">
-      <span className="text-[15px] font-semibold tabular-nums text-text-primary">
-        {usd(p.cheapestUsd)}
-      </span>
-      {p.averageUsd != null && p.averageUsd !== p.cheapestUsd && (
-        <span className="text-[11px] tabular-nums text-text-tertiary">
-          avg {usd(p.averageUsd)}
-        </span>
-      )}
-    </span>
-  )
-}
-
-function ItemRow({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
-  const meta = [
-    item.rarity,
-    item.area,
-    item.incomePerSec != null ? formatIncome(item.incomePerSec) : null,
-    item.price?.sampleSize ? `${item.price.sampleSize} listings` : null,
-  ].filter(Boolean) as string[]
-  return (
-    <Link
+    <ValueCard
       href={`/${gameSlug}/values/${item.slug}`}
-      className={`flex items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
-    >
-      <span className="flex min-w-0 flex-col gap-1">
-        <span className="truncate text-[15px] font-semibold text-text-primary">
-          {item.name}
-        </span>
-        {meta.length > 0 && (
-          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-text-tertiary">
-            {meta.map((m, i) => (
-              <span key={`${i}-${m}`} className="flex items-center gap-1.5">
-                {i > 0 && <span aria-hidden className="h-1 w-1 rounded-full bg-white/20" />}
-                {m}
-              </span>
-            ))}
-          </span>
-        )}
-      </span>
-      <PriceCell item={item} />
-    </Link>
+      headerLeft={
+        item.area ? (
+          <span className="truncate text-[11px] font-medium text-text-tertiary">{item.area}</span>
+        ) : undefined
+      }
+      headerRight={rarity ? <RarityLabel label={rarity.label} color={rarity.color} /> : undefined}
+      imageSrc={item.imageUrl}
+      imageAlt={item.name}
+      name={item.name}
+      sub={
+        item.incomePerSec != null ? (
+          <span className="tabular-nums text-[#7EE0A6]">{formatIncome(item.incomePerSec)}</span>
+        ) : undefined
+      }
+      footer={
+        <PriceStatPair
+          empty={priced ? null : 'No Price Yet'}
+          stats={[
+            {
+              label: 'Cheapest',
+              value: p?.cheapestUsd != null ? usd(p.cheapestUsd) : null,
+              sub: p?.sampleSize ? `${p.sampleSize} listings` : undefined,
+            },
+            { label: 'Average', value: p?.averageUsd != null ? usd(p.averageUsd) : null },
+          ]}
+        />
+      }
+    />
   )
 }
 
@@ -118,9 +111,9 @@ function Section({
           {lead}
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
         {items.map((item) => (
-          <ItemRow key={item.id} item={item} gameSlug={gameSlug} />
+          <ItemCard key={item.id} item={item} gameSlug={gameSlug} />
         ))}
       </div>
     </section>

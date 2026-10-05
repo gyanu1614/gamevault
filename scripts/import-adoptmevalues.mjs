@@ -207,19 +207,22 @@ async function main() {
 
   for (const pet of pets) {
     // --- upsert the pet row (by slug) ---
-    // Obtainability: curated override, else the enriched value. An existing pet
-    // with no enriched value keeps what it has (an un-enriched refresh used to
-    // reset every pet to 'obtainable').
+    // Obtainability: curated override, else (NEW pets only) the enriched value.
+    // An existing pet keeps what it has: the source page carries no real
+    // obtainability (enrich always says 'obtainable'), and existing rows were
+    // set from the wiki on 2026-10-05.
+    const isExisting = known.has(pet.slug)
     const obtainability =
-      KNOWN_OBTAINABILITY[pet.slug] ??
-      pet.obtainability ??
-      (known.has(pet.slug) ? undefined : 'obtainable')
+      KNOWN_OBTAINABILITY[pet.slug] ?? (isExisting ? undefined : pet.obtainability ?? 'obtainable')
     const petPayload = {
       slug: pet.slug,
       name: pet.name,
       rarity: pet.rarity,
       ...(obtainability ? { obtainability } : {}),
-      image_url: pet.image_url,
+      // Image: set on insert only. Existing rows may point at our own
+      // adopt-me-pets bucket copy (the source CDN 404s for some pets); a
+      // refresh must never put the broken source URL back.
+      ...(isExisting ? {} : { image_url: pet.image_url }),
       // demand_rank deliberately omitted — the source's rank is a
       // position-within-rarity artifact, not real demand (see note above).
       demand_trend: 'stable',
