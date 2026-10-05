@@ -10,7 +10,7 @@ import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import ListingDetailSkeleton from './_ListingDetailSkeleton'
 import { createClient } from '@/lib/supabase/server'
 import { getTemplateFields } from '@/lib/templates'
@@ -20,6 +20,9 @@ import { BlogRail } from '@/components/blog/BlogRail'
 import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
 import { partitionSameItem } from '../_offerMatching'
 import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
+import { getActiveGame, getEnabledCategory } from '../_routeGate'
+import { createAnonClient } from '@/lib/supabase/anon'
+import { currencyListingRedirect, isCurrencyCategoryType } from '@/lib/listings/url'
 
 // V15p — Empty taxonomy for ad-hoc ItemOffer shaping in the similar-
 // offers carousel. The detail page doesn't need the filter chain, so we
@@ -35,8 +38,54 @@ interface PageProps {
   }>
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Currency listings have no single-listing page (owner, 2026-10-04): their
+ * URL 308s to the game's currency page with that seller's offer pinned
+ * (`?seller=&offer=`, read client-side by the currency page). Decided from the
+ * URL's (game, category) pair — two cached anon reads shared with the category
+ * route gate — BEFORE the cookie client or any heavy read, and in both
+ * generateMetadata and the route so the redirect lands before the shell
+ * streams (a real 308, not a client hop). Item/account listings fall through
+ * unchanged. A dead currency listing still redirects, to the plain page.
+ */
+const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
+  gameSlug: string,
+  categorySlug: string,
+  listingSlug: string,
+): Promise<string | null> {
+  const game = await getActiveGame(gameSlug)
+  if (!game) return null
+  const category = await getEnabledCategory(game.id, categorySlug)
+  if (!category || !isCurrencyCategoryType(category.type)) return null
+
+  const supabase = createAnonClient()
+  const SELECT = 'id, seller:public_profiles!listings_seller_id_fkey(username, shop_slug)'
+  const scoped = (column: 'slug' | 'id', value: string) =>
+    supabase
+      .from('listings')
+      .select(SELECT)
+      .eq(column, value)
+      .eq('game_category_id', category.id)
+      .eq('status', 'active')
+      .maybeSingle()
+  let { data: listing } = (await scoped('slug', listingSlug)) as { data: any }
+  if (!listing && UUID_RE.test(listingSlug)) {
+    listing = ((await scoped('id', listingSlug)) as { data: any }).data
+  }
+
+  return currencyListingRedirect({
+    gameSlug,
+    category: { slug: category.slug, type: category.type },
+    listing: listing ? { id: listing.id, seller: listing.seller ?? null } : null,
+  })
+})
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, categorySlug, listingSlug } = await params
+  const currencyTarget = await resolveCurrencyRedirect(gameSlug, categorySlug, listingSlug)
+  if (currencyTarget) permanentRedirect(currencyTarget)
   const supabase = await createClient()
 
   let { data: listing } = await supabase
@@ -250,7 +299,9 @@ async function getCarouselListings({
  * instead of in a route-level `loading.tsx`.
  */
 export default async function ListingDetailRoute({ params }: PageProps) {
-  const { listingSlug } = await params
+  const { gameSlug, categorySlug, listingSlug } = await params
+  const currencyTarget = await resolveCurrencyRedirect(gameSlug, categorySlug, listingSlug)
+  if (currencyTarget) permanentRedirect(currencyTarget)
   if (!(await getListing(listingSlug))) notFound()
 
   return (

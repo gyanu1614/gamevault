@@ -40,6 +40,13 @@ describe('which URLs are listed', () => {
     expect(buildSitemap(only).map((e) => e.url)).not.toContain(`${BASE}/fortnite/buy-accounts`)
   })
 
+  it('does NOT list currency listings (no page of their own: the URL 308s to the currency page)', () => {
+    const all = urls()
+    expect(all.filter((u) => u.startsWith(`${BASE}/valorant/buy-vp/`))).toEqual([])
+    expect(all).toContain(`${BASE}/valorant/buy-vp`) // the currency page itself stays
+    expect(all).toContain(`${BASE}/steal-a-brainrot/buy-items/sab-item`) // item listings unchanged
+  })
+
   it('lists an empty currency category that has curated content', () => {
     expect(urls({ listings: [] })).toContain(`${BASE}/valorant/buy-vp`)
   })
@@ -108,7 +115,7 @@ describe('every entry has a truthful lastmod', () => {
     expect(lastmod(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)).toBe('2026-09-30T00:00:00Z')
     expect(lastmod(`${BASE}/adopt-me/values/bat-dragon`)).toBe('2026-09-15T00:00:00Z')
     expect(lastmod(`${BASE}/steal-an-egg/values/golden-egg`)).toBe('2026-09-22T00:00:00Z')
-    expect(lastmod(`${BASE}/valorant/buy-vp/vp-1000`)).toBe('2026-09-28T09:00:00Z')
+    expect(lastmod(`${BASE}/steal-a-brainrot/buy-items/sab-item`)).toBe('2026-09-26T09:00:00Z')
     // category = newest buyable listing or curated config
     expect(lastmod(`${BASE}/valorant/buy-vp`)).toBe('2026-09-28T09:00:00Z')
     // hub = newest of the game row and its listings; sell page = the game row

@@ -91,10 +91,25 @@ export interface CurrencyConfig {
   glyph: string
   /** One-line tagline shown above the hero card. */
   tagline: string
-  /** Cheapest per-unit price the seller-side wizard accepts. */
+  /**
+   * Flexible mode: lowest accepted price per unit of granularity (per Robux,
+   * per K, per M — the unit `listings.price` is stored in). 0 = no minimum.
+   * Up to 8 decimals. Read through `resolveCurrencyPriceRules`
+   * (src/lib/currency/price-rules.ts), never directly.
+   */
   price_floor: number
-  /** Most expensive per-unit price the seller-side wizard accepts. */
-  price_ceiling: number
+  /** Flexible mode: highest accepted price per unit; null/absent = no cap. */
+  price_max?: number | null
+  /** Bundle mode: lowest accepted price per bundle; null = no minimum. */
+  bundle_price_min?: number | null
+  /** Bundle mode: highest accepted price per bundle; null = no cap. */
+  bundle_price_max?: number | null
+  /**
+   * @deprecated Before 2026-10-04: a per-unit maximum the admin form never
+   * showed, defaulting to 10 (the "$10 per unit" bundle bug). Read only as
+   * a fallback by `resolveCurrencyPriceRules`; the form drops it on save.
+   */
+  price_ceiling?: number | null
   /** What the page surfaces as a "recommended" or "average" price for buyers. */
   recommended_price: number
   /** Smallest order quantity the buyer can pick. */
@@ -165,8 +180,10 @@ export const DEFAULT_CURRENCY_CONFIG: CurrencyConfig = {
   unit_label: 'Currency',
   glyph: '$',
   tagline: 'In-game currency.',
-  price_floor: 0.001,
-  price_ceiling: 10,
+  price_floor: 0,
+  price_max: null,
+  bundle_price_min: null,
+  bundle_price_max: null,
   recommended_price: 0.01,
   min_quantity: 100,
   quantity_step: 100,

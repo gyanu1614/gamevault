@@ -16,6 +16,9 @@
 import { z } from 'zod'
 import { SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
+import { resolveCurrencyPriceRules } from '@/lib/currency/price-rules'
+import { formatUnitPrice } from '@/lib/currency/price-format'
+import { quantityUnit } from '@/lib/currency/quantity-unit'
 
 export const DELIVERY_METHODS = ['manual', 'instant'] as const
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number]
@@ -35,6 +38,12 @@ export const TITLE_MAX = 100
 export const DESCRIPTION_MAX = 5000
 /** listings.price is numeric(12,4). */
 export const PRICE_MIN = 0.01
+/** Flexible currency is priced PER UNIT, so it may go below a cent — down to
+ *  the column's 4th decimal. ACC-06 is kept by the order-minimum rule
+ *  (price × minimum order ≥ ORDER_VALUE_MIN), see resolveOrderMinimumValue. */
+export const UNIT_PRICE_MIN = 0.0001
+/** The smallest order a listing may allow (checkout rounds to cents). */
+export const ORDER_VALUE_MIN = 0.01
 export const PRICE_MAX = 99_999_999.9999
 export const PRICE_SCALE = 4
 export const MAX_QUANTITY = 1_000_000_000
@@ -110,27 +119,65 @@ function firstIssue(err: z.ZodError): string {
   return `${path}${issue?.message ?? 'invalid input'}`
 }
 
+/** Flexible currency (per-unit pricing): currency with no bundles configured. */
+function isFlexibleCurrency(ctx: ListingRuleContext): boolean {
+  return ctx.categoryType === 'currency' && !((ctx.currencyConfig?.bundles?.length ?? 0) > 0)
+}
+
 /**
  * ACC-06 — price: numeric(12,4) rounding, an absolute floor of $0.01 (a
  * $0 listing took checkout's wallet-covered auto-confirm path), the column's
- * ceiling, and the admin's per-game floor / ceiling for currency listings.
+ * ceiling, and the admin's per-game minimum / maximum for currency listings.
+ *
+ * D2/D3 (2026-10-04): the admin rules come from resolveCurrencyPriceRules —
+ * per BUNDLE for bundle currencies (the bundle price was being checked
+ * against a hidden per-unit default ceiling of $10), per unit for flexible
+ * currencies, and a maximum only when an admin set one. Flexible currency
+ * may price below a cent (Robux $0.0055); its floor is the column scale and
+ * the order-minimum rule keeps every order at $0.01 or more.
  */
 export function resolvePrice(raw: number, ctx: ListingRuleContext, label = 'price'): ValidationResult<number> {
   if (!Number.isFinite(raw)) return { ok: false, error: `${label} must be a number` }
   const price = roundPrice(raw)
-  if (price < PRICE_MIN) return { ok: false, error: `${label} must be at least $${PRICE_MIN.toFixed(2)}` }
+  const flexible = isFlexibleCurrency(ctx)
+  const absoluteMin = flexible ? UNIT_PRICE_MIN : PRICE_MIN
+  if (price < absoluteMin) return { ok: false, error: `${label} must be at least ${formatUnitPrice(absoluteMin)}` }
   if (price > PRICE_MAX) return { ok: false, error: `${label} is above the maximum allowed` }
   if (ctx.categoryType === 'currency' && ctx.currencyConfig) {
-    const floor = Number(ctx.currencyConfig.price_floor)
-    const ceiling = Number(ctx.currencyConfig.price_ceiling)
-    if (Number.isFinite(floor) && floor > 0 && price < floor) {
-      return { ok: false, error: `${label} must be at least $${floor} per unit for this game` }
+    const rules = resolveCurrencyPriceRules(ctx.currencyConfig)
+    const per =
+      rules.mode === 'bundles'
+        ? 'bundle'
+        : quantityUnit(ctx.currencyConfig.quantity_granularity, ctx.currencyConfig.unit_label)
+    if (rules.min != null && price < rules.min) {
+      return { ok: false, error: `${label} must be at least ${formatUnitPrice(rules.min)} per ${per} for this game` }
     }
-    if (Number.isFinite(ceiling) && ceiling > 0 && price > ceiling) {
-      return { ok: false, error: `${label} must be at most $${ceiling} per unit for this game` }
+    if (rules.max != null && price > rules.max) {
+      return { ok: false, error: `${label} must be at most ${formatUnitPrice(rules.max)} per ${per} for this game` }
     }
   }
   return { ok: true, value: price }
+}
+
+/**
+ * ACC-06 for per-unit pricing: the smallest order a flexible-currency listing
+ * allows (price × minimum order) must cost at least $0.01, so no order can
+ * round to $0 at checkout (subtotal = round2(price × quantity)).
+ */
+export function resolveOrderMinimumValue(
+  price: number,
+  minQuantity: number,
+  ctx: ListingRuleContext,
+): ValidationResult<true> {
+  if (!isFlexibleCurrency(ctx)) return { ok: true, value: true }
+  // Unrounded product (epsilon for float noise): 0.005 × 1 is under a cent.
+  if (price * Math.max(1, minQuantity) + 1e-9 < ORDER_VALUE_MIN) {
+    return {
+      ok: false,
+      error: 'the smallest order at this price would cost under $0.01 — raise the price or the minimum order',
+    }
+  }
+  return { ok: true, value: true }
 }
 
 /**
@@ -228,6 +275,8 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
     ctx,
   )
   if (!minimum.ok) return minimum
+  const orderMin = resolveOrderMinimumValue(price.value, minimum.value.min_quantity, ctx)
+  if (!orderMin.ok) return orderMin
 
   return {
     ok: true,
@@ -281,6 +330,8 @@ export interface ExistingListingForPatch {
   is_unlimited: boolean
   delivery_method: DeliveryMethod | string
   bundle_id?: string | null
+  /** Current price; needed for the order-minimum rule when only the minimum changes. */
+  price?: number | null
 }
 
 /**
@@ -329,6 +380,15 @@ export function validateListingPatch(
     if (!minimum.ok) return minimum
     if (minimum.value.min_quantity !== (p.min_quantity ?? existing.min_quantity)) {
       p.min_quantity = minimum.value.min_quantity
+    }
+  }
+
+  // Order-minimum rule on the merged row (price or minimum may change alone).
+  if (p.price !== undefined || p.min_quantity !== undefined) {
+    const price = p.price ?? (existing.price != null ? Number(existing.price) : null)
+    if (price != null && Number.isFinite(price)) {
+      const orderMin = resolveOrderMinimumValue(price, p.min_quantity ?? existing.min_quantity, ctx)
+      if (!orderMin.ok) return orderMin
     }
   }
 

@@ -6,8 +6,8 @@
  * is no "unverified" rank — new sellers start at Bronze.
  *
  *   Rank 1  Bronze     orange   — entry rank, 3 listings pre-moderated
- *   Rank 2  Silver     zinc     — standard active seller
- *   Rank 3  Gold       yellow   — trusted, proven seller
+ *   Rank 2  Silver     zinc     — standard active seller (custom banner)
+ *   Rank 3  Gold       yellow   — trusted, proven seller (custom banner)
  *   Rank 4  Diamond    cyan     — elite (custom banner)
  *   Rank 5  Legendary  lime     — the ultimate rank (custom banner)
  *
@@ -137,7 +137,7 @@ export const TIERS: TierDef[] = [
     Icon: Gem,
     thresholds: { minSales: 10, minRating: 4.0, minAgeDays: 30, minCompletionRate: 90.0 },
     listingLimit: 50,
-    bannerAccess: false,
+    bannerAccess: true,
     preModerationListings: 0,
     sortOrder: 2,
     maxListingsPerHour: 10,
@@ -160,7 +160,7 @@ export const TIERS: TierDef[] = [
     Icon: Diamond,
     thresholds: { minSales: 50, minRating: 4.3, minAgeDays: 90, minCompletionRate: 95.0 },
     listingLimit: 100,
-    bannerAccess: false,
+    bannerAccess: true,
     preModerationListings: 0,
     sortOrder: 3,
     maxListingsPerHour: 20,

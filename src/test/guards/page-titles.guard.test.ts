@@ -50,6 +50,18 @@ const CATEGORY = {
   id: 'c1', name: 'Valorant Points', slug: 'buy-vp', type: 'currency', is_enabled: true,
   game_id: 'g1', game: { slug: 'valorant', name: 'Valorant' }, extras: {},
 }
+// Currency listings have no page of their own (they 308 to the currency page),
+// so the listing-page title check runs on an ITEM listing.
+const ITEM_CATEGORY = {
+  id: 'c2', name: 'Valorant Items', slug: 'buy-items', type: 'items', is_enabled: true,
+  game_id: 'g1', game: { slug: 'valorant', name: 'Valorant' }, extras: {},
+}
+const ITEM_LISTING = {
+  id: 'l2', slug: 'valorant-knife-skin', title: 'Knife Skin', description: 'Fast delivery', price: 19.99,
+  status: 'active', quantity: 1, game_id: 'g1', game_category_id: 'c2', image_url: null,
+  game: { slug: 'valorant', name: 'Valorant' }, category: { slug: 'buy-items', name: 'Valorant Items', type: 'items' },
+  seller: { id: 's1', username: 'seller1', is_test: false },
+}
 const LISTING = {
   id: 'l1', slug: 'valorant-1000-vp', title: '1000 VP', description: 'Fast delivery', price: 9.99,
   status: 'active', quantity: 5, game_id: 'g1', game_category_id: 'c1', image_url: null,
@@ -57,9 +69,11 @@ const LISTING = {
   seller: { id: 's1', username: 'seller1', is_test: false },
 }
 const SEED: Record<string, any[]> = {
-  games: [{ ...GAME, categories: [CATEGORY] }],
-  game_categories: [CATEGORY],
-  listings: [LISTING],
+  games: [{ ...GAME, categories: [CATEGORY, ITEM_CATEGORY] }],
+  // The recorder ignores filters and returns the FIRST row, so the item rows
+  // lead: the listing page must resolve to an item listing, not a currency one.
+  game_categories: [ITEM_CATEGORY, CATEGORY],
+  listings: [ITEM_LISTING, LISTING],
   category_configs: [],
   adopt_me_pets: [{ slug: 'bat-dragon', name: 'Bat Dragon', has_page: true, image_url: null }],
   public_profiles: [],
@@ -119,7 +133,7 @@ const ROUTES: Route[] = [
   { name: 'game hub', load: () => import('@/app/(marketplace)/[gameSlug]/page'), params: { gameSlug: 'valorant' } },
   { name: 'game sell page', load: () => import('@/app/(marketplace)/[gameSlug]/sell/page'), params: { gameSlug: 'valorant' } },
   { name: 'category page', load: () => import('@/app/(marketplace)/[gameSlug]/[categorySlug]/page'), params: { gameSlug: 'valorant', categorySlug: 'buy-vp' } },
-  { name: 'listing page', load: () => import('@/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page'), params: { gameSlug: 'valorant', categorySlug: 'buy-vp', listingSlug: 'valorant-1000-vp' } },
+  { name: 'listing page', load: () => import('@/app/(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]/page'), params: { gameSlug: 'valorant', categorySlug: 'buy-items', listingSlug: 'valorant-knife-skin' } },
   { name: 'value item (adopt-me)', load: () => import('@/app/(marketplace)/[gameSlug]/values/[itemSlug]/page'), params: { gameSlug: 'adopt-me', itemSlug: 'bat-dragon' } },
 ]
 

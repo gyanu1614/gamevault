@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { isCurrencyCategoryType } from '@/lib/listings/url'
 
 import { CONTENT_HUB_GAME_SLUGS, getGameContentTheme } from '@/lib/content/theme'
 import {
@@ -236,7 +237,11 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
       priority: 0.7,
     }))
 
-  const listingPages: Entry[] = liveListings.map((l) => {
+  // Currency listings have no page of their own (the listing URL 308s to the
+  // currency page, which is listed above as a category page).
+  const listingPages: Entry[] = liveListings
+    .filter((l) => !isCurrencyCategoryType(categoryById.get(l.game_category_id)?.type))
+    .map((l) => {
     const game = gameById.get(l.game_id)!
     const cat = categoryById.get(l.game_category_id)!
     return {

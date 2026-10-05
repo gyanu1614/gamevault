@@ -23,6 +23,7 @@ import { getLandingPage, getAllLandingPageSlugs, LandingPage } from '@/lib/seo/l
 import { getLandingPageListings } from '@/lib/seo/landingPageInventory'
 import { breadcrumbList, productAggregate, serializeJsonLd } from '@/lib/seo/jsonld'
 import type { ListingWithRelations } from '@/types/database'
+import { listingUrl } from '@/lib/listings/url'
 
 import { SITE_URL } from '@/config/site'
 
@@ -114,7 +115,7 @@ function buildStructuredData(page: LandingPage, listings: ListingWithRelations[]
           '@type': 'ListItem',
           position: i + 1,
           name: l.title,
-          url: `${BASE_URL}/${l.game?.slug}/${l.category?.slug}/${l.slug || l.id}`,
+          url: `${BASE_URL}${listingUrl(l)}`,
           offers: {
             '@type': 'Offer',
             price: l.price.toFixed(2),
@@ -306,7 +307,7 @@ export default async function SEOLandingPage({
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <Link
-                            href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
+                            href={listingUrl(listing)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-tint-bg hover:bg-[rgba(86,184,127,0.20)] border border-lime-tint-border text-lime-text text-xs font-semibold transition-colors"
                           >
                             Buy
@@ -324,7 +325,7 @@ export default async function SEOLandingPage({
                 {listings.slice(0, 6).map((listing) => (
                   <Link
                     key={listing.id}
-                    href={`/${listing.game?.slug}/${listing.category?.slug}/${listing.slug || listing.id}`}
+                    href={listingUrl(listing)}
                     className="flex items-center justify-between gap-4 p-4 rounded-lg bg-bg-raised transition-colors hover:bg-bg-raised-hover"
                   >
                     <div className="min-w-0">

@@ -33,7 +33,11 @@ export const PUBLIC_SELLER_PROFILE_COLUMNS = [
 export const PUBLIC_SELLER_PROFILE_SELECT =
   'id, username, shop_name, shop_slug, business_name, avatar_url, banner_url, bio, created_at, seller_tier, is_verified, founding_seller, seller_applications!seller_applications_user_id_fkey ( status )' as const
 
-/** Review columns safe for the public page — moderation state is excluded. */
+/**
+ * Review columns safe for the public page — moderation state is excluded.
+ * The page maps each row to a slim `StoreReview` on the server (buyer handle
+ * anonymised there), so the embeds below never reach the browser raw.
+ */
 export const PUBLIC_REVIEW_COLUMNS = [
   'id',
   'order_id',
@@ -55,7 +59,7 @@ export const PUBLIC_REVIEW_COLUMNS = [
 ] as const
 
 export const PUBLIC_REVIEW_SELECT =
-  'id, order_id, reviewer_id, seller_id, listing_id, game_id, rating, title, comment, is_positive, seller_response, seller_responded_at, is_verified_purchase, created_at, updated_at, edit_count, last_edited_at, buyer:profiles!reviews_buyer_id_fkey(username, avatar_url), order:orders(order_number)' as const
+  'id, order_id, reviewer_id, seller_id, listing_id, game_id, rating, title, comment, is_positive, seller_response, seller_responded_at, is_verified_purchase, created_at, updated_at, edit_count, last_edited_at, buyer:profiles!reviews_reviewer_id_fkey(username), game:games(name), listing:listings(title)' as const
 
 /**
  * Columns that must NEVER reach an anonymous visitor. Not exhaustive by

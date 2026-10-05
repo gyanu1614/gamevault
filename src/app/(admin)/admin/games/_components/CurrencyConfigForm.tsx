@@ -22,13 +22,6 @@ import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { CircleNotch, Plus, Trash, UploadSimple, X } from '@phosphor-icons/react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { cn } from '@/lib/utils'
 import { PanelHead, adminBtnSm } from '../../components/kit'
@@ -42,6 +35,9 @@ import {
   type CurrencyConfig,
 } from '@/lib/types/category-configs'
 import { PlatformFieldsSection } from './PlatformFieldsSection'
+import { CurrencyPricingRules } from './CurrencyPricingRules'
+import { priceRulesForSave } from '@/lib/currency/price-rules'
+import { parseRuleTexts, ruleTextsOf, type RuleTexts } from '@/lib/currency/price-rule-form'
 import { CurrencyBundlesSection } from './CurrencyBundlesSection'
 import { uploadCurrencyImage } from '@/lib/actions/admin-category-configs'
 import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
@@ -58,6 +54,9 @@ const ICON_BTN_DANGER =
 export function CurrencyConfigForm({ gameId }: { gameId: string }) {
   const qc = useQueryClient()
   const [draft, setDraft] = useState<CurrencyConfig | null>(null)
+  // Pricing Rules amounts as typed text (8 decimals; parsed on save).
+  const [ruleTexts, setRuleTexts] = useState<RuleTexts | null>(null)
+  const [triedSave, setTriedSave] = useState(false)
 
   const query = useQuery({
     queryKey: ['admin-category-config', gameId, 'currency'],
@@ -65,6 +64,7 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
       const cfg = await fetchCategoryConfigAdmin(gameId, 'currency')
       // Seed local draft state once on first load.
       setDraft(cfg ?? DEFAULT_CURRENCY_CONFIG)
+      setRuleTexts(ruleTextsOf(cfg ?? DEFAULT_CURRENCY_CONFIG))
       return cfg
     },
     staleTime: 30_000,
@@ -152,7 +152,14 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
       onSubmit={(e) => {
         e.preventDefault()
         if (!draft) return
-        mutation.mutate(draft)
+        setTriedSave(true)
+        const rules = parseRuleTexts(ruleTexts ?? ruleTextsOf(draft))
+        if (!rules.ok) {
+          toast.error('Fix the highlighted price rules before saving.')
+          return
+        }
+        // Explicit price keys; the hidden legacy price_ceiling is dropped.
+        mutation.mutate(priceRulesForSave(draft, rules.value) as CurrencyConfig)
       }}
       className="space-y-4"
     >
@@ -252,106 +259,15 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         </div>
       </section>
 
-      {/* ── Pricing rules ── */}
-      {(() => {
-        // V19/P24/P4.a — Bundle mode collapses the Granularity / Min
-        // quantity / Quantity step fields. Each bundle IS the unit,
-        // so those rules are managed implicitly by the bundle row.
-        // The price floor still applies (cheapest $/bundle accepted)
-        // but the label drops "per K" — admins reading floor in
-        // bundle mode are setting "$ per bundle".
-        const isBundleMode = (draft.bundles?.length ?? 0) > 0
-        return (
-      <section className={CARD}>
-        <PanelHead
-          title="Pricing Rules"
-          subtitle="The seller wizard rejects per-unit prices below this minimum. The buyer page automatically surfaces the cheapest active listing as the recommended offer."
-        />
-        {isBundleMode && (
-          <div className="mb-4 rounded-md bg-info-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-text-secondary">
-            <span className="font-semibold text-info">Bundle mode.</span>{' '}
-            Each bundle is its own quantity unit, so granularity, minimum quantity,
-            and quantity step don’t apply. The price floor below still gates the
-            cheapest $ a seller can list per bundle.
-          </div>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label={
-              isBundleMode
-                ? 'Minimum Listing Price ($)'
-                : `Minimum Price per ${formatGranularityLabel(draft)}`
-            }
-            hint={
-              isBundleMode
-                ? 'Sellers can’t list below this price'
-                : 'Cheapest accepted $ per unit of granularity'
-            }
-            htmlFor="cc-price-floor"
-          >
-            <input
-              id="cc-price-floor"
-              type="number"
-              step="0.0001"
-              min="0"
-              value={draft.price_floor}
-              onChange={(e) => patch({ price_floor: parseFloat(e.target.value) || 0 })}
-              className={cn(accountInputCls, 'tabular-nums')}
-            />
-          </Field>
-        </div>
-        {!isBundleMode && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Minimum Quantity" hint="Lowest order size buyers can pick" htmlFor="cc-min-quantity">
-              <input
-                id="cc-min-quantity"
-                type="number"
-                step="1"
-                min="1"
-                value={draft.min_quantity}
-                onChange={(e) => patch({ min_quantity: parseInt(e.target.value || '0', 10) })}
-                className={cn(accountInputCls, 'tabular-nums')}
-              />
-            </Field>
-            <Field label="Quantity Step" hint="Increment used by the +/- buttons" htmlFor="cc-quantity-step">
-              <input
-                id="cc-quantity-step"
-                type="number"
-                step="1"
-                min="1"
-                value={draft.quantity_step}
-                onChange={(e) => patch({ quantity_step: parseInt(e.target.value || '0', 10) })}
-                className={cn(accountInputCls, 'tabular-nums')}
-              />
-            </Field>
-            {/* V19/P2.b — Granularity controls the suffix everywhere a
-                quantity is displayed. "Unit" = absolute count, "Thousand"
-                = a 1 in qty means 1,000 actual units, "Million" likewise. */}
-            <Field label="Granularity" hint="What 1 unit of quantity equals" htmlFor="cc-granularity">
-              <Select
-                value={draft.quantity_granularity ?? 'unit'}
-                onValueChange={(v) =>
-                  patch({ quantity_granularity: v as 'unit' | 'thousand' | 'million' })
-                }
-              >
-                <SelectTrigger
-                  id="cc-granularity"
-                  className="h-10 rounded-md border-0 bg-bg-overlay px-3.5 hover:bg-bg-overlay-2 data-[state=open]:ring-focus-soft"
-                >
-                  <SelectValue placeholder="Unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unit">Unit</SelectItem>
-                  <SelectItem value="thousand">Thousand (K)</SelectItem>
-                  <SelectItem value="million">Million (M)</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-        )}
-      </section>
-        )
-      })()}
+      {/* ── Pricing rules (rewritten 2026-10-04: mode switch, per-mode
+          fields, 8-decimal amounts, live example, seller summary) ── */}
+      <CurrencyPricingRules
+        draft={draft}
+        patch={patch}
+        texts={ruleTexts ?? ruleTextsOf(draft)}
+        onTexts={setRuleTexts}
+        showErrors={triedSave}
+      />
 
       {/* ── Seller-side instructions ── */}
       <section className={CARD}>
@@ -404,22 +320,6 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
-
-/**
- * V19/P6 — "Price per K" / "Price per Robux" / "Price per M Tokens"
- * depending on granularity + unit_label. Keeps the admin-facing
- * label honest: when the admin sets unit_label="Tokens" and
- * granularity="thousand", they see "Minimum price per K Tokens".
- */
-function formatGranularityLabel(draft: CurrencyConfig): string {
-  const unit = (draft.unit_label || 'unit').trim()
-  switch (draft.quantity_granularity) {
-    case 'thousand': return `K ${unit}`
-    case 'million':  return `M ${unit}`
-    case 'unit':
-    default:         return unit
-  }
-}
 
 function Field({
   label,
