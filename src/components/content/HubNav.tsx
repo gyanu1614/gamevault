@@ -30,7 +30,7 @@ import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
-import { VALUE_BTN_PRIMARY, VALUE_PANEL } from '@/components/values/styles'
+import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
 
 const TOOL_LABEL: Record<'values' | 'calculator', string> = {
@@ -153,7 +153,7 @@ export function HubNav({
         {/* ── Brand mark + game switcher ──
             shrink-0 below md (the row is already tight on a phone), flex-1 from
             md up so it claims its half and centres the tabs. */}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3 xl:flex-1">
+        <div className="flex shrink-0 items-center gap-2 self-stretch sm:gap-3 xl:flex-1">
           <Link
             href="/"
             aria-label="DropMarket home"
@@ -180,9 +180,11 @@ export function HubNav({
           <Popover open={open} onOpenChange={setOpen}>
             {/* Icon + name link to the game hub (/{slug}) like the marketplace
                 GameSubNav; the caret beside them opens the switcher. The
-                anchor keeps the panel aligned to the whole lockup. */}
+                anchor keeps the panel aligned to the whole lockup, and spans the
+                full bar height so the panel hangs straight off the bar's bottom
+                edge (attached, no gap). */}
             <PopoverAnchor asChild>
-              <div className="-ml-1.5 flex shrink-0 items-center">
+              <div className="-ml-1.5 flex shrink-0 items-center self-stretch">
                 <Link
                   href={`/${current.slug}`}
                   aria-label={`${current.name} marketplace`}
@@ -214,21 +216,27 @@ export function HubNav({
             <PopoverContent
               align="start"
               side="bottom"
-              sideOffset={8}
+              // 1px = the bar's bottom hairline: the panel continues the bar.
+              sideOffset={1}
               // Desktop: focus lands in the search box (first focusable).
               // Phones: no auto-focus, so the keyboard doesn't cover the list.
               onOpenAutoFocus={(e) => {
                 if (coarse) e.preventDefault()
               }}
-              className={`w-[300px] max-w-[calc(100vw-24px)] overflow-hidden p-0 text-[15px] ${VALUE_PANEL}`}
+              className="w-[320px] max-w-[calc(100vw-24px)] overflow-hidden rounded-b-lg rounded-t-none border-0 bg-[rgba(29,30,35,0.97)] p-0 text-[15px] shadow-[0_18px_40px_-14px_rgba(0,0,0,0.75)] backdrop-blur-2xl backdrop-saturate-150 data-[state=open]:slide-in-from-top-1 data-[state=open]:zoom-in-100"
             >
               <Command label="Switch game" filter={filterGames} defaultValue={current.slug} loop>
-                <div className="flex items-center gap-2.5 border-b border-white/[0.07] px-3.5">
-                  <MagnifyingGlassIcon aria-hidden size={16} weight="bold" className="shrink-0 text-text-tertiary" />
-                  <Command.Input
-                    placeholder="Search games"
-                    className="h-12 min-w-0 flex-1 bg-transparent text-base text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
-                  />
+                {/* Search: a filled row, no border or focus box — it just
+                    lifts a step while focused (the global focus ring is
+                    switched off on the bare input; the row is the indicator). */}
+                <div className="p-2 pb-1">
+                  <div className="flex h-11 items-center gap-2.5 rounded-md bg-white/[0.05] px-3 transition-colors focus-within:bg-white/[0.09]">
+                    <MagnifyingGlassIcon aria-hidden size={16} weight="bold" className="shrink-0 text-text-tertiary" />
+                    <Command.Input
+                      placeholder="Search games"
+                      className="h-full min-w-0 flex-1 border-0 bg-transparent text-base text-text-primary shadow-none outline-none ring-0 placeholder:text-text-tertiary focus:outline-none focus:ring-0 focus-visible:shadow-none focus-visible:outline-none focus-visible:ring-0 sm:text-sm"
+                    />
+                  </div>
                 </div>
                 <Command.List className="max-h-[min(60vh,460px)] overflow-y-auto overscroll-contain p-1.5">
                   <Command.Empty className="px-3 py-6 text-center text-sm text-text-tertiary">No games found</Command.Empty>
