@@ -14,6 +14,7 @@
  * of three full columns, which is where most of the height went.
  */
 
+import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import Link from 'next/link'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
@@ -32,11 +33,10 @@ const LEGAL = [
 ]
 
 const SUPPORT_EMAIL = 'support@dropmarket.gg'
-const DISCORD_URL = 'https://discord.gg/z5ghW37JRu'
 
 /* Brand socials — Phosphor logo glyphs (no hand-drawn SVG paths). */
 const SOCIALS: Array<{ name: string; href: string; Icon: typeof DiscordLogoIcon }> = [
-  { name: 'Discord', href: DISCORD_URL, Icon: DiscordLogoIcon },
+  { name: 'Discord', href: DISCORD_INVITE_URL, Icon: DiscordLogoIcon },
   { name: 'Twitter', href: 'https://twitter.com/dropmarket', Icon: TwitterLogoIcon },
 ]
 
