@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { formatCash, formatIncome, formatMultiplier } from '@/lib/sab/format'
 import { mutationVisual, mutationOrder } from '@/lib/sab/mutations'
@@ -12,6 +12,7 @@ import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
 import { VALUE_LABEL } from '@/components/values/styles'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 
 // recharts is ~100KB and the chart sits below the fold (often just a
 // "collecting data" state early on). Lazy-load it so it doesn't bloat the
@@ -90,6 +91,17 @@ export default function ItemHero({
   const defaultSlug = ordered.find((m) => m.slug === 'default')?.slug ?? ordered[0]?.slug ?? ''
   const [selectedSlug, setSelectedSlug] = useState(defaultSlug)
   const heroRef = useRef<HTMLDivElement>(null)
+
+  // Deep links from the values directory carry ?mutation=<slug>: open the
+  // hero (and the chart) on that mutation. Read after hydration through the
+  // bridge so the page stays static.
+  const onParams = useCallback(
+    (params: URLSearchParams) => {
+      const slug = params.get('mutation')
+      if (slug && ordered.some((m) => m.slug === slug)) setSelectedSlug(slug)
+    },
+    [ordered],
+  )
 
   // On mobile the chips sit far below the hero, so after picking a mutation
   // scroll the hero back into view so the updated price is visible.
@@ -231,21 +243,22 @@ export default function ItemHero({
           </div>
         </>
       }
-      // Combined price trend — the hero-selected mutation is pre-lit; toggle
-      // legend chips to overlay/compare other mutations. Zoomed Y-axis.
+      // Price trend of the hero-selected mutation (Compare adds others).
       below={
-        <PriceTrendChart
-          mode="overlay"
-          series={series}
-          selectedKey={selected.slug}
-          formatValue={formatTrendCash}
-          seriesNoun="mutations"
-          height={180}
-          idPrefix="sab-trend"
-          emptyBody={() =>
-            "We snapshot each mutation's price every day. Trend lines appear once we have a few days of data."
-          }
-        />
+        <>
+          <SearchParamsBridge onParams={onParams} />
+          <PriceTrendChart
+            series={series}
+            selectedKey={selected.slug}
+            formatValue={formatTrendCash}
+            seriesNoun="mutations"
+            height={180}
+            idPrefix="sab-trend"
+            emptyBody={() =>
+              "We snapshot each mutation's price every day. Trend lines appear once we have a few days of data."
+            }
+          />
+        </>
       }
     />
   )

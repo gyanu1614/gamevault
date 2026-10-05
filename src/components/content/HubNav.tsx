@@ -11,26 +11,25 @@
  * - Tool tabs and buy buttons are data-driven; games without a category or
  *   tool simply don't render that control.
  * - Marketplace look (card-surface system): the same translucent near-black
- *   bar as the marketplace navbar, neutral tabs, a Radix dropdown for the
- *   switcher (Escape / outside-click close, keyboard nav, no page trap).
+ *   bar as the marketplace navbar, neutral tabs, and a searchable game
+ *   switcher (Radix Popover + cmdk: type to filter ~235 games by name, arrow
+ *   keys + Enter, Escape / outside-click close, no page trap).
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { Command } from 'cmdk'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/csr/ArrowUpRight'
 import { ShoppingBagIcon } from '@phosphor-icons/react/dist/csr/ShoppingBag'
 import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { VALUE_BTN_PRIMARY, VALUE_PANEL } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
 
@@ -42,6 +41,20 @@ const TOOL_LABEL: Record<'values' | 'calculator', string> = {
 /** Neutral tab colours (hub chrome stays neutral; no forest/lime accent). */
 const TAB_ACTIVE = 'text-text-primary'
 const TAB_IDLE = 'text-text-secondary hover:text-text-primary'
+
+/**
+ * Game search: case-insensitive name match (no fuzzy letter-skipping), name
+ * starts first, then a word start, then anywhere. cmdk passes the name as the
+ * item's only keyword (the value is the unique slug).
+ */
+function filterGames(value: string, search: string, keywords?: string[]): number {
+  const q = search.trim().toLowerCase()
+  if (!q) return 1
+  const name = (keywords?.[0] ?? value).toLowerCase()
+  if (name.startsWith(q)) return 1
+  if (name.includes(` ${q}`)) return 0.8
+  return name.includes(q) ? 0.6 : 0
+}
 
 export function HubNav({
   data,
@@ -65,6 +78,13 @@ export function HubNav({
   )
   const calcMode = calcModeOverride ?? urlCalcMode
   const [open, setOpen] = useState(false)
+  const router = useRouter()
+  // Phones open on the list, not the keyboard (see useCoarsePointer).
+  const coarse = useCoarsePointer()
+  // A pointer click on a game row navigates through its own <Link> (so
+  // middle / cmd-click still open a tab); cmdk's onSelect then only closes.
+  // Enter has no click, so onSelect navigates.
+  const pointerPick = useRef(false)
 
   const { current, games, tools, itemsHref, accountsHref, sellHref } = data
 
@@ -152,13 +172,14 @@ export function HubNav({
           </Link>
           <span aria-hidden className="hidden h-[26px] w-px bg-white/[0.08] sm:block" />
 
-          {/* ── Game switcher ── Radix dropdown (portalled, collision-aware).
-              modal={false}: the page keeps scrolling and stays clickable while
-              it is open; outside click / Escape / picking a game closes it.
-              -ml-1.5 cancels the trigger's own padding so the game icon keeps
-              its alignment with the brand mark. */}
-          <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-            <DropdownMenuTrigger
+          {/* ── Game switcher ── Radix popover (portalled, collision-aware)
+              with a cmdk search list. Non-modal: the page keeps scrolling and
+              stays clickable while it is open; outside click / Escape /
+              picking a game closes it. -ml-1.5 cancels the trigger's own
+              padding so the game icon keeps its alignment with the brand mark. */}
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              aria-label={`Switch game (current: ${current.name})`}
               className={`-ml-1.5 flex h-10 shrink-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12 sm:pr-2 ${
                 open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
               }`}
@@ -175,34 +196,65 @@ export function HubNav({
                 aria-hidden
                 className={`text-text-secondary transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
               />
-            </DropdownMenuTrigger>
+            </PopoverTrigger>
 
-            <DropdownMenuContent
+            <PopoverContent
               align="start"
+              side="bottom"
               sideOffset={8}
-              collisionPadding={12}
-              className={`max-h-[min(70vh,520px)] w-[300px] max-w-[calc(100vw-24px)] overflow-y-auto p-1.5 ${VALUE_PANEL}`}
+              // Desktop: focus lands in the search box (first focusable).
+              // Phones: no auto-focus, so the keyboard doesn't cover the list.
+              onOpenAutoFocus={(e) => {
+                if (coarse) e.preventDefault()
+              }}
+              className={`w-[300px] max-w-[calc(100vw-24px)] overflow-hidden p-0 text-[15px] ${VALUE_PANEL}`}
             >
-              {games.map((g) => {
-                const active = g.slug === current.slug
-                return (
-                  <DropdownMenuItem
-                    key={g.slug}
-                    asChild
-                    className={`gap-3 px-2.5 py-2.5 text-[15px] focus:bg-white/[0.06] ${
-                      active ? 'bg-white/[0.06] font-semibold text-text-primary' : 'text-text-secondary focus:text-text-primary'
-                    }`}
-                  >
-                    <Link href={`/${g.slug}/blog`} aria-current={active ? 'page' : undefined}>
-                      <GameMark name={g.name} imageUrl={g.imageUrl} size="row" />
-                      <span className="min-w-0 flex-1 truncate">{g.name}</span>
-                      {active && <CheckIcon size={16} weight="bold" aria-hidden className="shrink-0 text-text-primary" />}
-                    </Link>
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Command label="Switch game" filter={filterGames} defaultValue={current.slug} loop>
+                <div className="flex items-center gap-2.5 border-b border-white/[0.07] px-3.5">
+                  <MagnifyingGlassIcon aria-hidden size={16} weight="bold" className="shrink-0 text-text-tertiary" />
+                  <Command.Input
+                    placeholder="Search games"
+                    className="h-12 min-w-0 flex-1 bg-transparent text-base text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
+                  />
+                </div>
+                <Command.List className="max-h-[min(60vh,460px)] overflow-y-auto overscroll-contain p-1.5">
+                  <Command.Empty className="px-3 py-6 text-center text-sm text-text-tertiary">No games found</Command.Empty>
+                  {games.map((g) => {
+                    const active = g.slug === current.slug
+                    const href = `/${g.slug}/blog`
+                    return (
+                      <Command.Item
+                        key={g.slug}
+                        value={g.slug}
+                        keywords={[g.name]}
+                        asChild
+                        onSelect={() => {
+                          setOpen(false)
+                          if (pointerPick.current) pointerPick.current = false
+                          else router.push(href)
+                        }}
+                      >
+                        <Link
+                          href={href}
+                          aria-current={active ? 'page' : undefined}
+                          onClick={() => {
+                            pointerPick.current = true
+                          }}
+                          className={`flex cursor-pointer select-none items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition-colors data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-text-primary ${
+                            active ? 'bg-white/[0.06] font-semibold text-text-primary' : 'text-text-secondary'
+                          }`}
+                        >
+                          <GameMark name={g.name} imageUrl={g.imageUrl} size="row" />
+                          <span className="min-w-0 flex-1 truncate">{g.name}</span>
+                          {active && <CheckIcon size={16} weight="bold" aria-hidden className="shrink-0 text-text-primary" />}
+                        </Link>
+                      </Command.Item>
+                    )
+                  })}
+                </Command.List>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* ── Section tabs — DESKTOP (md+) only ──

@@ -1,21 +1,19 @@
 'use client'
 
 /**
- * Adopt Me price trend: the shared PriceTrendChart in single-line mode, one
- * series per variant of the 8-form ladder (shared variant colours), with
- * range tabs. The selected variant is SHARED with the hero + stats via
- * context: the hero reprices this chart, and the chart's own dropdown writes
- * back (so the hero follows too).
+ * Adopt Me price trend: the shared PriceTrendChart, one series per variant of
+ * the 8-form ladder (shared variant colours). It plots the variant selected
+ * on the page (shared with the hero + stats via context, so picking NFR up top
+ * reprices this chart); Compare adds other variants as extra lines.
  */
 
 import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { VARIANTS, VARIANT_LABEL, type Variant } from '../../calculator/_adoptMeCalcTypes'
+import { VARIANTS, VARIANT_LABEL } from '../../calculator/_adoptMeCalcTypes'
 import type { PetPricePoint } from './_adoptMePetTypes'
 import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
 import { TrendChartPlaceholder } from '@/components/values/ValueItemHero'
-import type { TrendRange } from '@/components/values/PriceTrendChart'
 
 // recharts is ~100KB and sits below the fold: load it after the page.
 const PriceTrendChart = dynamic(
@@ -26,20 +24,13 @@ const PriceTrendChart = dynamic(
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const formatUsd = (v: number) => USD.format(v)
 
-const RANGES: TrendRange[] = [
-  { key: '7d', label: '7D', days: 7 },
-  { key: '30d', label: '30D', days: 30 },
-  { key: '90d', label: '90D', days: 90 },
-  { key: 'all', label: 'All', days: null },
-]
-
 export function AdoptMePriceTrend({
   history,
 }: {
   /** Daily history keyed by variant (from getAdoptMePet). */
   history: Record<string, PetPricePoint[]>
 }) {
-  const { selectedCode, setSelectedCode } = useSelectedVariant()
+  const { selectedCode } = useSelectedVariant()
 
   const series = useMemo(
     () =>
@@ -54,14 +45,10 @@ export function AdoptMePriceTrend({
 
   return (
     <PriceTrendChart
-      mode="single"
       series={series}
       selectedKey={selectedCode}
-      onSelect={(v) => setSelectedCode(v as Variant)}
       formatValue={formatUsd}
-      ranges={RANGES}
-      defaultRange="30d"
-      showCurrent
+      seriesNoun="variants"
       height={220}
       idPrefix="am-trend"
       emptyBody={(name) =>

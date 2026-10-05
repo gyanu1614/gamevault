@@ -7,6 +7,7 @@ import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { valuesTag } from '@/lib/values/revalidation'
 import { aggregateStock } from './stock'
 import { loadValueCatalog, type LoadedCatalog } from './catalogs'
+import { matchListingToValueItem } from './match'
 import type { ItemStock } from './buy-state'
 
 /**
@@ -96,10 +97,20 @@ export async function getValueListings(gameSlug: string): Promise<{ pair: ItemsP
         console.error('[value-listings] stock read failed', error.message)
         return []
       }
-      return (data ?? []) as ValueListingRow[]
+      const rows = (data ?? []) as ValueListingRow[]
+      // Re-check each stored link against today's matcher: a link written by
+      // an older matcher ("Fairy Bat Dragon NFR" → Bat Dragon) stays in the
+      // row until the listing is edited, but must never show on the item page.
+      const catalog = await getValueCatalog(gameSlug)
+      if (!catalog) return rows
+      return rows.filter(
+        (r) =>
+          matchListingToValueItem({ title: String(r.title ?? ''), templateData: r.template_data }, catalog.catalog)
+            ?.itemSlug === r.value_item_slug,
+      )
     },
-    ['value-listings', gameSlug, pair.pairId],
-    { revalidate: 86400, tags: [valueStockTag(gameSlug), categoryListingsTag(pair.pairId)] },
+    ['value-listings', 'whole-name-v2', gameSlug, pair.pairId],
+    { revalidate: 86400, tags: [valueStockTag(gameSlug), categoryListingsTag(pair.pairId), valuesTag(gameSlug)] },
   )()
   return { pair, rows }
 }
