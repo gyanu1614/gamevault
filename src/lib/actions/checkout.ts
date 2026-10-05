@@ -26,6 +26,7 @@
  * transaction), never by the browser.
  */
 
+import { orderMinimum } from '@/lib/listings/order-minimum'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { PURCHASES_ENABLED, PURCHASES_DISABLED_MESSAGE } from '@/lib/config/purchases'
@@ -159,7 +160,8 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
       return { success: false, error: `Insufficient stock. Only ${listing.quantity} available` }
     }
     // ACC-05(e) — the seller's minimum order size was never enforced here.
-    const minQuantity = Math.max(1, Math.floor(Number(listing.min_quantity ?? 1)))
+    // Bundles are always 1 (orderMinimum), the same rule as the checkout page.
+    const minQuantity = orderMinimum(listing)
     if (quantity < minQuantity) {
       return { success: false, error: `This offer has a minimum order of ${minQuantity}` }
     }
