@@ -21,24 +21,34 @@
  * normal browser UA. Tune with --delay-ms. Enrichment (per-pet pages) is
  * opt-in via --enrich because it's one extra request per pet.
  *
+ * PAGINATION: the list is /values (page 1, 60 cards + "Load More") then
+ * /values/page/2 … /values/page/N (14 pages / 791 pets on 2026-10-04). The
+ * collector walks pages until one has zero cards (hard cap --max-pages, 30).
+ * Parsing lives in scripts/lib/adoptmevalues-catalog.mjs (shared with the
+ * catalog dry run).
+ *
  * Usage:
- *   node scripts/collect-adoptmevalues.mjs              # list page only → JSON
+ *   node scripts/collect-adoptmevalues.mjs              # every list page → JSON
  *   node scripts/collect-adoptmevalues.mjs --enrich     # + per-pet obtainability/demand
  *   node scripts/collect-adoptmevalues.mjs --enrich --send   # + seed the DB
  *   node scripts/collect-adoptmevalues.mjs --limit 10   # first 10 pets (testing)
+ *   node scripts/collect-adoptmevalues.mjs --enrich --enrich-offset 0 --enrich-limit 200
+ *   node scripts/collect-adoptmevalues.mjs --send --qualifying data/adopt-me-catalog-dryrun/<date>.json
  */
 
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
+import {
+  ADOPTMEVALUES_BASE_URL as BASE_URL,
+  DEFAULT_MAX_LIST_PAGES,
+  fetchCatalogPages,
+  fetchText,
+  parsePetPage,
+} from './lib/adoptmevalues-catalog.mjs'
 
-const BASE_URL = 'https://www.adoptmevalues.app'
-const LIST_PATH = '/values'
 const DEFAULT_OUTPUT = 'data/adopt-me-feeds/adoptmevalues-latest.json'
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120.0 Safari/537.36'
-const COLLECTOR_VERSION = 1
+const COLLECTOR_VERSION = 2 // 2 = every list page, not just page 1
 
 // --- args -------------------------------------------------------------------
 function parseArgs(argv) {
@@ -47,6 +57,15 @@ function parseArgs(argv) {
     send: false,
     delayMs: Number(process.env.ADOPTME_DELAY_MS ?? 1500),
     limit: Number(process.env.ADOPTME_LIMIT ?? 0), // 0 = all found
+    maxPages: Number(process.env.ADOPTME_MAX_PAGES ?? DEFAULT_MAX_LIST_PAGES),
+    // Enrichment batching: one request per pet, so a full 791-pet pass is
+    // ~20 min. --enrich-offset/--enrich-limit split it; --enrich-slugs targets.
+    enrichOffset: 0,
+    enrichLimit: 0, // 0 = every pet from the offset
+    enrichSlugs: null,
+    // Passed through to the importer on --send (see import-adoptmevalues.mjs).
+    qualifying: null,
+    allowNew: false,
     outputPath: DEFAULT_OUTPUT,
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -55,156 +74,96 @@ function parseArgs(argv) {
     else if (a === '--send') o.send = true
     else if (a === '--delay-ms') o.delayMs = Number(argv[++i])
     else if (a === '--limit') o.limit = Number(argv[++i])
+    else if (a === '--max-pages') o.maxPages = Number(argv[++i])
+    else if (a === '--enrich-offset') o.enrichOffset = Number(argv[++i])
+    else if (a === '--enrich-limit') o.enrichLimit = Number(argv[++i])
+    else if (a === '--enrich-slugs') o.enrichSlugs = argv[++i].split(',').map((s) => s.trim())
+    else if (a === '--qualifying') o.qualifying = argv[++i]
+    else if (a === '--allow-new') o.allowNew = true
     else if (a === '--output') o.outputPath = argv[++i]
   }
+  // Politeness floor.
+  o.delayMs = Math.max(1000, o.delayMs)
   return o
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function fetchText(url) {
-  const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html' } })
-  if (!res.ok) throw new Error(`GET ${url} → ${res.status}`)
-  return res.text()
-}
-
-// --- parsing helpers --------------------------------------------------------
-
-/** "2.1K" → 2100, "7.2K" → 7200, "1.05M" → 1050000, "905" → 905. */
-function parseCompactNumber(raw) {
-  if (raw == null) return null
-  const s = String(raw).trim().replace(/,/g, '')
-  const m = s.match(/^([0-9]*\.?[0-9]+)\s*([KMB]?)$/i)
-  if (!m) return null
-  const n = parseFloat(m[1])
-  const mult = { '': 1, k: 1e3, m: 1e6, b: 1e9 }[m[2].toLowerCase()]
-  return Math.round(n * mult)
-}
-
-/** adoptmevalues rarity text → our canonical schema value. */
-function normalizeRarity(raw) {
-  const r = String(raw || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
-  const map = {
-    common: 'common',
-    uncommon: 'uncommon',
-    rare: 'rare',
-    ultra_rare: 'ultra_rare',
-    legendary: 'legendary',
-  }
-  return map[r] ?? null // unknown rarities are dropped, not guessed
-}
-
-/**
- * Parse the values list page into pet records. The list is a flat run of
- * anchor cards: <a href="/values/{slug}">…<img alt="Name">…<p>rarity</p>…
- * <p>{base}</p>…<span>N {neon}</span><span>M {mega}</span>. We slice per anchor
- * and pull fields by local regex so one malformed card can't derail the rest.
- */
-function parseListPage(html) {
-  const pets = []
-  // Split on the anchor that opens each card.
-  const parts = html.split(/<a href="\/values\//).slice(1)
-  for (const part of parts) {
-    const slug = (part.match(/^([a-z0-9-]+)"/) || [])[1]
-    if (!slug) continue
-    const name = (part.match(/<img alt="([^"]+)"/) || [])[1]?.trim()
-    // Rarity can be two words ("ultra rare"), so allow spaces in the capture —
-    // a [a-zA-Z-]+ class silently truncated "ultra rare" to "ultra" and dropped
-    // every Ultra-Rare pet.
-    const rarityRaw = (part.match(/uppercase tracking-wider[^>]*>([a-zA-Z -]+)</) || [])[1]
-    const baseRaw = (part.match(/font-extrabold[^>]*>([0-9.,KMB]+)</) || [])[1]
-    const neonRaw = (part.match(/>\s*N\s*(?:<!--\s*-->)?\s*([0-9.,KMB]+)\s*</) || [])[1]
-    const megaRaw = (part.match(/>\s*M\s*(?:<!--\s*-->)?\s*([0-9.,KMB]+)\s*</) || [])[1]
-    const image = (part.match(/src="(https:\/\/[^"]*\/images\/pets\/[^"]+)"/) || [])[1]
-    if (!name || !slug) continue
-
-    pets.push({
-      slug,
-      name,
-      rarity: normalizeRarity(rarityRaw),
-      rarity_raw: rarityRaw ?? null,
-      image_url: image ? image.replace(/ /g, '%20') : null,
-      // Trade values (community points), per published variant only.
-      trade_values: {
-        N: parseCompactNumber(baseRaw),
-        NEON: parseCompactNumber(neonRaw),
-        MEGA: parseCompactNumber(megaRaw),
-      },
-      obtainability: null, // filled by --enrich
-      demand_rank: null,
-      demand_trend: null,
-    })
-  }
-  return pets
-}
-
-/** Per-pet page → obtainability + demand. Best-effort; nulls when absent. */
-function parsePetPage(html) {
-  const text = html
-    .replace(/<script[\s\S]*?<\/script>/g, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-
-  let obtainability = null
-  if (/\bUnobtainable\b/i.test(text)) obtainability = 'unobtainable'
-  else if (/\bLimited\b/i.test(text)) obtainability = 'limited'
-  else if (/\bObtainable\b/i.test(text)) obtainability = 'obtainable'
-
-  const demandRank = (text.match(/Demand Rank[^0-9]*#?\s*([0-9]+)/i) || [])[1]
-  let demandTrend = null
-  if (/rising|going up|trending up/i.test(text)) demandTrend = 'rising'
-  else if (/falling|going down|trending down/i.test(text)) demandTrend = 'falling'
-  else if (/stable/i.test(text)) demandTrend = 'stable'
-
-  return {
-    obtainability,
-    demand_rank: demandRank ? Number(demandRank) : null,
-    demand_trend: demandTrend,
-  }
+/** Slugs that qualify in a dry-run report (adoptme-catalog-dryrun.mjs). */
+async function qualifyingSlugs(reportPath) {
+  const report = JSON.parse(await readFile(resolve(process.cwd(), reportPath), 'utf8'))
+  return new Set((report.pets ?? []).filter((p) => p.qualifies).map((p) => p.slug))
 }
 
 // --- main -------------------------------------------------------------------
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   console.log('Adopt Me catalog collector (adoptmevalues.app)')
-  console.log(`  enrich=${opts.enrich} send=${opts.send} delay=${opts.delayMs}ms limit=${opts.limit || 'all'}\n`)
+  console.log(
+    `  enrich=${opts.enrich} send=${opts.send} delay=${opts.delayMs}ms ` +
+      `maxPages=${opts.maxPages} limit=${opts.limit || 'all'}\n`,
+  )
 
-  const listHtml = await fetchText(BASE_URL + LIST_PATH)
-  let pets = parseListPage(listHtml)
-  console.log(`Parsed ${pets.length} pets from the list page.`)
+  // Every list page: /values, /values/page/2 … until a page has zero cards.
+  const catalog = await fetchCatalogPages({
+    maxPages: opts.maxPages,
+    delayMs: opts.delayMs,
+    log: (m) => console.log(m),
+  })
+  let pets = catalog.pets
+  console.log(`Parsed ${pets.length} pets from ${catalog.pages} list pages (stopped: ${catalog.stoppedBy}).`)
+  if (catalog.stoppedBy === 'max-pages') {
+    console.log(`  ⚠️  hit the ${opts.maxPages}-page ceiling before an empty page — raise --max-pages if the catalog grew.`)
+  }
 
-  // Drop cards we couldn't classify (unknown rarity) — never guess a rarity.
+  // Unknown rarity: never guess one. Log every card by name (it used to vanish
+  // silently) and keep them out of the feed.
   const dropped = pets.filter((p) => !p.rarity)
   if (dropped.length) {
-    console.log(`  ⚠️  ${dropped.length} dropped for unknown rarity: ${dropped.map((p) => p.rarity_raw).join(', ')}`)
+    console.log(`  ⚠️  ${dropped.length} skipped for unknown rarity:`)
+    for (const p of dropped) console.log(`       ${p.name} (${p.slug}) rarity="${p.rarity_raw ?? ''}"`)
     pets = pets.filter((p) => p.rarity)
   }
 
   if (opts.limit > 0) pets = pets.slice(0, opts.limit)
 
   if (opts.enrich) {
-    console.log(`\nEnriching ${pets.length} pets from per-pet pages (${opts.delayMs}ms apart)…`)
-    for (let i = 0; i < pets.length; i += 1) {
-      const p = pets[i]
+    let batch = pets
+    if (opts.enrichSlugs) {
+      const want = new Set(opts.enrichSlugs)
+      batch = pets.filter((p) => want.has(p.slug))
+    } else {
+      const end = opts.enrichLimit > 0 ? opts.enrichOffset + opts.enrichLimit : undefined
+      batch = pets.slice(opts.enrichOffset, end)
+    }
+    console.log(`\nEnriching ${batch.length} of ${pets.length} pets from per-pet pages (${opts.delayMs}ms apart)…`)
+    for (let i = 0; i < batch.length; i += 1) {
+      const p = batch[i]
       try {
         const petHtml = await fetchText(`${BASE_URL}/values/${p.slug}`)
         Object.assign(p, parsePetPage(petHtml))
-        process.stdout.write(`  [${i + 1}/${pets.length}] ${p.name} → ${p.obtainability ?? '?'}\n`)
+        process.stdout.write(`  [${i + 1}/${batch.length}] ${p.name} → ${p.obtainability ?? '?'}\n`)
       } catch (err) {
-        console.log(`  [${i + 1}/${pets.length}] ${p.name} → enrich failed: ${err.message}`)
+        console.log(`  [${i + 1}/${batch.length}] ${p.name} → enrich failed: ${err.message}`)
       }
-      if (i < pets.length - 1) await sleep(opts.delayMs)
+      if (i < batch.length - 1) await sleep(opts.delayMs)
     }
+  }
+
+  // Informational only: how many of these pets a dry-run report says qualify.
+  if (opts.qualifying) {
+    const ok = await qualifyingSlugs(opts.qualifying)
+    console.log(`\n${pets.filter((p) => ok.has(p.slug)).length} of ${pets.length} pets qualify per ${opts.qualifying}`)
   }
 
   const feed = {
     source: 'adoptmevalues.app',
     collector_version: COLLECTOR_VERSION,
-    // No Date.now() note: this runs as a plain script, wall-clock is fine here.
     collected_at: new Date().toISOString(),
+    list_pages: catalog.pages,
     enriched: opts.enrich,
     pet_count: pets.length,
+    skipped_unknown_rarity: dropped.map((p) => ({ slug: p.slug, name: p.name, rarity_raw: p.rarity_raw })),
     pets,
   }
 
@@ -215,15 +174,14 @@ async function main() {
 
   if (opts.send) {
     console.log('\n--send: handing feed to the importer…')
+    // --write so the importer PERSISTS. The importer only ever ADDS a pet that
+    // is not already in the DB when --qualifying lists it (or --allow-new);
+    // existing pets are refreshed as before.
+    const importerArgs = ['scripts/import-adoptmevalues.mjs', opts.outputPath, '--write']
+    if (opts.qualifying) importerArgs.push('--qualifying', opts.qualifying)
+    if (opts.allowNew) importerArgs.push('--allow-new')
     await new Promise((res, rej) => {
-      // --write so the importer actually PERSISTS. Without it the importer
-      // dry-runs ("Would upsert…") and nothing reaches the DB — which is the
-      // whole point of --send.
-      const child = spawn(
-        'node',
-        ['scripts/import-adoptmevalues.mjs', opts.outputPath, '--write'],
-        { stdio: 'inherit' },
-      )
+      const child = spawn('node', importerArgs, { stdio: 'inherit' })
       child.on('exit', (code) => (code === 0 ? res() : rej(new Error(`importer exited ${code}`))))
     })
   }

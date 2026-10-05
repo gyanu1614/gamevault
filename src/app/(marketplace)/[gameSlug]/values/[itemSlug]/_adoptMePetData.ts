@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
  * Per-pet data for /adopt-me/values/{slug}. A pet is only servable when
@@ -77,11 +78,18 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
   // Daily price history for the trend chart. Ordered oldest→newest so the chart
   // reads left-to-right. Keyed by variant; only variants with rows appear.
-  const { data: historyRows } = await (supabase as any)
-    .from('adopt_me_price_history')
-    .select('variant,cash_value_usd,history_date')
-    .eq('pet_id', pet.id)
-    .order('history_date', { ascending: true })
+  // PAGED: 8 variants × one row a day passes PostgREST's 1000-row cap after
+  // ~125 days, and the cut would drop the NEWEST days (ascending order).
+  // (history_date, variant) is unique per pet, so pages never overlap.
+  const { data: historyRows } = await fetchAllRows<any>((from, to) =>
+    (supabase as any)
+      .from('adopt_me_price_history')
+      .select('variant,cash_value_usd,history_date')
+      .eq('pet_id', pet.id)
+      .order('history_date', { ascending: true })
+      .order('variant', { ascending: true })
+      .range(from, to),
+  )
 
   const priceHistory: Record<string, PetPricePoint[]> = {}
   for (const r of (historyRows ?? []) as any[]) {
@@ -130,11 +138,15 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 /** Slugs of all publishable pets — for generateStaticParams + similar-pets. */
 export async function getPublishablePetSlugs(): Promise<string[]> {
   const supabase = createAnonClient()
-  const { data } = await (supabase as any)
-    .from('adopt_me_pets')
-    .select('slug')
-    .eq('has_page', true)
-  return ((data ?? []) as { slug: string }[]).map((r) => r.slug)
+  const { data } = await fetchAllRows<{ slug: string }>((from, to) =>
+    (supabase as any)
+      .from('adopt_me_pets')
+      .select('slug')
+      .eq('has_page', true)
+      .order('slug', { ascending: true })
+      .range(from, to),
+  )
+  return (data ?? []).map((r) => r.slug)
 }
 
 /**
@@ -171,13 +183,17 @@ export async function getSimilarPets(
 ): Promise<SimilarPet[]> {
   const supabase = createAnonClient()
 
-  // Pull every page-having pet once (the catalog is small — ~60 rows), with its
-  // FR cash, so we can rank in memory by rarity + value proximity.
-  const { data: petRows } = await (supabase as any)
-    .from('adopt_me_pets')
-    .select('id,slug,name,image_url,rarity')
-    .eq('has_page', true)
-    .neq('slug', excludeSlug)
+  // Pull every page-having pet once, with its FR cash, so we can rank in memory
+  // by rarity + value proximity. Paged — the catalog can pass 1000 rows.
+  const { data: petRows } = await fetchAllRows<any>((from, to) =>
+    (supabase as any)
+      .from('adopt_me_pets')
+      .select('id,slug,name,image_url,rarity')
+      .eq('has_page', true)
+      .neq('slug', excludeSlug)
+      .order('id', { ascending: true })
+      .range(from, to),
+  )
   const pets = (petRows ?? []) as Array<{
     id: string
     slug: string
@@ -187,11 +203,16 @@ export async function getSimilarPets(
   }>
   if (!pets.length) return []
 
-  const { data: frRows } = await (supabase as any)
-    .from('adopt_me_pet_values')
-    .select('pet_id,cheapest_usd,cash_value_usd')
-    .eq('variant', 'FR')
-    .in('pet_id', pets.map((p) => p.id))
+  // Every FR row, paged, matched in memory: an `.in('pet_id', …)` over the
+  // whole catalog (~800 uuids) would overflow the request URL.
+  const { data: frRows } = await fetchAllRows<any>((from, to) =>
+    (supabase as any)
+      .from('adopt_me_pet_values')
+      .select('pet_id,cheapest_usd,cash_value_usd')
+      .eq('variant', 'FR')
+      .order('pet_id', { ascending: true })
+      .range(from, to),
+  )
   // Prefer the cheapest real listing, else the legacy cash value — same headline
   // the rest of the hub uses.
   const frByPet = new Map<string, number | null>(
