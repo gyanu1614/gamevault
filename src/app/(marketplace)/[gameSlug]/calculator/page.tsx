@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { CalculatorSeo, CALCULATOR_FAQ } from './_CalculatorSeo'
 import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
@@ -142,7 +142,7 @@ export async function generateMetadata({
 }
 
 async function getAllCashPrices(
-  supabase: ReturnType<typeof createAnonClient>,
+  supabase: ReturnType<typeof createValueListReadClient>,
 ): Promise<CashPriceRow[]> {
   const pageSize = 1000
   const rows: CashPriceRow[] = []
@@ -175,7 +175,7 @@ async function getAllCashPrices(
 }
 
 async function getAllTradePrices(
-  supabase: ReturnType<typeof createAnonClient>,
+  supabase: ReturnType<typeof createValueListReadClient>,
 ): Promise<TradePriceRow[]> {
   const pageSize = 1000
   const rows: TradePriceRow[] = []
@@ -215,7 +215,7 @@ async function getCalculatorData(): Promise<{
   tradePrices: CalcPrice[]
   lastUpdated: string | null
 }> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('steal-a-brainrot')
 
   const [
     brainrotResult,

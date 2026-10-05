@@ -4,7 +4,12 @@ import {
   internalJson,
 } from '@/lib/security/internal-route-auth'
 import { CONTENT_HUB_GAME_SLUGS, hasHubPage } from '@/lib/content/theme'
-import { parseChangedSlugs, valueItemPriceTag, valuesTag } from '@/lib/values/revalidation'
+import {
+  parseChangedSlugs,
+  valueGamePriceTag,
+  valueItemPriceTag,
+  valuesTag,
+} from '@/lib/values/revalidation'
 import { submitChangedValuePages } from '@/lib/seo/indexnow'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
@@ -20,12 +25,21 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
  *   { "changedSlugs": ["owl", "frost-dragon"] }
  *
  *   • each changed item  → revalidateTag(price:<game>:<item>) — that page only
- *   • any item changed   → the price LISTS by path (values hub, calculator,
- *                          price-index): they rank every item by price
+ *   • any item changed   → revalidateTag(price:<game>), the tag every LIST
+ *                          read carries (values hub, calculator, neon
+ *                          calculator, price index, methodology, blog hub,
+ *                          SAB landing), plus the list paths. No item page
+ *                          carries price:<game> (lib/values/revalidation.ts).
  *   • nothing changed    → nothing revalidated (logged). The common case.
  *
+ * The tags reach the DATA, not only the page shell: every values read is
+ * cached under exactly these tags by the tagged read client
+ * (lib/values/read-client.ts). Before 2026-10-05 the reads were cached
+ * untagged, so a tag-triggered re-render reused the old responses.
+ *
  * `?full=1` (same auth) is the manual escape hatch: the whole-game
- * `values:<game>` tag plus every hub path — what every run did before T1, at
+ * `values:<game>` tag (carried by EVERY values read, item and list) plus
+ * every hub path — what every run did before T1, at
  * ~50 ISR write units per item page. Use it after a catalogue edit or a
  * pricing-model change, not on a schedule.
  *
@@ -113,6 +127,10 @@ export async function POST(request: Request): Promise<Response> {
       revalidateTag(tag)
       revalidated.push(tag)
     }
+    // The lists rank every item by price: their reads carry the game price
+    // tag (item pages never do, so this rebuilds no item page).
+    revalidateTag(valueGamePriceTag(gameSlug))
+    revalidated.push(valueGamePriceTag(gameSlug))
     listPaths()
   } else {
     console.log(`[values-revalidate] ${gameSlug}: 0 changed items — nothing revalidated`)

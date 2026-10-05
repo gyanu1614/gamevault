@@ -1,27 +1,29 @@
-import { unstable_cache } from 'next/cache'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createTaggedAnonClient } from '@/lib/supabase/anon'
+import { valueListReadTags } from '@/lib/values/revalidation'
 
 /**
  * Shared cache tag + cached readers for SAB price data.
  *
- * Price pages are ISR-cached (revalidate = 3600). Reads that go through the
- * cached helpers here also carry PRICE_CACHE_TAG, so the manual correct-prices
- * route can call revalidateTag(PRICE_CACHE_TAG) right after it refreshes sab_price_display
- * — pages then pick up fresh prices on their next request instead of waiting out
- * the hour, and a render that happened to read a stale snapshot self-heals the
- * moment new prices land.
+ * The values grid's price reads go through the tagged anon client (the values
+ * read rule: src/lib/values/revalidation.ts). Each query response is cached in
+ * Next's Data Cache under the SAB list tags — so the publish step
+ * (/api/internal/values-revalidate: `price:steal-a-brainrot` on any moved item,
+ * `values:steal-a-brainrot` on ?full=1) refreshes the DATA, not only the page
+ * shell — plus PRICE_CACHE_TAG for the correct-prices cron.
  *
- * The reads use a plain anon client (NO cookies) so they are safe to memoize
- * inside unstable_cache — a cookie-bound server client cannot be cached.
+ * Until 2026-10-05 this was an unstable_cache entry tagged only PRICE_CACHE_TAG,
+ * which the values publish step never revalidated: the grid kept its prices for
+ * up to the hour window after every publish.
  */
 export const PRICE_CACHE_TAG = 'sab-prices'
 
-function anonClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
+const SAB_GAME = 'steal-a-brainrot'
+
+function gridPricesClient() {
+  return createTaggedAnonClient({
+    tags: [PRICE_CACHE_TAG, ...valueListReadTags(SAB_GAME)],
+    revalidate: 3600,
+  })
 }
 
 export interface DefaultPriceRow {
@@ -45,30 +47,28 @@ export interface MutationPriceRow {
 
 /**
  * Every brainrot's default-mutation price + every priced mutation price — the
- * two reads the values grid needs. Cached + tagged so the whole grid refreshes
- * the instant a crawl republishes, and reads are served from cache in between.
- * Reads hit sab_price_display (indexed table), so even a cache miss is ~5ms.
+ * two reads the values grid needs, cached + tagged (see above). Reads hit
+ * sab_price_display (indexed table), so even a cache miss is ~5ms.
  */
-export const getCachedGridPrices = unstable_cache(
-  async (): Promise<{ defaults: DefaultPriceRow[]; mutations: MutationPriceRow[] }> => {
-    const supabase = anonClient()
-    const [defaultsResult, mutationsResult] = await Promise.all([
-      supabase
-        .from('sab_price_display')
-        .select(
-          'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
-        )
-        .eq('mutation_slug', 'default'),
-      supabase
-        .from('sab_price_display')
-        .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
-        .not('cheapest_usd', 'is', null),
-    ])
-    return {
-      defaults: (defaultsResult.data as DefaultPriceRow[] | null) ?? [],
-      mutations: (mutationsResult.data as MutationPriceRow[] | null) ?? [],
-    }
-  },
-  ['sab-grid-prices'],
-  { tags: [PRICE_CACHE_TAG], revalidate: 3600 },
-)
+export async function getCachedGridPrices(): Promise<{
+  defaults: DefaultPriceRow[]
+  mutations: MutationPriceRow[]
+}> {
+  const supabase = gridPricesClient()
+  const [defaultsResult, mutationsResult] = await Promise.all([
+    supabase
+      .from('sab_price_display')
+      .select(
+        'brainrot_id,market_value_usd,market_low_usd,market_high_usd,cheapest_usd,average_usd,confidence_label,is_trade_ready,external_sample_size',
+      )
+      .eq('mutation_slug', 'default'),
+    supabase
+      .from('sab_price_display')
+      .select('brainrot_id,mutation_slug,cheapest_usd,average_usd')
+      .not('cheapest_usd', 'is', null),
+  ])
+  return {
+    defaults: (defaultsResult.data as DefaultPriceRow[] | null) ?? [],
+    mutations: (mutationsResult.data as MutationPriceRow[] | null) ?? [],
+  }
+}

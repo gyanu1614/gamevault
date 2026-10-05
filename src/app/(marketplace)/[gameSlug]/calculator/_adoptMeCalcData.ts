@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import {
   VARIANTS,
@@ -25,7 +25,7 @@ function num(v: number | string | null): number | null {
 }
 
 export async function getAdoptMeCalcPets(): Promise<CalcPet[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('adopt-me')
 
   // Paged (PostgREST stops one response at 1000 rows, silently): 8 value rows
   // per pet would drop every pet past ~125. Unique-key order per page.
@@ -102,7 +102,7 @@ export type AdoptMeTopValue = {
  * link targets), newest prices via the reputable columns.
  */
 export async function getAdoptMeTopValues(limit = 20): Promise<AdoptMeTopValue[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('adopt-me')
 
   const [petsRes, valuesRes] = await Promise.all([
     fetchAllRows<any>((from, to) =>

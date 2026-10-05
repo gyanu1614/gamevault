@@ -6,7 +6,8 @@
  * the shared threshold and POSTs {changedSlugs}. What this route must get
  * right, all invisible until the Vercel bill or a stale page shows it:
  *
- *  1. Changed items only: one `price:<game>:<item>` tag per moved item, never
+ *  1. Changed items only: one `price:<game>:<item>` tag per moved item plus
+ *     the list tag `price:<game>` (carried only by list-page reads), never
  *     the whole-game `values:<game>` tag (that rebuilt every item page of the
  *     game on every run — the Adopt Me / Steal an Egg cost before T1).
  *  2. Zero changes = zero revalidations, not a fallback to the whole game.
@@ -60,14 +61,15 @@ describe('values-revalidate route — changed items (the scheduled path)', () =>
     submitChangedValuePages.mockClear()
   })
 
-  it('revalidates one price tag per moved item and the list pages — never the game tag', async () => {
+  it('revalidates one price tag per moved item and the list tag — never the game tag', async () => {
     const { status, body } = await post('adopt-me', { changedSlugs: ['owl', 'frost-dragon'] })
     expect(status).toBe(200)
     expect(body.mode).toBe('changed-items')
     expect(body.changed_count).toBe(2)
-    expect(tags()).toEqual(['price:adopt-me:owl', 'price:adopt-me:frost-dragon'])
+    // `price:adopt-me` is the list tag: every list-page read carries it and
+    // no item-page read does (values-data-tags guard), so it rebuilds lists only.
+    expect(tags()).toEqual(['price:adopt-me:owl', 'price:adopt-me:frost-dragon', 'price:adopt-me'])
     expect(tags()).not.toContain('values:adopt-me')
-    expect(tags()).not.toContain('price:adopt-me')
     expect(paths()).toEqual(expect.arrayContaining(['/adopt-me/values']))
     expect(paths().some((p) => p.includes('[itemSlug]'))).toBe(false)
   })
@@ -86,13 +88,13 @@ describe('values-revalidate route — changed items (the scheduled path)', () =>
 
   it('skips list pages a game does not publish (Steal an Egg: no calculator, no price-index)', async () => {
     await post('steal-an-egg', { changedSlugs: ['cosmic-egg'] })
-    expect(tags()).toEqual(['price:steal-an-egg:cosmic-egg'])
+    expect(tags()).toEqual(['price:steal-an-egg:cosmic-egg', 'price:steal-an-egg'])
     expect(paths().some((p) => p.includes('calculator') || p.includes('price-index'))).toBe(false)
   })
 
   it('SAB goes through the same contract (the reprice publish step calls it)', async () => {
     await post('steal-a-brainrot', { changedSlugs: ['tim-cheese'] })
-    expect(tags()).toEqual(['price:steal-a-brainrot:tim-cheese'])
+    expect(tags()).toEqual(['price:steal-a-brainrot:tim-cheese', 'price:steal-a-brainrot'])
     expect(paths()).toEqual(
       expect.arrayContaining(['/steal-a-brainrot/values', '/steal-a-brainrot/calculator']),
     )
@@ -101,7 +103,7 @@ describe('values-revalidate route — changed items (the scheduled path)', () =>
   it('drops anything that is not a page slug, and de-duplicates', async () => {
     const { body } = await post('adopt-me', { changedSlugs: ['owl', 'owl', '../x', 'A B', 7, ''] })
     expect(body.changed_count).toBe(1)
-    expect(tags()).toEqual(['price:adopt-me:owl'])
+    expect(tags()).toEqual(['price:adopt-me:owl', 'price:adopt-me'])
   })
 
   it('rejects a body without changedSlugs (no silent whole-game fallback)', async () => {

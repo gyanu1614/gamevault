@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 
 /**
@@ -58,7 +58,9 @@ function num(v: number | string | null): number | null {
 
 /** Full detail for one pet, or null if it isn't publishable (has_page=false). */
 export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | null> {
-  const supabase = createAnonClient()
+  // Tagged with this pet's price tag + the game tag: the publish step's
+  // revalidateTag refreshes these responses, not just the page shell.
+  const supabase = createValueItemReadClient('adopt-me', slug)
 
   const { data: pet, error } = await (supabase as any)
     .from('adopt_me_pets')
@@ -137,7 +139,7 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
 
 /** Slugs of all publishable pets — for generateStaticParams + similar-pets. */
 export async function getPublishablePetSlugs(): Promise<string[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('adopt-me')
   const { data } = await fetchAllRows<{ slug: string }>((from, to) =>
     (supabase as any)
       .from('adopt_me_pets')
@@ -181,7 +183,10 @@ export async function getSimilarPets(
   refFrUsd: number | null,
   limit = 14,
 ): Promise<SimilarPet[]> {
-  const supabase = createAnonClient()
+  // Read ON the current pet's page, so under ITS tags (never the game price
+  // tag — see lib/values/revalidation.ts): sibling prices in the rail refresh
+  // when this pet's page is republished or on a full refresh.
+  const supabase = createValueItemReadClient('adopt-me', excludeSlug)
 
   // Pull every page-having pet once, with its FR cash, so we can rank in memory
   // by rarity + value proximity. Paged — the catalog can pass 1000 rows.

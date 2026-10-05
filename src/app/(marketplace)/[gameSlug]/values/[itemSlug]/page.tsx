@@ -7,7 +7,7 @@ import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
 import { TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
@@ -49,6 +49,9 @@ import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
  */
 export const revalidate = 604800
 
+/** The game the sab_* tables price — the tag game of every SAB read below. */
+const SAB_GAME = 'steal-a-brainrot'
+
 /** Games served by the generic values_* pipeline (see the hub route). */
 const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
 
@@ -63,7 +66,7 @@ const VALUES_PIPELINE_GAMES = new Set(['steal-an-egg'])
  * demand into the same cache).
  */
 export async function generateStaticParams() {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient(SAB_GAME)
   const [{ data: brainrots }, petSlugs] = await Promise.all([
     (supabase as any)
       .from('sab_brainrot_market_catalog')
@@ -217,7 +220,7 @@ function formatDate(value: string | null): string | null {
 }
 
 async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
-  const supabase = createAnonClient()
+  const supabase = createValueItemReadClient(SAB_GAME, slug)
   const { data, error } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
     // STATE-012 — explicit columns, exactly the BrainrotRow contract above.
@@ -236,9 +239,10 @@ async function getBrainrot(slug: string): Promise<BrainrotRow | null> {
 }
 
 async function getDefaultTradePrice(
+  itemSlug: string,
   brainrotId: string,
 ): Promise<TradePriceRow | null> {
-  const supabase = createAnonClient()
+  const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
   const { data, error } = await (supabase as any)
     .from('sab_price_display')
     .select(
@@ -256,8 +260,8 @@ async function getDefaultTradePrice(
   return (data as TradePriceRow | null) ?? null
 }
 
-async function getMutations(brainrotId: string): Promise<MutationOption[]> {
-  const supabase = createAnonClient()
+async function getMutations(itemSlug: string, brainrotId: string): Promise<MutationOption[]> {
+  const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
 
   // Fetch mutation income data, per-mutation market prices, and the measured
   // mutation price premiums in parallel, then merge so each mutation carries
@@ -370,9 +374,10 @@ async function getMutations(brainrotId: string): Promise<MutationOption[]> {
 // so the page renders fine before history exists — the chart shows a
 // "collecting history" state in that case.
 async function getPriceHistory(
+  itemSlug: string,
   brainrotId: string,
 ): Promise<Record<string, { date: string; median: number }[]>> {
-  const supabase = createAnonClient()
+  const supabase = createValueItemReadClient(SAB_GAME, itemSlug)
   const { data, error } = await (supabase as any)
     .from('sab_price_history')
     .select('mutation_slug:mutation_id,history_date,median_usd,sab_mutations(slug)')
@@ -392,7 +397,8 @@ async function getPriceHistory(
 }
 
 async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]> {
-  const supabase = createAnonClient()
+  // Read on this item's page → this item's tags, never the game list tag.
+  const supabase = createValueItemReadClient(SAB_GAME, brainrot.slug)
   const { data } = await (supabase as any)
     .from('sab_brainrot_market_catalog')
     .select('id,name,slug,rarity,image_url,display_price_usd,display_price_label')
@@ -477,7 +483,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (VALUES_PIPELINE_GAMES.has(gameSlug)) {
     const theme = getGameContentTheme(gameSlug)
-    const item = (await getValueItems(gameSlug)).find((i) => i.slug === itemSlug)
+    const item = (await getValueItems(gameSlug, { itemSlug })).find((i) => i.slug === itemSlug)
     if (!item) return { title: 'Value Not Found' }
     const price = item.price
     const priced = price?.cheapestUsd != null
@@ -554,10 +560,10 @@ export default async function BrainrotValuePage({ params }: PageProps) {
 
   const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav] =
     await Promise.all([
-      getMutations(brainrot.id),
+      getMutations(brainrot.slug, brainrot.id),
       getRelatedBrainrots(brainrot),
-      getDefaultTradePrice(brainrot.id),
-      getPriceHistory(brainrot.id),
+      getDefaultTradePrice(brainrot.slug, brainrot.id),
+      getPriceHistory(brainrot.slug, brainrot.id),
       getHubNavData(gameSlug),
     ])
 

@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import type { AdoptMePetItem, AdoptMeVariantValue } from './_AdoptMeValuesClient'
 
@@ -40,7 +40,7 @@ function num(v: number | string | null): number | null {
 }
 
 export async function getAdoptMePets(): Promise<AdoptMePetItem[]> {
-  const supabase = createAnonClient()
+  const supabase = createValueListReadClient('adopt-me')
 
   // Both reads are PAGED: one PostgREST response stops at max_rows (1000) and
   // the cut is silent — 8 value rows per pet would lose every pet past ~125.

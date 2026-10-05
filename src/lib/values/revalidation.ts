@@ -1,5 +1,39 @@
 import { unstable_cache } from 'next/cache'
 
+/**
+ * Values hub cache tags — and THE rule for reading values data (2026-10-05).
+ *
+ * The publish step (/api/internal/values-revalidate) refreshes pages with
+ * `revalidateTag`. A tag only refreshes DATA that was cached under it: on
+ * Next 14 every un-annotated server fetch on a static route is stored in the
+ * Data Cache with the page's window and no tags, so a re-render triggered by
+ * a tag was served the old query responses (Adopt Me pet pages kept a fixed
+ * price for days after `values-revalidate?full=1`).
+ *
+ * The pattern — one, everywhere: every values-hub data read goes through
+ * `createValueItemReadClient` / `createValueListReadClient`
+ * (src/lib/values/read-client.ts), the tagged anon client. Each query response
+ * is cached under the read's tag set, and the render is tagged with it too:
+ *
+ *   • ITEM pages (`/<game>/values/<item>`) — every read, including the
+ *     similar/related rails: valueItemReadTags(game, item)
+ *       = [price:<game>:<item>, values:<game>]
+ *     Never the game price tag: an item page carrying it is rebuilt with
+ *     every list refresh (the pre-T1 ~500 ISR writes per run).
+ *   • LIST pages (values hub, calculator, neon calculator, price index,
+ *     methodology counts, blog hub, SAB landing carousel):
+ *     valueListReadTags(game) = [price:<game>, values:<game>]
+ *
+ * The publish step revalidates exactly those tags: each moved item's
+ * `price:<game>:<item>` plus `price:<game>` for the lists; `?full=1` revalidates
+ * `values:<game>`, which every read carries.
+ *
+ * `createAnonClient()` stays for NON-values reads (games, blog posts,
+ * categories) and inside `unstable_cache` callbacks (Next 14 runs those
+ * no-store; the entry itself carries the tags — value-listings/stock-server).
+ * src/test/guards/values-data-tags.guard.test.ts pins this.
+ */
+
 /** Cache tag carried by every render of a game's value pages. */
 export function valuesTag(gameSlug: string): string {
   return `values:${gameSlug}`
@@ -20,14 +54,24 @@ export function valueItemPriceTag(gameSlug: string, itemSlug: string): string {
 }
 
 /**
- * Cache tag for a game's price LISTS. Reserved: no render binds it today —
- * the lists (values hub, calculator, price-index) are revalidated by PATH.
+ * Cache tag for a game's price LISTS — carried by every list-page read
+ * (valueListReadTags), revalidated whenever any item of the game moved.
  * It must NEVER be bound by an item page: until T1 (2026-10-04) the item
  * binding below carried it, so every "changed items" call that also refreshed
  * the lists re-marked ALL ~500 SAB item pages stale.
  */
 export function valueGamePriceTag(gameSlug: string): string {
   return `price:${gameSlug}`
+}
+
+/** Tags of every data read on ONE item's value page (see the header). */
+export function valueItemReadTags(gameSlug: string, itemSlug: string): string[] {
+  return [valueItemPriceTag(gameSlug, itemSlug), valuesTag(gameSlug)]
+}
+
+/** Tags of every data read on a game's list pages (see the header). */
+export function valueListReadTags(gameSlug: string): string[] {
+  return [valueGamePriceTag(gameSlug), valuesTag(gameSlug)]
 }
 
 /**

@@ -44,7 +44,8 @@ export default async function ValueItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const [items, hubNav, buyData] = await Promise.all([
-    getValueItems(gameSlug),
+    // Read under THIS item's tags (never the game list tag — T1).
+    getValueItems(gameSlug, { itemSlug }),
     getHubNavData(gameSlug),
     // DropMarket's own live stock (Bundle 2): buy button + "Available Now".
     getValueItemBuyData(gameSlug, itemSlug),

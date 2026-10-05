@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createValuesReadClient } from '@/lib/values/read-client'
 
 /**
  * Read layer for the generic values pipeline.
@@ -7,6 +7,10 @@ import { createAnonClient } from '@/lib/supabase/anon'
  * Every query is keyed by game slug and `kind`, so the same functions serve
  * any game on the pipeline — this is what the hub pages call instead of the
  * per-game `sab_*` / `adopt_me_*` readers.
+ *
+ * Every read goes through the tagged values client: list pages (the default)
+ * read under the game's list tags, an item page passes `itemSlug` and reads
+ * under that item's tags (lib/values/revalidation.ts has the rule).
  */
 
 export interface ValueItem {
@@ -88,8 +92,9 @@ async function selectAll<T>(build: (from: number, to: number) => any): Promise<T
   return out
 }
 
-async function gameIdFor(slug: string): Promise<string | null> {
-  const supabase = createAnonClient()
+type ReadClient = ReturnType<typeof createValuesReadClient>
+
+async function gameIdFor(supabase: ReadClient, slug: string): Promise<string | null> {
   const { data } = await (supabase as any)
     .from('games')
     .select('id')
@@ -105,11 +110,16 @@ async function gameIdFor(slug: string): Promise<string | null> {
  */
 export async function getValueItems(
   gameSlug: string,
-  kinds?: Array<ValueItem['kind']>,
+  opts: {
+    kinds?: Array<ValueItem['kind']>
+    /** The item page reading this list — picks that item's cache tags. */
+    itemSlug?: string | null
+  } = {},
 ): Promise<ValueItem[]> {
-  const gameId = await gameIdFor(gameSlug)
+  const { kinds, itemSlug } = opts
+  const supabase = createValuesReadClient({ gameSlug, itemSlug })
+  const gameId = await gameIdFor(supabase, gameSlug)
   if (!gameId) return []
-  const supabase = createAnonClient()
 
   const [items, prices] = await Promise.all([
     selectAll<ItemRow>((from, to) => {
@@ -173,7 +183,7 @@ export async function getValueItem(
   gameSlug: string,
   itemSlug: string,
 ): Promise<ValueItem | null> {
-  const all = await getValueItems(gameSlug)
+  const all = await getValueItems(gameSlug, { itemSlug })
   return all.find((i) => i.slug === itemSlug) ?? null
 }
 
