@@ -6,6 +6,7 @@
  *   pnpm value-refs:backfill --env=local                 # link every listing not yet linked
  *   pnpm value-refs:backfill --env=prod --dry-run        # owner: report against production
  *   pnpm value-refs:backfill --env=prod --yes            # owner: apply (after the migration is pushed)
+ *   pnpm value-refs:backfill --env=prod --relink --yes   # re-check every ACTIVE listing; rewrite only links that changed
  *
  * Writes the unmatched report to data/value-ref-unmatched-<env>.csv. The
  * nightly /api/cron/value-listing-refs does the same linking (and revalidates
@@ -62,8 +63,9 @@ if (ENV === 'prod' && !DRY && !has('--yes')) {
 
 const supabase = createClient(URL, KEY, { auth: { persistSession: false } })
 
-const out = await reconcileValueRefs(supabase, { limit: LIMIT, dryRun: DRY, all: DRY })
-console.log(`${DRY ? 'DRY RUN — ' : ''}checked ${out.checked} · linked ${out.linked} · unmatched (value games) ${out.unmatched.length} · errors ${out.errors.length}`)
+const RELINK = has('--relink')
+const out = await reconcileValueRefs(supabase, { limit: LIMIT, dryRun: DRY, all: DRY && !RELINK, relink: RELINK })
+console.log(`${DRY ? 'DRY RUN — ' : ''}checked ${out.checked} · linked ${out.linked} · relinked ${out.relinked} · unmatched (value games) ${out.unmatched.length} · errors ${out.errors.length}`)
 for (const e of out.errors.slice(0, 10)) console.error('  ✗', e)
 
 mkdirSync('data', { recursive: true })
@@ -73,4 +75,5 @@ const csv = ['id,game,title,template_keys']
   .join('\n')
 writeFileSync(file, csv + '\n')
 console.log(`unmatched report → ${file}`)
+for (const c of out.changedItems.slice(0, 50)) console.log(`  item stock changed: ${c.gameSlug}/${c.itemSlug}`)
 if (out.errors.length) process.exitCode = 1

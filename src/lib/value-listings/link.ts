@@ -27,6 +27,9 @@ interface ListingRow {
   game_category_id: string | null
   title: string | null
   template_data: Record<string, unknown> | null
+  value_item_slug?: string | null
+  value_variant?: string | null
+  value_matched_at?: string | null
 }
 
 export interface UnmatchedListing {
@@ -43,11 +46,15 @@ export interface LinkOutcome {
   errors: string[]
   /** Pairs whose listings changed link — the caller revalidates these. */
   gameCategoryIds: string[]
+  /** Value item pages whose stock changed (old AND new item of a re-link). */
+  changedItems: Array<{ gameSlug: string; itemSlug: string }>
+  /** Rows whose stored link was wrong or stale and was rewritten. */
+  relinked: number
 }
 
-const ROW_COLUMNS = 'id, game_id, game_category_id, title, template_data'
+const ROW_COLUMNS = 'id, game_id, game_category_id, title, template_data, value_item_slug, value_variant, value_matched_at'
 
-const empty = (): LinkOutcome => ({ checked: 0, linked: 0, unmatched: [], errors: [], gameCategoryIds: [] })
+const empty = (): LinkOutcome => ({ checked: 0, linked: 0, unmatched: [], errors: [], gameCategoryIds: [], changedItems: [], relinked: 0 })
 
 const message = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as any).message) : String(e))
 
@@ -94,12 +101,26 @@ async function linkRows(client: AnyClient, rows: ListingRow[], out: LinkOutcome,
         }
       }
 
-      if (!dryRun) {
-        const { error: writeError } = await client
-          .from('listings')
-          .update({ value_item_slug: match?.itemSlug ?? null, value_variant: match?.variant ?? null, value_matched_at: now })
-          .eq('id', row.id)
-        if (writeError) throw writeError
+      const nextSlug = match?.itemSlug ?? null
+      const nextVariant = match?.variant ?? null
+      const storedSlug = row.value_item_slug ?? null
+      const unchanged =
+        row.value_matched_at != null && storedSlug === nextSlug && (row.value_variant ?? null) === nextVariant
+      if (!unchanged) {
+        if (!dryRun) {
+          const { error: writeError } = await client
+            .from('listings')
+            .update({ value_item_slug: nextSlug, value_variant: nextVariant, value_matched_at: now })
+            .eq('id', row.id)
+          if (writeError) throw writeError
+        }
+        // A link that MOVED (e.g. "Fairy Bat Dragon NFR" stored as bat-dragon
+        // before the pet existed): both item pages' stock changes.
+        if (row.value_matched_at != null && storedSlug !== nextSlug) out.relinked += 1
+        if (gameSlug) {
+          if (storedSlug) out.changedItems.push({ gameSlug, itemSlug: storedSlug })
+          if (nextSlug && nextSlug !== storedSlug) out.changedItems.push({ gameSlug, itemSlug: nextSlug })
+        }
       }
       if (match) {
         out.linked += 1
@@ -148,12 +169,21 @@ export async function linkListingsToValueItems(
  */
 export async function reconcileValueRefs(
   client: AnyClient,
-  { limit = 1000, dryRun = false, all = false }: { limit?: number; dryRun?: boolean; all?: boolean } = {},
+  {
+    limit = 1000,
+    dryRun = false,
+    all = false,
+    relink = false,
+  }: { limit?: number; dryRun?: boolean; all?: boolean; relink?: boolean } = {},
 ): Promise<LinkOutcome> {
   const out = empty()
   try {
     let query = client.from('listings').select(ROW_COLUMNS)
-    if (!all) query = query.is('value_matched_at', null)
+    // relink: re-check every ACTIVE listing against the current catalogue +
+    // matcher (catalogue grew, matcher tightened); only rows whose link
+    // actually changes are written.
+    if (relink) query = query.eq('status', 'active')
+    else if (!all) query = query.is('value_matched_at', null)
     const { data, error } = await query.order('created_at', { ascending: true }).limit(limit)
     if (error) throw error
     await linkRows(client, (data ?? []) as ListingRow[], out, dryRun)
