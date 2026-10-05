@@ -6,8 +6,10 @@ import {
   BANNER_TIER_ERROR,
   getMyStoreBannerCore,
   removeStoreBannerCore,
+  setStoreBannerFocalCore,
   uploadStoreBannerCore,
   type BannerDeps,
+  type BannerPatch,
   type BannerSeller,
 } from './store-banner-service'
 
@@ -16,7 +18,7 @@ vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', SB)
 const PNG = `data:image/png;base64,${Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]).toString('base64')}`
 
 function makeDeps(seller: Partial<BannerSeller> | null, userId: string | null = 'u1') {
-  const calls = { upload: 0, set: [] as (string | null)[], revalidated: [] as string[], removed: 0 }
+  const calls = { upload: 0, set: [] as (string | null)[], patches: [] as BannerPatch[], revalidated: [] as string[], removed: 0 }
   const deps: BannerDeps = {
     userId,
     store: {
@@ -32,8 +34,9 @@ function makeDeps(seller: Partial<BannerSeller> | null, userId: string | null = 
         calls.removed++
       },
       publicUrl: (p) => `${SB}/storage/v1/object/public/store-banners/${p}`,
-      setBannerUrl: async (_u, url) => {
-        calls.set.push(url)
+      setBanner: async (_u, patch) => {
+        calls.patches.push(patch)
+        if (patch.url !== undefined) calls.set.push(patch.url)
         return { error: null }
       },
     },
@@ -93,6 +96,7 @@ describe('store banner — remove + read', () => {
     const { deps, calls } = makeDeps({ seller_tier: 'bronze' })
     expect(await removeStoreBannerCore(deps)).toEqual({ ok: true, bannerUrl: null })
     expect(calls.set).toEqual([null])
+    expect(calls.patches).toEqual([{ url: null, focalY: 50 }])
     expect(calls.removed).toBe(1)
   })
 
@@ -102,5 +106,59 @@ describe('store banner — remove + read', () => {
     expect(bronze).toMatchObject({ ok: true, data: { canUpload: false, tierLabel: 'Bronze', bannerUrl: stored, shopHref: '/shop/acme' } })
     const gold = await getMyStoreBannerCore(makeDeps({ seller_tier: 'gold', banner_url: 'https://evil.example/x.png' }).deps)
     expect(gold).toMatchObject({ ok: true, data: { canUpload: true, bannerUrl: null } })
+  })
+})
+
+const STORED = `${SB}/storage/v1/object/public/store-banners/u1/banner.webp?v=1`
+
+describe('store banner — focal point (position)', () => {
+  it('stores the chosen position with a new upload, centred when omitted', async () => {
+    const a = makeDeps({ seller_tier: 'gold' })
+    await uploadStoreBannerCore(a.deps, PNG, 30)
+    expect(a.calls.patches).toEqual([{ url: `${SB}/storage/v1/object/public/store-banners/u1/banner.webp?v=42`, focalY: 30 }])
+    const b = makeDeps({ seller_tier: 'gold' })
+    await uploadStoreBannerCore(b.deps, PNG)
+    expect(b.calls.patches[0]).toMatchObject({ focalY: 50 })
+  })
+
+  it('refuses an out-of-range position before touching storage', async () => {
+    for (const bad of [-1, 101, NaN, '40']) {
+      const { deps, calls } = makeDeps({ seller_tier: 'gold' })
+      expect(await uploadStoreBannerCore(deps, PNG, bad)).toMatchObject({ ok: false })
+      expect(calls.upload).toBe(0)
+      expect(calls.patches).toEqual([])
+    }
+  })
+
+  it('repositions the saved banner for a Silver+ owner and revalidates the shop', async () => {
+    const { deps, calls } = makeDeps({ seller_tier: 'silver', banner_url: STORED })
+    expect(await setStoreBannerFocalCore(deps, 72.4)).toEqual({ ok: true, focalY: 72 })
+    expect(calls.patches).toEqual([{ focalY: 72 }])
+    expect(calls.revalidated).toEqual(['acme'])
+  })
+
+  it('refuses Bronze, a missing banner, bad values and non-sellers', async () => {
+    const cases: [Partial<BannerSeller> | null, unknown, string | null][] = [
+      [{ seller_tier: 'bronze', banner_url: STORED }, 40, 'u1'],
+      [{ seller_tier: 'gold', banner_url: null }, 40, 'u1'],
+      [{ seller_tier: 'gold', banner_url: 'https://evil.example/x.png' }, 40, 'u1'],
+      [{ seller_tier: 'gold', banner_url: STORED }, 120, 'u1'],
+      [{ seller_tier: 'gold', banner_url: STORED }, '40', 'u1'],
+      [{ seller_tier: 'gold', banner_url: STORED, role: 'buyer' }, 40, 'u1'],
+      [{ seller_tier: 'gold', banner_url: STORED }, 40, null],
+    ]
+    for (const [seller, value, userId] of cases) {
+      const { deps, calls } = makeDeps(seller, userId)
+      expect(await setStoreBannerFocalCore(deps, value)).toMatchObject({ ok: false })
+      expect(calls.patches).toEqual([])
+      expect(calls.revalidated).toEqual([])
+    }
+  })
+
+  it('reports the saved position (clamped; centred when unset)', async () => {
+    const set = await getMyStoreBannerCore(makeDeps({ seller_tier: 'gold', banner_url: STORED, banner_focal_y: 15 }).deps)
+    expect(set).toMatchObject({ ok: true, data: { focalY: 15 } })
+    const unset = await getMyStoreBannerCore(makeDeps({ seller_tier: 'gold', banner_url: STORED }).deps)
+    expect(unset).toMatchObject({ ok: true, data: { focalY: 50 } })
   })
 })

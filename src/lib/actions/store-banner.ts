@@ -17,9 +17,11 @@ import { rateLimitAction } from '@/lib/security/rate-limit'
 import {
   getMyStoreBannerCore,
   removeStoreBannerCore,
+  setStoreBannerFocalCore,
   supabaseBannerStore,
   uploadStoreBannerCore,
   type BannerDeps,
+  type BannerFocalResult,
   type BannerResult,
   type MyStoreBanner,
 } from '@/lib/shop/store-banner-service'
@@ -50,14 +52,27 @@ export async function getMyStoreBanner(): Promise<{ ok: true; data: MyStoreBanne
   }
 }
 
-export async function uploadStoreBanner(dataUrl: string): Promise<BannerResult> {
+/** `focalY` — the position chosen in the editor, saved with the new banner. */
+export async function uploadStoreBanner(dataUrl: string, focalY?: number): Promise<BannerResult> {
   const limited = await rateLimitAction('revalidate', 'Too many uploads. Please wait a minute and try again.')
   if (limited) return { ok: false, error: limited.error }
   try {
-    return await uploadStoreBannerCore(await deps(), dataUrl)
+    return await uploadStoreBannerCore(await deps(), dataUrl, focalY)
   } catch (err) {
     console.error('[store-banner] upload failed', err)
     return { ok: false, error: 'Could not save your banner. Try again in a moment.' }
+  }
+}
+
+/** Reposition the saved banner (vertical focal point 0–100). */
+export async function saveStoreBannerPosition(focalY: number): Promise<BannerFocalResult> {
+  const limited = await rateLimitAction('revalidate', 'Too many changes. Please wait a minute and try again.')
+  if (limited) return { ok: false, error: limited.error }
+  try {
+    return await setStoreBannerFocalCore(await deps(), focalY)
+  } catch (err) {
+    console.error('[store-banner] position failed', err)
+    return { ok: false, error: 'Could not save the banner position. Try again in a moment.' }
   }
 }
 

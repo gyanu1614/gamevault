@@ -12,14 +12,23 @@
  *   5. the service role uploads it to the `store-banners` bucket, which has
  *      no write policy for anon/authenticated, and sets `profiles.banner_url`
  *      — the DB trigger re-checks the rank and refuses non-service writers.
+ *
+ * The focal point (`profiles.banner_focal_y`, 0–100: which horizontal slice
+ * of the banner the short header strip shows) follows the same path: same
+ * owner + Silver+ gate, strict 0–100 validation, service-role write; the
+ * trigger refuses a focal change from any other writer
+ * (migration …_store_banner_focal_y).
  */
 import 'server-only'
 
 import { tierLabel } from '@/lib/seller/tiers'
 import {
   canUploadStoreBanner,
+  clampBannerFocalY,
   isStoreBannerUrl,
   parseBannerDataUrl,
+  parseBannerFocalY,
+  STORE_BANNER_FOCAL_DEFAULT,
   STORE_BANNER_BUCKET,
   STORE_BANNER_MIN_TIER,
 } from './store-banner'
@@ -31,6 +40,13 @@ export interface BannerSeller {
   shop_slug: string | null
   username: string | null
   banner_url: string | null
+  banner_focal_y?: number | null
+}
+
+/** What one profile write changes (omitted keys are left alone). */
+export interface BannerPatch {
+  url?: string | null
+  focalY?: number
 }
 
 export interface BannerStore {
@@ -38,7 +54,7 @@ export interface BannerStore {
   upload(path: string, bytes: Uint8Array, contentType: string): Promise<{ error: string | null }>
   remove(path: string): Promise<void>
   publicUrl(path: string): string
-  setBannerUrl(userId: string, url: string | null): Promise<{ error: string | null }>
+  setBanner(userId: string, patch: BannerPatch): Promise<{ error: string | null }>
 }
 
 export interface BannerDeps {
@@ -50,6 +66,7 @@ export interface BannerDeps {
 }
 
 export type BannerResult = { ok: true; bannerUrl: string | null } | { ok: false; error: string }
+export type BannerFocalResult = { ok: true; focalY: number } | { ok: false; error: string }
 
 export interface MyStoreBanner {
   tier: string
@@ -57,6 +74,8 @@ export interface MyStoreBanner {
   canUpload: boolean
   /** The stored banner when it is one of ours (shown in settings even if hidden). */
   bannerUrl: string | null
+  /** Saved vertical focal point, 0–100. */
+  focalY: number
   shopHref: string | null
 }
 
@@ -86,18 +105,31 @@ export async function getMyStoreBannerCore(deps: BannerDeps): Promise<{ ok: true
       tierLabel: tierLabel(seller.seller_tier),
       canUpload: canUploadStoreBanner(seller.seller_tier),
       bannerUrl: isStoreBannerUrl(seller.banner_url) ? seller.banner_url : null,
+      focalY: clampBannerFocalY(seller.banner_focal_y),
       shopHref: slug ? `/shop/${slug}` : null,
     },
   }
 }
 
-export async function uploadStoreBannerCore(deps: BannerDeps, dataUrl: unknown): Promise<BannerResult> {
+/**
+ * `focalY` (optional) is the position the seller chose in the editor before
+ * saving; it is stored with the new banner in the same write. Omitted → the
+ * new banner starts centred.
+ */
+export async function uploadStoreBannerCore(deps: BannerDeps, dataUrl: unknown, focalY?: unknown): Promise<BannerResult> {
   const loaded = await loadSeller(deps)
   if ('error' in loaded) return { ok: false, error: loaded.error }
   const { userId, seller } = loaded
 
   // The gate: the rank as stored NOW, read server-side.
   if (!canUploadStoreBanner(seller.seller_tier)) return { ok: false, error: BANNER_TIER_ERROR }
+
+  let focal = STORE_BANNER_FOCAL_DEFAULT
+  if (focalY !== undefined) {
+    const f = parseBannerFocalY(focalY)
+    if (!f.ok) return { ok: false, error: f.error }
+    focal = f.value
+  }
 
   const parsed = parseBannerDataUrl(dataUrl)
   if (!parsed.ok) return { ok: false, error: parsed.error }
@@ -114,7 +146,7 @@ export async function uploadStoreBannerCore(deps: BannerDeps, dataUrl: unknown):
 
   // Same object path every time; the version query busts browser/CDN caches.
   const url = `${deps.store.publicUrl(path)}?v=${(deps.now ?? Date.now)()}`
-  const saved = await deps.store.setBannerUrl(userId, url)
+  const saved = await deps.store.setBanner(userId, { url, focalY: focal })
   if (saved.error) {
     console.error('[store-banner] profile update failed', saved.error)
     return { ok: false, error: GENERIC_ERROR }
@@ -131,7 +163,7 @@ export async function removeStoreBannerCore(deps: BannerDeps): Promise<BannerRes
   if ('error' in loaded) return { ok: false, error: loaded.error }
   const { userId, seller } = loaded
 
-  const saved = await deps.store.setBannerUrl(userId, null)
+  const saved = await deps.store.setBanner(userId, { url: null, focalY: STORE_BANNER_FOCAL_DEFAULT })
   if (saved.error) {
     console.error('[store-banner] profile update failed', saved.error)
     return { ok: false, error: 'Could not remove your banner. Try again in a moment.' }
@@ -143,13 +175,40 @@ export async function removeStoreBannerCore(deps: BannerDeps): Promise<BannerRes
   return { ok: true, bannerUrl: null }
 }
 
+/**
+ * Move the visible slice of the CURRENT banner. Same gate as an upload (a
+ * seller below Silver cannot restyle a banner nobody sees), and there must be
+ * a stored banner of ours to position.
+ */
+export async function setStoreBannerFocalCore(deps: BannerDeps, focalY: unknown): Promise<BannerFocalResult> {
+  const loaded = await loadSeller(deps)
+  if ('error' in loaded) return { ok: false, error: loaded.error }
+  const { userId, seller } = loaded
+
+  if (!canUploadStoreBanner(seller.seller_tier)) return { ok: false, error: BANNER_TIER_ERROR }
+  if (!isStoreBannerUrl(seller.banner_url)) return { ok: false, error: 'Upload a banner first.' }
+
+  const f = parseBannerFocalY(focalY)
+  if (!f.ok) return { ok: false, error: f.error }
+
+  const saved = await deps.store.setBanner(userId, { focalY: f.value })
+  if (saved.error) {
+    console.error('[store-banner] focal update failed', saved.error)
+    return { ok: false, error: 'Could not save the banner position. Try again in a moment.' }
+  }
+
+  const slug = seller.shop_slug?.trim() || seller.username?.trim()
+  if (slug) deps.revalidateShop(slug)
+  return { ok: true, focalY: f.value }
+}
+
 /** The Supabase adapter (service-role client). */
 export function supabaseBannerStore(svc: any): BannerStore {
   return {
     async readSeller(userId) {
       const { data, error } = await svc
         .from('profiles')
-        .select('role, seller_tier, shop_slug, username, banner_url')
+        .select('role, seller_tier, shop_slug, username, banner_url, banner_focal_y')
         .eq('id', userId)
         .maybeSingle()
       if (error) throw new Error(error.message)
@@ -167,11 +226,11 @@ export function supabaseBannerStore(svc: any): BannerStore {
     publicUrl(path) {
       return svc.storage.from(STORE_BANNER_BUCKET).getPublicUrl(path).data.publicUrl as string
     },
-    async setBannerUrl(userId, url) {
-      const { error } = await svc
-        .from('profiles')
-        .update({ banner_url: url, updated_at: new Date().toISOString() })
-        .eq('id', userId)
+    async setBanner(userId, patch) {
+      const row: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      if (patch.url !== undefined) row.banner_url = patch.url
+      if (patch.focalY !== undefined) row.banner_focal_y = patch.focalY
+      const { error } = await svc.from('profiles').update(row).eq('id', userId)
       return { error: error ? String(error.message ?? error) : null }
     },
   }

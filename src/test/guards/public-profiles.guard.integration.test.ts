@@ -57,7 +57,7 @@ const PUBLIC_COLUMNS = [
   'badges', 'is_verified', 'founding_seller',
   'shop_name', 'shop_slug', 'shop_banner_url', 'shop_banner_position',
   'shop_primary_color', 'shop_secondary_color', 'shop_theme', 'shop_layout',
-  'banner_url', 'banner_preset',
+  'banner_url', 'banner_preset', 'banner_focal_y',
 ] as const
 
 /**
