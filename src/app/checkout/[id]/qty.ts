@@ -1,3 +1,5 @@
+import { orderMinimum } from '@/lib/listings/order-minimum'
+
 /**
  * The quantity a checkout renders and quotes for — ONE clamp shared by the
  * page (which quotes the buyer fee for this subtotal, checkout B3) and the
@@ -12,7 +14,7 @@ export function clampCheckoutQty(
   isBundle: boolean,
 ): number {
   if (!initialQty) return 1
-  const min = isBundle ? 1 : Math.max(1, listing.min_quantity ?? 1)
+  const min = isBundle ? 1 : orderMinimum(listing)
   const max = Math.max(min, listing.quantity ?? min)
   return Math.min(max, Math.max(min, initialQty))
 }
