@@ -11,6 +11,7 @@ import { SaveButton } from '@/components/account/SaveButton'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useFormState, useSavedFlash } from './_useFormState'
+import { StoreBannerCard } from './_StoreBannerCard'
 import { shopNameCooldown, shopSlugPreview } from './_settings-model'
 
 interface SellerTabProps {
@@ -27,6 +28,7 @@ export function SellerTab(props: SellerTabProps) {
     <>
       <StoreAvailabilitySection />
       <ShopIdentityCard {...props} />
+      <StoreBannerCard />
     </>
   )
 }

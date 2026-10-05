@@ -1,114 +1,94 @@
 'use client'
 
 /**
- * SellerStorefront — V10 reskin.
+ * SellerStorefront — the public /shop/[slug] page.
  *
- * Public shop page: banner → Tabs (Shop / Reviews / About). Listings grid
- * reuses the ListingCard for parity with browse/marketplace. Filter row
- * uses Combobox (game) and primitives across the board. Mobile-first.
+ *   Header   banner (Silver+ custom / generated art) + avatar + identity
+ *   Stats    one strip: feedback · sold · offers · stated delivery · member since
+ *   Tabs     Offers (filters + shared ItemCard grid) · Reviews · About
+ *
+ * Every tab panel is in the HTML (inactive ones `hidden`), so the cached page
+ * carries the reviews and policies for crawlers, not just the active tab.
+ * Viewer-specific bits (own shop, presence) resolve client-side.
  */
 
-import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
-import { SITE_URL } from '@/config/site'
-import React, { useLayoutEffect, useMemo, useState } from 'react'
-import Link from '@/components/navigation/AppLink'
-import Image from 'next/image'
-import { Package, Calendar, Star } from 'lucide-react'
+import { sellerShopSlug } from '@/lib/seller/identity'
+import { useLayoutEffect, useState } from 'react'
+import { CalendarBlankIcon } from '@phosphor-icons/react/dist/csr/CalendarBlank'
+import { GameControllerIcon } from '@phosphor-icons/react/dist/csr/GameController'
+import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
+import { MedalIcon } from '@phosphor-icons/react/dist/csr/Medal'
+import { ShoppingBagIcon } from '@phosphor-icons/react/dist/csr/ShoppingBag'
+import { MoonIcon } from '@phosphor-icons/react/dist/csr/Moon'
 
 import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'
-import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import SellerProfileBanner from '@/components/shop/SellerProfileBanner'
-import ReviewsList from '@/components/reviews/ReviewsList'
-import { cn } from '@/lib/utils'
-import { listingUrl } from '@/lib/listings/url'
-import { getAvatarUrl } from '@/lib/utils/avatar'
-import { tierByKey, DEFAULT_TIER, type SellerTier } from '@/lib/seller/tiers'
+import { StoreOffers } from '@/components/shop/StoreOffers'
+import { StoreReviews } from '@/components/shop/StoreReviews'
+import { SITE_URL } from '@/config/site'
+import { sellerDisplayName, sellerShopHref } from '@/lib/seller/identity'
+import { tierByKey } from '@/lib/seller/tiers'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
-import { useSellerOnline } from '@/hooks/use-seller-presence'
+import { gameFacets, memberSinceLabel, type RatingBreakdown, type StoreOffer, type StoreReview } from '@/lib/shop/storefront-model'
+import type { ResolvedStoreBanner } from '@/lib/shop/store-banner'
+import { MARKET_CARD } from '@/lib/ui/surfaces'
+import { getAvatarUrl } from '@/lib/utils/avatar'
+import { cn } from '@/lib/utils'
 
-interface SellerStorefrontProps {
+export interface SellerStorefrontProps {
   seller: {
+    /** The allowlisted PUBLIC_SELLER_PROFILE_SELECT row. */
     profile: any
-    listings: any[]
-    reviews: any[]
+    offers: StoreOffer[]
+    reviews: StoreReview[]
+    breakdown: RatingBreakdown
+    banner: ResolvedStoreBanner
+    isPaused: boolean
     stats: {
       totalSales: number
-      avgRating: number
-      totalReviews: number
-      positivePercentage: number
       activeListings: number
+      avgDelivery: string | null
     }
   }
 }
 
-export default function SellerStorefront({ seller }: SellerStorefrontProps) {
-  const [activeTab, setActiveTab] = useState<'shop' | 'reviews' | 'about'>('shop')
-  const [selectedGame, setSelectedGame] = useState<string>('all')
+type Tab = 'offers' | 'reviews' | 'about'
 
-  // V17k — Scroll-to-top on mount. Pairs with `scroll={false}` on the
-  // seller chip in _ItemCard, which suppresses Next's pre-navigation
-  // scroll-jump on the SOURCE page. The user should still land at the
-  // top of THIS page; useLayoutEffect runs before paint so there's no
-  // visible flash at the previous scroll position.
+export default function SellerStorefront({ seller }: SellerStorefrontProps) {
+  const [tab, setTab] = useState<Tab>('offers')
+  const { profile, offers, reviews, breakdown, banner, isPaused, stats } = seller
+
+  // V17k — land at the top of the shop. Pairs with `scroll={false}` on the
+  // seller chip in _ItemCard; layout effect so there is no flash.
   useLayoutEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-    }
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
   }, [])
 
-  // Group listings by game
-  const listingsByGame = useMemo(() => {
-    const grouped: Record<string, any[]> = {}
-    seller.listings.forEach((listing) => {
-      const game = listing.game?.name || 'Other'
-      if (!grouped[game]) grouped[game] = []
-      grouped[game].push(listing)
-    })
-    return grouped
-  }, [seller.listings])
+  const displayName = sellerDisplayName(profile) || profile.business_name || 'Seller'
+  const tier = tierByKey(profile.seller_tier)
+  const memberSince = memberSinceLabel(profile.created_at)
+  const games = gameFacets(offers)
 
-  const gameOptions: ComboboxOption[] = useMemo(
-    () => [
-      { value: 'all', label: `All games (${seller.listings.length})` },
-      ...Object.keys(listingsByGame).map((g) => ({
-        value: g,
-        label: `${g} (${listingsByGame[g].length})`,
-      })),
-    ],
-    [listingsByGame, seller.listings.length],
-  )
-
-  const filteredListings =
-    selectedGame === 'all' ? seller.listings : listingsByGame[selectedGame] || []
-
-  // Live presence, read in the browser (the storefront HTML is cached):
-  // false until the first read, then polled every 60 s.
-  const isOnline = useSellerOnline(seller.profile.id) === true
-  const sellerTier = (seller.profile.seller_tier || DEFAULT_TIER) as SellerTier
-  const tier = tierByKey(sellerTier)
-
-  // JSON-LD
-  const businessName = sellerDisplayName(seller.profile) || seller.profile.business_name
+  // JSON-LD (unchanged shape: Store + AggregateRating).
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Store',
-    name: businessName,
-    image: getAvatarUrl(seller.profile.avatar_url, seller.profile.username),
+    name: sellerDisplayName(profile) || profile.business_name,
+    image: getAvatarUrl(profile.avatar_url, profile.username),
     description: `Gaming marketplace seller on DropMarket`,
-    url: `${SITE_URL}${sellerShopHref(seller.profile) ?? ''}`,
+    url: `${SITE_URL}${sellerShopHref(profile) ?? ''}`,
     aggregateRating:
-      seller.stats.totalReviews > 0
+      breakdown.total > 0
         ? {
             '@type': 'AggregateRating',
-            ratingValue: seller.stats.avgRating,
-            reviewCount: seller.stats.totalReviews,
+            ratingValue: breakdown.average,
+            reviewCount: breakdown.total,
             bestRating: 5,
             worstRating: 1,
           }
         : undefined,
-    founder: { '@type': 'Person', name: seller.profile.username },
+    founder: { '@type': 'Person', name: profile.username },
     memberOf: { '@type': 'Organization', name: 'DropMarket' },
   }
 
@@ -117,152 +97,123 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
 
       <main className="min-h-screen bg-bg-base pb-16">
-        {/* Banner */}
-        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8">
           <SellerProfileBanner
-            sellerId={seller.profile.id}
-            username={seller.profile.username}
-            shopName={seller.profile.shop_name || seller.profile.business_name}
-            avatarUrl={getAvatarUrl(seller.profile.avatar_url, seller.profile.username)}
-            isOnline={isOnline}
-            // Reflect the real profile flag — NOT a hardcoded `true`. The
-            // storefront only renders for an approved seller, so this is
-            // normally true; but a fabricated "Verified" badge on a profile
-            // that isn't is a trust tell a real seller will catch.
-            isVerified={seller.profile.is_verified === true}
-            rating={seller.stats.avgRating}
-            reviewsCount={seller.stats.totalReviews}
-            listingsCount={seller.stats.activeListings}
-            totalSales={seller.stats.totalSales}
-            sellerTier={sellerTier}
-            isFoundingSeller={seller.profile.founding_seller === true}
-            bannerConfig={
-              seller.profile.banner_url
-                ? { type: 'custom', url: seller.profile.banner_url }
-                : { type: 'preset' }
-            }
-            onMessageClick={() => {
-              window.location.href = `/account/messages?seller=${seller.profile.id}`
-            }}
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* The Messages tab bar; each panel below is labelled by its tab. */}
-          <SegmentedTabs<'shop' | 'reviews' | 'about'>
-            tabs={[
-              { id: 'shop', label: 'Shop' },
-              { id: 'reviews', label: <>Reviews<TabCount n={seller.stats.totalReviews} /></> },
-              { id: 'about', label: 'About' },
-            ]}
-            value={activeTab as 'shop' | 'reviews' | 'about'}
-            onChange={(v) => setActiveTab(v as any)}
-            layoutId="shop-tabs"
-            ariaLabel="Shop sections"
-            idPrefix="shop"
+            sellerId={profile.id}
+            displayName={displayName}
+            username={profile.username}
+            avatarUrl={profile.avatar_url ? getAvatarUrl(profile.avatar_url, profile.username) : null}
+            // The real profile flag — never a hardcoded badge.
+            isVerified={profile.is_verified === true}
+            isFoundingSeller={profile.founding_seller === true}
+            sellerTier={profile.seller_tier}
+            memberSince={memberSince}
+            isPaused={isPaused}
+            banner={banner}
           />
 
-            {/* Shop */}
-            {activeTab === 'shop' && (
-            <div role="tabpanel" id="shop-panel-shop" aria-labelledby="shop-tab-shop" className="pt-6">
-              {/* Filter row */}
-              <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="sm:w-64">
-                  <Combobox
-                    value={selectedGame}
-                    onChange={setSelectedGame}
-                    options={gameOptions}
-                    ariaLabel="Filter by game"
-                    unsorted
-                  />
-                </div>
-                <span className="text-xs text-text-tertiary">
-                  {filteredListings.length} {filteredListings.length === 1 ? 'listing' : 'listings'}
+          {/* Stat strip */}
+          <dl className={cn('mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-white/[0.07] sm:grid-cols-3 lg:grid-cols-5')}>
+            <Stat
+              label="Positive Feedback"
+              value={breakdown.positivePercent != null ? `${breakdown.positivePercent}%` : '—'}
+              hint={
+                breakdown.total > 0
+                  ? `${breakdown.total.toLocaleString('en-US')} ${breakdown.total === 1 ? 'Review' : 'Reviews'}`
+                  : 'No Reviews Yet'
+              }
+            />
+            <Stat
+              label="Sold"
+              value={stats.totalSales > 0 ? stats.totalSales.toLocaleString('en-US') : '—'}
+              hint={stats.totalSales > 0 ? 'Completed Orders' : 'No Sales Yet'}
+            />
+            <Stat
+              label="Active Offers"
+              value={stats.activeListings.toLocaleString('en-US')}
+              hint={games.length > 0 ? `Across ${games.length} ${games.length === 1 ? 'Game' : 'Games'}` : 'None Listed'}
+            />
+            <Stat label="Avg. Delivery" value={stats.avgDelivery ?? '—'} hint="Seller's Stated Time" />
+            <Stat
+              label="Rank"
+              value={
+                <span className={cn('inline-flex items-center gap-2', tier.colors.text)}>
+                  <TierIcon tier={tier.key} size={22} decorative />
+                  {tier.label}
                 </span>
-              </div>
+              }
+              hint={memberSince ? `Since ${memberSince}` : 'DropMarket Seller'}
+              className="col-span-2 sm:col-span-1"
+            />
+          </dl>
 
-              {filteredListings.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredListings.map((listing) => (
-                    <ShopListingCard key={listing.id} listing={listing} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyShop sellerName={seller.profile.username} />
-              )}
+          {isPaused && (
+            <div className="mt-4 flex items-start gap-3 rounded-lg bg-warning-bg px-4 py-3 text-[13px] text-warning">
+              <MoonIcon size={18} weight="fill" aria-hidden className="mt-px shrink-0" />
+              <p>
+                <span className="font-semibold">This Store Is Paused.</span>{' '}
+                The seller has paused their store, so their offers are hidden from the marketplace until they are back.
+              </p>
             </div>
-            )}
+          )}
 
-            {/* Reviews */}
-            {activeTab === 'reviews' && (
-            <div role="tabpanel" id="shop-panel-reviews" aria-labelledby="shop-tab-reviews" className="pt-6">
-              <div className="mx-auto max-w-3xl">
-                <ReviewsList
-                  sellerId={seller.profile.id}
-                  initialReviews={seller.reviews}
-                  allowSellerReply={false}
-                />
-              </div>
-            </div>
-            )}
+          {/* Tabs */}
+          <div className="mt-6">
+            <SegmentedTabs<Tab>
+              tabs={[
+                { id: 'offers', label: <>Offers<TabCount n={offers.length} /></> },
+                { id: 'reviews', label: <>Reviews<TabCount n={breakdown.total} /></> },
+                { id: 'about', label: 'About' },
+              ]}
+              value={tab}
+              onChange={setTab}
+              layoutId="shop-tabs"
+              ariaLabel="Shop sections"
+              idPrefix="shop"
+            />
+          </div>
 
-            {/* About */}
-            {activeTab === 'about' && (
-            <div role="tabpanel" id="shop-panel-about" aria-labelledby="shop-tab-about" className="pt-6">
-              <div className="mx-auto max-w-3xl space-y-5">
-                {/* About */}
-                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
-                  <h2 className="mb-3 text-base font-bold text-text-primary">About This Seller</h2>
-                  <p className="text-sm leading-relaxed text-text-secondary">
-                    {seller.profile.bio?.trim() || 'No description provided yet.'}
+          <section
+            role="tabpanel"
+            id="shop-panel-offers"
+            aria-labelledby="shop-tab-offers"
+            hidden={tab !== 'offers'}
+            className="pt-5 motion-safe:animate-in motion-safe:fade-in-0"
+          >
+            <h2 className="sr-only">Offers</h2>
+            <StoreOffers offers={offers} sellerName={displayName} shopSlug={sellerShopSlug(profile)} />
+          </section>
+
+          <section
+            role="tabpanel"
+            id="shop-panel-reviews"
+            aria-labelledby="shop-tab-reviews"
+            hidden={tab !== 'reviews'}
+            className="pt-5 motion-safe:animate-in motion-safe:fade-in-0"
+          >
+            <h2 className="sr-only">Reviews</h2>
+            <StoreReviews reviews={reviews} breakdown={breakdown} />
+          </section>
+
+          <section
+            role="tabpanel"
+            id="shop-panel-about"
+            aria-labelledby="shop-tab-about"
+            hidden={tab !== 'about'}
+            className="pt-5 motion-safe:animate-in motion-safe:fade-in-0"
+          >
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+              <div className="space-y-5">
+                <Card title="About This Seller">
+                  <p className="whitespace-pre-line break-words text-[14px] leading-relaxed text-text-secondary">
+                    {profile.bio?.trim() || 'No description provided yet.'}
                   </p>
-                </section>
+                </Card>
 
-                {/* Info */}
-                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
-                  <h2 className="mb-4 text-base font-bold text-text-primary">Seller Information</h2>
-                  <dl className="space-y-2.5 text-sm">
-                    <InfoRow
-                      icon={Calendar}
-                      label="Member since"
-                      value={new Date(seller.profile.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                      })}
-                    />
-                    {/* "Response time" removed — it was a hardcoded "Within 2
-                        hours" with no data behind it (a fabricated metric a real
-                        seller/buyer will catch). Reinstate only when we track a
-                        real median response time per seller. */}
-                    <InfoRow
-                      icon={Star}
-                      label="Seller tier"
-                      value={
-                        <span className={cn('inline-flex items-center gap-1.5 font-semibold', tier.colors.text)}>
-                          <TierIcon tier={tier.key} size={16} decorative />
-                          {tier.label}
-                        </span>
-                      }
-                    />
-                    <InfoRow
-                      icon={Package}
-                      label="Total sales"
-                      value={
-                        <span className="font-mono font-semibold tabular-nums text-text-primary">
-                          {seller.stats.totalSales}
-                        </span>
-                      }
-                    />
-                  </dl>
-                </section>
-
-                {/* Policies */}
-                <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
-                  <h2 className="mb-4 text-base font-bold text-text-primary">Shop Policies</h2>
+                <Card title="Shop Policies">
                   <div className="space-y-4 text-sm">
                     <PolicyBlock
-                      title="Returns & refunds"
+                      title="Returns & Refunds"
                       body="Every order is covered by SafeDrop Protection. Not delivered or not as described within your protection window? Full refund."
                     />
                     <PolicyBlock
@@ -274,100 +225,86 @@ export default function SellerStorefront({ seller }: SellerStorefrontProps) {
                       body="Message me anytime for questions or support — all communication stays on-platform, where SafeDrop covers your order."
                     />
                   </div>
-                </section>
+                </Card>
               </div>
+
+              <Card title="Seller Information">
+                <dl className="text-[14px]">
+                  <InfoRow icon={<CalendarBlankIcon size={16} aria-hidden />} label="Member Since" value={memberSince ?? '—'} />
+                  <InfoRow
+                    icon={<MedalIcon size={16} aria-hidden />}
+                    label="Rank"
+                    value={
+                      <span className={cn('inline-flex items-center gap-1.5 font-semibold', tier.colors.text)}>
+                        <TierIcon tier={tier.key} size={16} decorative />
+                        {tier.label}
+                      </span>
+                    }
+                  />
+                  <InfoRow
+                    icon={<ShoppingBagIcon size={16} aria-hidden />}
+                    label="Completed Sales"
+                    value={<span className="font-semibold tabular-nums">{stats.totalSales.toLocaleString('en-US')}</span>}
+                  />
+                  <InfoRow
+                    icon={<LightningIcon size={16} aria-hidden />}
+                    label="Avg. Stated Delivery"
+                    value={stats.avgDelivery ?? '—'}
+                  />
+                  <InfoRow
+                    icon={<GameControllerIcon size={16} aria-hidden />}
+                    label="Games"
+                    value={games.length > 0 ? games.map((g) => g.label).join(', ') : '—'}
+                  />
+                </dl>
+              </Card>
             </div>
-            )}
+          </section>
         </div>
       </main>
     </>
   )
 }
 
-// ─── Listing card (shop-local variant) ───────────────────────────────────────
+// ─── Pieces ─────────────────────────────────────────────────────────────────
 
-function ShopListingCard({ listing }: { listing: any }) {
-  const img = listing.images?.[0]
-  const game = listing.game?.name ?? ''
-  const category = listing.category?.name ?? ''
-  const hasPriceDrop = listing.original_price && listing.original_price > listing.price
-  const discountPct = hasPriceDrop
-    ? Math.round(((listing.original_price - listing.price) / listing.original_price) * 100)
-    : 0
-
+function Stat({
+  label,
+  value,
+  hint,
+  className,
+}: {
+  label: string
+  value: React.ReactNode
+  hint?: string
+  className?: string
+}) {
   return (
-    <Link
-      href={listingUrl(listing)}
-      className={cn('group flex flex-col overflow-hidden rounded-lg', MARKET_CARD, MARKET_CARD_HOVER)}
-    >
-      <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
-        {img ? (
-          <Image
-            src={img}
-            alt={listing.title}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-5xl">
-            {listing.game?.emoji ?? '🎮'}
-          </div>
-        )}
-        {/* Game chip */}
-        <div className="absolute left-2.5 top-2.5 inline-flex h-6 items-center rounded-md bg-black/55 px-2 text-[12px] font-semibold text-white backdrop-blur-sm">
-          {game}
-        </div>
-        {hasPriceDrop && (
-          <div className="absolute right-2.5 top-2.5 inline-flex h-6 items-center rounded-md bg-success-bg px-2 text-[12px] font-bold text-success backdrop-blur-sm">
-            -{discountPct}%
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        <div className="text-[12.5px] font-medium text-text-tertiary">
-          {category}
-        </div>
-        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug text-text-primary">
-          {listing.title}
-        </h3>
-        <div className="mt-auto flex items-center justify-between pt-2">
-          <div>
-            <div className="font-mono text-lg font-bold tabular-nums text-text-primary">
-              ${listing.price.toFixed(2)}
-            </div>
-            {hasPriceDrop && (
-              <div className="font-mono text-[11px] text-text-tertiary line-through tabular-nums">
-                ${listing.original_price.toFixed(2)}
-              </div>
-            )}
-          </div>
-          {listing.quantity > 0 ? (
-            <span className="text-[12px] text-text-secondary">
-              {listing.quantity > 10000 ? '∞' : listing.quantity} in stock
-            </span>
-          ) : (
-            <span className="text-[12px] text-error">Out of stock</span>
-          )}
-        </div>
-      </div>
-    </Link>
+    <div className={cn('min-w-0 bg-[#1D1E23] px-4 py-3.5 sm:px-5 sm:py-4', className)}>
+      <dt className="truncate text-[12.5px] font-medium text-text-secondary">{label}</dt>
+      <dd className="mt-1 truncate text-[20px] font-bold leading-tight tabular-nums text-text-primary sm:text-[22px]">{value}</dd>
+      {hint && <dd className="mt-0.5 truncate text-[12px] text-text-tertiary">{hint}</dd>}
+    </div>
   )
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function InfoRow({
-  icon: Icon, label, value,
-}: { icon: React.ElementType; label: string; value: React.ReactNode }) {
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/[0.07] pb-2.5 last:border-b-0 last:pb-0">
-      <dt className="inline-flex items-center gap-2 text-text-secondary">
-        <Icon className="h-4 w-4 text-text-tertiary" />
+    <section className={cn('rounded-lg p-5 sm:p-6', MARKET_CARD)}>
+      <h2 className="mb-3 text-[15px] font-semibold text-text-primary">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] py-2.5 first:pt-0 last:border-b-0 last:pb-0">
+      <dt className="inline-flex shrink-0 items-center gap-2 text-text-secondary">
+        <span className="text-text-tertiary">{icon}</span>
         {label}
       </dt>
-      <dd className="text-text-primary">{value}</dd>
+      <dd className="min-w-0 text-right text-text-primary">{value}</dd>
     </div>
   )
 }
@@ -376,23 +313,7 @@ function PolicyBlock({ title, body }: { title: string; body: string }) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-      <p className="mt-1 text-sm text-text-secondary">{body}</p>
-    </div>
-  )
-}
-
-function EmptyShop({ sellerName }: { sellerName: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-bg-raised p-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.05]">
-        <Package className="h-5 w-5 text-text-tertiary" />
-      </div>
-      <div>
-        <h3 className="text-base font-semibold text-text-primary">No listings yet</h3>
-        <p className="mt-1 text-sm text-text-secondary">
-          @{sellerName} hasn’t listed anything in this category.
-        </p>
-      </div>
+      <p className="mt-1 text-sm leading-relaxed text-text-secondary">{body}</p>
     </div>
   )
 }

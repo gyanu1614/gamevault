@@ -123,6 +123,7 @@ export default function ItemCard({
   gameName,
   isOwn,
   isBestDeal,
+  href: hrefOverride,
 }: {
   offer: ItemOffer
   gameSlug: string
@@ -130,9 +131,12 @@ export default function ItemCard({
   gameName?: string
   isOwn?: boolean
   isBestDeal?: boolean
+  /** Card link override (e.g. a currency offer opens the currency page with
+   *  this seller selected instead of the listing route's redirect). */
+  href?: string
 }) {
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-  const href = `/${gameSlug}/${offer.detailCategorySlug}/${offer.detailSlug}`
+  const href = hrefOverride ?? `/${gameSlug}/${offer.detailCategorySlug}/${offer.detailSlug}`
   const sellerName = sellerDisplayName(offer.seller)
 
   // Delivery: green chip + bolt for instant, neutral clock + window label
