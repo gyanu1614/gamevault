@@ -190,7 +190,7 @@ export interface WaysInput {
 
 function fastWay(name: string, gameName: string, shortName: string, price: string | null) {
   return {
-    heading: `Buy ${name} On DropMarket`,
+    heading: 'Buy It',
     tag: 'Fastest · Minutes',
     steps: [
       { icon: 'store' as const, title: 'Open DropMarket', value: `${shortName} listings for ${name}` },
@@ -261,7 +261,7 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
       free: {
         state: 'available',
         tag: 'Free · Takes A While',
-        heading: hatch ? 'Hatch It For Free' : 'Unbox It For Free',
+        heading: 'How To Get It For Free',
         steps: [
           {
             icon: 'coins',
@@ -273,9 +273,11 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
           { icon: 'target', title: 'Land The Drop', value: `${e.oddsPct}% per ${verb} — about ${formatCount(e.spins)} ${verbs}` },
         ],
         total: {
-          label: 'Total On Average',
+          label: 'Total',
           value: formatAmount(pay.total, pay.unit),
-          detail: rounds ? `≈ ${formatCount(rounds)} rounds at ${rate} Coins a round` : null,
+          detail: rounds
+            ? `You’d have to play about ${formatCount(rounds)} rounds to get it.`
+            : `About ${formatCount(e.spins)} ${verbs} on average to get it.`,
         },
         message: null,
       },
@@ -294,7 +296,7 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
       free: {
         state: 'available',
         tag: 'Free · Takes A While',
-        heading: 'Craft It For Free',
+        heading: 'How To Get It For Free',
         steps: [
           ...recipe.map((r) => ({
             icon: 'materials' as const,
@@ -304,7 +306,7 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
           { icon: 'craft' as const, title: 'Open The Crafting Station', value: `In ${shortName}` },
           { icon: 'target' as const, title: `Craft ${name}`, value: 'No Robux needed' },
         ],
-        total: { label: 'Recipe', value: needs, detail: null },
+        total: { label: 'Total', value: needs, detail: 'Crafted at the Crafting Station. No Robux needed.' },
         message: null,
       },
       fast,
@@ -319,7 +321,7 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
     free: {
       state: 'available',
       tag: 'In-Game',
-      heading: 'Get It In-Game',
+      heading: 'How To Get It In-Game',
       steps: [
         { icon: 'box', title: 'How', value: noDot(h.method) },
         ...(h.costs ? [{ icon: 'coins' as const, title: 'Cost', value: noDot(h.costs) }] : []),

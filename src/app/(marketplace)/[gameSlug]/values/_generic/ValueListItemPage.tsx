@@ -337,7 +337,6 @@ async function ItemBody({
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}
-          sellHref={sellHref}
         />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />

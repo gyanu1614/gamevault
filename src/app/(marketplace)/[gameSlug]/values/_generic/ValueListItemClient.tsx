@@ -15,6 +15,7 @@ import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder, confidenceMeta } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
 import { marketSecondaryUsd } from '@/lib/values/pricing'
@@ -300,86 +301,82 @@ export function ValueListBuyActions({
 
 const FAST_ICONS = { store: StorefrontIcon, cart: ShoppingCartIcon, bolt: LightningIcon } as const
 const FAST_GREEN = '63,217,134'
+/** Steps across one line on desktop (2-up on tablets, stacked on phones). */
+const FAST_COLS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' }
 
 /**
- * How To Get, way 2 — the fast way: DropMarket → buy → delivered in minutes.
- * Client-side only for the live buy link (useBuyCta: this item's listings
- * when we stock it, else the closest listings); the text itself is in the
+ * How To Get, row 2 — "Buy It": DropMarket → buy → delivered in minutes, then
+ * one button. Owner, 2026-10-05: the button always reads "Buy MM2 Items"; it
+ * opens this item's listings when we stock it, otherwise the game's items
+ * page. Client-side only for the live stock (useBuyCta); the text is in the
  * server HTML. Step 1 links to the same place as the button.
  */
 export function HowToGetFastWay({
-  index,
   way,
   name,
+  shortName,
   buy,
-  sellHref,
 }: {
-  index: number
-  way: { heading: string; tag: string; steps: WayStep[] }
+  way: { heading: string; steps: WayStep[] }
   name: string
+  shortName: string
   buy: ItemBuy
-  /** Shown when the item can't be obtained any more (sellers hold the supply). */
-  sellHref: string | null
 }) {
   const cta = useItemCta(buy, name)
+  const href = cta.state === 'none' ? `/${buy.gameSlug}/${buy.categorySlug}` : cta.href
+  const label = `Buy ${shortName} Items`
   return (
-    <div
-      className="flex flex-col rounded-lg p-5"
-      style={{ background: `linear-gradient(180deg, rgba(${FAST_GREEN},0.09) 0%, rgba(${FAST_GREEN},0.03) 100%)` }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p className={VALUE_LABEL}>Way {index}</p>
-        <span
-          className="rounded-md px-2 py-0.5 text-[11px] font-semibold"
-          style={{ background: `rgba(${FAST_GREEN},0.14)`, color: `rgb(${FAST_GREEN})` }}
-        >
-          {way.tag}
-        </span>
-      </div>
-      <h3 className="mt-1.5 text-[17px] font-semibold text-text-primary">{way.heading}</h3>
-      <ol className="mt-4 space-y-3">
-        {way.steps.map((step, i) => {
-          const Icon = FAST_ICONS[step.icon as keyof typeof FAST_ICONS] ?? StorefrontIcon
-          const body = (
-            <>
-              <p className="text-[14px] font-semibold leading-5 text-text-primary">
-                <span className="sr-only">Step {i + 1}: </span>
-                {step.title}
-              </p>
-              <p className="text-[13px] leading-5 text-text-secondary">{step.value}</p>
-            </>
-          )
-          return (
-            <li key={step.title} className="flex items-center gap-3">
-              <span
-                aria-hidden
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
-                style={{ background: `rgba(${FAST_GREEN},0.14)`, color: `rgb(${FAST_GREEN})` }}
-              >
-                <Icon size={18} weight="duotone" />
-              </span>
-              {i === 0 ? (
-                <Link
-                  href={cta.href}
-                  prefetch={false}
-                  onClick={cta.onClick}
-                  className="min-w-0 rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+    <div className="mt-7 border-t border-white/[0.07] pt-6">
+      <h3 className="text-[18px] font-semibold text-text-primary">{way.heading}</h3>
+      <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
+        <ol className={`grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 ${FAST_COLS[way.steps.length] ?? ''}`}>
+          {way.steps.map((step, i) => {
+            const Icon = FAST_ICONS[step.icon as keyof typeof FAST_ICONS] ?? StorefrontIcon
+            const body = (
+              <>
+                <p className="text-[14px] font-semibold leading-5 text-text-primary">
+                  <span className="sr-only">Step {i + 1}: </span>
+                  {step.title}
+                </p>
+                <p className="mt-0.5 text-[13px] leading-5 text-text-secondary">{step.value}</p>
+              </>
+            )
+            return (
+              <li key={step.title} className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
+                  style={{ background: `rgba(${FAST_GREEN},0.14)`, color: `rgb(${FAST_GREEN})` }}
                 >
-                  {body}
-                </Link>
-              ) : (
-                <div className="min-w-0">{body}</div>
-              )}
-            </li>
-          )
-        })}
-      </ol>
-      <ValueBuyActions
-        cta={cta}
-        itemName={name}
-        sell={sellHref ? { href: sellHref, label: 'Sell Yours For Cash' } : null}
-        className="mt-auto pt-5"
-      />
+                  <Icon size={18} weight="duotone" />
+                </span>
+                {i === 0 ? (
+                  <Link
+                    href={href}
+                    prefetch={false}
+                    onClick={cta.onClick}
+                    className="min-w-0 rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div className="min-w-0">{body}</div>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+        <Link
+          href={href}
+          prefetch={false}
+          onClick={cta.onClick}
+          className="group inline-flex shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        >
+          <BuyButtonFace size="md" className="w-full lg:w-auto">
+            <span className="truncate">{label}</span>
+          </BuyButtonFace>
+        </Link>
+      </div>
     </div>
   )
 }

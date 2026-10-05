@@ -8,7 +8,7 @@ import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question'
 import { TargetIcon } from '@phosphor-icons/react/dist/ssr/Target'
 import type { IconProps } from '@phosphor-icons/react'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
-import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
+import { VALUE_SURFACE } from '@/components/values/styles'
 import { cn } from '@/lib/utils'
 import { HowToGetFastWay, type ItemBuy } from './ValueListItemClient'
 import {
@@ -61,7 +61,6 @@ export function ValueItemHowToGet({
   howToGet,
   cheapestUsd,
   buy,
-  sellHref,
 }: {
   itemName: string
   gameName: string
@@ -73,7 +72,6 @@ export function ValueItemHowToGet({
   howToGet: ValueHowToGet | null
   cheapestUsd: number | null
   buy: ItemBuy
-  sellHref: string
 }) {
   if (!howToGet) return null
   const status = howToGetStatusMeta(howToGet.status)
@@ -129,17 +127,16 @@ export function ValueItemHowToGet({
         </div>
 
         {/* Answer first — the snippet a search engine quotes. */}
-        <p className="mt-4 max-w-[78ch] text-body leading-7 text-text-secondary">
+        <p className="mt-4 text-body leading-7 text-text-secondary">
           <strong className="font-semibold text-text-primary">{ways.lead}</strong> {ways.body}
         </p>
 
-        {/* The two ways. */}
-        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <FreeWayPanel way={ways.free} index={1} />
-          <HowToGetFastWay index={2} way={ways.fast} name={itemName} buy={buy} sellHref={howToGet.status === 'obtainable' ? null : sellHref} />
-        </div>
+        {/* The two ways, as two plain rows on the same card (no card-in-card):
+            the free way, then buy it. */}
+        <FreeWayRow way={ways.free} />
+        <HowToGetFastWay way={ways.fast} name={itemName} shortName={shortName} buy={buy} />
 
-        {note && <p className="mt-4 max-w-[78ch] text-body-sm leading-6 text-text-tertiary">{note}</p>}
+        {note && <p className="mt-5 text-body-sm leading-6 text-text-tertiary">{note}</p>}
       </div>
 
       <p className="border-t border-white/[0.07] px-5 py-3.5 text-[12px] leading-5 text-text-tertiary sm:px-8">
@@ -177,23 +174,28 @@ export function ValueItemHowToGet({
   )
 }
 
-/** Way 1: the free in-game route (or why it's gone). */
-function FreeWayPanel({ way, index }: { way: FreeWay; index: number }) {
+/** Steps across one line on desktop (2-up on tablets, stacked on phones). */
+export const WAY_STEP_COLS: Record<number, string> = {
+  1: 'lg:grid-cols-1',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+  5: 'lg:grid-cols-5',
+}
+
+/** Row 1: the free in-game route (or why it's gone) — steps in a line, then the total. */
+function FreeWayRow({ way }: { way: FreeWay }) {
   const muted = way.state !== 'available'
   return (
-    <div className="flex flex-col rounded-lg bg-white/[0.035] p-5">
-      <div className="flex items-center justify-between gap-3">
-        <p className={VALUE_LABEL}>Way {index}</p>
-        <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[11px] font-semibold text-text-secondary">{way.tag}</span>
-      </div>
-      <h3 className={cn('mt-1.5 text-[17px] font-semibold', muted ? 'text-text-secondary' : 'text-text-primary')}>{way.heading}</h3>
+    <div className="mt-7 border-t border-white/[0.07] pt-6">
+      <h3 className={cn('text-[18px] font-semibold', muted ? 'text-text-secondary' : 'text-text-primary')}>{way.heading}</h3>
 
       {way.steps.length > 0 && (
-        <ol className="mt-4 space-y-3">
+        <ol className={cn('mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>
           {way.steps.map((step, i) => {
             const Icon = FREE_ICONS[step.icon] ?? QuestionIcon
             return (
-              <li key={`${step.title}-${i}`} className="flex items-center gap-3">
+              <li key={`${step.title}-${i}`} className="flex items-start gap-3">
                 <span
                   aria-hidden
                   className={cn(
@@ -208,7 +210,7 @@ function FreeWayPanel({ way, index }: { way: FreeWay; index: number }) {
                     <span className="sr-only">Step {i + 1}: </span>
                     {step.title}
                   </p>
-                  <p className="text-[13px] leading-5 text-text-secondary">{step.value}</p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-text-secondary">{step.value}</p>
                 </div>
               </li>
             )
@@ -216,16 +218,15 @@ function FreeWayPanel({ way, index }: { way: FreeWay; index: number }) {
         </ol>
       )}
 
-      {way.message && <p className="mt-4 text-body-sm leading-6 text-text-secondary">{way.message}</p>}
+      {way.message && <p className="mt-3 text-body-sm leading-6 text-text-secondary">{way.message}</p>}
 
       {way.total && (
-        <div className="mt-auto pt-4">
-          <div className="rounded-md bg-white/[0.05] px-4 py-3">
-            <p className={VALUE_LABEL}>{way.total.label}</p>
-            <p className="mt-0.5 text-[20px] font-bold leading-tight tracking-[-0.01em] tabular-nums text-text-primary">{way.total.value}</p>
-            {way.total.detail && <p className="mt-0.5 text-[12px] text-text-tertiary">{way.total.detail}</p>}
-          </div>
-        </div>
+        <p className="mt-5 text-body leading-7 text-text-secondary">
+          <span className="font-semibold text-text-primary">
+            {way.total.label}: {way.total.value}.
+          </span>
+          {way.total.detail && <> {way.total.detail}</>}
+        </p>
       )}
     </div>
   )

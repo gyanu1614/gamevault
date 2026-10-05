@@ -83,26 +83,26 @@ describe('how-to-get copy', () => {
   it('way 1: short steps with real numbers and the honest total', () => {
     const f = ways('Chroma Lightbringer', chromaLightbringer).free
     expect(f.state).toBe('available')
-    expect(f.heading).toBe('Unbox It For Free')
+    expect(f.heading).toBe('How To Get It For Free')
     expect(f.steps.map((s) => [s.title, s.value])).toEqual([
       ['Earn Coins', 'Up to 40 Coins per round'],
       ['Open Mystery Box 2', 'In the in-game Shop'],
       ['Spin It', '1,000 Coins, 100 Diamonds or 1 Mystery Key per spin'],
       ['Land The Drop', '0.004% per spin — about 25,000 spins'],
     ])
-    expect(f.total).toEqual({ label: 'Total On Average', value: '25,000,000 Coins', detail: '≈ 625,000 rounds at 40 Coins a round' })
+    expect(f.total).toEqual({ label: 'Total', value: '25,000,000 Coins', detail: 'You’d have to play about 625,000 rounds to get it.' })
   })
 
   it('way 2: DropMarket → buy → delivered in minutes', () => {
     const fast = ways('Chroma Lightbringer', chromaLightbringer).fast
-    expect(fast.heading).toBe('Buy Chroma Lightbringer On DropMarket')
+    expect(fast.heading).toBe('Buy It')
     expect(fast.steps.map((s) => s.title)).toEqual(['Open DropMarket', 'Buy Chroma Lightbringer', 'Get It In Minutes'])
     expect(fast.steps[1].value).toBe('From $2.17, reputable sellers')
   })
 
   it('never gives a rounds figure without a verified earn rate', () => {
     const w = howToGetWays({ name: 'X', gameName: 'Murder Mystery 2', shortName: 'MM2', h: chromaLightbringer, cheapestUsd: null })
-    expect(w.free.total?.detail).toBeNull()
+    expect(w.free.total?.detail).toBe('About 25,000 spins on average to get it.')
     expect(w.body).not.toMatch(/rounds/)
   })
 
@@ -140,7 +140,7 @@ describe('how-to-get copy', () => {
       odds: '0.004% per hatch',
     }
     const f = ways('Chroma Fire Cat', fireCat).free
-    expect(f.heading).toBe('Hatch It For Free')
+    expect(f.heading).toBe('How To Get It For Free')
     expect(f.steps.map((s) => s.title)).toEqual(['Earn Coins', 'Open Common Egg', 'Hatch It', 'Land The Drop'])
     expect(f.steps[3].value).toBe('0.004% per hatch — about 25,000 hatches')
   })
