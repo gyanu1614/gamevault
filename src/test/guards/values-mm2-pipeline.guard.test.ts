@@ -10,7 +10,7 @@ import { eldoradoStructuredConfig } from '@/lib/values/sources/eldorado-structur
 
 const ROOT = process.cwd()
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8')
-const MIGRATION = read('supabase/migrations/20261004235134_values_mm2_catalogue.sql')
+const MIGRATION = read('supabase/migrations/20261005004438_values_mm2_catalogue.sql')
 const WORKFLOW = read('.github/workflows/values-pricing-daily.yml')
 const PKG = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
 

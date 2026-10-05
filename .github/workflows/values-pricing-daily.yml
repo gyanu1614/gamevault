@@ -339,7 +339,7 @@ jobs:
         run: pnpm reprice --game=steal-an-egg ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
 
   # ── Murder Mystery 2: generic values_* pipeline, eldorado-structured ─────
-  # OFF by default. It needs migration 20261004235134_values_mm2_catalogue on
+  # OFF by default. It needs migration 20261005004438_values_mm2_catalogue on
   # prod + the wiki catalogue imported (pnpm values:mm2:catalogue --write
   # --env=prod --yes). Turn on with the repo variable MM2_PRICING_ENABLED=true
   # (Settings → Secrets and variables → Actions → Variables); before that a

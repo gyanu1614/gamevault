@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Copy catalogue images from the source wiki into OUR public bucket
- * (`values-items`, created by migration 20261004235134) and point
+ * (`values-items`, created by migration 20261005004438) and point
  * values_items.image_url at the copy, with the CC-BY-SA credit line in
  * values_items.image_attribution. Pages never hot-link the wiki CDN.
  *
