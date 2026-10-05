@@ -47,7 +47,7 @@ export const getAllGames = unstable_cache(
     }
   },
   ['all-active-games'],
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
 )
 
 /**

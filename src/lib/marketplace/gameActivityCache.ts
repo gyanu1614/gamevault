@@ -11,7 +11,7 @@ import { GAME_DIRECTORY_TAG as ADMIN_GAME_DIRECTORY_TAG } from './gameDirectoryC
  * (footerGameRanking.ts). Renders on EVERY page via the root layout, so:
  *   - cookie-free: a service-role client (orders are not anon-readable), only
  *     aggregate counts leave this function — no row is ever rendered;
- *   - unstable_cache'd for an hour under the game-directory tags (the nightly
+ *   - unstable_cache'd for a day under the game-directory tags (the nightly
  *     /api/cron/revalidate-listing-pages revalidates GAME_DIRECTORY_TAG);
  *   - fails open: any error (or no service key, e.g. a local build) returns
  *     empty signals and the footer keeps its curated sort_order.
@@ -89,5 +89,5 @@ export async function readGameActivity(now: Date = new Date()): Promise<FooterGa
 
 export const getCachedGameActivity = unstable_cache(readGameActivity, ['footer-game-activity'], {
   tags: [GAME_DIRECTORY_TAG, ADMIN_GAME_DIRECTORY_TAG],
-  revalidate: 3600,
+  revalidate: 86400,
 })

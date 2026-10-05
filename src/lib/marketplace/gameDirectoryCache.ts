@@ -69,5 +69,5 @@ export const getCachedGameDirectory = unstable_cache(
     }
   },
   ['game-directory'],
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 3600 },
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
 )
