@@ -176,15 +176,15 @@ function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?
   const [failed, setFailed] = useState(false)
   const src = game?.image_url || (game?.slug ? getGameIcon(game.slug) : null)
   return (
-    <div className="grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden rounded-lg bg-white/[0.06]">
+    <div className="grid h-11 w-11 flex-shrink-0 place-items-center overflow-hidden rounded-[8px] bg-white/[0.06]">
       {src && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt=""
           aria-hidden
-          width={40}
-          height={40}
+          width={44}
+          height={44}
           onError={() => setFailed(true)}
           className="h-full w-full object-cover"
         />
@@ -202,14 +202,14 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
     <Link
       href={`/account/orders/${order.id}`}
       onClick={onNavigate}
-      className="group flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-white/[0.05] focus-visible:bg-white/[0.05] focus-visible:outline-none"
+      className="group flex items-center gap-3.5 rounded-[8px] px-3 py-3 transition-colors hover:bg-white/[0.05] focus-visible:bg-white/[0.05] focus-visible:outline-none"
     >
       <LiveOrderGameIcon game={(order.listing as any)?.game} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-semibold text-text-primary">
           {(order.listing as any)?.title || 'Order'}
         </p>
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1.5 flex items-center gap-2.5">
           <OrderStatusPill status={order.status} className="h-5 px-1.5 text-[11px]" />
           <span className="text-[12.5px] tabular-nums text-text-tertiary">
             ${Number(order.total_amount).toFixed(2)}
@@ -1057,7 +1057,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-full text-gray-300 transition-transform transition-duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
+              className="h-10 w-10 shrink-0 rounded-[8px] text-gray-300 transition-transform transition-duration-[120ms] hover:bg-white/10 hover:text-white active:scale-[0.96] active:brightness-95 lg:hidden"
               onClick={() => {
                 // Account pages use the full desktop-parity sidebar on mobile.
                 // Marketplace pages keep the two-pane category menu.
@@ -1202,9 +1202,9 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   {/* h-10 w-10 to match the real bell/messages/activity
                       Buttons (40×40) so the navbar width is identical
                       before and after auth resolves. */}
-                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
-                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
-                  <div className="h-10 w-10 animate-pulse rounded-lg bg-white/10 max-lg:h-9 max-lg:w-9" />
+                  <div className="h-10 w-10 animate-pulse rounded-[8px] bg-white/10 max-lg:h-9 max-lg:w-9" />
+                  <div className="h-10 w-10 animate-pulse rounded-[8px] bg-white/10 max-lg:h-9 max-lg:w-9" />
+                  <div className="h-10 w-10 animate-pulse rounded-[8px] bg-white/10 max-lg:h-9 max-lg:w-9" />
                 </>
               )}
 
@@ -1263,18 +1263,18 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             <p className="mt-1 text-[13px] text-text-tertiary">No new notifications</p>
                           </div>
                         ) : (
-                          <div className="min-h-0 max-h-[420px] space-y-0.5 overflow-y-auto overscroll-contain p-2">
+                          <div className="min-h-0 max-h-[420px] space-y-1 overflow-y-auto overscroll-contain px-2.5 pb-2.5 pt-2">
                             {recentNotifications.map((notification: any) => (
-                              <div key={notification.id} className="group relative rounded-lg transition-colors hover:bg-white/[0.05]">
+                              <div key={notification.id} className="group relative rounded-[8px] transition-colors hover:bg-white/[0.05]">
                                 <Link
                                   href={safeInternalPath(notification.link)}
                                   onClick={() => {
                                     markAsRead(notification.id)
                                     setNotificationsOpen(false)
                                   }}
-                                  className="flex items-start gap-3 rounded-lg p-2.5 pr-11 focus-visible:bg-white/[0.05] focus-visible:outline-none"
+                                  className="flex items-start gap-3.5 rounded-[8px] px-3 py-3 pr-11 focus-visible:bg-white/[0.05] focus-visible:outline-none"
                                 >
-                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-text-secondary">
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.06] text-text-secondary">
                                     <BellIcon size={17} weight="bold" aria-hidden />
                                   </span>
                                   <span className="min-w-0 flex-1">
@@ -1300,7 +1300,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                 <button
                                   type="button"
                                   aria-label="Dismiss notification"
-                                  className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-md text-text-tertiary transition-[opacity,background-color,color] hover:bg-white/10 hover:text-text-primary focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                  className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-[6px] text-text-tertiary transition-[opacity,background-color,color] hover:bg-white/10 hover:text-text-primary focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                   onClick={() => markAsRead(notification.id)}
                                 >
                                   <XIcon size={14} weight="bold" aria-hidden />
@@ -1310,11 +1310,11 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                           </div>
                         )}
 
-                        <div className="shrink-0 border-t border-white/[0.07] p-2">
+                        <div className="shrink-0 border-t border-white/[0.07] p-2.5">
                           <Link
                             href="/notifications"
                             onClick={() => setNotificationsOpen(false)}
-                            className="flex h-10 items-center justify-center rounded-lg text-[13.5px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+                            className="flex h-10 items-center justify-center rounded-[8px] text-[13.5px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
                           >
                             View All Notifications
                           </Link>
@@ -1380,19 +1380,19 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             <p className="mt-1 text-[13px] text-text-tertiary">Orders in progress will appear here</p>
                           </div>
                         ) : (
-                          <div className="min-h-0 max-h-[440px] overflow-y-auto overscroll-contain p-2">
+                          <div className="min-h-0 max-h-[460px] overflow-y-auto overscroll-contain px-2.5 pb-2.5 pt-2">
                             {[
                               { title: 'Buying', orders: activeOrders.buying },
                               { title: 'Selling', orders: activeOrders.selling },
                             ]
                               .filter((section) => section.orders.length > 0)
                               .map((section, i) => (
-                                <div key={section.title} className={cn(i > 0 && 'mt-1.5 border-t border-white/[0.07] pt-1.5')}>
-                                  <div className="flex items-center gap-1.5 px-2.5 pb-1 pt-1.5 text-[13px] font-semibold text-text-tertiary">
+                                <div key={section.title} className={cn(i > 0 && 'mt-2 border-t border-white/[0.07] pt-2')}>
+                                  <div className="flex items-center gap-1.5 px-3 pb-1.5 pt-2 text-[12.5px] font-medium text-text-tertiary">
                                     {section.title}
                                     <span className="tabular-nums">({section.orders.length})</span>
                                   </div>
-                                  <div className="space-y-0.5">
+                                  <div className="space-y-1">
                                     {section.orders.map((order: any) => (
                                       <LiveOrderRow key={order.id} order={order} onNavigate={() => setActivityOpen(false)} />
                                     ))}
@@ -1419,7 +1419,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 // navbar doesn't grow when the user data resolves. `!user`
                 // guard so a cached-then-fresh hydration doesn't flash the
                 // skeleton over the real avatar.
-                <div className="h-10 w-10 animate-pulse rounded-full bg-white/10 max-lg:h-9 max-lg:w-9 lg:w-[62px] lg:rounded-lg" />
+                <div className="h-10 w-10 animate-pulse rounded-full bg-white/10 max-lg:h-9 max-lg:w-9 lg:w-[62px] lg:rounded-[8px]" />
               ) : user ? (
                 <div className="relative" data-dropdown>
                   {/* Avatar + caret on desktop, avatar alone on phones. */}
@@ -1434,7 +1434,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                       setMobileMenuOpen(false)
                     }}
                     className={cn(
-                      'group flex h-10 items-center gap-1.5 rounded-lg p-1 transition-[background-color,transform] duration-150 hover:bg-white/[0.07] active:scale-[0.96] lg:pr-2',
+                      'group flex h-10 items-center gap-1.5 rounded-[8px] p-1 transition-[background-color,transform] duration-150 hover:bg-white/[0.07] active:scale-[0.96] lg:pr-2',
                       'max-lg:h-9 max-lg:w-9 max-lg:justify-center max-lg:rounded-full max-lg:p-0',
                       userMenuOpen && 'bg-white/[0.09]',
                     )}
@@ -1493,7 +1493,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     variant="ghost"
                     size="sm"
                     onClick={() => authDialog.open('login')}
-                    className="inline-flex h-9 rounded-lg px-2.5 text-gray-300 hover:bg-white/10 hover:text-white sm:px-3"
+                    className="inline-flex h-9 rounded-[8px] px-2.5 text-gray-300 hover:bg-white/10 hover:text-white sm:px-3"
                   >
                     Log In
                   </Button>
@@ -1501,7 +1501,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     type="button"
                     size="sm"
                     onClick={() => authDialog.open('signup')}
-                    className="h-9 rounded-lg bg-white px-3 text-black hover:bg-white/90 font-medium"
+                    className="h-9 rounded-[8px] bg-white px-3 text-black hover:bg-white/90 font-medium"
                   >
                     Sign Up
                   </Button>
@@ -1955,7 +1955,7 @@ function CategoryDropdown({
           onClick={() => (isActive ? onSelect() : onHoverStart())}
           aria-expanded={isActive}
           className={cn(
-            'relative flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[14px] font-medium transition-colors',
+            'relative flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[8px] px-3.5 text-[14px] font-medium transition-colors',
             showPill || isCurrent ? 'text-white' : 'text-white/75 hover:text-white',
           )}
         >
@@ -1963,7 +1963,7 @@ function CategoryDropdown({
             <motion.span
               layoutId="nav-tab-pill"
               aria-hidden
-              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+              className="absolute inset-0 rounded-[8px] bg-white/[0.08]"
               transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 40 }}
             />
           )}
@@ -2049,7 +2049,7 @@ function CategoryDropdown({
               // inside the mega-menu stay open, anywhere else dismisses it
               // (the touch counterpart of the mouseleave debounce).
               data-dropdown
-              className="w-[min(960px,92vw)] overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)]"
+              className="w-[min(960px,92vw)] overflow-hidden rounded-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_56px_-16px_rgba(0,0,0,0.85)]"
               style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
             >
               {/* V21/P7.aa — min-h on the GRID (not the card) so the left
@@ -2076,7 +2076,7 @@ function CategoryDropdown({
                         <SmartLink
                           href={`/${game.slug}/${categorySlug}`}
                           onClick={onSelect}
-                          className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
+                          className="group flex items-center gap-3 rounded-[8px] p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
                         >
                           {game.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -2085,10 +2085,10 @@ function CategoryDropdown({
                               alt=""
                               width={40}
                               height={40}
-                              className="h-10 w-10 shrink-0 rounded-lg object-contain"
+                              className="h-10 w-10 shrink-0 rounded-[8px] object-contain"
                             />
                           ) : (
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.07] text-[12px] font-bold text-text-secondary">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-white/[0.07] text-[12px] font-bold text-text-secondary">
                               {game.name.slice(0, 2).toUpperCase()}
                             </span>
                           )}
@@ -2150,7 +2150,7 @@ function CategoryDropdown({
                             <SmartLink
                               href={`/${game.slug}/${categorySlug}`}
                               onClick={onSelect}
-                              className="group flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
+                              className="group flex items-center gap-2.5 rounded-[8px] p-2 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none"
                             >
                               {game.image_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -2547,7 +2547,7 @@ function GlobalSearch({
             // a distinct field, not a second pill matching the navbar's
             // rounded-full shape.
             // Fill only (no resting border), like every other field.
-            'h-10 rounded-lg pl-11 text-[14px] text-white placeholder:text-white/45 outline-none transition-[background-color,box-shadow] focus:outline-none focus-visible:shadow-none',
+            'h-10 rounded-[8px] pl-11 text-[14px] text-white placeholder:text-white/45 outline-none transition-[background-color,box-shadow] focus:outline-none focus-visible:shadow-none',
             expanded
               ? 'w-full bg-white/[0.07] pr-11 ring-1 ring-white/15'
               : cn(
@@ -2592,12 +2592,12 @@ function GlobalSearch({
             // behind the results. Width tracks the bar: full when expanded,
             // fixed when collapsed.
             className={cn(
-              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_28px_64px_-16px_rgba(0,0,0,0.9)]',
+              'animate-fade-in absolute top-full mt-2 overflow-hidden rounded-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_56px_-16px_rgba(0,0,0,0.85)]',
               expanded ? 'inset-x-0' : 'right-0 w-[440px]',
             )}
             style={{ backgroundColor: 'var(--navbar-dropdown-bg, #1D1E23)' }}
           >
-            <div className="max-h-[420px] overflow-y-auto p-1.5">
+            <div className="max-h-[420px] overflow-y-auto p-2">
               {searching && !hasResults ? (
                 // V21/P7.v — In-flight: spinner, never a premature "no
                 // matches". The empty state only shows once the search
@@ -2664,7 +2664,7 @@ function GlobalSearch({
                                     onClick={() => goToCategory(m.game, c.slug)}
                                     onMouseEnter={() => setHighlightIdx(idx)}
                                     className={cn(
-                                      'flex w-full items-center justify-between gap-3 rounded-lg py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
+                                      'flex w-full items-center justify-between gap-3 rounded-[8px] py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
                                       highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]',
                                     )}
                                   >
@@ -2735,7 +2735,7 @@ function GlobalSearch({
                                     onClick={() => goToOption(h)}
                                     onMouseEnter={() => setHighlightIdx(idx)}
                                     className={cn(
-                                      'flex w-full items-center justify-between gap-3 rounded-lg py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
+                                      'flex w-full items-center justify-between gap-3 rounded-[8px] py-2.5 pl-2.5 pr-2.5 text-left transition-colors',
                                       highlighted ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]',
                                     )}
                                   >
