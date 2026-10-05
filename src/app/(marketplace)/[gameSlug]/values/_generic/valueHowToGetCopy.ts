@@ -22,76 +22,6 @@ import {
   type ValueHowToGet,
 } from '@/lib/values/how-to-get'
 
-/** Wiki text is CC BY-SA; the credit goes next to the source link. */
-export const WIKI_LICENSE = 'CC BY-SA 3.0'
-
-/**
- * The short muted line under the steps. Never on an unconfirmed item (its
- * note is a research memo). On an unobtainable item the data's closing
- * "trading or buying is the only way now" is dropped: the answer above says
- * exactly that, so the card doesn't say it twice.
- */
-export function howToGetNote(h: ValueHowToGet): string | null {
-  if (h.status === 'unknown' || !h.note) return null
-  if (h.status !== 'unobtainable') return h.note
-  const note = h.note
-    .replace(/;\s*trading or buying is the only way( to get it)? now\.$/i, '.')
-    .replace(/\s*Trading or buying is the only way( to get it)? now\.$/, '')
-    .trim()
-  return note || null
-}
-
-export interface SourceGroup {
-  /** "Murder Mystery 2 Wiki" */
-  label: string
-  /** "CC BY-SA 3.0" for a wiki. */
-  license: string | null
-  links: Array<{ title: string; href: string }>
-}
-
-const titleCase = (s: string) => s.replace(/-/g, ' ').replace(/\b[a-z]/g, (c) => c.toUpperCase())
-
-/** Sources grouped by site, in first-seen order: wiki pages by title, the Roblox API as one link. */
-export function howToGetSources(h: ValueHowToGet): SourceGroup[] {
-  const groups = new Map<string, SourceGroup>()
-  for (const href of h.sources) {
-    let url: URL
-    try {
-      url = new URL(href)
-    } catch {
-      continue
-    }
-    const fandom = url.hostname.match(/^([a-z0-9-]+)\.fandom\.com$/)
-    let key: string
-    let group: Omit<SourceGroup, 'links'>
-    let title: string
-    if (fandom) {
-      key = url.hostname
-      group = { label: `${titleCase(fandom[1])} Wiki`, license: WIKI_LICENSE }
-      const page = url.pathname.replace(/^\/wiki\//, '')
-      title = decodeURIComponent(page).replace(/_/g, ' ') || group.label
-    } else if (/(^|\.)roblox\.com$/.test(url.hostname)) {
-      key = 'roblox'
-      group = { label: 'Roblox', license: null }
-      title = /game-passes/.test(url.pathname) ? 'Game Pass Listing' : 'Roblox'
-    } else {
-      key = url.hostname
-      group = { label: url.hostname.replace(/^www\./, ''), license: null }
-      title = url.hostname.replace(/^www\./, '')
-    }
-    const g = groups.get(key) ?? { ...group, links: [] }
-    if (!g.links.some((l) => l.href === href)) g.links.push({ title, href })
-    groups.set(key, g)
-  }
-  return [...groups.values()]
-}
-
-/** "Checked Oct 5, 2026" */
-export function checkedLabel(h: ValueHowToGet): string {
-  const d = new Date(`${h.checkedAt}T00:00:00Z`)
-  return `Checked ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`
-}
-
 const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)
 
 /* ───────────────────────── Two ways (owner, 2026-10-05) ─────────────────────────
@@ -135,9 +65,13 @@ export interface HowToGetWays {
   /** The rest of the answer. */
   body: string
   free: FreeWay
-  fast: { heading: string; tag: string; steps: WayStep[] }
-  /** "Released March 2020 update." / "Originally: … · Released …" */
-  history: string | null
+  fast: {
+    heading: string
+    tag: string
+    steps: WayStep[]
+    /** The paid way's one-line callout: "Total Cost: Around $2.17 · …". */
+    total: { label: string; value: string | null; detail: string }
+  }
 }
 
 const noDot = (s: string) => s.replace(/[.\s]+$/, '')
@@ -150,12 +84,6 @@ export function boxName(method: string): string | null {
   return m ? m[1].trim() : null
 }
 
-function historyLine(h: ValueHowToGet, past: boolean): string | null {
-  const parts: string[] = []
-  if (past) parts.push(`Originally: ${noDot(h.method)}${h.costs ? ` (${noDot(h.costs)})` : ''}`)
-  if (h.released) parts.push(`Released ${h.released}`)
-  return parts.length ? `${parts.join(' · ')}.` : null
-}
 
 export interface WaysInput {
   name: string
@@ -172,6 +100,12 @@ function fastWay(name: string, gameName: string, shortName: string, price: strin
   return {
     heading: 'Buy It for Cheap',
     tag: 'Fastest · Minutes',
+    // The same one-line callout as the free way's total, for the paid way.
+    total: {
+      label: 'Total Cost',
+      value: price ? `Around ${price}` : null,
+      detail: 'Sold by ID-verified sellers · Safe and quick service.',
+    },
     steps: [
       { icon: 'store' as const, title: 'Open DropMarket', value: `${shortName} listings for ${name}` },
       { icon: 'cart' as const, title: `Buy ${name}`, value: price ? `From ${price}, reputable sellers` : 'From reputable sellers' },
@@ -218,8 +152,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
             : `It hasn’t returned since, and it isn’t sold for Robux.`,
       },
       fast,
-      // The gone panel already shows how it was obtained; an unconfirmed one shows nothing, so it gets the line.
-      history: unconfirmed ? historyLine(h, true) : null,
     }
   }
 
@@ -262,7 +194,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
         message: null,
       },
       fast,
-      history: historyLine(h, false),
     }
   }
 
@@ -290,7 +221,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
         message: null,
       },
       fast,
-      history: historyLine(h, false),
     }
   }
 
@@ -310,7 +240,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
       message: null,
     },
     fast,
-    history: historyLine(h, false),
   }
 }
 

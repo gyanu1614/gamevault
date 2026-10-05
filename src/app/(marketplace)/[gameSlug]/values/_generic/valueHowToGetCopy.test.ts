@@ -3,11 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { parseHowToGet, type ValueHowToGet } from '@/lib/values/how-to-get'
 import {
   boxName,
-  checkedLabel,
   howToGetFaqs,
   howToGetWays,
-  howToGetNote,
-  howToGetSources,
 } from './valueHowToGetCopy'
 import { itemFaq, type ItemCopyInput } from './valueListItemCopy'
 
@@ -90,6 +87,11 @@ describe('how-to-get copy', () => {
     expect(fast.heading).toBe('Buy It for Cheap')
     expect(fast.steps.map((s) => s.title)).toEqual(['Open DropMarket', 'Buy Chroma Lightbringer', 'Get It In Minutes'])
     expect(fast.steps[1].value).toBe('From $2.17, reputable sellers')
+    expect(fast.total).toEqual({
+      label: 'Total Cost',
+      value: 'Around $2.17',
+      detail: 'Sold by ID-verified sellers · Safe and quick service.',
+    })
   })
 
   it('never gives a rounds figure without a verified earn rate', () => {
@@ -120,7 +122,6 @@ describe('how-to-get copy', () => {
     expect(w.free.state).toBe('unconfirmed')
     expect(w.free.steps).toEqual([])
     expect(`${w.title} ${w.lead} ${w.body}`).not.toMatch(/Yes|for free in|1,699|3,399/)
-    expect(howToGetNote(beachy)).toBeNull()
   })
 
   it('uses "hatch" for pets from an egg', () => {
@@ -140,32 +141,6 @@ describe('how-to-get copy', () => {
   it('finds the box name in the method', () => {
     expect(boxName(chromaLightbringer.method)).toBe('Mystery Box 2')
     expect(boxName('Tier 30 reward of the Halloween 2021 event pass.')).toBeNull()
-  })
-
-  it("doesn't repeat the trade line in an unobtainable note", () => {
-    expect(howToGetNote(harvester)).toBe('Event-exclusive: it did not return in later events.')
-    expect(howToGetNote({ ...harvester, note: 'Event-exclusive box; trading or buying is the only way now.' })).toBe('Event-exclusive box.')
-    expect(howToGetNote({ ...harvester, note: 'Trading or buying is the only way now.' })).toBeNull()
-    expect(howToGetNote(chromaLightbringer)).toBe(chromaLightbringer.note)
-  })
-
-  it('credits the wiki under its licence and dates the check', () => {
-    expect(howToGetSources(chromaLightbringer)).toEqual([
-      {
-        label: 'Murder Mystery 2 Wiki',
-        license: 'CC BY-SA 3.0',
-        links: [
-          { title: 'Chroma Lightbringer', href: chromaLightbringer.sources[0] },
-          { title: 'Mystery Box 2', href: chromaLightbringer.sources[1] },
-        ],
-      },
-    ])
-    expect(howToGetSources(beachy)[1]).toEqual({
-      label: 'Roblox',
-      license: null,
-      links: [{ title: 'Game Pass Listing', href: beachy.sources[1] }],
-    })
-    expect(checkedLabel(chromaLightbringer)).toBe('Checked Oct 5, 2026')
   })
 
   it('answers the searches people make: "how do you get X" and "can you get X for free"', () => {

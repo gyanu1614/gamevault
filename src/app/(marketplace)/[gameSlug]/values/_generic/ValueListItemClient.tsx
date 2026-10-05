@@ -25,6 +25,8 @@ import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
 import type { WayStep } from './valueHowToGetCopy'
 import { WaySectionHead } from './WaySectionHead'
+import { ValueCallout } from '@/components/values/ValueCallout'
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck'
 
 // recharts is ~100KB and sits below the fold: load it after the page.
 const PriceTrendChart = dynamic(
@@ -318,7 +320,7 @@ export function HowToGetFastWay({
   shortName,
   buy,
 }: {
-  way: { heading: string; tag: string; steps: WayStep[] }
+  way: { heading: string; tag: string; steps: WayStep[]; total: { label: string; value: string | null; detail: string } }
   name: string
   shortName: string
   buy: ItemBuy
@@ -329,7 +331,7 @@ export function HowToGetFastWay({
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
       <WaySectionHead n={2} title={way.heading} tag={way.tag} tone="green" />
-      <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
+      <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
         <ol className={`grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 ${FAST_COLS[way.steps.length] ?? ''}`}>
           {way.steps.map((step, i) => {
             const Icon = FAST_ICONS[step.icon as keyof typeof FAST_ICONS] ?? StorefrontIcon
@@ -378,6 +380,14 @@ export function HowToGetFastWay({
           </BuyButtonFace>
         </Link>
       </div>
+      <ValueCallout
+        tone="blue"
+        icon={ShieldCheckIcon}
+        title={way.total.value ? `${way.total.label}: ${way.total.value}` : undefined}
+        className="mt-5"
+      >
+        {way.total.detail}
+      </ValueCallout>
     </div>
   )
 }

@@ -1,10 +1,9 @@
-import { Fragment, type ComponentType } from 'react'
+import type { ComponentType } from 'react'
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise'
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise'
 import { CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins'
 import { HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer'
 import { HourglassMediumIcon } from '@phosphor-icons/react/dist/ssr/HourglassMedium'
-import { LightbulbIcon } from '@phosphor-icons/react/dist/ssr/Lightbulb'
 import { PackageIcon } from '@phosphor-icons/react/dist/ssr/Package'
 import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question'
 import { TargetIcon } from '@phosphor-icons/react/dist/ssr/Target'
@@ -16,9 +15,6 @@ import { WaySectionHead } from './WaySectionHead'
 import { cn } from '@/lib/utils'
 import { HowToGetFastWay, type ItemBuy } from './ValueListItemClient'
 import {
-  checkedLabel,
-  howToGetNote,
-  howToGetSources,
   howToGetWays,
   type FreeWay,
   type WayIcon,
@@ -78,8 +74,6 @@ export function ValueItemHowToGet({
 }) {
   if (!howToGet) return null
   const ways = howToGetWays({ name: itemName, gameName, shortName, h: howToGet, cheapestUsd, earnRate })
-  const note = howToGetNote(howToGet)
-  const sources = howToGetSources(howToGet)
   const rgb = hexRgb(accent) ?? '255,255,255'
 
   return (
@@ -131,42 +125,11 @@ export function ValueItemHowToGet({
 
         {/* The two ways, as two plain rows on the same card (no card-in-card):
             the free way, then buy it. */}
-        <FreeWayRow way={ways.free} note={note} />
+        <FreeWayRow way={ways.free} />
         <HowToGetFastWay way={ways.fast} name={itemName} shortName={shortName} buy={buy} />
 
       </div>
 
-      <p className="border-t border-white/[0.07] px-5 py-3.5 text-[12px] leading-5 text-text-tertiary sm:px-8">
-        {ways.history && <>{ways.history} </>}
-        {sources.length > 0 && (
-          <>
-            {sources.length > 1 ? 'Sources: ' : 'Source: '}
-            {sources.map((g, gi) => (
-              <Fragment key={g.label}>
-                {gi > 0 && '; '}
-                {g.label}
-                {' — '}
-                {g.links.map((l, li) => (
-                  <Fragment key={l.href}>
-                    {li > 0 && ', '}
-                    <a
-                      href={l.href}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="rounded-sm underline decoration-white/20 underline-offset-2 transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                    >
-                      {l.title}
-                    </a>
-                  </Fragment>
-                ))}
-                {g.license && ` (${g.license})`}
-              </Fragment>
-            ))}
-            {' · '}
-          </>
-        )}
-        {checkedLabel(howToGet)}
-      </p>
     </section>
   )
 }
@@ -181,14 +144,14 @@ export const WAY_STEP_COLS: Record<number, string> = {
 }
 
 /** Row 1: the free in-game route (or why it's gone) — steps in a line, then the total. */
-function FreeWayRow({ way, note }: { way: FreeWay; note: string | null }) {
+function FreeWayRow({ way }: { way: FreeWay }) {
   const muted = way.state !== 'available'
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
       <WaySectionHead n={1} title={way.heading} tag={way.tag} tone="neutral" muted={muted} />
 
       {way.steps.length > 0 && (
-        <ol className={cn('mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>
+        <ol className={cn('mt-6 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>
           {way.steps.map((step, i) => {
             const Icon = FREE_ICONS[step.icon] ?? QuestionIcon
             return (
@@ -217,22 +180,12 @@ function FreeWayRow({ way, note }: { way: FreeWay; note: string | null }) {
 
       {way.message && <p className="mt-3 text-body-sm leading-6 text-text-secondary">{way.message}</p>}
 
-      {/* The two things worth stopping on: what the free way really costs,
-          and the tip that goes with it — slim one-line callouts right under
-          the steps. */}
-      {(way.total || note) && (
-        <div className="mt-5 space-y-2.5">
-          {way.total && (
-            <ValueCallout tone="blue" icon={HourglassMediumIcon} title={`${way.total.label}: ${way.total.value}`}>
-              {way.total.detail}
-            </ValueCallout>
-          )}
-          {note && (
-            <ValueCallout tone="yellow" icon={LightbulbIcon} title="Good To Know">
-              {note}
-            </ValueCallout>
-          )}
-        </div>
+      {/* What the free way really costs — one slim line under the steps
+          (row 2 closes with the same callout for the paid way). */}
+      {way.total && (
+        <ValueCallout tone="blue" icon={HourglassMediumIcon} title={`${way.total.label}: ${way.total.value}`} className="mt-5">
+          {way.total.detail}
+        </ValueCallout>
       )}
     </div>
   )
