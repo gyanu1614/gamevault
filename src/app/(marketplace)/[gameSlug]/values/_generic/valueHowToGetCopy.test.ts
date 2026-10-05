@@ -87,7 +87,7 @@ describe('how-to-get copy', () => {
 
   it('way 2: DropMarket → buy → delivered in minutes', () => {
     const fast = ways('Chroma Lightbringer', chromaLightbringer).fast
-    expect(fast.heading).toBe('Buy It')
+    expect(fast.heading).toBe('Buy It for Cheap')
     expect(fast.steps.map((s) => s.title)).toEqual(['Open DropMarket', 'Buy Chroma Lightbringer', 'Get It In Minutes'])
     expect(fast.steps[1].value).toBe('From $2.17, reputable sellers')
   })

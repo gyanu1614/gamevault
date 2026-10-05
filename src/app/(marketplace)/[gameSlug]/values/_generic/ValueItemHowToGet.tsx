@@ -12,6 +12,7 @@ import type { IconProps } from '@phosphor-icons/react'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { VALUE_SURFACE } from '@/components/values/styles'
 import { ValueCallout } from '@/components/values/ValueCallout'
+import { WaySectionHead } from './WaySectionHead'
 import { cn } from '@/lib/utils'
 import { HowToGetFastWay, type ItemBuy } from './ValueListItemClient'
 import {
@@ -184,7 +185,7 @@ function FreeWayRow({ way, note }: { way: FreeWay; note: string | null }) {
   const muted = way.state !== 'available'
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
-      <h3 className={cn('text-[18px] font-semibold', muted ? 'text-text-secondary' : 'text-text-primary')}>{way.heading}</h3>
+      <WaySectionHead n={1} title={way.heading} tag={way.tag} tone="neutral" muted={muted} />
 
       {way.steps.length > 0 && (
         <ol className={cn('mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>
@@ -217,12 +218,12 @@ function FreeWayRow({ way, note }: { way: FreeWay; note: string | null }) {
       {way.message && <p className="mt-3 text-body-sm leading-6 text-text-secondary">{way.message}</p>}
 
       {/* The two things worth stopping on: what the free way really costs,
-          and the tip that goes with it — tinted callouts right under the
-          steps, side by side on desktop. */}
+          and the tip that goes with it — slim one-line callouts right under
+          the steps. */}
       {(way.total || note) && (
-        <div className={cn('mt-5 grid grid-cols-1 gap-3', way.total && note && 'lg:grid-cols-2')}>
+        <div className="mt-5 space-y-2.5">
           {way.total && (
-            <ValueCallout tone="amber" icon={HourglassMediumIcon} title={`${way.total.label}: ${way.total.value}`}>
+            <ValueCallout tone="blue" icon={HourglassMediumIcon} title={`${way.total.label}: ${way.total.value}`}>
               {way.total.detail}
             </ValueCallout>
           )}

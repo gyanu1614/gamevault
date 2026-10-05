@@ -170,7 +170,7 @@ export interface WaysInput {
 
 function fastWay(name: string, gameName: string, shortName: string, price: string | null) {
   return {
-    heading: 'Buy It',
+    heading: 'Buy It for Cheap',
     tag: 'Fastest · Minutes',
     steps: [
       { icon: 'store' as const, title: 'Open DropMarket', value: `${shortName} listings for ${name}` },
