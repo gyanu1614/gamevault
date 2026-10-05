@@ -258,7 +258,7 @@ interface OwnedListingRow {
 }
 
 const OWNED_LISTING_SELECT =
-  'seller_id, status, game_id, game_category_id, quantity, min_quantity, is_unlimited, delivery_method, bundle_id, pair:game_categories!listings_game_category_id_fkey (type)'
+  'seller_id, status, game_id, game_category_id, price, quantity, min_quantity, is_unlimited, delivery_method, bundle_id, pair:game_categories!listings_game_category_id_fkey (type)'
 
 /**
  * Update listing price — the offers-table inline price editor. Same validator

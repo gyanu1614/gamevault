@@ -77,6 +77,8 @@ import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, typ
 import { visiblePlatformKinds } from './PlatformFieldsBlock'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
 import { resolveMinQuantity } from '@/lib/currency/min-quantity'
+import { resolveCurrencyPriceRules, type CurrencyPriceRules } from '@/lib/currency/price-rules'
+import { formatUnitPrice } from '@/lib/currency/price-format'
 import type {
   GlobalCategory,
   AttributeTemplateFull,
@@ -1360,6 +1362,7 @@ export default function SellWizard({
                   bundles={currencyConfig?.bundles ?? null}
                   bundleId={bundleId} onBundleId={setBundleId}
                   existingBundleListingId={existingBundleListingId}
+                  priceRules={selectedCategory.slug === 'currency' && currencyConfig ? resolveCurrencyPriceRules(currencyConfig) : null}
                 />
                 <TermsCard
                   agreeSellerRules={agreeSellerRules}
@@ -2238,6 +2241,13 @@ interface Step4Props {
    * of failing at publish.
    */
   existingBundleListingId?: string
+  /**
+   * D2/D3 — The admin's price range for this currency (per bundle in bundle
+   * mode, per unit otherwise), read the same way the server validator reads
+   * it. Shown under the price field so the seller sees the range before
+   * Create Offer, not as a toast after it. Null = no rules / not currency.
+   */
+  priceRules?: CurrencyPriceRules | null
 }
 
 /**
@@ -2616,6 +2626,26 @@ function Step4Publish(p: Step4Props) {
                     <span className="shrink-0 pr-3 text-sm font-medium text-text-tertiary">USD</span>
                   </div>
                   {priceInvalid && <FieldError>This field is required.</FieldError>}
+                  {/* D2/D3 — the admin range, in the same unit as the label. */}
+                  {(() => {
+                    const r = p.priceRules
+                    if (!isCurrency || !r || (r.min == null && r.max == null)) return null
+                    const per = isBundleMode ? 'bundle' : suffix ?? 'unit'
+                    const n = Number(p.price)
+                    const below = n > 0 && r.min != null && n < r.min
+                    const above = n > 0 && r.max != null && n > r.max
+                    const range =
+                      r.min != null && r.max != null
+                        ? `${formatUnitPrice(r.min)} to ${formatUnitPrice(r.max)} per ${per}`
+                        : r.min != null
+                          ? `at least ${formatUnitPrice(r.min)} per ${per}`
+                          : `at most ${formatUnitPrice(r.max as number)} per ${per}`
+                    return (
+                      <p className={cn('text-[12px] leading-snug', below || above ? 'text-warning' : 'text-text-tertiary')}>
+                        {below || above ? `This game accepts ${range}.` : `Accepted price: ${range}.`}
+                      </p>
+                    )
+                  })()}
                   {/* Fee spec §1 — the seller sees their exact commission
                       and estimated net proceeds before publishing. The rate
                       is the resolver's answer for THIS seller on THIS pair
@@ -2623,10 +2653,16 @@ function Step4Publish(p: Step4Props) {
                   {Number(p.price) > 0 && feePreview?.ok && (() => {
                     const price = Number(p.price)
                     const net = round2(price - round2((price * feePreview.pct) / 100))
+                    // A sub-cent per-unit price (Robux $0.0055) rounds to
+                    // $0.00 above; the estimate then shows the per-unit net
+                    // unrounded. Display only: payouts are computed per order.
+                    const netText = price < 0.01
+                      ? formatUnitPrice(price * (1 - feePreview.pct / 100))
+                      : `$${net.toFixed(2)}`
                     return (
                       <p className="text-[12px] text-text-tertiary">
                         You receive{' '}
-                        <span className="font-semibold text-lime-text">${net.toFixed(2)}</span>
+                        <span className="font-semibold text-lime-text">{netText}</span>
                         {isBundleMode ? ' per bundle' : isCurrency ? ` per ${suffix}` : ''} ({feePreview.pct}% fee
                         {feePreview.foundingApplied ? ', founding rate' : feePreview.rankPts > 0 ? `, ${feePreview.rank} rank` : ''}).
                       </p>
@@ -3242,7 +3278,7 @@ function BuyerCardPreview({
                 </div>
               )}
               <span className="font-mono text-xl font-bold text-white drop-shadow-md">
-                {Number.isFinite(priceNum) && priceNum > 0 ? `$${priceNum.toFixed(2)}` : '$—'}
+                {Number.isFinite(priceNum) && priceNum > 0 ? formatUnitPrice(priceNum) : '$—'}
               </span>
             </div>
 
