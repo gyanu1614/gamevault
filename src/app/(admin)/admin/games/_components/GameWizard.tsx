@@ -32,6 +32,7 @@ import { accountInputCls } from '@/components/account/AccountSurface'
 import { Switch } from '@/components/ui/switch'
 import { PanelHead, adminBtn, adminBtnSm } from '../../components/kit'
 import { useFilePicker } from '../../components/useFilePicker'
+import { HeroBackgroundField } from './HeroBackgroundField'
 import { MAX_IMAGE_UPLOAD_BYTES, imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
   saveGameIdentity,
@@ -782,6 +783,27 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </button>
                 {blogCtaPicker.input}
               </div>
+
+              <div className="h-px bg-white/[0.06]" />
+
+              {/* Hero background — the game's ONE hero image on every page of
+                  the game (GameHeroBackdrop). Saves on its own, like the
+                  uploads above. */}
+              <HeroBackgroundField
+                gameId={gameId}
+                gameSlug={slug}
+                initialRow={
+                  game
+                    ? {
+                        hero_bg_url: game.hero_bg_url ?? null,
+                        hero_bg_srcset: game.hero_bg_srcset ?? null,
+                        hero_bg_blur: game.hero_bg_blur ?? null,
+                        hero_bg_focal_y: game.hero_bg_focal_y ?? null,
+                        hero_bg_updated_at: game.hero_bg_updated_at ?? null,
+                      }
+                    : null
+                }
+              />
             </div>
           )}
 

@@ -150,9 +150,9 @@ export default function RootLayout({
     >
       <head>
         {/* Hero preloading is ROUTE-AWARE: each segment layout emits its own
-            <HeroBackdropPreload> for the one hero it renders — `marketplace`
-            in (marketplace), `sell` in (sell), `account` in /account, `home`
-            on the landing page.
+            <HeroBackdropPreload> for the one hero it renders — `sell` in
+            (sell), `account` in /account, `home` on the landing page. Game
+            pages preload their own game's hero (GameHeroBackdrop).
 
             V21/P7.g used to warm-preload all five heroes here so SPA
             navigations never showed a black flash. It cost every route ~2MB

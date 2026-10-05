@@ -21,6 +21,7 @@ import { resolveGameSeo } from '@/lib/seo/templates'
 import { stripBrand } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import GameSubNav from '@/components/marketplace/GameSubNav'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { SabLanding } from './values/_SabLanding'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { SabNavExtras } from './values/_SabNavExtras'
@@ -309,6 +310,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
     // The body carries Top Selling Items/Accounts carousels + links into the
     // Values/Calculator hub (which have their own forest theme).
     return (
+      <GameHeroBackdrop gameSlug={gameSlug} size="landing">
       <div className="min-h-screen">
         <JsonLd
           data={breadcrumbList([
@@ -339,6 +341,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
           accountOffers={sabListings.accountOffers}
         />
       </div>
+      </GameHeroBackdrop>
     )
   }
 
@@ -359,6 +362,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const accountsCard = cards.find((c) => c.type === 'account') ?? null
 
   return (
+    <GameHeroBackdrop gameSlug={gameSlug} size="landing">
     <div className="min-h-screen">
       <JsonLd
         data={breadcrumbList([
@@ -394,5 +398,6 @@ export default async function GameBrowsePage({ params }: PageProps) {
         blogRail={<BlogRail gameSlug={gameSlug} gameName={game.name} />}
       />
     </div>
+    </GameHeroBackdrop>
   )
 }

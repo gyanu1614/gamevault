@@ -9,7 +9,7 @@ import ValuesDirectoryClient, {
   type BrainrotDirectoryItem,
   type CardMutation,
 } from './_ValuesDirectoryClient'
-import { SabHeroBackdrop } from './_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
@@ -481,7 +481,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
-      <SabHeroBackdrop>
+      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
       <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
@@ -628,7 +628,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
       {brainrots.length > 0 && (
         <HubBuyCta gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" buyHref="/steal-a-brainrot/buy-items" />
       )}
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

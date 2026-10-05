@@ -18,13 +18,15 @@ vi.stubGlobal('React', React)
 const read = (rel: string) => readFileSync(path.join(process.cwd(), rel), 'utf8')
 
 describe('no preload for a file the page may not use', () => {
-  it('the marketplace layout emits no <link rel=preload>: its backdrop is a CSS background', async () => {
+  it('the marketplace layout emits no <link rel=preload> and no shared backdrop image', async () => {
+    // Every marketplace route draws its OWN game's hero (GameHeroBackdrop,
+    // one preload for the one image it shows); the layout loading the old
+    // shared marketplace.avif under it would be a second, unseen download.
     const { default: MarketplaceLayout } = await import('@/app/(marketplace)/layout')
     const html = renderToStaticMarkup(createElement(MarketplaceLayout, null, createElement('main', null, 'page')))
     expect(html).not.toMatch(/rel="preload"/)
-    // ...and the backdrop itself is still there, so the page looks the same.
-    expect(html).toContain('hero-backdrop')
-    expect(html).toContain('/assets/heroes/marketplace.avif')
+    expect(html).not.toContain('hero-backdrop')
+    expect(html).not.toContain('/assets/heroes/marketplace.avif')
   })
 
   it.each([

@@ -33,7 +33,7 @@ import { getGameContentTheme, CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme
 import { createAnonClient } from '@/lib/supabase/anon'
 import { cache } from 'react'
 import { getHubTopValues } from '../blog/_hubData'
-import { SabHeroBackdrop } from '../values/_SabHeroBackdrop'
+import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { HubCtaBand } from '@/components/content/HubCtaBand'
 import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
@@ -184,7 +184,7 @@ export default async function SellLandingPage({ params }: PageProps) {
 
   return (
     <main className="relative min-h-screen bg-[#0C0F0E]">
-      <SabHeroBackdrop height={760}>
+      <GameHeroBackdrop gameSlug={gameSlug} size="tall">
         <HubNav data={hubNav} />
 
         <JsonLd
@@ -236,7 +236,7 @@ export default async function SellLandingPage({ params }: PageProps) {
         </HubHero>
 
       {/* Body — max-w-7xl page gutter like the other hubs. Stays INSIDE
-          SabHeroBackdrop (like Values/Blog) so there's no seam/dark line where
+          GameHeroBackdrop (like Values/Blog) so there's no seam/dark line where
           the hero backdrop would otherwise end. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
         {/* Why sell here — three cards, wider + separated (gap, not hairline). */}
@@ -421,7 +421,7 @@ export default async function SellLandingPage({ params }: PageProps) {
           <SellFinalCta gameName={name} gameSlug={gameSlug} accent={theme.accent} bgSrc={ctaImage} />
         </div>
       </div>
-      </SabHeroBackdrop>
+      </GameHeroBackdrop>
 
       <JsonLd data={faqPage(FAQ)} />
 
