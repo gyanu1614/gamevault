@@ -49,6 +49,7 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 import { useSellerListings } from '@/hooks/use-seller-listings'
 import type { Listing } from '@/lib/api/seller-compatible'
+import { currencyOfferTitle, type CurrencyTitleConfig } from '@/lib/orders/display-title'
 import { formatDeliveryLabel, SELLER_DELIVERY_WINDOWS } from '@/lib/utils/delivery-time'
 import { canSellerPublish, type SellerStatus } from '@/lib/utils/seller-status'
 import { getMyStorePaused } from '@/lib/actions/seller-presence'
@@ -189,20 +190,21 @@ function methodLabel(method: string | null | undefined): string {
   return m.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function escapeRegExp(v: string): string {
-  return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/** Currency rows: sellers often prefix titles with the game name the row
- *  already shows underneath ("Fortnite 800 V-Bucks"). Show just the
- *  bundle name ("800 V-Bucks"). Display-only — the stored title is
- *  untouched. */
-function displayTitle(l: Listing, type: OfferType): string {
-  if (type !== 'currency' || !l.game?.name) return l.title
-  const stripped = l.title
-    .replace(new RegExp(`^\\s*${escapeRegExp(l.game.name)}\\s*[-–—:|]?\\s*`, 'i'), '')
-    .trim()
-  return stripped || l.title
+/** Currency rows name what the offer sells: a bundle by its own name
+ *  ("2,800 V-Bucks"), a flexible offer by the currency's name, never the game
+ *  name the row already shows underneath. Display-only — the stored title is
+ *  untouched (shared rule: currencyOfferTitle). */
+function displayTitle(l: Listing, type: OfferType, config?: CurrencyTitleConfig | null): string {
+  return (
+    currencyOfferTitle({
+      title: l.title,
+      isCurrency: type === 'currency',
+      gameName: l.game?.name,
+      categoryName: l.category?.name,
+      currencyConfig: config,
+      bundleId: l.bundle_id,
+    }) || l.title
+  )
 }
 
 /** Public listing URL — the shared builder: item/account offers get their
@@ -388,7 +390,7 @@ function OffersContent() {
         .select('game_id, config')
         .eq('category_type', 'currency')
         .in('game_id', currencyGameIds)
-      const map: Record<string, { quantity_granularity?: QuantityGranularity; unit_label?: string }> = {}
+      const map: Record<string, { quantity_granularity?: QuantityGranularity; unit_label?: string; bundles?: CurrencyTitleConfig['bundles'] }> = {}
       for (const row of (data ?? []) as Array<{ game_id: string; config: Record<string, unknown> | null }>) {
         map[row.game_id] = (row.config ?? {}) as (typeof map)[string]
       }
@@ -955,7 +957,7 @@ function OffersContent() {
                               the offer name as the value beneath it. */}
                           <span className="block text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
                           <span className="mt-0.5 block max-w-[240px] truncate text-[13.5px] font-bold text-text-primary">
-                            {displayTitle(l, type)}
+                            {displayTitle(l, type, currencyConfigs?.[l.game_id])}
                           </span>
                           {/* What the review team asked to change — shown ONLY
                               while the offer is in Changes Requested (the same
@@ -1097,7 +1099,7 @@ function OffersContent() {
                   <span className="min-w-0 flex-1 pl-1">
                     <span className="block truncate text-[12px] text-text-tertiary">{l.game?.name ?? '—'}</span>
                     <span className="mt-0.5 block truncate text-[13.5px] font-bold text-text-primary">
-                      {displayTitle(l, type)}
+                      {displayTitle(l, type, currencyConfigs?.[l.game_id])}
                     </span>
                   </span>
                   <StatusChip k={chip} />

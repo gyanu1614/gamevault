@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { orderDisplayTitle, orderItemTitle, orderItemImage } from './display-title'
+import { currencyOfferTitle, orderDisplayTitle, orderItemTitle, orderItemImage } from './display-title'
 
 describe('orderDisplayTitle', () => {
   it('prefixes the amount for flexible per-unit currency', () => {
@@ -79,5 +79,39 @@ describe('orderItemTitle / orderItemImage', () => {
   })
   it('missing config keeps the old currency fallback', () => {
     expect(orderItemTitle({ listingTitle: 'Roblox Robux', quantity: 400, categoryType: 'currency', currencyConfig: null })).toBe('400 - Roblox Robux')
+  })
+})
+
+describe('currencyOfferTitle', () => {
+  const vbucks = {
+    unit_label: 'V-Bucks',
+    bundles: [
+      { id: 'b1000', name: '1,000 V-Bucks' },
+      { id: 'b2800', name: '2,800 V-Bucks' },
+    ],
+  }
+
+  it('names a bundle offer by its bundle, so sibling bundles differ', () => {
+    const base = { title: 'V-Bucks', isCurrency: true, gameName: 'Fortnite', currencyConfig: vbucks }
+    expect(currencyOfferTitle({ ...base, bundleId: 'b2800' })).toBe('2,800 V-Bucks')
+    expect(currencyOfferTitle({ ...base, bundleId: 'b1000' })).toBe('1,000 V-Bucks')
+  })
+
+  it('drops a repeated game-name prefix on a flexible offer', () => {
+    expect(currencyOfferTitle({ title: 'Fortnite - V-Bucks', isCurrency: true, gameName: 'Fortnite' })).toBe('V-Bucks')
+  })
+
+  it('replaces a placeholder title with the unit label, then the category name', () => {
+    expect(
+      currencyOfferTitle({ title: 'units', isCurrency: true, currencyConfig: { unit_label: 'FC Coins' } }),
+    ).toBe('FC Coins')
+    expect(
+      currencyOfferTitle({ title: 'units', isCurrency: true, currencyConfig: { unit_label: 'units' }, categoryName: 'Coins' }),
+    ).toBe('Coins')
+  })
+
+  it('falls back to the title when the bundle id is unknown, and leaves items alone', () => {
+    expect(currencyOfferTitle({ title: 'Gems', isCurrency: true, currencyConfig: vbucks, bundleId: 'gone' })).toBe('Gems')
+    expect(currencyOfferTitle({ title: 'Fortnite Shadow Skin', isCurrency: false, gameName: 'Fortnite' })).toBe('Fortnite Shadow Skin')
   })
 })

@@ -111,3 +111,42 @@ export function orderItemImage(opts: {
   }
   return opts.listingImage || null
 }
+
+/** Unit labels that are config placeholders, not a currency's name. */
+const PLACEHOLDER_UNIT = /^(units?|currency)$/i
+
+function escapeRegExp(v: string): string {
+  return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * What a currency OFFER sells, for every list that shows offers (the
+ * seller's Offers page, the public shop): a bundle offer is the bundle's own
+ * name ("2,800 V-Bucks", owner 2026-10-05: four Fortnite bundles all read
+ * "V-Bucks"); a flexible offer is the currency's name. The game name is
+ * shown separately, so a title that repeats it ("Fortnite V-Bucks") loses
+ * the prefix, and a placeholder title ("units") falls back to the unit label
+ * or the category name. Non-currency offers keep their title.
+ */
+export function currencyOfferTitle(opts: {
+  title: string | null | undefined
+  isCurrency: boolean
+  gameName?: string | null
+  /** The game's currency category name ("FC Coins"): last-resort name. */
+  categoryName?: string | null
+  currencyConfig?: CurrencyTitleConfig | null
+  bundleId?: string | null
+}): string {
+  const raw = opts.title?.trim() || ''
+  if (!opts.isCurrency) return raw
+  const bundle = bundleOf(opts.currencyConfig, opts.bundleId)?.name?.trim()
+  if (bundle) return bundle
+  const game = opts.gameName?.trim()
+  const stripped = game
+    ? raw.replace(new RegExp(`^\\s*${escapeRegExp(game)}\\s*[-–—:|]?\\s*`, 'i'), '').trim()
+    : raw
+  if (stripped && !PLACEHOLDER_UNIT.test(stripped)) return stripped
+  const unit = opts.currencyConfig?.unit_label?.trim()
+  if (unit && !PLACEHOLDER_UNIT.test(unit)) return unit
+  return opts.categoryName?.trim() || stripped || raw
+}
