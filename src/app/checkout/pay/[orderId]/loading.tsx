@@ -1,96 +1,94 @@
 /**
- * Payment page skeleton — Ledger Receipt shaped: dark navbar, step row,
- * then the 300/520/270 three-column silhouette (ledger rail · receipt
- * card with QR square · assurance column). Dark pulses, shape-stable.
+ * Payment page skeleton: the 2026-10 layout. Checkout navbar strip, title,
+ * then the payment column (amount hero, QR square + address/buttons, footer
+ * line) beside the 340px side column (order summary, status timeline,
+ * policy links). One column on phones, payment first. Shape-stable.
  */
 
-const IVORY = '#16171B'
-const NAV = '#16171B'
-const LINE = 'rgba(255,255,255,0.14)'
+import { MARKET_CARD } from '@/lib/ui/surfaces'
 
 function Block({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-white/[0.07] ${className}`} />
-}
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-lg border bg-[#1D1E23] ${className}`} style={{ borderColor: LINE }}>
-      {children}
-    </div>
-  )
+  return <div className={`animate-pulse rounded-md bg-white/[0.07] motion-reduce:animate-none ${className}`} />
 }
 
 export default function PayLoading() {
   return (
-    <div className="min-h-screen" style={{ background: IVORY }}>
-      <div className="flex h-[54px] items-center justify-between px-4 sm:px-8" style={{ background: NAV }}>
+    <div className="min-h-[100dvh] bg-bg-base" aria-busy="true" aria-label="Loading payment">
+      <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-4 sm:px-10">
         <div className="flex items-center gap-2">
-          <div className="h-[22px] w-[22px] animate-pulse rounded-md bg-white/10" />
-          <div className="h-4 w-24 animate-pulse rounded bg-white/10" />
+          <Block className="h-6 w-6" />
+          <Block className="h-4 w-24" />
         </div>
-        <div className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
+        <Block className="h-7 w-7 rounded-full" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-5 sm:px-8">
-        <div className="flex justify-center">
-          <Block className="h-6 w-80" />
-        </div>
+      <div className="mx-auto w-full max-w-[1080px] px-4 pb-16 pt-6 sm:px-6 sm:pt-10 lg:px-8">
+        <Block className="h-7 w-64 sm:h-8" />
+        <Block className="mt-2 h-4 w-44" />
 
-        <div className="mt-5 flex flex-col gap-3 lg:grid lg:justify-center lg:gap-7 lg:[grid-template-columns:300px_520px_270px]">
-          {/* Ledger rail */}
-          <Card className="hidden p-[18px] lg:block">
-            <Block className="h-3.5 w-32" />
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="mt-4 flex items-start gap-3">
-                <Block className="mt-1 h-2 w-2 rounded-full" />
-                <div className="flex-1">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+          {/* Payment column */}
+          <div className={`${MARKET_CARD} overflow-hidden rounded-lg`}>
+            <div className="p-5 sm:p-8">
+              <div className="flex items-start justify-between gap-4">
+                <Block className="h-4 w-24" />
+                <Block className="h-8 w-32 rounded-full" />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <Block className="h-10 w-52 sm:h-11" />
+                <Block className="h-10 w-[92px]" />
+              </div>
+              <Block className="mt-3 h-3.5 w-56" />
+            </div>
+            <div className="grid grid-cols-1 gap-6 border-t border-white/[0.07] p-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8 sm:p-8">
+              <Block className="h-[240px] w-[240px] justify-self-center sm:h-[260px] sm:w-[260px] sm:justify-self-start" />
+              <div className="min-w-0">
+                <Block className="h-4 w-32" />
+                <Block className="mt-3 h-4 w-full" />
+                <Block className="mt-2 h-4 w-2/3" />
+                <div className="mt-4 grid grid-cols-1 gap-2.5 sm:flex">
+                  <Block className="h-10 w-full sm:w-[92px]" />
+                  <Block className="h-10 w-full sm:w-36" />
+                </div>
+                <Block className="mt-6 h-3.5 w-full" />
+              </div>
+            </div>
+            <div className="border-t border-white/[0.07] px-5 py-4 sm:px-8">
+              <Block className="h-3.5 w-72 max-w-full" />
+            </div>
+          </div>
+
+          {/* Side column: status first on phones, summary first on desktop */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className={`${MARKET_CARD} order-1 rounded-lg p-5 lg:order-2`}>
+              <Block className="h-4 w-28" />
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="mt-4 flex items-center gap-3">
+                  <Block className="h-4 w-4 rounded-full" />
                   <Block className="h-3.5 w-36" />
-                  <Block className="mt-1 h-3 w-24" />
+                </div>
+              ))}
+            </div>
+            <div className={`${MARKET_CARD} order-2 rounded-lg p-5 lg:order-1`}>
+              <div className="flex items-start gap-3.5">
+                <Block className="h-[52px] w-[52px]" />
+                <div className="min-w-0 flex-1">
+                  <Block className="h-4 w-full" />
+                  <Block className="mt-1.5 h-3.5 w-24" />
+                  <Block className="mt-1.5 h-3 w-32" />
                 </div>
               </div>
-            ))}
-          </Card>
-
-          {/* Receipt card — QR + amount/button stack, then the full-width
-              address bar and the warning callout. */}
-          <Card className="px-5 py-5 sm:px-8 sm:py-7">
-            <div className="flex items-center gap-3.5">
-              <Block className="h-[52px] w-[52px] rounded-md" />
-              <div className="min-w-0 flex-1">
-                <Block className="h-4 w-44" />
-                <Block className="mt-1.5 h-3 w-28" />
-              </div>
-              <Block className="h-6 w-16" />
-            </div>
-            <div className="my-5 border-t border-dashed" style={{ borderColor: LINE }} />
-            <div className="flex flex-col items-center gap-6 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-7">
-              <Block className="h-[218px] w-[218px] rounded-md" />
-              <div className="flex w-full flex-col justify-between gap-5 sm:py-1">
-                <div>
-                  <Block className="h-3 w-20" />
-                  <Block className="mt-2 h-7 w-44" />
-                  <Block className="mt-2.5 h-3.5 w-40" />
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="mt-4 flex justify-between">
+                  <Block className="h-3.5 w-20" />
+                  <Block className="h-3.5 w-14" />
                 </div>
-                <Block className="h-11 w-full rounded-md" />
-              </div>
+              ))}
             </div>
-            <Block className="mt-5 h-3 w-32" />
-            <Block className="mt-2 h-11 w-full rounded-md" />
-            <Block className="mt-4 h-10 w-full rounded-md" />
-          </Card>
-
-          {/* Assurance column */}
-          <div className="hidden lg:block">
-            <Card className="p-[18px]">
-              <Block className="h-4 w-44" />
-              <Block className="mt-2 h-3.5 w-full" />
-              <Block className="mt-1 h-3.5 w-3/4" />
-            </Card>
-            <Card className="mt-3 p-[18px]">
-              <Block className="h-3.5 w-20" />
-              <Block className="mt-2 h-3.5 w-14" />
-              <Block className="mt-2 h-3.5 w-24" />
-            </Card>
+            <div className="order-3 px-1 pt-1">
+              <Block className="h-3.5 w-64 max-w-full" />
+              <Block className="mt-3 ml-6 h-3.5 w-48" />
+            </div>
           </div>
         </div>
       </div>
