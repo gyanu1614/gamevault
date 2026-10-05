@@ -17,7 +17,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { Command } from 'cmdk'

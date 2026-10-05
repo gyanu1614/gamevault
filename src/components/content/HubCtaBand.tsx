@@ -14,7 +14,7 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 
 /** 6px button, brand fill by default; hover lifts brightness (fill is inline). */
@@ -85,6 +85,8 @@ export function HubCtaBand({
             src={bgSrc ?? `/cta-heroes/${gameSlug}.jpg`}
             alt=""
             aria-hidden
+            loading="lazy"
+            decoding="async"
             onError={() => setHasImage(false)}
             style={{ opacity: bgOpacity }}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"

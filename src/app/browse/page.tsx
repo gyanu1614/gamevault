@@ -12,7 +12,7 @@
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getGameIcon } from '@/features/home/lib/game-icons'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'

@@ -8,7 +8,7 @@
  * the copy-on-click order id + presence pulse animation need browser.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { ArrowLeft, Copy, Truck, Clock, CheckCircle2, Package, AlertTriangle, XCircle, RefreshCw, Check } from 'lucide-react'
 import { useState } from 'react'

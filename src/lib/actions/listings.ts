@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
+import { snapshotListings, submitListingChanges } from '@/lib/seo/indexnow'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import { validateListingPatch } from '@/lib/listings/validate'
 import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
@@ -338,6 +339,10 @@ export async function updateListing(
       patch.status = 'active'
     }
 
+    // IndexNow compares the listing before and after, so only a real change
+    // (title, description, images, price, going live or off) is submitted.
+    const indexNowBefore = await snapshotListings(createServiceRoleClient(), [listingId])
+
     // Update the listing (service role; the ownership check above is the gate)
     const { data, error: updateError } = await (createServiceRoleClient()
       .from('listings')
@@ -360,6 +365,7 @@ export async function updateListing(
     // hook (features/home/hooks/*), which server revalidation cannot reach.
     // Step 7b — the category page itself (status/price/title changes).
     await revalidateListingSurfaces(supabase as never, { listingIds: [listingId] })
+    await submitListingChanges(indexNowBefore, await snapshotListings(createServiceRoleClient(), [listingId]))
 
     return { success: true, listing: data }
   } catch (error: any) {
@@ -418,6 +424,8 @@ export async function bulkUpdateListings(
       byContext.set(key, [...(byContext.get(key) ?? []), r])
     }
     const service = createServiceRoleClient()
+    const indexNowIds = eligible.map((r) => r.id)
+    const indexNowBefore = await snapshotListings(service, indexNowIds)
     let updated = 0
     for (const group of byContext.values()) {
       const rules = await loadListingRuleContext(supabase, group[0].game_id, group[0].pair?.type ?? 'items')
@@ -439,6 +447,7 @@ export async function bulkUpdateListings(
     // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
     await linkListingsToValueItems(service, eligible.map((r) => r.id))
     await revalidateListingSurfaces(supabase as never, { listingIds: eligible.map((r) => r.id) })
+    await submitListingChanges(indexNowBefore, await snapshotListings(service, indexNowIds))
     return { success: true, updated }
   } catch (error: any) {
     console.error('Error bulk-updating listings:', error)
@@ -531,6 +540,9 @@ export async function deleteListing(
       }
     }
 
+    // IndexNow: read the listing (slug, game, category) BEFORE it is deleted.
+    const indexNowBefore = await snapshotListings(createServiceRoleClient(), [listingId])
+
     // Delete the listing
     const { error: deleteError } = await supabase
       .from('listings')
@@ -538,6 +550,8 @@ export async function deleteListing(
       .eq('id', listingId)
 
     if (deleteError) throw deleteError
+    // Gone: engines should see the page is no longer there.
+    await submitListingChanges(indexNowBefore, new Map())
 
     if (listing.game_category_id) {
       await revalidateListingSurfaces(supabase as never, {

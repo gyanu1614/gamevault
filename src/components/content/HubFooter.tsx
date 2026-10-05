@@ -15,7 +15,7 @@
  */
 
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
 import { TwitterLogoIcon } from '@phosphor-icons/react/dist/ssr/TwitterLogo'

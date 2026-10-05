@@ -11,13 +11,14 @@
  */
 
 import type { ReactNode } from 'react'
-import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
+import { HeroBackdrop } from '@/components/hero-backdrop'
 
 export default function MarketplaceLayout({ children }: { children: ReactNode }) {
   return (
-    <>
-      <HeroBackdropPreload name="marketplace" />
-      <HeroBackdrop name="marketplace">{children}</HeroBackdrop>
-    </>
+    // No <link rel=preload> for the backdrop: it is a faint CSS background under
+    // a scrim, and on the values/calculator/blog/sell routes it sits almost
+    // entirely beneath their own hero. A high-priority preload competed with the
+    // first view on every marketplace route (Bundle 1, page weight).
+    <HeroBackdrop name="marketplace">{children}</HeroBackdrop>
   )
 }

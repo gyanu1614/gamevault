@@ -13,7 +13,7 @@
  * canvas), matching LayoutWrapper's chrome rules.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { usePathname } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { IconRocket, IconArrowRight } from '@tabler/icons-react'

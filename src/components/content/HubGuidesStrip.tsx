@@ -16,7 +16,7 @@
  * stays legible. Posts with no cover fall back to the plain card gradient.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
 import { VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 

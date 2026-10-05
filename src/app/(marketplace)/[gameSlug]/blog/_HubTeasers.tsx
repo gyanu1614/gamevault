@@ -8,7 +8,7 @@
  * printing an empty box.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import type { HubTeaserItem } from './_hubData'
 import ValuesMarquee from './_ValuesMarquee'

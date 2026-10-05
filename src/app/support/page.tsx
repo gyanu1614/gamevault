@@ -6,11 +6,12 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { Mail, ShieldCheck, Package, FileText, ArrowRight } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Support | DropMarket',
+  // Bare: the root layout template appends "| DropMarket".
+  title: 'Support',
   description: 'Get help with orders, payments, and your DropMarket account.',
 }
 

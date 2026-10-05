@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {

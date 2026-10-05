@@ -1,7 +1,7 @@
 'use client'
 
 import { lockScroll } from '@/lib/scroll-lock'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { SmartLink } from '@/components/global/SmartLink'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'

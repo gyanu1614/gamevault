@@ -21,7 +21,7 @@ import type { ReviewWithRelations } from '@/types/database'
 import SellerResponseForm from './SellerResponseForm'
 import EditReviewButton from './EditReviewButton'
 import EditReviewModal from './EditReviewModal'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 
 interface ReviewCardProps {
   review: ReviewWithRelations

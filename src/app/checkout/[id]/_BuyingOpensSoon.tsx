@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowLeft, BellRing, Check, Loader2, Clock } from 'lucide-react'
 import { submitBuyerWaitlist } from '@/lib/actions/buyer-waitlist'
 

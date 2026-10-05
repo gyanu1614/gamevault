@@ -28,6 +28,8 @@ export function SilverIcon({ src, className }: { src: string; className?: string
         src={src}
         alt=""
         aria-hidden
+        loading="lazy"
+        decoding="async"
         className="h-full w-full object-contain [filter:grayscale(1)_sepia(0.15)_hue-rotate(40deg)_saturate(1.05)_brightness(1.05)_contrast(1.2)_drop-shadow(0_4px_6px_rgba(0,0,0,0.55))]"
       />
       {/* glass shine, clipped to the icon shape */}

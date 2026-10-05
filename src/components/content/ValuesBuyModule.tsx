@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { HUB_COPY } from '@/lib/content/theme'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'

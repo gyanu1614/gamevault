@@ -10,7 +10,7 @@
  * dissolve never opens a seam. The CTA is the brand primary button.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 

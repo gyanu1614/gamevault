@@ -114,6 +114,8 @@ export default function HowItWorksBand({
               src="/icons/safedrop-emblem-lg.png"
               alt=""
               aria-hidden
+              loading="lazy"
+              decoding="async"
               className="pointer-events-none absolute -right-44 top-1/2 hidden h-[30rem] w-[30rem] -translate-y-1/2 rotate-12 select-none opacity-30 lg:block"
             />
 

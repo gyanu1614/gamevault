@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { VALUE_SURFACE, VALUE_TILE } from '@/components/values/styles'
 import { formatCash } from '@/lib/sab/format'

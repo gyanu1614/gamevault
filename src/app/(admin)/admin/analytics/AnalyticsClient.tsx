@@ -20,7 +20,7 @@
  *  6. Promo code performance + disputes summary
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRight, Warning } from '@phosphor-icons/react'
 import type { AnalyticsData, DailyPoint } from '@/lib/actions/admin-analytics'
 import { StatStrip } from '@/components/account/AccountSurface'

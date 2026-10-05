@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Receipt } from '@phosphor-icons/react'
 import { AdminOrder } from '@/lib/actions/admin-orders'

@@ -14,6 +14,7 @@ import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
+import { snapshotListings, submitListingChanges, type ListingSnapshot } from '@/lib/seo/indexnow'
 
 // ─── Shared moderator gate ───────────────────────────────────────────────────
 
@@ -201,6 +202,13 @@ export async function approveListing(
     if (!gate.ok) return { success: false, error: gate.error }
     const { user, supabase } = gate
 
+    // IndexNow: the approval is the moment most listings go live, so snapshot
+    // the listing (and, below, any queue it drains) BEFORE it changes.
+    const indexNowBefore: Map<string, ListingSnapshot> | null = await snapshotListings(
+      createServiceRoleClient(),
+      [listingId],
+    )
+
     // Use the database function to approve listing (bypasses the moderation trigger)
     const { error: approveError } = await (supabase.rpc as any)('approve_listing', {
       listing_id: listingId,
@@ -275,6 +283,7 @@ export async function approveListing(
     // admins never re-review a seller who already crossed the bar.
     let drainedCount = 0
     let drainedSellerId: string | undefined
+    const drainedIds: string[] = []
     try {
       const service = createServiceRoleClient()
       const { data: approvedRow } = await service
@@ -295,12 +304,18 @@ export async function approveListing(
             .select('id')
             .eq('seller_id', sellerId)
             .eq('status', 'pending_approval') as any
+          // Snapshot the queue before it is released so IndexNow sees these go live too.
+          const queueBefore = await snapshotListings(service, (queued ?? []).map((q: { id: string }) => q.id))
+          if (queueBefore) for (const [id, snap] of queueBefore) indexNowBefore?.set(id, snap)
           for (const q of queued ?? []) {
             const { error: drainError } = await (service.rpc as any)('approve_listing', {
               listing_id: q.id,
               admin_id: user.id,
             })
-            if (!drainError) drainedCount++
+            if (!drainError) {
+              drainedCount++
+              drainedIds.push(q.id)
+            }
           }
           if (drainedCount > 0) {
             await (service.from('notifications').insert as any)({
@@ -350,6 +365,10 @@ export async function approveListing(
       listingIds: [listingId],
       sellerIds: drainedSellerId ? [drainedSellerId] : [],
     })
+    await submitListingChanges(
+      indexNowBefore,
+      await snapshotListings(createServiceRoleClient(), [listingId, ...drainedIds]),
+    )
 
     return { success: true, drainedCount }
   } catch (error: any) {

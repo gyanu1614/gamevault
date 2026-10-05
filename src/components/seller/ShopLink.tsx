@@ -8,7 +8,7 @@
  * sellers with no shop. Both failure modes are impossible here.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 import { sellerShopHref, type SellerIdentityInput } from '@/lib/seller/identity'
 

@@ -19,7 +19,7 @@
  * `label`) rather than arbitrary px — see the type-scale convention.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowUpRight, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { BlogPost } from '@/lib/blog/posts'

@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { HubSection } from '@/components/values/HubSection'

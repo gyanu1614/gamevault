@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut'

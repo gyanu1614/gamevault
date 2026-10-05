@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { AlertCircle } from 'lucide-react'
 import * as Sentry from '@sentry/nextjs'
 import { reloadOnceForStaleBuild } from '@/lib/stale-build'

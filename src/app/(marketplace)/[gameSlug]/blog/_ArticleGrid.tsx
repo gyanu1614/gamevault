@@ -4,7 +4,7 @@
  * every card is the same fixed-ratio tile in a responsive grid, so nothing jumps.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock'
 import { VALUE_SURFACE_LINK } from '@/components/values/styles'

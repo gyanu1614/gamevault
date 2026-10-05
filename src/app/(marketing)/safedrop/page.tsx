@@ -22,7 +22,7 @@ import {
   Scale,
   Wallet
 } from 'lucide-react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 import { serializeJsonLd } from '@/lib/seo/jsonld'

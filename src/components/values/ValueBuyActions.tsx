@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import type { useBuyCta } from '@/components/value-listings/useBuyCta'

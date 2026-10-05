@@ -10,7 +10,7 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp'

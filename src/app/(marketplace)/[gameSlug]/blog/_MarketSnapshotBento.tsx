@@ -13,7 +13,7 @@
  * nothing when there's no data.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion, useMotionTemplate, useMotionValue } from 'framer-motion'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'

@@ -26,7 +26,7 @@
  * so authors know these tokens are reserved, not active.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 
 export interface TocEntry {

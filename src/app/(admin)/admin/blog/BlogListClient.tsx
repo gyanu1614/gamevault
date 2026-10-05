@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { CaretDown, CaretLeft, CircleNotch, Image as ImageIcon, Newspaper, PencilSimple, Plus, Trash } from '@phosphor-icons/react'

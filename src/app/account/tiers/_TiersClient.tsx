@@ -19,7 +19,7 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { AnimatePresence, motion, useReducedMotion, type PanInfo } from 'framer-motion'
 import {
   PercentIcon,

@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ArrowRightIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import ItemCard from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemCard'

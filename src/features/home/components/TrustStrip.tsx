@@ -13,7 +13,7 @@
  * icons, matching the treatment this strip had in the footer.
  */
 
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 
 import { SilverIcon } from '@/components/ui/silver-icon'
 

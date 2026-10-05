@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { safeSession } from '@/lib/safe-storage'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'

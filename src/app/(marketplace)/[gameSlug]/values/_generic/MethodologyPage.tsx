@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { JsonLd, breadcrumbList } from '@/lib/seo/jsonld'
 import { HubNav } from '@/components/content/HubNav'

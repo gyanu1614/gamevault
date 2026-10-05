@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import useEmblaCarousel from 'embla-carousel-react'
 import { useReducedMotion } from 'framer-motion'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'

@@ -19,7 +19,7 @@
  */
 
 import { forwardRef, type ReactNode } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { ShieldAlert, Ban, CheckCircle, AlertCircle, Clock, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 
 interface RestrictionStatusProps {
   profile: any

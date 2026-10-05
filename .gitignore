@@ -108,6 +108,10 @@ src/types/database.generated.ts
 # Blender sources for the CS2 weapon render (26MB) — build inputs, not app code
 art/cs2/
 
+# page-weight measurement output (scripts/measure-page-weight.mjs)
+.measure-out/
+
+
 # Bundle 2: pnpm value-refs:backfill report output
 data/value-ref-unmatched-*.csv
 # GSC report output (pnpm gsc:index-report / gsc:search-report) — never committed

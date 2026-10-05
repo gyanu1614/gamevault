@@ -37,7 +37,7 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import { StatStrip, accountInputCls } from '@/components/account/AccountSurface'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'

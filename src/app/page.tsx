@@ -6,7 +6,9 @@ import { LatestListings } from '@/features/home/components/LatestListings'
 import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 
 export const metadata: Metadata = {
-  title: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely',
+  // `absolute`: the brand already leads this title, so skip the layout's
+  // "| DropMarket" suffix (it rendered "DropMarket | … | DropMarket").
+  title: { absolute: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely' },
   description:
     'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop Protection on every order. Lowest fees, instant delivery.',
   keywords: [

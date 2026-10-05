@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { pingIndexNow } from '@/lib/seo/indexnow'
+import { submitChangedValuePages } from '@/lib/seo/indexnow'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 // Must be set in environment variables. No fallback — fail closed if unset
@@ -130,12 +130,14 @@ export async function GET(request: NextRequest) {
     const capturedCount = await captureFromCorrectedView(admin)
     console.log(`✅ Captured ${capturedCount} SAB price snapshot rows (corrected)`)
 
-    // Freshness signal: now that today's prices are captured, ping IndexNow so
-    // Bing/Yandex (+ ChatGPT search, which reads Bing's index) re-crawl the SAB
-    // value pages the same day they change. This makes our "updated daily" claim
-    // a real signal engines act on — not just sitemap lastmod on the next crawl.
-    // Fire-and-forget + no-op outside prod; never blocks the capture result.
-    let pingedCount = 0
+    // Freshness signal: now that today's prices are captured, tell IndexNow about
+    // the value pages whose cash value REALLY moved (>= 5% and >= $0.25 against the
+    // previous daily snapshot; lib/seo/indexnow/value-changes.ts) so Bing/Yandex
+    // (+ ChatGPT search, which reads Bing's index) re-crawl exactly those.
+    // This replaced a job that re-sent all ~504 SAB URLs in one batch every day,
+    // which Bing flagged as "batch mode". Production only, never throws, and
+    // never blocks the capture result.
+    let indexNowChanged = 0
     let revalidatedCount = 0
     try {
       const { data: slugRows } = await admin
@@ -147,16 +149,7 @@ export async function GET(request: NextRequest) {
         new Set((slugRows ?? []).map((r) => r.brainrot_slug).filter(Boolean)),
       ).map((slug) => `/steal-a-brainrot/values/${slug}`)
 
-      // Hub pages change daily too; lead with them. IndexNow accepts up to
-      // 10k URLs/request, so the ~500 item pages fit in a single batch.
-      const paths = [
-        '/steal-a-brainrot',
-        '/steal-a-brainrot/values',
-        '/steal-a-brainrot/calculator',
-        ...itemPaths,
-      ]
-      await pingIndexNow(paths)
-      pingedCount = paths.length
+      indexNowChanged = await submitChangedValuePages(admin, 'steal-a-brainrot')
 
       // Bust the ISR cache for every price-bearing SAB page so today's corrected
       // prices show the moment this cron finishes, instead of up to an hour later
@@ -178,7 +171,7 @@ export async function GET(request: NextRequest) {
     } catch (pingErr) {
       // Never fail the cron over a freshness ping or revalidation.
       console.error(
-        'IndexNow ping / revalidation after snapshot failed (non-fatal):',
+        'IndexNow submission / revalidation after snapshot failed (non-fatal):',
         pingErr,
       )
     }
@@ -186,9 +179,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       captured: capturedCount,
-      pinged: pingedCount,
+      indexnow_changed: indexNowChanged,
       revalidated: revalidatedCount,
-      message: `Captured ${capturedCount} SAB price snapshot rows; pinged ${pingedCount} URLs to IndexNow; revalidated ${revalidatedCount} pages`,
+      message: `Captured ${capturedCount} SAB price snapshot rows; ${indexNowChanged} value pages changed enough for IndexNow; revalidated ${revalidatedCount} pages`,
     })
   } catch (error: any) {
     console.error('Unexpected error in snapshot-sab-prices cron:', error)

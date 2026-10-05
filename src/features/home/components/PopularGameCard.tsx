@@ -17,7 +17,7 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import type { PopularGameCard as GameCardData } from '../lib/popular-games'
 
 interface Props {
