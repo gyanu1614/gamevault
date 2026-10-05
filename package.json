@@ -51,6 +51,7 @@
     "values:eldorado:import": "tsx scripts/import-eldorado-values.mjs",
     "values:mm2:catalogue": "tsx scripts/import-mm2-wiki-catalogue.mjs",
     "values:mm2:how-to-get": "node scripts/import-mm2-how-to-get.mjs",
+    "values:mm2:events": "node scripts/import-mm2-events.mjs",
     "values:images": "tsx scripts/copy-values-images.mjs",
     "values:dryrun": "tsx scripts/values-dryrun.mjs",
     "value-refs:backfill": "tsx scripts/value-refs-backfill.mjs",
