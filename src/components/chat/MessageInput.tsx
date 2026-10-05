@@ -12,6 +12,9 @@
  *  - Auto-growing textarea (1–5 lines, scrollbar after)
  *  - Enter sends, Shift+Enter inserts newline
  *  - Disabled state during send + when parent disabled
+ *  - `optimistic`: the field clears the instant you send and stays live
+ *    (the parent shows the message as a pending bubble right away and
+ *    owns failure with an inline Retry), so nothing greys out mid-send
  *  - Character counter only when within 100 chars of the cap
  *  - Inline keyboard hint moved to a faint helper below the input
  */
@@ -32,6 +35,13 @@ interface MessageInputProps {
   maxLength?: number
   /** Show the paperclip (order chats, for the buyer and seller only). */
   allowAttachments?: boolean
+  /**
+   * The parent queues the message optimistically: `onSend` resolves as soon
+   * as the pending bubble is on screen, and only rejects for an input
+   * problem (then the text/file are put back). The field is never disabled
+   * while a send is in flight.
+   */
+  optimistic?: boolean
 }
 
 export default function MessageInput({
@@ -40,6 +50,7 @@ export default function MessageInput({
   disabled = false,
   maxLength = 2000,
   allowAttachments = false,
+  optimistic = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -75,6 +86,22 @@ export default function MessageInput({
 
   const handleSend = async () => {
     if (!canSend) return
+    if (optimistic) {
+      const text = message.trim()
+      const picked = file
+      setMessage('')
+      setFile(null)
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+      try {
+        await onSend(text, picked)
+      } catch {
+        // Rejected before it was queued (e.g. a file not allowed here):
+        // hand the draft back rather than lose it.
+        setMessage((cur) => cur || text)
+        setFile((cur) => cur ?? picked)
+      }
+      return
+    }
     setIsSending(true)
     try {
       await onSend(message.trim(), file)
@@ -173,6 +200,9 @@ export default function MessageInput({
         <Button
           type="button"
           onClick={handleSend}
+          // Keep focus in the field: tapping Send must not drop the phone
+          // keyboard between messages.
+          onMouseDown={(e) => e.preventDefault()}
           disabled={!canSend}
           size="icon"
           className={cn(
