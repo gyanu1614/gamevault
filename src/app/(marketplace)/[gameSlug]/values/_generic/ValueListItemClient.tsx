@@ -320,7 +320,7 @@ export function HowToGetFastWay({
   shortName,
   buy,
 }: {
-  way: { heading: string; tag: string; steps: WayStep[]; total: { label: string; value: string | null; detail: string } }
+  way: { heading: string; steps: WayStep[]; total: { label: string; value: string | null; detail: string } }
   name: string
   shortName: string
   buy: ItemBuy
@@ -330,7 +330,7 @@ export function HowToGetFastWay({
   const label = `Buy ${shortName} Items`
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
-      <WaySectionHead n={2} title={way.heading} tag={way.tag} tone="green" />
+      <WaySectionHead n={2} title={way.heading} tone="green" />
       <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
         <ol className={`grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 ${FAST_COLS[way.steps.length] ?? ''}`}>
           {way.steps.map((step, i) => {

@@ -148,7 +148,7 @@ function FreeWayRow({ way }: { way: FreeWay }) {
   const muted = way.state !== 'available'
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
-      <WaySectionHead n={1} title={way.heading} tag={way.tag} tone="neutral" muted={muted} />
+      <WaySectionHead n={1} title={way.heading} tone="neutral" muted={muted} />
 
       {way.steps.length > 0 && (
         <ol className={cn('mt-6 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>

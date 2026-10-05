@@ -46,8 +46,6 @@ export interface WayStep {
 
 export interface FreeWay {
   state: 'available' | 'gone' | 'unconfirmed'
-  /** Chip over the panel: "Free · Takes A While". */
-  tag: string
   /** Panel heading: "Unbox It For Free". */
   heading: string
   steps: WayStep[]
@@ -67,7 +65,6 @@ export interface HowToGetWays {
   free: FreeWay
   fast: {
     heading: string
-    tag: string
     steps: WayStep[]
     /** The paid way's one-line callout: "Total Cost: Around $2.17 · …". */
     total: { label: string; value: string | null; detail: string }
@@ -99,7 +96,6 @@ export interface WaysInput {
 function fastWay(name: string, gameName: string, shortName: string, price: string | null) {
   return {
     heading: 'Buy It for Cheap',
-    tag: 'Fastest · Minutes',
     // The same one-line callout as the free way's total, for the paid way.
     total: {
       label: 'Total Cost',
@@ -135,7 +131,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
         : `It isn’t in the Shop or sold for Robux, so buying it from another player${fromPrice} is the way to get it now — delivered by in-game trade in minutes.`,
       free: {
         state: unconfirmed ? 'unconfirmed' : 'gone',
-        tag: unconfirmed ? 'Unconfirmed' : seasonal ? 'Event Only' : 'No Longer Available',
         heading: unconfirmed ? 'Free Way: Unconfirmed' : 'The Free Way Has Ended',
         steps: unconfirmed
           ? []
@@ -172,7 +167,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
       body: `It’s a ${e.oddsPct}% chance per ${verb}, so expect about ${formatCount(e.spins)} ${verbs} — ${formatAmount(pay.total, pay.unit)}${rounds ? `, or about ${formatCount(rounds)} rounds of play` : ''}. Most players skip the grind and buy it${fromPrice}, delivered in minutes.`,
       free: {
         state: 'available',
-        tag: 'Free · Takes A While',
         heading: 'How To Get It For Free',
         steps: [
           {
@@ -206,7 +200,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
       body: `Collect ${needs} and craft it at the Crafting Station — no Robux needed. Or skip the grind and buy it${fromPrice}, delivered in minutes.`,
       free: {
         state: 'available',
-        tag: 'Free · Takes A While',
         heading: 'How To Get It For Free',
         steps: [
           ...recipe.map((r) => ({
@@ -230,7 +223,6 @@ export function howToGetWays(i: WaysInput): HowToGetWays {
     body: `${sentence(h.method)}${h.costs ? ` It costs ${noDot(h.costs)}.` : ''} You can also buy it${fromPrice}, delivered in minutes.`,
     free: {
       state: 'available',
-      tag: 'In-Game',
       heading: 'How To Get It In-Game',
       steps: [
         { icon: 'box', title: 'How', value: noDot(h.method) },
