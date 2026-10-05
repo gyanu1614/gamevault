@@ -7,7 +7,7 @@
  * a second run on the same day upserts, it doesn't duplicate.
  *
  * History CANNOT be backfilled, so this must run every day — each missed day is
- * permanently lost. Runs in CI (see .github/workflows/adopt-me-daily.yml) after
+ * permanently lost. Runs in CI (see .github/workflows/values-pricing-daily.yml) after
  * the price refresh, or locally: `npm run adoptme:snapshot`.
  *
  * Only snapshots variants that have a cash value (observed or estimated). The

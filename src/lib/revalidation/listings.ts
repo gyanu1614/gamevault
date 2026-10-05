@@ -1,4 +1,5 @@
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { valueItemStockTag } from '@/lib/value-listings/tags'
 
 /**
  * Event-driven revalidation for the listing surfaces (Step 7b).
@@ -11,6 +12,13 @@ import { revalidateTag, unstable_cache } from 'next/cache'
  * or seller ids); this resolves them to the game_categories rows involved and
  * revalidates one tag per row. The category page anchors its render to that
  * tag with bindCategoryListingsTag().
+ *
+ * Listings linked to a value item (`listings.value_item_slug`, Bundle 2) also
+ * revalidate that item's stock tag, so the item's value page (buy button,
+ * "Available Now") follows the listing — that page alone, not every value
+ * page of the game (T1, 2026-10-04). Resolved from listing or seller ids;
+ * a call with category ids only cannot name items and leaves them to the
+ * nightly reconcile (/api/cron/value-listing-refs).
  *
  * The guard test `listing-mutations-revalidate.guard.test.ts` enumerates the
  * mutation sites, so a new one cannot land without calling this.
@@ -51,13 +59,21 @@ export interface ListingsReader {
   }
 }
 
-type CategoryRow = { game_category_id: string | null }
+type CategoryRow = {
+  game_category_id: string | null
+  value_item_slug?: string | null
+  game?: { slug: string | null } | Array<{ slug: string | null }> | null
+}
+
+/** One read resolves both: the category page and the linked value item. */
+const SURFACE_COLUMNS = 'game_category_id, value_item_slug, game:games!listings_game_id_fkey(slug)'
 
 export async function revalidateListingSurfaces(
   client: ListingsReader,
   target: ListingSurfaceTarget,
 ): Promise<ListingSurfaceResult> {
   const ids = new Set<string>(target.gameCategoryIds ?? [])
+  const valueItemTags = new Set<string>()
   let error: string | undefined
 
   const lookups: Array<[string, readonly string[]]> = []
@@ -66,13 +82,26 @@ export async function revalidateListingSurfaces(
 
   for (const [column, values] of lookups) {
     try {
-      const { data, error: readError } = await client
+      let { data, error: readError } = await client
         .from('listings')
-        .select('game_category_id')
+        .select(SURFACE_COLUMNS)
         .in(column, values)
+      if (readError) {
+        // The value-item half is an addition; never let it cost the category
+        // pages their refresh. Retry the plain read and report the miss.
+        console.error('[revalidateListingSurfaces] value-item lookup failed', readError)
+        ;({ data, error: readError } = await client
+          .from('listings')
+          .select('game_category_id')
+          .in(column, values))
+      }
       if (readError) throw readError
       for (const row of (data ?? []) as CategoryRow[]) {
         if (row.game_category_id) ids.add(row.game_category_id)
+        const game = Array.isArray(row.game) ? row.game[0] : row.game
+        if (row.value_item_slug && game?.slug) {
+          valueItemTags.add(valueItemStockTag(game.slug, row.value_item_slug))
+        }
       }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
@@ -80,8 +109,7 @@ export async function revalidateListingSurfaces(
   }
 
   const tags: string[] = []
-  for (const id of ids) {
-    const tag = categoryListingsTag(id)
+  for (const tag of [...[...ids].map(categoryListingsTag), ...valueItemTags]) {
     try {
       revalidateTag(tag)
       tags.push(tag)

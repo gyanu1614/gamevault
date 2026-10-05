@@ -1,9 +1,3 @@
-import { revalidatePath, revalidateTag } from 'next/cache'
-import {
-  valueGamePriceTag,
-  valueItemPriceTag,
-  valuesTag,
-} from '@/lib/values/revalidation'
 import { checkRateLimitByIp, rateLimitResponse } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -95,63 +89,42 @@ export async function POST(
     )
   }
 
-  const GAME = 'steal-a-brainrot'
-
-  // The lists always move when anything moves: they rank every item by price.
-  const paths = [`/${GAME}/values`, `/${GAME}/calculator`]
-
-  for (const path of paths) {
-    revalidatePath(path)
-  }
-
-  // Which items actually changed this crawl. The publish step diffs the
-  // freshly materialised prices against the previous snapshot
-  // (sab_refresh_price_display_changed, migration 20260922172054) and sends
-  // the slugs here.
+  // T1 (2026-10-04): the SAB crawl's import no longer revalidates pages.
   //
-  // Absent or malformed body → fall back to the whole-game tag, which is the
-  // pre-2026-09-22 behaviour. That keeps an older deployment of the edge
-  // function (or a manual curl) correct, just expensive: the game tag marks
-  // every one of the ~500 item pages stale, which was ~80% of the monthly ISR
-  // budget (build audit 2026-09-22, §4).
-  let changedSlugs: string[] | null = null
+  // This route is called by the sab-market-import edge function right after
+  // it refreshes sab_price_display from the crawl's fresh estimates — BEFORE
+  // the runner's reprice applies the corrections (cohort anchoring, mutation
+  // multipliers). Revalidating here published pre-correction numbers, with an
+  // exact-equality diff (every cent wobble), and a second refresh followed
+  // anyway. Every scheduled import (G2G and Eldorado) is now followed in the
+  // same job by `pnpm reprice --game=sab --publish`, which diffs the
+  // corrected display against the last PUBLISHED snapshot with the shared
+  // threshold and POSTs only the moved items to /api/internal/values-revalidate
+  // — the one contract every game uses.
+  //
+  // So this is an acknowledgement: it keeps the deployed edge function's
+  // ROUTE-010 check green (a 2xx) without a redeploy, records what the import
+  // reported, and revalidates nothing. A manual whole-game refresh is
+  // POST /api/internal/values-revalidate?game=steal-a-brainrot&full=1.
+  let reported: number | null = null
   try {
     const body: unknown = await request.json()
     const raw = (body as { changedSlugs?: unknown } | null)?.changedSlugs
-    if (Array.isArray(raw)) {
-      changedSlugs = raw.filter(
-        (slug): slug is string => typeof slug === 'string' && slug.length > 0,
-      )
-    }
+    if (Array.isArray(raw)) reported = raw.length
   } catch {
-    // No body / not JSON — fall through to the whole-game tag.
+    // No body / not JSON — nothing to record.
   }
 
-  const revalidated: string[] = [...paths]
-
-  if (changedSlugs === null) {
-    revalidateTag(valuesTag(GAME))
-    revalidated.push(valuesTag(GAME))
-  } else {
-    // Item pages whose price moved. An empty list is a legitimate answer —
-    // a crawl where nothing changed revalidates no item page at all.
-    for (const slug of changedSlugs) {
-      const tag = valueItemPriceTag(GAME, slug)
-      revalidateTag(tag)
-      revalidated.push(tag)
-    }
-    if (changedSlugs.length > 0) {
-      // The price LISTS (directory, calculator) read every item's price.
-      revalidateTag(valueGamePriceTag(GAME))
-      revalidated.push(valueGamePriceTag(GAME))
-    }
-  }
+  console.log(
+    `[sab-market-revalidate] import reported ${reported ?? 'no'} changed slug(s); ` +
+      'deferred to the reprice publish step (values-revalidate).',
+  )
 
   return jsonResponse({
     ok: true,
-    mode: changedSlugs === null ? 'whole-game-fallback' : 'changed-items',
-    changed_count: changedSlugs?.length ?? null,
-    revalidated,
+    mode: 'deferred-to-reprice',
+    import_reported_changed: reported,
+    revalidated: [],
     revalidated_at: new Date().toISOString(),
   })
 }

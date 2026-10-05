@@ -28,17 +28,40 @@ export async function GET(request: NextRequest) {
   }
 
   const service = createServiceRoleClient()
+  const startedAt = new Date().toISOString()
   const out = await reconcileValueRefs(service, { limit: 5000 })
 
-  if (out.gameCategoryIds.length) {
-    await revalidateListingSurfaces(service as never, { gameCategoryIds: out.gameCategoryIds })
+  // Item pages read a per-ITEM stock slice (T1): name the items this run
+  // linked, so those pages — and only those — pick the listings up. Resolved
+  // through the seam by listing id (it maps each listing to its category and
+  // its value item). The per-game tag below no longer reaches item pages.
+  let linkedIds: string[] = []
+  if (out.linked > 0) {
+    const { data, error } = await (service as any)
+      .from('listings')
+      .select('id')
+      .gte('value_matched_at', startedAt)
+      .not('value_item_slug', 'is', null)
+      .limit(5000)
+    if (error) console.error('[value-listing-refs] linked-listing read failed', error.message)
+    linkedIds = ((data ?? []) as Array<{ id: string }>).map((r) => r.id)
   }
+
+  if (out.gameCategoryIds.length || linkedIds.length) {
+    await revalidateListingSurfaces(service as never, {
+      gameCategoryIds: out.gameCategoryIds,
+      listingIds: linkedIds,
+    })
+  }
+  // Per-GAME stock reads (calculator, item listings pages) — a handful of
+  // pages per game, not the ~500 item pages.
   for (const game of VALUE_CATALOG_GAMES) revalidateTag(valueStockTag(game))
 
   return NextResponse.json({
     ok: out.errors.length === 0,
     checked: out.checked,
     linked: out.linked,
+    item_pages_refreshed_for: linkedIds.length,
     unmatched: out.unmatched.length,
     errors: out.errors.slice(0, 20),
     ran_at: new Date().toISOString(),

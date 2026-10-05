@@ -4,10 +4,10 @@
  * revalidated by tag, not by path):
  *
  *   • `values:<game>`       — catalogue/content edits, via
- *                             /api/internal/values-revalidate
- *   • `price:<game>:<item>` — the price crawl's publish step, which only names
- *                             the items whose prices actually moved
- *                             (/api/internal/sab-market-revalidate)
+ *                             /api/internal/values-revalidate?full=1
+ *   • `price:<game>:<item>` — every game's pricing publish step, which only
+ *                             names the items whose prices moved past the
+ *                             threshold (/api/internal/values-revalidate, T1)
  *
  * Both must be bound before the first game-specific branch, so every variant
  * of the page (SAB, Adopt Me, the generic pipeline) carries them.

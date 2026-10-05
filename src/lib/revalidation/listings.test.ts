@@ -68,6 +68,27 @@ describe('listing surfaces revalidation', () => {
     expect(tags()).toEqual(['listings:category:c1', 'listings:category:c3'])
   })
 
+  it('also revalidates the value item a listing is linked to — that item only (T1)', async () => {
+    recorder = createSupabaseRecorder({
+      listings: [
+        { game_category_id: 'c7', value_item_slug: 'bat-dragon', game: { slug: 'adopt-me' } },
+        { game_category_id: 'c7', value_item_slug: null, game: { slug: 'adopt-me' } },
+        { game_category_id: 'c9', value_item_slug: 'owl', game: [{ slug: 'adopt-me' }] },
+      ],
+    })
+    const r = await revalidateListingSurfaces(recorder.client, { listingIds: ['l1', 'l2', 'l3'] })
+    expect(tags()).toEqual([
+      'listings:category:c7',
+      'listings:category:c9',
+      'value-stock:adopt-me:bat-dragon',
+      'value-stock:adopt-me:owl',
+    ])
+    // Never the per-game stock tag: that would rebuild every item page.
+    expect(tags()).not.toContain('value-stock:adopt-me')
+    expect(r.tags).toHaveLength(4)
+    expect(recorder.tables()).toEqual(['listings'])
+  })
+
   it('never throws — a failed lookup revalidates what it can and reports it', async () => {
     recorder = createSupabaseRecorder()
     recorder.client.from = () => {

@@ -1,6 +1,12 @@
 import 'server-only'
 import { cache } from 'react'
-import { getItemsPair, getValueCatalog, getValueListings, type ValueListingRow } from '@/lib/value-listings/stock-server'
+import {
+  getItemsPair,
+  getValueCatalog,
+  getValueItemListings,
+  getValueListings,
+  type ValueListingRow,
+} from '@/lib/value-listings/stock-server'
 import { buildItemPage, isKnownVariant } from '@/lib/value-listings/item-page'
 import { aggregateStock } from '@/lib/value-listings/stock'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
@@ -53,9 +59,13 @@ export interface ValueItemBuyData {
   offerVariants: Record<string, string | null>
 }
 
-/** Buy button + "Available Now" data for one value item page. */
+/**
+ * Buy button + "Available Now" data for one value item page. Reads only this
+ * item's listings, under this item's stock tag (T1): a listing change
+ * rebuilds this page, not every item page of the game.
+ */
 export async function getValueItemBuyData(gameSlug: string, itemSlug: string, limit = 12): Promise<ValueItemBuyData | null> {
-  const listings = await getValueListings(gameSlug)
+  const listings = await getValueItemListings(gameSlug, itemSlug)
   if (!listings) return null
   const rows = listings.rows.filter((r) => r.value_item_slug === itemSlug)
   const stock =
