@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('@/lib/pricing/games/sab', () => ({ runSabCorrection: vi.fn() }))
 vi.mock('@/lib/pricing/games/adopt-me', () => ({ runAdoptMeCorrection: vi.fn() }))
 vi.mock('@/lib/pricing/games/steal-an-egg', () => ({ runStealAnEggCorrection: vi.fn() }))
+vi.mock('@/lib/pricing/games/murder-mystery-2', () => ({ runMurderMystery2Correction: vi.fn() }))
 
 import { repriceAndPublish } from './run'
 import type { PricingGame } from './registry'

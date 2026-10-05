@@ -11,9 +11,10 @@
  * read/write — lives in the cron) so the decision logic is unit-testable.
  */
 
-import { REPUTABLE_MIN_REVIEWS } from '@/lib/sab/reputable-pricing'
 import {
+  PLACEHOLDER_HIGH_RATIO,
   computeReputablePrices,
+  dropPlaceholderHighs,
   variantKey,
   type RawListing,
   type VariantReputablePrice,
@@ -87,13 +88,12 @@ export function ladderBelow(lo: string, hi: string): boolean {
 export const LADDER_TOLERANCE = 1.15
 
 /**
- * A listing more than this multiple of the next-highest reputable listing in
- * its pet+variant is a placeholder, not a price ("Adopt Me > 2D Kitty > MFR"
- * at $3,618.88 over $22–68 offers, qty 99,999 — a shop's out-of-stock price).
- * The engine's cheapest-support walk falls back to the TOP listing when nothing
- * qualifies, so one of these became 2d-kitty's MFR price.
+ * Placeholder highs ("Adopt Me > 2D Kitty > MFR" at $3,618.88 over $22–68
+ * offers, qty 99,999 — a shop's out-of-stock price) are dropped by the shared
+ * adapter's `dropPlaceholderHighs`; the ratio lives there so every game uses
+ * the same one. Re-exported for the existing Adopt Me tests.
  */
-export const PLACEHOLDER_HIGH_RATIO = 10
+export { PLACEHOLDER_HIGH_RATIO }
 
 /** Confidence label from the reputable-listing count — mirrors the SQL helper. */
 export function confidenceFor(count: number): string {
@@ -209,33 +209,6 @@ function resolveLadder(
     kept = kept.filter((e) => e !== out)
   }
   return { kept, dropped }
-}
-
-/**
- * Drop placeholder highs: while a pet+variant's top reputable-capable listing
- * is more than PLACEHOLDER_HIGH_RATIO × the next one, it is not a price.
- */
-function dropPlaceholderHighs(listings: RawListing[]): { kept: RawListing[]; dropped: number } {
-  const groups = new Map<string, RawListing[]>()
-  for (const l of listings) {
-    const price = Number(l.priceUsd)
-    const reviews = Number(l.reviews)
-    if (!(price > 0) || l.reviews == null || !(reviews >= REPUTABLE_MIN_REVIEWS)) continue
-    const key = variantKey(l.itemId, l.variant)
-    const list = groups.get(key)
-    if (list) list.push(l)
-    else groups.set(key, [l])
-  }
-  const drop = new Set<RawListing>()
-  for (const list of groups.values()) {
-    const sorted = [...list].sort((a, b) => Number(b.priceUsd) - Number(a.priceUsd))
-    for (let i = 0; i < sorted.length - 1; i += 1) {
-      if (Number(sorted[i].priceUsd) > Number(sorted[i + 1].priceUsd) * PLACEHOLDER_HIGH_RATIO) {
-        drop.add(sorted[i])
-      } else break
-    }
-  }
-  return { kept: drop.size ? listings.filter((l) => !drop.has(l)) : listings, dropped: drop.size }
 }
 
 /**

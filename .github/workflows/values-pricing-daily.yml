@@ -37,7 +37,7 @@ on:
       games:
         description: Which games to run
         type: choice
-        options: [all, sab, adopt-me, steal-an-egg]
+        options: [all, sab, adopt-me, steal-an-egg, murder-mystery-2]
         default: all
       publish:
         description: >-
@@ -82,6 +82,13 @@ on:
         description: "Steal an Egg: Eldorado pages to crawl (50 listings each; 39 = all)"
         required: false
         default: "40"
+      mm2_force:
+        description: >-
+          Murder Mystery 2: run even while the repo variable
+          MM2_PRICING_ENABLED is not 'true' (one-off after the migration is
+          pushed). Only with games = murder-mystery-2.
+        type: boolean
+        default: false
 
 concurrency:
   group: values-pricing-daily
@@ -330,3 +337,57 @@ jobs:
       # NOT continue-on-error: a failed reprice or publish must fail the job.
       - name: Reprice Steal An Egg and publish changed prices
         run: pnpm reprice --game=steal-an-egg ${{ env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
+
+  # ── Murder Mystery 2: generic values_* pipeline, eldorado-structured ─────
+  # OFF by default. It needs migration 20261004235134_values_mm2_catalogue on
+  # prod + the wiki catalogue imported (pnpm values:mm2:catalogue --write
+  # --env=prod --yes). Turn on with the repo variable MM2_PRICING_ENABLED=true
+  # (Settings → Secrets and variables → Actions → Variables); before that a
+  # manual run needs games=murder-mystery-2 + mm2_force. `all` never forces it.
+  #
+  # Publishing is a SECOND switch, MM2_HUB_LIVE=true: /api/internal/
+  # values-revalidate answers 400 for a game that is not a content hub yet, so
+  # until the MM2 pages ship the job collects, prices and records daily history
+  # (charts have data on launch day) but revalidates nothing.
+  murder-mystery-2:
+    if: >-
+      inputs.sab_publish_only_run_id == ''
+      && (
+        (vars.MM2_PRICING_ENABLED == 'true'
+          && (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'murder-mystery-2'))
+        || (inputs.games == 'murder-mystery-2' && inputs.mm2_force)
+      )
+    runs-on: ubuntu-latest
+    # ~282 pages at 1.5 s ≈ 8 min (+ backoff headroom); reprice ~1 min.
+    timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      VALUES_REVALIDATE_SECRET: ${{ secrets.VALUES_REVALIDATE_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Cheapest-first walk of the whole category, then import. The importer
+      # refuses to retire listings from an incomplete feed.
+      - name: Collect Eldorado listings and import raw rows
+        run: pnpm values:eldorado --game=murder-mystery-2 --crawl --write
+
+      - name: Upload the collected feed (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: mm2-market-${{ github.run_id }}
+          path: data/values-feeds/murder-mystery-2/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # NOT continue-on-error: a failed reprice or publish must fail the job.
+      - name: Reprice Murder Mystery 2 (publish once the hub is live)
+        run: pnpm reprice --game=murder-mystery-2 ${{ vars.MM2_HUB_LIVE == 'true' && env.PUBLISH_FLAG != 'none' && env.PUBLISH_FLAG || '' }}
