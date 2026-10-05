@@ -1,0 +1,290 @@
+{
+  "checked_at": "2026-10-05",
+  "game": "murder-mystery-2",
+  "ways": [
+    {
+      "slug": "coins-and-boxes",
+      "title": "Collect Coins and open Shop boxes",
+      "what_you_get": "A random weapon from one of the 11 Shop boxes (6 knife boxes, 3 gun boxes, Mystery Box 1 and 2). Each box has one Godly and its Chroma.",
+      "how": "Pick up Coins that spawn on the map during rounds (any role). Spend 1,000 Coins in the Shop to open one box. Diamonds (100) and Mystery Keys (1) also work, but Diamonds are Robux-only.",
+      "cost_or_time": "1,000 Coins per spin. The coin bag caps at 40 Coins a round (50 with the paid Elite Gamepass), so one spin = 25 full-bag rounds (20 with Elite).",
+      "odds": "Per spin, by rarity tier: Common 70%, Uncommon 15%, Rare 10%, Legendary 5%, Godly 0.2%, Chroma 0.004%. Our math from those odds: 500 spins (500,000 Coins, ~12,500 full-bag rounds) on average for one Godly; 347 spins (~347,000 Coins) for a 50% chance; ~1,150 spins for a 90% chance. A Chroma averages 25,000 spins (25 million Coins).",
+      "notes": "This is the one free source of new weapons that never closes. Most spins give Commons, which are worth little alone but feed crafting (see salvage-and-craft). The wiki's rarity odds add up to 100.2%, so treat them as rounded.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Coins",
+        "https://murder-mystery-2.fandom.com/wiki/Boxes",
+        "https://murder-mystery-2.fandom.com/wiki/Shop",
+        "https://murder-mystery-2.fandom.com/wiki/Mystery_Box_1",
+        "https://murder-mystery-2.fandom.com/wiki/Knife_Box_1",
+        "https://murder-mystery-2.fandom.com/wiki/Diamonds",
+        "https://murder-mystery-2.fandom.com/wiki/Mystery_Key",
+        "https://murder-mystery-2.fandom.com/wiki/Elite_Gamepass"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "salvage-and-craft",
+      "title": "Salvage weapons and craft a Seer",
+      "what_you_get": "Random Uncommon, Rare or Legendary weapons, the Godly knife Seer, or (late game) a Random Painted Seer, including a chance at Chroma Seer.",
+      "how": "Open your Inventory and press View to reach the Crafting Station. Salvaging a Common, Uncommon, Rare or Legendary weapon gives 2 shards of that rarity. Recipes: 12 Common shards = random Uncommon; 12 Uncommon = random Rare; 12 Rare = random Legendary; 20 Legendary shards = Seer; 10 Godly shards + 10 Godly Metal = Random Painted Seer.",
+      "cost_or_time": "Seer = 20 Legendary shards = 10 Legendary weapons salvaged. Our math: if you salvage every box drop and craft upward, a Seer costs about 135 box spins (~135,000 Coins, ~3,400 full-bag rounds) on average, far cheaper than unboxing a Godly. Painted Seer needs 10 Godly Metal, and Godly Metal only comes from salvaging Seers, so it costs 10 Seers plus 10 Godly shards.",
+      "odds": "Seer is guaranteed once you have the shards. Random crafts pick one of 5 fixed weapons per rarity.",
+      "notes": "Seer is the only Godly you can always earn for free with no luck involved. Salvaging destroys the weapon, so check a value list first and never salvage something worth more traded. Seer took only 10 Legendary shards before the 2019 Season 1 update. Event crafting recipes (Christmas 2025 effects) were removed when the event ended.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Crafting",
+        "https://murder-mystery-2.fandom.com/wiki/Shards",
+        "https://murder-mystery-2.fandom.com/wiki/Metals",
+        "https://murder-mystery-2.fandom.com/wiki/Seer"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "event-pass",
+      "title": "Event battle passes (Halloween, Christmas, some summers)",
+      "what_you_get": "Event weapons, pets and effects on each tier, ending in an event Godly (with a small Chroma chance). Items stay tradeable and stop being obtainable when the event ends.",
+      "how": "During a major event, rounds drop the event currency (Candies, Snow Tokens) instead of Coins. You spend it to unlock tiers one by one. MM2 passes have one track: there is no separate free and premium track.",
+      "cost_or_time": "Halloween 2025: 25 tiers, tier 1 free, tiers 2-25 at 800 Candies each, then the Raygun Godly for 90,000 Candies: 109,200 Candies in total. Christmas 2025: 30 tiers at 600 Snow Tokens each (tier 1 free), then Snowcannon for 100,000 Snow Tokens.",
+      "odds": "Tiers are fixed rewards, not random. Only the final Godly purchase has a small Chroma roll (rate not published).",
+      "notes": "Fully free if you collect the currency in rounds, but the full pass is a long grind. Event currency can also be bought with Robux. No event is running on 2026-10-05; Halloween 2026 has no announced date (Halloween 2025 started Oct 18, 2025).",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025",
+        "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+        "https://murder-mystery-2.fandom.com/wiki/Candies_(2025)",
+        "https://murder-mystery-2.fandom.com/wiki/Snow_Tokens"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "event-quests",
+      "title": "Event daily, weekly and event quests",
+      "what_you_get": "Event currency from daily and weekly quests, plus weapons, effects or emotes from Event Quests for finishing enough dailies.",
+      "how": "Only while an event runs. Christmas 2025 and Valentine's 2026 had 3 daily quests; Summer 2026 had 6 daily and 3 weekly quests. Dailies reset at 08:00 UTC; weeklies on Thursday.",
+      "cost_or_time": "Free; a few rounds a day for the length of the event (Summer 2026 ran Jul 23 - Aug 23, 2026).",
+      "odds": "Quest rewards are fixed. Currency from quests then buys random event-box spins (e.g. Summer Box '26: 120 Shells a spin, 0.2% Godly).",
+      "notes": "Summer 2026 and Valentine's 2026 used quest-only currencies (Shells, Heart Gems): you earned them by completing quests that count Coins collected, not by picking them up.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+        "https://murder-mystery-2.fandom.com/wiki/Valentines_Event_2026",
+        "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026",
+        "https://murder-mystery-2.fandom.com/wiki/Shells"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "live-events-and-hunts",
+      "title": "Live events, hidden-item hunts and collabs",
+      "what_you_get": "One-off free items for being there or finding hidden objects, e.g. the Lil' Alien pet (Halloween 2025 live event), the Reindeer knife (Santa's List hunt, Christmas 2025), the RB Knife (RB Battles, 2020), and badges and accessories from The Hunt: Roblox 20 (Sept 2026).",
+      "how": "Be in the game when the live event plays, or complete the hunt on the listed maps while it is live.",
+      "cost_or_time": "Free; minutes to a few hours, but only during a short window.",
+      "odds": "Guaranteed if you take part in time.",
+      "notes": "These never come back; afterwards the items are trade-only. The Hunt: Roblox 20 quests gave Hunt badges and accessories, not MM2 weapons; its MM2 weapons were sold in a 799-Robux Retro Bundle.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Lil%27_Alien",
+        "https://murder-mystery-2.fandom.com/wiki/Reindeer_(2025)",
+        "https://murder-mystery-2.fandom.com/wiki/RB_Knife",
+        "https://murder-mystery-2.fandom.com/wiki/The_Hunt:_Roblox_20_Event",
+        "https://murder-mystery-2.fandom.com/wiki/Badges"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "christmas-gifts",
+      "title": "Receive Christmas Gifts from other players",
+      "what_you_get": "A random weapon from any Shop mystery box per Gift (normal box odds). The sender earns the Gifting Center Godly after giving 100 Gifts.",
+      "how": "Christmas events only. Other players buy Gifts (600 Snow Tokens each in 2025) and can only open them on someone else, so receiving one costs you nothing.",
+      "cost_or_time": "Free to receive; depends on other players. Giving 100 Gifts to earn the Godly (Ornament in 2025) costs the giver 60,000 Snow Tokens.",
+      "odds": "Same rarity odds as a normal Shop box; Chroma Ornament was a 1 in 50 roll for givers in 2025.",
+      "notes": "Gifts cannot be traded or used on yourself. Seasonal only.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Gifts",
+        "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "leveling-and-prestige",
+      "title": "Leveling and Prestige",
+      "what_you_get": "No items. Level 10 unlocks trading. Roblox badges at levels 10-100. Level 100 lets you Prestige (up to Prestige X), which only resets your level and moves you up the server player list.",
+      "how": "Earn XP in rounds: surviving as Innocent (5 XP a second), a full coin bag (+900), Sheriff win (+900, +320 per Innocent saved), Murderer kills (+700 each). Winning or Elite gives 1.5x.",
+      "cost_or_time": "Free; plays out over many rounds.",
+      "odds": null,
+      "notes": "Be honest on the page: levels and prestige give no weapons, pets or coins. Their real value is the Level 10 trading unlock. Evo weapons evolve with XP but are bought with Robux.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/XP",
+        "https://murder-mystery-2.fandom.com/wiki/Prestige",
+        "https://murder-mystery-2.fandom.com/wiki/Badges",
+        "https://murder-mystery-2.fandom.com/wiki/Trading",
+        "https://murder-mystery-2.fandom.com/wiki/Evo_Weapons"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "trading-up",
+      "title": "Trading up (the honest version)",
+      "what_you_get": "Better items over time by making small, fair-or-better trades with other players.",
+      "how": "Reach Level 10. Start with what you unbox or craft (Seer is a common value unit: MM2Values measures items in Seers). Check a value list before every trade, trade for items in demand, take small overpays, and never send first or trade outside the official trade window.",
+      "cost_or_time": "Free but slow: many trades, each needing a willing partner.",
+      "odds": "No odds; it depends on the market and your patience. Most traders do not get rich.",
+      "notes": "Trading is the only way to get event-exclusive, code and promo items now. Risks: scams, value crashes after dupes, and trade-window bugs (the wiki lists several).",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Trading",
+        "https://murder-mystery-2.fandom.com/wiki/Duping",
+        "https://murder-mystery-2.fandom.com/wiki/Seer"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "event-leaderboards",
+      "title": "Event leaderboards (top 100 trophies)",
+      "what_you_get": "Untradeable trophy weapons for the top 100 currency collectors (and top gift-givers at Christmas) in a major event.",
+      "how": "Collect the most event currency during the event. At Christmas, bought Snow Tokens do not count toward the collecting board.",
+      "cost_or_time": "Free in theory; in practice it takes extreme play time against hundreds of thousands of players.",
+      "odds": "Top 100 out of hundreds of thousands of players.",
+      "notes": "Included for completeness; not a realistic route for most players.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Christmas_Event_2025",
+        "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025",
+        "https://murder-mystery-2.fandom.com/wiki/Unique_Weapons"
+      ],
+      "confidence": "high"
+    },
+    {
+      "slug": "daily-login-rewards",
+      "title": "Daily or login rewards",
+      "what_you_get": "None. Outside events, MM2 has no daily login reward, spin wheel or group reward.",
+      "how": "Not applicable. The closest thing is event daily quests (see event-quests), which only exist during events.",
+      "cost_or_time": null,
+      "odds": null,
+      "notes": "Checked by searching the MM2 wiki (no page or mention of a login, daily or group reward outside event quests). Not checked in-game.",
+      "sources": [
+        "https://murder-mystery-2.fandom.com/wiki/Summer_Event_2026",
+        "https://murder-mystery-2.fandom.com/wiki/Shop"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "codes": {
+    "redemption_available": true,
+    "redemption_ui_note": "Third-party guides updated in Sept-Oct 2026 say an 'Enter Code' box still sits at the bottom right of the Inventory. Some report the Redeem button does nothing. No code works either way. We did not check this in-game.",
+    "working": [],
+    "expired": [
+      { "code": "F1RSTC0D3", "reward": "Gifted (Uncommon knife)", "when": "2014-12-28, about 48 hours", "source": "https://murder-mystery-2.fandom.com/wiki/Gifted", "notes": "First MM2 code. The wiki also spells it F1RSTCOD3; some sites list G1FT3D." },
+      { "code": "R3PT1L3", "reward": "Reptile (Common knife)", "when": "2014-12-28/29, about 48 hours", "source": "https://murder-mystery-2.fandom.com/wiki/Reptile" },
+      { "code": "N30N", "reward": "Neon (Common knife)", "when": "2014-12-30, 24 hours (closed 12 hours early by mistake, then fixed)", "source": "https://murder-mystery-2.fandom.com/wiki/Neon", "notes": "The Codes page writes N3ON; the item page and Timeline write N30N." },
+      { "code": "2015", "reward": "2015 (Common knife)", "when": "2014-12-31 to 2015-01-01", "source": "https://murder-mystery-2.fandom.com/wiki/2015" },
+      { "code": "INF3CT3D", "reward": "Infected (Common knife)", "when": "2015-01-05, 7 days", "source": "https://murder-mystery-2.fandom.com/wiki/Infected" },
+      { "code": "G003Y", "reward": "Goo (Common knife)", "when": "2015-04-12 to 2015-04-17", "source": "https://murder-mystery-2.fandom.com/wiki/Goo" },
+      { "code": "PATR1CK", "reward": "Patrick (Common knife)", "when": "2016-03-17 (St. Patrick's Day)", "source": "https://murder-mystery-2.fandom.com/wiki/Patrick" },
+      { "code": "B4CK2SK00L", "reward": "Skool (Common knife)", "when": "Back-to-school season; year not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Skool", "notes": "The item page infobox says SK00L." },
+      { "code": "N3XTL3V3L", "reward": "TNL (Common knife)", "when": "2014-2016 era (The Next Level stream series); exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/TNL", "notes": "Some sites list TH3N3XTL3V3L." },
+      { "code": "PR1SM", "reward": "Prism (Common knife)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Prism" },
+      { "code": "AL3X", "reward": "Alex (Common knife, The Pals)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Alex" },
+      { "code": "C0RL", "reward": "Corl (Common knife, The Pals)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Corl" },
+      { "code": "D3NIS", "reward": "Denis (Common knife, The Pals)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Denis", "notes": "Item infobox spells it D3N1S." },
+      { "code": "SK3TCH", "reward": "Sketchy (Common knife, The Pals)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Sketchy" },
+      { "code": "SUB0", "reward": "Sub (Common knife, The Pals)", "when": "Pre-2019; exact date not recorded", "source": "https://murder-mystery-2.fandom.com/wiki/Sub" },
+      { "code": "HW2017", "reward": "Pumpkin (Common pet)", "when": "2017-10-27, Halloween Event 2017", "source": "https://murder-mystery-2.fandom.com/wiki/Pumpkin_(2017)", "notes": "The only code that gave a pet." },
+      { "code": "COMB4T2", "reward": "Combat II (Common knife)", "when": "About 2020-05-02 (May 2020 Update)", "source": "https://murder-mystery-2.fandom.com/wiki/May_2020_Update", "notes": "The LAST free in-game code. The item infobox spells it C0MB4T2. Many code sites wrongly say there have been no codes since 2017." }
+    ],
+    "promo_codes_not_free": [
+      { "item": "Eternal (Godly knife)", "how": "Code bundled with official merch from shopmm2.com", "when": "2016-11-05 to 2016-11-14", "status": "Ended; merch sold out", "source": "https://murder-mystery-2.fandom.com/wiki/Eternal" },
+      { "item": "Eternal II (Godly knife)", "how": "Merch code", "when": "2018-11-17", "status": "Ended", "source": "https://murder-mystery-2.fandom.com/wiki/Eternal_II" },
+      { "item": "Eternal III (Godly knife)", "how": "Merch code ($50 sweater)", "when": "2019-06-09", "status": "Ended", "source": "https://murder-mystery-2.fandom.com/wiki/Eternal_III" },
+      { "item": "Eternalcane (Godly knife)", "how": "Merch code, Christmas 2019", "when": "2019-12-06", "status": "Ended", "source": "https://murder-mystery-2.fandom.com/wiki/Eternalcane" },
+      { "item": "Eternal IV (Godly knife)", "how": "Merch code", "when": "2020-05-20", "status": "Ended", "source": "https://murder-mystery-2.fandom.com/wiki/Eternal_IV" },
+      { "item": "Rainbow knife + Rainbow Fire effect", "how": "Merch promo (date not recorded); the knife later moved to Knife Box 1", "when": "Pre-2018", "status": "Ended (the knife is still in Knife Box 1)", "source": "https://murder-mystery-2.fandom.com/wiki/Promos" },
+      { "item": "JD (Legendary knife)", "how": "JD YouTube channel giveaways or JD merch", "when": "Date not recorded", "status": "Ended", "source": "https://murder-mystery-2.fandom.com/wiki/JD" },
+      { "item": "SharkSeeker (Unique gun, untradeable)", "how": "Code inside the Hasbro NERF Shark Seeker blaster, redeemed at roblox.com/redeem", "when": "2021-06-28", "status": "Not free. A code from an unused blaster may still redeem; we could not confirm.", "source": "https://murder-mystery-2.fandom.com/wiki/SharkSeeker" },
+      { "item": "Dartbringer (Unique gun, untradeable)", "how": "Code inside the NERF Dartbringer blaster, redeemed at roblox.com/redeem", "when": "Released in game 2022-01-28", "status": "Not free. Same caveat as SharkSeeker.", "source": "https://murder-mystery-2.fandom.com/wiki/Dartbringer" },
+      { "item": "Mystery Enthusiast hat (Roblox accessory, not an MM2 item)", "how": "Code in the Roblox Toys Action Series 6 MM2 Game Pack", "when": "Date not recorded", "status": "Not free", "source": "https://murder-mystery-2.fandom.com/wiki/Merchandise" }
+    ],
+    "where_announced": [
+      "https://x.com/NikilisRBX",
+      "https://discord.com/invite/pnpbbtZ",
+      "https://www.roblox.com/games/142823291/Murder-Mystery-2",
+      "https://www.roblox.com/communities/1030692",
+      "https://www.instagram.com/nikilisrbx/",
+      "https://www.tiktok.com/@nikilis.rbx"
+    ],
+    "notes": "Verdict: no MM2 code works today, and none has been released in more than five years. The last free in-game code was COMB4T2 (Combat II) in May 2020, not 2017 as many code sites say. The last merch code was Eternal IV (May 2020). The NERF toy codes (2021-2022) came with a paid product and gave untradeable guns. Codes were always posted by Nikilis (@NikilisRBX on X) and on the official Discord (invite pnpbbtZ, created by Nikilis's account, about 606k members). shopmm2.com has no live site: its DNS has nameservers but no A record (2026-10-05). The Roblox game description still says 'follow ... for free knife codes', which is old text and not a sign of live codes."
+  },
+  "scams": [
+    {
+      "title": "Fake 'MM2 codes' and code generator sites",
+      "how_it_works": "Sites, videos and TikToks list 'new working codes' or a 'godly generator' that asks for your username or password, a survey, an app install or a 'human verification' step.",
+      "how_to_spot": "MM2 has had no working code since May 2020. Real codes only ever came from Nikilis's own accounts, and Roblox says no generator exists. Anything that asks for your password or a download is phishing."
+    },
+    {
+      "title": "Free Robux or 'free godly' giveaways",
+      "how_it_works": "Accounts promise godlies or Robux if you join a Discord, invite friends, follow, log in on a link, or 'trade first to enter'.",
+      "how_to_spot": "Roblox has no sanctioned free-Robux offers. A real giveaway never needs your password, a login on another site, or your items first. The 2021 Batwing dupe spread through exactly this kind of 'invite rewards' Discord."
+    },
+    {
+      "title": "Trust trades and 'you go first'",
+      "how_it_works": "The scammer asks you to give your item first (or in a separate trade, or 'to hold it for the giveaway'), promising to send theirs back after. They never do.",
+      "how_to_spot": "Only trade inside one in-game trade window where both sides' items show before you accept. Never accept a deal that needs you to give first."
+    },
+    {
+      "title": "Duplication ('dupe') offers and duped items",
+      "how_it_works": "People offer to 'dupe' your godly or sell dupe scripts. They keep your item, or the script steals your account. Mass dupes also crash the value of the duped items.",
+      "how_to_spot": "Duping is an exploit. Nikilis bans dupers (Aug 2021 ban wave). Anyone offering to double your items is either a scammer or about to get you banned."
+    },
+    {
+      "title": "Untradeable-item and swap tricks in the trade window",
+      "how_it_works": "Scammers add items that cannot actually transfer (effects, emotes, powers, radios via an exploit seen in Jan 2022) or quickly swap a valuable item for a lookalike before you accept.",
+      "how_to_spot": "Re-check every slot before you accept; only weapons, pets and misc items trade. Use a value list, and decline anything that changes at the last second."
+    },
+    {
+      "title": "Account sharing and 'middleman' requests",
+      "how_it_works": "Someone asks you to log into their account, share yours, or hand items to a 'middleman' who disappears.",
+      "how_to_spot": "Never share a password or 2-step code. Roblox only asks for your password on its own login page."
+    }
+  ],
+  "watch_sources": [
+    {
+      "url": "https://murder-mystery-2.fandom.com/api.php?action=query&prop=revisions&titles=Codes|Timeline|Shop|Boxes|Crafting|Promos&rvprop=ids|timestamp&format=json&formatversion=2",
+      "what": "Wiki pages for codes, the timeline, Shop, Boxes, Crafting and Promos.",
+      "how_to_detect_change": "Store each page's revid. If it changes, fetch the page content and diff it (Codes 'Working Codes' section, new Timeline rows, new boxes or recipes). Revids on 2026-10-05: Codes 167612, Timeline 179097, Shop 178319, Boxes 178756, Crafting 179406."
+    },
+    {
+      "url": "https://murder-mystery-2.fandom.com/api.php?action=query&prop=revisions&titles=Halloween_Event_2026|Christmas_Event_2026|Season_2&rvprop=ids|timestamp&format=json&formatversion=2",
+      "what": "Future event and update pages, missing on 2026-10-05.",
+      "how_to_detect_change": "A page going from 'missing' to having a revision means the wiki has started covering the event. Then read its start date and items."
+    },
+    {
+      "url": "https://murder-mystery-2.fandom.com/api.php?action=query&list=recentchanges&rcnamespace=0&rclimit=100&rcprop=title|ids|timestamp&format=json",
+      "what": "All recent article edits on the MM2 wiki.",
+      "how_to_detect_change": "Keep the last rcid seen. Flag new titles containing 'Event', 'Box', 'Bundle', 'Update' or 'Code'."
+    },
+    {
+      "url": "https://games.roblox.com/v1/games?universeIds=66654135",
+      "what": "MM2's Roblox game record (universe 66654135, place 142823291).",
+      "how_to_detect_change": "Compare 'updated' (2026-09-24T18:02:21Z on 2026-10-05) and 'description'. A new updated time means a game update was published; a description change can announce an event or code."
+    },
+    {
+      "url": "https://apis.roblox.com/game-passes/v1/universes/66654135/game-passes?passView=Full&pageSize=100",
+      "what": "MM2 game passes (event bundles appear here).",
+      "how_to_detect_change": "Diff the pass ids and their isForSale flags. A new bundle or pass going on sale usually marks an event start."
+    },
+    {
+      "url": "https://apis.roblox.com/virtual-events/v1/universes/66654135/virtual-events?limit=10",
+      "what": "Roblox Events entries for MM2 (Summer 2026 had one).",
+      "how_to_detect_change": "A non-empty data list, or new event ids, means an upcoming event has been scheduled. It returned an empty list on 2026-10-05, even with fromUtc=2026-01-01, so it may only show upcoming or active events (unconfirmed)."
+    },
+    {
+      "url": "https://groups.roblox.com/v1/groups/1030692",
+      "what": "Nikilis's official 'Murder Mystery' Roblox group (about 4.76M members).",
+      "how_to_detect_change": "Watch the 'shout' field (null on 2026-10-05) and the description."
+    },
+    {
+      "url": "https://discord.com/api/v9/invites/pnpbbtZ?with_counts=true",
+      "what": "Official MM2 Discord (invite made by nikilisrbx). Code and event news would be posted in its announcement channels.",
+      "how_to_detect_change": "Without a bot in the server, only the invite metadata can be read (name, description, member count). A real watch needs the owner to follow the announcement channel into a DropMarket server."
+    },
+    {
+      "url": "https://x.com/NikilisRBX",
+      "what": "Nikilis's X account, where every past code and event was announced.",
+      "how_to_detect_change": "X has no free API. Check by hand, or treat the wiki and Roblox signals above as a proxy, since the wiki usually logs new posts within hours."
+    }
+  ]
+}
