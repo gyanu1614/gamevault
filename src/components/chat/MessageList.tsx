@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
 import { Loader2, PackageCheck, XCircle } from 'lucide-react'
 import MessageBubble from './MessageBubble'
 import OrderMessageCard from './OrderMessageCard'
@@ -12,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { isSystemMessage, parseSystemNotice } from '@/lib/chat/system-notice'
 import { useStickToBottom } from 'use-stick-to-bottom'
+import { lastOwnMessageId, statusLabel, type LocalFile, type LocalStatus } from '@/lib/chat/message-state'
 
 interface Message {
   id: string
@@ -19,7 +21,12 @@ interface Message {
   /** NULL = a DropMarket system notice (see lib/chat/system-notice). */
   sender_id: string | null
   is_read: boolean
+  read_at?: string | null
   created_at: string
+  attachments?: string[] | null
+  /** Optimistic send state (order chat); unset once the server has it. */
+  local_status?: LocalStatus
+  local_files?: LocalFile[]
 }
 
 interface MessageListProps {
@@ -60,6 +67,10 @@ interface MessageListProps {
   onViewOrder?: () => void
   isLoading?: boolean
   autoScroll?: boolean
+  /** Re-send an own message that failed. */
+  onRetry?: (id: string) => void
+  /** Whether the newest message is in view (drives mark-as-read). */
+  onAtBottomChange?: (atBottom: boolean) => void
 }
 
 export default function MessageList({
@@ -72,14 +83,17 @@ export default function MessageList({
   onViewOrder,
   isLoading = false,
   autoScroll = true,
+  onRetry,
+  onAtBottomChange,
 }: MessageListProps) {
   // Chat scroll: opens at the newest message, follows new messages while
   // the reader is at the bottom, and leaves them alone once they scroll up
   // to read history (use-stick-to-bottom, spring-animated, resize-aware).
-  const { scrollRef, contentRef, scrollToBottom } = useStickToBottom({
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     initial: 'instant',
     resize: 'smooth',
   })
+  const reduceMotion = useReducedMotion()
   const [adminUsers, setAdminUsers] = useState<Record<string, { username: string; avatar_url?: string }>>({})
   const supabase = createClient()
 
@@ -95,10 +109,15 @@ export default function MessageList({
     currentUserId !== order.seller.id
 
   // Fetch admin info for messages sent by admins
+  // Keyed on the SET of senders, not on `messages`: an optimistic send, its
+  // ack and every read receipt change the array, and each change used to
+  // re-run these two queries.
+  const senderKey = Array.from(new Set(messages.map((m) => m.sender_id).filter((id): id is string => !!id)))
+    .sort()
+    .join(',')
   useEffect(() => {
     const fetchAdminUsers = async () => {
-      // Get unique sender IDs from messages
-      const senderIds = Array.from(new Set(messages.map(m => m.sender_id).filter((id): id is string => !!id)))
+      const senderIds = senderKey.split(',')
 
       // Check which senders are admins
       const { data: admins } = await supabase
@@ -129,10 +148,10 @@ export default function MessageList({
       }
     }
 
-    if (messages.length > 0) {
+    if (senderKey) {
       fetchAdminUsers()
     }
-  }, [messages, supabase])
+  }, [senderKey, supabase])
 
   // Sending your own message always brings you back down to it, even if
   // you had scrolled up. Other people's messages only follow when you're
@@ -141,12 +160,39 @@ export default function MessageList({
   const lastId = lastMessage?.id
   const lastIsOwn = lastMessage?.sender_id === currentUserId
   const prevLastIdRef = useRef(lastId)
+  // Messages from the other side that landed while the reader was scrolled
+  // up: counted for the "New messages" pill instead of yanking the view.
+  const [unseen, setUnseen] = useState(0)
   useEffect(() => {
-    if (autoScroll && lastId && lastId !== prevLastIdRef.current && lastIsOwn) {
-      void scrollToBottom('smooth')
+    if (lastId && lastId !== prevLastIdRef.current && prevLastIdRef.current !== undefined) {
+      if (lastIsOwn) {
+        if (autoScroll) void scrollToBottom('smooth')
+      } else if (!isAtBottom) {
+        setUnseen((n) => n + 1)
+      }
     }
     prevLastIdRef.current = lastId
-  }, [lastId, lastIsOwn, autoScroll, scrollToBottom])
+  }, [lastId, lastIsOwn, autoScroll, scrollToBottom, isAtBottom])
+
+  useEffect(() => {
+    if (isAtBottom) setUnseen(0)
+    onAtBottomChange?.(isAtBottom)
+  }, [isAtBottom, onAtBottomChange])
+
+  // Status words sit under the newest own message only ("Sent",
+  // "Read 2m ago"); older own messages keep just the tick. "Read Xm ago"
+  // is relative, so it re-renders once a minute while it is showing.
+  const lastOwnId = lastOwnMessageId(messages, currentUserId)
+  const lastOwn = lastOwnId ? messages.find((m) => m.id === lastOwnId) : undefined
+  const [now, setNow] = useState(() => new Date())
+  const lastOwnReadAt = lastOwn?.read_at ?? null
+  useEffect(() => {
+    if (!lastOwnReadAt) return
+    setNow(new Date())
+    const t = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(t)
+  }, [lastOwnReadAt])
+  const lastOwnStatus = lastOwn ? statusLabel(lastOwn, now) : null
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
@@ -189,6 +235,7 @@ export default function MessageList({
   }
 
   return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
     <div
       ref={scrollRef}
       className="min-h-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20"
@@ -232,7 +279,10 @@ export default function MessageList({
           </div>
 
           {/* Messages for this date */}
-          <AnimatePresence mode="popLayout">
+          {/* initial={false}: the thread opens settled; only messages
+              that arrive later animate in. Keys are the row ids, which an
+              optimistic message already has, so a send never re-mounts. */}
+          <AnimatePresence initial={false}>
             {dateMessages.map((message, index) => {
               // DropMarket notices (no sender): dispute cards. Anything
               // unrecognised from the system sender is not shown.
@@ -338,6 +388,8 @@ export default function MessageList({
                   isBuyerMessage={isBuyerMessage}
                   isSellerMessage={isSellerMessage}
                   isAdminView={isAdminView}
+                  statusText={message.id === lastOwnId && message.local_status === undefined ? lastOwnStatus : null}
+                  onRetry={onRetry}
                 />
               )
             })}
@@ -345,6 +397,29 @@ export default function MessageList({
         </div>
       ))}
 
+    </div>
+    </div>
+
+    {/* New messages arrived while scrolled up: a pill, not a jump. */}
+    {/* Centred by a static wrapper: framer owns the button's transform. */}
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+    <AnimatePresence>
+      {unseen > 0 && !isAtBottom && (
+        <motion.button
+          key="new-messages"
+          type="button"
+          onClick={() => void scrollToBottom('smooth')}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+          transition={reduceMotion ? { duration: 0.15 } : { type: 'spring', bounce: 0, duration: 0.3 }}
+          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#24252B] px-3.5 py-2 text-[12.5px] font-semibold text-text-primary shadow-[0_6px_20px_rgba(0,0,0,0.45)] hover:bg-[#2B2C33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        >
+          <ArrowDownIcon className="h-3.5 w-3.5" weight="bold" aria-hidden />
+          {unseen === 1 ? '1 New Message' : `${unseen} New Messages`}
+        </motion.button>
+      )}
+    </AnimatePresence>
     </div>
     </div>
   )

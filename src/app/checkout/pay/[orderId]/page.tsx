@@ -1,19 +1,20 @@
 /**
- * /checkout/pay/[orderId] — the native BTCPay payment page ("Ivory Receipt",
- * design A2: forest header + stepper + receipt body on the dark ground).
+ * /checkout/pay/[orderId] — the native BTCPay payment page (2026-10 layout:
+ * payment column + order summary / status column on the dark ground).
  *
  * Server side: authenticate + verify the buyer owns the order, bounce anywhere
  * sensible if it isn't payable, pull the live invoice + per-coin payment
- * methods from Greenfield. QR rendering happens client-side (qr-code-styling,
- * coin logo embedded); the client polls getPaymentPageStatus — including the
- * instant chain-watch — while the verified webhook remains the only thing
- * that actually marks the order paid.
+ * methods from Greenfield. The QR is drawn as plain SVG from qr.ts (payload =
+ * BTCPay's own payment URI, verbatim); the client polls getPaymentPageStatus
+ * (including the instant chain-watch) while the verified webhook remains the
+ * only thing that actually marks the order paid.
  */
 
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
 import { createClient } from '@/lib/supabase/server'
-import PayClient, { type PayMethod } from './_PayClient'
+import { withOwnOrderFields } from '@/lib/orders/own-fields'
+import PayClient, { type PayMethod, type PaySummary } from './_PayClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,11 +68,11 @@ function methodMeta(
   if (u.includes('USDT')) {
     const chain =
       u.includes('TRON') || address.startsWith('T')
-        ? { network: 'TRON · TRC20', name: 'TRON', eta: 'usually under a minute' }
+        ? { network: 'TRON (TRC20)', name: 'TRON', eta: 'usually under a minute' }
         : u.includes('POLYGON') || u.includes('MATIC')
           ? { network: 'Polygon', name: 'Polygon', eta: 'usually under a minute' }
           : u.includes('ETH')
-            ? { network: 'Ethereum · ERC20', name: 'Ethereum', eta: 'usually 2–5 minutes' }
+            ? { network: 'Ethereum (ERC20)', name: 'Ethereum', eta: 'usually 2 to 5 minutes' }
             : null
     return {
       label: 'USDT',
@@ -81,14 +82,14 @@ function methodMeta(
       networkName: chain?.name ?? null,
       confirmEta: chain?.eta ?? null,
       networkWarning: chain
-        ? `Send only USDT on the ${chain.name} network — funds sent on any other network can’t be recovered.`
-        : 'Double-check the network in your wallet matches this address — funds sent on the wrong network can’t be recovered.',
+        ? `Send only USDT on the ${chain.name} network. Funds sent on any other network can’t be recovered.`
+        : 'Check the network in your wallet matches this address. Funds sent on the wrong network can’t be recovered.',
     }
   }
   if (u.includes('LN'))
-    return { label: 'Bitcoin (Lightning)', short: 'BTC ⚡', icon: '/crypto/btc.svg', network: 'Lightning', networkName: 'Lightning', confirmEta: 'usually instant', networkWarning: null }
+    return { label: 'Bitcoin (Lightning)', short: 'BTC', icon: '/crypto/btc.svg', network: 'Lightning', networkName: 'Lightning', confirmEta: 'usually instant', networkWarning: null }
   if (u.startsWith('BTC'))
-    return { label: 'Bitcoin', short: 'BTC', icon: '/crypto/btc.svg', network: 'Bitcoin', networkName: 'Bitcoin', confirmEta: 'usually 10–20 minutes', networkWarning: null }
+    return { label: 'Bitcoin', short: 'BTC', icon: '/crypto/btc.svg', network: 'Bitcoin', networkName: 'Bitcoin', confirmEta: 'usually 10 to 20 minutes', networkWarning: null }
   const code = u.split('-')[0]
   return { label: code, short: code, icon: null, network: null, networkName: null, confirmEta: null, networkWarning: null }
 }
@@ -109,7 +110,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   const { data: order } = (await supabase
     .from('orders')
     .select(
-      'id, order_number, buyer_id, status, total_amount, currency, listing_id, listing:listing_id ( title, images, game:game_id ( name ) )'
+      'id, order_number, buyer_id, status, quantity, subtotal, total_amount, currency, listing_id, listing:listing_id ( title, images, game:game_id ( name ) )'
     )
     .eq('id', orderId)
     .single()) as any
@@ -137,6 +138,36 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       : `/account/orders/${orderId}`)
   }
   const invoiceId: string = attempt.provider_charge_id
+
+  // Order summary (display only). Item price + total are shared columns;
+  // promo / processing fee / store credit are the buyer's own private fields,
+  // read through the auth.uid()-scoped RPC. Same arithmetic as the order
+  // page's breakdown; on any read failure the summary shows the total only.
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const totalNum = Number(order.total_amount) || 0
+  let summary: PaySummary = {
+    itemPrice: null,
+    quantity: Number(order.quantity) || 1,
+    serviceFee: null,
+    promoDiscount: 0,
+    storeCredit: 0,
+    total: totalNum,
+  }
+  try {
+    const [own] = await withOwnOrderFields(supabase, 'buyer', [{ id: order.id as string }])
+    const itemPrice = Number(order.subtotal ?? 0)
+    const promoDiscount = Number(own?.promo_discount ?? 0) || 0
+    summary = {
+      ...summary,
+      itemPrice: itemPrice > 0 ? itemPrice : null,
+      // Marketplace + payment fee as one Service Fee row (order page model).
+      serviceFee: itemPrice > 0 ? Math.max(0, round2(totalNum - itemPrice + promoDiscount)) : null,
+      promoDiscount,
+      storeCredit: Number(own?.wallet_amount_used ?? 0) || 0,
+    }
+  } catch (e) {
+    console.error('[PayPage] own order fields read failed:', e)
+  }
 
   // Live invoice + payable methods from Greenfield.
   const { btcpayFetchInvoice, btcpayFetchPaymentMethods } = await import(
@@ -194,7 +225,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
         listingTitle={order.listing?.title ?? 'Your Order'}
         itemImage={order.listing?.images?.[0] ?? null}
         gameName={order.listing?.game?.name ?? null}
-        totalAmount={Number(order.total_amount) || 0}
+        summary={summary}
         currency={order.currency || 'USD'}
         invoiceAmount={invoiceAmount}
         initialInvoiceStatus={invoiceStatus}
