@@ -143,7 +143,7 @@ export default function HowItWorksBand({
         ))}
 
         {/* 4 — the promise, wide and green. */}
-        <Tile className="hiw-tile--safe flex items-center sm:col-span-2">
+        <Tile className="hiw-tile--safe flex items-center max-sm:pt-12 sm:col-span-2">
           <Progress step={4} tone="green" />
           <div className="flex w-full items-center gap-4">
             <span

@@ -365,7 +365,18 @@ export function GameHub({
         {hasCategories && <SellPrompt gameSlug={gameSlug} gameName={gameName} />}
       </div>
 
-      <HowItWorksBand title={`How to Buy ${gameName} Items on DropMarket`} />
+      <HowItWorksBand
+        title={`How to Buy ${gameName} Items on DropMarket`}
+        highlight={
+          totalOffers > 0
+            ? {
+                label: `Live on DropMarket`,
+                value: `${totalOffers.toLocaleString('en-US')} ${gameName} ${totalOffers === 1 ? 'Offer' : 'Offers'}`,
+                note: 'From ID-verified sellers',
+              }
+            : null
+        }
+      />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* About — the SEO intro, as readable copy (it used to be the hero
