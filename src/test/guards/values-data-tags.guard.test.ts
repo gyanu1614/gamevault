@@ -37,6 +37,7 @@ const SCOPE_DIRS = [
   `${HUB}/events`, // events archive (values_events + live prices)
   `${HUB}/free-items`, // free items guide (live prices of the Godlies it names)
   `${HUB}/codes`, // codes page (live prices of the merch-code items)
+  `${HUB}/chromas`, // Chroma hub (live Chroma + normal prices, events)
 ]
 
 /** Single files outside those directories that read values data. */

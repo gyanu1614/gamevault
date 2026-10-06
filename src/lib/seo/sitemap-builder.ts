@@ -210,6 +210,13 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
         }
       }
     }
+    // The Chroma hub: lastmod = the newest Chroma price move (its numbers are live prices).
+    if (theme.pages.chromas) {
+      const chromaPrices = input.pipelineItems.filter((i) => i.gameSlug === slug && i.rarity === 'Chroma')
+      if (chromaPrices.length > 0) {
+        out.push({ url: at(`/${slug}/chromas`), ...dated(newest(...chromaPrices.map((i) => i.priceChangedAt))), changeFrequency: 'daily', priority: 0.8 })
+      }
+    }
     // The honest guides: lastmod = the research's own check date (build-time seed).
     if (theme.pages.freeItems && freeGuideLastmod(slug)) {
       out.push({ url: at(`/${slug}/free-items`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })

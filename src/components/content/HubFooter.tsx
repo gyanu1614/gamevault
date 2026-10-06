@@ -56,6 +56,7 @@ export interface HubFooterLink {
 const FOOTER_TOOL_NAME: Record<HubTool, (gameName: string) => string> = {
   values: () => 'Value List',
   calculator: () => 'WFL Calculator',
+  chromas: (g) => `${g} Chroma Values`,
   events: (g) => `${g} Events`,
   freeItems: (g) => `Free ${g} Items`,
   codes: (g) => `${g} Codes`,

@@ -113,6 +113,17 @@ describe('which URLs are listed', () => {
     expect(all.filter((u) => /\/(free-items|codes)$/.test(u))).toHaveLength(2)
   })
 
+  it('lists the MM2 Chroma hub, dated by the newest Chroma price move, only while a Chroma is priced', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-03T00:00:00Z', sampleSize: 37 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-luger', rarity: 'Chroma', priceChangedAt: '2026-10-04T00:00:00Z', sampleSize: 2 },
+    ]
+    expect(lastmod(`${BASE}/murder-mystery-2/chromas`, { pipelineItems })).toBe('2026-10-04T00:00:00Z')
+    expect(urls({ pipelineItems: pipelineItems.slice(0, 1) })).not.toContain(`${BASE}/murder-mystery-2/chromas`)
+    expect(urls().filter((u) => u.endsWith('/chromas'))).toEqual([])
+  })
+
   it('lists no events hub for a game with no published events', () => {
     expect(urls({ valueEvents: [] })).not.toContain(`${BASE}/murder-mystery-2/events`)
   })

@@ -236,3 +236,20 @@ export async function getValueItemEvent(
   const row = (data ?? [])[0] as { slug: string; name: string } | undefined
   return row ? { slug: row.slug, name: row.name } : null
 }
+
+/**
+ * Item slug → the event it first came from (earliest year, then start date),
+ * for every item any published event lists. One tagged read of the events
+ * (no catalogue join) — the Chroma hub labels and groups its rows with it.
+ */
+export async function getValueItemEventMap(gameSlug: string): Promise<Map<string, { slug: string; name: string }>> {
+  const rows = await readEventRows(gameSlug)
+  const oldestFirst = [...rows].sort(
+    (a, b) => a.year - b.year || (a.starts_on ?? '9999').localeCompare(b.starts_on ?? '9999'),
+  )
+  const out = new Map<string, { slug: string; name: string }>()
+  for (const r of oldestFirst) {
+    for (const i of itemRows(r.items)) if (i.slug && !out.has(i.slug)) out.set(i.slug, { slug: r.slug, name: r.name })
+  }
+  return out
+}

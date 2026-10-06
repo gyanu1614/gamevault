@@ -95,6 +95,8 @@ export interface HubPageSet {
   freeItems: boolean
   /** The codes page: /[game]/codes — the verdict, every expired code, scam warnings. */
   codes: boolean
+  /** The Chroma hub: /[game]/chromas — every Chroma, its price vs its normal version, the unbox maths. */
+  chromas: boolean
 }
 
 /** A HubNav tool tab — each is also a HubPageSet page, served at HUB_TOOL_PATH[tool] (./hub-tools). */
@@ -223,6 +225,7 @@ const DEFAULT_THEME: GameContentTheme = {
     events: false,
     freeItems: false,
     codes: false,
+    chromas: false,
   },
   navTools: [],
   itemNoun: 'Item',
@@ -264,6 +267,7 @@ const THEMES: Record<string, GameContentTheme> = {
       events: false,
       freeItems: false,
       codes: false,
+      chromas: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Brainrot',
@@ -310,6 +314,7 @@ const THEMES: Record<string, GameContentTheme> = {
       events: false,
       freeItems: false,
       codes: false,
+      chromas: false,
     },
     navTools: ['values'],
     itemNoun: 'Egg',
@@ -359,6 +364,7 @@ const THEMES: Record<string, GameContentTheme> = {
       events: false,
       freeItems: false,
       codes: false,
+      chromas: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Pet',
@@ -409,8 +415,11 @@ const THEMES: Record<string, GameContentTheme> = {
       // every real free way with the odds, and the codes verdict (none work).
       freeItems: true,
       codes: true,
+      // The Chroma hub (2026-10-05): every Chroma with its price, its normal
+      // version's price and the multiple, plus the unbox-vs-buy maths.
+      chromas: true,
     },
-    navTools: ['values', 'events', 'freeItems', 'codes'],
+    navTools: ['values', 'chromas', 'events', 'freeItems', 'codes'],
     itemNoun: 'Item',
     itemNounPlural: 'Items',
     // Chroma is its own item with its own price (chroma-fang → fang), not a

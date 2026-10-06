@@ -352,7 +352,7 @@ async function FreeItemsBody({
         {chromas.length > 0 && (
           <SimilarItemsRail
             title={chromaRailTitle(n)}
-            seeAllHref={`/${gameSlug}/values`}
+            seeAllHref={hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : `/${gameSlug}/values`}
             itemNoun="chromas"
             className="border-t border-white/[0.07] pt-10"
             items={chromas.map((c) => ({

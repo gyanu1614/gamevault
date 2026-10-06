@@ -17,6 +17,9 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
 import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
+import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
+import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
+import Link from '@/components/navigation/AppLink'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
@@ -69,6 +72,7 @@ export default function ValueListClient({
   hub,
   hasTrends,
   freshness,
+  chromaHubHref = null,
 }: {
   gameSlug: string
   gameName: string
@@ -77,6 +81,8 @@ export default function ValueListClient({
   /** At least one item has a 7-day change — gates the Movers sort. */
   hasTrends: boolean
   freshness: { lastChangedAt: string | null; listingCount: number; sourceCount: number }
+  /** The game's Chroma hub (/[game]/chromas), offered while the Chroma tile is on. */
+  chromaHubHref?: string | null
 }) {
   const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
   const reduceMotion = useReducedMotion()
@@ -229,6 +235,17 @@ export default function ValueListClient({
             label="Filter by rarity or type"
           />
         </div>
+
+        {chromaHubHref && view === 'chroma' && (
+          <Link
+            href={chromaHubHref}
+            className="group mt-3 inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            <DiamondIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+            Every Chroma vs Its Normal Version, With the Unbox Odds
+            <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        )}
 
         <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-text-secondary">

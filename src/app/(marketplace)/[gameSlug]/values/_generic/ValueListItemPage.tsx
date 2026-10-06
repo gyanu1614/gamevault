@@ -3,6 +3,7 @@ import Link from '@/components/navigation/AppLink'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
+import { DiamondIcon } from '@phosphor-icons/react/dist/ssr/Diamond'
 import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -74,6 +75,8 @@ export default async function ValueListItemPage({
   const base = item.baseItemId ? items.find((i) => i.id === item.baseItemId) ?? null : null
   const chroma = base ? null : items.find((i) => i.baseItemId === item.id) ?? null
   const counterpart = base ?? chroma
+  // A Chroma links up to the Chroma hub (which links every Chroma page back).
+  const chromaHubHref = item.rarity === 'Chroma' && hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null
 
   const price = item.price
   const cheapestUsd = price?.cheapestUsd ?? null
@@ -155,16 +158,31 @@ export default async function ValueListItemPage({
           <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
             What {item.name} sells for in real money — from live listings by reputable sellers.
           </p>
-          {/* Internal link back to its event (the event page links here). */}
-          {fromEvent && (
-            <Link
-              href={`/${gameSlug}/events/${fromEvent.slug}`}
-              className="group mt-3 inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <CalendarStarIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
-              From the {fromEvent.name} Event
-              <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
-            </Link>
+          {/* Internal links: back to its event (the event page links here) and,
+              for a Chroma, to the Chroma hub (every Chroma vs its normal version). */}
+          {(fromEvent || chromaHubHref) && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+              {fromEvent && (
+                <Link
+                  href={`/${gameSlug}/events/${fromEvent.slug}`}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <CalendarStarIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  From the {fromEvent.name} Event
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+              {chromaHubHref && (
+                <Link
+                  href={chromaHubHref}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <DiamondIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  All {hub.shortName} Chromas
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+            </div>
           )}
         </div>
 

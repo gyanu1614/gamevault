@@ -150,6 +150,7 @@ async function ValueListBody({
           listingCount: freshness.listingCount,
           sourceCount: freshness.sourceCount,
         }}
+        chromaHubHref={hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null}
       />
 
       <ValuesSeo
@@ -166,6 +167,7 @@ async function ValueListBody({
           buyHref,
           top,
           freeGuideHref: hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null,
+          chromaHubHref: hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null,
         })}
       />
 
@@ -182,6 +184,7 @@ function valueListIntro({
   buyHref,
   top,
   freeGuideHref,
+  chromaHubHref,
 }: {
   gameSlug: string
   gameName: string
@@ -190,6 +193,8 @@ function valueListIntro({
   top: ValueListRow | undefined
   /** The game's honest free-items guide, when it publishes one. */
   freeGuideHref: string | null
+  /** The game's Chroma hub, when it publishes one. */
+  chromaHubHref: string | null
 }): { heading: string; body: React.ReactNode }[] {
   return [
     {
@@ -232,7 +237,17 @@ function valueListIntro({
           In {gameName} most of the money sits in a small set of items. Event
           Godlies and Ancients never come back once the event ends, so supply only
           shrinks, and a Chroma unboxes far less often than its normal version —
-          which is why a Chroma can sell for many times its base weapon. Once you
+          which is why a Chroma can sell for many times its base weapon
+          {chromaHubHref && (
+            <>
+              {' '}(see{' '}
+              <Link href={chromaHubHref} className={linkCls}>
+                every {shortName} Chroma&apos;s price next to its normal version
+              </Link>
+              )
+            </>
+          )}
+          . Once you
           know what an item is worth you can{' '}
           <Link href={buyHref} className={linkCls}>
             buy {shortName} items
