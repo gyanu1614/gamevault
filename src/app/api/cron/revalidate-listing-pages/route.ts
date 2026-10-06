@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { GAME_DIRECTORY_TAG, PAUSED_SELLERS_TAG, TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
+import {
+  GAME_DIRECTORY_TAG,
+  HOME_LISTINGS_TAG,
+  PAUSED_SELLERS_TAG,
+  TEST_SELLERS_TAG,
+} from '@/lib/revalidation/tags'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 /**
@@ -11,9 +16,17 @@ import { isCronAuthorized } from '@/lib/security/cron-auth'
  * This is the safety net for anything that changes what those pages show
  * without a mutation path: a DB-side status change, an admin toggling a game
  * or category, a revalidateTag that failed. Once a night every category page
- * is marked stale by ROUTE PATTERN (the only form Next matches for a dynamic
- * route), along with the shared reads. Lazy: a page re-renders on its next
- * visit, so the cost is bounded by the traffic those pages get anyway.
+ * and game hub is marked stale by ROUTE PATTERN (the only form Next matches
+ * for a dynamic route), along with the shared reads and the homepage rails.
+ * Lazy: a page re-renders on its next visit, so the cost is bounded by the
+ * traffic those pages get anyway.
+ *
+ * The pattern must include the route group: Next 14 tags a render with its
+ * FILE path (`/(marketplace)/[gameSlug]/[categorySlug]/page`), so
+ * `revalidatePath('/[gameSlug]/[categorySlug]', 'page')` matched nothing —
+ * until 2026-10-05 this backstop refreshed no listing data at all. The path
+ * tag also purges every fetch those renders made, untagged ones included.
+ * Guarded by listings-data-tags.guard.test.ts.
  *
  * Auth: the same CRON_SECRET bearer every cron uses; unset → 401, never open.
  */
@@ -26,13 +39,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  revalidatePath('/[gameSlug]/[categorySlug]', 'page')
-  const tags = [PAUSED_SELLERS_TAG, TEST_SELLERS_TAG, GAME_DIRECTORY_TAG]
+  // Literal calls, so the guard can check each pattern names a real page file.
+  revalidatePath('/(marketplace)/[gameSlug]/[categorySlug]', 'page')
+  revalidatePath('/(marketplace)/[gameSlug]', 'page')
+  const paths = ['/(marketplace)/[gameSlug]/[categorySlug]', '/(marketplace)/[gameSlug]']
+  const tags = [PAUSED_SELLERS_TAG, TEST_SELLERS_TAG, GAME_DIRECTORY_TAG, HOME_LISTINGS_TAG]
   for (const tag of tags) revalidateTag(tag)
 
   return NextResponse.json({
     ok: true,
-    revalidated: ['/[gameSlug]/[categorySlug]', ...tags],
+    revalidated: [...paths, ...tags],
     revalidated_at: new Date().toISOString(),
   })
 }

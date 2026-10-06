@@ -1,6 +1,8 @@
 // Cookie-free: the homepage is static (ISR). The cookie client calls
-// cookies(), which would force it to render per request.
-import { createAnonClient } from '@/lib/supabase/anon'
+// cookies(), which would force it to render per request. Listing reads are
+// cached under HOME_LISTINGS_TAG (lib/listings/read-client), which every
+// listing mutation revalidates — an untagged read would never refresh here.
+import { createHomeListingsReadClient } from '@/lib/listings/read-client'
 import { listingUrl } from '@/lib/listings/url'
 
 export interface LatestListing {
@@ -63,7 +65,7 @@ function cardTypeFor(categoryType: string): ListingCardType {
  * listing nobody can actually buy shouldn't appear on the homepage.
  */
 export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
-  const supabase = createAnonClient()
+  const supabase = createHomeListingsReadClient()
 
   // Fetch wider than `limit` so the round-robin has every game to draw from;
   // the interleave below is what trims to `limit`.

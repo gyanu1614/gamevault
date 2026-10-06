@@ -10,6 +10,7 @@ import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { isSystemMessage, systemNoticePreview } from '@/lib/chat/system-notice'
+import { useChatThread } from '@/hooks/use-chat-thread'
 
 export function useSellerMessages() {
   const queryClient = useQueryClient()
@@ -88,22 +89,6 @@ export function useSellerMessages() {
     }
   }, [user?.id, conversations, queryClient, supabase])
 
-  // Send message mutation
-  const sendMessage = useMutation({
-    mutationFn: ({ conversationId, content, attachments }: {
-      conversationId: string
-      content: string
-      attachments?: string[]
-    }) => messagesApi.sendMessage(conversationId, content, attachments),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['seller', 'messages', 'conversations'] })
-      queryClient.invalidateQueries({ queryKey: ['seller', 'messages', variables.conversationId] })
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to send message')
-    },
-  })
-
   // Mark as read mutation
   const markAsRead = useMutation({
     mutationFn: (conversationId: string) => messagesApi.markAsRead(conversationId),
@@ -146,73 +131,36 @@ export function useSellerMessages() {
     conversations: conversations || [],
     isLoadingConversations,
     conversationsError,
-    sendMessage: sendMessage.mutateAsync,
-    isSending: sendMessage.isPending,
     markAsRead: markAsRead.mutateAsync,
   }
 }
 
 /**
- * Hook for specific conversation messages
+ * One conversation's thread for /account/messages: the same instant-send
+ * hook as the order chat (optimistic bubble, Sending → Sent → Read,
+ * "Not sent · Retry", realtime merge, read-when-seen). Sending never blocks
+ * the input. Same insert path and RLS as before: a `messages` row written
+ * by the session client as the signed-in user.
  */
-export function useConversationMessages(conversationId: string | null) {
-  const queryClient = useQueryClient()
+export function useConversationMessages(
+  conversationId: string | null,
+  { attachOrderId }: { attachOrderId: string | null },
+) {
   const { user } = useAuth()
-  const supabase = createClient()
-
-  const {
-    data: messages,
-    isLoading,
-    error,
-  } = useQuery<Message[]>({
-    queryKey: ['seller', 'messages', conversationId],
-    queryFn: () => conversationId ? messagesApi.getMessages(conversationId) : Promise.resolve([]),
-    enabled: !!conversationId,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time feel
+  const thread = useChatThread({
+    conversationId,
+    currentUserId: user?.id ?? '',
+    // The inbox lists only conversations the viewer is a party to.
+    canMarkRead: !!user?.id,
+    attachOrderId,
   })
 
-  // Realtime subscription for messages in the current conversation
-  useEffect(() => {
-    if (!conversationId || !user?.id) return
-
-    const channel = supabase
-      .channel(`conversation-messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        () => {
-          // Immediately refetch messages for this conversation
-          queryClient.invalidateQueries({ queryKey: ['seller', 'messages', conversationId] })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        () => {
-          // Refetch on message updates (e.g., read status)
-          queryClient.invalidateQueries({ queryKey: ['seller', 'messages', conversationId] })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      channel.unsubscribe()
-    }
-  }, [conversationId, user?.id, queryClient, supabase])
-
   return {
-    messages: messages || [],
-    isLoading,
-    error,
+    messages: thread.messages,
+    isLoading: thread.isLoading,
+    error: thread.error,
+    sendMessage: thread.send,
+    retryMessage: thread.retry,
+    setAtBottom: thread.setAtBottom,
   }
 }

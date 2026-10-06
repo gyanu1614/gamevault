@@ -1,0 +1,73 @@
+{
+  "game": "fortnite",
+  "currency": "V-Bucks",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are V-Bucks and What Can You Buy With Them?",
+    "paragraphs": [
+      "V-Bucks are Fortnite's in-game currency. You spend them in the Item Shop on skins, emotes, pickaxes, gliders and wraps, and on passes like the Battle Pass, which costs 800 V-Bucks.",
+      "V-Bucks bought on PC, PlayStation, Xbox or mobile sit in one shared balance. V-Bucks bought on Nintendo Switch stay on Switch."
+    ]
+  },
+  "official_prices": {
+    "heading": "V-Bucks Prices: Official Store vs DropMarket",
+    "note": "Epic cut the V-Bucks in each pack on March 19, 2026 and kept the prices the same. Paying through Epic's own checkout also gives you 20% back in Epic Rewards.",
+    "packages": [
+      { "amount": 800, "usd": 8.99, "where": "Fortnite Item Shop (US)" },
+      { "amount": 2400, "usd": 22.99, "where": "Fortnite Item Shop (US)" },
+      { "amount": 4500, "usd": 36.99, "where": "Fortnite Item Shop (US)" },
+      { "amount": 12500, "usd": 89.99, "where": "Fortnite Item Shop (US)" }
+    ],
+    "extras": [
+      { "label": "Fortnite Crew", "detail": "$11.99/mo: 800 V-Bucks a month, the current passes and a monthly Crew skin" },
+      { "label": "Before March 19, 2026", "detail": "The same packs gave 1,000 / 2,800 / 5,000 / 13,500 V-Bucks" }
+    ],
+    "source": "https://www.engadget.com/gaming/epic-is-increasing-the-price-of-fortnites-v-bucks-currency-185800744.html"
+  },
+  "delivery": {
+    "heading": "How V-Bucks Delivery Works",
+    "method": "code_or_account_topup",
+    "steps": [
+      "Pick an offer for your platform. Read the seller's delivery note before you pay.",
+      "After checkout, share what the seller asks for in the order chat: your Epic username and platform, or the details for a top-up.",
+      "If you get a V-Bucks code, redeem it at fortnite.com/vbuckscard while signed in to your Epic account.",
+      "Check your V-Bucks balance in Fortnite, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": null
+  },
+  "support_topic": {
+    "heading": "Can You Gift V-Bucks in Fortnite?",
+    "paragraphs": [
+      "No. Epic doesn't let you gift or transfer V-Bucks, and packs that contain V-Bucks can't be gifted either. You can only gift items that are in the Item Shop right now.",
+      "To send a gift you need two-factor authentication on, account level 2 or higher, and the friend must have been on your list for at least 2 days. You can send 5 gifts in any 24 hours.",
+      "Fortnite Crew and Battle Pass levels can't be gifted. Passes can only be gifted when bought with real money, not with V-Bucks."
+    ],
+    "source": "https://www.epicgames.com/help/en-US/c-Category_Fortnite/c-Fortnite_Billingandpayment/how-does-gifting-work-in-fortnite-a000084676"
+  },
+  "faq_extra": [
+    {
+      "q": "Do V-Bucks work on every platform?",
+      "a": "Mostly. V-Bucks bought on PC, PlayStation, Xbox or mobile share one balance. V-Bucks bought on Nintendo Switch only work on Switch, so tell your seller if you play there."
+    },
+    {
+      "q": "Where do I redeem a V-Bucks card?",
+      "a": "At fortnite.com/vbuckscard, signed in to your Epic account. The code won't work in the PlayStation, Xbox or Nintendo store."
+    },
+    {
+      "q": "How many V-Bucks is the Battle Pass?",
+      "a": "800 V-Bucks since March 19, 2026. It pays back 800 V-Bucks as you level it up."
+    }
+  ],
+  "trademark_owner": "Epic Games, Inc.",
+  "sources": [
+    "https://www.engadget.com/gaming/epic-is-increasing-the-price-of-fortnites-v-bucks-currency-185800744.html",
+    "https://www.fortnite.com/news/fortnite-v-bucks-price-increase?lang=en-US",
+    "https://www.epicgames.com/help/en-US/c-Category_Fortnite/c-Fortnite_Billingandpayment/how-does-gifting-work-in-fortnite-a000084676",
+    "https://www.epicgames.com/help/en-US/c-Category_Fortnite/c-Fortnite_Billingandpayment/why-don-t-all-of-my-v-bucks-transfer-across-platforms-a000086016",
+    "https://epicgames.com/help/fortnite-battle-royale-c-34254770/billing-and-payment-c-39884448/how-to-redeem-a-v-bucks-card-a17681982",
+    "https://www.pcgamesn.com/fortnite/crew-v-bucks-decrease"
+  ],
+  "confidence": "medium",
+  "notes": "Prices: Engadget (2026-03-10) quoting Epic's announcement; fortnite.com itself is behind a Cloudflare JS wall so I could not read it directly. Our config bundles (800/2,400/4,500/12,500) match the post-March pack sizes. Crew $11.99 and 800 V-Bucks/month from third-party summaries (PCGamesN); medium confidence on the exact date the Crew stipend dropped (Engadget says with the March change, another source says June 6, 2026). Gifting rules from Epic help (search snippet; page not fetched in full). DELIVERY IS UNCLEAR: the config has no delivery method and the placeholder is generic; live listings only say 'PC' with no delivery note. V-Bucks can't be transferred between accounts, so sellers must use a code/gift card or log in to top up. The steps cover both and no_password is false. The current config FAQ ('Never share your password... game's own trade/gift system') is not true for V-Bucks and should be changed."
+}

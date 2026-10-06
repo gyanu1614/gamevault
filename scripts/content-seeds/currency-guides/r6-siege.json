@@ -1,0 +1,64 @@
+{
+  "game": "r6-siege",
+  "currency": "R6 Credits",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are R6 Credits and What Can You Buy With Them?",
+    "paragraphs": [
+      "R6 Credits are the premium currency in Rainbow Six Siege X. You spend them on the seasonal Battle Pass, new operators and cosmetics like weapon skins, uniforms, headgear and charms.",
+      "Renown is the free currency you earn by playing. R6 Credits are the one you buy, and some items in the shop are sold only for Credits."
+    ]
+  },
+  "official_prices": {
+    "heading": "R6 Credits Prices: Official Store vs DropMarket",
+    "note": "These are Ubisoft Store prices in US dollars. Bigger packs give more Credits per dollar, and console stores can show different pack sizes.",
+    "packages": [
+      { "amount": 600, "usd": 4.99, "where": "store.ubisoft.com (US)" },
+      { "amount": 1200, "usd": 9.99, "where": "store.ubisoft.com (US)" },
+      { "amount": 3300, "usd": 24.99, "where": "store.ubisoft.com (US)" },
+      { "amount": 7200, "usd": 49.99, "where": "store.ubisoft.com (US)" },
+      { "amount": 15000, "usd": 99.99, "where": "store.ubisoft.com (US)" }
+    ],
+    "extras": [],
+    "source": "https://store.ubisoft.com/us/tom-clancys-rainbow-six-siege---7,200-r6-credits/6818d5da8ac12e7a99688235.html?lang=en_US"
+  },
+  "delivery": {
+    "heading": "How R6 Credits Delivery Works",
+    "method": "account_topup",
+    "steps": [
+      "Link an Xbox (Microsoft) account to your Ubisoft account. It's free, and you can create one at xbox.com if you don't have one.",
+      "After checkout, send the seller the login for that linked Xbox account in the order chat.",
+      "The seller tops up the Credits on that account.",
+      "Launch Siege, check your Credit balance, then confirm the order. Change your Xbox password afterwards."
+    ],
+    "no_password": false,
+    "typical_time": "Sellers on DropMarket quote 15 to 30 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "How Do You Link an Xbox Account to Ubisoft?",
+    "paragraphs": [
+      "Sign in at account.ubisoft.com, open Linked accounts and choose Xbox. You'll be sent to Microsoft to sign in and approve the link.",
+      "Your operators, skins and progress sit on your Ubisoft account, so the Xbox account is just the route the seller uses to add Credits. Use a fresh Xbox account with no card saved on it."
+    ],
+    "source": "https://www.ubisoft.com/en-us/help/rainbow-six-siege/gameplay/article/crossplay-and-cross-progression-in-rainbow-six-siege/000097631"
+  },
+  "faq_extra": [
+    {
+      "q": "How much is the R6 Battle Pass in Credits?",
+      "a": "Check the in-game shop for the current season. Ubisoft sets the Battle Pass price in R6 Credits each season."
+    },
+    {
+      "q": "What's the difference between Renown and R6 Credits?",
+      "a": "Renown is earned by playing and can't be bought. R6 Credits are bought with real money, and some items are Credit-only."
+    }
+  ],
+  "trademark_owner": "Ubisoft Entertainment",
+  "sources": [
+    "https://store.ubisoft.com/us/tom-clancys-rainbow-six-siege---7,200-r6-credits/6818d5da8ac12e7a99688235.html?lang=en_US",
+    "https://store.ubisoft.com/us/tom-clancys-rainbow-six-siege---600-r6-credits/5a8314e26b54a4f61838cf19.html?lang=en_US",
+    "https://www.ubisoft.com/en-us/help/rainbow-six-siege/gameplay/article/crossplay-and-cross-progression-in-rainbow-six-siege/000097631",
+    "https://www.ubisoft.com/en-us/game/rainbow-six/siege/news-updates/5VKFbvEGOggfkM9nQ8pC6i/crossplatform-synchronization"
+  ],
+  "confidence": "medium",
+  "notes": "Pack prices read from the Ubisoft US store HTML on 2026-10-05 (600/$4.99, 1,200/$9.99, 3,300/$24.99, 7,200/$49.99, 15,000/$99.99); older guides list 2,670/4,920/7,560/16,000 packs, which seem to be older or console-store sizes. Our config bundles 30,000 and 45,000 don't exist as official packs (stacked purchases). Delivery method taken from our live R6 listings: buyer links an Xbox account to Ubisoft and hands the seller that login; one seller even asks for Ubisoft login. So no_password is FALSE and the current config FAQ ('Never share your password') contradicts how our R6 sellers actually deliver. Sellers say Credits 'appear across all linked platforms'; I could not confirm Ubisoft's current rule on cross-platform Credit sharing (the help page is JS-rendered; third-party sources conflict), so it's left out. The Ubisoft account-linking steps are the usual flow but I didn't fetch a Ubisoft page that spells them out: medium confidence. The 'Change your Xbox password afterwards' advice is ours. Battle Pass Credit price not stated because I couldn't confirm the current season's price."
+}

@@ -1,0 +1,63 @@
+{
+  "game": "call-of-duty",
+  "currency": "COD Points",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are COD Points and What Can You Buy With Them?",
+    "paragraphs": [
+      "COD Points (CP) are the premium currency in Call of Duty. You spend them in the store on bundles of operator skins and weapon blueprints, and on the seasonal Battle Pass.",
+      "Your CP balance is shared between the current Call of Duty games on the same platform, including Warzone. What you buy with it unlocks on every platform linked to your Activision account."
+    ]
+  },
+  "official_prices": {
+    "heading": "COD Points Prices: Official Store vs DropMarket",
+    "note": "These are US prices. You can buy CP in the in-game store or your platform's store, and the balance only works on the platform where you bought it.",
+    "packages": [
+      { "amount": 1100, "usd": 9.99, "where": "In-game / platform store (US)" },
+      { "amount": 2400, "usd": 19.99, "where": "In-game / platform store (US)" },
+      { "amount": 5000, "usd": 39.99, "where": "In-game / platform store (US)" },
+      { "amount": 9500, "usd": 74.99, "where": "In-game / platform store (US)" },
+      { "amount": 13000, "usd": 99.99, "where": "In-game / platform store (US)" }
+    ],
+    "extras": [],
+    "source": "https://lfcarry.com/guides/cod-points-guide"
+  },
+  "delivery": {
+    "heading": "How COD Points Delivery Works",
+    "method": "code_or_account_topup",
+    "steps": [
+      "Pick an offer for the platform you play on: PlayStation, Xbox, Battle.net or Steam.",
+      "Read the seller's delivery note before you pay. It says whether you get a code or a top-up.",
+      "After checkout, send what the seller asks for in the order chat.",
+      "Check your CP balance in the store on that platform, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": null
+  },
+  "support_topic": {
+    "heading": "Do COD Points Transfer Between Platforms?",
+    "paragraphs": [
+      "No. Activision says you can only use COD Points on the platform where you bought them. CP bought on PlayStation won't show up on PC.",
+      "Items you buy with CP do carry across, as long as your platforms are linked to the same Activision account. Moving between two consoles of the same family, like PS4 to PS5, keeps your balance."
+    ],
+    "source": "https://support.activision.com/black-ops-6/articles/cod-points-in-black-ops-6"
+  },
+  "faq_extra": [
+    {
+      "q": "Can you gift COD Points to a friend?",
+      "a": "No. Activision doesn't let you transfer or gift COD Points to another player."
+    },
+    {
+      "q": "Are COD Points shared with Warzone?",
+      "a": "Yes, on the same platform. Your balance works across the current Call of Duty games and Warzone."
+    }
+  ],
+  "trademark_owner": "Activision Publishing, Inc.",
+  "sources": [
+    "https://support.activision.com/black-ops-6/articles/cod-points-in-black-ops-6",
+    "https://lfcarry.com/guides/cod-points-guide",
+    "https://twitter.com/atviassist/status/1220809337423257600"
+  ],
+  "confidence": "medium",
+  "notes": "Platform lock and the no-gifting rule are from Activision's Black Ops 6 support article (updated 2024-10-23); I assumed the rule is unchanged for Black Ops 7, so medium confidence. US prices from a third-party guide (lfcarry, Aug 2026); smaller packs (200/500 CP) exist on some stores but weren't confirmed. Our config bundles (4,800, 9,600, 12,000, 21,600, 26,400) aren't official pack sizes; sellers seem to stack packs. 'Shared with Warzone and current games' is general knowledge, consistent with Activision but not quoted from a fetched page. DELIVERY IS UNCLEAR: no live COD listings, generic placeholder. CP can't be gifted, so delivery has to be a platform code or an account top-up; no_password is false. Config regions (US/UK/South Korea) and platforms (lists both 'Battlenet' and 'Battle.net', plus 'PC') need tidying."
+}

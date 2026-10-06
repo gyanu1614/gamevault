@@ -39,7 +39,11 @@ const recorder = createSupabaseRecorder({
   profiles: [],
   seller_presence: [],
 })
-vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
+vi.mock('@/lib/supabase/anon', () => ({
+  createAnonClient: () => recorder.client,
+  // Listing reads go through the tagged client (lib/listings/read-client.ts).
+  createTaggedAnonClient: () => recorder.client,
+}))
 
 describe('category page helpers read through the anon client', () => {
   it('getCategoryStats', async () => {

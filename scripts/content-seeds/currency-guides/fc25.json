@@ -1,0 +1,52 @@
+{
+  "game": "fc25",
+  "currency": "FC Coins",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are FC Coins and What Can You Buy With Them?",
+    "paragraphs": [
+      "FC Coins are the currency in EA Sports FC Ultimate Team. You spend them on the Transfer Market to buy players and items, and on packs and Squad Building Challenges.",
+      "EA doesn't sell coins. You earn them by playing matches and selling cards, and EA keeps a 5% tax on every Transfer Market sale. Coins stay in that year's game, so FC 25 coins don't move to FC 26 or FC 27."
+    ]
+  },
+  "official_prices": null,
+  "delivery": {
+    "heading": "How FC Coins Delivery Works",
+    "method": "unclear_see_notes",
+    "steps": [
+      "Pick an offer for your platform and check which FC edition it's for.",
+      "Read the seller's delivery note before you pay. It says whether they buy a card you list or need access to your club.",
+      "After checkout, send what they ask for in the order chat.",
+      "Check your coin balance in Ultimate Team, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": null
+  },
+  "support_topic": {
+    "heading": "Do FC Coins Carry Over to the Next FC Game?",
+    "paragraphs": [
+      "No. Each FC game has its own Ultimate Team club, so coins, players and items stay in the edition you earned them in. FC 27 came out on September 25, 2026, with a fresh club for everyone.",
+      "FC Points, the currency you buy from EA, are different. A leftover FC Points balance can move to the next edition once, on the same platform."
+    ],
+    "source": "https://en.wikipedia.org/wiki/EA_Sports_FC_27"
+  },
+  "faq_extra": [
+    {
+      "q": "What's the difference between FC Coins and FC Points?",
+      "a": "Coins are earned in-game and used on the Transfer Market. FC Points are bought with real money and spent on packs, passes and draft entries. EA sells 500 FC Points for $4.99 and 12,000 for $99.99 on Steam."
+    },
+    {
+      "q": "How much does EA take when you sell a card?",
+      "a": "5% of the sale price. Sell a card for 10,000 coins and you get 9,500."
+    }
+  ],
+  "trademark_owner": "Electronic Arts Inc.",
+  "sources": [
+    "https://en.wikipedia.org/wiki/EA_Sports_FC_27",
+    "https://store.steampowered.com/app/3707320/EA_SPORTS_FC_26__FC_Points/",
+    "https://supercoinsy.com/article/ea-sports-fc-25-transfer-market-complete-guide",
+    "https://timesaver.gg/blog/ea-fc-26-save-coins-for-fc-27"
+  ],
+  "confidence": "low",
+  "notes": "STALE GAME: our slug is fc25, but FC 26 (Sept 2025) and FC 27 (released 2026-09-25 per Wikipedia) are out, and FC 25 coins only work in FC 25. Owner should decide whether this page moves to FC 27 / a generic 'EA FC Coins' page. Coins have no official cash price (EA sells FC Points only), so official_prices is null. FC Points prices are FC 26 Steam prices (100/$0.99 ... 18,500/$149.99); FC 27 point prices not checked. The 5% EA tax is from a third-party guide but is long-standing. 'FC Points carry over once on the same platform' is from a third-party summary (timesaver.gg), medium confidence. DELIVERY IS UNCLEAR: config unit_label is 'units' (not 'Coins'), there are no bundles or platform fields, and the one live listing is titled 'EA FC25 units' with the description '800 FC Coins', so it may really be FC Points. Usual coin delivery is either the player-auction method (buyer lists a card, seller buys it) or a 'comfort trade' (seller logs in), so no_password is false. The config FAQ ('only your username') doesn't fit either method."
+}

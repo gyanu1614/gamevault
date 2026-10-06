@@ -1,0 +1,66 @@
+{
+  "game": "valorant",
+  "currency": "Valorant Points",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Valorant Points and What Can You Buy With Them?",
+    "paragraphs": [
+      "Valorant Points (VP) are Riot's premium currency for Valorant. You spend them in the in-game Store on weapon skin bundles, Night Market deals, the Premium Battle Pass and agent unlocks.",
+      "VP is tied to your Riot account and its region. It can't be traded, and you can't send VP from your balance to a friend."
+    ]
+  },
+  "official_prices": {
+    "heading": "Valorant Points Prices: Official Store vs DropMarket",
+    "note": "These are US prices. Riot prices VP in local currency, so a pack costs a different amount in Brazil, Turkey or the Philippines, and taxes can change the checkout total.",
+    "packages": [
+      { "amount": 475, "usd": 4.99, "where": "Valorant Store (US)" },
+      { "amount": 1000, "usd": 9.99, "where": "Valorant Store (US)" },
+      { "amount": 2050, "usd": 19.99, "where": "Valorant Store (US)" },
+      { "amount": 3650, "usd": 34.99, "where": "Valorant Store (US)" },
+      { "amount": 5350, "usd": 49.99, "where": "Valorant Store (US)" },
+      { "amount": 11000, "usd": 99.99, "where": "Valorant Store (US)" }
+    ],
+    "extras": [
+      { "label": "Valorant prepaid cards", "detail": "PC only and locked to the region they were bought for" }
+    ],
+    "source": "https://www.setup.gg/game/valorant/points/"
+  },
+  "delivery": {
+    "heading": "How Valorant Points Delivery Works",
+    "method": "code_or_account_topup",
+    "steps": [
+      "Pick an offer that matches your account's region and your platform.",
+      "After checkout, send the seller what their delivery note asks for in the order chat.",
+      "If you get a prepaid code, redeem it in the Valorant client: click the VP icon next to Store, then Prepaid Cards & Codes.",
+      "Check your VP balance, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": null
+  },
+  "support_topic": {
+    "heading": "Do Valorant Points Work in Every Region?",
+    "paragraphs": [
+      "No. Valorant prepaid codes only work on the server region they were issued for. A US code won't redeem on a Brazil or Turkey account, and you'll see \"This Code is Not Valid in Your Region\".",
+      "What matters is the region your Riot account is registered to, not where you are. Pick an offer for that region, and if you're not sure, ask the seller before you pay."
+    ],
+    "source": "https://support.riotgames.com/en-us/riot/events/prepaid-gift-cards"
+  },
+  "faq_extra": [
+    {
+      "q": "Can you gift Valorant Points?",
+      "a": "Only as a new purchase on PC. Riot lets friends of at least one week gift VP or featured bundles, but you can't send VP from your current balance. The sender needs account level 15, both players must be on the same shard, and you can send 10 gifts a day."
+    },
+    {
+      "q": "Do Valorant prepaid cards work on console?",
+      "a": "No. Riot says Valorant prepaid cards are PC only."
+    }
+  ],
+  "trademark_owner": "Riot Games, Inc.",
+  "sources": [
+    "https://www.setup.gg/game/valorant/points/",
+    "https://support.riotgames.com/en-us/riot/events/prepaid-gift-cards",
+    "https://support.riotgames.com/en-us/valorant/store/gifting-in-valorant"
+  ],
+  "confidence": "medium",
+  "notes": "US VP prices from setup.gg (checked 2026-09-10); not read from Riot's own store, which needs a logged-in client. Gifting rules from Riot support (updated 2026-06-01): 10 gifts/day there, while older third-party guides say 5; Riot's figure used. The 'what_is' list of uses (bundles, Night Market, Premium Battle Pass, agents) is general game knowledge, not sourced from a fetched page this run. DELIVERY IS UNCLEAR: config has region options (Brazil, Malaysia, Global, Turkey, US, Philippines) and platforms PC/PlayStation, but no delivery method and a generic placeholder; the one live listing has no description. VP can't be moved between accounts, so sellers either sell region codes or log in to top up. Note our config lists PlayStation, but Riot says prepaid cards are PC only, so a PlayStation VP offer would have to be an account top-up. The config FAQ 'only your username is required' is not true for VP."
+}

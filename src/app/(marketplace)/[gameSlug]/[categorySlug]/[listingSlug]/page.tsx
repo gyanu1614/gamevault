@@ -22,7 +22,7 @@ import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_ite
 import { partitionSameItem } from '../_offerMatching'
 import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
 import { getActiveGame, getEnabledCategory } from '../_routeGate'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { currencyListingRedirect, isCurrencyCategoryType } from '@/lib/listings/url'
 
 // V15p — Empty taxonomy for ad-hoc ItemOffer shaping in the similar-
@@ -61,7 +61,10 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   const category = await getEnabledCategory(game.id, categorySlug)
   if (!category || !isCurrencyCategoryType(category.type)) return null
 
-  const supabase = createAnonClient()
+  // Runs before the cookie client, so Next caches this read — with no window
+  // on this route. Tagged with the category so a listing mutation (status,
+  // seller rename) refreshes it (lib/listings/read-client).
+  const supabase = createCategoryListingsReadClient([category.id])
   const SELECT = 'id, seller:public_profiles!listings_seller_id_fkey(username, shop_slug)'
   const scoped = (column: 'slug' | 'id', value: string) =>
     supabase

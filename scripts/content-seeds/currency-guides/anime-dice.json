@@ -1,0 +1,47 @@
+{
+  "game": "anime-dice",
+  "currency": "Anime Dice Gems",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Gems in Anime Dice?",
+    "paragraphs": [
+      "Gems are the purple currency in Anime Dice. Their main use is rerolling a unit's Grade, at 1 Gem per roll, and the Grade sets that unit's income multiplier.",
+      "Gems are separate from Cash, Tickets, Lucky Spins and Trait Rerolls. You earn them from Towers, daily rewards and codes."
+    ]
+  },
+  "official_prices": null,
+  "delivery": {
+    "heading": "How Anime Dice Gem Delivery Works",
+    "method": "unclear_see_notes",
+    "steps": [
+      "After checkout, send your Roblox username in the order chat.",
+      "Accept the seller's friend request and join Anime Dice when they say they're ready.",
+      "The seller joins you and delivers the way their offer describes.",
+      "Check your Gems, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": "Sellers on DropMarket quote about 15 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "How Do You Get Gems in Anime Dice?",
+    "paragraphs": [
+      "Clear Towers, which drop Gems after each run, and log in for Daily Rewards, which reach 32 Gems on day 5. Redeem codes in the Shop, too.",
+      "Save Gems for units you'll keep. Each Grade reroll costs 1 Gem, and the top Grade is very rare."
+    ],
+    "source": "https://www.u7buy.com/blog/how-to-get-anime-dice-gems/"
+  },
+  "faq_extra": [
+    {
+      "q": "Can you buy Anime Dice Gems with Robux?",
+      "a": "Not directly, as of October 2026. Gems come from Towers, daily rewards and codes."
+    }
+  ],
+  "trademark_owner": "Anime Dice is a Roblox experience; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://www.u7buy.com/blog/how-to-get-anime-dice-gems/",
+    "https://itemku.zendesk.com/hc/en-us/articles/48794624128781-How-to-Trade-Anime-Dice-Items",
+    "https://insider-gaming.com/roblox-anime-dice-codes/"
+  ],
+  "confidence": "low",
+  "notes": "Facts come from a competitor blog (u7buy, 2026-09-21; facts only, prose rewritten) and itemku's help article; no wiki was reachable. That blog says Gems are account-bound with no player-to-player trading and no Robux purchase. Itemku says Anime Dice items are delivered 'via the Gift feature', which suggests some gifting exists, but not that Gems can be gifted. DELIVERY IS UNCLEAR and may need account access: our live seller says 'We will add you and then join you for the trade'. Owner/seller must confirm how Gems actually reach the buyer before this guide goes live. Config unit_label 'Gems', granularity thousand, generic placeholder."
+}

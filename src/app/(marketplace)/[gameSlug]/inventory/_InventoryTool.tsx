@@ -612,7 +612,7 @@ function EmptyState({
 }) {
   return (
     <div className="px-5 py-8 sm:px-8 sm:py-10">
-      <h3 className="text-[18px] font-semibold text-text-primary">Start With A Popular {shortName} Item</h3>
+      <h3 className="text-[18px] font-semibold text-text-primary">Popular {shortName} Items</h3>
       <p className="mt-1.5 text-body-sm text-text-secondary">
         Tap an item to add it, or search all {priced.toLocaleString('en-US')} priced items.
       </p>

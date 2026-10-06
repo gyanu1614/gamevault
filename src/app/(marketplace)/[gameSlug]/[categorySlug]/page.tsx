@@ -12,6 +12,7 @@ import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import Image from 'next/image'
 import GameSubNav, { type GameCategory } from '@/components/marketplace/GameSubNav'
@@ -343,7 +344,7 @@ async function getGenericListings(
   categoryId: string,
   pausedSellerIds: string[],
 ): Promise<GenericGridListing[]> {
-  const supabase = createAnonClient()
+  const supabase = createCategoryListingsReadClient([categoryId])
   let query: any = supabase
     .from('listings')
     .select(`
@@ -463,7 +464,10 @@ async function CategoryBrowsePage({ params }: PageProps) {
       realCategorySlug = catRow.data?.slug ?? null
       if (categoryId) {
         stats = await getCategoryStats(game.id, categoryId)
-        let bundleQuery: any = supabase
+        // Tagged with this category (lib/listings/read-client): an untagged
+        // read would survive the listing mutation's revalidateTag.
+        const listingsDb = createCategoryListingsReadClient([categoryId])
+        let bundleQuery: any = listingsDb
           .from('listings')
           .select(`
             id, description, price, quantity, delivery_time, is_unlimited,
@@ -616,7 +620,8 @@ async function CategoryBrowsePage({ params }: PageProps) {
       realCategorySlug = catRow.data?.slug ?? null
       if (categoryId) {
         stats = await getCategoryStats(game.id, categoryId)
-        let currencyQuery: any = supabase
+        const listingsDb = createCategoryListingsReadClient([categoryId])
+        let currencyQuery: any = listingsDb
           .from('listings')
           .select(`
             id, title, description, price, original_price, quantity,
@@ -773,7 +778,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
       getAllGameCategories(game.id),
       loadItemsTaxonomy(game.id, taxonomySlug),
       (async () => {
-        const sb = createAnonClient()
+        const sb = createCategoryListingsReadClient([category.id])
         let itemsQuery: any = sb
           .from('listings')
           .select(`

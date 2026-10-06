@@ -33,12 +33,19 @@ describe('nightly listing-page revalidate', () => {
     process.env.CRON_SECRET = 'test-secret'
   })
 
-  it('marks every category page and the shared reads stale', async () => {
+  it('marks every category page, game hub, the shared reads and the homepage rails stale', async () => {
     const { status, body } = await get('Bearer test-secret')
     expect(status).toBe(200)
-    expect(revalidatePath.mock.calls).toEqual([['/[gameSlug]/[categorySlug]', 'page']])
+    // File paths WITH the route group: Next 14 tags a render with
+    // `/(marketplace)/[gameSlug]/[categorySlug]/page`, so the group-less
+    // pattern this cron used to send matched no page and no fetch.
+    expect(revalidatePath.mock.calls).toEqual([
+      ['/(marketplace)/[gameSlug]/[categorySlug]', 'page'],
+      ['/(marketplace)/[gameSlug]', 'page'],
+    ])
     expect(revalidateTag.mock.calls.map((c) => c[0]).sort()).toEqual([
       'games:directory',
+      'listings:home',
       'profiles:test-sellers',
       'seller-presence:paused',
     ])

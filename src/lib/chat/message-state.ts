@@ -69,6 +69,30 @@ function sameRow(a: ChatMessage, b: ChatRow): boolean {
   )
 }
 
+/** The pending bubble for a message I just wrote: on screen in the same
+ *  frame, with the id the insert will carry. */
+export function optimisticMessage(args: {
+  id: string
+  conversationId: string
+  senderId: string
+  content: string
+  localFiles?: LocalFile[]
+  now?: Date
+}): ChatMessage {
+  return {
+    id: args.id,
+    conversation_id: args.conversationId,
+    sender_id: args.senderId,
+    content: args.content,
+    attachments: [],
+    is_read: false,
+    read_at: null,
+    created_at: (args.now ?? new Date()).toISOString(),
+    local_status: 'sending',
+    local_files: args.localFiles,
+  }
+}
+
 /** Append an optimistic message (no-op if that id is already there). */
 export function addOptimistic(list: ChatMessage[], msg: ChatMessage): ChatMessage[] {
   if (list.some((m) => m.id === msg.id)) return list
