@@ -9,8 +9,11 @@ import { BUYER_FEES_TAG, FEE_RULES_TAG } from './tags'
  *   · the tag — every unstable_cache'd resolver read (public schedule,
  *     per-game headline rate);
  *   · /sell/fees — the public schedule page;
- *   · /[gameSlug]/sell — the ROUTE PATTERN (a concrete segment inside a
- *     pattern matches nothing and fails silently — CLAUDE.md);
+ *   · /(marketplace)/[gameSlug]/sell — the ROUTE PATTERN (a concrete segment
+ *     inside a pattern matches nothing and fails silently — CLAUDE.md), as
+ *     the FILE path: Next 14 tags renders with the route group included, so
+ *     the group-less '/[gameSlug]/sell' this used to send matched nothing
+ *     (listings-data-tags.guard.test.ts);
  *   · /admin/games — the admin list the Fees tab sits under.
  *
  * Called only after a successful write + audit row; a failed revalidate
@@ -19,7 +22,7 @@ import { BUYER_FEES_TAG, FEE_RULES_TAG } from './tags'
 export function revalidateFeeReaders(): void {
   revalidateTag(FEE_RULES_TAG)
   revalidatePath('/sell/fees')
-  revalidatePath('/[gameSlug]/sell', 'page')
+  revalidatePath('/(marketplace)/[gameSlug]/sell', 'page')
   revalidatePath('/admin/games')
 }
 

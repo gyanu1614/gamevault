@@ -21,7 +21,11 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 let recorder: SupabaseRecorder
-vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
+vi.mock('@/lib/supabase/anon', () => ({
+  createAnonClient: () => recorder.client,
+  // Listing reads go through the tagged client (lib/listings/read-client.ts).
+  createTaggedAnonClient: () => recorder.client,
+}))
 
 const EXPENSIVE = new Set(['listings', 'profiles', 'seller_presence', 'category_configs', '<auth.getUser>'])
 

@@ -42,6 +42,7 @@ const RUNNER_SCHEDULED: Record<string, { workflow: string; step: string }[]> = {
     { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=sab' },
     { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=adopt-me' },
     { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=steal-an-egg' },
+    { workflow: 'values-pricing-daily.yml', step: 'pnpm reprice --game=murder-mystery-2' },
   ],
   '/api/cron/expire-sab-listings': [
     { workflow: 'values-pricing-daily.yml', step: 'pnpm sab:expire' },

@@ -1,6 +1,7 @@
 // Cookie-free: the homepage is static (ISR). The cookie client calls
 // cookies(), which would force it to render per request.
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createHomeListingsReadClient } from '@/lib/listings/read-client'
 
 export interface GameCategoryChip {
   /** Category's own label — "V-Bucks", "R6 Credits", "Skins & Items". */
@@ -123,7 +124,9 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
   // One pass over active non-test listings, folded per game in memory. The
   // alternative — a count query per game — is N round-trips for a grid that
   // renders 8 cards.
-  const { data: listings } = await supabase
+  // Live counts / from-prices: cached under HOME_LISTINGS_TAG, which every
+  // listing mutation revalidates (lib/listings/read-client).
+  const { data: listings } = await createHomeListingsReadClient()
     .from('listings')
     .select('game_id, price, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
     .eq('status', 'active')

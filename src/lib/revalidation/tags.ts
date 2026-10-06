@@ -40,3 +40,12 @@ export const BUYER_FEES_TAG = 'fees:buyer-methods'
 export function gameHeroTag(gameSlug: string): string {
   return `game-hero:${gameSlug}`
 }
+
+/**
+ * The homepage's listing rails (Latest Listings, the game cards' live counts
+ * and from-prices). Every listing read there is cached under this tag
+ * (lib/listings/read-client.ts); revalidateListingSurfaces revalidates it
+ * with the category tags, so a listing change refreshes the homepage — that
+ * one page — and the nightly backstop refreshes it too.
+ */
+export const HOME_LISTINGS_TAG = 'listings:home'

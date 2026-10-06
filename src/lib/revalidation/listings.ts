@@ -1,5 +1,6 @@
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { valueItemStockTag } from '@/lib/value-listings/tags'
+import { HOME_LISTINGS_TAG } from './tags'
 
 /**
  * Event-driven revalidation for the listing surfaces (Step 7b).
@@ -19,6 +20,14 @@ import { valueItemStockTag } from '@/lib/value-listings/tags'
  * page of the game (T1, 2026-10-04). Resolved from listing or seller ids;
  * a call with category ids only cannot name items and leaves them to the
  * nightly reconcile (/api/cron/value-listing-refs).
+ *
+ * Any call that touches a category also revalidates HOME_LISTINGS_TAG: the
+ * homepage rails list listings of every game, so that one page follows too.
+ *
+ * The tags refresh the DATA, not just the page shell, only because every
+ * listing read on those pages is cached under them (lib/listings/read-client,
+ * guarded by listings-data-tags.guard.test.ts): an untagged supabase-js read
+ * survives a revalidateTag in Next 14's Data Cache.
  *
  * The guard test `listing-mutations-revalidate.guard.test.ts` enumerates the
  * mutation sites, so a new one cannot land without calling this.
@@ -109,7 +118,8 @@ export async function revalidateListingSurfaces(
   }
 
   const tags: string[] = []
-  for (const tag of [...[...ids].map(categoryListingsTag), ...valueItemTags]) {
+  const homeTags = ids.size > 0 ? [HOME_LISTINGS_TAG] : []
+  for (const tag of [...[...ids].map(categoryListingsTag), ...valueItemTags, ...homeTags]) {
     try {
       revalidateTag(tag)
       tags.push(tag)

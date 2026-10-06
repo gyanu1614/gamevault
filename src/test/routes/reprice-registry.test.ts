@@ -22,6 +22,7 @@ describe('pricing registry', () => {
     // runner exactly like the older two — `pnpm reprice --game=steal-an-egg`.
     expect(pricingGameKeys().sort()).toEqual([
       'adopt-me',
+      'murder-mystery-2',
       'sab',
       'steal-an-egg',
     ])

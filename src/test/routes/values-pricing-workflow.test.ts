@@ -54,7 +54,7 @@ describe('values-pricing-daily.yml', () => {
   })
 
   it('has one job per game (SAB split into its two sources)', () => {
-    expect(Object.keys(J).sort()).toEqual(['adopt-me', 'sab', 'sab-g2g', 'steal-an-egg'])
+    expect(Object.keys(J).sort()).toEqual(['adopt-me', 'murder-mystery-2', 'sab', 'sab-g2g', 'steal-an-egg'])
     for (const [name, text] of Object.entries(J)) {
       expect(text, `${name} needs a timeout`).toMatch(/timeout-minutes: \d+/)
     }
@@ -63,6 +63,7 @@ describe('values-pricing-daily.yml', () => {
   it("games are independent: one game's failure never blocks another", () => {
     expect(J['adopt-me']).not.toMatch(/\n {4}needs:/)
     expect(J['steal-an-egg']).not.toMatch(/\n {4}needs:/)
+    expect(J['murder-mystery-2']).not.toMatch(/\n {4}needs:/)
     // SAB waits for its own G2G cross-check, but runs even when it failed.
     expect(J.sab).toMatch(/needs: sab-g2g/)
     expect(J.sab).toMatch(/always\(\)/)
