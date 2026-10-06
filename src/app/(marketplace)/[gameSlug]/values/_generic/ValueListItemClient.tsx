@@ -23,6 +23,10 @@ import type { TrendSeries } from '@/components/values/PriceTrendChart'
 import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
 import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
+import { TagIcon } from '@phosphor-icons/react/dist/csr/Tag'
+import { SealCheckIcon } from '@phosphor-icons/react/dist/csr/SealCheck'
+import { UsersThreeIcon } from '@phosphor-icons/react/dist/csr/UsersThree'
+import { GaugeIcon } from '@phosphor-icons/react/dist/csr/Gauge'
 import type { WayStep } from './valueHowToGetCopy'
 import { WaySectionHead } from './WaySectionHead'
 import { ValueCallout } from '@/components/values/ValueCallout'
@@ -214,75 +218,86 @@ function FormSwitch({ forms }: { forms: ItemForm[] }) {
   )
 }
 
-function ActivityCell({ label, value, color }: { label: string; value: string; color?: string }) {
+const ABOUT_TEAL_RGB = '84,221,190'
+
+/** One stat in the About card: tinted icon tile + label + value. */
+function AboutStat({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof TagIcon
+  label: string
+  value: string
+  color?: string
+}) {
   return (
-    <div className={`${VALUE_SURFACE} px-4 py-3.5`}>
-      <dt className={VALUE_LABEL}>{label}</dt>
-      <dd
-        className="mt-1 text-subheading font-bold tabular-nums text-text-primary"
-        style={color ? { color } : undefined}
-      >
-        {value}
-      </dd>
+    <div className="flex min-w-0 items-center gap-3 sm:px-5 sm:first:pl-0">
+      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/[0.06] text-text-secondary">
+        <Icon size={18} weight="duotone" />
+      </span>
+      <div className="min-w-0">
+        <dt className={VALUE_LABEL}>{label}</dt>
+        <dd className="truncate text-[16px] font-semibold tabular-nums text-text-primary" style={color ? { color } : undefined}>
+          {value}
+        </dd>
+      </div>
     </div>
   )
 }
 
-/** The quick-answer callout + the market stats strip (Adopt Me's About block). */
+/**
+ * "How much is X worth?" — ONE compact card (owner, 2026-10-05: the old
+ * callout + four big stat cards were too big and scattered): the starting
+ * price and the buy button on top, then four quiet stats on one line. No
+ * listing counts — the value is the verified market price from professional
+ * sellers.
+ */
 export function ValueListAboutStats({
   name,
   cheapestUsd,
   marketUsd,
-  listedNow,
   confidence,
   buy,
 }: {
   name: string
   cheapestUsd: number | null
   marketUsd: number | null
-  listedNow: number
   confidence: string | null
   buy: ItemBuy
 }) {
   const cta = useItemCta(buy, name)
   return (
-    <>
-      {cheapestUsd != null && (
-        <div
-          className={`${VALUE_SURFACE} mb-6 flex flex-col gap-5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6`}
-        >
-          <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-x-2 text-[12px] font-medium">
-              <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: CHEAPEST_TEAL }} />
-              <span className="text-text-primary">{name}</span>
-              <span className="text-text-tertiary">· Starting From</span>
-            </p>
-            <p className="mt-1.5 text-[30px] font-bold leading-none tracking-[-0.02em] text-text-primary tabular-nums">
-              {usd(cheapestUsd)}
-            </p>
-            <p className="mt-1.5 text-body-sm text-text-secondary">
-              The lowest price a reputable seller is asking right now.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
-            {marketUsd != null && (
-              <div className="sm:text-right">
-                <p className={VALUE_LABEL}>Market Price</p>
-                <p className="mt-0.5 text-body font-semibold tabular-nums text-text-primary">{usd(marketUsd)}</p>
-              </div>
-            )}
-            <ValueBuyActions cta={cta} itemName={name} />
-          </div>
+    <div className={`${VALUE_SURFACE} relative isolate overflow-hidden p-5 sm:p-6`}>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{ background: `radial-gradient(50% 90% at 0% 0%, rgba(${ABOUT_TEAL_RGB},0.10), transparent 70%)` }}
+      />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[12px] font-medium text-text-tertiary">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: CHEAPEST_TEAL }} />
+            {name} · Starting From
+          </p>
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span className="text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-text-primary">
+              {cheapestUsd != null ? usd(cheapestUsd) : '—'}
+            </span>
+            <span className="text-body-sm text-text-secondary">the lowest price from professional sellers right now</span>
+          </p>
         </div>
-      )}
+        <ValueBuyActions cta={cta} itemName={name} className="shrink-0" />
+      </div>
 
-      <dl className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <ActivityCell label="Cheapest" value={cheapestUsd != null ? usd(cheapestUsd) : '—'} color={CHEAPEST_TEAL} />
-        <ActivityCell label="Market Price" value={marketUsd != null ? usd(marketUsd) : '—'} />
-        <ActivityCell label="Listed Now" value={listedNow > 0 ? listedNow.toLocaleString('en-US') : 'None'} />
-        <ActivityCell label="Confidence" value={confidenceMeta(confidence).label} />
+      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-white/[0.07] pt-5 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-white/[0.07]">
+        <AboutStat icon={TagIcon} label="Cheapest" value={cheapestUsd != null ? usd(cheapestUsd) : '—'} color={CHEAPEST_TEAL} />
+        <AboutStat icon={SealCheckIcon} label="Verified Market Price" value={marketUsd != null ? usd(marketUsd) : '—'} />
+        <AboutStat icon={UsersThreeIcon} label="Sold By" value="Professional Sellers" />
+        <AboutStat icon={GaugeIcon} label="Confidence" value={confidenceMeta(confidence).label} />
       </dl>
-    </>
+    </div>
   )
 }
 

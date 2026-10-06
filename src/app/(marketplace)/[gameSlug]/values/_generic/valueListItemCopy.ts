@@ -98,16 +98,20 @@ export function chromaSentence(i: ItemCopyInput): string | null {
     : `It is the Chroma form of the ${c.name}: the same ${i.typeNoun} with a color-shifting finish, which drops far less often.`
 }
 
-/** The answer-first, dated price sentence (what an answer engine quotes). */
+/**
+ * The answer-first, dated price sentence (what an answer engine quotes), worded
+ * like the searches ("how much is X worth in MM2"). Owner, 2026-10-05: no
+ * listing counts in copy — the value is the verified market price, sold by
+ * professional sellers.
+ */
 export function priceSentence(i: ItemCopyInput): string | null {
   if (i.cheapestUsd == null) return null
   const date = asOf(i.priceChangedAt)
-  const market =
-    i.marketUsd != null && i.marketUsd > i.cheapestUsd + 0.005
-      ? `, and the typical market price is ${formatUsd(i.marketUsd)}`
-      : ''
-  const listings = i.listedNow === 1 ? '1 live listing' : `${i.listedNow.toLocaleString('en-US')} live listings`
-  return `${date ? `As of ${date}, the` : 'The'} cheapest ${i.name} from a reputable seller costs ${formatUsd(i.cheapestUsd)}${market}, across ${listings}.`
+  const lead = date ? `As of ${date}, ` : ''
+  const market = i.marketUsd != null && i.marketUsd > i.cheapestUsd + 0.005 ? i.marketUsd : null
+  return market != null
+    ? `${lead}${i.name} is worth about ${formatUsd(market)} in ${i.shortName} — its verified market price — and starts at ${formatUsd(i.cheapestUsd)} from professional sellers.`
+    : `${lead}${i.name} is worth about ${formatUsd(i.cheapestUsd)} in ${i.shortName}, the verified price from professional sellers.`
 }
 
 /**
