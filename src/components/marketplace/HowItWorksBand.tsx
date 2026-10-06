@@ -1,24 +1,36 @@
 'use client'
 
 /**
- * V43 — "How it works" — PINNED scroll-story band (Flock-style), shared
- * across marketplace surfaces (item detail, currency, bundles).
+ * How It Works: a compact, full-bleed band shared by the currency, bundle,
+ * game hub and listing detail pages.
  *
- * Desktop: the section wraps a tall scroll RUNWAY (`lg:h-[190vh]`); the
- * band is sticky and fills the viewport below the navbar, so the page
- * appears to stop while continued scrolling drives a lime comet along
- * the progress track — steps (3D icon, lime title, one-liner) brighten
- * in sequence, then the pin releases. Mobile: no pin, columns stack,
- * everything lit.
+ * Owner, 2026-10-05: the old pinned 190vh runway with a skewed band, a
+ * "— HOW IT WORKS —" eyebrow plus a second display line and 144px icons
+ * was too big. Now:
+ *   - ONE H2, written as the search phrase ("How to Buy Robux on DropMarket").
+ *   - A raised band with CURVED top and bottom edges (SVG waves filled with
+ *     the band colour over the page ground), no straight slants.
+ *   - Four steps in one row on tablet/desktop, a vertical timeline on
+ *     phones. The 3D icons sit in small discs on a progress line.
+ *   - Scroll story without pinning: Framer's useScroll maps the band's trip
+ *     through the viewport to a progress value; the line fills and each step
+ *     lights up in turn (the current one gets a soft lime ring).
+ *   - Reduced motion, and the server HTML: every step is lit and the line is
+ *     full. Nothing is hidden before hydration, so every word is in the HTML.
  *
- * Context adaptation: pass `steps` to override the copy per surface
- * (e.g. "Pick Your Amount" on currency pages) — the four 3D icons and
- * the scroll mechanics stay fixed. Pass `heading` to change the display
- * line. Icons live in `src/components/icons/how-it-works/`.
+ * Copy per surface comes in through `title` and `steps` (exactly four).
+ * Icons live in `src/components/icons/how-it-works/`.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion'
+import {
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion'
 import { cn } from '@/lib/utils'
 import {
   Step1ChooseItem,
@@ -26,7 +38,6 @@ import {
   Step3Delivery,
   Step4Confirm,
 } from '@/components/icons/how-it-works'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
 
 export interface HowItWorksStepCopy {
   title: string
@@ -34,171 +45,195 @@ export interface HowItWorksStepCopy {
 }
 
 const DEFAULT_STEPS: HowItWorksStepCopy[] = [
-  { title: 'Choose Your Item', body: 'Compare offers, buy with confidence.' },
-  { title: 'Pay Securely', body: 'Every order is covered by SafeDrop Protection.' },
-  { title: 'Get Your Delivery', body: 'Fast in-game delivery, tracked live.' },
-  { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or full refund.' },
+  { title: 'Choose Your Item', body: 'Compare offers by price, delivery time and rating.' },
+  { title: 'Pay at Checkout', body: 'Every order is covered by SafeDrop Protection.' },
+  { title: 'Get Your Delivery', body: 'Delivered in-game, tracked in your order chat.' },
+  { title: 'Confirm Delivery', body: 'Confirm and the order is complete, or get a full refund.' },
 ]
 
 const STEP_ICONS = [Step1ChooseItem, Step2SecurePayment, Step3Delivery, Step4Confirm]
-const STEP_NUMS = ['01', '02', '03', '04']
+
+/** Band surface: a step above the page ground, same black family (no blue tint). */
+const BAND = '#1F2025'
+const EDGE = 'rgba(255,255,255,0.10)'
+
+/**
+ * Curved split line. Drawn in a 1440×64 box stretched to the band width; the
+ * filled side is the band, the open side shows the page ground. The bottom
+ * edge is the same curve rotated 180°, so the band reads as one shape.
+ */
+const WAVE = 'M0,54 C260,6 520,0 760,28 C1000,54 1220,60 1440,12'
+function CurveEdge({ side }: { side: 'top' | 'bottom' }) {
+  return (
+    <svg
+      aria-hidden
+      focusable="false"
+      viewBox="0 0 1440 64"
+      preserveAspectRatio="none"
+      className={cn('block h-8 w-full sm:h-12 lg:h-14', side === 'bottom' && 'rotate-180')}
+    >
+      <path d={`${WAVE} L1440,64 L0,64 Z`} style={{ fill: BAND }} />
+      <path d={WAVE} fill="none" stroke={EDGE} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
 
 export default function HowItWorksBand({
-  heading,
+  title = 'How to Buy on DropMarket',
+  sub,
   steps = DEFAULT_STEPS,
 }: {
-  heading?: { kicker?: string; title: string; accent?: string }
-  /** Copy override per surface — exactly 4 entries expected. */
+  /** The section's H2: write it as the search phrase. */
+  title?: string
+  /** Optional one-line subtitle. */
+  sub?: string
+  /** Copy per surface: exactly four entries. */
   steps?: HowItWorksStepCopy[]
 }) {
-  const runwayRef = useRef<HTMLDivElement | null>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
+  const reduce = useReducedMotion()
+  const n = steps.length
 
-  // Progress spans EXACTLY the pinned phase: 0 when the runway's top
-  // reaches 96px below the viewport top (where the sticky engages —
-  // matching lg:top-24, clear of the fixed navbar), 1 when its bottom
-  // meets the viewport bottom (sticky releases).
-  const { scrollYProgress } = useScroll({
-    target: runwayRef,
-    offset: ['start 96px', 'end end'],
-  })
-  const fill = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
+  // 0 as the band's top enters the lower part of the screen, 1 as its
+  // bottom passes the middle: the story plays while the band is in view,
+  // with no pinning.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.85', 'end 0.55'] })
+  const smooth = useSpring(scrollYProgress, { stiffness: 160, damping: 28, mass: 0.35 })
+  // Step i lights at progress i/n; the line reaches step i's centre then.
+  const fill = useTransform(smooth, [0, (n - 1) / n], [0, 1], { clamp: true })
 
-  const [active, setActive] = useState(0)
-  useMotionValueEvent(scrollYProgress, 'change', (v) => {
-    setActive(Math.max(0, Math.min(3, Math.floor(v * 4))))
-  })
-
-  // Below lg there is no pin — every step renders lit.
-  const [isDesktop, setIsDesktop] = useState(false)
+  const toStep = (v: number) => Math.max(0, Math.min(n - 1, Math.floor(v * n)))
+  // Server render and reduced motion: everything lit.
+  const [active, setActive] = useState(n - 1)
+  const [live, setLive] = useState(false)
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const update = () => setIsDesktop(mq.matches)
-    update()
-    mq.addEventListener('change', update)
-    return () => mq.removeEventListener('change', update)
-  }, [])
-  const activeIdx = isDesktop ? active : 3
+    if (reduce) {
+      setLive(false)
+      setActive(n - 1)
+      return
+    }
+    setLive(true)
+    setActive(toStep(scrollYProgress.get()))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce, n])
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if (!reduce) setActive(toStep(v))
+  })
 
-  const h = heading ?? {
-    kicker: 'How it works',
-    title: 'Buy Safely, Understand',
-    accent: 'How',
-  }
+  const lineStyle = live ? { scaleX: fill } : undefined
+  const lineStyleY = live ? { scaleY: fill } : undefined
 
   return (
-    // Full-bleed ANGLED BAND (Eldorado-style "split look") — render this
-    // OUTSIDE any max-w wrapper. bg-bg-base masks the violet backdrop's
-    // edge in the wedges above/below the skewed panel.
-    <section className="mt-8 bg-bg-base sm:mt-10">
-      {/* Scroll runway — the extra height IS the pinned scroll distance.
-          V49 — trimmed from 280vh: the 01→04 ride took too much scroll. */}
-      <div ref={runwayRef} className="lg:h-[190vh]">
-        <div className="lg:sticky lg:top-24 lg:flex lg:min-h-[calc(100vh-6rem)] lg:flex-col lg:justify-center">
-          {/* overflow-x-clip: the emblem bleeds past the right viewport
-              edge — clip horizontally only (`clip` keeps sticky working). */}
-          <div className="relative overflow-x-clip py-12 sm:py-14 lg:py-16">
-            {/* Angled band surface with ambient underglow along the seam. */}
-            <div
-              aria-hidden
-              className="absolute inset-x-0 bottom-4 top-4 -skew-y-2 overflow-hidden border-t border-border-subtle bg-[color-mix(in_srgb,var(--color-bg-raised)_90%,transparent)]"
+    <section aria-labelledby="how-it-works-title" className="relative mt-12 sm:mt-16">
+      <CurveEdge side="top" />
+      <div ref={ref} className="relative -my-px" style={{ background: BAND }}>
+        {/* A soft light from the top curve, nothing more. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(50%_100%_at_50%_0%,rgba(255,255,255,0.035),transparent_70%)]"
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-4 pb-5 pt-3 sm:px-6 sm:pb-6 lg:px-8">
+          <div className="text-center">
+            <h2
+              id="how-it-works-title"
+              className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-primary sm:text-[28px]"
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-72">
-                <span className="absolute inset-x-0 top-0 h-56 bg-[radial-gradient(55%_100%_at_50%_0%,rgba(255,255,255,0.05),transparent_70%)] animate-pulse [animation-duration:12s]" />
-                <span className="absolute -top-16 left-[12%] h-72 w-[36rem] -rotate-6 bg-gradient-to-b from-white/[0.03] to-transparent blur-2xl" />
-                <span className="absolute -top-16 right-[10%] h-72 w-[32rem] rotate-6 bg-gradient-to-b from-white/[0.025] to-transparent blur-2xl" />
-              </div>
-            </div>
-            {/* SafeDrop emblem — big, right side, behind the final column. */}
+              {title}
+            </h2>
+            {sub && <p className="mx-auto mt-2 max-w-xl text-[14px] text-text-secondary sm:text-[15px]">{sub}</p>}
+          </div>
+
+          {/* Steps: vertical timeline on phones, one row from sm up. */}
+          <ol className="relative mt-7 grid grid-cols-1 gap-5 sm:mt-9 sm:grid-cols-4 sm:gap-4">
+            {/* Progress line, horizontal (sm+): between the first and last disc centres. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-9 hidden h-px bg-white/[0.08] sm:block"
+            >
+              <motion.span
+                style={lineStyle}
+                className="absolute inset-0 origin-left bg-[linear-gradient(90deg,rgba(198,255,61,0.15),rgba(198,255,61,0.7))]"
+              />
+            </span>
+            {/* Progress line, vertical (phones). */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-7 left-7 top-7 w-px bg-white/[0.08] sm:hidden"
+            >
+              <motion.span
+                style={lineStyleY}
+                className="absolute inset-0 origin-top bg-[linear-gradient(180deg,rgba(198,255,61,0.15),rgba(198,255,61,0.7))]"
+              />
+            </span>
+
+            {steps.map((s, i) => {
+              const Icon = STEP_ICONS[i] ?? Step4Confirm
+              const lit = i <= active
+              const current = live && i === active
+              return (
+                <li
+                  key={s.title}
+                  className="relative flex items-center gap-4 sm:flex-col sm:items-center sm:gap-0 sm:text-center"
+                >
+                  <span
+                    className={cn(
+                      'relative grid h-14 w-14 shrink-0 place-items-center rounded-full transition-[box-shadow,background-color] duration-500 sm:h-[72px] sm:w-[72px]',
+                      'bg-[#202127] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]',
+                      current &&
+                        'shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(198,255,61,0.45),0_0_28px_-6px_rgba(198,255,61,0.5)]',
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        'h-10 w-10 object-contain transition-[opacity,filter,transform] duration-500 sm:h-[52px] sm:w-[52px]',
+                        lit ? 'opacity-100' : 'scale-90 opacity-35 grayscale',
+                      )}
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold tabular-nums transition-colors duration-500',
+                        lit ? 'bg-lime text-text-inverse' : 'bg-bg-overlay text-text-tertiary',
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                  </span>
+                  <div className={cn('min-w-0 transition-opacity duration-500 sm:mt-3.5', lit ? 'opacity-100' : 'opacity-45')}>
+                    <h3 className="text-[15.5px] font-semibold leading-snug tracking-[-0.01em] text-text-primary sm:text-[16px]">
+                      {s.title}
+                    </h3>
+                    <p className="mt-0.5 text-[13.5px] leading-snug text-text-secondary sm:mx-auto sm:mt-1 sm:max-w-[220px]">
+                      {s.body}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+
+          {/* One slim callout: the guarantee, with the 3D shield. */}
+          <p className="mx-auto mt-7 flex w-fit max-w-full items-start gap-2.5 sm:items-center rounded-md bg-white/[0.045] px-3 py-2 text-[13px] text-text-secondary sm:mt-8 sm:text-[13.5px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icons/safedrop-emblem-lg.png"
               alt=""
               aria-hidden
+              width={20}
+              height={20}
               loading="lazy"
               decoding="async"
-              className="pointer-events-none absolute -right-44 top-1/2 hidden h-[30rem] w-[30rem] -translate-y-1/2 rotate-12 select-none opacity-30 lg:block"
+              className="mt-px h-5 w-5 shrink-0 object-contain sm:mt-0"
             />
-
-            {/* Content — constrained back to the page width. */}
-            <div className="relative mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
-              <SectionHeading kicker={h.kicker} title={h.title} accent={h.accent} />
-
-              {/* Step columns */}
-              <div className="mt-10 grid grid-cols-1 gap-y-12 sm:mt-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-4 lg:gap-y-0">
-                {steps.map((s, i) => {
-                  const on = i <= activeIdx
-                  const Icon = STEP_ICONS[i] ?? Step4Confirm
-                  // Split-tone title: only the LAST word carries lime,
-                  // the rest stays primary.
-                  const words = s.title.trim().split(/\s+/)
-                  const accent = words.length > 1 ? words[words.length - 1] : null
-                  const head = accent ? words.slice(0, -1).join(' ') : s.title
-                  return (
-                    <div
-                      key={STEP_NUMS[i] ?? i}
-                      className="flex flex-col items-center px-2 text-center"
-                    >
-                      <Icon
-                        className={cn(
-                          '-mt-2 mb-5 h-28 w-28 object-contain transition-all duration-500 sm:h-36 sm:w-36',
-                          on ? 'opacity-100' : 'opacity-40 grayscale',
-                        )}
-                      />
-                      <h3
-                        className={cn(
-                          'relative text-[22px] font-bold leading-tight text-text-primary transition-opacity duration-500 sm:text-[24px]',
-                          on ? 'opacity-100' : 'opacity-40',
-                        )}
-                      >
-                        {head}
-                        {accent && (
-                          <>
-                            {' '}
-                            <span className="text-lime-text">{accent}</span>
-                          </>
-                        )}
-                      </h3>
-                      <p
-                        className={cn(
-                          'relative mt-1.5 max-w-[260px] text-[14.5px] leading-relaxed transition-colors duration-500 sm:text-[15px]',
-                          on ? 'text-text-secondary' : 'text-text-disabled',
-                        )}
-                      >
-                        {s.body}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Progress track — travelling lime comet + bare step numbers
-                  that ignite as the comet passes. Desktop only. */}
-              <div className="relative mt-10 hidden h-[3px] w-full rounded-full bg-border-subtle lg:block">
-                <div className="absolute inset-0 overflow-hidden rounded-full">
-                  <motion.div
-                    style={{ left: fill, x: '-100%' }}
-                    className="absolute inset-y-0 w-48 bg-[linear-gradient(to_right,transparent,#C6FF3D)]"
-                  />
-                </div>
-                {STEP_NUMS.map((num, i) => (
-                  <span
-                    key={num}
-                    style={{ left: `${i * 25 + 12.5}%` }}
-                    className={cn(
-                      'absolute top-full mt-2.5 -translate-x-1/2 text-[15px] font-extrabold tabular-nums tracking-wide transition-all duration-300',
-                      active >= i
-                        ? 'text-lime-text opacity-100 drop-shadow-[0_0_8px_rgba(198,255,61,0.45)]'
-                        : 'text-text-tertiary opacity-60',
-                    )}
-                  >
-                    {num}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+            <span>
+              <span className="font-semibold text-lime-text">SafeDrop Protection</span>
+              <span className="text-text-tertiary"> · </span>
+              Item Guaranteed or Full Refund<span className="hidden sm:inline"> on every order</span>.
+            </span>
+          </p>
         </div>
       </div>
+      <CurveEdge side="bottom" />
     </section>
   )
 }

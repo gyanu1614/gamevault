@@ -28,8 +28,8 @@ import {
   PackageIcon,
 } from '@phosphor-icons/react/dist/ssr'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { FaqSection } from '@/components/marketplace/FaqCards'
+import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
@@ -365,7 +365,7 @@ export function GameHub({
         {hasCategories && <SellPrompt gameSlug={gameSlug} gameName={gameName} />}
       </div>
 
-      <HowItWorksBand />
+      <HowItWorksBand title={`How to Buy ${gameName} Items on DropMarket`} />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* About — the SEO intro, as readable copy (it used to be the hero
@@ -390,17 +390,15 @@ export function GameHub({
           )}
         </section>
 
-        {faq.length > 0 && (
-          <section className="mt-12 sm:mt-16">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${gameName} on DropMarket.`}
-            />
-            <FaqCards items={faq} />
-          </section>
-        )}
+        <FaqSection
+          title={`${gameName} FAQ`}
+          sub={`Quick answers about buying ${gameName} items on DropMarket.`}
+          items={faq}
+        />
+
+        {/* SEO article seam — renders nothing until the owner's article
+            design lands (see CurrencyAboutSection). */}
+        <CurrencyAboutSection gameName={gameName} />
 
         {blogRail}
       </div>

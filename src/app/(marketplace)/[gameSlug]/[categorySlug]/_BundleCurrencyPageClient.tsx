@@ -22,8 +22,8 @@
  *
  * V47 — Lower page rewired to the shared marketplace section library
  * (same stack as the item detail + flexible currency pages): editorial
- * Other Sellers heading with per-game watermark, pinned HowItWorksBand,
- * SectionHeading + FaqCards, BlogSection, PaymentsMarquee, and the
+ * Other Sellers heading with per-game watermark, How It Works band,
+ * FaqSection, the SEO article seam, BlogSection, PaymentsMarquee, and the
  * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
@@ -40,8 +40,8 @@ import { NumberField } from '@/components/ui/number-field'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { FaqSection } from '@/components/marketplace/FaqCards'
+import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
@@ -623,30 +623,29 @@ export default function BundleCurrencyPageClient({
         </section>
       )}
 
-      {/* ─── HOW IT WORKS — full-bleed angled band (outside the max-w
-          wrapper), pinned scroll-story with bundle-context copy. */}
+      {/* ─── HOW IT WORKS — compact curved band with bundle copy. */}
       <HowItWorksBand
+        title={`How to Buy ${data.unitLabel} on DropMarket`}
         steps={[
-          { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
+          { title: 'Pick Your Bundle', body: 'Choose the platform, region and amount.' },
+          { title: 'Pay at Checkout', body: 'Every order is covered by SafeDrop Protection.' },
+          { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated time.' },
+          { title: 'Confirm Delivery', body: 'Confirm and the order is complete, or get a full refund.' },
         ]}
       />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* ─── FAQ — admin-configured items, Flock-geometry cards. */}
-        {data.faq.length > 0 && (
-          <section className="mt-10 sm:mt-14">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${data.gameName} ${data.unitLabel}.`}
-            />
-            <FaqCards items={data.faq} />
-          </section>
-        )}
+        {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
+        <FaqSection
+          title={`${data.unitLabel} FAQ`}
+          sub={`Quick answers about buying ${data.gameName} ${data.unitLabel} on DropMarket.`}
+          items={data.faq}
+          className="mt-8 sm:mt-10"
+        />
+
+        {/* ─── SEO ARTICLE seam — renders nothing until the owner's article
+            design lands (see CurrencyAboutSection). */}
+        <CurrencyAboutSection gameName={data.gameName} currencyName={data.unitLabel} />
 
         {/* ─── BLOG — game-relevant guides rail. */}
         {blogRail}

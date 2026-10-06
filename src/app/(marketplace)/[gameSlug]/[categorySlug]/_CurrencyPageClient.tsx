@@ -23,8 +23,8 @@ import { PhoneBuySheet } from './_PhoneBuySheet'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { FaqSection } from '@/components/marketplace/FaqCards'
+import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
@@ -400,32 +400,31 @@ export default function CurrencyPageClient({
         </div>
       </div>
 
-      {/* ─── HOW IT WORKS — full-bleed angled band (outside the max-w
-          wrapper), pinned scroll-story with currency-context copy. */}
+      {/* ─── HOW IT WORKS — compact curved band with currency copy. */}
       <HowItWorksBand
+        title={`How to Buy ${data.currency.name} on DropMarket`}
         steps={[
-          { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
+          { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time.' },
+          { title: 'Pay at Checkout', body: 'Every order is covered by SafeDrop Protection.' },
+          { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated time.' },
+          { title: 'Confirm Delivery', body: 'Confirm and the order is complete, or get a full refund.' },
         ]}
       />
 
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
-        {/* ─── FAQ — admin-configured items, Flock-geometry cards. */}
-        {data.faq.length > 0 && (
-          <section className="mt-10 sm:mt-14">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${data.currency.name}.`}
-            />
-            <FaqCards items={data.faq} />
-          </section>
-        )}
+        {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
+        <FaqSection
+          title={`${data.currency.name} FAQ`}
+          sub={`Quick answers about buying ${data.currency.game} ${data.currency.name} on DropMarket.`}
+          items={data.faq}
+          className="mt-8 sm:mt-10"
+        />
 
-        {/* ─── SEO block (kept for search copy). */}
+        {/* ─── SEO ARTICLE seam — renders nothing until the owner's article
+            design lands (see CurrencyAboutSection). */}
+        <CurrencyAboutSection gameName={data.currency.game} currencyName={data.currency.name} />
+
+        {/* ─── SEO block (existing copy, kept until the article replaces it). */}
         <div className="mx-auto mt-14 max-w-4xl">
           <SeoBlock currency={data.currency} />
         </div>
@@ -1139,7 +1138,6 @@ function EmptyState() {
     </div>
   )
 }
-
 
 // V14e — Match the How it works width (full max-w-4xl wrapper). The
 // previous max-w-2xl looked starved next to the 3-column grid above.
