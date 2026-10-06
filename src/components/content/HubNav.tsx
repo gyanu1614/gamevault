@@ -7,7 +7,8 @@
  *
  * - The game icon + name link to the game's marketplace hub (/{slug}), like
  *   the marketplace GameSubNav; the caret beside them opens the game
- *   switcher, where picking a game goes to ITS hub home (/{slug}/blog).
+ *   switcher, where picking a game goes to ITS hub home (its blog, or its
+ *   value list when it has no blog — hubNav.ts hubHome).
  * - Tool tabs and buy buttons are data-driven; games without a category or
  *   tool simply don't render that control.
  * - Marketplace look (card-surface system): the same translucent near-black
@@ -32,10 +33,17 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
+import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
 
-const TOOL_LABEL: Record<'values' | 'calculator', string> = {
+const TOOL_LABEL: Record<HubTool, string> = {
   values: 'Values',
   calculator: 'Calculator',
+  inventory: 'Inventory Worth',
+  chromas: 'Chromas',
+  boxes: 'Box Odds',
+  events: 'Events',
+  freeItems: 'Free Items',
+  codes: 'Codes',
 }
 
 /** Neutral tab colours (hub chrome stays neutral; no forest/lime accent). */
@@ -91,7 +99,7 @@ export function HubNav({
   // The page tabs, built once and rendered in two places: the inline desktop
   // nav (md+) and the mobile sub-row (below md). One source avoids drift.
   const tabs: { key: string; label: string; href: string }[] = [
-    { key: 'guides', label: 'Guides', href: `/${current.slug}/blog` },
+    ...(current.hasGuides ? [{ key: 'guides', label: 'Guides', href: `/${current.slug}/blog` }] : []),
     // The calculator's two modes are their own tabs rather than a dropdown: two
     // options never justified a menu, and flat tabs are one tap instead of two
     // — plus both are crawlable links.
@@ -119,8 +127,8 @@ export function HubNav({
         : [
             {
               key: tool,
-              label: TOOL_LABEL[tool as 'values' | 'calculator'],
-              href: `/${current.slug}/${tool}`,
+              label: TOOL_LABEL[tool],
+              href: `/${current.slug}/${HUB_TOOL_PATH[tool]}`,
             },
           ],
     ),
@@ -244,7 +252,7 @@ export function HubNav({
                   <Command.Empty className="px-3 py-6 text-center text-sm text-text-tertiary">No games found</Command.Empty>
                   {games.map((g) => {
                     const active = g.slug === current.slug
-                    const href = `/${g.slug}/blog`
+                    const href = g.homeHref
                     return (
                       <Command.Item
                         key={g.slug}

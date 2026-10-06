@@ -10,7 +10,7 @@ type Db = any
 
 /** Everything buildSitemap needs, read through `db` (the sitemap's Supabase client). */
 export async function loadSitemapInput(db: Db, baseUrl: string): Promise<SitemapInput> {
-  const [core, sab, adoptMe, pipeline, gamePosts, landingChecks] =
+  const [core, sab, adoptMe, pipeline, events, gamePosts, landingChecks] =
     await Promise.all([
       loadCoreRows(db),
       fetchAllRows<SitemapInput['sabBrainrots'][number]>((from, to) =>
@@ -32,6 +32,21 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
           .eq('is_enabled', true)
           .eq('is_priced', true)
           .order('id')
+          .range(from, to),
+      ),
+      // The events archive (values_events): published rows, any game.
+      fetchAllRows<{
+        slug: string
+        status: string
+        items: unknown
+        updated_at: string | null
+        games: { slug: string } | null
+      }>((from, to) =>
+        db
+          .from('values_events')
+          .select('slug, status, items, updated_at, games!inner(slug)')
+          .eq('is_published', true)
+          .order('slug')
           .range(from, to),
       ),
       fetchAllRows<SitemapInput['gamePosts'][number]>((from, to) =>
@@ -59,6 +74,15 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
         rarity: r.rarity ?? null,
         priceChangedAt: r.values_prices?.price_changed_at ?? null,
         sampleSize: r.values_prices?.sample_size ?? null,
+      })),
+    valueEvents: events
+      .filter((r) => r.games?.slug)
+      .map((r) => ({
+        gameSlug: r.games!.slug,
+        slug: r.slug,
+        status: r.status,
+        itemCount: Array.isArray(r.items) ? r.items.length : 0,
+        updatedAt: r.updated_at ?? null,
       })),
     gamePosts,
     posts: getAllPosts(),

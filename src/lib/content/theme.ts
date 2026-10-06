@@ -14,6 +14,8 @@
  * Adding a game = adding an entry here. Nothing else.
  */
 
+import type { HubTool } from './hub-tools'
+
 export interface GameContentTheme {
   /** Display name used in breadcrumbs, headings and copy. */
   name: string
@@ -60,7 +62,7 @@ export interface GameContentTheme {
    */
   pages: HubPageSet
   /** Tool tabs shown in HubNav, in display order. */
-  navTools: Array<'values' | 'calculator'>
+  navTools: HubTool[]
   /**
    * What this game calls one tradable thing ("Brainrot", "Pet", "Egg") and one
    * of its forms ("Mutation", "Variant"). Shared components read these instead
@@ -78,6 +80,8 @@ export interface GameContentTheme {
    * `pages.values`.
    */
   footerTools: boolean
+  /** Hub tools linked from the footer only (the page exists; its tab was folded out of a crowded nav). */
+  footerOnlyTools?: HubTool[]
 }
 
 /** The hub pages a game can publish. Absent/false = the route notFound()s. */
@@ -87,7 +91,22 @@ export interface HubPageSet {
   priceIndex: boolean
   methodology: boolean
   blog: boolean
+  /** The events archive: /[game]/events + /[game]/events/[eventSlug] (values_events). */
+  events: boolean
+  /** The honest free-items guide: /[game]/free-items (researched seed JSON, build time). */
+  freeItems: boolean
+  /** The codes page: /[game]/codes — the verdict, every expired code, scam warnings. */
+  codes: boolean
+  /** The Chroma hub: /[game]/chromas — every Chroma, its price vs its normal version, the unbox maths. */
+  chromas: boolean
+  /** The inventory value calculator: /[game]/inventory — pick your items, see their USD worth, share it. */
+  inventory: boolean
+  /** Box Odds: /[game]/boxes + /[game]/boxes/[boxSlug] — every box, what's inside, the drop rates, the value maths. */
+  boxes: boolean
 }
+
+/** A HubNav tool tab — each is also a HubPageSet page, served at HUB_TOOL_PATH[tool] (./hub-tools). */
+export type { HubTool }
 
 /** Static worked-example for the blog calculator promo (see `calculatorExample`). */
 export interface CalcPromoExample {
@@ -209,6 +228,12 @@ const DEFAULT_THEME: GameContentTheme = {
     priceIndex: false,
     methodology: false,
     blog: false,
+    events: false,
+    freeItems: false,
+    codes: false,
+    chromas: false,
+    inventory: false,
+    boxes: false,
   },
   navTools: [],
   itemNoun: 'Item',
@@ -247,6 +272,12 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: true,
       methodology: true,
       blog: true,
+      events: false,
+      freeItems: false,
+      codes: false,
+      chromas: false,
+      inventory: false,
+      boxes: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Brainrot',
@@ -290,6 +321,12 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: false,
+      events: false,
+      freeItems: false,
+      codes: false,
+      chromas: false,
+      inventory: false,
+      boxes: false,
     },
     navTools: ['values'],
     itemNoun: 'Egg',
@@ -336,6 +373,12 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: true,
+      events: false,
+      freeItems: false,
+      codes: false,
+      chromas: false,
+      inventory: false,
+      boxes: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Pet',
@@ -379,8 +422,27 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: false,
+      // The events archive (values_events, 2026-10-05): every MM2 event since
+      // Halloween 2015 with its items and their live set value.
+      events: true,
+      // The honest guides (2026-10-05, scripts/values-seeds/murder-mystery-2.free-items.json):
+      // every real free way with the odds, and the codes verdict (none work).
+      freeItems: true,
+      codes: true,
+      // The Chroma hub (2026-10-05): every Chroma with its price, its normal
+      // version's price and the multiple, plus the unbox-vs-buy maths.
+      chromas: true,
+      // The Inventory Worth tool (2026-10-05): pick your items, see what the
+      // inventory is worth at today's live prices, share it as an image.
+      inventory: true,
+      // Box Odds (2026-10-05, scripts/values-seeds/murder-mystery-2.boxes.json):
+      // every Shop and retired box, its items, the in-game drop rates and the
+      // expected value of a spin at live prices.
+      boxes: true,
     },
-    navTools: ['values'],
+    // Seven tabs crowd the bar: Codes lives in the footer only (footerOnlyTools).
+    navTools: ['values', 'inventory', 'chromas', 'boxes', 'events', 'freeItems'],
+    footerOnlyTools: ['codes'],
     itemNoun: 'Item',
     itemNounPlural: 'Items',
     // Chroma is its own item with its own price (chroma-fang → fang), not a

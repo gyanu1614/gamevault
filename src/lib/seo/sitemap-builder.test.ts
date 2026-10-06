@@ -92,6 +92,67 @@ describe('which URLs are listed', () => {
     expect(all).not.toContain(`${BASE}/murder-mystery-2/calculator`) // Step 3
   })
 
+  it('lists the MM2 events hub and every event page except a thin (ended, no items) one', () => {
+    const all = urls()
+    expect(all).toContain(`${BASE}/murder-mystery-2/events`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/events/halloween-2025`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/events/halloween-2026`) // upcoming: "release date" searches
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/events/rb-battles-season-1`) // ended, no items: noindex
+    expect(all.filter((u) => /\/(adopt-me|steal-a-brainrot|steal-an-egg)\/events/.test(u))).toEqual([])
+    // lastmod: the row's own date; the hub carries the newest.
+    expect(lastmod(`${BASE}/murder-mystery-2/events/halloween-2025`)).toBe('2026-10-05T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/events`)).toBe('2026-10-05T00:00:00Z')
+  })
+
+  it('lists the MM2 free-items guide and codes page, dated by the research check, and no other game’s', async () => {
+    const all = urls()
+    const { getFreeGuide } = await import('@/lib/values/free-guide')
+    const checked = `${getFreeGuide('murder-mystery-2')!.checkedAt}T00:00:00Z`
+    expect(lastmod(`${BASE}/murder-mystery-2/free-items`)).toBe(checked)
+    expect(lastmod(`${BASE}/murder-mystery-2/codes`)).toBe(checked)
+    expect(all.filter((u) => /\/(free-items|codes)$/.test(u))).toHaveLength(2)
+  })
+
+  it('lists the MM2 Chroma hub, dated by the newest Chroma price move, only while a Chroma is priced', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-03T00:00:00Z', sampleSize: 37 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-luger', rarity: 'Chroma', priceChangedAt: '2026-10-04T00:00:00Z', sampleSize: 2 },
+    ]
+    expect(lastmod(`${BASE}/murder-mystery-2/chromas`, { pipelineItems })).toBe('2026-10-04T00:00:00Z')
+    expect(urls({ pipelineItems: pipelineItems.slice(0, 1) })).not.toContain(`${BASE}/murder-mystery-2/chromas`)
+    expect(urls().filter((u) => u.endsWith('/chromas'))).toEqual([])
+  })
+
+  it('lists the MM2 Box Odds hub and all 44 box pages, dated by the seed check or a newer price move of their items', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'gemstone', rarity: 'Godly', priceChangedAt: '2026-10-09T00:00:00Z', sampleSize: 20 },
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-11T00:00:00Z', sampleSize: 63 },
+    ]
+    const all = urls({ pipelineItems })
+    const boxes = all.filter((u) => u.startsWith(`${BASE}/murder-mystery-2/boxes`))
+    expect(boxes).toContain(`${BASE}/murder-mystery-2/boxes`)
+    expect(boxes).toHaveLength(45)
+    // Mystery Box 1 holds Gemstone: its page moves with that price; Harvester is in no box.
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes/mystery-box-1`, { pipelineItems })).toBe('2026-10-09T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes/knife-box-4`, { pipelineItems })).toBe('2026-10-05T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes`, { pipelineItems })).toBe('2026-10-09T00:00:00Z')
+  })
+
+  it('lists the MM2 Inventory Worth tool, dated by the newest price move, only while an item is priced', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-03T00:00:00Z', sampleSize: 37 },
+    ]
+    expect(lastmod(`${BASE}/murder-mystery-2/inventory`, { pipelineItems })).toBe('2026-10-05T00:00:00Z')
+    expect(urls({ pipelineItems: [] })).not.toContain(`${BASE}/murder-mystery-2/inventory`)
+    expect(urls({ pipelineItems }).filter((u) => u.endsWith('/inventory'))).toEqual([`${BASE}/murder-mystery-2/inventory`])
+  })
+
+  it('lists no events hub for a game with no published events', () => {
+    expect(urls({ valueEvents: [] })).not.toContain(`${BASE}/murder-mystery-2/events`)
+  })
+
   it('lists SAB and Adopt Me value items, and the hub pages their theme enables', () => {
     const all = urls()
     expect(all).toContain(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)

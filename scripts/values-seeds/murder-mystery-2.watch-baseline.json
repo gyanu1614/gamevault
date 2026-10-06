@@ -1,0 +1,26 @@
+{
+  "game": "murder-mystery-2",
+  "checked_at": "2026-10-05",
+  "about": "Baseline for scripts/mm2-watch.mjs, built from the free-items research (murder-mystery-2.free-items.json, watch_sources) and the same endpoints read on 2026-10-05. A difference means MM2 or its wiki changed: re-check the free-items guide, codes, boxes and events seeds, then refresh this file with `node scripts/mm2-watch.mjs --update`.",
+  "wiki": {
+    "revids": {
+      "Codes": 167612,
+      "Timeline": 179097,
+      "Shop": 178319,
+      "Boxes": 178756,
+      "Crafting": 179406,
+      "Promos": 116738
+    },
+    "missing": ["Halloween Event 2026", "Christmas Event 2026", "Season 2"]
+  },
+  "roblox": {
+    "universe_id": 66654135,
+    "game_updated": "2026-09-24T18:02:21Z",
+    "description_sha256": "428d496ea8c376f5",
+    "game_pass_count": 72,
+    "game_passes_for_sale": [429957, 1308795, 1927110322],
+    "virtual_event_count": 0,
+    "group_id": 1030692,
+    "group_shout": null
+  }
+}

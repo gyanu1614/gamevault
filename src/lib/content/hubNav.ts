@@ -3,7 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
-import { getGameContentTheme, hasGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage, hasGameContentTheme, type HubTool } from '@/lib/content/theme'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
 
 /**
@@ -21,13 +21,23 @@ export interface HubNavGame {
   name: string
   slug: string
   imageUrl: string | null
+  /** The game publishes a blog hub — the "Guides" tab only shows when true. */
+  hasGuides: boolean
+  /** Where picking the game in the switcher goes: its blog, else its values. */
+  homeHref: string
+}
+
+/** A hub game's landing page: Guides when it has a blog, else its value list (MM2 has no blog yet). */
+function hubHome(slug: string): { hasGuides: boolean; homeHref: string } {
+  const hasGuides = hasHubPage(slug, 'blog')
+  return { hasGuides, homeHref: hasGuides ? `/${slug}/blog` : `/${slug}/values` }
 }
 
 export interface HubNavData {
   games: HubNavGame[]
   current: HubNavGame
   /** Tool tabs available for this game, in display order. */
-  tools: Array<'values' | 'calculator'>
+  tools: HubTool[]
   /** Storefront links — null when the game lacks that category. */
   itemsHref: string | null
   accountsHref: string | null
@@ -87,11 +97,13 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
       name: g.name,
       slug: g.slug,
       imageUrl: hubGameIcon(g.slug, g.image_url),
+      ...hubHome(g.slug),
     })),
     current: {
       name: current?.name ?? gameSlug,
       slug: gameSlug,
       imageUrl: hubGameIcon(gameSlug, current?.image_url),
+      ...hubHome(gameSlug),
     },
     tools: getGameContentTheme(gameSlug).navTools,
     itemsHref,

@@ -9,6 +9,9 @@ import {
 } from '@/lib/games/indexability'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { valueItemHasPage } from '@/lib/values/hub-config'
+import { isEventIndexable } from '@/lib/values/events-model'
+import { freeGuideLastmod } from '@/lib/values/free-guide'
+import { allBoxes, boxesCheckedAt } from '@/lib/values/boxes'
 import { computeCategoryPages } from '@/lib/seo/category-index'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
@@ -59,6 +62,8 @@ export interface SitemapInput {
     priceChangedAt: string | null
     sampleSize: number | null
   }[]
+  /** Published events archive rows (values_events), any game. */
+  valueEvents: { gameSlug: string; slug: string; status: string; itemCount: number; updatedAt: string | null }[]
   gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null }[]
   /** Every blog post (for the index page's date). */
   posts: { publishedAt: string }[]
@@ -193,6 +198,49 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
       out.push({ url: at(`/${slug}/values/methodology`), ...dated(SITE_PAGES_UPDATED.methodology), changeFrequency: 'monthly', priority: 0.5 })
     }
     if (theme.pages.priceIndex) out.push({ url: at(`/${slug}/price-index`), ...dated(data), changeFrequency: 'daily', priority: 0.7 })
+    if (theme.pages.events) {
+      // The events archive: the hub, then every event page the route serves
+      // with an index verdict (isEventIndexable — same rule as its robots meta).
+      // lastmod = the event row's own updated_at; the hub = the newest of them.
+      const events = input.valueEvents.filter((e) => e.gameSlug === slug)
+      if (events.length > 0) {
+        out.push({ url: at(`/${slug}/events`), ...dated(newest(...events.map((e) => e.updatedAt))), changeFrequency: 'weekly', priority: 0.75 })
+        for (const e of events) {
+          if (!isEventIndexable(e)) continue
+          out.push({ url: at(`/${slug}/events/${e.slug}`), ...dated(e.updatedAt), changeFrequency: 'weekly', priority: 0.65 })
+        }
+      }
+    }
+    // The Chroma hub: lastmod = the newest Chroma price move (its numbers are live prices).
+    if (theme.pages.chromas) {
+      const chromaPrices = input.pipelineItems.filter((i) => i.gameSlug === slug && i.rarity === 'Chroma')
+      if (chromaPrices.length > 0) {
+        out.push({ url: at(`/${slug}/chromas`), ...dated(newest(...chromaPrices.map((i) => i.priceChangedAt))), changeFrequency: 'daily', priority: 0.8 })
+      }
+    }
+    // Box Odds: the hub + every box page (closed set from the build-time seed).
+    // lastmod = the newest of the research's check date and the price moves
+    // of the items the page shows (its numbers are live prices).
+    if (theme.pages.boxes && allBoxes(slug).length > 0) {
+      const checked = boxesCheckedAt(slug)
+      const moved = new Map(input.pipelineItems.filter((i) => i.gameSlug === slug).map((i) => [i.slug, i.priceChangedAt]))
+      const boxes = allBoxes(slug).map((b) => ({ b, last: newest(checked ? `${checked}T00:00:00Z` : null, ...b.items.map((i) => (i.slug ? moved.get(i.slug) : null))) }))
+      out.push({ url: at(`/${slug}/boxes`), ...dated(newest(...boxes.map((x) => x.last))), changeFrequency: 'daily', priority: 0.8 })
+      for (const { b, last } of boxes) {
+        out.push({ url: at(`/${slug}/boxes/${b.slug}`), ...dated(last), changeFrequency: 'weekly', priority: b.inShop ? 0.7 : 0.6 })
+      }
+    }
+    // Inventory Worth: lastmod = the newest price move of any item (it totals live prices).
+    if (theme.pages.inventory && input.pipelineItems.some((i) => i.gameSlug === slug)) {
+      out.push({ url: at(`/${slug}/inventory`), ...dated(data), changeFrequency: 'daily', priority: 0.8 })
+    }
+    // The honest guides: lastmod = the research's own check date (build-time seed).
+    if (theme.pages.freeItems && freeGuideLastmod(slug)) {
+      out.push({ url: at(`/${slug}/free-items`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })
+    }
+    if (theme.pages.codes && freeGuideLastmod(slug)) {
+      out.push({ url: at(`/${slug}/codes`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })
+    }
     for (const item of itemsByGame[slug] ?? []) {
       if (!item.slug) continue
       out.push({ url: at(`/${slug}/values/${item.slug}`), ...dated(item.updated_at), changeFrequency: 'daily', priority: 0.7 })

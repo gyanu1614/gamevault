@@ -8,7 +8,7 @@ import { HubHero } from '@/components/content/HubHero'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { HUB_GROUND } from '@/components/values/styles'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { getValueItems, getValueTrends, getValuesFreshness } from '@/lib/values/data'
@@ -150,6 +150,7 @@ async function ValueListBody({
           listingCount: freshness.listingCount,
           sourceCount: freshness.sourceCount,
         }}
+        chromaHubHref={hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null}
       />
 
       <ValuesSeo
@@ -159,7 +160,16 @@ async function ValueListBody({
         buyHref={buyHref}
         calculatorHref={null}
         faq={faq}
-        intro={valueListIntro({ gameSlug, gameName: theme.name, shortName: hub.shortName, buyHref, top })}
+        intro={valueListIntro({
+          gameSlug,
+          gameName: theme.name,
+          shortName: hub.shortName,
+          buyHref,
+          top,
+          freeGuideHref: hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null,
+          chromaHubHref: hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null,
+          inventoryHref: hasHubPage(gameSlug, 'inventory') ? `/${gameSlug}/inventory` : null,
+        })}
       />
 
       <HubBuyCta gameName={theme.name} gameSlug={gameSlug} buyHref={buyHref} />
@@ -174,12 +184,21 @@ function valueListIntro({
   shortName,
   buyHref,
   top,
+  freeGuideHref,
+  chromaHubHref,
+  inventoryHref,
 }: {
   gameSlug: string
   gameName: string
   shortName: string
   buyHref: string
   top: ValueListRow | undefined
+  /** The game's honest free-items guide, when it publishes one. */
+  freeGuideHref: string | null
+  /** The game's Chroma hub, when it publishes one. */
+  chromaHubHref: string | null
+  /** The game's Inventory Worth tool, when it publishes one. */
+  inventoryHref: string | null
 }): { heading: string; body: React.ReactNode }[] {
   return [
     {
@@ -194,6 +213,15 @@ function valueListIntro({
             <>
               {' '}The most expensive item on the list today is the {top.name}, from{' '}
               {usd(top.cheapestUsd)}.
+            </>
+          )}
+          {inventoryHref && (
+            <>
+              {' '}Got a whole inventory? Add every item to the{' '}
+              <Link href={inventoryHref} className={linkCls}>
+                {shortName} inventory value calculator
+              </Link>{' '}
+              and see what your inventory is worth in total.
             </>
           )}
         </>
@@ -222,12 +250,31 @@ function valueListIntro({
           In {gameName} most of the money sits in a small set of items. Event
           Godlies and Ancients never come back once the event ends, so supply only
           shrinks, and a Chroma unboxes far less often than its normal version —
-          which is why a Chroma can sell for many times its base weapon. Once you
+          which is why a Chroma can sell for many times its base weapon
+          {chromaHubHref && (
+            <>
+              {' '}(see{' '}
+              <Link href={chromaHubHref} className={linkCls}>
+                every {shortName} Chroma&apos;s price next to its normal version
+              </Link>
+              )
+            </>
+          )}
+          . Once you
           know what an item is worth you can{' '}
           <Link href={buyHref} className={linkCls}>
             buy {shortName} items
           </Link>{' '}
           at a fair price, or list your own, with SafeDrop covering every order.
+          {freeGuideHref && (
+            <>
+              {' '}Want them without paying? Here is{' '}
+              <Link href={freeGuideHref} className={linkCls}>
+                every real way to get free {shortName} Godlies
+              </Link>
+              , with the odds.
+            </>
+          )}
         </>
       ),
     },

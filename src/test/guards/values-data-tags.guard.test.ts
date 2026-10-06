@@ -34,12 +34,19 @@ const SCOPE_DIRS = [
   `${HUB}/neon-calculator`,
   `${HUB}/price-index`,
   `${HUB}/blog`,
+  `${HUB}/events`, // events archive (values_events + live prices)
+  `${HUB}/free-items`, // free items guide (live prices of the Godlies it names)
+  `${HUB}/codes`, // codes page (live prices of the merch-code items)
+  `${HUB}/chromas`, // Chroma hub (live Chroma + normal prices, events)
+  `${HUB}/inventory`, // Inventory Worth (every priced item's live price)
+  `${HUB}/boxes`, // Box Odds (live prices of every box item, events)
 ]
 
 /** Single files outside those directories that read values data. */
 const SCOPE_FILES = [
   'src/lib/sab/priceCache.ts',
   'src/lib/values/data.ts',
+  'src/lib/values/events.ts',
   `${HUB}/page.tsx`, // the SAB landing's top-values carousel
 ]
 

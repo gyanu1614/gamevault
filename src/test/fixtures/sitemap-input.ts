@@ -50,6 +50,11 @@ export function sitemapFixture(over: Partial<SitemapInput> = {}): SitemapInput {
       { gameSlug: 'steal-an-egg', slug: 'thin-egg', priceChangedAt: '2026-09-23T00:00:00Z', sampleSize: 2 },
       { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-09-24T00:00:00Z', sampleSize: 63 },
     ],
+    valueEvents: [
+      { gameSlug: 'murder-mystery-2', slug: 'halloween-2025', status: 'ended', itemCount: 31, updatedAt: '2026-10-05T00:00:00Z' },
+      { gameSlug: 'murder-mystery-2', slug: 'halloween-2026', status: 'upcoming', itemCount: 0, updatedAt: '2026-10-04T00:00:00Z' },
+      { gameSlug: 'murder-mystery-2', slug: 'rb-battles-season-1', status: 'ended', itemCount: 0, updatedAt: '2026-10-03T00:00:00Z' },
+    ],
     gamePosts: [
       { slug: 'vp-guide', primary_game_slug: 'valorant', updated_at: '2026-09-10T00:00:00Z' },
       { slug: 'vp-tips', primary_game_slug: 'valorant', updated_at: '2026-09-14T00:00:00Z' },

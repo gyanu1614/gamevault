@@ -51,6 +51,7 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   values_items: 'public value pages; RLS restricts to is_enabled',
   values_prices: 'public value pages; aggregate market pricing, no PII',
   values_price_history: 'public value-page charts; aggregate pricing',
+  values_events: 'public events archive (MM2); SELECT only, RLS restricts to is_published, no write grants',
 
   // Fee engine (PR 1): fees are public information, quoted on the seller fee
   // page and the sell wizard. Read-only: no write policy, writes are

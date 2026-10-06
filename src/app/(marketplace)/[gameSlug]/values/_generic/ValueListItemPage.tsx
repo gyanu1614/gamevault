@@ -2,6 +2,9 @@ import { Suspense } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
+import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
+import { DiamondIcon } from '@phosphor-icons/react/dist/ssr/Diamond'
+import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator'
 import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -9,12 +12,14 @@ import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
-import { getGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
+import { getValueItemEvent } from '@/lib/values/events'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { rarityMeta } from '@/lib/values/rarity'
+import { boxForItem } from '@/lib/values/boxes'
 import { getValueItemHistory, getValueItemHowToGet, trendValue, type ValueItem } from '@/lib/values/data'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
@@ -56,20 +61,30 @@ export default async function ValueListItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const hub = valueListHub(gameSlug)!
-  const [hubNav, howToGet] = await Promise.all([
+  const [hubNav, howToGet, fromEvent] = await Promise.all([
     getHubNavData(gameSlug),
     // Verified how-to-get facts (values_items.how_to_get), under the item's tags.
     getValueItemHowToGet(gameSlug, item.slug),
+    // The event it came from (values_events), for the link back — item tags too.
+    hasHubPage(gameSlug, 'events') ? getValueItemEvent(gameSlug, item.slug) : Promise.resolve(null),
   ])
 
   const rarity = rarityMeta(gameSlug, item.rarity)
   const typeLabel = (item.itemType && hub.itemTypeLabels[item.itemType]) || theme.itemNoun
+
   const hasPage = (i: ValueItem) => valueItemHasPage(gameSlug, { rarity: i.rarity, priced: i.price?.cheapestUsd != null })
 
   // The other form: a Chroma's base, or this item's Chroma.
   const base = item.baseItemId ? items.find((i) => i.id === item.baseItemId) ?? null : null
   const chroma = base ? null : items.find((i) => i.baseItemId === item.id) ?? null
   const counterpart = base ?? chroma
+  // A Chroma links up to the Chroma hub (which links every Chroma page back).
+  const chromaHubHref = item.rarity === 'Chroma' && hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null
+  // A priced item drops straight into Inventory Worth: `#i=<slug>:1` is the
+  // tool's own hash format; `&add=1` merges it into the visitor's saved list
+  // instead of replacing it (a shared link without it shows exactly its list).
+  const inventoryHref =
+    item.price?.cheapestUsd != null && hasHubPage(gameSlug, 'inventory') ? `/${gameSlug}/inventory#i=${item.slug}:1&add=1` : null
 
   const price = item.price
   const cheapestUsd = price?.cheapestUsd ?? null
@@ -148,9 +163,51 @@ export default async function ValueListItemPage({
           <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-display">
             {item.name} Value in {hub.shortName}
           </h1>
-          <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
-            What {item.name} sells for in real money — from live listings by reputable sellers.
+          {/* The answer, right under the H1: what it is, the chroma link, and
+              what it's worth — plain server text, the first thing a crawler
+              and an answer engine read. */}
+          <p className="mt-4 text-body leading-7 text-text-secondary">
+            {aboutSentence(copy)}
+            {chromaSentence(copy) ? ` ${chromaSentence(copy)}` : ''}
+            {priceSentence(copy) ? ` ${priceSentence(copy)}` : ''}
           </p>
+          {/* Internal links: back to its event (the event page links here) and,
+              for a Chroma, to the Chroma hub (every Chroma vs its normal version). */}
+          {(fromEvent || chromaHubHref || inventoryHref) && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+              {fromEvent && (
+                <Link
+                  href={`/${gameSlug}/events/${fromEvent.slug}`}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <CalendarStarIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  From the {fromEvent.name} Event
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+              {chromaHubHref && (
+                <Link
+                  href={chromaHubHref}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <DiamondIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  All {hub.shortName} Chromas
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+              {inventoryHref && (
+                <Link
+                  href={inventoryHref}
+                  prefetch={false}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <CalculatorIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  Add To Inventory Worth
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         <Suspense fallback={<ValueListItemSkeleton withForms={!!counterpart && hasPage(counterpart)} />}>
@@ -224,7 +281,6 @@ async function ItemBody({
   const price = item.price
   const cheapestUsd = price?.cheapestUsd ?? null
   const marketUsd = price?.averageUsd ?? null
-  const listedNow = price?.sampleSize ?? 0
 
   // Standard ↔ Chroma, only when the other form has a page to go to.
   const forms: ItemForm[] | null =
@@ -245,7 +301,7 @@ async function ItemBody({
   stats.push({ label: 'Type', value: typeLabel })
   if (item.origin) stats.push({ label: 'Origin', value: item.origin })
   if (item.releaseYear) stats.push({ label: 'Released', value: String(item.releaseYear) })
-  stats.push({ label: 'Listed Now', value: listedNow > 0 ? listedNow.toLocaleString('en-US') : 'None' })
+  stats.push({ label: 'Sold By', value: 'Professional Sellers' })
 
   const series = [item, ...(counterpart ? [counterpart] : [])].map((f) => ({
     key: f.slug,
@@ -274,7 +330,6 @@ async function ItemBody({
   const similarTitle = `Similar ${rarity.label || ''} ${allSameType ? plural(typeLabel) : theme.itemNounPlural}`.replace(/\s+/g, ' ')
 
   const imageCredit = parseImageAttribution(item.imageAttribution)
-  const chromaLine = chromaSentence(copy)
 
   return (
     <>
@@ -310,21 +365,17 @@ async function ItemBody({
       />
 
       <div className="relative mx-auto w-full max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
-        <section>
-          <h2 className="mb-5 text-heading font-bold tracking-tight text-text-primary">About The {item.name}</h2>
+        <section aria-labelledby="item-worth-title">
+          <h2 id="item-worth-title" className="mb-5 text-heading font-bold tracking-tight text-text-primary">
+            How Much Is {item.name} Worth in {hub.shortName}?
+          </h2>
           <ValueListAboutStats
             name={item.name}
             cheapestUsd={cheapestUsd}
             marketUsd={marketUsd}
-            listedNow={listedNow}
             confidence={price?.confidenceLabel ?? null}
             buy={buy}
           />
-          {/* Answer-first, dated, quotable — plain server text for crawlers. */}
-          <p className="mt-6 text-body leading-7 text-text-secondary">
-            {aboutSentence(copy)} {chromaLine ? `${chromaLine} ` : ''}
-            {priceSentence(copy)}
-          </p>
         </section>
 
         <ValueItemHowToGet
@@ -337,6 +388,8 @@ async function ItemBody({
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}
+          freeGuideHref={hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null}
+          boxLink={boxLinkFor(gameSlug, item.slug)}
         />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />
@@ -395,4 +448,10 @@ async function ItemBody({
       </div>
     </>
   )
+}
+
+/** How To Get → the box an item drops from (a Shop box first), when the game publishes Box Odds. */
+function boxLinkFor(gameSlug: string, itemSlug: string): { href: string; label: string } | null {
+  const box = hasHubPage(gameSlug, 'boxes') ? boxForItem(gameSlug, itemSlug) : null
+  return box ? { href: `/${gameSlug}/boxes/${box.slug}`, label: `${box.name} Drop Rates` } : null
 }

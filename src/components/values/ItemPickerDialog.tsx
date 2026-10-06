@@ -17,6 +17,10 @@ export interface ItemPickerItem {
   sub?: string
   /** Colour for the sub line (e.g. the rarity colour); tertiary text otherwise. */
   subColor?: string
+  /** A price line under the sub line ("$12.10"). */
+  price?: string
+  /** Copies already picked: a count badge on the tile's corner (multi-add pickers). */
+  count?: number
 }
 
 /**
@@ -168,8 +172,17 @@ export function ItemPickerDialog({
                         <button
                           type="button"
                           onClick={() => onPick(it.key)}
-                          className="group flex h-full w-full flex-col items-center gap-1.5 rounded-md bg-white/[0.04] p-2.5 text-center transition-[background-color,transform] hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                          aria-label={it.count ? `${it.name}, ${it.count} picked` : undefined}
+                          className="group relative flex h-full w-full flex-col items-center gap-1.5 rounded-md bg-white/[0.04] p-2.5 text-center transition-[background-color,transform] hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                         >
+                          {it.count ? (
+                            <span
+                              aria-hidden
+                              className="absolute right-1.5 top-1.5 grid h-5 min-w-5 place-items-center rounded-md bg-lime px-1 text-[11px] font-bold tabular-nums text-text-inverse"
+                            >
+                              {it.count}
+                            </span>
+                          ) : null}
                           <ValueArt
                             src={it.imageUrl}
                             alt=""
@@ -187,6 +200,9 @@ export function ItemPickerDialog({
                             >
                               {it.sub}
                             </span>
+                          )}
+                          {it.price && (
+                            <span className="text-[12px] font-semibold tabular-nums text-text-primary">{it.price}</span>
                           )}
                         </button>
                       </li>

@@ -24,6 +24,10 @@ import {
   getGameContentTheme,
   hasHubPage,
 } from '@/lib/content/theme'
+import { getFreeGuide } from '@/lib/values/free-guide'
+import { sharedWeaponBoxOdds } from '@/lib/values/shop-boxes'
+import { allBoxes } from '@/lib/values/boxes'
+import { valueListHub } from '@/lib/values/hub-config'
 
 describe('content hub config', () => {
   it('publishes exactly the games that have a hub today', () => {
@@ -54,6 +58,12 @@ describe('content hub config', () => {
         priceIndex: true,
         methodology: true,
         blog: true,
+        events: false,
+        freeItems: false,
+        codes: false,
+        chromas: false,
+        inventory: false,
+        boxes: false,
       },
       'adopt-me': {
         values: true,
@@ -61,6 +71,12 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: true,
+        events: false,
+        freeItems: false,
+        codes: false,
+        chromas: false,
+        inventory: false,
+        boxes: false,
       },
       'steal-an-egg': {
         values: true,
@@ -68,6 +84,12 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: false,
+        events: false,
+        freeItems: false,
+        codes: false,
+        chromas: false,
+        inventory: false,
+        boxes: false,
       },
       // MM2 Step 2: value list + item pages + methodology. The calculator
       // (Trade Checker / Inventory Worth) is Step 3.
@@ -77,6 +99,17 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: false,
+        // The events archive (values_events, 2026-10-05) — MM2 only.
+        events: true,
+        // The honest free-items guide + codes page (seed JSON, 2026-10-05) — MM2 only.
+        freeItems: true,
+        codes: true,
+        // The Chroma hub (live prices + the Shop box odds seed, 2026-10-05) — MM2 only.
+        chromas: true,
+        // The Inventory Worth tool (live prices, client-side totals + share image) — MM2 only.
+        inventory: true,
+        // Box Odds (the box seed + live prices, 2026-10-05) — MM2 only.
+        boxes: true,
       },
     })
   })
@@ -90,6 +123,17 @@ describe('content hub config', () => {
       'steal-a-brainrot',
       'steal-an-egg',
     ])
+    // The events archive: MM2 only (values_events is MM2's data today).
+    expect(contentHubSlugsFor('events')).toEqual(['murder-mystery-2'])
+    // Free items + codes: MM2 only (the researched seed is MM2's).
+    expect(contentHubSlugsFor('freeItems')).toEqual(['murder-mystery-2'])
+    expect(contentHubSlugsFor('codes')).toEqual(['murder-mystery-2'])
+    // Chromas: MM2 only (a Chroma is an MM2 rarity with its own box odds).
+    expect(contentHubSlugsFor('chromas')).toEqual(['murder-mystery-2'])
+    // Inventory Worth: MM2 only (the value-list hub's priced catalogue).
+    expect(contentHubSlugsFor('inventory')).toEqual(['murder-mystery-2'])
+    // Box Odds: MM2 only (the researched box seed is MM2's).
+    expect(contentHubSlugsFor('boxes')).toEqual(['murder-mystery-2'])
     // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',
@@ -113,6 +157,36 @@ describe('content hub config', () => {
         // link straight to a 404.
         expect(hasHubPage(slug, tool)).toBe(true)
       }
+    }
+    // MM2's tabs stay tidy at six: Values · Inventory Worth · Chromas · Box Odds ·
+    // Events · Free Items. Codes moved to the footer only when Box Odds arrived.
+    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'inventory', 'chromas', 'boxes', 'events', 'freeItems'])
+    expect(getGameContentTheme('murder-mystery-2').footerOnlyTools).toEqual(['codes'])
+    for (const slug of CONTENT_HUB_GAME_SLUGS) {
+      for (const tool of getGameContentTheme(slug).footerOnlyTools ?? []) {
+        expect(hasHubPage(slug, tool), `${slug} footer links ${tool}, which it does not publish`).toBe(true)
+      }
+    }
+  })
+
+  it('every game publishing Box Odds has the box seed, the shared odds and the coin rate', () => {
+    for (const slug of contentHubSlugsFor('boxes')) {
+      expect(allBoxes(slug).length, `${slug} publishes /boxes but has no box seed`).toBeGreaterThan(0)
+      expect(sharedWeaponBoxOdds(slug), `${slug} publishes /boxes but has no shared Shop box odds`).not.toBeNull()
+      expect(valueListHub(slug)?.earnRate, `${slug} publishes /boxes but has no earn rate`).toBeTruthy()
+    }
+  })
+
+  it('every game publishing a Chroma hub has the box odds and coin rate its maths needs', () => {
+    for (const slug of contentHubSlugsFor('chromas')) {
+      expect(sharedWeaponBoxOdds(slug), `${slug} publishes /chromas but has no shared Shop box odds`).not.toBeNull()
+      expect(valueListHub(slug)?.earnRate, `${slug} publishes /chromas but has no earn rate`).toBeTruthy()
+    }
+  })
+
+  it('every game publishing free items or codes has a researched guide', () => {
+    for (const slug of [...contentHubSlugsFor('freeItems'), ...contentHubSlugsFor('codes')]) {
+      expect(getFreeGuide(slug), `${slug} publishes a guide page but has no seed`).not.toBeNull()
     }
   })
 
