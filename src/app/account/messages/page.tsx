@@ -12,7 +12,6 @@
 import { lockScroll } from '@/lib/scroll-lock'
 import { useState, useEffect } from 'react'
 import Link from '@/components/navigation/AppLink'
-import { toast } from 'sonner'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Search, MessageSquare, Package,
@@ -25,8 +24,6 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { classifyOfferType } from '@/lib/utils/offer-type'
 import MessageList from '@/components/chat/MessageList'
 import MessageInput from '@/components/chat/MessageInput'
-import { createClient } from '@/lib/supabase/client'
-import { attachmentOnlyLabel, uploadChatAttachment } from '@/lib/chat/attachments'
 import { MessagesSkeleton } from './_MessagesSkeleton'
 import { cn } from '@/lib/utils'
 import { normalizeOrderNumber } from '@/lib/orders/order-number'
@@ -64,13 +61,7 @@ function fmtShortRel(iso: string): string {
 
 export default function MessagesPage() {
   const { user, loading: authLoading } = useAuth()
-  const {
-    conversations,
-    isLoadingConversations,
-    sendMessage,
-    isSending,
-    markAsRead,
-  } = useSellerMessages()
+  const { conversations, isLoadingConversations } = useSellerMessages()
 
   // Currency name + icon for every game with a currency order in the list
   // (phone rows: "Order For Robux" beside the Robux icon).
@@ -84,9 +75,6 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [tab, setTab] = useState<ChatTab>('all')
   const [isOrderInfoCollapsed, setIsOrderInfoCollapsed] = useState(true)
-
-  const { messages, isLoading: isLoadingMessages } =
-    useConversationMessages(selectedConversationId)
 
   useEffect(() => setIsOrderInfoCollapsed(true), [selectedConversationId])
 
@@ -111,38 +99,25 @@ export default function MessagesPage() {
   // Scrolling lives in MessageList (use-stick-to-bottom): opens at the
   // newest message and follows new ones while the reader is at the bottom.
 
-  useEffect(() => {
-    if (selectedConversationId && (selectedConversation?.unread_count ?? 0) > 0) {
-      markAsRead(selectedConversationId)
-    }
-  }, [selectedConversationId, selectedConversation, markAsRead])
-
   // Files ride only in an order chat, and only for its buyer and seller:
   // the storage policy on the order's folder accepts those two.
   const canAttach =
     !!selectedConversation?.order?.id &&
     (selectedConversation.buyer_id === user?.id || selectedConversation.seller_id === user?.id)
 
-  const handleSend = async (text: string, file?: File | null) => {
-    if (!selectedConversationId) return
-    let attachments: string[] | undefined
-    if (file) {
-      try {
-        if (!canAttach || !selectedConversation?.order?.id) {
-          throw new Error('Files can only be sent in an order chat.')
-        }
-        attachments = [await uploadChatAttachment(createClient().storage as any, selectedConversation.order.id, file)]
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not upload the file. Please try again.')
-        throw e
-      }
-    }
-    await sendMessage({
-      conversationId: selectedConversationId,
-      content: text || (file ? attachmentOnlyLabel(file.type) : text),
-      attachments,
-    })
-  }
+  // The thread: instant send (the input clears and stays live, the bubble
+  // shows Sending → Sent → Read, a failure offers Retry), realtime merge,
+  // and the other party's messages marked read once the newest is in view.
+  // Same hook as the order chat.
+  const {
+    messages,
+    isLoading: isLoadingMessages,
+    sendMessage,
+    retryMessage,
+    setAtBottom,
+  } = useConversationMessages(selectedConversationId, {
+    attachOrderId: canAttach ? selectedConversation?.order?.id ?? null : null,
+  })
 
   const filteredConversations = conversations.filter((conv) => {
     if (tab === 'unread' && !((conv.unread_count ?? 0) > 0)) return false
@@ -465,16 +440,18 @@ export default function MessagesPage() {
                   }
                   order={selectedConversation.order as any}
                   isLoading={isLoadingMessages}
+                  onRetry={retryMessage}
+                  onAtBottomChange={setAtBottom}
                 />
               </div>
 
               {/* Input — the same composer as the order page (attach button
                   in order chats). */}
               <MessageInput
-                onSend={handleSend}
+                onSend={sendMessage}
                 placeholder="Type a message…"
-                disabled={isSending}
                 allowAttachments={canAttach}
+                optimistic
               />
             </motion.div>
           ) : (
