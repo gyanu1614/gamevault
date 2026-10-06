@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react'
+import Link from '@/components/navigation/AppLink'
+import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise'
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise'
 import { CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins'
@@ -60,6 +62,7 @@ export function ValueItemHowToGet({
   howToGet,
   cheapestUsd,
   buy,
+  freeGuideHref = null,
 }: {
   itemName: string
   gameName: string
@@ -71,6 +74,8 @@ export function ValueItemHowToGet({
   howToGet: ValueHowToGet | null
   cheapestUsd: number | null
   buy: ItemBuy
+  /** The game's free-items guide (/[game]/free-items), linked beside the free way's heading. */
+  freeGuideHref?: string | null
 }) {
   if (!howToGet) return null
   const ways = howToGetWays({ name: itemName, gameName, shortName, h: howToGet, cheapestUsd, earnRate })
@@ -125,7 +130,7 @@ export function ValueItemHowToGet({
 
         {/* The two ways, as two plain rows on the same card (no card-in-card):
             the free way, then buy it. */}
-        <FreeWayRow way={ways.free} />
+        <FreeWayRow way={ways.free} guide={freeGuideHref ? { href: freeGuideHref, label: `Every Free Way in ${shortName}` } : null} />
         <HowToGetFastWay way={ways.fast} name={itemName} buy={buy} />
 
       </div>
@@ -144,11 +149,22 @@ export const WAY_STEP_COLS: Record<number, string> = {
 }
 
 /** Row 1: the free in-game route (or why it's gone) — steps in a line, then the total. */
-function FreeWayRow({ way }: { way: FreeWay }) {
+function FreeWayRow({ way, guide }: { way: FreeWay; guide: { href: string; label: string } | null }) {
   const muted = way.state !== 'available'
   return (
     <div className="mt-7 border-t border-white/[0.07] pt-6">
-      <WaySectionHead n={1} title={way.heading} tone="neutral" muted={muted} />
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <WaySectionHead n={1} title={way.heading} tone="neutral" muted={muted} />
+        {guide && (
+          <Link
+            href={guide.href}
+            className="group inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            {guide.label}
+            <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        )}
+      </div>
 
       {way.steps.length > 0 && (
         <ol className={cn('mt-6 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', WAY_STEP_COLS[way.steps.length])}>

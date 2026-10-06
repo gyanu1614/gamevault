@@ -10,6 +10,7 @@ import {
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { valueItemHasPage } from '@/lib/values/hub-config'
 import { isEventIndexable } from '@/lib/values/events-model'
+import { freeGuideLastmod } from '@/lib/values/free-guide'
 import { computeCategoryPages } from '@/lib/seo/category-index'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
@@ -208,6 +209,13 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
           out.push({ url: at(`/${slug}/events/${e.slug}`), ...dated(e.updatedAt), changeFrequency: 'weekly', priority: 0.65 })
         }
       }
+    }
+    // The honest guides: lastmod = the research's own check date (build-time seed).
+    if (theme.pages.freeItems && freeGuideLastmod(slug)) {
+      out.push({ url: at(`/${slug}/free-items`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })
+    }
+    if (theme.pages.codes && freeGuideLastmod(slug)) {
+      out.push({ url: at(`/${slug}/codes`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })
     }
     for (const item of itemsByGame[slug] ?? []) {
       if (!item.slug) continue

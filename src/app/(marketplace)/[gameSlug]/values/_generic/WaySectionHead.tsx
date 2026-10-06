@@ -14,12 +14,15 @@ export function WaySectionHead({
   title,
   tone,
   muted = false,
+  as: Heading = 'h3',
 }: {
   n: number
   title: string
   tone: keyof typeof TONES
   /** The free way has ended / is unconfirmed: quieter heading. */
   muted?: boolean
+  /** h2 when the section is a top-level block of its page (the guides); h3 inside an item page's section. */
+  as?: 'h2' | 'h3'
 }) {
   const t = TONES[tone]
   return (
@@ -31,10 +34,10 @@ export function WaySectionHead({
       >
         {n}
       </span>
-      <h3 className={`text-[20px] font-semibold tracking-tight ${muted ? 'text-text-secondary' : 'text-text-primary'}`}>
+      <Heading className={`text-[20px] font-semibold tracking-tight ${muted ? 'text-text-secondary' : 'text-text-primary'}`}>
         <span className="sr-only">{n}. </span>
         {title}
-      </h3>
+      </Heading>
     </div>
   )
 }

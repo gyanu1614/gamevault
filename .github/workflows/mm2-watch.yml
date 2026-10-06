@@ -1,0 +1,62 @@
+name: MM2 Weekly Watch
+
+# Read-only check that the facts behind the MM2 free items guide, codes page,
+# boxes and events (scripts/values-seeds/murder-mystery-2.*) are still current:
+# wiki revision ids, future event pages, the Roblox game's update time and
+# description, game passes, Roblox Events and the group shout, against
+# scripts/values-seeds/murder-mystery-2.watch-baseline.json.
+# When something changed it opens (or comments on) one GitHub issue. No secrets
+# beyond GITHUB_TOKEN; no dependencies (plain Node, public endpoints).
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 15:00 UTC every Monday.
+    - cron: "0 15 * * 1"
+
+concurrency:
+  group: mm2-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Run the watch
+        id: watch
+        run: |
+          set +e
+          node scripts/mm2-watch.mjs --report watch-report.md
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = no change, 1 = changed (handled below), 2 = a source could not be read.
+          if [ "$code" -eq 2 ]; then exit 1; fi
+          exit 0
+
+      - name: Open or update the issue
+        if: steps.watch.outputs.code == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="MM2 watch: something changed, re-check the free items and codes data"
+          existing=$(gh issue list --state open --search "\"MM2 watch\" in:title" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file watch-report.md
+          else
+            gh issue create --title "$title" --body-file watch-report.md
+          fi

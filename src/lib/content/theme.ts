@@ -14,6 +14,8 @@
  * Adding a game = adding an entry here. Nothing else.
  */
 
+import type { HubTool } from './hub-tools'
+
 export interface GameContentTheme {
   /** Display name used in breadcrumbs, headings and copy. */
   name: string
@@ -89,10 +91,14 @@ export interface HubPageSet {
   blog: boolean
   /** The events archive: /[game]/events + /[game]/events/[eventSlug] (values_events). */
   events: boolean
+  /** The honest free-items guide: /[game]/free-items (researched seed JSON, build time). */
+  freeItems: boolean
+  /** The codes page: /[game]/codes — the verdict, every expired code, scam warnings. */
+  codes: boolean
 }
 
-/** A HubNav tool tab — each is also a HubPageSet page at /[game]/<tool>. */
-export type HubTool = 'values' | 'calculator' | 'events'
+/** A HubNav tool tab — each is also a HubPageSet page, served at HUB_TOOL_PATH[tool] (./hub-tools). */
+export type { HubTool }
 
 /** Static worked-example for the blog calculator promo (see `calculatorExample`). */
 export interface CalcPromoExample {
@@ -215,6 +221,8 @@ const DEFAULT_THEME: GameContentTheme = {
     methodology: false,
     blog: false,
     events: false,
+    freeItems: false,
+    codes: false,
   },
   navTools: [],
   itemNoun: 'Item',
@@ -254,6 +262,8 @@ const THEMES: Record<string, GameContentTheme> = {
       methodology: true,
       blog: true,
       events: false,
+      freeItems: false,
+      codes: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Brainrot',
@@ -298,6 +308,8 @@ const THEMES: Record<string, GameContentTheme> = {
       methodology: true,
       blog: false,
       events: false,
+      freeItems: false,
+      codes: false,
     },
     navTools: ['values'],
     itemNoun: 'Egg',
@@ -345,6 +357,8 @@ const THEMES: Record<string, GameContentTheme> = {
       methodology: true,
       blog: true,
       events: false,
+      freeItems: false,
+      codes: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Pet',
@@ -391,8 +405,12 @@ const THEMES: Record<string, GameContentTheme> = {
       // The events archive (values_events, 2026-10-05): every MM2 event since
       // Halloween 2015 with its items and their live set value.
       events: true,
+      // The honest guides (2026-10-05, scripts/values-seeds/murder-mystery-2.free-items.json):
+      // every real free way with the odds, and the codes verdict (none work).
+      freeItems: true,
+      codes: true,
     },
-    navTools: ['values', 'events'],
+    navTools: ['values', 'events', 'freeItems', 'codes'],
     itemNoun: 'Item',
     itemNounPlural: 'Items',
     // Chroma is its own item with its own price (chroma-fang → fang), not a

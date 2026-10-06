@@ -25,7 +25,7 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubCtaBand } from '@/components/content/HubCtaBand'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
-import { HUB_COPY, getGameContentTheme } from '@/lib/content/theme'
+import { HUB_COPY, getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
@@ -209,6 +209,9 @@ async function EventBody({
   const sameSeason = all.filter((x) => x.slug !== e.slug && x.season === e.season && hasArt(x))
   const railEvents = (sameSeason.length ? sameSeason : all.filter((x) => x.slug !== e.slug && hasArt(x))).slice(0, 12)
   const nextSameSeason = upcoming ? null : all.find((x) => x.status === 'upcoming' && x.season === e.season) ?? null
+  // Cross-links: back · value list · the free-items guide · the next same-season event.
+  const freeGuide = hasHubPage(gameSlug, 'freeItems')
+  const navCards = 2 + (freeGuide ? 1 : 0) + (nextSameSeason ? 1 : 0)
   const howSection = <HowSection ctx={ctx} event={e} last={last} pattern={pattern} buyHref={buyHref} />
 
   return (
@@ -331,7 +334,7 @@ async function EventBody({
 
         <nav
           aria-label={`More ${ctx.gameName} events`}
-          className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', nextSameSeason && 'lg:grid-cols-3')}
+          className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', navCards === 3 && 'lg:grid-cols-3', navCards === 4 && 'lg:grid-cols-4')}
         >
           <Link
             href={`/${gameSlug}/events`}
@@ -353,10 +356,25 @@ async function EventBody({
             </span>
             <CaretRightIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
           </Link>
+          {freeGuide && (
+            <Link
+              href={`/${gameSlug}/free-items`}
+              className={cn(
+                `${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`,
+                navCards === 3 && 'sm:col-span-2 lg:col-span-1',
+              )}
+            >
+              <span>
+                <span className={`block ${VALUE_LABEL}`}>Every Real Way</span>
+                <span className="block text-body-sm font-semibold text-text-primary">Free {ctx.shortName} Items Guide</span>
+              </span>
+              <CaretRightIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
+            </Link>
+          )}
           {nextSameSeason && (
             <Link
               href={`/${gameSlug}/events/${nextSameSeason.slug}`}
-              className={`${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:col-span-2 lg:col-span-1`}
+              className={`${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${navCards === 3 ? 'sm:col-span-2 lg:col-span-1' : ''}`}
             >
               <span>
                 <span className={`block ${VALUE_LABEL}`}>Coming Next</span>

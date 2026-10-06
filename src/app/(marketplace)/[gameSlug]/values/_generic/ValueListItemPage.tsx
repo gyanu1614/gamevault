@@ -352,6 +352,7 @@ async function ItemBody({
           howToGet={howToGet}
           cheapestUsd={cheapestUsd}
           buy={buy}
+          freeGuideHref={hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null}
         />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />

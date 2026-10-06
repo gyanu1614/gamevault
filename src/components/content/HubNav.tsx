@@ -33,12 +33,14 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
 import { VALUE_BTN_PRIMARY } from '@/components/values/styles'
 import type { HubNavData } from '@/lib/content/hubNav'
-import type { HubTool } from '@/lib/content/theme'
+import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
 
 const TOOL_LABEL: Record<HubTool, string> = {
   values: 'Values',
   calculator: 'Calculator',
   events: 'Events',
+  freeItems: 'Free Items',
+  codes: 'Codes',
 }
 
 /** Neutral tab colours (hub chrome stays neutral; no forest/lime accent). */
@@ -123,7 +125,7 @@ export function HubNav({
             {
               key: tool,
               label: TOOL_LABEL[tool],
-              href: `/${current.slug}/${tool}`,
+              href: `/${current.slug}/${HUB_TOOL_PATH[tool]}`,
             },
           ],
     ),

@@ -104,6 +104,15 @@ describe('which URLs are listed', () => {
     expect(lastmod(`${BASE}/murder-mystery-2/events`)).toBe('2026-10-05T00:00:00Z')
   })
 
+  it('lists the MM2 free-items guide and codes page, dated by the research check, and no other game’s', async () => {
+    const all = urls()
+    const { getFreeGuide } = await import('@/lib/values/free-guide')
+    const checked = `${getFreeGuide('murder-mystery-2')!.checkedAt}T00:00:00Z`
+    expect(lastmod(`${BASE}/murder-mystery-2/free-items`)).toBe(checked)
+    expect(lastmod(`${BASE}/murder-mystery-2/codes`)).toBe(checked)
+    expect(all.filter((u) => /\/(free-items|codes)$/.test(u))).toHaveLength(2)
+  })
+
   it('lists no events hub for a game with no published events', () => {
     expect(urls({ valueEvents: [] })).not.toContain(`${BASE}/murder-mystery-2/events`)
   })

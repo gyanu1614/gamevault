@@ -16,7 +16,8 @@
 
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import Link from '@/components/navigation/AppLink'
-import type { HubTool } from '@/lib/content/theme'
+import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
+import { hasHubPage } from '@/lib/content/theme'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
 import { TwitterLogoIcon } from '@phosphor-icons/react/dist/ssr/TwitterLogo'
@@ -51,6 +52,15 @@ export interface HubFooterLink {
   href: string
 }
 
+/** Footer link text per tool: keyword anchors ("Free Murder Mystery 2 Items"). */
+const FOOTER_TOOL_NAME: Record<HubTool, (gameName: string) => string> = {
+  values: () => 'Value List',
+  calculator: () => 'WFL Calculator',
+  events: (g) => `${g} Events`,
+  freeItems: (g) => `Free ${g} Items`,
+  codes: (g) => `${g} Codes`,
+}
+
 export function HubFooter({
   gameName,
   gameSlug,
@@ -67,10 +77,11 @@ export function HubFooter({
   // Data-driven, exactly like the nav: a game without a calculator or a
   // storefront category simply doesn't get that link.
   const hubLinks: HubFooterLink[] = [
-    { name: 'Guides', href: `/${gameSlug}/blog` },
+    // Guides only where the game publishes a blog (MM2 has none: the link was a 404).
+    ...(hasHubPage(gameSlug, 'blog') ? [{ name: 'Guides', href: `/${gameSlug}/blog` }] : []),
     ...tools.map((tool) => ({
-      name: tool === 'values' ? 'Value List' : tool === 'events' ? `${gameName} Events` : 'WFL Calculator',
-      href: `/${gameSlug}/${tool}`,
+      name: FOOTER_TOOL_NAME[tool](gameName),
+      href: `/${gameSlug}/${HUB_TOOL_PATH[tool]}`,
     })),
     { name: 'Pricing Methodology', href: `/${gameSlug}/values/methodology` },
   ]

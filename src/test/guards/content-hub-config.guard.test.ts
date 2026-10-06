@@ -24,6 +24,7 @@ import {
   getGameContentTheme,
   hasHubPage,
 } from '@/lib/content/theme'
+import { getFreeGuide } from '@/lib/values/free-guide'
 
 describe('content hub config', () => {
   it('publishes exactly the games that have a hub today', () => {
@@ -55,6 +56,8 @@ describe('content hub config', () => {
         methodology: true,
         blog: true,
         events: false,
+        freeItems: false,
+        codes: false,
       },
       'adopt-me': {
         values: true,
@@ -63,6 +66,8 @@ describe('content hub config', () => {
         methodology: true,
         blog: true,
         events: false,
+        freeItems: false,
+        codes: false,
       },
       'steal-an-egg': {
         values: true,
@@ -71,6 +76,8 @@ describe('content hub config', () => {
         methodology: true,
         blog: false,
         events: false,
+        freeItems: false,
+        codes: false,
       },
       // MM2 Step 2: value list + item pages + methodology. The calculator
       // (Trade Checker / Inventory Worth) is Step 3.
@@ -82,6 +89,9 @@ describe('content hub config', () => {
         blog: false,
         // The events archive (values_events, 2026-10-05) — MM2 only.
         events: true,
+        // The honest free-items guide + codes page (seed JSON, 2026-10-05) — MM2 only.
+        freeItems: true,
+        codes: true,
       },
     })
   })
@@ -97,6 +107,9 @@ describe('content hub config', () => {
     ])
     // The events archive: MM2 only (values_events is MM2's data today).
     expect(contentHubSlugsFor('events')).toEqual(['murder-mystery-2'])
+    // Free items + codes: MM2 only (the researched seed is MM2's).
+    expect(contentHubSlugsFor('freeItems')).toEqual(['murder-mystery-2'])
+    expect(contentHubSlugsFor('codes')).toEqual(['murder-mystery-2'])
     // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',
@@ -120,6 +133,14 @@ describe('content hub config', () => {
         // link straight to a 404.
         expect(hasHubPage(slug, tool)).toBe(true)
       }
+    }
+    // MM2's tabs stay tidy: Values · Events · Free Items · Codes.
+    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'events', 'freeItems', 'codes'])
+  })
+
+  it('every game publishing free items or codes has a researched guide', () => {
+    for (const slug of [...contentHubSlugsFor('freeItems'), ...contentHubSlugsFor('codes')]) {
+      expect(getFreeGuide(slug), `${slug} publishes a guide page but has no seed`).not.toBeNull()
     }
   })
 

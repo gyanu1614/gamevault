@@ -8,7 +8,7 @@ import { HubHero } from '@/components/content/HubHero'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { HUB_GROUND } from '@/components/values/styles'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { getValueItems, getValueTrends, getValuesFreshness } from '@/lib/values/data'
@@ -159,7 +159,14 @@ async function ValueListBody({
         buyHref={buyHref}
         calculatorHref={null}
         faq={faq}
-        intro={valueListIntro({ gameSlug, gameName: theme.name, shortName: hub.shortName, buyHref, top })}
+        intro={valueListIntro({
+          gameSlug,
+          gameName: theme.name,
+          shortName: hub.shortName,
+          buyHref,
+          top,
+          freeGuideHref: hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null,
+        })}
       />
 
       <HubBuyCta gameName={theme.name} gameSlug={gameSlug} buyHref={buyHref} />
@@ -174,12 +181,15 @@ function valueListIntro({
   shortName,
   buyHref,
   top,
+  freeGuideHref,
 }: {
   gameSlug: string
   gameName: string
   shortName: string
   buyHref: string
   top: ValueListRow | undefined
+  /** The game's honest free-items guide, when it publishes one. */
+  freeGuideHref: string | null
 }): { heading: string; body: React.ReactNode }[] {
   return [
     {
@@ -228,6 +238,15 @@ function valueListIntro({
             buy {shortName} items
           </Link>{' '}
           at a fair price, or list your own, with SafeDrop covering every order.
+          {freeGuideHref && (
+            <>
+              {' '}Want them without paying? Here is{' '}
+              <Link href={freeGuideHref} className={linkCls}>
+                every real way to get free {shortName} Godlies
+              </Link>
+              , with the odds.
+            </>
+          )}
         </>
       ),
     },
