@@ -17,7 +17,7 @@
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import Link from '@/components/navigation/AppLink'
 import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
-import { hasHubPage } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
 import { TwitterLogoIcon } from '@phosphor-icons/react/dist/ssr/TwitterLogo'
@@ -58,6 +58,7 @@ const FOOTER_TOOL_NAME: Record<HubTool, (gameName: string) => string> = {
   calculator: () => 'WFL Calculator',
   inventory: (g) => `${g} Inventory Value Calculator`,
   chromas: (g) => `${g} Chroma Values`,
+  boxes: (g) => `${g} Box Odds`,
   events: (g) => `${g} Events`,
   freeItems: (g) => `Free ${g} Items`,
   codes: (g) => `${g} Codes`,
@@ -81,7 +82,8 @@ export function HubFooter({
   const hubLinks: HubFooterLink[] = [
     // Guides only where the game publishes a blog (MM2 has none: the link was a 404).
     ...(hasHubPage(gameSlug, 'blog') ? [{ name: 'Guides', href: `/${gameSlug}/blog` }] : []),
-    ...tools.map((tool) => ({
+    // The nav's tabs, then any tool folded out of a crowded nav (MM2: Codes).
+    ...[...tools, ...(getGameContentTheme(gameSlug).footerOnlyTools ?? []).filter((t) => !tools.includes(t))].map((tool) => ({
       name: FOOTER_TOOL_NAME[tool](gameName),
       href: `/${gameSlug}/${HUB_TOOL_PATH[tool]}`,
     })),

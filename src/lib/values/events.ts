@@ -253,3 +253,12 @@ export async function getValueItemEventMap(gameSlug: string): Promise<Map<string
   }
   return out
 }
+
+/**
+ * Event slug → name for every published event (one tagged read, no catalogue
+ * join). The Box Odds pages link a retired box to its event only when the
+ * event is published, with the event's own name.
+ */
+export async function getValueEventNames(gameSlug: string): Promise<Map<string, string>> {
+  return new Map((await readEventRows(gameSlug)).map((r) => [r.slug, r.name]))
+}

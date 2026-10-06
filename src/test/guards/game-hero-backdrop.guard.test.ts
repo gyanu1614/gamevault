@@ -78,6 +78,8 @@ const RENDER_MODULES = [
   'free-items/_FreeItemsPage.tsx', // the free items guide (MM2)
   'codes/_CodesPage.tsx', // the codes page (MM2)
   'chromas/_ChromasPage.tsx', // the Chroma hub (MM2)
+  'boxes/_BoxesHubPage.tsx', // Box Odds hub (MM2)
+  'boxes/_BoxPage.tsx', // one box (MM2)
   'inventory/_InventoryPage.tsx', // the Inventory Worth tool (MM2)
 ]
 

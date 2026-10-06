@@ -331,9 +331,20 @@ async function FreeItemsBody({
 
         {godlies.length > 0 && (
           <section aria-labelledby="free-godlies">
-            <h2 id="free-godlies" className="text-heading font-bold tracking-tight text-text-primary">
-              {godlyGridHeading(ctx, godlies.length)}
-            </h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+              <h2 id="free-godlies" className="text-heading font-bold tracking-tight text-text-primary">
+                {godlyGridHeading(ctx, godlies.length)}
+              </h2>
+              {hasHubPage(gameSlug, 'boxes') && (
+                <Link
+                  href={`/${gameSlug}/boxes`}
+                  className="group inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  Every {ctx.shortName} Box&apos;s Drop Rates
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+            </div>
             <p className="mt-2 text-body-sm leading-6 text-text-secondary">{godlyGridLead(ctx, n)}</p>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {godlies.map((g) => (

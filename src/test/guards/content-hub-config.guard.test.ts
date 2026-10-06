@@ -26,6 +26,7 @@ import {
 } from '@/lib/content/theme'
 import { getFreeGuide } from '@/lib/values/free-guide'
 import { sharedWeaponBoxOdds } from '@/lib/values/shop-boxes'
+import { allBoxes } from '@/lib/values/boxes'
 import { valueListHub } from '@/lib/values/hub-config'
 
 describe('content hub config', () => {
@@ -62,6 +63,7 @@ describe('content hub config', () => {
         codes: false,
         chromas: false,
         inventory: false,
+        boxes: false,
       },
       'adopt-me': {
         values: true,
@@ -74,6 +76,7 @@ describe('content hub config', () => {
         codes: false,
         chromas: false,
         inventory: false,
+        boxes: false,
       },
       'steal-an-egg': {
         values: true,
@@ -86,6 +89,7 @@ describe('content hub config', () => {
         codes: false,
         chromas: false,
         inventory: false,
+        boxes: false,
       },
       // MM2 Step 2: value list + item pages + methodology. The calculator
       // (Trade Checker / Inventory Worth) is Step 3.
@@ -104,6 +108,8 @@ describe('content hub config', () => {
         chromas: true,
         // The Inventory Worth tool (live prices, client-side totals + share image) — MM2 only.
         inventory: true,
+        // Box Odds (the box seed + live prices, 2026-10-05) — MM2 only.
+        boxes: true,
       },
     })
   })
@@ -126,6 +132,8 @@ describe('content hub config', () => {
     expect(contentHubSlugsFor('chromas')).toEqual(['murder-mystery-2'])
     // Inventory Worth: MM2 only (the value-list hub's priced catalogue).
     expect(contentHubSlugsFor('inventory')).toEqual(['murder-mystery-2'])
+    // Box Odds: MM2 only (the researched box seed is MM2's).
+    expect(contentHubSlugsFor('boxes')).toEqual(['murder-mystery-2'])
     // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',
@@ -150,8 +158,23 @@ describe('content hub config', () => {
         expect(hasHubPage(slug, tool)).toBe(true)
       }
     }
-    // MM2's tabs stay tidy: Values · Inventory Worth · Chromas · Events · Free Items · Codes.
-    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'inventory', 'chromas', 'events', 'freeItems', 'codes'])
+    // MM2's tabs stay tidy at six: Values · Inventory Worth · Chromas · Box Odds ·
+    // Events · Free Items. Codes moved to the footer only when Box Odds arrived.
+    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'inventory', 'chromas', 'boxes', 'events', 'freeItems'])
+    expect(getGameContentTheme('murder-mystery-2').footerOnlyTools).toEqual(['codes'])
+    for (const slug of CONTENT_HUB_GAME_SLUGS) {
+      for (const tool of getGameContentTheme(slug).footerOnlyTools ?? []) {
+        expect(hasHubPage(slug, tool), `${slug} footer links ${tool}, which it does not publish`).toBe(true)
+      }
+    }
+  })
+
+  it('every game publishing Box Odds has the box seed, the shared odds and the coin rate', () => {
+    for (const slug of contentHubSlugsFor('boxes')) {
+      expect(allBoxes(slug).length, `${slug} publishes /boxes but has no box seed`).toBeGreaterThan(0)
+      expect(sharedWeaponBoxOdds(slug), `${slug} publishes /boxes but has no shared Shop box odds`).not.toBeNull()
+      expect(valueListHub(slug)?.earnRate, `${slug} publishes /boxes but has no earn rate`).toBeTruthy()
+    }
   })
 
   it('every game publishing a Chroma hub has the box odds and coin rate its maths needs', () => {

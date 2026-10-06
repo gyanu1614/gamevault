@@ -64,7 +64,7 @@ export function LayoutWrapper({
   // (like every other game/category page), so it is NOT matched here.
   const isValuesHub =
     !!pathname &&
-    /^\/[^/]+\/(values|calculator|neon-calculator|blog|price-index|sell|events|free-items|codes|chromas|inventory)(\/|$)/.test(pathname)
+    /^\/[^/]+\/(values|calculator|neon-calculator|blog|price-index|sell|events|free-items|codes|chromas|inventory|boxes)(\/|$)/.test(pathname)
 
   // Check if we're on a seller page with sidebar (not /new or /edit)
   const isSellerPageWithSidebar = pathname?.startsWith('/seller') &&

@@ -40,6 +40,7 @@ const TOOL_LABEL: Record<HubTool, string> = {
   calculator: 'Calculator',
   inventory: 'Inventory Worth',
   chromas: 'Chromas',
+  boxes: 'Box Odds',
   events: 'Events',
   freeItems: 'Free Items',
   codes: 'Codes',

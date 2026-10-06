@@ -11,6 +11,7 @@ import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { valueItemHasPage } from '@/lib/values/hub-config'
 import { isEventIndexable } from '@/lib/values/events-model'
 import { freeGuideLastmod } from '@/lib/values/free-guide'
+import { allBoxes, boxesCheckedAt } from '@/lib/values/boxes'
 import { computeCategoryPages } from '@/lib/seo/category-index'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
@@ -215,6 +216,18 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
       const chromaPrices = input.pipelineItems.filter((i) => i.gameSlug === slug && i.rarity === 'Chroma')
       if (chromaPrices.length > 0) {
         out.push({ url: at(`/${slug}/chromas`), ...dated(newest(...chromaPrices.map((i) => i.priceChangedAt))), changeFrequency: 'daily', priority: 0.8 })
+      }
+    }
+    // Box Odds: the hub + every box page (closed set from the build-time seed).
+    // lastmod = the newest of the research's check date and the price moves
+    // of the items the page shows (its numbers are live prices).
+    if (theme.pages.boxes && allBoxes(slug).length > 0) {
+      const checked = boxesCheckedAt(slug)
+      const moved = new Map(input.pipelineItems.filter((i) => i.gameSlug === slug).map((i) => [i.slug, i.priceChangedAt]))
+      const boxes = allBoxes(slug).map((b) => ({ b, last: newest(checked ? `${checked}T00:00:00Z` : null, ...b.items.map((i) => (i.slug ? moved.get(i.slug) : null))) }))
+      out.push({ url: at(`/${slug}/boxes`), ...dated(newest(...boxes.map((x) => x.last))), changeFrequency: 'daily', priority: 0.8 })
+      for (const { b, last } of boxes) {
+        out.push({ url: at(`/${slug}/boxes/${b.slug}`), ...dated(last), changeFrequency: 'weekly', priority: b.inShop ? 0.7 : 0.6 })
       }
     }
     // Inventory Worth: lastmod = the newest price move of any item (it totals live prices).

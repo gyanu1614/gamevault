@@ -19,6 +19,7 @@ import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { rarityMeta } from '@/lib/values/rarity'
+import { boxForItem } from '@/lib/values/boxes'
 import { getValueItemHistory, getValueItemHowToGet, trendValue, type ValueItem } from '@/lib/values/data'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
@@ -70,6 +71,7 @@ export default async function ValueListItemPage({
 
   const rarity = rarityMeta(gameSlug, item.rarity)
   const typeLabel = (item.itemType && hub.itemTypeLabels[item.itemType]) || theme.itemNoun
+
   const hasPage = (i: ValueItem) => valueItemHasPage(gameSlug, { rarity: i.rarity, priced: i.price?.cheapestUsd != null })
 
   // The other form: a Chroma's base, or this item's Chroma.
@@ -388,6 +390,7 @@ async function ItemBody({
           cheapestUsd={cheapestUsd}
           buy={buy}
           freeGuideHref={hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null}
+          boxLink={boxLinkFor(gameSlug, item.slug)}
         />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />
@@ -446,4 +449,10 @@ async function ItemBody({
       </div>
     </>
   )
+}
+
+/** How To Get → the box an item drops from (a Shop box first), when the game publishes Box Odds. */
+function boxLinkFor(gameSlug: string, itemSlug: string): { href: string; label: string } | null {
+  const box = hasHubPage(gameSlug, 'boxes') ? boxForItem(gameSlug, itemSlug) : null
+  return box ? { href: `/${gameSlug}/boxes/${box.slug}`, label: `${box.name} Drop Rates` } : null
 }

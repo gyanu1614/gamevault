@@ -124,6 +124,21 @@ describe('which URLs are listed', () => {
     expect(urls().filter((u) => u.endsWith('/chromas'))).toEqual([])
   })
 
+  it('lists the MM2 Box Odds hub and all 44 box pages, dated by the seed check or a newer price move of their items', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'gemstone', rarity: 'Godly', priceChangedAt: '2026-10-09T00:00:00Z', sampleSize: 20 },
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-11T00:00:00Z', sampleSize: 63 },
+    ]
+    const all = urls({ pipelineItems })
+    const boxes = all.filter((u) => u.startsWith(`${BASE}/murder-mystery-2/boxes`))
+    expect(boxes).toContain(`${BASE}/murder-mystery-2/boxes`)
+    expect(boxes).toHaveLength(45)
+    // Mystery Box 1 holds Gemstone: its page moves with that price; Harvester is in no box.
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes/mystery-box-1`, { pipelineItems })).toBe('2026-10-09T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes/knife-box-4`, { pipelineItems })).toBe('2026-10-05T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/boxes`, { pipelineItems })).toBe('2026-10-09T00:00:00Z')
+  })
+
   it('lists the MM2 Inventory Worth tool, dated by the newest price move, only while an item is priced', () => {
     const pipelineItems = [
       { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },

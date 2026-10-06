@@ -39,6 +39,7 @@ const SCOPE_DIRS = [
   `${HUB}/codes`, // codes page (live prices of the merch-code items)
   `${HUB}/chromas`, // Chroma hub (live Chroma + normal prices, events)
   `${HUB}/inventory`, // Inventory Worth (every priced item's live price)
+  `${HUB}/boxes`, // Box Odds (live prices of every box item, events)
 ]
 
 /** Single files outside those directories that read values data. */

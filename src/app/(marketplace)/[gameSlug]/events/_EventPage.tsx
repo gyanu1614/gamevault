@@ -35,6 +35,7 @@ import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE, VALUE_SURFACE_LINK } from '@/co
 import { valueListHub } from '@/lib/values/hub-config'
 import { rarityMeta, rarityRank } from '@/lib/values/rarity'
 import { getValueEvent } from '@/lib/values/events'
+import { boxesForEvent } from '@/lib/values/boxes'
 import {
   CHANNEL_LABEL,
   EVENT_SEASONS,
@@ -212,7 +213,11 @@ async function EventBody({
   // Cross-links: back · value list · the free-items guide · the next same-season event.
   const freeGuide = hasHubPage(gameSlug, 'freeItems')
   const navCards = 2 + (freeGuide ? 1 : 0) + (nextSameSeason ? 1 : 0)
-  const howSection = <HowSection ctx={ctx} event={e} last={last} pattern={pattern} buyHref={buyHref} />
+  // The event's box(es) on Box Odds (2015 Christmas had two).
+  const boxLinks = hasHubPage(gameSlug, 'boxes')
+    ? boxesForEvent(gameSlug, e.slug).map((b) => ({ href: `/${gameSlug}/boxes/${b.slug}`, label: `${b.name} Drop Rates` }))
+    : []
+  const howSection = <HowSection ctx={ctx} event={e} last={last} pattern={pattern} buyHref={buyHref} boxLinks={boxLinks} />
 
   return (
     <>
@@ -487,12 +492,15 @@ function HowSection({
   last,
   pattern,
   buyHref,
+  boxLinks = [],
 }: {
   ctx: CopyCtx
   event: EventView
   last: EventView | null
   pattern: ReturnType<typeof seasonPattern> | null
   buyHref: string
+  /** The event's box pages (/[game]/boxes/[boxSlug]), linked beside the "How Items Were Obtained" heading. */
+  boxLinks?: { href: string; label: string }[]
 }) {
   const upcoming = e.status === 'upcoming'
   // No items (e.g. a Roblox tie-in with no MM2 rewards): the answer says so; no section.
@@ -524,7 +532,23 @@ function HowSection({
     const groups = groupByChannel(e.items)
     row1 = (
       <>
-        <WaySectionHead n={1} title={`How ${e.name} Items Were Obtained`} tone="neutral" />
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <WaySectionHead n={1} title={`How ${e.name} Items Were Obtained`} tone="neutral" />
+          {boxLinks.length > 0 && (
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {boxLinks.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="group inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  {l.label}
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              ))}
+            </span>
+          )}
+        </div>
         {e.howItemsWereObtained && (
           <p className="mt-6 text-body leading-7 text-text-secondary">{e.howItemsWereObtained}</p>
         )}

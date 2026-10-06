@@ -338,6 +338,20 @@ async function ChromasBody({ gameSlug, ctx, u, buyHref }: { gameSlug: string; ct
             <div className="mt-7 border-t border-white/[0.07] pt-6">
               <WaySectionHead n={1} title={unbox.heading} tone="neutral" />
               <Steps steps={unbox.steps} tone="neutral" />
+              {hasHubPage(gameSlug, 'boxes') && (
+                <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] leading-5">
+                  <span className="font-medium text-text-tertiary">Odds by Box:</span>
+                  {shopBoxes(gameSlug).map((box) => (
+                    <Link
+                      key={box.slug}
+                      href={`/${gameSlug}/boxes/${box.slug}`}
+                      className="rounded-sm font-medium text-text-secondary underline decoration-white/20 underline-offset-2 transition-colors hover:text-text-primary hover:decoration-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    >
+                      {box.name}
+                    </Link>
+                  ))}
+                </p>
+              )}
               {unbox.tip && (
                 <ValueCallout tone="yellow" icon={WarningCircleIcon} title={unbox.tip.title} className="mt-5">
                   {unbox.tip.body}

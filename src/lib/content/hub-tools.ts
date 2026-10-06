@@ -3,7 +3,7 @@
  * client nav can import the paths without pulling every game theme into the
  * browser bundle. Each tool is also a HubPageSet page (lib/content/theme).
  */
-export type HubTool = 'values' | 'calculator' | 'inventory' | 'chromas' | 'events' | 'freeItems' | 'codes'
+export type HubTool = 'values' | 'calculator' | 'inventory' | 'chromas' | 'boxes' | 'events' | 'freeItems' | 'codes'
 
 /** The URL segment of each tool tab (/[game]/<segment>). */
 export const HUB_TOOL_PATH: Record<HubTool, string> = {
@@ -11,6 +11,7 @@ export const HUB_TOOL_PATH: Record<HubTool, string> = {
   calculator: 'calculator',
   inventory: 'inventory',
   chromas: 'chromas',
+  boxes: 'boxes',
   events: 'events',
   freeItems: 'free-items',
   codes: 'codes',
