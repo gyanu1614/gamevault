@@ -53,6 +53,8 @@ import { CategoryGuide } from '@/components/marketplace/CategoryGuide'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { normalizePlatformOptions } from '@/lib/types/category-configs'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { applyGuideToFaq, getCurrencyGuide } from '@/lib/currency-guides'
+import { CurrencyGuideSection } from '@/components/marketplace/currency-guide/CurrencyGuideSection'
 import { pageTitle } from '@/lib/seo/title'
 import { getCategoryStats, formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
 
@@ -437,6 +439,8 @@ async function CategoryBrowsePage({ params }: PageProps) {
   const bundles = (currencyConfig?.bundles ?? []).filter(
     (b) => b && b.id && b.name,
   )
+  // The per-game "<Currency> Guide" fact sheet (null → no guide section).
+  const guide = currencyShell ? getCurrencyGuide(gameSlug) : null
   if (currencyShell && bundles.length > 0) {
     const supabase = createAnonClient()
     const game = await getActiveGame(gameSlug)
@@ -541,7 +545,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
       // V19/P24/P7.d — Surface How it works + FAQ on the bundle page,
       // same shape and source as the flexible currency page uses.
       steps: currencyConfig?.steps ?? [],
-      faq: currencyConfig?.faq ?? [],
+      // The guide fixes the password answer where a login may be needed and
+      // adds its own questions; the accordion and FAQPage JSON-LD share it.
+      faq: applyGuideToFaq(currencyConfig?.faq ?? [], guide),
     }
 
     const gameName = game?.name ?? gameSlug
@@ -583,6 +589,26 @@ async function CategoryBrowsePage({ params }: PageProps) {
           data={data}
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
+          guide={
+            guide ? (
+              <CurrencyGuideSection
+                guide={guide}
+                gameId={game?.id}
+                gameName={gameName}
+                iconUrl={data.currencyIconUrl}
+                ours={{
+                  kind: 'bundle',
+                  bundles: data.bundles.map((b) => ({ id: b.id, amount: Number(b.amount ?? 0) })),
+                  offers: bundleOffers.map((o) => ({
+                    bundleId: o.bundleId,
+                    pricePerBundle: o.pricePerBundle,
+                    stock: o.stock,
+                    region: o.region,
+                  })),
+                }}
+              />
+            ) : null
+          }
         />
       </>
     )
@@ -676,6 +702,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
         ...mergedData.currency,
         iconUrl: currencyConfig?.currency_icon_url ?? null,
       },
+      // Password answer made honest + the guide's questions (same list feeds
+      // the FAQPage JSON-LD below).
+      faq: applyGuideToFaq(mergedData.faq, guide),
     }
 
     // V14m/Step 7a — the self-purchase block (a seller can't buy their own
@@ -731,6 +760,21 @@ async function CategoryBrowsePage({ params }: PageProps) {
           gameSlug={gameSlug}
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
+          guide={
+            guide ? (
+              <CurrencyGuideSection
+                guide={guide}
+                gameId={game?.id}
+                gameName={gameName}
+                iconUrl={currencyConfig?.currency_icon_url ?? null}
+                ours={{
+                  kind: 'flexible',
+                  granularity: mergedData.currency.granularity,
+                  offers: realOffers.map((o) => ({ pricePerUnit: o.pricePerUnit, minQty: o.minQty, stock: o.stock })),
+                }}
+              />
+            ) : null
+          }
         />
       </>
     )

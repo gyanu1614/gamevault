@@ -41,7 +41,6 @@ import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { FaqSection } from '@/components/marketplace/FaqCards'
-import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
@@ -115,6 +114,7 @@ export default function BundleCurrencyPageClient({
   data,
   introLine,
   blogRail,
+  guide,
 }: {
   data: BundleCurrencyPageData
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -122,6 +122,8 @@ export default function BundleCurrencyPageClient({
   introLine?: string | null
   /** Server-rendered blog rail (DB-backed), passed as a slot. */
   blogRail?: React.ReactNode
+  /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
+  guide?: React.ReactNode
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -643,9 +645,8 @@ export default function BundleCurrencyPageClient({
           className="mt-8 sm:mt-10"
         />
 
-        {/* ─── SEO ARTICLE seam — renders nothing until the owner's article
-            design lands (see CurrencyAboutSection). */}
-        <CurrencyAboutSection gameName={data.gameName} currencyName={data.unitLabel} />
+        {/* ─── CURRENCY GUIDE — prices vs official, delivery, safety (server slot). */}
+        {guide}
 
         {/* ─── BLOG — game-relevant guides rail. */}
         {blogRail}

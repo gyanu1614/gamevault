@@ -1,13 +1,11 @@
 /**
- * Seam for the long-form SEO article ("Buy <Game> <Currency> Cheap") that
- * closes the currency pages and the game hub, after the FAQ.
+ * Seam after the FAQ on the game hub. Renders nothing.
  *
- * Owner, 2026-10-05: the article is being researched and designed
- * separately, so this renders nothing for now. It is already placed in
- * the page order (product → How It Works → FAQ → this → footer) on the
- * flexible currency page, the bundle currency page and the game hub, so
- * the article lands here without touching the pages again. Keep it a
- * server-renderable component: the article's text must be in the HTML.
+ * The currency pages no longer use it: they render the per-game
+ * "<Currency> Guide" (components/marketplace/currency-guide) through their
+ * `guide` slot. The hub keeps this empty seam on purpose, so the guide's
+ * text lives on ONE URL per game (the currency page) instead of being
+ * duplicated on the hub. Keep it server-renderable if it ever fills.
  */
 
 export function CurrencyAboutSection(_props: { gameName: string; currencyName?: string | null }) {

@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { FaqSection } from '@/components/marketplace/FaqCards'
-import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
@@ -175,6 +174,7 @@ export default function CurrencyPageClient({
   gameSlug,
   introLine,
   blogRail,
+  guide,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -185,6 +185,8 @@ export default function CurrencyPageClient({
   introLine?: string | null
   /** Server-rendered blog rail (DB-backed), passed as a slot. */
   blogRail?: React.ReactNode
+  /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
+  guide?: React.ReactNode
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -420,14 +422,15 @@ export default function CurrencyPageClient({
           className="mt-8 sm:mt-10"
         />
 
-        {/* ─── SEO ARTICLE seam — renders nothing until the owner's article
-            design lands (see CurrencyAboutSection). */}
-        <CurrencyAboutSection gameName={data.currency.game} currencyName={data.currency.name} />
+        {/* ─── CURRENCY GUIDE — prices vs official, delivery, safety (server slot). */}
+        {guide}
 
-        {/* ─── SEO block (existing copy, kept until the article replaces it). */}
-        <div className="mx-auto mt-14 max-w-4xl">
-          <SeoBlock currency={data.currency} />
-        </div>
+        {/* ─── SEO block: only for games without a guide (the guide replaces it). */}
+        {!guide && (
+          <div className="mx-auto mt-14 max-w-4xl">
+            <SeoBlock currency={data.currency} />
+          </div>
+        )}
 
         {/* ─── BLOG — game-relevant guides rail (server-rendered, slot). */}
         {blogRail}
@@ -1171,9 +1174,9 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
           </h3>
           <p className="mt-2">
             Every order is covered by SafeDrop Protection: your {currency.name} arrives
-            as described, or you get your money back. No password
-            sharing is ever required — delivery is through in-game gifting or group payouts.
-            Not delivered or not as described? You get a full refund.
+            as described, or you get your money back. Some delivery methods need account
+            access, so read the seller&apos;s delivery note: it says exactly what&apos;s needed
+            before you pay.
           </p>
         </div>
       </div>
