@@ -39,6 +39,10 @@ export interface HowItWorksHighlight {
   value: string
   /** Optional small line under the value. */
   note?: string
+  /** The currency's own icon (Robux, V-Bucks), floated on the right. */
+  iconUrl?: string | null
+  /** Game art, blurred and dimmed behind the figure. */
+  backdropUrl?: string | null
 }
 
 const DEFAULT_STEPS: HowItWorksStepCopy[] = [
@@ -68,6 +72,54 @@ function Progress({ step, tone }: { step: number; tone: 'blue' | 'green' }) {
         />
       ))}
     </span>
+  )
+}
+
+/**
+ * The live figure on the first tile: the game's art blurred into a dark
+ * backdrop, the price on the left, the currency's icon floating on the right.
+ * Owner, 2026-10-05: a plain teal "7 Roblox Offers" box "doesn't look good";
+ * wanted the Robux icon and a backdrop.
+ */
+function Highlight({ label, value, note, iconUrl, backdropUrl }: HowItWorksHighlight) {
+  return (
+    <div className="relative isolate flex min-h-[124px] items-center gap-4 overflow-hidden rounded-lg bg-[#16171B] px-4 py-4 sm:px-5">
+      {backdropUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- game art, decorative
+        <img
+          src={backdropUrl}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full scale-125 object-cover opacity-50 blur-[6px] saturate-[1.2]"
+        />
+      )}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(22,23,27,0.96) 0%, rgba(22,23,27,0.82) 50%, rgba(22,23,27,0.45) 100%), radial-gradient(60% 90% at 88% 50%, rgba(46,155,255,0.22), transparent 70%)',
+        }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-medium text-text-secondary">{label}</p>
+        <p className="mt-0.5 text-[26px] font-bold leading-tight tracking-[-0.02em] tabular-nums text-text-primary">{value}</p>
+        {note && <p className="mt-1 text-[12px] text-text-tertiary">{note}</p>}
+      </div>
+      {iconUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
+        <img
+          src={iconUrl}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          className="hiw-coin h-16 w-16 shrink-0 object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.55)] sm:h-[72px] sm:w-[72px]"
+        />
+      )}
+    </div>
   )
 }
 
@@ -116,13 +168,7 @@ export default function HowItWorksBand({
           <p className="mt-2 max-w-[34ch] text-[14px] leading-6 text-text-secondary">{s1.body}</p>
           {highlight && (
             <div className="mt-auto pt-8">
-              <div className="rounded-lg bg-[rgba(84,221,190,0.07)] px-4 py-3.5">
-                <p className="text-[12px] font-medium text-text-tertiary">{highlight.label}</p>
-                <p className="mt-0.5 text-[26px] font-bold leading-tight tracking-[-0.02em] tabular-nums text-[#54DDBE]">
-                  {highlight.value}
-                </p>
-                {highlight.note && <p className="mt-0.5 text-[12px] text-text-tertiary">{highlight.note}</p>}
-              </div>
+              <Highlight {...highlight} />
             </div>
           )}
         </Tile>

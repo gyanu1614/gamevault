@@ -255,10 +255,12 @@ export default function CurrencyPageClient({
         : priceUnit(data.currency.granularity)
     return {
       label: `${data.currency.name} from`,
-      value: `${unitPrice(min)} / ${per}`,
-      note: `${allOffers.length} ${allOffers.length === 1 ? 'seller' : 'sellers'} live now`,
+      value: unitPrice(min),
+      note: `per ${per} · ${allOffers.length} ${allOffers.length === 1 ? 'seller' : 'sellers'} live now`,
+      iconUrl: data.currency.iconUrl ?? null,
+      backdropUrl: gameImageUrl ?? null,
     }
-  }, [allOffers, data.currency])
+  }, [allOffers, data.currency, gameImageUrl])
 
   const otherSellers = useMemo(() => {
     const list = allOffers.filter((o) => o.id !== activeId)
@@ -320,7 +322,7 @@ export default function CurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art INSIDE main's stacking
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
-    <main className="relative isolate min-h-screen pb-24 pt-3 sm:pt-4">
+    <main className="relative isolate min-h-screen pb-12 pt-3 sm:pt-4">
       <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface

@@ -587,6 +587,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         />
         <BundleCurrencyPageClient
           data={data}
+          gameImageUrl={game?.image_url ?? null}
           introLine={introLine}
           blogRail={<BlogRail gameSlug={gameSlug} gameName={gameName} />}
           guide={

@@ -65,6 +65,7 @@ import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
 import { clampCheckoutQty } from './qty'
+import { PAYMENT_METHOD_LOGOS } from '@/lib/payments/method-marks'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -411,34 +412,28 @@ function CompanyStrip() {
 // a method later = registry entry + fee row + one line here (a missing line
 // still renders, with the fallback icon/note).
 type PayMethodId = 'crypto' | (string & {})
-const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; logo?: string }> = {
+const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[] }> = {
   pix_br: {
-    logo: '/payments/pix_br.svg',
     Icon: Zap,
     points: ['Scan the QR with your bank app', 'Payment confirms instantly'],
   },
   gcash_ph: {
-    logo: '/payments/gcash_ph.svg',
     Icon: Smartphone,
     points: ['Approve the payment in GCash', 'Payment confirms instantly'],
   },
   maya_ph: {
-    logo: '/payments/maya_ph.svg',
     Icon: Smartphone,
     points: ['Approve the payment in Maya', 'Payment confirms instantly'],
   },
   qr_ph: {
-    logo: '/payments/qr_ph.svg',
     Icon: QrCode,
     points: ['Scan with any PH bank or wallet app', 'Payment confirms instantly'],
   },
   qris_id: {
-    logo: '/payments/qris_id.svg',
     Icon: QrCode,
     points: ['Scan with GoPay, OVO, DANA & more', 'Payment confirms instantly'],
   },
   oxxo_mx: {
-    logo: '/payments/oxxo_mx.svg',
     Icon: Store,
     points: ['Pay cash at any OXXO store', 'Voucher valid 48 hours', 'Clears within a day'],
   },
@@ -460,42 +455,34 @@ const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[]; log
   },
   // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
   trustly: {
-    logo: '/payments/trustly.svg',
     Icon: Landmark,
     points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
   },
   blik_pl: {
-    logo: '/payments/blik_pl.svg',
     Icon: Smartphone,
     points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
   },
   p24_pl: {
-    logo: '/payments/p24_pl.svg',
     Icon: Landmark,
     points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
   },
   eps_at: {
-    logo: '/payments/eps_at.svg',
     Icon: Landmark,
     points: ['Approve in your bank portal', 'Payment confirms instantly'],
   },
   mbway_pt: {
-    logo: '/payments/mbway_pt.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
   },
   bancomatpay_it: {
-    logo: '/payments/bancomatpay_it.svg',
     Icon: Smartphone,
     points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
   },
   payu_cz: {
-    logo: '/payments/payu_cz.svg',
     Icon: Landmark,
     points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
   },
   paysafecard: {
-    logo: '/payments/paysafecard.svg',
     Icon: CreditCard,
     points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your Store Balance'],
   },
@@ -535,7 +522,7 @@ function toRow(m: ClientMethod): LocalMethodRow {
     label: m.label,
     region: m.coverage,
     quote: m.quote,
-    logo: ui.logo,
+    logo: PAYMENT_METHOD_LOGOS[m.method],
     flag: m.countries.length === 1 ? ccFlag(m.countries[0]) : '🌍',
     countries: m.countries,
     Icon: ui.Icon,

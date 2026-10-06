@@ -115,6 +115,7 @@ export default function BundleCurrencyPageClient({
   introLine,
   blogRail,
   guide,
+  gameImageUrl,
 }: {
   data: BundleCurrencyPageData
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -124,6 +125,8 @@ export default function BundleCurrencyPageClient({
   blogRail?: React.ReactNode
   /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
   guide?: React.ReactNode
+  /** Game art for the How It Works price tile backdrop. */
+  gameImageUrl?: string | null
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -154,8 +157,10 @@ export default function BundleCurrencyPageClient({
       label: `${data.unitLabel} from`,
       value: best.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
       note: `${best.name} · ${sellers} ${sellers === 1 ? 'seller' : 'sellers'} live now`,
+      iconUrl: data.currencyIconUrl,
+      backdropUrl: gameImageUrl ?? null,
     }
-  }, [data.offers, data.bundles, data.unitLabel])
+  }, [data.offers, data.bundles, data.unitLabel, data.currencyIconUrl, gameImageUrl])
 
   // V19/P24/P4 — Bundle selection defaults to the cheapest available
   // bundle (the "Popular" pick) so the right-side panel has a real
@@ -302,7 +307,7 @@ export default function BundleCurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art (game watermark, shield
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
-    <main className="relative isolate min-h-screen pb-24">
+    <main className="relative isolate min-h-screen pb-12">
       <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
