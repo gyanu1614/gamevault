@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { boxSlugs, getBox } from '@/lib/values/boxes'
-import { socialTitle } from '@/lib/seo/title'
+import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import BoxPage from '../_BoxPage'
 import { boxMetaDescription, boxMetaTitle } from '../_boxesCopy'
 import { boxesCopyCtx, loadBoxes, shopOddsFor } from '../_boxesData'
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title: socialTitle(title), description, url: path, type: 'article' },
+    openGraph: { images: DEFAULT_OG_IMAGES, title: socialTitle(title), description, url: path, type: 'article' },
   }
 }
 

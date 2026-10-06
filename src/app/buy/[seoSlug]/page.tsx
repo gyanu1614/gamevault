@@ -13,6 +13,7 @@
  *   - CTA
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from '@/components/navigation/AppLink'
@@ -63,6 +64,7 @@ export async function generateMetadata(
     robots: indexable ? undefined : { index: false, follow: true },
     alternates: { canonical: url },
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title: page.title,
       description: page.description,
       url,

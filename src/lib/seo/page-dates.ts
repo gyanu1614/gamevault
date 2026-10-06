@@ -16,8 +16,8 @@ export const SITE_PAGES_UPDATED = {
   safedrop: '2026-09-28',
   /** src/app/(marketing)/sell/fees/page.tsx */
   sellFees: '2026-09-29',
-  /** src/app/account/become-seller/ */
-  becomeSeller: '2026-09-29',
+  /** src/app/early-seller/ — the public "Become a Seller" page */
+  earlySeller: '2026-09-22',
   /** src/app/(marketplace)/[gameSlug]/values/methodology/page.tsx */
   methodology: '2026-09-20',
   /** src/lib/seo/landingPages.ts: the curated copy of every /buy/* page */

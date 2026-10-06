@@ -10,6 +10,7 @@
  * to the client form island.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/early-seller' },
   robots: { index: true, follow: true },
   openGraph: {
+    images: DEFAULT_OG_IMAGES,
     title: 'Become a Founding Seller on DropMarket',
     description:
       'The first 100 sellers get lower fees, early access, and a founding-seller badge. Reserve your spot.',

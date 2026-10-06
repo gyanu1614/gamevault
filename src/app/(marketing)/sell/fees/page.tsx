@@ -10,6 +10,7 @@
  * here. Static-first: no cookie client, no searchParams, force-static.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
 // Per-icon entry points (see TierIcon.tsx): the ssr barrel costs vitest ~9,000 modules.
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
     'What it costs to sell on DropMarket: commission by category, per-game rates, the rank discount ladder and the founding-seller programme — read live from the fee table checkout uses.',
   alternates: { canonical: '/sell/fees' },
   openGraph: {
+    images: DEFAULT_OG_IMAGES,
     title: 'Seller Fees on DropMarket',
     description: 'Commission by category, per-game rates, rank discounts and the founding programme — no listing fee, ever.',
     url: '/sell/fees',

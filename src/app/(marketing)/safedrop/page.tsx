@@ -6,6 +6,7 @@
  * seller payouts, and FAQs.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import React from 'react'
 import { Metadata } from 'next'
 import {
@@ -52,6 +53,7 @@ export const metadata: Metadata = {
   description:
     "SafeDrop Protection is included on every DropMarket order. Not delivered or not as described? You get your money back.",
   openGraph: {
+    images: DEFAULT_OG_IMAGES,
     title: 'SafeDrop Protection',
     description:
       'SafeDrop Protection on every DropMarket order. Get what you ordered, or your money back',

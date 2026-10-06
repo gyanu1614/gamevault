@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { getFreeGuide } from '@/lib/values/free-guide'
-import { socialTitle } from '@/lib/seo/title'
+import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import CodesPage, { codesCopyCtx } from './_CodesPage'
 import { codesFacts, metaDescription, metaTitle } from './_codesCopy'
 
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title: socialTitle(title), description, url: path, type: 'article' },
+    openGraph: { images: DEFAULT_OG_IMAGES, title: socialTitle(title), description, url: path, type: 'article' },
   }
 }
 

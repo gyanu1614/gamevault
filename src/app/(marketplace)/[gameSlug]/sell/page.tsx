@@ -18,6 +18,7 @@
  * per game (SAB = live reputable listings; Adopt Me = estimated until real data lands).
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
@@ -139,6 +140,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     robots: indexable ? undefined : { index: false, follow: true },
     alternates: { canonical: `/${gameSlug}/sell` },
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title: `Sell ${name} for Real Money`,
       description,
       url: `/${gameSlug}/sell`,

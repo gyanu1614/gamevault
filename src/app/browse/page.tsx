@@ -9,6 +9,7 @@
  * game/category graph wasn't linked from a hub.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import type { Metadata } from 'next'
@@ -39,6 +40,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/browse` },
   openGraph: {
+    images: DEFAULT_OG_IMAGES,
     title: 'Browse the DropMarket Marketplace',
     description:
       'Accounts, currency, items, top-ups and boosting across every game — protected by SafeDrop.',

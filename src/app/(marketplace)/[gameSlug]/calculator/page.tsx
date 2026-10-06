@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { notFound } from 'next/navigation'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
@@ -106,6 +107,7 @@ export async function generateMetadata({
         'adopt me trade calculator real money',
       ],
       openGraph: {
+        images: DEFAULT_OG_IMAGES,
         title,
         description: 'Check whether an Adopt Me trade is a Win, Fair or Loss — in trade value and in real money.',
         url: '/adopt-me/calculator',
@@ -131,6 +133,7 @@ export async function generateMetadata({
       canonical: '/steal-a-brainrot/calculator',
     },
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title:
         'Steal a Brainrot Value & Trade Calculator',
       description:

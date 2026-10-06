@@ -491,6 +491,7 @@ function SectionHeader({
   size?: 'default' | 'hero'
 }) {
   const showIcon = iconUrl !== undefined
+  const Heading = size === 'hero' ? 'h1' : 'h2'
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 px-1">
       <div className="flex min-w-0 items-center gap-3">
@@ -517,7 +518,9 @@ function SectionHeader({
               {eyebrow}
             </p>
           )}
-          <h2
+          {/* The hero title is the page's one H1 (every currency page had
+              none: the crawl of 2026-10-06 found 10 without an H1). */}
+          <Heading
             className={cn(
               'text-text-primary',
               eyebrow ? 'leading-none' : 'leading-tight',
@@ -527,7 +530,7 @@ function SectionHeader({
             )}
           >
             {title}
-          </h2>
+          </Heading>
           {subtitle && (
             <p
               className={cn(
