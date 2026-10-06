@@ -3,13 +3,15 @@ import 'server-only'
 /**
  * Game hub (/[gameSlug]) loaders. Cookie-free (anon client) so the page stays
  * ISR; the hub binds every category's listings tag (page.tsx) so a listing
- * change anywhere in the game refreshes it, like the category pages.
+ * change anywhere in the game refreshes it, like the category pages. Listing
+ * reads are cached under those tags (lib/listings/read-client), so the
+ * refresh re-reads the data instead of reusing the cached rows.
  *
  * Parity with the category grids and page titles: offline (paused) and
  * test/demo sellers are left out of both the numbers and the offer rows.
  */
 
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { getCategoryStats } from '@/lib/seo/page-stats'
@@ -54,7 +56,7 @@ export async function getHubOffers(
   const accountIds = categories.filter((c) => c.type === 'account').map((c) => c.id)
   if (itemIds.length === 0 && accountIds.length === 0) return { items: [], accounts: [] }
 
-  const supabase = createAnonClient()
+  const supabase = createCategoryListingsReadClient([...itemIds, ...accountIds])
   const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
   const hidden = Array.from(new Set([...paused, ...test]))
 

@@ -30,7 +30,11 @@ function createFakeClient(seed: Record<string, unknown[]>) {
 }
 
 let fake: ReturnType<typeof createFakeClient>
-vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => fake.client }))
+vi.mock('@/lib/supabase/anon', () => ({
+  createAnonClient: () => fake.client,
+  // Listing reads go through the tagged client (lib/listings/read-client.ts).
+  createTaggedAnonClient: () => fake.client,
+}))
 vi.mock('@/lib/supabase/server', () => {
   throw new Error('the homepage must not import the cookie client')
 })

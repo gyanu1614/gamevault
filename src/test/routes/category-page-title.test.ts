@@ -31,7 +31,11 @@ const category = {
   game: { slug: 'adopt-me' },
 }
 let recorder = createSupabaseRecorder({})
-vi.mock('@/lib/supabase/anon', () => ({ createAnonClient: () => recorder.client }))
+vi.mock('@/lib/supabase/anon', () => ({
+  createAnonClient: () => recorder.client,
+  // Listing reads go through the tagged client (lib/listings/read-client.ts).
+  createTaggedAnonClient: () => recorder.client,
+}))
 
 async function titleFor(seoTitle: string | null) {
   category.seo_title = seoTitle

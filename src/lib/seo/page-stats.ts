@@ -10,7 +10,7 @@
  */
 
 import * as React from 'react'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
@@ -61,7 +61,9 @@ function formatAvgDelivery(avgMinutes: number): string {
 export const getCategoryStats = requestMemo(
   async (gameId: string, categoryId: string): Promise<CategoryStats> => {
     // Cookie-free (Step 7a): this runs inside ISR pages' metadata and body.
-    const supabase = createAnonClient()
+    // Tagged with the category, so a listing mutation refreshes the numbers
+    // and not just the page shell (lib/listings/read-client).
+    const supabase = createCategoryListingsReadClient([categoryId])
     // Parity with the visible grids: Offline-Mode sellers are hidden on
     // the page, so their listings must not inflate the advertised
     // count/low price either. (The flexible-currency minQty>=100 client

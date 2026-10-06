@@ -64,10 +64,10 @@ const ANON_ALLOWED: Record<string, { count: number; reason: string }> = {
     reason: 'getGame: the games row for the article — not values data',
   },
   [`${HUB}/page.tsx`]: {
-    count: 4,
+    count: 3,
     reason:
-      'games rows + marketplace listings (listing surfaces revalidate by their own tags, Step 7b); ' +
-      'its one price read (getSabTopValues) is tagged',
+      'games / game_categories / category_configs rows — its marketplace listing reads use the ' +
+      'listing read clients (listings-data-tags.guard); its one price read (getSabTopValues) is tagged',
   },
 }
 

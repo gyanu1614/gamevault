@@ -14,6 +14,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { isGameHubIndexable } from '@/lib/games/indexability'
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { withCurrencyNavLabel } from '@/lib/categories/currency-nav-label'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
@@ -126,8 +127,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Index bar (mirrors sitemap.ts): an empty hub — no active listings
   // and no curated currency config — stays out of the index until it
   // has something real to rank ({index:false, follow:true}).
+  // The count spans every category of the game, so it is cached under all of
+  // their listings tags (lib/listings/read-client): a mutation in any of them
+  // refreshes it, not just the page shell.
+  const listingsDb = createCategoryListingsReadClient(gameCats.map((c: any) => c.id))
   const [{ count: listingCount }, { data: curatedCfg }] = await Promise.all([
-    supabase
+    listingsDb
       .from('listings')
       // SEO hygiene: only REAL (non-test) active listings count toward
       // indexability, so a game with only test listings stays noindex.
@@ -216,12 +221,14 @@ async function getSabTopValues(): Promise<SabTopValue[]> {
  * surface, not an SEO-indexed listing count. Accounts are detected by the
  * joined category type === 'account'.
  */
-async function getSabLandingOffers(gameId: string): Promise<{
+async function getSabLandingOffers(gameId: string, categoryIds: string[]): Promise<{
   itemOffers: ItemOffer[]
   accountOffers: ItemOffer[]
   minPriceUsd: number | null
 }> {
-  const supabase = createAnonClient()
+  // Every category of the game, so a listing change in any of them refreshes
+  // this landing (the tags also bind the render; lib/listings/read-client).
+  const supabase = createCategoryListingsReadClient(categoryIds)
 
   // Same select shape as the buy-items page's RawListing so listingToOffer()
   // gets everything it needs (seller rating/reviews/sales, category, template).
@@ -287,7 +294,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const [sabTopValues, sabListings] = await Promise.all([
     isSab ? getSabTopValues() : Promise.resolve([]),
     isSab
-      ? getSabLandingOffers(game.id)
+      ? getSabLandingOffers(game.id, categories.map((c) => c.id))
       : Promise.resolve({ itemOffers: [], accountOffers: [], minPriceUsd: null }),
   ])
 

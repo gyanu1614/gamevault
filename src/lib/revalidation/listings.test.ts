@@ -48,8 +48,8 @@ describe('listing surfaces revalidation', () => {
   it('revalidates explicit category ids, deduped', async () => {
     recorder = createSupabaseRecorder()
     const r = await revalidateListingSurfaces(recorder.client, { gameCategoryIds: ['c1', 'c2', 'c1'] })
-    expect(tags()).toEqual(['listings:category:c1', 'listings:category:c2'])
-    expect(r.tags.sort()).toEqual(['listings:category:c1', 'listings:category:c2'])
+    expect(tags()).toEqual(['listings:category:c1', 'listings:category:c2', 'listings:home'])
+    expect(r.tags.sort()).toEqual(['listings:category:c1', 'listings:category:c2', 'listings:home'])
     expect(recorder.tables()).toEqual([])
   })
 
@@ -58,14 +58,14 @@ describe('listing surfaces revalidation', () => {
       listings: [{ game_category_id: 'c7' }, { game_category_id: 'c7' }, { game_category_id: 'c9' }],
     })
     await revalidateListingSurfaces(recorder.client, { listingIds: ['l1', 'l2', 'l3'] })
-    expect(tags()).toEqual(['listings:category:c7', 'listings:category:c9'])
+    expect(tags()).toEqual(['listings:category:c7', 'listings:category:c9', 'listings:home'])
     expect(recorder.tables()).toEqual(['listings'])
   })
 
   it("resolves a seller to every category they list in (store pause hides all of them)", async () => {
     recorder = createSupabaseRecorder({ listings: [{ game_category_id: 'c1' }, { game_category_id: 'c3' }] })
     await revalidateListingSurfaces(recorder.client, { sellerIds: ['s1'] })
-    expect(tags()).toEqual(['listings:category:c1', 'listings:category:c3'])
+    expect(tags()).toEqual(['listings:category:c1', 'listings:category:c3', 'listings:home'])
   })
 
   it('also revalidates the value item a listing is linked to — that item only (T1)', async () => {
@@ -80,12 +80,13 @@ describe('listing surfaces revalidation', () => {
     expect(tags()).toEqual([
       'listings:category:c7',
       'listings:category:c9',
+      'listings:home',
       'value-stock:adopt-me:bat-dragon',
       'value-stock:adopt-me:owl',
     ])
     // Never the per-game stock tag: that would rebuild every item page.
     expect(tags()).not.toContain('value-stock:adopt-me')
-    expect(r.tags).toHaveLength(4)
+    expect(r.tags).toHaveLength(5)
     expect(recorder.tables()).toEqual(['listings'])
   })
 
@@ -98,8 +99,16 @@ describe('listing surfaces revalidation', () => {
       gameCategoryIds: ['c1'],
       listingIds: ['l1'],
     })
-    expect(tags()).toEqual(['listings:category:c1'])
+    expect(tags()).toEqual(['listings:category:c1', 'listings:home'])
     expect(r.error).toMatch(/db down/)
+  })
+
+  it('refreshes the homepage rails with any category, and only then', async () => {
+    recorder = createSupabaseRecorder({ listings: [] })
+    await revalidateListingSurfaces(recorder.client, { listingIds: ['gone'] })
+    expect(tags()).toEqual([])
+    await revalidateListingSurfaces(recorder.client, { gameCategoryIds: ['c1'] })
+    expect(tags().filter((t) => t === 'listings:home')).toHaveLength(1)
   })
 
   it('does nothing with an empty target', async () => {
