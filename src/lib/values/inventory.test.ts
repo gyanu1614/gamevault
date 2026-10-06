@@ -166,7 +166,7 @@ describe('trade ad', () => {
     const text = tradeAdText({ lines, totals: inventoryTotals(lines), shortName: 'MM2', pageUrl: url, hash: 'i=chroma-fang:2,harvester:1' })
     expect(text).toBe(
       [
-        '**Trading My MM2 Inventory: $89.20**',
+        '**MM2 Inventory Worth $89.20**',
         '- Harvester: $65.00',
         '- Chroma Fang x2: $24.20',
         '**Total: $89.20** (3 items, live USD prices)',

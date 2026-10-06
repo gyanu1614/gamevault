@@ -301,7 +301,7 @@ export function tradeAdText({
   const shown = [...lines].sort((a, b) => b.lineUsd - a.lineUsd || a.item.name.localeCompare(b.item.name)).slice(0, TRADE_AD_LINES)
   const rest = lines.length - shown.length
   const body = [
-    `**Trading My ${shortName} Inventory: ${fmtUsd(totals.cheapestUsd)}**`,
+    `**${shortName} Inventory Worth ${fmtUsd(totals.cheapestUsd)}**`,
     ...shown.map((l) => `- ${escapeMd(l.item.name)}${l.qty > 1 ? ` x${l.qty}` : ''}: ${fmtUsd(l.lineUsd)}`),
     ...(rest > 0 ? [`- + ${rest} more ${rest === 1 ? 'item' : 'items'}`] : []),
     `**Total: ${fmtUsd(totals.cheapestUsd)}** (${totals.count} ${totals.count === 1 ? 'item' : 'items'}, live USD prices)`,
