@@ -34,12 +34,14 @@ const SCOPE_DIRS = [
   `${HUB}/neon-calculator`,
   `${HUB}/price-index`,
   `${HUB}/blog`,
+  `${HUB}/events`, // events archive (values_events + live prices)
 ]
 
 /** Single files outside those directories that read values data. */
 const SCOPE_FILES = [
   'src/lib/sab/priceCache.ts',
   'src/lib/values/data.ts',
+  'src/lib/values/events.ts',
   `${HUB}/page.tsx`, // the SAB landing's top-values carousel
 ]
 

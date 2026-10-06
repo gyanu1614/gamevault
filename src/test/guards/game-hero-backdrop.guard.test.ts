@@ -73,6 +73,8 @@ const RENDER_MODULES = [
   'blog/page.tsx',
   'blog/[slug]/page.tsx',
   'sell/page.tsx',
+  'events/_EventsHubPage.tsx', // events archive hub (MM2)
+  'events/_EventPage.tsx', // one event
 ]
 
 describe('game pages render GameHeroBackdrop', () => {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/games/indexability'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { valueItemHasPage } from '@/lib/values/hub-config'
+import { isEventIndexable } from '@/lib/values/events-model'
 import { computeCategoryPages } from '@/lib/seo/category-index'
 import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
 
@@ -59,6 +60,8 @@ export interface SitemapInput {
     priceChangedAt: string | null
     sampleSize: number | null
   }[]
+  /** Published events archive rows (values_events), any game. */
+  valueEvents: { gameSlug: string; slug: string; status: string; itemCount: number; updatedAt: string | null }[]
   gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null }[]
   /** Every blog post (for the index page's date). */
   posts: { publishedAt: string }[]
@@ -193,6 +196,19 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
       out.push({ url: at(`/${slug}/values/methodology`), ...dated(SITE_PAGES_UPDATED.methodology), changeFrequency: 'monthly', priority: 0.5 })
     }
     if (theme.pages.priceIndex) out.push({ url: at(`/${slug}/price-index`), ...dated(data), changeFrequency: 'daily', priority: 0.7 })
+    if (theme.pages.events) {
+      // The events archive: the hub, then every event page the route serves
+      // with an index verdict (isEventIndexable — same rule as its robots meta).
+      // lastmod = the event row's own updated_at; the hub = the newest of them.
+      const events = input.valueEvents.filter((e) => e.gameSlug === slug)
+      if (events.length > 0) {
+        out.push({ url: at(`/${slug}/events`), ...dated(newest(...events.map((e) => e.updatedAt))), changeFrequency: 'weekly', priority: 0.75 })
+        for (const e of events) {
+          if (!isEventIndexable(e)) continue
+          out.push({ url: at(`/${slug}/events/${e.slug}`), ...dated(e.updatedAt), changeFrequency: 'weekly', priority: 0.65 })
+        }
+      }
+    }
     for (const item of itemsByGame[slug] ?? []) {
       if (!item.slug) continue
       out.push({ url: at(`/${slug}/values/${item.slug}`), ...dated(item.updated_at), changeFrequency: 'daily', priority: 0.7 })

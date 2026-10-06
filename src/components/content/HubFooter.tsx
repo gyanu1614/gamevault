@@ -16,6 +16,7 @@
 
 import { DISCORD_INVITE_URL } from '@/lib/config/founding-seller'
 import Link from '@/components/navigation/AppLink'
+import type { HubTool } from '@/lib/content/theme'
 import Image from 'next/image'
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo'
 import { TwitterLogoIcon } from '@phosphor-icons/react/dist/ssr/TwitterLogo'
@@ -59,7 +60,7 @@ export function HubFooter({
 }: {
   gameName: string
   gameSlug: string
-  tools: Array<'values' | 'calculator'>
+  tools: HubTool[]
   itemsHref: string | null
   accountsHref: string | null
 }) {
@@ -68,7 +69,7 @@ export function HubFooter({
   const hubLinks: HubFooterLink[] = [
     { name: 'Guides', href: `/${gameSlug}/blog` },
     ...tools.map((tool) => ({
-      name: tool === 'values' ? 'Value List' : 'WFL Calculator',
+      name: tool === 'values' ? 'Value List' : tool === 'events' ? `${gameName} Events` : 'WFL Calculator',
       href: `/${gameSlug}/${tool}`,
     })),
     { name: 'Pricing Methodology', href: `/${gameSlug}/values/methodology` },

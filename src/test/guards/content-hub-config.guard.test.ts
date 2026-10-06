@@ -54,6 +54,7 @@ describe('content hub config', () => {
         priceIndex: true,
         methodology: true,
         blog: true,
+        events: false,
       },
       'adopt-me': {
         values: true,
@@ -61,6 +62,7 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: true,
+        events: false,
       },
       'steal-an-egg': {
         values: true,
@@ -68,6 +70,7 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: false,
+        events: false,
       },
       // MM2 Step 2: value list + item pages + methodology. The calculator
       // (Trade Checker / Inventory Worth) is Step 3.
@@ -77,6 +80,8 @@ describe('content hub config', () => {
         priceIndex: false,
         methodology: true,
         blog: false,
+        // The events archive (values_events, 2026-10-05) — MM2 only.
+        events: true,
       },
     })
   })
@@ -90,6 +95,8 @@ describe('content hub config', () => {
       'steal-a-brainrot',
       'steal-an-egg',
     ])
+    // The events archive: MM2 only (values_events is MM2's data today).
+    expect(contentHubSlugsFor('events')).toEqual(['murder-mystery-2'])
     // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',

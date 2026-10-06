@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
+import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
 import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -9,7 +10,8 @@ import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
-import { getGameContentTheme } from '@/lib/content/theme'
+import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
+import { getValueItemEvent } from '@/lib/values/events'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
@@ -56,10 +58,12 @@ export default async function ValueListItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const hub = valueListHub(gameSlug)!
-  const [hubNav, howToGet] = await Promise.all([
+  const [hubNav, howToGet, fromEvent] = await Promise.all([
     getHubNavData(gameSlug),
     // Verified how-to-get facts (values_items.how_to_get), under the item's tags.
     getValueItemHowToGet(gameSlug, item.slug),
+    // The event it came from (values_events), for the link back — item tags too.
+    hasHubPage(gameSlug, 'events') ? getValueItemEvent(gameSlug, item.slug) : Promise.resolve(null),
   ])
 
   const rarity = rarityMeta(gameSlug, item.rarity)
@@ -151,6 +155,17 @@ export default async function ValueListItemPage({
           <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
             What {item.name} sells for in real money — from live listings by reputable sellers.
           </p>
+          {/* Internal link back to its event (the event page links here). */}
+          {fromEvent && (
+            <Link
+              href={`/${gameSlug}/events/${fromEvent.slug}`}
+              className="group mt-3 inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            >
+              <CalendarStarIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+              From the {fromEvent.name} Event
+              <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          )}
         </div>
 
         <Suspense fallback={<ValueListItemSkeleton withForms={!!counterpart && hasPage(counterpart)} />}>

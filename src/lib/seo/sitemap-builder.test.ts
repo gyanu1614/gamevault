@@ -92,6 +92,22 @@ describe('which URLs are listed', () => {
     expect(all).not.toContain(`${BASE}/murder-mystery-2/calculator`) // Step 3
   })
 
+  it('lists the MM2 events hub and every event page except a thin (ended, no items) one', () => {
+    const all = urls()
+    expect(all).toContain(`${BASE}/murder-mystery-2/events`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/events/halloween-2025`)
+    expect(all).toContain(`${BASE}/murder-mystery-2/events/halloween-2026`) // upcoming: "release date" searches
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/events/rb-battles-season-1`) // ended, no items: noindex
+    expect(all.filter((u) => /\/(adopt-me|steal-a-brainrot|steal-an-egg)\/events/.test(u))).toEqual([])
+    // lastmod: the row's own date; the hub carries the newest.
+    expect(lastmod(`${BASE}/murder-mystery-2/events/halloween-2025`)).toBe('2026-10-05T00:00:00Z')
+    expect(lastmod(`${BASE}/murder-mystery-2/events`)).toBe('2026-10-05T00:00:00Z')
+  })
+
+  it('lists no events hub for a game with no published events', () => {
+    expect(urls({ valueEvents: [] })).not.toContain(`${BASE}/murder-mystery-2/events`)
+  })
+
   it('lists SAB and Adopt Me value items, and the hub pages their theme enables', () => {
     const all = urls()
     expect(all).toContain(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)

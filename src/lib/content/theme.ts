@@ -60,7 +60,7 @@ export interface GameContentTheme {
    */
   pages: HubPageSet
   /** Tool tabs shown in HubNav, in display order. */
-  navTools: Array<'values' | 'calculator'>
+  navTools: HubTool[]
   /**
    * What this game calls one tradable thing ("Brainrot", "Pet", "Egg") and one
    * of its forms ("Mutation", "Variant"). Shared components read these instead
@@ -87,7 +87,12 @@ export interface HubPageSet {
   priceIndex: boolean
   methodology: boolean
   blog: boolean
+  /** The events archive: /[game]/events + /[game]/events/[eventSlug] (values_events). */
+  events: boolean
 }
+
+/** A HubNav tool tab — each is also a HubPageSet page at /[game]/<tool>. */
+export type HubTool = 'values' | 'calculator' | 'events'
 
 /** Static worked-example for the blog calculator promo (see `calculatorExample`). */
 export interface CalcPromoExample {
@@ -209,6 +214,7 @@ const DEFAULT_THEME: GameContentTheme = {
     priceIndex: false,
     methodology: false,
     blog: false,
+    events: false,
   },
   navTools: [],
   itemNoun: 'Item',
@@ -247,6 +253,7 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: true,
       methodology: true,
       blog: true,
+      events: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Brainrot',
@@ -290,6 +297,7 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: false,
+      events: false,
     },
     navTools: ['values'],
     itemNoun: 'Egg',
@@ -336,6 +344,7 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: true,
+      events: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Pet',
@@ -379,8 +388,11 @@ const THEMES: Record<string, GameContentTheme> = {
       priceIndex: false,
       methodology: true,
       blog: false,
+      // The events archive (values_events, 2026-10-05): every MM2 event since
+      // Halloween 2015 with its items and their live set value.
+      events: true,
     },
-    navTools: ['values'],
+    navTools: ['values', 'events'],
     itemNoun: 'Item',
     itemNounPlural: 'Items',
     // Chroma is its own item with its own price (chroma-fang → fang), not a
