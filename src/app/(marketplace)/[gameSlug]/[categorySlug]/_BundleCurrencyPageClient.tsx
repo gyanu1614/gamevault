@@ -139,6 +139,24 @@ export default function BundleCurrencyPageClient({
     data.platforms[0]?.value ?? '',
   )
 
+  // How It Works first tile: the cheapest bundle on sale right now.
+  const cheapestBundleHighlight = useMemo(() => {
+    let best: { name: string; price: number } | null = null
+    for (const o of data.offers) {
+      if (!(o.pricePerBundle > 0)) continue
+      const b = data.bundles.find((x) => x.id === o.bundleId)
+      if (!b) continue
+      if (!best || o.pricePerBundle < best.price) best = { name: b.name, price: o.pricePerBundle }
+    }
+    if (!best) return null
+    const sellers = new Set(data.offers.map((o) => o.sellerId)).size
+    return {
+      label: `${data.unitLabel} from`,
+      value: best.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      note: `${best.name} · ${sellers} ${sellers === 1 ? 'seller' : 'sellers'} live now`,
+    }
+  }, [data.offers, data.bundles, data.unitLabel])
+
   // V19/P24/P4 — Bundle selection defaults to the cheapest available
   // bundle (the "Popular" pick) so the right-side panel has a real
   // price on first render rather than an empty state.
@@ -628,11 +646,12 @@ export default function BundleCurrencyPageClient({
       {/* ─── HOW IT WORKS — compact curved band with bundle copy. */}
       <HowItWorksBand
         title={`How to Buy ${data.unitLabel} on DropMarket`}
+        highlight={cheapestBundleHighlight}
         steps={[
-          { title: 'Pick Your Bundle', body: 'Choose the platform, region and amount.' },
-          { title: 'Pay at Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated time.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete, or get a full refund.' },
+          { title: 'Pick Your Bundle', body: 'Choose your platform, region and bundle, then compare sellers.' },
+          { title: 'Pay at Checkout', body: 'Pay in seconds. Your order is covered from the start.' },
+          { title: `Get Your ${data.unitLabel}`, body: 'Your seller delivers to your account within their stated time.' },
+          { title: 'Confirm Your Order', body: `Got your ${data.unitLabel}? Confirm and you're done. Not received? You get a full refund.` },
         ]}
       />
 

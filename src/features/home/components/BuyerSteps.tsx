@@ -54,7 +54,7 @@ interface Step {
  */
 const GRAD_ID = 'buyer-step-gloss'
 
-function StepIcon({ Icon }: { Icon: LucideIcon }) {
+export function StepIcon({ Icon }: { Icon: LucideIcon }) {
   return (
     <span
       className="buyer-step__glyph relative block h-full w-full"
@@ -69,7 +69,7 @@ function StepIcon({ Icon }: { Icon: LucideIcon }) {
 }
 
 /** One shared gradient + glow filter for every icon on the section. */
-function IconDefs() {
+export function IconDefs() {
   return (
     <svg width="0" height="0" aria-hidden className="absolute">
       <defs>
