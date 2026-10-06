@@ -1,0 +1,67 @@
+{
+  "game": "grow-a-garden",
+  "currency": "Trade Tokens",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Grow a Garden Tokens and What Can You Buy With Them?",
+    "paragraphs": [
+      "Trade Tokens are the currency of the Farmers Market, Grow a Garden's trading world, added on November 29, 2025. Players list pets and crops at their booths for a price in Tokens, and you spend Tokens to buy them.",
+      "Sheckles are the main-game money you earn by selling crops, and they buy seeds, gear and eggs. Sheckles don't work in the Farmers Market, and there's no fixed rate between the two."
+    ]
+  },
+  "official_prices": {
+    "heading": "Grow a Garden Token Prices: Robux vs DropMarket",
+    "note": "The game sells Trade Tokens for Robux at 1 Robux per Token. There's no direct cash price, so what you pay depends on how you buy your Robux.",
+    "packages": [
+      { "amount": 50, "robux": 50, "usd": null, "where": "In-game Tokens shop (Robux)" },
+      { "amount": 250, "robux": 250, "usd": null, "where": "In-game Tokens shop (Robux)" },
+      { "amount": 1000, "robux": 1000, "usd": null, "where": "In-game Tokens shop (Robux)" },
+      { "amount": 5000, "robux": 5000, "usd": null, "where": "In-game Tokens shop (Robux)" }
+    ],
+    "extras": [
+      { "label": "Sheckles", "detail": "Not sold for Robux any more. You earn them by selling crops and pets." }
+    ],
+    "source": "https://growagarden.fandom.com/wiki/Trade_World"
+  },
+  "delivery": {
+    "heading": "How Grow a Garden Token Delivery Works",
+    "method": "in_game_trade",
+    "steps": [
+      "After checkout, send your Roblox username (the @ name, not your display name) in the order chat.",
+      "Accept the seller's friend request and stay in Grow a Garden.",
+      "The seller joins you and hands over the Tokens the way their delivery note describes.",
+      "Check your Token balance, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote about 15 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "Can You Trade in Grow a Garden With a New Account?",
+    "paragraphs": [
+      "Not straight away. Grow a Garden blocks trading on brand-new Roblox accounts for about a week, so an account made today can't receive a trade yet.",
+      "Trading in the main game also needs a Trading Ticket from the Gear Shop, which costs 100,000 Sheckles or 19 Robux. The ticket isn't used up if a trade is declined."
+    ],
+    "source": "https://growagarden.fandom.com/wiki/Trading_Ticket"
+  },
+  "faq_extra": [
+    {
+      "q": "Can you buy Sheckles with Robux in Grow a Garden?",
+      "a": "Not any more. Sheckles used to be sold in the Robux shop, but now you earn them by selling crops and pets. Trade Tokens are the only currency the game sells for Robux."
+    },
+    {
+      "q": "Can you use Sheckles in the Farmers Market?",
+      "a": "No. The Farmers Market only takes Trade Tokens. Sheckles are for the main game's shops."
+    }
+  ],
+  "trademark_owner": "Grow a Garden is a Roblox experience; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://growagarden.fandom.com/wiki/Trade_World",
+    "https://growagarden.fandom.com/wiki/Trade_Tokens",
+    "https://growagarden.fandom.com/wiki/Sheckles",
+    "https://growagarden.fandom.com/wiki/Trading",
+    "https://growagarden.fandom.com/wiki/Trading_Ticket",
+    "https://growagardentradevalues.com/guides/trade-tokens-vs-sheckles-explained/"
+  ],
+  "confidence": "medium",
+  "notes": "CURRENCY MISMATCH: the brief says Sheckles, but our prod config unit_label is 'Token' and live listings are titled 'Grow a Garden units'. I wrote the guide for Trade Tokens (what the page labels), and explained Sheckles alongside. Owner should confirm which currency sellers actually sell. All game facts come from the community wiki (fandom), not the developer: Token = 1 Robux, packs 50/250/1,000/5,000 (the wiki also mentions a 25,000 Robux pack, but its gallery labels it 15,000, so it's left out). Trading account-age limit: wiki gives both 7 days (Trading Ticket page) and 10 days (Trading page), so the copy says 'about a week'. Trading Ticket 100,000 Sheckles / 19 Robux from the wiki. DELIVERY: config placeholder is generic; one live seller says 'We will add you and join you for the trade' and asks for the @username. Whether Tokens move through the trade window or via a booth purchase is not confirmed, so step 3 defers to the seller's note. Trademark owner: the experience is by developer Jandel; I did not confirm a company name, so the line names Roblox only."
+}

@@ -1,0 +1,46 @@
+{
+  "game": "tap-simulator",
+  "currency": "Tap Simulator Tokens",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Tap Simulator Tokens and What Can You Buy With Them?",
+    "paragraphs": [
+      "Tokens are Tap Simulator's premium currency. You spend them on gamepasses, limited eggs, boosts and pets from other players in the Trading Plaza.",
+      "There are two kinds. Free Tokens you earn in-game can't be traded. Paid Tokens, bought with Robux or earned by selling to other players, can be traded."
+    ]
+  },
+  "official_prices": null,
+  "delivery": {
+    "heading": "How Tap Simulator Token Delivery Works",
+    "method": "in_game_trade",
+    "steps": [
+      "After checkout, send your Roblox username in the order chat.",
+      "Join Tap Simulator and go to the Trading Plaza.",
+      "Follow the seller's delivery note to receive the Tokens, either through a trade or a sale at your booth.",
+      "Check your Token balance, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote about 15 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "Why Can't I Trade My Tap Simulator Tokens?",
+    "paragraphs": [
+      "Tokens you earned for free, from quests, codes or bosses, can't be traded. Only Paid Tokens, the ones bought with Robux or earned from other players, move between accounts.",
+      "Tokens you buy on DropMarket arrive through trading, so they count as tradeable Tokens."
+    ],
+    "source": "https://www.tapsimulator.com/guides/token-farming-strategy"
+  },
+  "faq_extra": [
+    {
+      "q": "How do you get Tokens in Tap Simulator for free?",
+      "a": "Redeem codes, finish quests, join events and farm bosses. Those Tokens are free Tokens, so you can spend them but not trade them."
+    }
+  ],
+  "trademark_owner": "Tap Simulator is a Roblox experience; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://www.tapsimulator.com/guides/token-farming-strategy",
+    "https://www.tapsimulator.org/mechanics/trading-plaza"
+  ],
+  "confidence": "low",
+  "notes": "Only third-party fan sites (tapsimulator.com / .org, ggwtb), seen via search snippets; the pages themselves returned 402/403/451. The free vs paid Token split is consistent across them. No Robux pack prices found, so official_prices is null even though Tokens can be bought with Robux; fill this in once checked in-game. The last sentence of the support topic ('Tokens you buy on DropMarket ... count as tradeable') is our inference from that rule. DELIVERY: config placeholder is generic; the one live listing says only '1K = 1000 TAP Simulator Tokens'. Step 3 defers to the seller's note."
+}

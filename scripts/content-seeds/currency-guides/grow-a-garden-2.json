@@ -1,0 +1,66 @@
+{
+  "game": "grow-a-garden-2",
+  "currency": "Sheckles",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Sheckles in Grow a Garden 2?",
+    "paragraphs": [
+      "Sheckles are the main currency in Grow a Garden 2, which came out on Roblox on June 12, 2026. You spend them on seeds, gear, props and pets around the map.",
+      "You earn Sheckles by selling crops and pets at the Sell Stand. Each friend in your server adds a 10% Sheckle boost, up to 70%. Leaves are a second currency from the Fall Harvest world."
+    ]
+  },
+  "official_prices": {
+    "heading": "Sheckle Prices: Robux Store vs DropMarket",
+    "note": "Grow a Garden 2 sells Sheckles for Robux in its Store, at 500 Sheckles per Robux. There's no direct cash price, so the real cost depends on how you buy your Robux.",
+    "packages": [
+      { "amount": 5000, "robux": 10, "usd": null, "where": "In-game Store (Robux)" },
+      { "amount": 10000, "robux": 20, "usd": null, "where": "In-game Store (Robux)" },
+      { "amount": 25000, "robux": 50, "usd": null, "where": "In-game Store (Robux)" },
+      { "amount": 50000, "robux": 100, "usd": null, "where": "In-game Store (Robux)" },
+      { "amount": 100000, "robux": 200, "usd": null, "where": "In-game Store (Robux)" }
+    ],
+    "extras": [
+      { "label": "Leaves", "detail": "Same pack sizes and Robux prices as Sheckles" },
+      { "label": "Gift packs", "detail": "Every pack has a gift version, so someone else can buy it for you" }
+    ],
+    "source": "https://growagarden2.fandom.com/wiki/Mechanics"
+  },
+  "delivery": {
+    "heading": "How Grow a Garden 2 Delivery Works",
+    "method": "unclear_see_notes",
+    "steps": [
+      "After checkout, send your Roblox username (the @ name) in the order chat.",
+      "Accept the seller's friend request and join Grow a Garden 2.",
+      "The seller delivers the way their offer describes, for example by sending you a gift pack.",
+      "Check your balance in the bottom-left corner, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote about 15 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "Can You Gift Sheckles in Grow a Garden 2?",
+    "paragraphs": [
+      "Yes. Every Sheckle and Leaf pack in the Store has a gift version, so another player can buy one and send it to you.",
+      "Packs cost Robux, so the sender pays for them. You don't need to share anything but your username."
+    ],
+    "source": "https://growagarden2.fandom.com/wiki/Mechanics"
+  },
+  "faq_extra": [
+    {
+      "q": "How do you get more Sheckles in Grow a Garden 2?",
+      "a": "Sell crops and pets at the Sell Stand, and play with friends: each friend in your server adds 10%, up to a 70% boost."
+    },
+    {
+      "q": "What are Leaves in Grow a Garden 2?",
+      "a": "Leaves are the Fall Harvest event currency. You earn them by selling crops and pets in the Fall Harvest world, or buy them for Robux."
+    }
+  ],
+  "trademark_owner": "Grow a Garden 2 is a Roblox experience; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://growagarden2.fandom.com/wiki/Mechanics",
+    "https://growagarden2.fandom.com/wiki/Sheckles",
+    "https://www.sportskeeda.com/roblox-news/grow-garden-2-crop-tier-list"
+  ],
+  "confidence": "low",
+  "notes": "CURRENCY MISMATCH: prod config unit_label is 'Tokens' (granularity million), but the GaG2 wiki lists only Sheckles, Leaves and Guild Tokens (Guild Tokens can't be bought or traded). I wrote it for Sheckles, as the brief's Wave 1 list implies; owner must confirm what our two live GaG2 sellers sell. Facts are from the community wiki: Robux pack table, gift versions, +10%/friend up to 70%. Release date June 12, 2026 from a search summary, not a fetched page. DELIVERY IS UNCLEAR: no delivery note on the live listings and the config placeholder is generic; I found no trading system documented for GaG2, so the likely method is gift packs, which the seller pays for in Robux. If sellers do something else, step 3 needs rewriting. The config FAQ has a test entry ('Can you see this Question? | Yes') that should be deleted."
+}
