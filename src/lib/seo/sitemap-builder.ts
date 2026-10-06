@@ -217,6 +217,10 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
         out.push({ url: at(`/${slug}/chromas`), ...dated(newest(...chromaPrices.map((i) => i.priceChangedAt))), changeFrequency: 'daily', priority: 0.8 })
       }
     }
+    // Inventory Worth: lastmod = the newest price move of any item (it totals live prices).
+    if (theme.pages.inventory && input.pipelineItems.some((i) => i.gameSlug === slug)) {
+      out.push({ url: at(`/${slug}/inventory`), ...dated(data), changeFrequency: 'daily', priority: 0.8 })
+    }
     // The honest guides: lastmod = the research's own check date (build-time seed).
     if (theme.pages.freeItems && freeGuideLastmod(slug)) {
       out.push({ url: at(`/${slug}/free-items`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })

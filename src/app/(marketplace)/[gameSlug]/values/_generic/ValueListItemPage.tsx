@@ -4,6 +4,7 @@ import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
 import { DiamondIcon } from '@phosphor-icons/react/dist/ssr/Diamond'
+import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator'
 import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
@@ -77,6 +78,11 @@ export default async function ValueListItemPage({
   const counterpart = base ?? chroma
   // A Chroma links up to the Chroma hub (which links every Chroma page back).
   const chromaHubHref = item.rarity === 'Chroma' && hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null
+  // A priced item drops straight into Inventory Worth: `#i=<slug>:1` is the
+  // tool's own hash format; `&add=1` merges it into the visitor's saved list
+  // instead of replacing it (a shared link without it shows exactly its list).
+  const inventoryHref =
+    item.price?.cheapestUsd != null && hasHubPage(gameSlug, 'inventory') ? `/${gameSlug}/inventory#i=${item.slug}:1&add=1` : null
 
   const price = item.price
   const cheapestUsd = price?.cheapestUsd ?? null
@@ -160,7 +166,7 @@ export default async function ValueListItemPage({
           </p>
           {/* Internal links: back to its event (the event page links here) and,
               for a Chroma, to the Chroma hub (every Chroma vs its normal version). */}
-          {(fromEvent || chromaHubHref) && (
+          {(fromEvent || chromaHubHref || inventoryHref) && (
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
               {fromEvent && (
                 <Link
@@ -179,6 +185,17 @@ export default async function ValueListItemPage({
                 >
                   <DiamondIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
                   All {hub.shortName} Chromas
+                  <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+              {inventoryHref && (
+                <Link
+                  href={inventoryHref}
+                  prefetch={false}
+                  className="group inline-flex items-center gap-1.5 rounded-sm text-body-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <CalculatorIcon aria-hidden size={16} weight="duotone" className="text-text-tertiary group-hover:text-text-primary" />
+                  Add To Inventory Worth
                   <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
                 </Link>
               )}

@@ -61,6 +61,7 @@ describe('content hub config', () => {
         freeItems: false,
         codes: false,
         chromas: false,
+        inventory: false,
       },
       'adopt-me': {
         values: true,
@@ -72,6 +73,7 @@ describe('content hub config', () => {
         freeItems: false,
         codes: false,
         chromas: false,
+        inventory: false,
       },
       'steal-an-egg': {
         values: true,
@@ -83,6 +85,7 @@ describe('content hub config', () => {
         freeItems: false,
         codes: false,
         chromas: false,
+        inventory: false,
       },
       // MM2 Step 2: value list + item pages + methodology. The calculator
       // (Trade Checker / Inventory Worth) is Step 3.
@@ -99,6 +102,8 @@ describe('content hub config', () => {
         codes: true,
         // The Chroma hub (live prices + the Shop box odds seed, 2026-10-05) — MM2 only.
         chromas: true,
+        // The Inventory Worth tool (live prices, client-side totals + share image) — MM2 only.
+        inventory: true,
       },
     })
   })
@@ -119,6 +124,8 @@ describe('content hub config', () => {
     expect(contentHubSlugsFor('codes')).toEqual(['murder-mystery-2'])
     // Chromas: MM2 only (a Chroma is an MM2 rarity with its own box odds).
     expect(contentHubSlugsFor('chromas')).toEqual(['murder-mystery-2'])
+    // Inventory Worth: MM2 only (the value-list hub's priced catalogue).
+    expect(contentHubSlugsFor('inventory')).toEqual(['murder-mystery-2'])
     // Steal An Egg deliberately absent: no calculator at launch.
     expect([...contentHubSlugsFor('calculator')].sort()).toEqual([
       'adopt-me',
@@ -143,8 +150,8 @@ describe('content hub config', () => {
         expect(hasHubPage(slug, tool)).toBe(true)
       }
     }
-    // MM2's tabs stay tidy: Values · Chromas · Events · Free Items · Codes.
-    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'chromas', 'events', 'freeItems', 'codes'])
+    // MM2's tabs stay tidy: Values · Inventory Worth · Chromas · Events · Free Items · Codes.
+    expect(getGameContentTheme('murder-mystery-2').navTools).toEqual(['values', 'inventory', 'chromas', 'events', 'freeItems', 'codes'])
   })
 
   it('every game publishing a Chroma hub has the box odds and coin rate its maths needs', () => {

@@ -97,6 +97,8 @@ export interface HubPageSet {
   codes: boolean
   /** The Chroma hub: /[game]/chromas — every Chroma, its price vs its normal version, the unbox maths. */
   chromas: boolean
+  /** The inventory value calculator: /[game]/inventory — pick your items, see their USD worth, share it. */
+  inventory: boolean
 }
 
 /** A HubNav tool tab — each is also a HubPageSet page, served at HUB_TOOL_PATH[tool] (./hub-tools). */
@@ -226,6 +228,7 @@ const DEFAULT_THEME: GameContentTheme = {
     freeItems: false,
     codes: false,
     chromas: false,
+    inventory: false,
   },
   navTools: [],
   itemNoun: 'Item',
@@ -268,6 +271,7 @@ const THEMES: Record<string, GameContentTheme> = {
       freeItems: false,
       codes: false,
       chromas: false,
+      inventory: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Brainrot',
@@ -315,6 +319,7 @@ const THEMES: Record<string, GameContentTheme> = {
       freeItems: false,
       codes: false,
       chromas: false,
+      inventory: false,
     },
     navTools: ['values'],
     itemNoun: 'Egg',
@@ -365,6 +370,7 @@ const THEMES: Record<string, GameContentTheme> = {
       freeItems: false,
       codes: false,
       chromas: false,
+      inventory: false,
     },
     navTools: ['values', 'calculator'],
     itemNoun: 'Pet',
@@ -418,8 +424,11 @@ const THEMES: Record<string, GameContentTheme> = {
       // The Chroma hub (2026-10-05): every Chroma with its price, its normal
       // version's price and the multiple, plus the unbox-vs-buy maths.
       chromas: true,
+      // The Inventory Worth tool (2026-10-05): pick your items, see what the
+      // inventory is worth at today's live prices, share it as an image.
+      inventory: true,
     },
-    navTools: ['values', 'chromas', 'events', 'freeItems', 'codes'],
+    navTools: ['values', 'inventory', 'chromas', 'events', 'freeItems', 'codes'],
     itemNoun: 'Item',
     itemNounPlural: 'Items',
     // Chroma is its own item with its own price (chroma-fang → fang), not a

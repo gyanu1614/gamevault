@@ -372,7 +372,10 @@ async function FreeItemsBody({
           items={qa}
         />
 
-        <nav aria-label={`More ${ctx.gameName} guides`} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <nav aria-label={`More ${ctx.gameName} guides`} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {hasHubPage(gameSlug, 'inventory') && (
+            <CrossLink href={`/${gameSlug}/inventory`} label="See What Your Inventory Is Worth" title={`${ctx.shortName} Inventory Calculator`} />
+          )}
           {hasHubPage(gameSlug, 'codes') && (
             <CrossLink href={`/${gameSlug}/codes`} label="Do Any Work?" title={`${ctx.shortName} Codes`} />
           )}

@@ -201,6 +201,26 @@ export function productAggregate({
   }
 }
 
+/**
+ * WebApplication — a free in-browser tool page (calculators). `description`
+ * should reuse the page's visible lead; no ratings (see the header rule).
+ */
+export function webApplication({ name, path, description }: { name: string; path: string; description: string }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name,
+    url: absoluteUrl(path),
+    description,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    publisher: { '@id': ORGANIZATION_ID },
+  }
+}
+
 /** FAQPage — only pass Q&As that are visibly rendered on the page. */
 export function faqPage(qas: { q: string; a: string }[]) {
   return {

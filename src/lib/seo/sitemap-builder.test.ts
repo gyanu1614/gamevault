@@ -124,6 +124,16 @@ describe('which URLs are listed', () => {
     expect(urls().filter((u) => u.endsWith('/chromas'))).toEqual([])
   })
 
+  it('lists the MM2 Inventory Worth tool, dated by the newest price move, only while an item is priced', () => {
+    const pipelineItems = [
+      { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
+      { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-03T00:00:00Z', sampleSize: 37 },
+    ]
+    expect(lastmod(`${BASE}/murder-mystery-2/inventory`, { pipelineItems })).toBe('2026-10-05T00:00:00Z')
+    expect(urls({ pipelineItems: [] })).not.toContain(`${BASE}/murder-mystery-2/inventory`)
+    expect(urls({ pipelineItems }).filter((u) => u.endsWith('/inventory'))).toEqual([`${BASE}/murder-mystery-2/inventory`])
+  })
+
   it('lists no events hub for a game with no published events', () => {
     expect(urls({ valueEvents: [] })).not.toContain(`${BASE}/murder-mystery-2/events`)
   })

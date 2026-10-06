@@ -38,6 +38,7 @@ import { HUB_TOOL_PATH, type HubTool } from '@/lib/content/hub-tools'
 const TOOL_LABEL: Record<HubTool, string> = {
   values: 'Values',
   calculator: 'Calculator',
+  inventory: 'Inventory Worth',
   chromas: 'Chromas',
   events: 'Events',
   freeItems: 'Free Items',

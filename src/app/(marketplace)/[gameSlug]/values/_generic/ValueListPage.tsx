@@ -168,6 +168,7 @@ async function ValueListBody({
           top,
           freeGuideHref: hasHubPage(gameSlug, 'freeItems') ? `/${gameSlug}/free-items` : null,
           chromaHubHref: hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null,
+          inventoryHref: hasHubPage(gameSlug, 'inventory') ? `/${gameSlug}/inventory` : null,
         })}
       />
 
@@ -185,6 +186,7 @@ function valueListIntro({
   top,
   freeGuideHref,
   chromaHubHref,
+  inventoryHref,
 }: {
   gameSlug: string
   gameName: string
@@ -195,6 +197,8 @@ function valueListIntro({
   freeGuideHref: string | null
   /** The game's Chroma hub, when it publishes one. */
   chromaHubHref: string | null
+  /** The game's Inventory Worth tool, when it publishes one. */
+  inventoryHref: string | null
 }): { heading: string; body: React.ReactNode }[] {
   return [
     {
@@ -209,6 +213,15 @@ function valueListIntro({
             <>
               {' '}The most expensive item on the list today is the {top.name}, from{' '}
               {usd(top.cheapestUsd)}.
+            </>
+          )}
+          {inventoryHref && (
+            <>
+              {' '}Got a whole inventory? Add every item to the{' '}
+              <Link href={inventoryHref} className={linkCls}>
+                {shortName} inventory value calculator
+              </Link>{' '}
+              and see what your inventory is worth in total.
             </>
           )}
         </>
