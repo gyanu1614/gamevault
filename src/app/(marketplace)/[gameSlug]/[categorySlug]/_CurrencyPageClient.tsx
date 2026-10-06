@@ -242,6 +242,22 @@ export default function CurrencyPageClient({
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
   }, [])
 
+  // The How It Works first tile shows the live cheapest price per unit.
+  const cheapestHighlight = useMemo(() => {
+    if (allOffers.length === 0) return null
+    const min = Math.min(...allOffers.map((o) => o.pricePerUnit))
+    if (!Number.isFinite(min) || min <= 0) return null
+    const per =
+      (data.currency.granularity ?? 'unit') === 'unit'
+        ? data.currency.unitLabel
+        : priceUnit(data.currency.granularity)
+    return {
+      label: `${data.currency.name} from`,
+      value: `${unitPrice(min)} / ${per}`,
+      note: `${allOffers.length} ${allOffers.length === 1 ? 'seller' : 'sellers'} live now`,
+    }
+  }, [allOffers, data.currency])
+
   const otherSellers = useMemo(() => {
     const list = allOffers.filter((o) => o.id !== activeId)
     switch (filter) {
@@ -403,11 +419,12 @@ export default function CurrencyPageClient({
       {/* ─── HOW IT WORKS — compact curved band with currency copy. */}
       <HowItWorksBand
         title={`How to Buy ${data.currency.name} on DropMarket`}
+        highlight={cheapestHighlight}
         steps={[
-          { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time.' },
-          { title: 'Pay at Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated time.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete, or get a full refund.' },
+          { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time, then choose how much you need.' },
+          { title: 'Pay at Checkout', body: 'Pay in seconds. Your order is covered from the start.' },
+          { title: `Get Your ${data.currency.name}`, body: 'Your seller delivers in-game within their stated time.' },
+          { title: 'Confirm Your Order', body: `Got your ${data.currency.name}? Confirm and you're done. Not received? You get a full refund.` },
         ]}
       />
 

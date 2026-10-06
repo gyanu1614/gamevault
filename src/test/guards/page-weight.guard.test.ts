@@ -66,7 +66,6 @@ const BELOW_THE_FOLD: { file: string; eagerOk?: string[] }[] = [
   { file: 'src/components/icons/how-it-works/Step2SecurePayment.tsx' },
   { file: 'src/components/icons/how-it-works/Step3Delivery.tsx' },
   { file: 'src/components/icons/how-it-works/Step4Confirm.tsx' },
-  { file: 'src/components/marketplace/HowItWorksBand.tsx' },
   { file: 'src/components/marketplace/TrustBand.tsx' },
   { file: 'src/components/footer.tsx' },
   // Home: the seller card sits below the hero, popular games and latest listings.
