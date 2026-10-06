@@ -2392,6 +2392,58 @@
    the glyph equally and reads flat, while a mask keeps the top edge solid
    and lets the foot dissolve into the page — which is what makes it read
    as carved out rather than painted on. */
+/* How It Works bento tiles (HowItWorksBand). Owner 2026-10-05: the flat
+   translucent fill looked bad — each tile now has the card gradient
+   (#22232A → #1A1B1F, top-lit) with a soft glow in its own accent from the
+   top-left corner: blue for steps 1–3 (the icons' colour), green for the
+   SafeDrop step. A hairline highlight on the top edge, no hard outline. */
+.hiw-tile {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(46, 155, 255, 0.12) 0%, rgba(46, 155, 255, 0.03) 38%, transparent 62%),
+    linear-gradient(180deg, #22232A 0%, #1A1B1F 100%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.07),
+    0 0 0 1px rgba(233, 237, 242, 0.04),
+    0 18px 40px -24px rgba(0, 0, 0, 0.75);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.hiw-tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(233, 237, 242, 0.09),
+    0 0 0 1px rgba(233, 237, 242, 0.06),
+    0 22px 44px -22px rgba(0, 0, 0, 0.8);
+}
+.hiw-tile--safe {
+  background:
+    radial-gradient(110% 120% at 0% 0%, rgba(63, 217, 134, 0.16) 0%, rgba(63, 217, 134, 0.04) 42%, transparent 70%),
+    linear-gradient(180deg, #1F2723 0%, #191D1B 100%);
+}
+/* A gentle rise as each tile scrolls in — CSS scroll-driven, so the tiles
+   are fully visible in the server HTML and in browsers without view
+   timelines; reduced motion opts out entirely. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .hiw-tile {
+      animation: hiw-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+@keyframes hiw-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* The currency icon on the first tile floats, slowly. */
+@media (prefers-reduced-motion: no-preference) {
+  .hiw-coin { animation: hiw-float 5s ease-in-out infinite; }
+}
+@keyframes hiw-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-5px) rotate(3deg); }
+}
+
 .buyer-step {
   /* The numeral overflows the grid cell on purpose; the row must not clip
      it, and it must not create page-level scroll either. */

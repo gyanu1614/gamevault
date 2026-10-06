@@ -1,0 +1,67 @@
+{
+  "game": "gta-v",
+  "currency": "GTA$",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Is GTA$ and What Can You Buy With It?",
+    "paragraphs": [
+      "GTA$ is the in-game money in GTA Online. You spend it on cars, properties, businesses, weapons, upgrades and clothing, and the big business buys can cost several million.",
+      "You earn GTA$ from jobs, heists and businesses, or buy it from Rockstar as Shark Cards. Your character's money stays on that character and platform."
+    ]
+  },
+  "official_prices": {
+    "heading": "GTA$ Prices: Shark Cards vs DropMarket",
+    "note": "Rockstar sells GTA$ as Shark Cards. These are PlayStation Store US prices for PS5; other platforms can differ slightly.",
+    "packages": [
+      { "amount": 250000, "usd": 4.99, "label": "Tiger Shark", "where": "PlayStation Store (US, PS5)" },
+      { "amount": 600000, "usd": 9.99, "label": "Bull Shark", "where": "PlayStation Store (US, PS5)" },
+      { "amount": 1500000, "usd": 19.99, "label": "Great White Shark", "where": "PlayStation Store (US, PS5)" },
+      { "amount": 4250000, "usd": 49.99, "label": "Whale Shark", "where": "PlayStation Store (US, PS5)" },
+      { "amount": 10000000, "usd": 99.99, "label": "Megalodon Shark", "where": "PlayStation Store (US, PS5)" }
+    ],
+    "extras": [
+      { "label": "GTA+", "detail": "$7.99/mo on PS5, Xbox Series X|S and PC Enhanced: GTA$500,000 every month plus member perks" }
+    ],
+    "source": "https://store.playstation.com/en-us/product/UP1004-PPSA03420_00-GTAVPS5CASHPACK6"
+  },
+  "delivery": {
+    "heading": "How GTA$ Delivery Works",
+    "method": "unclear_see_notes",
+    "steps": [
+      "Pick an offer for your platform: PC, PlayStation or Xbox.",
+      "Read the seller's delivery note before you pay. It says exactly what they need from you.",
+      "After checkout, send those details in the order chat.",
+      "Check your character's bank balance in GTA Online, then confirm the order."
+    ],
+    "no_password": false,
+    "typical_time": null
+  },
+  "support_topic": {
+    "heading": "Can You Give Money to Other Players in GTA Online?",
+    "paragraphs": [
+      "Not directly. GTA Online has no bank transfer between players, and the old cash-drop option was removed years ago.",
+      "The only built-in way is sharing the payout from the job you just finished with players in your session. That's why GTA$ can't be delivered like a trade in other games."
+    ],
+    "source": "https://www.cheatcc.com/articles/transferring-money-to-other-players-in-grand-theft-auto-online/"
+  },
+  "faq_extra": [
+    {
+      "q": "How much GTA$ is in a Megalodon Shark Card?",
+      "a": "GTA$10,000,000 for $99.99 on the US PlayStation Store for PS5."
+    },
+    {
+      "q": "Does GTA+ give you money every month?",
+      "a": "Yes. GTA+ members get GTA$500,000 each month while the membership is active, along with other perks."
+    }
+  ],
+  "trademark_owner": "Take-Two Interactive Software, Inc. (Rockstar Games)",
+  "sources": [
+    "https://store.playstation.com/en-us/product/UP1004-PPSA03420_00-GTAVPS5CASHPACK2",
+    "https://store.playstation.com/en-us/product/UP1004-PPSA03420_00-GTAVPS5CASHPACK6",
+    "https://www.gameshub.com/news/guides/gta-plus-2894375/",
+    "https://www.cheatcc.com/articles/transferring-money-to-other-players-in-grand-theft-auto-online/",
+    "https://thenerdstash.com/how-to-drop-and-give-money-to-other-players-in-gta-online/"
+  ],
+  "confidence": "low",
+  "notes": "Shark Card amounts and prices read from five PlayStation Store US product pages (PS5) on 2026-10-05. Older/PC sources list the Megalodon as GTA$8,000,000; PS5 shows 10,000,000, so the 'where' is pinned to PS5. GTA+ price and stipend from third-party guides (gameshub/GTA Intel), not a Rockstar page: medium confidence. The no-direct-transfer fact is from third-party guides; Rockstar's own support site was not fetched. DELIVERY IS UNCLEAR: no live GTA listings, the config has no delivery method and a generic placeholder. Because GTA$ can't be traded between players, third-party GTA$ is usually delivered by account access or modded 'drops', which break Rockstar's terms and risk bans or money removal. Owner decision needed on how (or whether) this page should describe delivery; confidence is low until a real seller method exists. The current config FAQ ('game's own trade/gift system... only your username') is not true for GTA$."
+}

@@ -37,7 +37,7 @@ describe('revalidateMyListingSurfaces', () => {
   it("revalidates exactly the caller's categories, resolved server-side", async () => {
     recorder = createSupabaseRecorder({ listings: [{ game_category_id: 'c1' }, { game_category_id: 'c2' }] })
     const r = await revalidateMyListingSurfaces()
-    expect(r).toEqual({ ok: true, tags: ['listings:category:c1', 'listings:category:c2'] })
+    expect(r).toEqual({ ok: true, tags: ['listings:category:c1', 'listings:category:c2', 'listings:home'] })
     const sellerLookup = recorder.queries.find((q) => q.table === 'listings')
     expect(sellerLookup?.calls).toContain('in')
   })

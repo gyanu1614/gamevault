@@ -27,9 +27,9 @@ import {
   StorefrontIcon,
   PackageIcon,
 } from '@phosphor-icons/react/dist/ssr'
-import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import HowItWorksBand, { type HowItWorksHighlight } from '@/components/marketplace/HowItWorksBand'
+import { FaqSection } from '@/components/marketplace/FaqCards'
+import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { OfferRail } from '@/components/marketplace/OfferRail'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
@@ -177,6 +177,46 @@ function CurrencySpotlight({ card, gameName, iconUrl }: { card: HubCard; gameNam
   )
 }
 
+/**
+ * The How It Works price tile on a hub: the currency's "from" price with its
+ * icon (Robux from $X) when the game has a currency, else the live offer
+ * count. Either way over the game's art.
+ */
+function hubHighlight({
+  spotlight,
+  currencyIconUrl,
+  gameImageUrl,
+  gameName,
+  totalOffers,
+}: {
+  spotlight: HubCard | null
+  currencyIconUrl: string | null
+  gameImageUrl: string | null
+  gameName: string
+  totalOffers: number
+}): HowItWorksHighlight | null {
+  if (spotlight?.fromLabel) {
+    const icon = currencyIconUrl || (spotlight.icon.startsWith('/icons/categories/') ? null : spotlight.icon)
+    // "$0.0052/Robux" → "$0.0052" big, "per Robux" in the small line.
+    const [price, per] = spotlight.fromLabel.split('/')
+    const offers = `${spotlight.count.toLocaleString('en-US')} ${spotlight.count === 1 ? 'offer' : 'offers'} live now`
+    return {
+      label: `${spotlight.name} from`,
+      value: price,
+      note: per ? `per ${per} · ${offers}` : offers,
+      iconUrl: icon,
+      backdropUrl: gameImageUrl,
+    }
+  }
+  if (totalOffers <= 0) return null
+  return {
+    label: `${gameName} on DropMarket`,
+    value: `${totalOffers.toLocaleString('en-US')} ${totalOffers === 1 ? 'Offer' : 'Offers'} Live`,
+    note: 'From ID-verified sellers',
+    backdropUrl: gameImageUrl,
+  }
+}
+
 function CategoryCard({ card, index }: { card: HubCard; index: number }) {
   return (
     <li className={RISE} style={{ animationDelay: `${120 + index * 50}ms` }}>
@@ -322,7 +362,7 @@ export function GameHub({
 }: GameHubProps) {
   const hasCategories = !!spotlight || grid.length > 0
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen pb-12">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <HubHeader gameName={gameName} gameImageUrl={gameImageUrl} pitch={pitch} totalOffers={totalOffers} />
 
@@ -365,7 +405,10 @@ export function GameHub({
         {hasCategories && <SellPrompt gameSlug={gameSlug} gameName={gameName} />}
       </div>
 
-      <HowItWorksBand />
+      <HowItWorksBand
+        title={`How to Buy ${gameName} Items on DropMarket`}
+        highlight={hubHighlight({ spotlight, currencyIconUrl, gameImageUrl, gameName, totalOffers })}
+      />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* About — the SEO intro, as readable copy (it used to be the hero
@@ -390,17 +433,15 @@ export function GameHub({
           )}
         </section>
 
-        {faq.length > 0 && (
-          <section className="mt-12 sm:mt-16">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${gameName} on DropMarket.`}
-            />
-            <FaqCards items={faq} />
-          </section>
-        )}
+        <FaqSection
+          title={`${gameName} FAQ`}
+          sub={`Quick answers about buying ${gameName} items on DropMarket.`}
+          items={faq}
+        />
+
+        {/* SEO article seam — renders nothing until the owner's article
+            design lands (see CurrencyAboutSection). */}
+        <CurrencyAboutSection gameName={gameName} />
 
         {blogRail}
       </div>

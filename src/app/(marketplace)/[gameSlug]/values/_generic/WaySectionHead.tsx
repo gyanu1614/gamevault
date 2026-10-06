@@ -3,10 +3,13 @@
  * "2 Buy It for Cheap"): a number tile and the heading, each section in its
  * own tone so the two read as two sections, not one list.
  * Presentational and hook-free, so the server row and the client row share it.
+ * Also the numbered heads of the currency guide (components/marketplace/currency-guide).
  */
 const TONES = {
   neutral: { tile: 'rgba(255,255,255,0.08)', tileText: '#F2F3F5' },
   green: { tile: 'rgba(63,217,134,0.16)', tileText: '#3FD986' },
+  /** Money / prices (the currency guide's price table). */
+  teal: { tile: 'rgba(45,212,191,0.14)', tileText: '#5EEAD4' },
 } as const
 
 export function WaySectionHead({

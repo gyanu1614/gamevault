@@ -1,67 +1,84 @@
 /**
- * V43 — Accepted payments: full-bleed monochrome wordmark marquee
- * (Eldorado-style strip). Duplicated track + the `animate-marquee`
- * keyframe run in REVERSE so logos flow left → right; pauses on hover.
- * Stylised text wordmarks — no licensed art. Render OUTSIDE any max-w
- * wrapper so it spans the whole viewport.
+ * "Accepted at Checkout": a full-bleed strip of the payment methods the
+ * checkout really offers, each as its brand mark on a small white tile (the
+ * same tile the checkout selector uses). Built from the Payssion registry
+ * plus the crypto card's coins, so a method can't appear here unless a buyer
+ * can pick it. Owner, 2026-10-05: the old stylised wordmarks (Visa, Klarna,
+ * Skrill…) were "random", not what we take, and the strip sat too far from
+ * the content above.
+ *
+ * Duplicated track + the `animate-marquee` keyframe (reversed, left →
+ * right); pauses on hover. Render OUTSIDE any max-w wrapper.
  */
 
-const PAYMENT_WORDMARKS: Array<{ key: string; node: React.ReactNode }> = [
-  { key: 'sepa', node: <span className="text-[30px] font-black tracking-tight">S€PA</span> },
-  { key: 'paysafe', node: <span className="text-[26px] font-bold lowercase tracking-tight">paysafe<span className="font-normal">card</span></span> },
-  { key: 'btc', node: <span className="inline-flex items-baseline gap-1 text-[28px] font-bold lowercase"><span aria-hidden>₿</span>bitcoin</span> },
-  { key: 'skrill', node: <span className="text-[30px] font-black tracking-tight">Skrill</span> },
-  { key: 'neteller', node: <span className="text-[25px] font-black italic uppercase tracking-wide">Neteller</span> },
-  { key: 'visa', node: <span className="text-[30px] font-black italic tracking-wider">VISA</span> },
-  {
-    key: 'mastercard',
-    node: (
-      <span className="inline-flex items-center gap-2">
-        <span aria-hidden className="relative inline-block h-7 w-11">
-          <span className="absolute left-0 top-0 h-7 w-7 rounded-full bg-current opacity-60" />
-          <span className="absolute right-0 top-0 h-7 w-7 rounded-full bg-current opacity-35" />
-        </span>
-        <span className="text-[25px] font-medium lowercase tracking-tight">mastercard</span>
-      </span>
-    ),
-  },
-  { key: 'applepay', node: <span className="text-[28px] font-semibold tracking-tight">&#63743; Pay</span> },
-  { key: 'gpay', node: <span className="text-[28px] font-semibold tracking-tight"><span className="font-bold">G</span> Pay</span> },
-  { key: 'klarna', node: <span className="text-[28px] font-black tracking-tight">Klarna.</span> },
-  { key: 'usdt', node: <span className="text-[28px] font-bold tracking-tight">₮ Tether</span> },
-  { key: 'eth', node: <span className="inline-flex items-baseline gap-1 text-[28px] font-semibold"><span aria-hidden>⟠</span>ethereum</span> },
+import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
+import { CHECKOUT_COINS, PAYMENT_METHOD_LOGOS } from '@/lib/payments/method-marks'
+
+interface Mark {
+  key: string
+  label: string
+  logo?: string
+  /** Coin icons are square: they sit beside their name. */
+  coin?: boolean
+}
+
+const MARKS: Mark[] = [
+  ...CHECKOUT_COINS.map((c) => ({ key: c.key, label: c.label, logo: c.icon, coin: true })),
+  ...payssionSelectorMethods().map((m) => ({ key: m.pmId, label: m.label, logo: PAYMENT_METHOD_LOGOS[m.pmId] })),
 ]
 
-export function PaymentsMarquee() {
-  const tracks = [PAYMENT_WORDMARKS, PAYMENT_WORDMARKS] as const
+function Tile({ mark }: { mark: Mark }) {
   return (
-    <section
-      aria-label="Accepted payment methods"
-      className="group relative mt-16 w-full overflow-hidden py-6 sm:mt-24"
-    >
-      {/* Edge fades so wordmarks slide in/out softly */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-bg-base to-transparent sm:w-32"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-bg-base to-transparent sm:w-32"
-      />
-      <div className="flex w-max animate-marquee items-center gap-16 text-text-tertiary [animation-direction:reverse] group-hover:[animation-play-state:paused] sm:gap-20">
-        {tracks.map((track, t) => (
-          <div
-            key={t}
-            aria-hidden={t === 1}
-            className="flex shrink-0 items-center gap-16 sm:gap-20"
-          >
-            {track.map((m) => (
-              <span key={`${t}-${m.key}`} className="shrink-0 select-none whitespace-nowrap opacity-80">
-                {m.node}
-              </span>
-            ))}
-          </div>
-        ))}
+    <span className="flex h-10 w-[92px] shrink-0 select-none items-center justify-center gap-1.5 overflow-hidden rounded-md bg-white px-2.5 shadow-[0_1px_0_rgba(255,255,255,0.08),0_6px_16px_-8px_rgba(0,0,0,0.7)] sm:h-11 sm:w-[100px]">
+      {mark.logo ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static brand marks in /public */}
+          <img
+            src={mark.logo}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className={mark.coin ? 'h-5 w-5 shrink-0' : 'h-full max-h-[26px] w-full object-contain'}
+          />
+          {mark.coin && <span className="text-[13px] font-bold tracking-tight text-[#16171B]">{mark.label}</span>}
+        </>
+      ) : (
+        <span className="text-[13px] font-extrabold tracking-tight text-[#16171B]">{mark.label}</span>
+      )}
+    </span>
+  )
+}
+
+export function PaymentsMarquee() {
+  return (
+    <section aria-labelledby="payments-strip-title" className="group relative mt-10 w-full overflow-hidden pb-2 pt-2 sm:mt-14">
+      <h2 id="payments-strip-title" className="mb-4 text-center text-[13px] font-medium text-text-tertiary">
+        Accepted at Checkout
+      </h2>
+      {/* Screen readers get the list once, in plain words. */}
+      <p className="sr-only">{MARKS.map((m) => m.label).join(', ')}</p>
+
+      <div className="relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-bg-base to-transparent sm:w-32"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-bg-base to-transparent sm:w-32"
+        />
+        <div
+          aria-hidden
+          className="flex w-max animate-marquee items-center py-1 [animation-direction:reverse] group-hover:[animation-play-state:paused] motion-reduce:animate-none"
+        >
+          {[0, 1].map((t) => (
+            <div key={t} className="flex shrink-0 items-center gap-3 pr-3">
+              {MARKS.map((m) => (
+                <Tile key={`${t}-${m.key}`} mark={m} />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

@@ -23,8 +23,7 @@ import { PhoneBuySheet } from './_PhoneBuySheet'
 import { cn } from '@/lib/utils'
 import ShopLink from '@/components/seller/ShopLink'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { FaqSection } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
@@ -175,6 +174,7 @@ export default function CurrencyPageClient({
   gameSlug,
   introLine,
   blogRail,
+  guide,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -185,6 +185,8 @@ export default function CurrencyPageClient({
   introLine?: string | null
   /** Server-rendered blog rail (DB-backed), passed as a slot. */
   blogRail?: React.ReactNode
+  /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
+  guide?: React.ReactNode
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -241,6 +243,24 @@ export default function CurrencyPageClient({
     }
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
   }, [])
+
+  // The How It Works first tile shows the live cheapest price per unit.
+  const cheapestHighlight = useMemo(() => {
+    if (allOffers.length === 0) return null
+    const min = Math.min(...allOffers.map((o) => o.pricePerUnit))
+    if (!Number.isFinite(min) || min <= 0) return null
+    const per =
+      (data.currency.granularity ?? 'unit') === 'unit'
+        ? data.currency.unitLabel
+        : priceUnit(data.currency.granularity)
+    return {
+      label: `${data.currency.name} from`,
+      value: unitPrice(min),
+      note: `per ${per} · ${allOffers.length} ${allOffers.length === 1 ? 'seller' : 'sellers'} live now`,
+      iconUrl: data.currency.iconUrl ?? null,
+      backdropUrl: gameImageUrl ?? null,
+    }
+  }, [allOffers, data.currency, gameImageUrl])
 
   const otherSellers = useMemo(() => {
     const list = allOffers.filter((o) => o.id !== activeId)
@@ -302,7 +322,7 @@ export default function CurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art INSIDE main's stacking
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
-    <main className="relative isolate min-h-screen pb-24 pt-3 sm:pt-4">
+    <main className="relative isolate min-h-screen pb-12 pt-3 sm:pt-4">
       <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
@@ -400,35 +420,36 @@ export default function CurrencyPageClient({
         </div>
       </div>
 
-      {/* ─── HOW IT WORKS — full-bleed angled band (outside the max-w
-          wrapper), pinned scroll-story with currency-context copy. */}
+      {/* ─── HOW IT WORKS — compact curved band with currency copy. */}
       <HowItWorksBand
+        title={`How to Buy ${data.currency.name} on DropMarket`}
+        highlight={cheapestHighlight}
         steps={[
-          { title: 'Pick Your Amount', body: 'Choose a seller and how much you need.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.currency.name}`, body: 'Delivered in-game within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
+          { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time, then choose how much you need.' },
+          { title: 'Pay at Checkout', body: 'Pay in seconds. Your order is covered from the start.' },
+          { title: `Get Your ${data.currency.name}`, body: 'Your seller delivers in-game within their stated time.' },
+          { title: 'Confirm Your Order', body: `Got your ${data.currency.name}? Confirm and you're done. Not received? You get a full refund.` },
         ]}
       />
 
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
-        {/* ─── FAQ — admin-configured items, Flock-geometry cards. */}
-        {data.faq.length > 0 && (
-          <section className="mt-10 sm:mt-14">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${data.currency.name}.`}
-            />
-            <FaqCards items={data.faq} />
-          </section>
-        )}
+        {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
+        <FaqSection
+          title={`${data.currency.name} FAQ`}
+          sub={`Quick answers about buying ${data.currency.game} ${data.currency.name} on DropMarket.`}
+          items={data.faq}
+          className="mt-8 sm:mt-10"
+        />
 
-        {/* ─── SEO block (kept for search copy). */}
-        <div className="mx-auto mt-14 max-w-4xl">
-          <SeoBlock currency={data.currency} />
-        </div>
+        {/* ─── CURRENCY GUIDE — prices vs official, delivery, safety (server slot). */}
+        {guide}
+
+        {/* ─── SEO block: only for games without a guide (the guide replaces it). */}
+        {!guide && (
+          <div className="mx-auto mt-14 max-w-4xl">
+            <SeoBlock currency={data.currency} />
+          </div>
+        )}
 
         {/* ─── BLOG — game-relevant guides rail (server-rendered, slot). */}
         {blogRail}
@@ -1140,7 +1161,6 @@ function EmptyState() {
   )
 }
 
-
 // V14e — Match the How it works width (full max-w-4xl wrapper). The
 // previous max-w-2xl looked starved next to the 3-column grid above.
 // Prose inside is still capped to a comfortable reading measure.
@@ -1173,9 +1193,9 @@ function SeoBlock({ currency }: { currency: CurrencyPageData['currency'] }) {
           </h3>
           <p className="mt-2">
             Every order is covered by SafeDrop Protection: your {currency.name} arrives
-            as described, or you get your money back. No password
-            sharing is ever required — delivery is through in-game gifting or group payouts.
-            Not delivered or not as described? You get a full refund.
+            as described, or you get your money back. Some delivery methods need account
+            access, so read the seller&apos;s delivery note: it says exactly what&apos;s needed
+            before you pay.
           </p>
         </div>
       </div>

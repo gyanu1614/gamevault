@@ -1,0 +1,51 @@
+{
+  "game": "escape-from-tarkov",
+  "currency": "Roubles",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Roubles in Escape from Tarkov?",
+    "paragraphs": [
+      "Roubles are the main currency in Escape from Tarkov. You use them to buy weapons, ammo, armour and meds from traders and the Flea Market, to pay for hideout upgrades and to insure your gear.",
+      "Battlestate doesn't sell Roubles. You make them by selling loot from raids and finishing quests. Dollars and Euros also exist, but most of the economy runs on Roubles."
+    ]
+  },
+  "official_prices": null,
+  "delivery": {
+    "heading": "How Rouble Delivery Works",
+    "method": "in_game_trade",
+    "steps": [
+      "Pick an offer for the right mode: PvP or PvE. They're separate profiles, so Roubles don't move between them.",
+      "After checkout, send your in-game nickname in the order chat.",
+      "Follow the seller's delivery note. It's usually a Flea Market sale or a hand-over in a raid.",
+      "Check your stash balance, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote about 15 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "What Level Do You Need for the Flea Market in Tarkov?",
+    "paragraphs": [
+      "Level 15. That's when the Flea Market opens and you can list or buy offers.",
+      "Since version 1.0, some item categories stay locked until higher levels: rifles and keys around 20 to 25, meds and barter items around 30, and top-tier ammo up to level 40. If a seller needs you to list an item, check you can list that category first."
+    ],
+    "source": "https://insider-gaming.com/tarkov-flea-market-locked-level-40/"
+  },
+  "faq_extra": [
+    {
+      "q": "Can you buy Roubles from Battlestate Games?",
+      "a": "No. The only official Roubles come with your game edition's starting stash. After that, you earn them in raids and from quests."
+    },
+    {
+      "q": "Do Roubles carry over between PvP and PvE?",
+      "a": "No. PvP and PvE use separate profiles, each with its own stash."
+    }
+  ],
+  "trademark_owner": "Battlestate Games Limited",
+  "sources": [
+    "https://insider-gaming.com/tarkov-flea-market-locked-level-40/",
+    "https://timesaver.gg/blog/tarkov-how-to-unlock-flea-market",
+    "https://en.wikipedia.org/wiki/Escape_from_Tarkov"
+  ],
+  "confidence": "low",
+  "notes": "Flea Market level 15 and the 1.0 category gates are from third-party guides (Insider Gaming, timesaver.gg), not a Battlestate page; the exact gate levels shift by patch, so the copy uses 'around'. 'PvP and PvE are separate profiles' is widely known but I didn't fetch a BSG page that says it: medium confidence. 'what_is' uses (traders, hideout, insurance, Dollars/Euros) are general game knowledge, not sourced this run. Config regions are PvE Zone / PvP Zone / PvP Season / PvE Season; I didn't verify what 'Season' vs 'Zone' means in current Tarkov, so the copy only says PvP or PvE. DELIVERY: config placeholder is generic; the live listing has no description. Delivery via Flea Market sale or in-raid hand-over is the usual method. Buying Roubles is against BSG's rules and BSG bans for RMT; the parent's 'Is It Safe' section should not overpromise here."
+}

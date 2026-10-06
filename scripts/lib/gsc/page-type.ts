@@ -38,7 +38,13 @@ export type PageType =
 /** Static folders under src/app/(marketplace)/[gameSlug]/. */
 export const GAME_HUB_SEGMENTS = [
   'blog',
+  'boxes',
   'calculator',
+  'chromas',
+  'codes',
+  'events',
+  'free-items',
+  'inventory',
   'neon-calculator',
   'price-index',
   'sell',

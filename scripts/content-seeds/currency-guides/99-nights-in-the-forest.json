@@ -1,0 +1,63 @@
+{
+  "game": "99-nights-in-the-forest",
+  "currency": "Diamonds",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Diamonds in 99 Nights in the Forest?",
+    "paragraphs": [
+      "Diamonds are the main currency in 99 Nights in the Forest. You spend them in the lobby on Classes, on buying or rolling Class talents, and on rerolling the Class Stock.",
+      "You can earn them for free: daily quests pay 5 each, chests and the Cultist Stronghold drop them, and you get a few for surviving past day 50 and day 99. You can also buy them for Robux in the Currency Shop."
+    ]
+  },
+  "official_prices": {
+    "heading": "Diamond Prices: Robux Shop vs DropMarket",
+    "note": "The Currency Shop sells Diamonds for Robux only, and Roblox Plus members get a discount. There's no direct cash price, so the real cost depends on how you buy your Robux.",
+    "packages": [
+      { "amount": 20, "robux": 99, "usd": null, "where": "In-game Currency Shop (Robux)" },
+      { "amount": 100, "robux": 400, "usd": null, "where": "In-game Currency Shop (Robux)" },
+      { "amount": 250, "robux": 900, "usd": null, "where": "In-game Currency Shop (Robux)" }
+    ],
+    "extras": [
+      { "label": "Roblox Plus", "detail": "Lower Robux prices on Diamond packs, for example 20 Diamonds for 80 Robux" }
+    ],
+    "source": "https://99-nights-in-the-forest.fandom.com/wiki/Diamonds"
+  },
+  "delivery": {
+    "heading": "How Diamond Delivery Works",
+    "method": "gifting",
+    "steps": [
+      "After checkout, send your Roblox username in the order chat.",
+      "Join 99 Nights in the Forest and stay in the lobby so the seller can find you.",
+      "The seller buys a Diamond pack with the gift button next to the Currency Shop and picks you as the receiver.",
+      "Check your Diamonds, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote about 30 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "Can You Gift Diamonds in 99 Nights in the Forest?",
+    "paragraphs": [
+      "Yes, but only by paying Robux. The gift icon next to the Currency Shop lets a player buy a Diamond pack and choose who gets it.",
+      "You can't send Diamonds you already have. Gifts are new purchases, so the person sending pays the Robux."
+    ],
+    "source": "https://99-nights-in-the-forest.fandom.com/wiki/Gifting"
+  },
+  "faq_extra": [
+    {
+      "q": "How do you get free Diamonds in 99 Nights in the Forest?",
+      "a": "Finish daily quests (5 each, 15 if you clear all three), open chests, beat the Cultist Stronghold, survive past day 50 and 99, and redeem codes from the Currency Shop's Codes button."
+    },
+    {
+      "q": "What do Diamonds buy in 99 Nights in the Forest?",
+      "a": "Classes, Class talents and Class Stock rerolls in the lobby."
+    }
+  ],
+  "trademark_owner": "99 Nights in the Forest is a Roblox experience by Grandma's Favourite Games; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://99-nights-in-the-forest.fandom.com/wiki/Diamonds",
+    "https://99-nights-in-the-forest.fandom.com/wiki/Gifting",
+    "https://esports.gg/news/roblox/diamonds-99-nights-in-the-forest/"
+  ],
+  "confidence": "medium",
+  "notes": "Facts from the community wiki. The Robux price table there looks partly vandalised (100 Diamonds listed as '400/1000', 9,999 Diamonds for 2,500 Robux), so I kept only 20/99, 100/400 and 250/900 and dropped 9,999; low confidence on the 100 and 250 rows. Our config bundles are 20/100/250/500/700/1,400 Diamonds and five of the six have amount 0, which looks like a config bug. DELIVERY: config placeholder is generic and the live listing has no description; gifting via the in-game gift button is the documented way to give Diamonds, so I used it, but no seller has confirmed. Config tagline says 'Gems' while unit_label says 'Diamonds'."
+}

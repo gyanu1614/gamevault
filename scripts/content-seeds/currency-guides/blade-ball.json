@@ -1,0 +1,58 @@
+{
+  "game": "blade-ball",
+  "currency": "Blade Ball Tokens",
+  "checked_at": "2026-10-05",
+  "what_is": {
+    "heading": "What Are Blade Ball Tokens and What Can You Buy With Them?",
+    "paragraphs": [
+      "Tokens are Blade Ball's trading currency. You spend them at the Trade Plaza to buy sword skins, emotes and explosions from other players' booths.",
+      "They're separate from Coins, which you earn by playing matches. You get Tokens by selling your own items at a booth or by buying them with Robux."
+    ]
+  },
+  "official_prices": {
+    "heading": "Blade Ball Token Prices: Robux vs DropMarket",
+    "note": "Blade Ball sells Tokens for Robux at a flat 1 Robux per Token, so 1,000 Tokens cost 1,000 Robux. There's no direct cash price; what you pay depends on how you buy your Robux.",
+    "packages": [],
+    "extras": [
+      { "label": "Rate", "detail": "1 Token = 1 Robux in the in-game shop" }
+    ],
+    "source": "https://bloxswaps.com/blog/how-to-get-tokens-in-blade-ball"
+  },
+  "delivery": {
+    "heading": "How Blade Ball Token Delivery Works",
+    "method": "in_game_trade",
+    "steps": [
+      "After checkout, send your Roblox username in the order chat.",
+      "Join Blade Ball and head to the Trade Plaza.",
+      "Follow the seller's delivery note. Token sellers usually ask you to list an item at your booth so they can buy it for the agreed Tokens.",
+      "Check your Token balance, then confirm the order."
+    ],
+    "no_password": true,
+    "typical_time": "Sellers on DropMarket quote under 20 minutes while they're online."
+  },
+  "support_topic": {
+    "heading": "Why Did I Get Fewer Tokens Than My Booth Price?",
+    "paragraphs": [
+      "The Trade Plaza keeps a small cut when an item sells, so the payout can be a little lower than the price you set. Players have reported a 5-Token listing paying out 4.",
+      "If a seller is paying you through your booth, agree up front on who covers that cut so the numbers match."
+    ],
+    "source": "https://bloxswaps.com/blog/how-to-get-tokens-in-blade-ball"
+  },
+  "faq_extra": [
+    {
+      "q": "How do you get Tokens in Blade Ball for free?",
+      "a": "Sell your sword skins, emotes or explosions at a Trade Plaza booth. That's the only way to earn Tokens without Robux."
+    },
+    {
+      "q": "Why can't I sell an item I just got?",
+      "a": "New items from crates, spins, trades or booth buys get a short trade lock. Hover over the item to see how long is left."
+    }
+  ],
+  "trademark_owner": "Blade Ball is a Roblox experience; Roblox is a trademark of Roblox Corporation",
+  "sources": [
+    "https://bloxswaps.com/blog/how-to-get-tokens-in-blade-ball",
+    "https://robloxden.com/game-codes/blade-ball/guides/blade-ball-how-to-get-tokens"
+  ],
+  "confidence": "low",
+  "notes": "All Blade Ball facts come from third-party guides (bloxswaps, updated 2026-09-16; robloxden); the Blade Ball fandom wiki API didn't respond. 1:1 Robux rate is consistent across sources; I couldn't confirm the in-game pack sizes, so packages is empty. The Trade Plaza cut is one reported example (5 -> 4), not a published rate. DELIVERY: config placeholder lists generic options; live sellers just say 'send user in the chat' / 'message me'. The booth-listing method in step 3 is the usual way Tokens move between players, but none of our sellers spell it out, so it's worded as 'usually'. Config has region options NA/EU (disabled) and one live offer uses EU."
+}

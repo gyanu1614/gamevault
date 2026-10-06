@@ -22,8 +22,8 @@
  *
  * V47 — Lower page rewired to the shared marketplace section library
  * (same stack as the item detail + flexible currency pages): editorial
- * Other Sellers heading with per-game watermark, pinned HowItWorksBand,
- * SectionHeading + FaqCards, BlogSection, PaymentsMarquee, and the
+ * Other Sellers heading with per-game watermark, How It Works band,
+ * FaqSection, the SEO article seam, BlogSection, PaymentsMarquee, and the
  * SafeDrop-watermarked offer panel with the shared TrustBand.
  */
 
@@ -40,8 +40,7 @@ import { NumberField } from '@/components/ui/number-field'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { MobileSlider } from '@/components/ui/mobile-slider'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
-import { SectionHeading } from '@/components/marketplace/SectionHeading'
-import { FaqCards } from '@/components/marketplace/FaqCards'
+import { FaqSection } from '@/components/marketplace/FaqCards'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import type { CurrencyBundle, PlatformOption } from '@/lib/types/category-configs'
@@ -115,6 +114,8 @@ export default function BundleCurrencyPageClient({
   data,
   introLine,
   blogRail,
+  guide,
+  gameImageUrl,
 }: {
   data: BundleCurrencyPageData
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -122,6 +123,10 @@ export default function BundleCurrencyPageClient({
   introLine?: string | null
   /** Server-rendered blog rail (DB-backed), passed as a slot. */
   blogRail?: React.ReactNode
+  /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
+  guide?: React.ReactNode
+  /** Game art for the How It Works price tile backdrop. */
+  gameImageUrl?: string | null
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -136,6 +141,26 @@ export default function BundleCurrencyPageClient({
   const [platform, setPlatform] = useState<string>(
     data.platforms[0]?.value ?? '',
   )
+
+  // How It Works first tile: the cheapest bundle on sale right now.
+  const cheapestBundleHighlight = useMemo(() => {
+    let best: { name: string; price: number } | null = null
+    for (const o of data.offers) {
+      if (!(o.pricePerBundle > 0)) continue
+      const b = data.bundles.find((x) => x.id === o.bundleId)
+      if (!b) continue
+      if (!best || o.pricePerBundle < best.price) best = { name: b.name, price: o.pricePerBundle }
+    }
+    if (!best) return null
+    const sellers = new Set(data.offers.map((o) => o.sellerId)).size
+    return {
+      label: `${data.unitLabel} from`,
+      value: best.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      note: `${best.name} · ${sellers} ${sellers === 1 ? 'seller' : 'sellers'} live now`,
+      iconUrl: data.currencyIconUrl,
+      backdropUrl: gameImageUrl ?? null,
+    }
+  }, [data.offers, data.bundles, data.unitLabel, data.currencyIconUrl, gameImageUrl])
 
   // V19/P24/P4 — Bundle selection defaults to the cheapest available
   // bundle (the "Popular" pick) so the right-side panel has a real
@@ -282,7 +307,7 @@ export default function BundleCurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art (game watermark, shield
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
-    <main className="relative isolate min-h-screen pb-24">
+    <main className="relative isolate min-h-screen pb-12">
       <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
@@ -623,30 +648,29 @@ export default function BundleCurrencyPageClient({
         </section>
       )}
 
-      {/* ─── HOW IT WORKS — full-bleed angled band (outside the max-w
-          wrapper), pinned scroll-story with bundle-context copy. */}
+      {/* ─── HOW IT WORKS — compact curved band with bundle copy. */}
       <HowItWorksBand
+        title={`How to Buy ${data.unitLabel} on DropMarket`}
+        highlight={cheapestBundleHighlight}
         steps={[
-          { title: 'Pick Your Bundle', body: 'Choose platform, region, and amount.' },
-          { title: 'Pay At Checkout', body: 'Every order is covered by SafeDrop Protection.' },
-          { title: `Get Your ${data.unitLabel}`, body: 'Delivered to your account within the stated window.' },
-          { title: 'Confirm Delivery', body: 'Confirm and the order is complete — or you get a full refund.' },
+          { title: 'Pick Your Bundle', body: 'Choose your platform, region and bundle, then compare sellers.' },
+          { title: 'Pay at Checkout', body: 'Pay in seconds. Your order is covered from the start.' },
+          { title: `Get Your ${data.unitLabel}`, body: 'Your seller delivers to your account within their stated time.' },
+          { title: 'Confirm Your Order', body: `Got your ${data.unitLabel}? Confirm and you're done. Not received? You get a full refund.` },
         ]}
       />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* ─── FAQ — admin-configured items, Flock-geometry cards. */}
-        {data.faq.length > 0 && (
-          <section className="mt-10 sm:mt-14">
-            <SectionHeading
-              kicker="FAQ"
-              title="Frequently Asked"
-              accent="Questions"
-              sub={`Everything you need to know about buying ${data.gameName} ${data.unitLabel}.`}
-            />
-            <FaqCards items={data.faq} />
-          </section>
-        )}
+        {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
+        <FaqSection
+          title={`${data.unitLabel} FAQ`}
+          sub={`Quick answers about buying ${data.gameName} ${data.unitLabel} on DropMarket.`}
+          items={data.faq}
+          className="mt-8 sm:mt-10"
+        />
+
+        {/* ─── CURRENCY GUIDE — prices vs official, delivery, safety (server slot). */}
+        {guide}
 
         {/* ─── BLOG — game-relevant guides rail. */}
         {blogRail}
