@@ -49,3 +49,6 @@ export function gameHeroTag(gameSlug: string): string {
  * one page — and the nightly backstop refreshes it too.
  */
 export const HOME_LISTINGS_TAG = 'listings:home'
+
+/** Every game's admin CTA banner (lib/content/game-cta-art.server). */
+export const GAME_CTA_BANNERS_TAG = 'games:cta-banners'

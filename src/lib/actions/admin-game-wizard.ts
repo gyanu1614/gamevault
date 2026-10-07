@@ -20,6 +20,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { ensureGameCategory } from '@/lib/categories'
+import { GAME_CTA_BANNERS_TAG } from '@/lib/revalidation/tags'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
 import {
@@ -704,8 +705,8 @@ export async function uploadGameBlogCtaImage(
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
-    // Footer game directory renders on every route (unstable_cache).
-    revalidateTag(GAME_DIRECTORY_TAG)
+    // Only the CTA bands show this image (lib/content/game-cta-art.server).
+    revalidateTag(GAME_CTA_BANNERS_TAG)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }

@@ -168,7 +168,7 @@ describe('Adopt Me value item page: bare tab title, branded social title', () =>
     const mod = await import('@/app/(marketplace)/[gameSlug]/values/[itemSlug]/page')
     const meta = await metadataOf(mod, { gameSlug: 'adopt-me', itemSlug: 'bat-dragon' })
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-    const bare = `Bat Dragon Value in Adopt Me (${monthYear}) — Cash & Trade Value`
+    const bare = `Bat Dragon Value in Adopt Me (${monthYear})`
 
     expect(meta.title).toBe(bare) // the page hands the layout a bare title
     expect(resolveTitle(meta.title, TITLE_TEMPLATE)).toBe(`${bare} | DropMarket`)
