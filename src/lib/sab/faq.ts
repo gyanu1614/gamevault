@@ -1,3 +1,5 @@
+
+import { withArticle } from '@/lib/text/article'
 import { formatCash, formatIncome, formatIngameCost } from './format'
 
 /**
@@ -49,7 +51,7 @@ export function buildBrainrotFaq(input: FaqInput): { q: string; a: string }[] {
   // 1 — How to get
   faq.push({
     q: `How do you get ${name} in Steal a Brainrot?`,
-    a: `${name} is a ${rarity} Brainrot that is currently ${obtain} in Steal a Brainrot${
+    a: `${name} is ${withArticle(rarity)} Brainrot that is currently ${obtain} in Steal a Brainrot${
       cost ? `, with an in-game cost of about ${cost}` : ''
     }. It earns ${income} at base income. You can also buy ${name} from verified sellers on DropMarket instead of grinding for it.`,
   })
@@ -93,7 +95,7 @@ export function buildBrainrotFaq(input: FaqInput): { q: string; a: string }[] {
   } else {
     faq.push({
       q: `Is ${name} a good Brainrot to own?`,
-      a: `${name} is a ${rarity} Brainrot earning ${income}, which makes it ${
+      a: `${name} is ${withArticle(rarity)} Brainrot earning ${income}, which makes it ${
         rarity.toLowerCase() === 'secret' || rarity.toLowerCase().includes('god')
           ? 'a high-tier, sought-after'
           : 'a solid mid-tier'
