@@ -34,39 +34,18 @@ export async function WhyBuyCard({
 }) {
   const art = await getGameCtaImage(gameSlug)
   const hasOffers = count > 0 && fromPrice != null
-  const why: Array<{ icon: string; title: string; body: string }> = [
-    {
-      icon: '/icons/set/shield-check.svg',
-      title: 'SafeDrop Protection',
-      body: 'Every order is covered. If it doesn’t arrive, or isn’t what the listing described, you get a full refund.',
-    },
-    {
-      icon: '/icons/set/clock.svg',
-      title: 'Delivery Time Up Front',
-      body: 'Each listing shows the seller’s own delivery time before you pay. Most orders arrive within 20 minutes.',
-    },
-    {
-      icon: '/icons/set/verified.svg',
-      title: 'Verified Sellers',
-      body: 'Every seller completes identity verification before they can list, and their rating and order history show on every listing.',
-    },
+  // One self-explaining line each, no body copy (owner, 2026-10-06: "nobody
+  // reads the sub text"). The offers line stays live.
+  const why: Array<{ icon: string; title: string }> = [
+    { icon: '/icons/set/shield-check.svg', title: 'Full Refund If It Never Arrives' },
+    { icon: '/icons/set/clock.svg', title: 'Delivery Time Shown Before You Pay' },
+    { icon: '/icons/set/verified.svg', title: 'Every Seller Is ID-Verified' },
     {
       icon: '/icons/set/tag.svg',
-      title: 'Compare Real Offers',
-      body: hasOffers
-        ? `${count} live ${count === 1 ? 'listing' : 'listings'} from ${fromPrice}. Sellers set their own prices, so you choose by price, speed or rating.`
-        : 'Sellers set their own prices, so you choose by price, speed or rating.',
+      title: hasOffers ? `${count} Live ${count === 1 ? 'Offer' : 'Offers'} From ${fromPrice}` : 'Compare Real Seller Prices',
     },
-    {
-      icon: '/icons/set/messages.svg',
-      title: 'Order Chat',
-      body: 'Talk to your seller directly from the order page to arrange delivery.',
-    },
-    {
-      icon: '/icons/set/support.svg',
-      title: 'Disputes Handled by People',
-      body: 'If something goes wrong, open a dispute from your order and our team reviews it.',
-    },
+    { icon: '/icons/set/messages.svg', title: 'Chat With Your Seller' },
+    { icon: '/icons/set/support.svg', title: 'Real People Settle Disputes' },
   ]
 
   return (
@@ -91,16 +70,11 @@ export async function WhyBuyCard({
         <h2 id={headingId} className="text-center text-subheading font-bold text-text-primary [text-wrap:balance]">
           Why Buy {subject} on DropMarket
         </h2>
-        <ul className="mx-auto mt-6 grid max-w-6xl gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mx-auto mt-7 grid max-w-5xl grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
           {why.map((w) => (
-            <li key={w.title} className="flex gap-3">
-              <SilverIcon src={w.icon} className="mt-0.5 h-5 w-5 shrink-0" />
-              <div className="min-w-0 text-body-sm leading-[1.5]">
-                <p className="font-bold text-text-primary">{w.title}</p>
-                {/* Explicit rgba, not `text-text-primary/85`: that token is a bare
-                    var(), so an opacity modifier compiles to nothing. */}
-                <p className="text-[rgba(233,237,242,0.88)]">{w.body}</p>
-              </div>
+            <li key={w.title} className="flex items-center gap-3">
+              <SilverIcon src={w.icon} className="h-6 w-6 shrink-0" />
+              <p className="text-[15px] font-semibold leading-snug text-text-primary">{w.title}</p>
             </li>
           ))}
         </ul>

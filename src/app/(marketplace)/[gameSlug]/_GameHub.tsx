@@ -79,16 +79,30 @@ function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   )
 }
 
+/** The three trust facts, centred under the Buy card (owner, 2026-10-06). */
+function HubFacts({ totalOffers, className }: { totalOffers: number; className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap justify-center gap-2', className)}>
+      {totalOffers > 0 && (
+        <Fact icon={<TagIcon size={14} weight="bold" />}>
+          <span className="font-semibold tabular-nums text-text-primary">{totalOffers.toLocaleString('en-US')}</span>
+          {totalOffers === 1 ? 'Offer Live' : 'Offers Live'}
+        </Fact>
+      )}
+      <Fact icon={<ShieldCheckIcon size={14} weight="bold" />}>SafeDrop Protection</Fact>
+      <Fact icon={<SealCheckIcon size={14} weight="bold" />}>Verified Sellers</Fact>
+    </div>
+  )
+}
+
 function HubHeader({
   gameName,
   gameImageUrl,
   pitch,
-  totalOffers,
 }: {
   gameName: string
   gameImageUrl: string | null
   pitch: string
-  totalOffers: number
 }) {
   return (
     <header className={cn('pt-2 sm:pt-3', RISE)}>
@@ -119,17 +133,7 @@ function HubHeader({
           </h1>
         </div>
       </div>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-text-secondary">{pitch}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {totalOffers > 0 && (
-          <Fact icon={<TagIcon size={14} weight="bold" />}>
-            <span className="font-semibold tabular-nums text-text-primary">{totalOffers.toLocaleString('en-US')}</span>
-            {totalOffers === 1 ? 'Offer Live' : 'Offers Live'}
-          </Fact>
-        )}
-        <Fact icon={<ShieldCheckIcon size={14} weight="bold" />}>SafeDrop Protection</Fact>
-        <Fact icon={<SealCheckIcon size={14} weight="bold" />}>Verified Sellers</Fact>
-      </div>
+      <p className="mt-4 text-[15px] leading-relaxed text-text-secondary lg:whitespace-nowrap">{pitch}</p>
     </header>
   )
 }
@@ -309,7 +313,7 @@ export function GameHub({
   return (
     <main className="min-h-screen pb-12">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <HubHeader gameName={gameName} gameImageUrl={gameImageUrl} pitch={pitch} totalOffers={totalOffers} />
+        <HubHeader gameName={gameName} gameImageUrl={gameImageUrl} pitch={pitch} />
 
         {!hasCategories && <OpeningSoon gameSlug={gameSlug} gameName={gameName} />}
 
@@ -325,6 +329,8 @@ export function GameHub({
             avgDelivery={spotlight.avgDelivery}
           />
         )}
+
+        {hasCategories && <HubFacts totalOffers={totalOffers} className={spotlight ? 'mt-4' : 'mt-6'} />}
 
         {itemsHref && (
           <OfferRail

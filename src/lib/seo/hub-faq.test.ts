@@ -40,9 +40,10 @@ describe('buildHubFaq', () => {
 
   it('answers with the live and official numbers', () => {
     expect(roblox[0].a).toBe(
-      "At the official price on roblox.com (web), 1,000 Robux costs $9.99. On DropMarket, sellers start from $0.0052/Robux, so 1,000 Robux costs you about $5.20. That's a saving of about 48%.",
+      "1,000 Robux costs $9.99 on roblox.com, the official store. Sellers on DropMarket start from $0.0052/Robux, so the same 1,000 Robux costs you about $5.20. That's a saving of about 48%.",
     )
-    expect(roblox[3].a).toContain('about $5.20 on DropMarket, so you keep about $4.79 (48%)')
+    expect(roblox[3].a).toContain('the same amount for about $5.20, almost half price')
+    for (const f of roblox) expect(f.a.startsWith('On DropMarket')).toBe(false)
     expect(roblox[6].a).toContain('USDT, Bitcoin and Pix')
     expect(roblox[7].a).toContain('about 8 minutes')
   })

@@ -54,7 +54,8 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
           className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
           style={{
             background:
-              'linear-gradient(to top, var(--color-bg-base) 12%, rgba(23,27,33,0.72) 55%, rgba(23,27,33,0) 100%)',
+              // Fades to the FOOTER's ground (it lives in the footer panel).
+              'linear-gradient(to top, var(--footer-bg) 12%, color-mix(in srgb, var(--footer-bg) 72%, transparent) 55%, transparent 100%)',
             backdropFilter: 'blur(3px)',
             WebkitBackdropFilter: 'blur(3px)',
             maskImage: 'linear-gradient(to top, #000 40%, transparent)',

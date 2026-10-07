@@ -185,7 +185,7 @@
 
 /* Footer vars — read by inline style on <footer> so they win over Tailwind utilities */
 [data-theme="v2"] {
-  --footer-bg:       #16171B;
+  --footer-bg:       #0F1013;
   --footer-top-glow: radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.06), transparent 70%);
 }
 

@@ -401,6 +401,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
     items: itemsCard ? { fromLabel: itemsCard.fromLabel, count: itemsCard.count } : null,
     accounts: accountsCard ? { fromLabel: accountsCard.fromLabel, count: accountsCard.count } : null,
     paymentMethods: [...CHECKOUT_COINS.map((c) => c.label), ...payssionSelectorMethods().map((m) => m.label)],
+    extra: guide?.page?.hub_faq ?? [],
   })
 
   return (

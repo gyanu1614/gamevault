@@ -90,6 +90,8 @@ const pageSchema = z
       .strict(),
     safety_text: text,
     support: z.object({ heading: text, text }).strict().optional(),
+    /** Questions for the game hub's FAQ, written for this game. */
+    hub_faq: z.array(z.object({ q: text, a: text }).strict()).optional(),
   })
   .strict()
 

@@ -133,15 +133,13 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
   }
 
   return (
-    <footer className="relative overflow-hidden" style={{ backgroundColor: 'var(--footer-bg, var(--color-bg-base))' }}>
-      {/* Where the footer begins: a soft lift in tone, no rule (owner,
-          2026-10-06: no white line; the no-outline card style). Inside, the
-          sections are separated by spacing alone. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-40"
-        style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(233,237,242,0.022) 55%, transparent 100%)' }}
-      />
+    // Its own panel (owner, 2026-10-06: footer and page read the same): a
+    // deeper tone than the page with rounded top corners, so it sits apart
+    // without a rule. Pages can still set --footer-bg.
+    <footer
+      className="relative mt-6 overflow-hidden rounded-t-[22px] sm:rounded-t-[28px]"
+      style={{ backgroundColor: 'var(--footer-bg, #0F1013)' }}
+    >
       <motion.div
         variants={stagger}
         initial="hidden"

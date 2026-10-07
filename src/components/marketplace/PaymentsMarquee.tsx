@@ -8,8 +8,8 @@
  * (PAYMENT_METHOD_MONO); a method without a clean mark is set as a wordmark.
  * A slow sheen sweeps the strip and a mark brightens under the pointer.
  *
- * Duplicated track + the `animate-marquee` keyframe (reversed, left →
- * right); pauses on hover; no motion under reduced motion. Render OUTSIDE
+ * Duplicated track + the `animate-marquee` keyframe, right → left, slow
+ * (90 s a lap); pauses on hover; no motion under reduced motion. Render OUTSIDE
  * any max-w wrapper.
  */
 
@@ -33,23 +33,23 @@ const MARKS: Mark[] = [
 
 function MarkView({ mark }: { mark: Mark }) {
   const base =
-    'pm-mark flex h-10 shrink-0 select-none items-center opacity-90 transition-[opacity,transform] duration-300 hover:-translate-y-0.5 hover:opacity-100'
+    'pm-mark flex h-12 shrink-0 select-none items-center opacity-90 transition-[opacity,transform] duration-300 hover:-translate-y-0.5 hover:opacity-100'
   if (mark.kind === 'word') {
-    return <span className={`${base} whitespace-nowrap text-[22px] font-extrabold tracking-[-0.02em] text-white`}>{mark.text}</span>
+    return <span className={`${base} whitespace-nowrap text-[28px] font-extrabold tracking-[-0.02em] text-white`}>{mark.text}</span>
   }
   if (mark.kind === 'coin') {
     return (
       <span className={`${base} gap-2.5`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- static mark in /public */}
-        <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-8 w-8" />
-        <span className="text-[21px] font-bold tracking-[-0.02em] text-white">{mark.label}</span>
+        <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-10 w-10" />
+        <span className="text-[27px] font-bold tracking-[-0.02em] text-white">{mark.label}</span>
       </span>
     )
   }
   return (
     <span className={base}>
       {/* eslint-disable-next-line @next/next/no-img-element -- static mark in /public */}
-      <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-7 w-auto max-w-[150px] object-contain" />
+      <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-9 w-auto max-w-[190px] object-contain" />
     </span>
   )
 }
@@ -57,7 +57,8 @@ function MarkView({ mark }: { mark: Mark }) {
 export function PaymentsMarquee() {
   return (
     <section aria-labelledby="payments-strip-title" className="group relative mt-12 w-full overflow-hidden pb-4 sm:mt-16">
-      <h2 id="payments-strip-title" className="mb-5 text-center text-[13px] font-medium text-text-tertiary">
+      {/* The strip speaks for itself; the heading stays for screen readers. */}
+      <h2 id="payments-strip-title" className="sr-only">
         Accepted at Checkout
       </h2>
       {/* Screen readers get the list once, in plain words. */}
@@ -74,10 +75,10 @@ export function PaymentsMarquee() {
         />
         <div
           aria-hidden
-          className="flex w-max animate-marquee items-center py-2 [animation-direction:reverse] group-hover:[animation-play-state:paused] motion-reduce:animate-none"
+          className="flex w-max animate-marquee items-center py-3 [animation-duration:90s] group-hover:[animation-play-state:paused] motion-reduce:animate-none"
         >
           {[0, 1].map((t) => (
-            <div key={t} className="pm-track flex shrink-0 items-center gap-14 pr-14 sm:gap-16 sm:pr-16">
+            <div key={t} className="pm-track flex shrink-0 items-center gap-16 pr-16 sm:gap-20 sm:pr-20">
               {MARKS.map((m) => (
                 <MarkView key={`${t}-${m.key}`} mark={m} />
               ))}
