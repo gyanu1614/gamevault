@@ -55,6 +55,66 @@
       "a": "Leaves are the Fall Harvest event currency. You earn them by selling crops and pets in the Fall Harvest world, or buy them for Robux."
     }
   ],
+  "page": {
+    "subtitle": "What Sheckles are in Grow a Garden 2, how they reach you and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Sheckles in Grow a Garden 2?",
+      "text": "Sheckles are the main money in Grow a Garden 2. You spend them on seeds, gear, props and pets around the map.",
+      "spend_intro": "You can also buy Robux and other Roblox game currencies here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Trade Tokens in Grow a Garden",
+          "href": "/grow-a-garden/buy-sheckles"
+        },
+        {
+          "label": "Tokens in Tap Simulator",
+          "href": "/tap-simulator/buy-currency"
+        },
+        {
+          "label": "Gems in Anime Dice",
+          "href": "/anime-dice/buy-currency"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "Sellers deliver in-game, for example with a gift pack from the Store, so you only share your Roblox username.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your @ username in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Join the Game",
+          "body": "Accept the seller's friend request and join Grow a Garden 2.",
+          "icon": "link"
+        },
+        {
+          "title": "Seller Sends It",
+          "body": "Often as a gift pack, the way their offer describes.",
+          "icon": "gift"
+        },
+        {
+          "title": "Sheckles Arrive",
+          "body": "Check your balance in the bottom-left corner, then confirm.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Each friend in your server adds a 10% Sheckle boost, up to 70%."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "Can You Gift Sheckles in Grow a Garden 2?",
+      "How do you get more Sheckles in Grow a Garden 2?",
+      "What are Leaves in Grow a Garden 2?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Grow a Garden 2 is a Roblox experience; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://growagarden2.fandom.com/wiki/Mechanics",

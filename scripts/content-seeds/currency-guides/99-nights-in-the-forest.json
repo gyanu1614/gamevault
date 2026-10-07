@@ -52,6 +52,70 @@
       "a": "Classes, Class talents and Class Stock rerolls in the lobby."
     }
   ],
+  "page": {
+    "subtitle": "What Diamonds are in 99 Nights in the Forest, how they reach you and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Diamonds in 99 Nights in the Forest?",
+      "text": "Diamonds are the main currency in 99 Nights in the Forest. You spend them in the lobby on Classes, Class talents and Class Stock rerolls.",
+      "spend_intro": "Many Roblox games have their own currency too, and you can buy those here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Tokens in Blade Ball",
+          "href": "/blade-ball/buy-currency"
+        },
+        {
+          "label": "Sheckles in Grow a Garden 2",
+          "href": "/grow-a-garden-2/buy-currency"
+        },
+        {
+          "label": "Gems in Anime Dice",
+          "href": "/anime-dice/buy-currency"
+        },
+        {
+          "label": "Tokens in Tap Simulator",
+          "href": "/tap-simulator/buy-currency"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "The seller buys a Diamond pack as a gift for you, so you only share your Roblox username.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your Roblox username in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Wait in the Lobby",
+          "body": "Join 99 Nights in the Forest and stay in the lobby.",
+          "icon": "link"
+        },
+        {
+          "title": "Seller Gifts a Pack",
+          "body": "They use the gift button next to the Currency Shop.",
+          "icon": "gift"
+        },
+        {
+          "title": "Diamonds Arrive",
+          "body": "Check your Diamonds, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "You can't send Diamonds you already have. Every gift is a new pack the sender pays for."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "Can You Gift Diamonds in 99 Nights in the Forest?",
+      "How do you get free Diamonds in 99 Nights in the Forest?",
+      "What do Diamonds buy in 99 Nights in the Forest?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "99 Nights in the Forest is a Roblox experience by Grandma's Favourite Games; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://99-nights-in-the-forest.fandom.com/wiki/Diamonds",

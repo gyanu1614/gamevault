@@ -40,6 +40,47 @@
       "a": "5% of the sale price. Sell a card for 10,000 coins and you get 9,500."
     }
   ],
+  "page": {
+    "subtitle": "What FC Coins are, how they get to your Ultimate Team club and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are FC Coins?",
+      "text": "FC Coins are the money in EA Sports FC Ultimate Team. You spend them on the Transfer Market for players and items, and on packs and Squad Building Challenges."
+    },
+    "delivery": {
+      "text": "Coins reach you in one of two ways: the seller buys a card you list, or they log in to your club.",
+      "steps": [
+        {
+          "title": "Pick Your Edition",
+          "body": "Choose an offer for your platform and FC edition.",
+          "icon": "cart"
+        },
+        {
+          "title": "Read the Note",
+          "body": "It says if they buy your card or need club access.",
+          "icon": "seller"
+        },
+        {
+          "title": "Send the Details",
+          "body": "Share what the seller asks for in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Coins Arrive",
+          "body": "Check your coin balance in Ultimate Team, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "EA keeps 5% of every Transfer Market sale, so a card sold for 10,000 coins pays out 9,500."
+    },
+    "safety_text": "Yes. Every order is covered and every seller is ID-checked. If you share your club login, change your password after.",
+    "faq_pick": [
+      "Do FC Coins Carry Over to the Next FC Game?",
+      "Do I need to share my password?",
+      "What's the difference between FC Coins and FC Points?",
+      "How much does EA take when you sell a card?",
+      "How fast is delivery?"
+    ]
+  },
   "trademark_owner": "Electronic Arts Inc.",
   "sources": [
     "https://en.wikipedia.org/wiki/EA_Sports_FC_27",

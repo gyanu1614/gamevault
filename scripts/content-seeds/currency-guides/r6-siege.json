@@ -52,6 +52,59 @@
       "a": "Renown is earned by playing and can't be bought. R6 Credits are bought with real money, and some items are Credit-only."
     }
   ],
+  "page": {
+    "subtitle": "What R6 Credits are, how much you can save, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are R6 Credits?",
+      "text": "R6 Credits are the money you buy for Rainbow Six Siege X. You spend them on the Battle Pass, new operators and skins, and some shop items are Credit-only."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on R6 Credits?",
+      "text": "The official store sells R6 Credits at fixed prices. Sellers here set their own, and many charge less for the same Credits.",
+      "amounts": [
+        600,
+        1200,
+        3300,
+        7200,
+        15000
+      ],
+      "tip_amount": 7200
+    },
+    "delivery": {
+      "text": "The seller tops up through an Xbox account linked to your Ubisoft account, so you share that Xbox login for the order.",
+      "steps": [
+        {
+          "title": "Link an Xbox Account",
+          "body": "Link a free Xbox account to your Ubisoft account.",
+          "icon": "link"
+        },
+        {
+          "title": "Send the Login",
+          "body": "Share that Xbox login with the seller in the order chat.",
+          "icon": "key"
+        },
+        {
+          "title": "Seller Tops Up",
+          "body": "The seller adds the Credits, usually in 15 to 30 minutes.",
+          "icon": "seller"
+        },
+        {
+          "title": "Credits Arrive",
+          "body": "Check your balance in Siege, then change your Xbox password.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Use a fresh Xbox account with no card saved on it. Your skins stay on your Ubisoft account."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you only share a spare Xbox login you change after.",
+    "faq_pick": [
+      "How Do You Link an Xbox Account to Ubisoft?",
+      "Do I need to share my password?",
+      "What's the difference between Renown and R6 Credits?",
+      "How much is the R6 Battle Pass in Credits?",
+      "How fast is delivery?"
+    ]
+  },
   "trademark_owner": "Ubisoft Entertainment",
   "sources": [
     "https://store.ubisoft.com/us/tom-clancys-rainbow-six-siege---7,200-r6-credits/6818d5da8ac12e7a99688235.html?lang=en_US",

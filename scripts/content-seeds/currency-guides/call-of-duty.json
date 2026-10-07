@@ -52,6 +52,59 @@
       "a": "Yes, on the same platform. Your balance works across the current Call of Duty games and Warzone."
     }
   ],
+  "page": {
+    "subtitle": "What COD Points are, how much you can save, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are COD Points?",
+      "text": "COD Points (CP) are Call of Duty's money. You spend them on operator skins, weapon blueprints and the Battle Pass, in Warzone and the current games."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on COD Points?",
+      "text": "The official store sells CP at fixed prices. Sellers here set their own, and many charge less for the same CP.",
+      "amounts": [
+        1100,
+        2400,
+        5000,
+        9500,
+        13000
+      ],
+      "tip_amount": 9500
+    },
+    "delivery": {
+      "text": "CP can't be gifted, so you get a code for your platform or the seller tops up your account.",
+      "steps": [
+        {
+          "title": "Pick Your Platform",
+          "body": "Choose PlayStation, Xbox, Battle.net or Steam.",
+          "icon": "cart"
+        },
+        {
+          "title": "Send the Details",
+          "body": "Share what the seller's note asks for in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Code or Top-Up",
+          "body": "Redeem your code, or the seller adds CP to your account.",
+          "icon": "key"
+        },
+        {
+          "title": "CP Arrives",
+          "body": "Check your CP balance on that platform, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "COD Points only work on the platform you bought them for, so pick the one you play on."
+    },
+    "safety_text": "Yes. Every order is covered and every seller is ID-checked. If a top-up needs your login, change your password after.",
+    "faq_pick": [
+      "Do COD Points Transfer Between Platforms?",
+      "Do I need to share my password?",
+      "Are COD Points shared with Warzone?",
+      "Can you gift COD Points to a friend?",
+      "How fast is delivery?"
+    ]
+  },
   "trademark_owner": "Activision Publishing, Inc.",
   "sources": [
     "https://support.activision.com/black-ops-6/articles/cod-points-in-black-ops-6",

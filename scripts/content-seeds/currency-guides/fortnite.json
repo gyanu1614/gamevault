@@ -59,6 +59,57 @@
       "a": "800 V-Bucks since March 19, 2026. It pays back 800 V-Bucks as you level it up."
     }
   ],
+  "page": {
+    "subtitle": "What V-Bucks are, how much you can save, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are V-Bucks?",
+      "text": "V-Bucks are Fortnite's in-game money. You spend them in the Item Shop on skins, emotes and pickaxes, and on the Battle Pass for 800 V-Bucks."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on V-Bucks?",
+      "text": "The official store sells V-Bucks at fixed prices. Sellers here set their own, and many charge less for the same V-Bucks.",
+      "amounts": [
+        800,
+        2400,
+        4500,
+        12500
+      ],
+      "tip_amount": 4500
+    },
+    "delivery": {
+      "text": "V-Bucks can't be sent between players, so you get a code to redeem or the seller tops up your account.",
+      "steps": [
+        {
+          "title": "Pick Your Platform",
+          "body": "Choose an offer for your platform and read the delivery note.",
+          "icon": "cart"
+        },
+        {
+          "title": "Send the Details",
+          "body": "Share your Epic username or the top-up details in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Redeem or Top Up",
+          "body": "Redeem your code at fortnite.com/vbuckscard, or the seller tops up.",
+          "icon": "key"
+        },
+        {
+          "title": "V-Bucks Arrive",
+          "body": "Check your balance in Fortnite, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "V-Bucks bought on Nintendo Switch only work on Switch, so tell your seller if you play there."
+    },
+    "safety_text": "Yes. Every order is covered and every seller is ID-checked. If a top-up needs your login, change your password after.",
+    "hub_faq": [
+      {
+        "q": "Can you gift V-Bucks in Fortnite?",
+        "a": "No, Epic doesn't let anyone gift or transfer V-Bucks. You can gift items that are in the Item Shop right now, as long as you have two-factor authentication on and you've been friends for at least 2 days. That's why bought V-Bucks come as a code or a top-up on your own account."
+      }
+    ]
+  },
   "trademark_owner": "Epic Games, Inc.",
   "sources": [
     "https://www.engadget.com/gaming/epic-is-increasing-the-price-of-fortnites-v-bucks-currency-185800744.html",

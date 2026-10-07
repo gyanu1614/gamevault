@@ -287,6 +287,8 @@ export interface GameHubProps {
   /** Cheapest live offer across the game ("$0.99"), for Why Buy. */
   fromPrice: string | null
   faq: { q: string; a: string }[]
+  /** Per-game trademark line under the payments strip. */
+  trademark: string
   /** Server-rendered blog rail (BlogRail), or null. */
   blogRail: ReactNode
 }
@@ -307,6 +309,7 @@ export function GameHub({
   totalOffers,
   fromPrice,
   faq,
+  trademark,
   blogRail,
 }: GameHubProps) {
   const hasCategories = !!spotlight || grid.length > 0
@@ -379,7 +382,7 @@ export function GameHub({
         {blogRail}
       </div>
 
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={trademark} />
     </main>
   )
 }

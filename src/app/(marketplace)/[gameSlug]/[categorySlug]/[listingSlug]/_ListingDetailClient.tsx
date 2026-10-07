@@ -44,6 +44,7 @@ import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { gameTrademarkLine } from '@/lib/seo/trademark'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { BUY_CTA_LABEL } from '@/lib/config/purchases'
 import type { TemplateField } from '@/lib/templates/types'
@@ -775,7 +776,7 @@ export default function ListingDetailClient({
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee, outside
           the max-w-7xl wrapper so it spans the whole viewport. */}
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={gameTrademarkLine(listing.gameName)} />
 
       {/* Mobile-audit — page-end sentinel for the Buy-bar footer guard */}
       <div ref={pageEndRef} aria-hidden className="h-px" />

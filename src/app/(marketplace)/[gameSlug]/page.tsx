@@ -35,6 +35,7 @@ import { GameHub } from './_GameHub'
 import { getHubCategoryStats, getHubCurrency, getHubOffers } from './_hubData'
 import { buildHubCards, hubPitch, pickTopSelling, splitCards, type HubCategory } from './_hubModel'
 import { getImageAccent } from '@/lib/ui/image-accent.server'
+import { gameTrademarkLine } from '@/lib/seo/trademark'
 import { buildHubFaq, pickOfficialPack } from '@/lib/seo/hub-faq'
 import { getCurrencyGuide } from '@/lib/currency-guides'
 import { formatStatPrice } from '@/lib/seo/page-stats'
@@ -439,6 +440,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
         totalOffers={cards.reduce((n, c) => n + c.count, 0)}
         fromPrice={fromPrice}
         faq={faq}
+        trademark={gameTrademarkLine(game.name, { currency: spotlight?.name, owner: guide?.trademark_owner })}
         blogRail={<BlogRail gameSlug={gameSlug} gameName={game.name} />}
       />
     </div>

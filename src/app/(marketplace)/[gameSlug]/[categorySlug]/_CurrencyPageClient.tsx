@@ -175,6 +175,7 @@ export default function CurrencyPageClient({
   introLine,
   blogRail,
   guide,
+  trademark,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -187,6 +188,8 @@ export default function CurrencyPageClient({
   blogRail?: React.ReactNode
   /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
   guide?: React.ReactNode
+  /** Per-game trademark line under the payments strip (lib/seo/trademark). */
+  trademark?: string | null
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -455,7 +458,7 @@ export default function CurrencyPageClient({
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={trademark} />
 
       {/* V14j — Fullscreen route-transition loader. Renders while the
           checkout route is resolving (useTransition pending). Animation

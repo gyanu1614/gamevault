@@ -355,7 +355,7 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
           other games (owner, 2026-10-06: merged "More Roblox" and the
           currency carousel; category glyphs, not game art; ten at most). */}
       {related.length > 0 && (
-        <Block id="guide-more" band title={guideFamily(guide) === 'roblox' ? 'More Roblox Games' : 'More Popular Games'}>
+        <Block id="guide-more" title={guideFamily(guide) === 'roblox' ? 'More Roblox Games' : 'More Popular Games'}>
           <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5">
             {related.map((l) => (
               <li key={l.href}>
@@ -372,23 +372,6 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
         </Block>
       )}
 
-      <p className="mx-auto mt-14 text-[12px] leading-5 text-text-tertiary">
-        {trademarkLine(guide.trademark_owner, gameName, c)}
-      </p>
     </section>
   )
-}
-
-/**
- * The not-affiliated line: names the marks, says we're independent and not
- * affiliated, sponsored or endorsed. One line on desktop (owner, 2026-10-06).
- */
-export function trademarkLine(owner: string, gameName: string, currency: string): string {
-  const stop = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
-  const who = owner.replace(/[.\s]+$/, '')
-  if (/\btrademark\b/i.test(owner)) {
-    return `${stop(owner)} DropMarket is independent and isn't affiliated with, sponsored or endorsed by them.`
-  }
-  const marks = currency.toLowerCase().includes(gameName.toLowerCase()) ? currency : `${gameName} and ${currency}`
-  return `${marks} are trademarks of ${who}. DropMarket is independent and isn't affiliated with, sponsored or endorsed by ${who}.`
 }

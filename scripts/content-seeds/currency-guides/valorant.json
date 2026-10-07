@@ -55,6 +55,65 @@
       "a": "No. Riot says Valorant prepaid cards are PC only."
     }
   ],
+  "page": {
+    "subtitle": "What Valorant Points are, how much you can save, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Valorant Points?",
+      "text": "Valorant Points (VP) are Riot's money for Valorant. You spend them in the Store on weapon skin bundles, Night Market deals, the Premium Battle Pass and agents."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on Valorant Points?",
+      "text": "The official store sells VP at fixed prices. Sellers here set their own, and many charge less for the same VP.",
+      "amounts": [
+        475,
+        1000,
+        2050,
+        5350,
+        11000
+      ],
+      "tip_amount": 5350
+    },
+    "delivery": {
+      "text": "VP can't be traded, so you get a prepaid code or the seller tops up your account.",
+      "steps": [
+        {
+          "title": "Match Your Region",
+          "body": "Pick an offer for your account's region and platform.",
+          "icon": "store"
+        },
+        {
+          "title": "Send the Details",
+          "body": "Share what the seller's delivery note asks for in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Redeem the Code",
+          "body": "In the client, click the VP icon, then Prepaid Cards & Codes.",
+          "icon": "key"
+        },
+        {
+          "title": "VP Arrives",
+          "body": "Check your VP balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Valorant codes only work in the region your Riot account is registered to, not where you are."
+    },
+    "safety_text": "Yes. Every order is covered and every seller is ID-checked. If a top-up needs your login, change your password after.",
+    "faq_pick": [
+      "Do Valorant Points Work in Every Region?",
+      "Do I need to share my password?",
+      "Can you gift Valorant Points?",
+      "Do Valorant prepaid cards work on console?",
+      "How fast is delivery?"
+    ],
+    "hub_faq": [
+      {
+        "q": "Can you gift Valorant Points?",
+        "a": "Only as a new purchase on PC. You can't send VP from your own balance. Riot lets friends of at least a week gift VP or featured bundles, the sender needs account level 15, and you can send 10 gifts a day."
+      }
+    ]
+  },
   "trademark_owner": "Riot Games, Inc.",
   "sources": [
     "https://www.setup.gg/game/valorant/points/",

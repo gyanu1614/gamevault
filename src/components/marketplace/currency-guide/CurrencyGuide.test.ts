@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import React, { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { getCurrencyGuide, type OurPrices } from '@/lib/currency-guides'
-import { CurrencyGuide, formatAmount, guideTitle, pageCopy, splitLead, trademarkLine, type CurrencyGuideProps } from './CurrencyGuide'
+import { CurrencyGuide, formatAmount, guideTitle, pageCopy, splitLead, type CurrencyGuideProps } from './CurrencyGuide'
 
 vi.stubGlobal('React', React)
 
@@ -70,12 +70,6 @@ describe('helpers', () => {
   it('guideTitle never repeats the game name', () => {
     expect(guideTitle('Roblox', 'Robux')).toBe('Roblox Robux Guide: Prices, Delivery and Safety')
     expect(guideTitle('Blade Ball', 'Blade Ball Tokens')).toBe('Blade Ball Tokens Guide: Prices, Delivery and Safety')
-  })
-  it('trademarkLine names the marks and says independent, not affiliated, sponsored or endorsed', () => {
-    expect(trademarkLine('Roblox Corporation', 'Roblox', 'Robux')).toBe(
-      "Roblox and Robux are trademarks of Roblox Corporation. DropMarket is independent and isn't affiliated with, sponsored or endorsed by Roblox Corporation.",
-    )
-    expect(trademarkLine('Epic Games, Inc.', 'Fortnite', 'V-Bucks')).toContain('trademarks of Epic Games, Inc. DropMarket')
   })
   it('formatAmount and splitLead', () => {
     expect(formatAmount('Robux', 1000)).toBe('1,000 Robux')

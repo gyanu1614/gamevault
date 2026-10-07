@@ -36,6 +36,65 @@
       "a": "Redeem codes, finish quests, join events and farm bosses. Those Tokens are free Tokens, so you can spend them but not trade them."
     }
   ],
+  "page": {
+    "subtitle": "What Tap Simulator Tokens are, how they reach you and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Tap Simulator Tokens?",
+      "text": "Tokens are Tap Simulator's premium currency. You spend them on gamepasses, limited eggs, boosts and pets from other players in the Trading Plaza.",
+      "spend_intro": "You can also buy Robux and other Roblox game currencies here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Tokens in Blade Ball",
+          "href": "/blade-ball/buy-currency"
+        },
+        {
+          "label": "Diamonds in 99 Nights in the Forest",
+          "href": "/99-nights-in-the-forest/buy-currency"
+        },
+        {
+          "label": "Trade Tokens in Grow a Garden",
+          "href": "/grow-a-garden/buy-sheckles"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "Tokens reach you through a trade or a sale at your booth, so you only share your Roblox username.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your Roblox username in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Go to the Plaza",
+          "body": "Join Tap Simulator and head to the Trading Plaza.",
+          "icon": "store"
+        },
+        {
+          "title": "Seller Trades You",
+          "body": "You get the Tokens by trade or a sale at your booth.",
+          "icon": "seller"
+        },
+        {
+          "title": "Tokens Arrive",
+          "body": "Check your Token balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Tokens you earn for free can't be traded. Only Paid Tokens move between players."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "Why Can't I Trade My Tap Simulator Tokens?",
+      "How do you get Tokens in Tap Simulator for free?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Tap Simulator is a Roblox experience; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://www.tapsimulator.com/guides/token-farming-strategy",

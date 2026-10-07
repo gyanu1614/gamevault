@@ -54,7 +54,7 @@ function MarkView({ mark }: { mark: Mark }) {
   )
 }
 
-export function PaymentsMarquee() {
+export function PaymentsMarquee({ disclaimer }: { disclaimer?: string | null } = {}) {
   return (
     <section aria-labelledby="payments-strip-title" className="group relative mt-12 w-full overflow-hidden pb-4 sm:mt-16">
       {/* The strip speaks for itself; the heading stays for screen readers. */}
@@ -86,6 +86,11 @@ export function PaymentsMarquee() {
           ))}
         </div>
       </div>
+      {/* The page's per-game trademark line sits under the strip, above the
+          footer (lib/seo/trademark). */}
+      {disclaimer && (
+        <p className="mx-auto mt-6 max-w-7xl px-4 text-center text-[12px] leading-5 text-text-tertiary sm:px-6 lg:px-8">{disclaimer}</p>
+      )}
     </section>
   )
 }

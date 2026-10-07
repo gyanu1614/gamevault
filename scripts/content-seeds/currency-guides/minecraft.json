@@ -52,6 +52,59 @@
       "a": "No. Minecoins and the Marketplace are only in Bedrock Edition."
     }
   ],
+  "page": {
+    "subtitle": "What Minecoins are, how much you can save, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Minecoins?",
+      "text": "Minecoins are the money for the Minecraft Marketplace in Bedrock Edition. You spend them on skins, texture packs, worlds and add-ons."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on Minecoins?",
+      "text": "The official store sells Minecoins at fixed prices. Sellers here set their own, and many charge less for the same coins.",
+      "amounts": [
+        320,
+        1020,
+        1720,
+        3500,
+        8800
+      ],
+      "tip_amount": 3500
+    },
+    "delivery": {
+      "text": "Minecoins come as a code you redeem yourself, so you never share your password.",
+      "steps": [
+        {
+          "title": "Pick Your Platform",
+          "body": "Choose an offer for the device you play on.",
+          "icon": "cart"
+        },
+        {
+          "title": "Get Your Code",
+          "body": "The seller sends a Minecoins code in the order chat.",
+          "icon": "key"
+        },
+        {
+          "title": "Redeem It",
+          "body": "Redeem at minecraft.net/redeem with your Microsoft account.",
+          "icon": "check"
+        },
+        {
+          "title": "Minecoins Arrive",
+          "body": "Open the Marketplace, check your balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Minecoins bought on Nintendo Switch stay on Switch, so tell your seller if you play there."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "Do Minecoins Work on Every Platform?",
+      "Can you use Minecoins in Java Edition?",
+      "Can you send Minecoins to a friend?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Mojang AB / Microsoft Corporation",
   "sources": [
     "https://www.minecraftpal.com/news/117/how-much-do-minecoins-cost-a-guide-to-prices-and-real-value",
