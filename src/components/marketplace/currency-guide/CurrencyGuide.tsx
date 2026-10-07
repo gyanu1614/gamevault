@@ -98,13 +98,39 @@ export function pageCopy(guide: Guide) {
 
 /* ── Building blocks ─────────────────────────────────────────────── */
 
-function Block({ id, title, lead, children }: { id: string; title: string; lead?: ReactNode; children?: ReactNode }) {
+/**
+ * One section. Layout B (owner picked "you decide", 2026-10-06, after
+ * measuring Eldorado and GameBoost at 1440 px: 30 px section titles, 16 px /
+ * 24 px text running the full page width): full-width sections, every other
+ * one on a filled band so it's always clear which content belongs to which
+ * heading.
+ */
+function Block({
+  id,
+  title,
+  lead,
+  band = false,
+  children,
+}: {
+  id: string
+  title: string
+  lead?: ReactNode
+  band?: boolean
+  children?: ReactNode
+}) {
   return (
-    <section aria-labelledby={id} className="mt-16 scroll-mt-24 sm:mt-20">
-      <h3 id={id} className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-text-primary [text-wrap:balance] sm:text-[26px]">
+    <section
+      aria-labelledby={id}
+      className={
+        band
+          ? 'mt-10 scroll-mt-24 rounded-2xl bg-[linear-gradient(180deg,#1D1E23_0%,#18191D_100%)] px-5 py-10 sm:mt-12 sm:px-12 sm:py-14'
+          : 'mt-10 scroll-mt-24 px-1 py-6 sm:mt-12 sm:py-8'
+      }
+    >
+      <h3 id={id} className="text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary [text-wrap:balance] sm:text-[30px]">
         {title}
       </h3>
-      {lead && <p className="mx-auto mt-3 max-w-2xl text-[15.5px] leading-7 text-text-secondary [text-wrap:pretty]">{lead}</p>}
+      {lead && <p className="mx-auto mt-3 max-w-4xl text-[16px] leading-[26px] text-text-secondary [text-wrap:pretty]">{lead}</p>}
       {children}
     </section>
   )
@@ -125,7 +151,7 @@ function Tip({ label, children, tone = 'blue', icon }: { label: string; children
 
 function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
   return (
-    <div className="mx-auto mt-8 max-w-2xl overflow-x-auto text-left">
+    <div className="mx-auto mt-8 max-w-3xl overflow-x-auto text-left">
       <table className="w-full border-collapse text-[15px] tabular-nums">
         <caption className="sr-only">{`${currency} prices: ${officialLabel} compared with sellers here`}</caption>
         <thead>
@@ -156,7 +182,7 @@ function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; cur
 function FloatIcon({ icon: Icon, tint }: { icon: ComponentType<IconProps>; tint: string }) {
   return (
     <span aria-hidden className="inline-flex drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" style={{ color: `rgb(${tint})` }}>
-      <Icon size={30} weight="duotone" />
+      <Icon size={36} weight="duotone" />
     </span>
   )
 }
@@ -197,12 +223,12 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
   const more = categories.filter((cat) => cat.type !== 'currency')
 
   return (
-    <section id="currency-guide" aria-labelledby="currency-guide-title" className="mx-auto mt-16 max-w-5xl px-4 text-center sm:mt-24 sm:px-6">
+    <section id="currency-guide" aria-labelledby="currency-guide-title" className="mx-auto mt-16 w-full max-w-7xl text-center sm:mt-24">
       <header>
-        <h2 id="currency-guide-title" className="text-[26px] font-bold leading-tight tracking-[-0.025em] text-text-primary [text-wrap:balance] sm:text-[34px]">
+        <h2 id="currency-guide-title" className="text-[28px] font-bold leading-tight tracking-[-0.025em] text-text-primary [text-wrap:balance] sm:text-[36px]">
           {guideTitle(gameName, c)}
         </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-[16px] leading-7 text-text-secondary [text-wrap:pretty]">{page.subtitle}</p>
+        <p className="mx-auto mt-3 max-w-4xl text-[17px] leading-7 text-text-secondary [text-wrap:pretty]">{page.subtitle}</p>
       </header>
 
       {/* 1 — What it is, and where else you can spend money on this site. */}
@@ -232,7 +258,7 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
 
       {/* 2 — Savings: five packs, official price against the cheapest seller here. */}
       {page.savings && showTable && (
-        <Block id="guide-prices" title={page.savings.heading} lead={page.savings.text}>
+        <Block id="guide-prices" band title={page.savings.heading} lead={page.savings.text}>
           <SavingsTable rows={rows} currency={c} officialLabel={officialLabel} />
           {tipRow && tipSave >= 2 && (
             <Tip label="Tip" icon={PiggyBankIcon}>
@@ -255,6 +281,7 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
       {/* 4 — Safety. */}
       <Block
         id="guide-safety"
+        band
         title={`Is It Safe to Buy ${c}?`}
         lead={
           rmtPublisher
@@ -282,7 +309,7 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
       {page.support && <Block id="guide-help" title={page.support.heading} lead={page.support.text} />}
 
       {/* 6 — More of this game: floating icon links, only categories with offers. */}
-      <Block id="guide-more" title={`More ${gameName}`}>
+      <Block id="guide-more" band title={`More ${gameName}`}>
         <ul className="mx-auto mt-7 flex max-w-3xl flex-wrap items-start justify-center gap-x-10 gap-y-6">
           {[{ href: `/${guide.game}`, name: `${gameName} Marketplace`, type: 'hub' }, ...more].map((l) => {
             const Icon = l.type === 'hub' ? StorefrontIcon : (CATEGORY_ICON[l.type ?? ''] ?? PackageIcon)
