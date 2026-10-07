@@ -108,6 +108,10 @@
   },
   "faq_extra": [
     {
+      "q": "Why is my Robux pending?",
+      "a": "Roblox holds Robux from a game pass sale for a few days to stop fraud. It usually clears in 5 to 7 days and then moves into your balance. Still pending after 30 days? Contact Roblox Support."
+    },
+    {
       "q": "How many Robux do I get after Roblox's 30% fee?",
       "a": "You keep 70% of a pass price. A 1,000 Robux pass pays you 700, so to receive 1,000 you'd price the pass at 1,429."
     },
@@ -181,33 +185,41 @@
       "steps": [
         {
           "title": "Make a Game Pass",
-          "body": "Create a pass in your game and put it on sale."
+          "body": "Create a pass in your game and put it on sale.",
+          "icon": "pass"
         },
         {
           "title": "Send the Link",
-          "body": "Share your username and the pass link in the order chat."
+          "body": "Share your username and the pass link in the order chat.",
+          "icon": "link"
         },
         {
           "title": "Seller Buys It",
-          "body": "The seller buys your pass, usually within minutes."
+          "body": "The seller buys your pass, usually within minutes.",
+          "icon": "seller"
         },
         {
           "title": "Robux Arrives",
-          "body": "It shows as Pending, then moves into your balance."
+          "body": "It shows as Pending, then moves into your balance.",
+          "icon": "currency"
         }
       ],
       "tip": "Roblox keeps Robux from a pass sale as Pending for about 5 to 7 days before you can spend it."
     },
     "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
-    "support": {
-      "heading": "Why Is My Robux Pending?",
-      "text": "Roblox holds Robux from a pass sale for a few days to stop fraud. It usually clears in 5 to 7 days. Still pending after 30? Contact Roblox Support."
-    },
     "hub_faq": [
       {
         "q": "Do I get Robux instantly?",
         "a": "There are two ways to buy. If you want Robux on your account, the seller buys your game pass and Roblox releases it to your balance after about 5 to 7 days. If you want an item or a bundle in a game, buy that amount and the seller gifts it to you in-game, which is much faster. Each seller's description says how they deliver."
       }
+    ],
+    "faq_pick": [
+      "Is buying Robux safe?",
+      "How fast is delivery?",
+      "Why is my Robux pending?",
+      "How many Robux do I get after Roblox's 30% fee?",
+      "Do I need to share my password?",
+      "Is there a Robux generator?"
     ]
   }
 }
