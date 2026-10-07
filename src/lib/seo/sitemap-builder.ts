@@ -298,21 +298,8 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
       priority: 0.7,
     }))
 
-  // Currency listings have no page of their own (the listing URL 308s to the
-  // currency page, which is listed above as a category page).
-  const listingPages: Entry[] = liveListings
-    .filter((l) => !isCurrencyCategoryType(categoryById.get(l.game_category_id)?.type))
-    .map((l) => {
-    const game = gameById.get(l.game_id)!
-    const cat = categoryById.get(l.game_category_id)!
-    return {
-      url: at(`/${game.slug}/${cat.slug}/${l.slug}`),
-      ...dated(l.updated_at),
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    }
-  })
-
+  // Listing pages are noindex (2026-10-06) and never listed here: the category
+  // pages above carry the listings.
   const all = [
     ...staticPages,
     ...legalPages,
@@ -324,7 +311,6 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
     ...gamePages,
     ...sellPages,
     ...categoryPages,
-    ...listingPages,
   ]
   // One entry per URL, first one wins.
   return [...new Map(all.map((e) => [e.url, e])).values()]

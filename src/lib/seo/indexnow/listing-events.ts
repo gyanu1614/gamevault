@@ -3,7 +3,7 @@ import { submitIndexNow, type SubmitFn } from './submit'
 import { isCurrencyCategoryType } from '@/lib/listings/url'
 
 /**
- * Listing pages are submitted when a listing is PUBLISHED, MATERIALLY EDITED or
+ * Listing changes are submitted when a listing is PUBLISHED, MATERIALLY EDITED or
  * REMOVED, never for housekeeping (stock count, delivery text, updated_at).
  *
  * One mechanism for every write path (wizard publish, moderation approval,
@@ -63,7 +63,11 @@ export function listingEventUrls(event: ListingEvent, s: ListingSnapshot): strin
       ? `/${s.gameSlug}/${s.categorySlug}/${s.slug}`
       : null
   const hub = `/${s.gameSlug}`
-  const urls = event === 'edited' ? [listing, category] : [listing, category, hub]
+  // Listing pages are noindex (2026-10-06): only a REMOVED listing's URL is
+  // submitted (so engines drop a stale copy); publish/edit refresh the
+  // category page and hub that show it.
+  const urls =
+    event === 'removed' ? [listing, category, hub] : event === 'edited' ? [category] : [category, hub]
   return urls.filter((u): u is string => !!u)
 }
 

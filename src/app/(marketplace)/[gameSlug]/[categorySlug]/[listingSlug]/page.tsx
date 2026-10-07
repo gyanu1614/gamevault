@@ -140,11 +140,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
 
   return {
-    // Never index a non-active listing (owner/admin preview) or a test/demo
-    // seller's listing (SEO hygiene).
-    ...(listing.status !== 'active' || listing.seller?.is_test
-      ? { robots: { index: false, follow: false } }
-      : {}),
+    // Listings are never indexed (owner, 2026-10-06, after the competitor
+    // audit: GameBoost and iGitems noindex seller listings). They are short-
+    // lived and seller-written; the indexed category page shows them. `follow`
+    // keeps their links (seller shop, category, game) crawlable. A non-active
+    // or test-seller listing also drops follow.
+    robots:
+      listing.status !== 'active' || listing.seller?.is_test
+        ? { index: false, follow: false }
+        : { index: false, follow: true },
     // Root template appends " | DropMarket".
     title: meta.title,
     description: meta.description,
