@@ -650,7 +650,7 @@ export default function BundleCurrencyPageClient({
 
       {/* ─── HOW IT WORKS — compact curved band with bundle copy. */}
       <HowItWorksBand
-        title={`How to Buy ${data.unitLabel} on DropMarket`}
+        title={`How to Buy ${data.unitLabel} Safely`}
         highlight={cheapestBundleHighlight}
         steps={[
           { title: 'Pick Your Bundle', body: 'Choose your platform, region and bundle, then compare sellers.' },

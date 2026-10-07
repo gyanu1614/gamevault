@@ -33,13 +33,20 @@ export async function getHubCategoryStats(
 }
 
 /** The currency card's art + unit suffix (per-unit games only, as the title does). */
-export async function getHubCurrency(gameSlug: string): Promise<{ iconUrl: string | null; unitSuffix: string | null }> {
+export async function getHubCurrency(
+  gameSlug: string,
+): Promise<{ iconUrl: string | null; unitSuffix: string | null; unitsPerPrice: number | null }> {
   const cfg = await fetchCategoryConfigBySlug(gameSlug, 'currency')
-  if (!cfg) return { iconUrl: null, unitSuffix: null }
+  if (!cfg) return { iconUrl: null, unitSuffix: null, unitsPerPrice: null }
   const perUnit = !!cfg.unit_label && (cfg.bundles?.length ?? 0) === 0
   return {
     iconUrl: cfg.currency_icon_url ?? null,
     unitSuffix: perUnit ? quantityUnit(cfg.quantity_granularity, cfg.unit_label) : null,
+    // How many units the listed price buys (1, 1,000 or 1,000,000): turns
+    // "from $0.0052/Robux" into "1,000 Robux costs about $5.20" in the FAQ.
+    unitsPerPrice: perUnit
+      ? cfg.quantity_granularity === 'million' ? 1_000_000 : cfg.quantity_granularity === 'thousand' ? 1_000 : 1
+      : null,
   }
 }
 

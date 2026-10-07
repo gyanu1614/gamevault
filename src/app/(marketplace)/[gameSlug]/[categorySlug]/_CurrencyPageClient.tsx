@@ -422,7 +422,7 @@ export default function CurrencyPageClient({
 
       {/* ─── HOW IT WORKS — compact curved band with currency copy. */}
       <HowItWorksBand
-        title={`How to Buy ${data.currency.name} on DropMarket`}
+        title={`How to Buy ${data.currency.name} Safely`}
         highlight={cheapestHighlight}
         steps={[
           { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time, then choose how much you need.' },

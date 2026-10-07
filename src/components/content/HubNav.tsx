@@ -148,7 +148,7 @@ export function HubNav({
   return (
     // Always solid — no transparent state at the top of the page. Same
     // translucent near-black + blur + hairline as the marketplace navbar.
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-[rgba(29,30,35,0.86)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150">
+    <header className="fixed inset-x-0 top-[var(--safe-top)] z-50 border-b border-white/[0.08] bg-[rgba(29,30,35,0.86)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150">
       {calcModeOverride === undefined && <SearchParamsBridge onParams={onParams} />}
       {/* Full-bleed row: no max-width cap, so the brand sits at the true left
           edge of the page and the storefront buttons at the true right edge.

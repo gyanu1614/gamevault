@@ -228,7 +228,7 @@ export default function RouteProgress() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed left-0 right-0 top-0 z-[100]"
+      className="pointer-events-none fixed left-0 right-0 top-[var(--safe-top)] z-[100]"
       style={{ opacity: visible ? 1 : 0, transition: 'opacity 220ms ease' }}
     >
       <div

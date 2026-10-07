@@ -1007,7 +1007,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
           (!important) utilities to beat them; at lg+ none of these
           classes apply and the desktop pill/bar morph is untouched. */}
       <nav
-        style={{ top: 'var(--beta-banner-offset, 0px)' }}
+        style={{ top: 'var(--chrome-top)' }}
         className="fixed left-0 right-0 z-50 flex justify-center"
       >
         <div className="w-full">

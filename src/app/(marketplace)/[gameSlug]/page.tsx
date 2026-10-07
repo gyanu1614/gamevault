@@ -362,7 +362,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const hasCurrency = categories.some((c) => c.type === 'currency')
   const [stats, currency, offers] = await Promise.all([
     getHubCategoryStats(game.id, categories),
-    hasCurrency ? getHubCurrency(gameSlug) : Promise.resolve({ iconUrl: null, unitSuffix: null }),
+    hasCurrency ? getHubCurrency(gameSlug) : Promise.resolve({ iconUrl: null, unitSuffix: null, unitsPerPrice: null }),
     getHubOffers(game.id, categories),
     // Anchor this render to every category's listings tag (no-op reads), so
     // revalidateListingSurfaces refreshes the hub with its category pages.
@@ -394,6 +394,8 @@ export default async function GameBrowsePage({ params }: PageProps) {
           fromLabel: spotlight.fromLabel,
           avgDelivery: spotlight.avgDelivery,
           official: pickOfficialPack(guide?.official_prices?.packages),
+          lowPrice: stats[spotlight.id]?.lowPrice ?? null,
+          unitsPerPrice: currency.unitsPerPrice,
         }
       : null,
     items: itemsCard ? { fromLabel: itemsCard.fromLabel, count: itemsCard.count } : null,

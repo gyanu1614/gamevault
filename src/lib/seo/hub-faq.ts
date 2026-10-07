@@ -19,6 +19,9 @@ export interface HubFaqInput {
     avgDelivery: string | null
     /** The official price of the pack closest to 1,000, from the researched guide. */
     official: { amount: number; usd: number; where: string } | null
+    /** Cheapest live price, and how many units it buys (per-unit currencies only). */
+    lowPrice?: number | null
+    unitsPerPrice?: number | null
   } | null
   items: { fromLabel: string | null; count: number } | null
   accounts: { fromLabel: string | null; count: number } | null
@@ -43,15 +46,26 @@ export function buildHubFaq(input: HubFaqInput): HubFaqItem[] {
   const { gameName: game, currency: cur } = input
   const out: HubFaqItem[] = []
 
+  // What the official pack costs here, and the saving: the comparison players
+  // search for ("how much is 1000 robux in usd"), done for them.
+  const here =
+    cur?.official && cur.lowPrice != null && cur.lowPrice > 0 && cur.unitsPerPrice
+      ? Math.ceil(((cur.official.amount / cur.unitsPerPrice) * cur.lowPrice) * 100) / 100
+      : null
+  const savePct = cur?.official && here != null ? Math.round((1 - here / cur.official.usd) * 100) : null
+  const pack = cur?.official ? `${num.format(cur.official.amount)} ${cur.name}` : ''
+
   if (cur?.official) {
     const o = cur.official
     out.push({
-      q: `How much is ${num.format(o.amount)} ${cur.name} in USD?`,
+      q: `How much is ${pack} in USD?`,
       a:
-        `${num.format(o.amount)} ${cur.name} costs ${usd(o.usd)} from ${o.where}. ` +
-        (cur.fromLabel
-          ? `On DropMarket, sellers start from ${cur.fromLabel}, so the same amount usually costs less. Compare offers on the ${cur.name} page before you buy.`
-          : `On DropMarket, sellers set their own prices, so compare offers on the ${cur.name} page before you buy.`),
+        `At the official price on ${o.where}, ${pack} costs ${usd(o.usd)}. ` +
+        (here != null && savePct != null && savePct >= 5
+          ? `On DropMarket, sellers start from ${cur.fromLabel}, so ${pack} costs you about ${usd(here)}. That's a saving of about ${savePct}%.`
+          : cur.fromLabel
+            ? `On DropMarket, sellers start from ${cur.fromLabel}. Compare offers on the ${cur.name} page to see what the same amount costs.`
+            : `Sellers here set their own prices, so compare offers on the ${cur.name} page before you buy.`),
     })
   }
 
@@ -75,7 +89,9 @@ export function buildHubFaq(input: HubFaqInput): HubFaqItem[] {
     out.push({
       q: `What's the cheapest way to buy ${cur.name}?`,
       a:
-        `Compare sellers. The cheapest ${cur.name} on DropMarket right now starts from ${cur.fromLabel}, and every offer shows its price per unit, stock and delivery time side by side.`,
+        here != null && savePct != null && savePct >= 5
+          ? `Buy from a seller instead of the official store. ${pack} costs ${usd(cur.official!.usd)} on ${cur.official!.where} and about ${usd(here)} on DropMarket, so you keep about ${usd(cur.official!.usd - here)} (${savePct}%).`
+          : `Compare sellers. ${cur.name} here starts from ${cur.fromLabel}, and every offer shows its price, stock and delivery time side by side.`,
     })
   }
 

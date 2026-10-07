@@ -237,7 +237,7 @@ function StepBar({
     // without this the page had no brand anchor and no way out except a
     // back link floating in the body. One bar now carries all three:
     // identity (logo), escape (back), and position (the segments).
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-subtle bg-[rgba(10,10,15,0.85)] backdrop-blur">
+    <header className="fixed inset-x-0 top-[var(--safe-top)] z-50 border-b border-border-subtle bg-[rgba(10,10,15,0.85)] backdrop-blur">
       {/* The brand row spans the viewport like a real navbar; only the
           step segments stay on the form's measure, so the rails line up
           with the fields below them. */}

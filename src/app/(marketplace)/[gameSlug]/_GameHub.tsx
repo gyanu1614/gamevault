@@ -8,8 +8,8 @@
  *   Buy card    the game's currency (CurrencyBuyCard: icon art, tinted in its colour)
  *   Offer rows  Top Selling Items, Top Selling Accounts (carousels, Show All)
  *   Categories  centred floating buttons, no heading
- *   Sell        "Start Making Money Today" over the seller-application art
- *   How it works, FAQ (searched questions), Why Buy, blog, payments
+ *   How it works, then Sell ("Start Making Money Today", a plain card)
+ *   FAQ (searched questions), Why Buy, blog, payments
  *
  * Owner, 2026-10-06: this order, the "Buy and Sell <Game> on DropMarket"
  * block and its chips removed, the Shop by Category grid moved down as buttons.
@@ -167,7 +167,7 @@ function hubHighlight({
   }
   if (totalOffers <= 0) return null
   return {
-    label: `${gameName} on DropMarket`,
+    label: `Live Now`,
     value: `${totalOffers.toLocaleString('en-US')} ${totalOffers === 1 ? 'Offer' : 'Offers'} Live`,
     note: 'From ID-verified sellers',
     backdropUrl: gameImageUrl,
@@ -211,46 +211,30 @@ function CategoryButtons({ cards, gameName }: { cards: HubCard[]; gameName: stri
  */
 function SellCta({ gameSlug, gameName }: { gameSlug: string; gameName: string }) {
   return (
-    <section aria-labelledby="hub-sell" className="relative isolate mt-14 overflow-hidden rounded-xl bg-[#18191D] sm:mt-16">
-      {/* eslint-disable-next-line @next/next/no-img-element -- static 18 KB backdrop, decorative */}
-      <img
-        src="/assets/heroes/sell-cta.avif"
-        alt=""
-        aria-hidden
-        loading="lazy"
-        decoding="async"
-        className="pointer-events-none absolute inset-0 -z-20 h-full w-full scale-110 object-cover opacity-[0.4] blur-[4px]"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            'linear-gradient(90deg, rgba(24,25,29,0.95) 0%, rgba(24,25,29,0.78) 45%, rgba(24,25,29,0.35) 100%), radial-gradient(60% 120% at 85% 50%, rgba(245,196,81,0.12), transparent 70%)',
-        }}
-      />
-      <div className="flex min-h-[200px] flex-col justify-center gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-10">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <span aria-hidden className="hidden h-14 w-14 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-text-primary sm:grid">
-            <StorefrontIcon size={26} weight="duotone" />
-          </span>
-          <div className="min-w-0">
-            <h2 id="hub-sell" className="text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary sm:text-[28px]">
-              Start Making Money Today
-            </h2>
-            <p className="mt-1.5 max-w-xl text-[14.5px] leading-relaxed text-text-secondary">
-              Sell your {gameName} items, accounts and currency, and make your first sale within hours.
-            </p>
-          </div>
+    <section
+      aria-labelledby="hub-sell"
+      className={cn('mt-4 flex flex-col gap-5 rounded-xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7', CARD)}
+    >
+      <div className="flex min-w-0 items-center gap-4">
+        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-text-primary">
+          <StorefrontIcon size={22} weight="duotone" />
+        </span>
+        <div className="min-w-0">
+          <h2 id="hub-sell" className="text-[20px] font-bold leading-tight tracking-[-0.01em] text-text-primary sm:text-[22px]">
+            Start Making Money Today
+          </h2>
+          <p className="mt-1 text-[14px] text-text-secondary">
+            Sell your {gameName} items, accounts and currency, and make your first sale within hours.
+          </p>
         </div>
-        <Link
-          href={`/${gameSlug}/sell`}
-          className="group inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-white px-6 text-[15px] font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98]"
-        >
-          Start Selling
-          <ArrowRightIcon size={16} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
-        </Link>
       </div>
+      <Link
+        href={`/${gameSlug}/sell`}
+        className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-white px-5 text-[14px] font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98]"
+      >
+        Start Selling
+        <ArrowRightIcon size={15} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
+      </Link>
     </section>
   )
 }
@@ -363,15 +347,16 @@ export function GameHub({
 
         {hasCategories && <CategoryButtons cards={[...(spotlight ? [spotlight] : []), ...grid]} gameName={gameName} />}
 
-        {hasCategories && <SellCta gameSlug={gameSlug} gameName={gameName} />}
       </div>
 
       <HowItWorksBand
-        title={`How to Buy ${gameName} Items on DropMarket`}
+        title={`How to Buy ${gameName} Items Safely`}
         highlight={hubHighlight({ spotlight, currencyIconUrl, gameImageUrl, gameName, totalOffers })}
       />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {hasCategories && <SellCta gameSlug={gameSlug} gameName={gameName} />}
+
         <FaqSection
           title={`${gameName} FAQ`}
           sub={`What players ask before buying ${spotlight ? spotlight.name : `${gameName} items`}.`}

@@ -519,7 +519,7 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
 
       {/* Desktop sidebar: a floating account card (fill only, like every
           account card; the old frosted panel had an outline). */}
-      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--chrome-top))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden">
         {/* V21/P7.aj — Call as a function, not <NavItems/>, so it inlines
             into this render tree. As a child component it got a fresh
             identity every parent re-render, remounting the subtree and
@@ -539,7 +539,7 @@ export function AccountSidebarSkeleton() {
   return (
     <aside
       aria-hidden
-      className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--beta-banner-offset,0px))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden"
+      className="hidden lg:flex lg:flex-col lg:fixed lg:left-4 lg:top-[calc(6rem+var(--chrome-top))] lg:bottom-4 lg:w-64 rounded-lg bg-bg-raised overflow-hidden"
     >
       <div className="flex items-center gap-3 border-b border-border-subtle p-3">
         <div className="skeleton h-10 w-10 shrink-0 rounded-full" />

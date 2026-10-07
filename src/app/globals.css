@@ -56,8 +56,18 @@
      BetaBanner keeps updated as the banner scrolls away (0 when there's no
      banner). Anything that hardcodes 60px instead of this var ends up hidden
      UNDER the navbar as soon as an announcement banner is mounted. */
-  --navbar-bottom: calc(60px + var(--beta-banner-offset, 0px));
+  --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
+
+  /* iPhone status-bar area (0 everywhere else). The root viewport is
+     viewport-fit=cover (layout.tsx), so the page runs under the status bar:
+     <body> is padded by it, every fixed top bar sits below it, and
+     .safe-top-fill paints it (owner, 2026-10-06: page content showed above
+     the sticky bars on iPhone Safari). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  /* Where fixed top chrome starts: below the status bar, or below the beta
+     banner while it's on screen (its offset already counts the status bar). */
+  --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles */
   --navbar-bg:               rgba(29, 30, 35, 0.78);
@@ -2380,7 +2390,7 @@
 /* Desktop navbar is 84px tall (pill + py-3); keep the shared edge var honest. */
 @media (min-width: 1024px) {
   :root {
-    --navbar-bottom: calc(84px + var(--beta-banner-offset, 0px));
+    --navbar-bottom: calc(84px + var(--chrome-top));
     --navbar-height: 84px;
   }
 }
@@ -2861,4 +2871,15 @@
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
     mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
   }
+}
+
+/* The iPhone status-bar strip (see --safe-top): body clears it, this paints it. */
+body { padding-top: var(--safe-top); }
+.safe-top-fill {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--safe-top);
+  z-index: 90;
+  pointer-events: none;
+  background: var(--color-bg-base);
 }
