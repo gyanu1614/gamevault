@@ -69,6 +69,8 @@ export interface ItemOffer {
   seller: ItemSeller
   /** Recommended score (0-100). Higher = better default sort position. */
   recommended: number
+  /** Completed sales of THIS listing (listings.sales), when the query read it. */
+  listingSales?: number
   /** Used by self-purchase detection on the client. */
   sellerId: string | null
   /** V15b — raw template_data keyed by attribute slug. Used by the client

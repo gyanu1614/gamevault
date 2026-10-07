@@ -177,6 +177,8 @@ export interface RawListing {
   price: number | null
   /** Pre-discount price; drives the strikethrough + % off on the card. */
   original_price?: number | null
+  /** Completed sales of this listing (read by the hub's Top Selling rows). */
+  sales?: number | null
   /** Seller-set delivery window label (e.g. "instant", "20min", "1hr"). */
   delivery_time?: string | null
   /** Remaining stock. */
@@ -281,6 +283,7 @@ export function listingToOffer(
     mutations: mutationLabels,
     mutationSlugs,
     pricePerUnit: Number(listing.price ?? 0),
+    ...(listing.sales != null ? { listingSales: Number(listing.sales) } : {}),
     // Only treat as a discount when the original is strictly higher.
     originalPrice:
       listing.original_price != null && Number(listing.original_price) > Number(listing.price ?? 0)

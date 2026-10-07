@@ -33,7 +33,13 @@ import { bindCategoryListingsTag } from '@/lib/revalidation/listings'
 import { BlogRail } from '@/components/blog/BlogRail'
 import { GameHub } from './_GameHub'
 import { getHubCategoryStats, getHubCurrency, getHubOffers } from './_hubData'
-import { buildHubCards, hubPitch, pickRail, splitCards, type HubCategory } from './_hubModel'
+import { buildHubCards, hubPitch, pickTopSelling, splitCards, type HubCategory } from './_hubModel'
+import { getImageAccent } from '@/lib/ui/image-accent.server'
+import { buildHubFaq, pickOfficialPack } from '@/lib/seo/hub-faq'
+import { getCurrencyGuide } from '@/lib/currency-guides'
+import { formatStatPrice } from '@/lib/seo/page-stats'
+import { CHECKOUT_COINS } from '@/lib/payments/method-marks'
+import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
 
 interface PageProps {
   params: Promise<{
@@ -317,7 +323,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
     // The body carries Top Selling Items/Accounts carousels + links into the
     // Values/Calculator hub (which have their own forest theme).
     return (
-      <GameHeroBackdrop gameSlug={gameSlug} size="landing">
+      <GameHeroBackdrop gameSlug={gameSlug} size="market">
       <div className="min-h-screen">
         <JsonLd
           data={breadcrumbList([
@@ -367,9 +373,36 @@ export default async function GameBrowsePage({ params }: PageProps) {
   const { spotlight, grid } = splitCards(cards)
   const itemsCard = cards.find((c) => c.type === 'items') ?? null
   const accountsCard = cards.find((c) => c.type === 'account') ?? null
+  const currencyIcon = currency.iconUrl || (spotlight && !spotlight.icon.startsWith('/icons/categories/') ? spotlight.icon : null)
+  const currencyAccent = currencyIcon ? await getImageAccent(currencyIcon) : null
+
+  // Why Buy's "from" price: the cheapest non-currency offer (a per-Robux
+  // price would read as "listings from $0.0052").
+  const goodsLow = grid
+    .map((c) => stats[c.id]?.lowPrice)
+    .filter((p): p is number => typeof p === 'number' && p > 0)
+  const fromPrice = goodsLow.length > 0 ? `$${formatStatPrice(Math.min(...goodsLow))}` : null
+
+  // The FAQ players actually search ("how much is 1000 robux in usd", "is it
+  // safe to buy robux"…). One list for the accordion and the FAQPage JSON-LD.
+  const guide = spotlight ? getCurrencyGuide(gameSlug) : null
+  const faq = buildHubFaq({
+    gameName: game.name,
+    currency: spotlight
+      ? {
+          name: spotlight.name,
+          fromLabel: spotlight.fromLabel,
+          avgDelivery: spotlight.avgDelivery,
+          official: pickOfficialPack(guide?.official_prices?.packages),
+        }
+      : null,
+    items: itemsCard ? { fromLabel: itemsCard.fromLabel, count: itemsCard.count } : null,
+    accounts: accountsCard ? { fromLabel: accountsCard.fromLabel, count: accountsCard.count } : null,
+    paymentMethods: [...CHECKOUT_COINS.map((c) => c.label), ...payssionSelectorMethods().map((m) => m.label)],
+  })
 
   return (
-    <GameHeroBackdrop gameSlug={gameSlug} size="landing">
+    <GameHeroBackdrop gameSlug={gameSlug} size="market">
     <div className="min-h-screen">
       <JsonLd
         data={breadcrumbList([
@@ -377,7 +410,7 @@ export default async function GameBrowsePage({ params }: PageProps) {
           { name: game.name, path: `/${gameSlug}` },
         ])}
       />
-      <JsonLd data={faqPage(seo.faq.map((f) => ({ q: f.q, a: f.a })))} />
+      <JsonLd data={faqPage(faq)} />
 
       <GameSubNav
         gameSlug={gameSlug}
@@ -394,14 +427,15 @@ export default async function GameBrowsePage({ params }: PageProps) {
         pitch={hubPitch(game.name, cards)}
         spotlight={spotlight}
         currencyIconUrl={currency.iconUrl}
+        currencyAccent={currencyAccent}
         grid={grid}
-        itemOffers={pickRail(offers.items, 12)}
-        accountOffers={pickRail(offers.accounts, 12)}
+        itemOffers={pickTopSelling(offers.items, 12)}
+        accountOffers={pickTopSelling(offers.accounts, 12)}
         itemsHref={itemsCard?.href ?? null}
         accountsHref={accountsCard?.href ?? null}
         totalOffers={cards.reduce((n, c) => n + c.count, 0)}
-        about={{ title: seo.h1, body: seo.intro }}
-        faq={seo.faq}
+        fromPrice={fromPrice}
+        faq={faq}
         blogRail={<BlogRail gameSlug={gameSlug} gameName={game.name} />}
       />
     </div>

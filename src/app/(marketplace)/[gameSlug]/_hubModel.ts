@@ -97,6 +97,22 @@ export function pickRail(offers: ItemOffer[], limit: number): ItemOffer[] {
   return sortOffers(offers, 'recommended').slice(0, limit)
 }
 
+/**
+ * "Top Selling" rows: this listing's own completed sales first, then the
+ * seller's lifetime sales, then the recommended order (owner, 2026-10-06).
+ */
+export function pickTopSelling(offers: ItemOffer[], limit: number): ItemOffer[] {
+  const rank = new Map(sortOffers(offers, 'recommended').map((o, i) => [o.id, i]))
+  return [...offers]
+    .sort(
+      (a, b) =>
+        (b.listingSales ?? 0) - (a.listingSales ?? 0) ||
+        b.seller.sales - a.seller.sales ||
+        (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0),
+    )
+    .slice(0, limit)
+}
+
 /** "Buy and sell Fortnite V-Bucks, accounts and skins from verified sellers." */
 export function hubPitch(gameName: string, cards: HubCard[]): string {
   const names = cards.map((c) => (c.isCurrency ? c.name : c.name.toLowerCase()))
