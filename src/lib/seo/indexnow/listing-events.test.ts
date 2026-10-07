@@ -55,13 +55,14 @@ describe('classifyListingChange: a listing is submitted only when it really chan
 })
 
 describe('listingEventUrls', () => {
-  it('published and removed: the listing, its category page and the game hub', () => {
-    const expected = ['/valorant/buy-vp/vp-1000', '/valorant/buy-vp', '/valorant']
-    expect(listingEventUrls('published', snap())).toEqual(expected)
-    expect(listingEventUrls('removed', snap())).toEqual(expected)
+  it('published: its category page and the game hub (listing pages are noindex)', () => {
+    expect(listingEventUrls('published', snap())).toEqual(['/valorant/buy-vp', '/valorant'])
   })
-  it('edited: the listing and its category page (the hub shows no listing detail)', () => {
-    expect(listingEventUrls('edited', snap())).toEqual(['/valorant/buy-vp/vp-1000', '/valorant/buy-vp'])
+  it('removed: the listing too, so engines drop a stale copy', () => {
+    expect(listingEventUrls('removed', snap())).toEqual(['/valorant/buy-vp/vp-1000', '/valorant/buy-vp', '/valorant'])
+  })
+  it('edited: only its category page (the hub shows no listing detail)', () => {
+    expect(listingEventUrls('edited', snap())).toEqual(['/valorant/buy-vp'])
   })
   it('skips what it cannot build (no slug yet, or a missing category)', () => {
     expect(listingEventUrls('published', snap({ slug: null }))).toEqual(['/valorant/buy-vp', '/valorant'])
@@ -71,7 +72,7 @@ describe('listingEventUrls', () => {
   it('never submits a currency listing URL (it has no page; the currency page is submitted)', () => {
     expect(listingEventUrls('published', snap({ categoryType: 'currency' }))).toEqual(['/valorant/buy-vp', '/valorant'])
     expect(listingEventUrls('edited', snap({ categoryType: 'currency' }))).toEqual(['/valorant/buy-vp'])
-    expect(listingEventUrls('edited', snap({ categoryType: 'items' }))).toEqual(['/valorant/buy-vp/vp-1000', '/valorant/buy-vp'])
+    expect(listingEventUrls('removed', snap({ categoryType: 'currency' }))).toEqual(['/valorant/buy-vp', '/valorant'])
   })
 })
 
@@ -89,7 +90,7 @@ describe('submitListingChanges', () => {
     await submitListingChanges(before, after, { submit })
     const calls = submit.mock.calls as unknown as [string[], { reason: string }][]
     expect(calls.map((c) => c[1].reason).sort()).toEqual(['listing-published', 'listing-removed'])
-    expect(calls.find((c) => c[1].reason === 'listing-published')![0]).toEqual(['/valorant/buy-vp/a', '/valorant/buy-vp', '/valorant'])
+    expect(calls.find((c) => c[1].reason === 'listing-published')![0]).toEqual(['/valorant/buy-vp', '/valorant'])
   })
 
   it('submits nothing when nothing really changed', async () => {
