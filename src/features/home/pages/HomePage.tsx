@@ -1,5 +1,3 @@
-'use client'
-
 /**
  * HomePage.
  *
@@ -13,25 +11,33 @@
  */
 
 import type { ReactNode } from 'react'
+import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
+import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
+import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { HeroFilm } from '../components/HeroFilm'
 import { SellerCta } from '../components/SellerCta'
-import { BuyerSteps } from '../components/BuyerSteps'
 import { HomeFaq } from '../components/HomeFaq'
 import { PreFooterCtaBand } from '../components/PreFooterCtaBand'
-import { TrustStrip } from '../components/TrustStrip'
 
 /**
- * Sections that fetch their own data are rendered on the server and passed
- * in as children. This page is a client component (the hero film needs
- * scroll and pointer motion), and a client component cannot render an async server
- * child directly — but it can render one handed to it as a prop.
+ * A server component: the hero film and the other motion sections are client
+ * islands of their own. Sections that fetch their own data are still handed
+ * in from the route (page.tsx).
+ *
+ * Owner, 2026-10-06 curation: the same sections as the game hubs, so the site
+ * reads as one product: How It Works band, the seller CTA, a six-question FAQ,
+ * Why Buy, and the payments strip above the footer. The duplicate Top Selling
+ * Games rail is gone (Popular Games already shows them).
  */
 export function HomePage({
   popularGames,
   latestListings,
+  liveOffers = 0,
 }: {
   popularGames?: ReactNode
   latestListings?: ReactNode
+  /** Live offers across the marketplace, for the Why Buy offers line. */
+  liveOffers?: number
 }) {
   return (
     <div className="page-stage">
@@ -45,15 +51,17 @@ export function HomePage({
 
         {latestListings}
 
-        {/* Order per the agreed eight: how-it-works/trust is 4, the seller
-            programme is 5. */}
-        <BuyerSteps />
+        <HowItWorksBand title="How to Buy Game Items Safely" className="py-0 sm:py-0" />
 
         {/* The site's standard fee line (fee-engine copy rule: qualitative,
             never a rate; fee-copy.guard.test.ts requires it on the homepage). */}
         <SellerCta feeLine="Lowest fees for buyers and sellers" />
 
         <HomeFaq />
+
+        <div className="page-measure">
+          <WhyBuyCard gameSlug="home" withArt={false} subject="Game Items" count={liveOffers} fromPrice={null} />
+        </div>
       </div>
 
       {/* Pre-footer CTA band — section 7. Deliberately OUTSIDE `.page-rhythm`:
@@ -66,10 +74,9 @@ export function HomePage({
         <PreFooterCtaBand artSrc="/cta-heroes/footer-cta.jpg" />
       </div>
 
-      {/* Proof points, on the page surface directly under the band. */}
-      <div className="mt-14 pb-16">
-        <TrustStrip />
-      </div>
+      {/* The payment methods the checkout really offers, above the footer like
+          every marketplace page. */}
+      <PaymentsMarquee />
     </div>
   )
 }

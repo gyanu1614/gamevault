@@ -26,6 +26,7 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 
 export const revalidate = 3600
 
@@ -112,7 +113,8 @@ export async function generateMetadata({
       description: post.seoDescription || post.excerpt,
       url,
       type: 'article',
-      ...(post.cover ? { images: [post.cover] } : {}),
+      // Next replaces the parent openGraph, so a coverless post needs the default image.
+      images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
     },
   }
 }

@@ -21,6 +21,7 @@ export async function WhyBuyCard({
   fromPrice,
   headingId,
   className,
+  withArt = true,
 }: {
   gameSlug: string
   /** "Roblox Items", or just "Roblox" on the hub. */
@@ -31,8 +32,10 @@ export async function WhyBuyCard({
   fromPrice: string | null
   headingId?: string
   className?: string
+  /** false: plain glass, no game art (the homepage has no single game). */
+  withArt?: boolean
 }) {
-  const art = await getGameCtaImage(gameSlug)
+  const art = withArt ? await getGameCtaImage(gameSlug) : null
   const hasOffers = count > 0 && fromPrice != null
   // One self-explaining line each, no body copy (owner, 2026-10-06: "nobody
   // reads the sub text"). The offers line stays live.
@@ -42,7 +45,11 @@ export async function WhyBuyCard({
     { icon: '/icons/set/verified.svg', title: 'Every Seller Is ID-Verified' },
     {
       icon: '/icons/set/tag.svg',
-      title: hasOffers ? `${count} Live ${count === 1 ? 'Offer' : 'Offers'} From ${fromPrice}` : 'Compare Real Seller Prices',
+      title: hasOffers
+        ? `${count} Live ${count === 1 ? 'Offer' : 'Offers'} From ${fromPrice}`
+        : count > 0
+          ? `${count} Live ${count === 1 ? 'Offer' : 'Offers'} to Compare`
+          : 'Compare Real Seller Prices',
     },
     { icon: '/icons/set/messages.svg', title: 'Chat With Your Seller' },
     { icon: '/icons/set/support.svg', title: 'Real People Settle Disputes' },
@@ -57,7 +64,7 @@ export async function WhyBuyCard({
         .filter(Boolean)
         .join(' ')}
     >
-      <GuideBackdrop gameSlug={gameSlug} src={art} />
+      {art && <GuideBackdrop gameSlug={gameSlug} src={art} />}
       <div
         aria-hidden
         className="absolute inset-0"
