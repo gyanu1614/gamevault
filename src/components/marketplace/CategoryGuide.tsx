@@ -24,10 +24,8 @@
 import Link from '@/components/navigation/AppLink'
 import type { ReactNode } from 'react'
 
-import { SilverIcon } from '@/components/ui/silver-icon'
 import { BuyerSteps } from '@/features/home/components/BuyerSteps'
-import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
-import { GuideBackdrop } from './GuideBackdrop'
+import { WhyBuyCard } from './WhyBuyCard'
 import { getCategoryGuide, type GuideBlock, type GuideText } from '@/content/category-guides'
 import { formatStatPrice, type CategoryStats } from '@/lib/seo/page-stats'
 
@@ -83,12 +81,6 @@ function Block({ block }: { block: GuideBlock }) {
 
 // ─── Shared content ─────────────────────────────────────────────────────────
 
-/** The game's ONE CTA image behind the "Why Buy" card (cached, cookie-free
- *  read — the category page stays ISR). */
-async function GuideArt({ gameSlug }: { gameSlug: string }) {
-  return <GuideBackdrop gameSlug={gameSlug} src={await getGameCtaImage(gameSlug)} />
-}
-
 function plural(n: number, one: string, many: string) {
   return n === 1 ? one : many
 }
@@ -110,41 +102,6 @@ export function CategoryGuide({
   const subject = `${gameName} ${categoryName}`
   const hasOffers = stats.count > 0 && stats.lowPrice != null
   const fromPrice = stats.lowPrice != null ? `$${formatStatPrice(stats.lowPrice)}` : null
-
-  const why: Array<{ icon: string; title: string; body: string }> = [
-    {
-      icon: '/icons/set/shield-check.svg',
-      title: 'SafeDrop Protection',
-      body: 'Every order is covered. If it doesn’t arrive, or isn’t what the listing described, you get a full refund.',
-    },
-    {
-      icon: '/icons/set/clock.svg',
-      title: 'Delivery Time Up Front',
-      body: 'Each listing shows the seller’s own delivery time before you pay. Most orders arrive within 20 minutes.',
-    },
-    {
-      icon: '/icons/set/verified.svg',
-      title: 'Verified Sellers',
-      body: 'Every seller completes identity verification before they can list, and their rating and order history show on every listing.',
-    },
-    {
-      icon: '/icons/set/tag.svg',
-      title: 'Compare Real Offers',
-      body: hasOffers
-        ? `${stats.count} live ${plural(stats.count, 'listing', 'listings')} from ${fromPrice}. Sellers set their own prices, so you choose by price, speed or rating.`
-        : 'Sellers set their own prices, so you choose by price, speed or rating.',
-    },
-    {
-      icon: '/icons/set/messages.svg',
-      title: 'Order Chat',
-      body: 'Talk to your seller directly from the order page to arrange delivery.',
-    },
-    {
-      icon: '/icons/set/support.svg',
-      title: 'Disputes Handled by People',
-      body: 'If something goes wrong, open a dispute from your order and our team reviews it.',
-    },
-  ]
 
   // COMPACT on purpose. This is reference copy under a full page of
   // listings — most visitors never read it, so it takes as little room as
@@ -228,45 +185,18 @@ export function CategoryGuide({
             text spans the full width) and heavier toward the bottom, where
             promo art tends to carry its own lettering. If the game has no
             art, the backdrop hides itself and the card is plain glass. */}
-        <div
+        <WhyBuyCard
+          gameSlug={gameSlug}
+          subject={subject}
+          count={stats.count}
+          fromPrice={fromPrice}
+          // Without a curated guide this is the section's first heading, so
+          // it takes over the landmark's label.
+          headingId={guide ? undefined : 'category-guide-title'}
           // Space ABOVE the card matches the space BELOW it (the wrapper's
           // gap to How to Buy), so the card sits evenly between the two.
-          className={`relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(233,237,242,0.07)] ${guide ? 'mt-16 sm:mt-20' : ''}`}
-        >
-          <GuideArt gameSlug={gameSlug} />
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(180deg, color-mix(in srgb, var(--color-bg-base) 68%, transparent) 0%, color-mix(in srgb, var(--color-bg-base) 76%, transparent) 60%, color-mix(in srgb, var(--color-bg-base) 90%, transparent) 100%)',
-            }}
-          />
-
-          <div className="relative px-5 py-7 sm:px-10 sm:py-9">
-            <h2
-              // Without a curated guide this is the section's first heading,
-              // so it takes over the landmark's label.
-              id={guide ? undefined : 'category-guide-title'}
-              className={`${h2} text-center`}
-            >
-              Why Buy {subject} on DropMarket
-            </h2>
-            <ul className="mx-auto mt-6 grid max-w-6xl gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-              {why.map((w) => (
-                <li key={w.title} className="flex gap-3">
-                  <SilverIcon src={w.icon} className="mt-0.5 h-5 w-5 shrink-0" />
-                  <div className="min-w-0 text-body-sm leading-[1.5]">
-                    <p className="font-bold text-text-primary">{w.title}</p>
-                    {/* Explicit rgba, not `text-text-primary/85`: that token is a bare
-                        var(), so an opacity modifier compiles to nothing. */}
-                    <p className="text-[rgba(233,237,242,0.88)]">{w.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+          className={guide ? 'mt-16 sm:mt-20' : undefined}
+        />
       </section>
 
       {/* ── How to Buy — the homepage's 4-step section, reused ─────────

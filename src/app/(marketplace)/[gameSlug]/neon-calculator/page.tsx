@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { notFound } from 'next/navigation'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -66,6 +67,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       'adopt me neon vs mega',
     ],
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title,
       description: 'Neon and Mega Neon cost in Adopt Me — build vs buy, in real money.',
       url: '/adopt-me/neon-calculator',

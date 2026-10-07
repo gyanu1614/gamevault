@@ -36,6 +36,65 @@
       "a": "Not directly, as of October 2026. Gems come from Towers, daily rewards and codes."
     }
   ],
+  "page": {
+    "subtitle": "What Anime Dice Gems are, how they reach your account and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Anime Dice Gems?",
+      "text": "Gems are the purple currency in Anime Dice. You spend them on Grade rerolls, at 1 Gem a roll, and the Grade sets a unit's income.",
+      "spend_intro": "Other Roblox games have their own money too, and you can buy it here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Diamonds in 99 Nights in the Forest",
+          "href": "/99-nights-in-the-forest/buy-currency"
+        },
+        {
+          "label": "Tokens in Blade Ball",
+          "href": "/blade-ball/buy-currency"
+        },
+        {
+          "label": "Sheckles in Grow a Garden 2",
+          "href": "/grow-a-garden-2/buy-currency"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "Each seller's offer says how Gems reach you, and some deliveries may need access to your account.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your Roblox username in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Accept the Request",
+          "body": "Accept the seller's friend request and join Anime Dice.",
+          "icon": "link"
+        },
+        {
+          "title": "Seller Delivers",
+          "body": "They deliver the way their offer describes.",
+          "icon": "seller"
+        },
+        {
+          "title": "Gems Arrive",
+          "body": "Check your Gems, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Each Grade reroll costs 1 Gem and the top Grade is very rare, so save Gems for units you keep."
+    },
+    "safety_text": "Yes. Every order is covered and every seller is ID-checked. If a seller needs your login, change your password after.",
+    "faq_pick": [
+      "How Do You Get Gems in Anime Dice?",
+      "Do I need to share my password?",
+      "Can you buy Anime Dice Gems with Robux?",
+      "How fast is delivery?"
+    ]
+  },
   "trademark_owner": "Anime Dice is a Roblox experience; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://www.u7buy.com/blog/how-to-get-anime-dice-gems/",

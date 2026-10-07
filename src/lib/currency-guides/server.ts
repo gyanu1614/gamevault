@@ -83,3 +83,87 @@ export async function getGuideLinks(guide: CurrencyGuide, gameName: string): Pro
     return { game: [], related: [] }
   }
 }
+
+export interface RelatedPageLink {
+  href: string
+  label: string
+  /** game_categories.type, for the category icon. */
+  type: string | null
+}
+
+interface LivePage {
+  gameSlug: string
+  gameName: string
+  ecosystem: string | null
+  slug: string
+  name: string
+  type: string | null
+  offers: number
+}
+
+/**
+ * Every enabled category page with at least one live offer (test sellers
+ * left out). One cached read for every guide; the nightly cron and any game
+ * edit refresh it through GAME_DIRECTORY_TAG. Fails open to none.
+ */
+const readLivePages = unstable_cache(
+  async (): Promise<LivePage[]> => {
+    try {
+      const db = createAnonClient() as any
+      const [cats, listings, testSellers] = await Promise.all([
+        db
+          .from('game_categories')
+          .select('id, slug, name, type, game:games!inner(slug, name, ecosystem, is_active)')
+          .eq('is_enabled', true)
+          .eq('game.is_active', true)
+          .limit(3000),
+        db.from('listings').select('game_category_id, seller_id').eq('status', 'active').limit(20_000),
+        getTestSellerIds(),
+      ])
+      const hidden = new Set(testSellers)
+      const count = new Map<string, number>()
+      for (const l of (listings.data ?? []) as { game_category_id: string; seller_id: string }[]) {
+        if (hidden.has(l.seller_id)) continue
+        count.set(l.game_category_id, (count.get(l.game_category_id) ?? 0) + 1)
+      }
+      const out: LivePage[] = []
+      for (const c of (cats.data ?? []) as { id: string; slug: string; name: string | null; type: string | null; game: { slug: string; name: string; ecosystem: string | null } }[]) {
+        const offers = count.get(c.id) ?? 0
+        if (offers === 0) continue
+        out.push({ gameSlug: c.game.slug, gameName: c.game.name, ecosystem: c.game.ecosystem, slug: c.slug, name: c.name ?? c.slug, type: c.type, offers })
+      }
+      return out.sort((a, b) => b.offers - a.offers || a.gameName.localeCompare(b.gameName))
+    } catch {
+      return []
+    }
+  },
+  ['currency-guide-live-pages-v1'],
+  { tags: [GAME_DIRECTORY_TAG], revalidate: 86_400 },
+)
+
+/**
+ * "More Roblox Games" (owner, 2026-10-06): this game's other categories with
+ * offers, then the busiest other games of the same family, one page each
+ * (Adopt Me Items, Steal a Brainrot Items…). Ten links at most.
+ */
+export async function getRelatedPages(
+  guide: CurrencyGuide,
+  gameName: string,
+  currentType: string = 'currency',
+  max = 10,
+): Promise<RelatedPageLink[]> {
+  const pages = await readLivePages()
+  const roblox = guideFamily(guide) === 'roblox'
+  const own = pages
+    .filter((p) => p.gameSlug === guide.game && p.type !== currentType)
+    .map((p) => ({ href: `/${p.gameSlug}/${p.slug}`, label: `${gameName} ${p.name}`, type: p.type }))
+  const seen = new Set<string>([guide.game])
+  const others: RelatedPageLink[] = []
+  for (const p of pages) {
+    if (seen.has(p.gameSlug)) continue
+    if (roblox ? p.ecosystem !== 'roblox' : p.ecosystem === 'roblox') continue
+    seen.add(p.gameSlug)
+    others.push({ href: `/${p.gameSlug}/${p.slug}`, label: `${p.gameName} ${p.name}`, type: p.type })
+  }
+  return [...own, ...others].slice(0, max)
+}

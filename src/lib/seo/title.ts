@@ -76,3 +76,11 @@ export function socialTitle(title: string): string {
   const t = title.trim()
   return ENDS_WITH_BRAND.test(t) ? t : `${t} | ${BRAND}`
 }
+
+/**
+ * The site's default share card (src/app/opengraph-image.tsx). Next replaces
+ * the parent's whole `openGraph` object when a page sets its own, so a page
+ * that sets `openGraph` without `images` ships NO og:image: the 2026-10-06
+ * crawl found 346 such URLs. Pages without their own image spread this in.
+ */
+export const DEFAULT_OG_IMAGES = [{ url: '/opengraph-image', width: 1200, height: 630, alt: BRAND }]

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
  */
 
 /** Band height per surface (globals.css `.game-hero[data-size]`). */
-export type GameHeroSize = 'market' | 'landing' | 'hub' | 'tall'
+export type GameHeroSize = 'market' | 'hub' | 'tall'
 
 export function GameHeroArt({
   hero,

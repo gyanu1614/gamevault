@@ -107,6 +107,7 @@ export function ValueListItemHero({
 
   return (
     <ValueItemHero
+      titleAs="h2"
       accent={accent}
       art={{
         src: imageUrl,

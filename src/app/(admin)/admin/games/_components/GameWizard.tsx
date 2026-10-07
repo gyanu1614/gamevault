@@ -32,6 +32,7 @@ import { accountInputCls } from '@/components/account/AccountSurface'
 import { Switch } from '@/components/ui/switch'
 import { PanelHead, adminBtn, adminBtnSm } from '../../components/kit'
 import { useFilePicker } from '../../components/useFilePicker'
+import { ImageCropDialog, type PixelRect } from '../../components/ImageCropDialog'
 import { HeroBackgroundField } from './HeroBackgroundField'
 import { MAX_IMAGE_UPLOAD_BYTES, imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
@@ -276,6 +277,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
     game?.blog_cta_image_url ?? null,
   )
   const [isUploadingBlogCta, setIsUploadingBlogCta] = useState(false)
+  const [pendingBlogCta, setPendingBlogCta] = useState<File | null>(null)
   // gameId only exists after step 1 saves (for create mode). In edit mode, it's the route param.
   const [gameId, setGameId] = useState<string | null>(game?.id ?? null)
 
@@ -421,18 +423,27 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
     }
   }
 
-  const handleBlogCtaFile = async (file: File) => {
+  // Pick → crop dialog (4:1 box) → upload the source with the chosen area;
+  // the server cuts it and saves one AVIF under 100 KB.
+  const handleBlogCtaFile = (file: File) => {
     if (!gameId) { toast.error('Save identity step first'); return }
     const tooLarge = imageTooLargeMessage(file, MAX_IMAGE_UPLOAD_BYTES, 'Banner')
     if (tooLarge) { toast.error(tooLarge); return }
+    setPendingBlogCta(file)
+  }
+
+  const handleBlogCtaCropped = async (rect: PixelRect) => {
+    const file = pendingBlogCta
+    if (!gameId || !file) return
     setIsUploadingBlogCta(true)
     try {
       const base64 = await readFileAsDataUrl(file)
       const res = await uploadGameBlogCtaImage(gameId, {
         name: file.name, type: file.type, size: file.size, base64,
-      })
+      }, rect)
       if (!res.success) { toast.error(res.error); return }
       setBlogCtaUrl(res.data.url)
+      setPendingBlogCta(null)
       toast.success('Blog banner uploaded')
     } catch (error) {
       toast.error(uploadErrorMessage(error))
@@ -512,7 +523,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
   // display:none input isn't). Each clears itself so re-picking a file works.
   const logoPicker = useFilePicker(handleLogoFile, 'image/png,image/jpeg,image/jpg,image/svg+xml,image/webp')
   const coverPicker = useFilePicker(handleCoverFile, 'image/png,image/jpeg,image/jpg,image/webp')
-  const blogCtaPicker = useFilePicker(handleBlogCtaFile, 'image/png,image/jpeg,image/jpg,image/webp')
+  const blogCtaPicker = useFilePicker(handleBlogCtaFile, 'image/png,image/jpeg,image/jpg,image/webp,image/avif')
 
   return (
     // V17l — Wizard now uses the full admin content width (same as the
@@ -753,7 +764,7 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
               <div>
                 <div className="text-[13.5px] font-semibold text-text-primary">Blog CTA Banner</div>
                 <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">
-                  Wide JPG/PNG/WebP, <strong className="font-semibold text-text-secondary">2560×640 (4:1)</strong> recommended, under 400 KB.
+                  Wide JPG/PNG/WebP/AVIF, <strong className="font-semibold text-text-secondary">1600 px wide or more</strong>; you choose a 4:1 area after picking, and it is saved as a small AVIF.
                   The game&rsquo;s one CTA image: sits behind every Buy / Sell band for this game
                   (values, calculators, guides, the sell page). Keep the focal point off-centre-left
                   — the copy covers the left third under a dark scrim. Max 2.5 MB.
@@ -783,6 +794,16 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </button>
                 {blogCtaPicker.input}
               </div>
+              <ImageCropDialog
+                file={pendingBlogCta}
+                aspect={4}
+                title="Choose the Banner Area"
+                hint="A 4:1 band behind every Buy / Sell banner for this game. Keep the subject right of centre: the copy covers the left third."
+                minWidth={1200}
+                busy={isUploadingBlogCta}
+                onCancel={() => setPendingBlogCta(null)}
+                onConfirm={handleBlogCtaCropped}
+              />
 
               <div className="h-px bg-white/[0.06]" />
 

@@ -175,6 +175,7 @@ export default function CurrencyPageClient({
   introLine,
   blogRail,
   guide,
+  trademark,
 }: {
   data: CurrencyPageData
   gameImageUrl?: string | null
@@ -187,6 +188,8 @@ export default function CurrencyPageClient({
   blogRail?: React.ReactNode
   /** Server-rendered "<Currency> Guide" (components/marketplace/currency-guide), or null. */
   guide?: React.ReactNode
+  /** Per-game trademark line under the payments strip (lib/seo/trademark). */
+  trademark?: string | null
 }) {
   const allOffers = useMemo<Offer[]>(() => [data.hero, ...data.sellers], [data])
   const [activeId, setActiveId] = useState<string>(data.hero.id)
@@ -322,7 +325,7 @@ export default function CurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art INSIDE main's stacking
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
-    <main className="relative isolate min-h-screen pb-12 pt-3 sm:pt-4">
+    <main className="relative isolate min-h-screen overflow-x-clip pb-12 pt-3 sm:pt-4">
       <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
@@ -422,7 +425,7 @@ export default function CurrencyPageClient({
 
       {/* ─── HOW IT WORKS — compact curved band with currency copy. */}
       <HowItWorksBand
-        title={`How to Buy ${data.currency.name} on DropMarket`}
+        title={`How to Buy ${data.currency.name} Safely`}
         highlight={cheapestHighlight}
         steps={[
           { title: 'Pick Your Amount', body: 'Compare sellers by price, stock and delivery time, then choose how much you need.' },
@@ -435,8 +438,7 @@ export default function CurrencyPageClient({
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
         <FaqSection
-          title={`${data.currency.name} FAQ`}
-          sub={`Quick answers about buying ${data.currency.game} ${data.currency.name} on DropMarket.`}
+          title="Frequently Asked Questions"
           items={data.faq}
           className="mt-8 sm:mt-10"
         />
@@ -456,7 +458,7 @@ export default function CurrencyPageClient({
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={trademark} />
 
       {/* V14j — Fullscreen route-transition loader. Renders while the
           checkout route is resolving (useTransition pending). Animation
@@ -491,6 +493,7 @@ function SectionHeader({
   size?: 'default' | 'hero'
 }) {
   const showIcon = iconUrl !== undefined
+  const Heading = size === 'hero' ? 'h1' : 'h2'
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 px-1">
       <div className="flex min-w-0 items-center gap-3">
@@ -517,7 +520,9 @@ function SectionHeader({
               {eyebrow}
             </p>
           )}
-          <h2
+          {/* The hero title is the page's one H1 (every currency page had
+              none: the crawl of 2026-10-06 found 10 without an H1). */}
+          <Heading
             className={cn(
               'text-text-primary',
               eyebrow ? 'leading-none' : 'leading-tight',
@@ -527,7 +532,7 @@ function SectionHeader({
             )}
           >
             {title}
-          </h2>
+          </Heading>
           {subtitle && (
             <p
               className={cn(

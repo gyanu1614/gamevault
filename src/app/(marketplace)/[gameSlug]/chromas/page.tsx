@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { chromaStats } from '@/lib/values/chromas'
-import { socialTitle } from '@/lib/seo/title'
+import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import ChromasPage, { chromaCopyCtx, chromaUnboxMaths, loadChromas } from './_ChromasPage'
 import { metaDescription, metaTitle } from './_chromasCopy'
 
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title: socialTitle(title), description, url: path, type: 'website' },
+    openGraph: { images: DEFAULT_OG_IMAGES, title: socialTitle(title), description, url: path, type: 'website' },
   }
 }
 

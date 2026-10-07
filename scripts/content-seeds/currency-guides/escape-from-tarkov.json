@@ -40,6 +40,47 @@
       "a": "No. PvP and PvE use separate profiles, each with its own stash."
     }
   ],
+  "page": {
+    "subtitle": "What Roubles are in Escape from Tarkov, how they reach your stash and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Roubles in Tarkov?",
+      "text": "Roubles are the main money in Escape from Tarkov. You use them to buy gear from traders and the Flea Market, upgrade your hideout and insure your kit."
+    },
+    "delivery": {
+      "text": "Roubles move in-game, usually through a Flea Market sale or a hand-over in a raid, so you never share your password.",
+      "steps": [
+        {
+          "title": "Pick PvP or PvE",
+          "body": "Choose the right mode. Roubles don't move between profiles.",
+          "icon": "cart"
+        },
+        {
+          "title": "Send Your Nickname",
+          "body": "Share your in-game nickname in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Seller Delivers",
+          "body": "Usually a Flea Market sale or a hand-over in a raid.",
+          "icon": "seller"
+        },
+        {
+          "title": "Roubles Arrive",
+          "body": "Check your stash balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "The Flea Market opens at level 15, so check you can list items before you order."
+    },
+    "safety_text": "Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "What Level Do You Need for the Flea Market in Tarkov?",
+      "Can you buy Roubles from Battlestate Games?",
+      "Do Roubles carry over between PvP and PvE?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Battlestate Games Limited",
   "sources": [
     "https://insider-gaming.com/tarkov-flea-market-locked-level-40/",

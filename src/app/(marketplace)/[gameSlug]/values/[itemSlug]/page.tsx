@@ -9,6 +9,7 @@ import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
 import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { withArticle } from '@/lib/text/article'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
 import ItemHero, { type MutationOption } from './_ItemHero'
@@ -459,8 +460,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // Title leads with the pet name + "value" (the head term) and carries the
     // real-money wedge; keeps DropMarket last.
     // Bare: the layout template adds " | DropMarket" (it used to be doubled).
-    const title = `${pet.name} Value in Adopt Me (${monthYear}) — Cash & Trade Value`
-    const description = `How much is a ${pet.name} worth in Adopt Me in real money? See the ${pet.name}'s cash value (USD) and community trade value — Normal, Fly Ride, Neon and Mega prices, updated ${monthYear} from real marketplace listings.`
+    // ≤ ~60 characters with the brand (the old "— Cash & Trade Value" tail ran
+    // to 82 and was cut in results). The price leads the description.
+    const title = `${pet.name} Value in Adopt Me (${monthYear})`
+    const fr = pet.variants.find((v) => v.variant === 'FR') ?? pet.variants[0]
+    const priceLead = fr?.cashUsd != null ? ` A Fly Ride ${pet.name} sells for about $${fr.cashUsd.toFixed(2)}.` : ''
+    const description = `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} See its cash value in USD and trade value for Normal, Fly Ride, Neon and Mega, updated ${monthYear}.`
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
     // names — "worth in real money / USD / can you sell". Per-pet, not the dead
@@ -469,7 +474,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${pet.name} value`,
       `${pet.name} value adopt me`,
       `${pet.name} worth`,
-      `how much is a ${pet.name} worth`,
+      `how much is ${withArticle(pet.name)} worth`,
       `${pet.name} value in real money`,
       `${pet.name} usd value`,
       `${pet.name} fly ride value`,
@@ -793,12 +798,12 @@ export default async function BrainrotValuePage({ params }: PageProps) {
                   The current value of <strong className="font-semibold text-text-primary">{brainrot.name}</strong>{' '}
                   in Steal a Brainrot is <strong className="font-semibold text-text-primary">{marketValue}</strong>
                   {updatedLabel ? <> as of {updatedLabel}</> : null}, based on live DropMarket
-                  marketplace data. It is a {brainrot.rarity} Brainrot with a base income of{' '}
+                  marketplace data. It is {withArticle(brainrot.rarity)} Brainrot with a base income of{' '}
                   {formatIncome(brainrot.base_income_per_second)}.
                 </>
               ) : (
                 <>
-                  {brainrot.name} is a {brainrot.rarity} Brainrot in Steal a Brainrot with a base income
+                  {brainrot.name} is {withArticle(brainrot.rarity)} Brainrot in Steal a Brainrot with a base income
                   of {formatIncome(brainrot.base_income_per_second)}. Live pricing is still being
                   collected — check back as DropMarket gathers more marketplace data.
                 </>
@@ -819,7 +824,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           <section className={`${VALUE_SURFACE} p-5 sm:p-6`}>
             <h2 className="text-lg font-semibold text-text-primary">About {brainrot.name}</h2>
             <p className="mt-2 text-sm leading-6 text-text-secondary">
-              {brainrot.name} is a {brainrot.rarity} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
+              {brainrot.name} is {withArticle(brainrot.rarity)} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
             </p>
             {brainrot.source_url && (
               <a

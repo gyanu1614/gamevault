@@ -7,22 +7,21 @@
  * category pages, landing, listing pages, values / calculators / guides /
  * sell). The preview frame is the desktop band's shape and draws the image
  * under the SAME night filter, veil, light and fade the site uses
- * (GameHeroOverlays + --hero-art-filter), so what you position is what
- * visitors see. Drag (or ↑ / ↓) to choose the vertical focal point.
+ * (GameHeroOverlays + --hero-art-filter), so the preview is what visitors see.
  *
- * Upload: the browser sends the source (≤ 6 MB) straight to storage through a
- * signed URL, then the server re-encodes it (WebP 960 / 1600 / 2400 + a
+ * Upload: pick a file → ImageCropDialog (a band-shaped box on the image; owner,
+ * 2026-10-06, replaced drag-to-position) → the browser sends the source
+ * (≤ 6 MB) straight to storage through a signed URL → the server cuts the
+ * chosen area and re-encodes it (AVIF 960 / 1600 / 1920, each ≤ 100 KB + a
  * blurred placeholder) and refreshes that game's pages. No new hero → the
  * game keeps its static art, or a neutral gradient.
  */
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { CircleNotchIcon } from '@phosphor-icons/react/dist/csr/CircleNotch'
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/csr/UploadSimple'
 import { TrashIcon } from '@phosphor-icons/react/dist/csr/Trash'
-import { FloppyDiskIcon } from '@phosphor-icons/react/dist/csr/FloppyDisk'
-import { BannerPositionEditor } from '@/app/account/settings/_BannerPositionEditor'
 import { GameHeroOverlays } from '@/components/marketplace/GameHeroArt'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -31,40 +30,18 @@ import {
   GAME_HERO_FOCAL_DEFAULT,
   GAME_HERO_FRAME_ASPECT,
   GAME_HERO_MIME,
+  GAME_HERO_MIN_WIDTH,
   parseHeroUploadRequest,
   resolveGameHero,
   type GameHero,
   type GameHeroRow,
 } from '@/lib/games/hero'
-import {
-  createGameHeroUpload,
-  processGameHero,
-  removeGameHero,
-  saveGameHeroPosition,
-} from '@/lib/actions/game-hero'
+import { createGameHeroUpload, processGameHero, removeGameHero } from '@/lib/actions/game-hero'
 import { adminBtn } from '../../components/kit'
+import { ImageCropDialog, type PixelRect } from '../../components/ImageCropDialog'
 import { useFilePicker } from '../../components/useFilePicker'
 
-type Busy = null | 'upload' | 'process' | 'position' | 'remove'
-
-/** Natural aspect (w / h) of an image URL, once it loads. */
-function useImageAspect(src: string | null): number | null {
-  const [aspect, setAspect] = useState<number | null>(null)
-  useEffect(() => {
-    setAspect(null)
-    if (!src) return
-    let live = true
-    const img = new Image()
-    img.onload = () => {
-      if (live && img.naturalWidth > 0 && img.naturalHeight > 0) setAspect(img.naturalWidth / img.naturalHeight)
-    }
-    img.src = src
-    return () => {
-      live = false
-    }
-  }, [src])
-  return aspect
-}
+type Busy = null | 'upload' | 'process' | 'remove'
 
 export function HeroBackgroundField({
   gameId,
@@ -80,21 +57,14 @@ export function HeroBackgroundField({
   const [hero, setHero] = useState<GameHero>(() =>
     resolveGameHero(gameSlug, initialRow ? { slug: gameSlug, ...initialRow } : null, process.env.NEXT_PUBLIC_SUPABASE_URL),
   )
-  const [focal, setFocal] = useState<number>(hero.focalY)
-  const [savedFocal, setSavedFocal] = useState<number>(hero.focalY)
   const [busy, setBusy] = useState<Busy>(null)
+  /** The picked file, waiting in the crop dialog. */
+  const [pending, setPending] = useState<File | null>(null)
 
   const src = hero.kind === 'none' ? null : hero.src
-  const aspect = useImageAspect(src)
-  const dirty = focal !== savedFocal
+  const apply = (next: GameHero) => setHero(next)
 
-  const apply = (next: GameHero) => {
-    setHero(next)
-    setFocal(next.focalY)
-    setSavedFocal(next.focalY)
-  }
-
-  const handleFile = async (file: File) => {
+  const handleFile = (file: File) => {
     if (!gameId) {
       toast.error('Save the identity step first')
       return
@@ -104,6 +74,14 @@ export function HeroBackgroundField({
       toast.error(req.error)
       return
     }
+    setPending(file)
+  }
+
+  const handleCropped = async (rect: PixelRect) => {
+    const file = pending
+    if (!gameId || !file) return
+    const req = parseHeroUploadRequest(file)
+    if (!req.ok) return
     setBusy('upload')
     try {
       const ticket = await createGameHeroUpload(gameId, { type: req.mime, size: file.size })
@@ -119,12 +97,13 @@ export function HeroBackgroundField({
         return
       }
       setBusy('process')
-      const res = await processGameHero(gameId, ticket.path, GAME_HERO_FOCAL_DEFAULT)
+      const res = await processGameHero(gameId, ticket.path, GAME_HERO_FOCAL_DEFAULT, rect)
       if (!res.ok) {
         toast.error(res.error)
         return
       }
       apply(res.hero)
+      setPending(null)
       toast.success('Hero background saved')
     } catch (err) {
       toast.error(err instanceof Error && err.message ? `Upload failed: ${err.message}` : 'Upload failed')
@@ -133,22 +112,6 @@ export function HeroBackgroundField({
     }
   }
   const picker = useFilePicker(handleFile, GAME_HERO_MIME.join(','))
-
-  const handleSavePosition = async () => {
-    if (!gameId) return
-    setBusy('position')
-    try {
-      const res = await saveGameHeroPosition(gameId, focal)
-      if (!res.ok) {
-        toast.error(res.error)
-        return
-      }
-      apply(res.hero)
-      toast.success('Position saved')
-    } finally {
-      setBusy(null)
-    }
-  }
 
   const handleRemove = async () => {
     if (!gameId) return
@@ -175,27 +138,25 @@ export function HeroBackgroundField({
       <div>
         <div className="text-[13.5px] font-semibold text-text-primary">Hero Background</div>
         <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-tertiary">
-          Wide JPG/PNG/WebP/AVIF, <strong className="font-semibold text-text-secondary">2400×1350 (16:9) or wider</strong>, max 6 MB.
+          Wide JPG/PNG/WebP/AVIF, <strong className="font-semibold text-text-secondary">1920 px wide or more</strong>, max 6 MB.
           The game&rsquo;s one hero image: sits behind the top of every page of this game (marketplace pages,
           landing, values, calculators, guides, sell). Drawn darkened under the site&rsquo;s hero scrim, as
-          previewed here. Drag the preview to choose which part shows.
+          previewed here. After you pick a file you choose which part to use; it is saved as a small AVIF.
         </p>
       </div>
 
       {src ? (
-        <BannerPositionEditor
-          src={src}
-          value={focal}
-          onChange={setFocal}
-          disabled={!gameId || busy !== null}
-          frameAspect={GAME_HERO_FRAME_ASPECT}
-          imageAspect={aspect ?? 16 / 9}
-          imageClassName="[filter:var(--hero-art-filter)]"
-          overlay={<GameHeroOverlays />}
-          label="Hero Background Position"
-        >
+        <div className="relative w-full overflow-hidden rounded-md bg-[#1A1B1F]" style={{ aspectRatio: String(GAME_HERO_FRAME_ASPECT) }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of the stored hero */}
+          <img
+            src={src}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover [filter:var(--hero-art-filter)]"
+            style={{ objectPosition: `50% ${hero.focalY}%` }}
+          />
+          <GameHeroOverlays />
           <StatusChip>{uploading ? (busy === 'process' ? 'Processing…' : 'Uploading…') : status}</StatusChip>
-        </BannerPositionEditor>
+        </div>
       ) : (
         <div
           className="relative w-full overflow-hidden rounded-md bg-[#1A1B1F]"
@@ -223,33 +184,7 @@ export function HeroBackgroundField({
         </button>
         {picker.input}
 
-        {dirty && (
-          <>
-            <button
-              type="button"
-              onClick={handleSavePosition}
-              disabled={!gameId || busy !== null}
-              className={cn(adminBtn.primary, 'shrink-0')}
-            >
-              {busy === 'position' ? (
-                <CircleNotchIcon aria-hidden weight="bold" className="h-4 w-4 animate-spin" />
-              ) : (
-                <FloppyDiskIcon aria-hidden weight="bold" className="h-4 w-4" />
-              )}
-              Save Position
-            </button>
-            <button
-              type="button"
-              onClick={() => setFocal(savedFocal)}
-              disabled={busy !== null}
-              className={cn(adminBtn.secondary, 'shrink-0')}
-            >
-              Cancel
-            </button>
-          </>
-        )}
-
-        {hero.kind === 'upload' && !dirty && (
+        {hero.kind === 'upload' && (
           <button
             type="button"
             onClick={handleRemove}
@@ -268,6 +203,17 @@ export function HeroBackgroundField({
       {!gameId && (
         <p className="text-[12px] text-text-tertiary">Save the identity step to upload a hero background.</p>
       )}
+
+      <ImageCropDialog
+        file={pending}
+        aspect={GAME_HERO_FRAME_ASPECT}
+        title="Choose the Hero Area"
+        hint="This band sits behind the top of every page of the game. Drag the box to the part to show; drag a corner to resize."
+        minWidth={GAME_HERO_MIN_WIDTH}
+        busy={uploading}
+        onCancel={() => setPending(null)}
+        onConfirm={handleCropped}
+      />
     </div>
   )
 }

@@ -88,11 +88,13 @@ export function OfferRail({ title, seeAllHref, offers, gameSlug, gameName, empty
               <Arrow dir="next" disabled={!canNext} onClick={() => emblaApi?.scrollNext()} />
             </div>
           )}
+          {/* Floating rectangular "Show All" (owner, 2026-10-06): a raised
+              fill + soft drop shadow, no outline. */}
           <Link
             href={seeAllHref}
-            className="group inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[14px] font-semibold text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+            className="group inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-[#1D1E23] px-3.5 text-[13.5px] font-semibold text-text-primary shadow-[0_12px_26px_-14px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)] transition-[background-color,transform] hover:-translate-y-px hover:bg-[#24252B] active:translate-y-0"
           >
-            See All
+            Show All
             <ArrowRightIcon size={14} weight="bold" aria-hidden className="transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>

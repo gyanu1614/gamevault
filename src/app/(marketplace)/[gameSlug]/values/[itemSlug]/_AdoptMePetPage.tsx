@@ -1,4 +1,5 @@
 import Link from '@/components/navigation/AppLink'
+import { withArticle } from '@/lib/text/article'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
@@ -86,7 +87,7 @@ function petFaq(pet: AdoptMePetDetail) {
   const frTrade = fr?.tradeValue != null ? TRADE.format(fr.tradeValue) : 'its listed'
   return [
     {
-      q: `How much is a ${pet.name} worth in Adopt Me?`,
+      q: `How much is ${withArticle(pet.name)} worth in Adopt Me?`,
       a: `A Fly Ride ${pet.name} is worth around ${frTrade} in community trade value. Its cash value in real money is shown on this page and is built from DropMarket marketplace activity; where we don't yet hold enough sales, the cash value is a clearly-marked estimate derived from the variant ladder.`,
     },
     {
@@ -172,7 +173,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             {pet.name} Value in Adopt Me
           </h1>
           <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
-            What a {pet.name} is worth in trade — and in real money.
+            What {withArticle(pet.name)} is worth in trade — and in real money.
           </p>
 
           {/* Interactive hero + variant grid — SAB's ItemHero layout, Adopt Me

@@ -9,6 +9,7 @@
  * SAB-only for now (guarded); generalizes when other games get price history.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
@@ -143,7 +144,7 @@ export async function generateMetadata({
     title,
     description: `The Steal a Brainrot Price Index for ${monthYear}: the most valuable Brainrots and the biggest price movers this week, from live DropMarket marketplace data, updated daily.`,
     alternates: { canonical: '/steal-a-brainrot/price-index' },
-    openGraph: { title, type: 'article', url: '/steal-a-brainrot/price-index' },
+    openGraph: { images: DEFAULT_OG_IMAGES, title, type: 'article', url: '/steal-a-brainrot/price-index' },
   }
 }
 

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { getValueEvent, getValueEventHead, getValueEventSlugs } from '@/lib/values/events'
 import { eventSetValue, isEventIndexable, previousSameSeason } from '@/lib/values/events-model'
-import { socialTitle } from '@/lib/seo/title'
+import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import EventPage from '../_EventPage'
 import { eventsCopyCtx } from '../_EventsHubPage'
 import { eventMetaDescription, eventMetaTitle } from '../_eventsCopy'
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title: socialTitle(title), description, url: path, type: 'article' },
+    openGraph: { images: DEFAULT_OG_IMAGES, title: socialTitle(title), description, url: path, type: 'article' },
     ...(indexable ? {} : { robots: { index: false, follow: true } }),
   }
 }

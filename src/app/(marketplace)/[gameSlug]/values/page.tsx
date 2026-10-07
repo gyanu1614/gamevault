@@ -20,6 +20,7 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 import GenericValuesHubPage from './_generic/ValuesHubPage'
 import ValueListPage from './_generic/ValueListPage'
+import { ValueItemIndex } from '@/components/values/ValueItemIndex'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { valueListHub } from '@/lib/values/hub-config'
 import { getGameContentTheme } from '@/lib/content/theme'
@@ -28,7 +29,7 @@ import { ValueArt } from '@/components/values/ValueArt'
 import { RarityLabel } from '@/components/values/ValueCard'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { rarityMeta } from '@/lib/values/rarity'
-import { socialTitle, stripBrand } from '@/lib/seo/title'
+import { socialTitle, stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 
 export const revalidate = 3600
 /**
@@ -107,6 +108,7 @@ export async function generateMetadata({
       ],
       alternates: { canonical: '/adopt-me/values' },
       openGraph: {
+        images: DEFAULT_OG_IMAGES,
         title: socialTitle,
         description:
           'Every Adopt Me pet, every variant — community trade value and DropMarket cash value side by side.',
@@ -131,7 +133,7 @@ export async function generateMetadata({
       title,
       description,
       alternates: { canonical: `/${gameSlug}/values` },
-      openGraph: { title: socialTitle(title), description, url: `/${gameSlug}/values`, type: 'website' },
+      openGraph: { images: DEFAULT_OG_IMAGES, title: socialTitle(title), description, url: `/${gameSlug}/values`, type: 'website' },
     }
   }
 
@@ -149,7 +151,7 @@ export async function generateMetadata({
       title,
       description: `${theme.name} values for ${monthYear}: what sealed eggs sell for by area and what accounts go for by income, priced from live marketplace listings.`,
       alternates: { canonical: `/${gameSlug}/values` },
-      openGraph: { title, url: `/${gameSlug}/values`, type: 'website' },
+      openGraph: { images: DEFAULT_OG_IMAGES, title, url: `/${gameSlug}/values`, type: 'website' },
     }
   }
 
@@ -170,6 +172,7 @@ export async function generateMetadata({
     description: `Steal a Brainrot value list for ${monthYear}: live cash values, income, rarity, obtainability, and mutation prices for every Brainrot — updated daily from real DropMarket marketplace data.`,
     alternates: { canonical: '/steal-a-brainrot/values' },
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title,
       description:
         'Compare Brainrot values, income, rarity, mutations, and live marketplace pricing — updated daily.',
@@ -642,6 +645,14 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           buyHref="/steal-a-brainrot/buy-items"
         />
       )}
+
+      {/* Every brainrot page linked in the server HTML (the directory above
+          is client-rendered and paged). */}
+      <ValueItemIndex
+        className="pt-12"
+        title="All Steal a Brainrot Values A–Z"
+        items={brainrots.map((b) => ({ href: `/steal-a-brainrot/values/${b.slug}`, name: b.name }))}
+      />
 
       {/* Guides strip — flows this high-authority page's equity into blog
           content (self-hides if the game has no tagged posts). */}

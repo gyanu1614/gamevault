@@ -101,3 +101,15 @@ describe('socialTitle', () => {
     expect(socialTitle('Bat Dragon Value | DropMarket')).toBe('Bat Dragon Value | DropMarket')
   })
 })
+
+import { gameHubTitle } from './templates'
+
+describe('gameHubTitle', () => {
+  it('leads with "<Game> Marketplace" and the buyer words, ≤ 47 characters', () => {
+    expect(gameHubTitle('Roblox', ['Robux', 'Items', 'Accounts', 'Gift Cards'])).toBe('Roblox Marketplace: Buy Robux, Items & Accounts')
+    expect(gameHubTitle('Fortnite', ['V-Bucks', 'Accounts'])).toBe('Fortnite Marketplace: Buy V-Bucks & Accounts')
+    const long = gameHubTitle('Escape Tsunami for Brainrots', ['Currency', 'Items', 'Accounts'])
+    expect(long.length).toBeLessThanOrEqual(47)
+    expect(long.startsWith('Escape Tsunami for Brainrots Marketplace')).toBe(true)
+  })
+})

@@ -8,6 +8,7 @@
  * Static server-rendered content; part of the Values hub chrome.
  */
 
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from '@/components/navigation/AppLink'
@@ -67,6 +68,7 @@ export async function generateMetadata({
         'are adopt me values accurate',
       ],
       openGraph: {
+        images: DEFAULT_OG_IMAGES,
         title: 'How DropMarket Values Adopt Me Pets',
         description:
           'Trade value vs cash value, real listings, fake-listing filtering, and how the 8 variants are priced.',
@@ -86,7 +88,7 @@ export async function generateMetadata({
       title,
       description,
       alternates: { canonical: `/${gameSlug}/values/methodology` },
-      openGraph: { title, description, url: `/${gameSlug}/values/methodology`, type: 'article' },
+      openGraph: { images: DEFAULT_OG_IMAGES, title, description, url: `/${gameSlug}/values/methodology`, type: 'article' },
     }
   }
 
@@ -98,7 +100,7 @@ export async function generateMetadata({
       title,
       description: `How DropMarket calculates ${theme.name} values: live marketplace listings, reputable-seller filtering, minimum evidence, why we never price individual pets, and the single-source limitation.`,
       alternates: { canonical: `/${gameSlug}/values/methodology` },
-      openGraph: { title, url: `/${gameSlug}/values/methodology`, type: 'article' },
+      openGraph: { images: DEFAULT_OG_IMAGES, title, url: `/${gameSlug}/values/methodology`, type: 'article' },
     }
   }
 
@@ -111,6 +113,7 @@ export async function generateMetadata({
       'How DropMarket calculates Steal a Brainrot values: live marketplace data sources, daily updates, confidence scoring, sample sizes, and what we exclude.',
     alternates: { canonical: '/steal-a-brainrot/values/methodology' },
     openGraph: {
+      images: DEFAULT_OG_IMAGES,
       title: 'How DropMarket Values Steal a Brainrot Prices',
       description:
         'Our pricing methodology — data sources, daily updates, confidence scoring, and exclusions.',

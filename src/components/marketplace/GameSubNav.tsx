@@ -98,8 +98,18 @@ export default function GameSubNav({
   // broken/empty left edge in the compact mobile subnavbar.
   const resolvedGameImage = gameImageUrl || getGameIcon(gameSlug)
 
+  // Tell the navbar a sub-navbar is mounted, so it drops its bottom hairline
+  // and the two bars read as one block (any route: hub, category, listing).
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.subnav = '1'
+    return () => {
+      delete root.dataset.subnav
+    }
+  }, [])
+
   return (
-    /* Desktop keeps the original floating pill. On phones this same
+    /* Desktop: a full-width strip under the navbar. On phones this same
        component becomes the page-local subnavbar: the outer slot reserves
        the fixed bar's real height (58px measured) so content below never
        overlaps, while the inner row stays attached directly beneath the
@@ -114,7 +124,7 @@ export default function GameSubNav({
          z, DOM order wins and page content paints over the fixed sub-nav.
          `!z-40` (z-index !important) beats that global rule so the sub-nav
          always sits above page content. */
-      className="relative !z-40 flex justify-center px-3 py-3 pointer-events-none sm:py-4 md:-mt-3 md:pb-5 md:pt-0 max-md:h-[58px] max-md:px-0 max-md:py-0"
+      className="relative !z-40 flex justify-center pointer-events-none md:-mt-[27px] md:mb-5 max-md:h-[58px]"
     >
       <motion.div
         initial={false}
@@ -132,25 +142,24 @@ export default function GameSubNav({
         animate={{ y: scrollHidden ? 'calc(-100% - 120px)' : '0%' }}
         transition={{ type: 'spring', stiffness: 420, damping: 40, mass: 0.8 }}
         className={cn(
-          'pointer-events-auto w-full max-w-fit',
-          'flex items-center gap-0.5',
-          // V21/P7.k — Match the floating navbar: translucent dark
-          // surface + heavy blur so the hero/gradient bleeds through
-          // instead of a flat black pill. Inline rgba because our
-          // tokens are raw hex (Tailwind /opacity doesn't apply).
-          'rounded-full border border-white/[0.1] shadow-2xl backdrop-blur-2xl backdrop-saturate-150',
-          // Mobile-audit — wrapper py trimmed (1.5 -> 1) to offset the
-          // taller tab buttons below (py-1 -> py-2.5 for >=36px targets)
-          // so the pill's overall height barely grows.
-          'px-2 py-1 sm:px-2.5 sm:py-2',
+          'pointer-events-auto w-full',
+          // Owner, 2026-10-06: the floating rounded pill matched nothing else
+          // on desktop. Desktop now does what the phone bar already did: a
+          // full-width strip that joins the navbar as its second row (same
+          // frosted surface, no outline, no hairline between them — the
+          // navbar drops its own via [data-subnav]). Content aligns to the
+          // page column.
+          'backdrop-blur-2xl backdrop-saturate-150',
+          'md:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.9)]',
           'max-md:fixed max-md:inset-x-0 max-md:top-[var(--navbar-bottom)] max-md:z-[45] max-md:max-w-none max-md:!rounded-none max-md:!border-x-0 max-md:!border-t-0 max-md:border-b max-md:border-white/[0.08] max-md:px-2 max-md:py-2 max-md:!bg-[#0b0f0c]',
         )}
-        style={{ backgroundColor: 'var(--subnav-pill-bg, rgba(29, 30, 35, 0.72))' }}
+        style={{ backgroundColor: 'var(--navbar-bg, rgba(29, 30, 35, 0.78))' }}
       >
+        <div className="flex w-full items-center gap-0.5 max-md:px-0 md:mx-auto md:max-w-7xl md:px-6 md:py-1.5 lg:px-8">
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
+          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 md:pl-0 md:hover:bg-transparent max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
         >
           <img
             src={resolvedGameImage}
@@ -242,6 +251,7 @@ export default function GameSubNav({
             />
           </div>
         )}
+        </div>
       </motion.div>
     </nav>
   )

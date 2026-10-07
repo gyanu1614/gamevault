@@ -5,11 +5,14 @@
  * searches; every category page's breadcrumb points here).
  *
  *   Header      game logo + name + one-line pitch + three facts
- *   Buy card    the game's currency (V-Bucks, Robux) with its live from-price
- *   Categories  one card per category: live offer count + from-price
- *   Offer rows  best item offers, best account offers (cheapest first)
- *   Sell        a quiet prompt to list this game
- *   How it works, About (the SEO intro), FAQ, blog, payments
+ *   Buy card    the game's currency (CurrencyBuyCard: icon art, tinted in its colour)
+ *   Offer rows  Top Selling Items, Top Selling Accounts (carousels, Show All)
+ *   Categories  centred floating buttons, no heading
+ *   How it works, then Sell ("Start Making Money Today", a plain card)
+ *   FAQ (searched questions), Why Buy, blog, payments
+ *
+ * Owner, 2026-10-06: this order, the "Buy and Sell <Game> on DropMarket"
+ * block and its chips removed, the Shop by Category grid moved down as buttons.
  *
  * Server component: every link is in the HTML. Entrance motion is CSS-only
  * (visible without JavaScript, off under reduced motion). Fill-only cards on
@@ -29,10 +32,10 @@ import {
 } from '@phosphor-icons/react/dist/ssr'
 import HowItWorksBand, { type HowItWorksHighlight } from '@/components/marketplace/HowItWorksBand'
 import { FaqSection } from '@/components/marketplace/FaqCards'
-import { CurrencyAboutSection } from '@/components/marketplace/CurrencyAboutSection'
+import { CurrencyBuyCard } from '@/components/marketplace/CurrencyBuyCard'
+import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { OfferRail } from '@/components/marketplace/OfferRail'
-import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { cn } from '@/lib/utils'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import type { HubCard } from './_hubModel'
@@ -76,16 +79,30 @@ function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   )
 }
 
+/** The three trust facts, centred under the Buy card (owner, 2026-10-06). */
+function HubFacts({ totalOffers, className }: { totalOffers: number; className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap justify-center gap-2', className)}>
+      {totalOffers > 0 && (
+        <Fact icon={<TagIcon size={14} weight="bold" />}>
+          <span className="font-semibold tabular-nums text-text-primary">{totalOffers.toLocaleString('en-US')}</span>
+          {totalOffers === 1 ? 'Offer Live' : 'Offers Live'}
+        </Fact>
+      )}
+      <Fact icon={<ShieldCheckIcon size={14} weight="bold" />}>SafeDrop Protection</Fact>
+      <Fact icon={<SealCheckIcon size={14} weight="bold" />}>Verified Sellers</Fact>
+    </div>
+  )
+}
+
 function HubHeader({
   gameName,
   gameImageUrl,
   pitch,
-  totalOffers,
 }: {
   gameName: string
   gameImageUrl: string | null
   pitch: string
-  totalOffers: number
 }) {
   return (
     <header className={cn('pt-2 sm:pt-3', RISE)}>
@@ -105,75 +122,18 @@ function HubHeader({
           </span>
         )}
         <div className="min-w-0">
-          <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
-            Marketplace
-          </p>
+          {/* "<Game> Marketplace": the phrase the hub ranks for, as the H1
+              (2026-10-06 audit: the bare game name matched no search). */}
           <h1
             className="font-black tracking-tight text-text-primary"
             style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
           >
-            {gameName}
+            {gameName} Marketplace
           </h1>
         </div>
       </div>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-text-secondary">{pitch}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {totalOffers > 0 && (
-          <Fact icon={<TagIcon size={14} weight="bold" />}>
-            <span className="font-semibold tabular-nums text-text-primary">{totalOffers.toLocaleString('en-US')}</span>
-            {totalOffers === 1 ? 'Offer Live' : 'Offers Live'}
-          </Fact>
-        )}
-        <Fact icon={<ShieldCheckIcon size={14} weight="bold" />}>SafeDrop Protection</Fact>
-        <Fact icon={<SealCheckIcon size={14} weight="bold" />}>Verified Sellers</Fact>
-      </div>
+      <p className="mt-4 text-[15px] leading-relaxed text-text-secondary lg:whitespace-nowrap">{pitch}</p>
     </header>
-  )
-}
-
-function CurrencySpotlight({ card, gameName, iconUrl }: { card: HubCard; gameName: string; iconUrl: string | null }) {
-  const icon = iconUrl || card.icon
-  return (
-    <section
-      aria-labelledby="hub-currency"
-      className={cn('mt-8 overflow-hidden rounded-xl', CARD, RISE, '[animation-delay:80ms]')}
-    >
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex min-w-0 items-center gap-4">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-white/[0.05]">
-            <CategoryGlyph src={icon} className="h-10 w-10" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[13px] font-medium text-text-tertiary">{gameName} Currency</p>
-            <h2 id="hub-currency" className="mt-0.5 text-[22px] font-bold leading-tight tracking-[-0.01em] text-text-primary">
-              Buy {card.name}
-            </h2>
-            <p className="mt-1 text-[13.5px] text-text-secondary">
-              {card.fromLabel ? (
-                <>
-                  From <span className="font-semibold tabular-nums text-text-primary">{card.fromLabel}</span>
-                  <span aria-hidden className="mx-1.5 text-text-tertiary">·</span>
-                  {card.count.toLocaleString('en-US')} {card.count === 1 ? 'Offer' : 'Offers'}
-                  {card.avgDelivery && (
-                    <>
-                      <span aria-hidden className="mx-1.5 text-text-tertiary">·</span>
-                      Delivered in about {card.avgDelivery}
-                    </>
-                  )}
-                </>
-              ) : (
-                'Offers are opening soon.'
-              )}
-            </p>
-          </div>
-        </div>
-        <Link href={card.href} className="group shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-          <BuyButtonFace size="lg" className="w-full sm:w-auto sm:min-w-[180px]">
-            Buy {card.name}
-          </BuyButtonFace>
-        </Link>
-      </div>
-    </section>
   )
 }
 
@@ -210,80 +170,64 @@ function hubHighlight({
   }
   if (totalOffers <= 0) return null
   return {
-    label: `${gameName} on DropMarket`,
+    label: `Live Now`,
     value: `${totalOffers.toLocaleString('en-US')} ${totalOffers === 1 ? 'Offer' : 'Offers'} Live`,
     note: 'From ID-verified sellers',
     backdropUrl: gameImageUrl,
   }
 }
 
-function CategoryCard({ card, index }: { card: HubCard; index: number }) {
+/** Every category as a centred, floating button (no heading; owner, 2026-10-06). */
+function CategoryButtons({ cards, gameName }: { cards: HubCard[]; gameName: string }) {
   return (
-    <li className={RISE} style={{ animationDelay: `${120 + index * 50}ms` }}>
-      <Link
-        href={card.href}
-        className={cn(
-          'group flex h-full min-h-[136px] flex-col justify-between rounded-lg p-4 sm:p-5',
-          CARD,
-          CARD_HOVER,
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
-        )}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-lg bg-white/[0.05] transition-colors group-hover:bg-white/[0.08]">
-            <CategoryGlyph src={card.icon} className="h-6 w-6" />
-          </span>
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.04] text-text-tertiary transition-[background-color,color,transform] duration-200 group-hover:bg-white/[0.09] group-hover:text-text-primary">
-            <ArrowUpRightIcon
-              size={14}
-              weight="bold"
-              aria-hidden
-              className="transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px"
-            />
-          </span>
-        </div>
-        <div className="mt-4 min-w-0">
-          <h3 className="truncate text-[16px] font-semibold text-text-primary">{card.name}</h3>
-          {/* Two fixed lines (count, then price) so a narrow phone card
-              never breaks "From $12.99" across lines. */}
-          <p className="mt-1 text-[13px] leading-snug text-text-secondary">
-            {card.count > 0 ? (
-              <>
-                <span className="block tabular-nums">
-                  {card.count.toLocaleString('en-US')} {card.count === 1 ? 'Offer' : 'Offers'}
-                </span>
-                {card.fromLabel && (
-                  <span className="block whitespace-nowrap">
-                    From <span className="font-semibold tabular-nums text-text-primary">{card.fromLabel}</span>
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="block text-text-tertiary">No offers yet</span>
-            )}
-          </p>
-        </div>
-      </Link>
-    </li>
+    <nav aria-label={`${gameName} categories`} className="mt-12 sm:mt-14">
+      <ul className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
+        {cards.map((card, i) => (
+          <li key={card.id} className={RISE} style={{ animationDelay: `${80 + i * 40}ms` }}>
+            <Link
+              href={card.href}
+              className={cn(
+                'group inline-flex h-12 items-center gap-2.5 rounded-lg bg-[#1D1E23] pl-2 pr-4 text-[14.5px] font-semibold text-text-primary',
+                'shadow-[0_16px_32px_-18px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.06)]',
+                'transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[#24252B] active:translate-y-0',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+              )}
+            >
+              <span aria-hidden className="grid h-8 w-8 place-items-center rounded-md bg-white/[0.06] transition-colors group-hover:bg-white/[0.1]">
+                <CategoryGlyph src={card.icon} className="h-[18px] w-[18px]" />
+              </span>
+              {card.name}
+              {card.count > 0 && (
+                <span className="text-[12.5px] font-medium tabular-nums text-text-tertiary">{card.count.toLocaleString('en-US')}</span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 
-function SellPrompt({ gameSlug, gameName }: { gameSlug: string; gameName: string }) {
+/**
+ * The sell band: a little taller than a card, the seller application's own
+ * art behind it (blurred, low opacity), one line of copy and one button.
+ */
+function SellCta({ gameSlug, gameName }: { gameSlug: string; gameName: string }) {
   return (
     <section
       aria-labelledby="hub-sell"
-      className={cn('mt-12 flex flex-col gap-5 rounded-xl p-5 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-7', CARD)}
+      className={cn('mt-4 flex flex-col gap-5 rounded-xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7', CARD)}
     >
       <div className="flex min-w-0 items-center gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-text-secondary">
-          <StorefrontIcon size={22} weight="bold" aria-hidden />
+        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-text-primary">
+          <StorefrontIcon size={22} weight="duotone" />
         </span>
         <div className="min-w-0">
-          <h2 id="hub-sell" className="text-[18px] font-bold leading-tight text-text-primary">
-            Sell {gameName} on DropMarket
+          <h2 id="hub-sell" className="text-[20px] font-bold leading-tight tracking-[-0.01em] text-text-primary sm:text-[22px]">
+            Start Making Money Today
           </h2>
-          <p className="mt-1 text-[13.5px] text-text-secondary">
-            List your {gameName} items, accounts or currency in minutes.
+          <p className="mt-1 text-[14px] text-text-secondary">
+            Sell your {gameName} items, accounts and currency, and make your first sale within hours.
           </p>
         </div>
       </div>
@@ -330,6 +274,8 @@ export interface GameHubProps {
   pitch: string
   spotlight: HubCard | null
   currencyIconUrl: string | null
+  /** "r,g,b" accent of the currency icon (getImageAccent), or null. */
+  currencyAccent: string | null
   grid: HubCard[]
   itemOffers: ItemOffer[]
   accountOffers: ItemOffer[]
@@ -337,8 +283,11 @@ export interface GameHubProps {
   itemsHref: string | null
   accountsHref: string | null
   totalOffers: number
-  about: { title: string; body: string }
+  /** Cheapest live offer across the game ("$0.99"), for Why Buy. */
+  fromPrice: string | null
   faq: { q: string; a: string }[]
+  /** Per-game trademark line under the payments strip. */
+  trademark: string
   /** Server-rendered blog rail (BlogRail), or null. */
   blogRail: ReactNode
 }
@@ -350,42 +299,44 @@ export function GameHub({
   pitch,
   spotlight,
   currencyIconUrl,
+  currencyAccent,
   grid,
   itemOffers,
   accountOffers,
   itemsHref,
   accountsHref,
   totalOffers,
-  about,
+  fromPrice,
   faq,
+  trademark,
   blogRail,
 }: GameHubProps) {
   const hasCategories = !!spotlight || grid.length > 0
   return (
     <main className="min-h-screen pb-12">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <HubHeader gameName={gameName} gameImageUrl={gameImageUrl} pitch={pitch} totalOffers={totalOffers} />
+        <HubHeader gameName={gameName} gameImageUrl={gameImageUrl} pitch={pitch} />
 
         {!hasCategories && <OpeningSoon gameSlug={gameSlug} gameName={gameName} />}
 
-        {spotlight && <CurrencySpotlight card={spotlight} gameName={gameName} iconUrl={currencyIconUrl} />}
-
-        {grid.length > 0 && (
-          <section aria-labelledby="hub-categories" className="mt-10 sm:mt-12">
-            <h2 id="hub-categories" className="mb-5 text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
-              Shop by Category
-            </h2>
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-              {grid.map((card, i) => (
-                <CategoryCard key={card.id} card={card} index={i} />
-              ))}
-            </ul>
-          </section>
+        {spotlight && (
+          <CurrencyBuyCard
+            className={cn('mt-8', RISE, '[animation-delay:80ms]')}
+            gameName={gameName}
+            name={spotlight.name}
+            href={spotlight.href}
+            iconUrl={currencyIconUrl || (spotlight.icon.startsWith('/icons/categories/') ? null : spotlight.icon)}
+            accent={currencyAccent}
+            fromLabel={spotlight.fromLabel}
+            avgDelivery={spotlight.avgDelivery}
+          />
         )}
+
+        {hasCategories && <HubFacts totalOffers={totalOffers} className={spotlight ? 'mt-4' : 'mt-6'} />}
 
         {itemsHref && (
           <OfferRail
-            title="Best Item Offers"
+            title="Top Selling Items"
             seeAllHref={itemsHref}
             offers={itemOffers}
             gameSlug={gameSlug}
@@ -394,7 +345,7 @@ export function GameHub({
         )}
         {accountsHref && (
           <OfferRail
-            title="Best Account Offers"
+            title="Top Selling Accounts"
             seeAllHref={accountsHref}
             offers={accountOffers}
             gameSlug={gameSlug}
@@ -402,51 +353,35 @@ export function GameHub({
           />
         )}
 
-        {hasCategories && <SellPrompt gameSlug={gameSlug} gameName={gameName} />}
+        {hasCategories && <CategoryButtons cards={[...(spotlight ? [spotlight] : []), ...grid]} gameName={gameName} />}
+
       </div>
 
       <HowItWorksBand
-        title={`How to Buy ${gameName} Items on DropMarket`}
+        title={`How to Buy ${gameName} Items Safely`}
         highlight={hubHighlight({ spotlight, currencyIconUrl, gameImageUrl, gameName, totalOffers })}
       />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* About — the SEO intro, as readable copy (it used to be the hero
-            paragraph). */}
-        <section aria-labelledby="hub-about" className="mx-auto mt-10 max-w-3xl sm:mt-14">
-          <h2 id="hub-about" className="text-[20px] font-bold tracking-[-0.01em] text-text-primary sm:text-[24px]">
-            {about.title}
-          </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">{about.body}</p>
-          {(itemsHref || accountsHref || spotlight) && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {[spotlight, ...grid].filter(Boolean).map((c) => (
-                <Link
-                  key={c!.id}
-                  href={c!.href}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white/[0.05] px-2.5 text-[13px] font-medium text-text-secondary transition-colors hover:bg-white/[0.09] hover:text-text-primary"
-                >
-                  {gameName} {c!.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        {hasCategories && <SellCta gameSlug={gameSlug} gameName={gameName} />}
 
         <FaqSection
-          title={`${gameName} FAQ`}
-          sub={`Quick answers about buying ${gameName} items on DropMarket.`}
+          title="Frequently Asked Questions"
           items={faq}
         />
 
-        {/* SEO article seam — renders nothing until the owner's article
-            design lands (see CurrencyAboutSection). */}
-        <CurrencyAboutSection gameName={gameName} />
+        <WhyBuyCard
+          className="mt-14 sm:mt-16"
+          gameSlug={gameSlug}
+          subject={gameName}
+          count={totalOffers}
+          fromPrice={fromPrice}
+        />
 
         {blogRail}
       </div>
 
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={trademark} />
     </main>
   )
 }

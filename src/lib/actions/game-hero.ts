@@ -29,9 +29,9 @@ import {
 function deps(): HeroDeps {
   return {
     store: supabaseHeroStore(createServiceRoleClient(), GAME_HERO_BUCKET),
-    processImage: async (gameId, bytes) => {
+    processImage: async (gameId, bytes, crop) => {
       const { processHeroImage } = await import('@/lib/games/hero-image')
-      return processHeroImage(gameId, bytes)
+      return processHeroImage(gameId, bytes, crop)
     },
     revalidateGame: (slug) => {
       // Every page of this game carries the tag through GameHeroBackdrop's
@@ -57,11 +57,19 @@ export async function createGameHeroUpload(
   }
 }
 
-/** Step 2: process the uploaded source into the hero files and save it. */
-export async function processGameHero(gameId: string, sourcePath: string, focalY?: number): Promise<HeroResult> {
+/**
+ * Step 2: process the uploaded source into the hero files and save it.
+ * `crop` is the area the admin chose in the crop dialog (source pixels).
+ */
+export async function processGameHero(
+  gameId: string,
+  sourcePath: string,
+  focalY?: number,
+  crop?: { x: number; y: number; width: number; height: number } | null,
+): Promise<HeroResult> {
   await requireAdmin()
   try {
-    return await processHeroCore(deps(), gameId, sourcePath, focalY)
+    return await processHeroCore(deps(), gameId, sourcePath, focalY, crop)
   } catch (err) {
     console.error('[game-hero] process failed', err)
     return { ok: false, error: 'Could not save the hero image. Try again in a moment.' }

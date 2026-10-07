@@ -95,6 +95,7 @@ export default function AdoptMePetHero({
 
   return (
     <ValueItemHero
+      titleAs="h2"
       anchorRef={heroRef}
       accent={accent}
       art={{ src: imageUrl, alt: `${displayName} — Adopt Me` }}

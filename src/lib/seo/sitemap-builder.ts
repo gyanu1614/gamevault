@@ -114,7 +114,9 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
     { url: at('/browse'), ...dated(marketLastmod), changeFrequency: 'daily', priority: 0.9 },
     { url: at('/safedrop'), ...dated(SITE_PAGES_UPDATED.safedrop), changeFrequency: 'weekly', priority: 0.8 },
     { url: at('/sell/fees'), ...dated(SITE_PAGES_UPDATED.sellFees), changeFrequency: 'weekly', priority: 0.7 },
-    { url: at('/account/become-seller'), ...dated(SITE_PAGES_UPDATED.becomeSeller), changeFrequency: 'monthly', priority: 0.7 },
+    // The public seller page. /account/become-seller is the signed-in
+    // application form (noindex), not a page to rank.
+    { url: at('/early-seller'), ...dated(SITE_PAGES_UPDATED.earlySeller), changeFrequency: 'monthly', priority: 0.7 },
   ]
 
   // ── legal: one route per doc under src/app/(legal). `safedrop` is /safedrop-policy.

@@ -20,6 +20,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { ensureGameCategory } from '@/lib/categories'
+import { GAME_CTA_BANNERS_TAG } from '@/lib/revalidation/tags'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { submitGameIfLive, submitGameRemoved } from '@/lib/seo/indexnow'
 import {
@@ -617,15 +618,17 @@ export async function upsertGameCategory(
  */
 export async function uploadGameBlogCtaImage(
   gameId: string,
-  fileData: { name: string; type: string; size: number; base64: string }
+  fileData: { name: string; type: string; size: number; base64: string },
+  /** The area chosen in the crop dialog (source pixels); the whole image when omitted. */
+  crop?: { x: number; y: number; width: number; height: number } | null,
 ): Promise<Result<{ url: string }>> {
   try {
     await requireAdmin()
     const supabase = getAdminSupabase()
 
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif']
     if (!validTypes.includes(fileData.type)) {
-      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, WebP' }
+      return { success: false, error: 'Invalid file type. Allowed: PNG, JPEG, WebP, AVIF' }
     }
     if (fileData.size > 4_194_304) {
       return { success: false, error: 'Banner must be 4 MB or smaller' }
@@ -635,8 +638,25 @@ export async function uploadGameBlogCtaImage(
     const base64Data = commaIdx >= 0 ? fileData.base64.slice(commaIdx + 1) : fileData.base64
     const buffer = Buffer.from(base64Data, 'base64')
 
-    const ext = (fileData.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `blog-cta/${gameId}-${Date.now()}.${ext}`
+    // Cut the chosen area and re-encode as one AVIF under 100 KB (owner,
+    // 2026-10-06: every page image small enough to load with no delay).
+    const { encodeAvifUnder, clampCrop } = await import('@/lib/games/hero-image')
+    const sharp = (await import('sharp')).default
+    let encoded: Buffer
+    try {
+      const meta = await sharp(buffer).rotate().toBuffer({ resolveWithObject: true })
+      const area = crop ? clampCrop(crop, meta.info.width, meta.info.height) : null
+      if (crop && !area) return { success: false, error: 'The crop is outside the image. Choose the area again.' }
+      const out = await encodeAvifUnder(() => {
+        const img = sharp(meta.data)
+        return (area ? img.extract({ left: area.x, top: area.y, width: area.width, height: area.height }) : img)
+          .resize({ width: 1600, withoutEnlargement: true })
+      })
+      encoded = out.data
+    } catch {
+      return { success: false, error: 'That image could not be processed. Try another one.' }
+    }
+    const path = `blog-cta/${gameId}-${Date.now()}.avif`
 
     // Clear the previous banner so the bucket doesn't accumulate orphans.
     const { data: existing } = await supabase
@@ -659,7 +679,7 @@ export async function uploadGameBlogCtaImage(
 
     const { error: upErr } = await supabase.storage
       .from('game-covers')
-      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+      .upload(path, encoded, { contentType: 'image/avif', cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
     const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)
@@ -685,8 +705,8 @@ export async function uploadGameBlogCtaImage(
 
     revalidatePath('/admin/games')
     revalidatePath(`/admin/games/${gameId}/edit`)
-    // Footer game directory renders on every route (unstable_cache).
-    revalidateTag(GAME_DIRECTORY_TAG)
+    // Only the CTA bands show this image (lib/content/game-cta-art.server).
+    revalidateTag(GAME_CTA_BANNERS_TAG)
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }

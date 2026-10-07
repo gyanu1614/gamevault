@@ -27,6 +27,9 @@ export function passwordAnswer(adminAnswer: string, noPassword: boolean | null |
   return noPassword === false ? ACCOUNT_ACCESS_ANSWER : adminAnswer
 }
 
+/** Questions shown on a currency page (accordion and FAQPage JSON-LD). */
+export const FAQ_MAX = 6
+
 const norm = (q: string) => q.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 /**
@@ -41,5 +44,22 @@ export function applyGuideToFaq(faq: FaqEntry[], guide: CurrencyGuide | null): F
   )
   const seen = new Set(fixed.map((f) => norm(f.q)))
   const extra = guide.faq_extra.filter((f) => !seen.has(norm(f.q)))
-  return [...fixed, ...extra]
+  for (const f of extra) seen.add(norm(f.q))
+  // The game's support question ("Why Is My Robux Pending?") is answered here,
+  // not as a one-line section in the guide (owner, 2026-10-06).
+  const support = guide.support_topic
+  const supportQ =
+    support && !seen.has(norm(support.heading))
+      ? [{ q: support.heading, a: support.paragraphs.slice(0, 2).join(' ') }]
+      : []
+  const all = [...fixed, ...extra, ...supportQ]
+  // Six at most (owner, 2026-10-06: "5-6 max, the best ones for search").
+  // A guide can name its six, in order (page.faq_pick); otherwise the first six.
+  const pick = guide.page?.faq_pick
+  if (pick && pick.length > 0) {
+    const byQ = new Map(all.map((f) => [norm(f.q), f]))
+    const chosen = pick.map((q) => byQ.get(norm(q))).filter((f): f is FaqEntry => !!f)
+    if (chosen.length > 0) return chosen.slice(0, FAQ_MAX)
+  }
+  return all.slice(0, FAQ_MAX)
 }

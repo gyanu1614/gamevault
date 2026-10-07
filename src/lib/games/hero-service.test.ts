@@ -99,7 +99,7 @@ describe('processHeroCore', () => {
     const res = await processHeroCore(deps, GAME, SOURCE, 40)
     expect(res.ok).toBe(true)
     expect(store.upload.mock.calls.map((c) => c[0])).toEqual(processed.ok ? processed.variants.map((v) => v.path) : [])
-    expect(store.upload.mock.calls.every((c) => c[2] === 'image/webp')).toBe(true)
+    expect(store.upload.mock.calls.every((c) => c[2] === 'image/avif')).toBe(true)
     expect(store.updateGame).toHaveBeenCalledWith(GAME, {
       hero_bg_url: pub(`${GAME}/newhash-1600.webp`),
       hero_bg_srcset: {

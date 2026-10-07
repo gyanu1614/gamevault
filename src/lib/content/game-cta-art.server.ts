@@ -1,14 +1,15 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
+import { GAME_CTA_BANNERS_TAG } from '@/lib/revalidation/tags'
 import { gameCtaImage } from './game-cta-art'
 
 /**
  * Every active game's admin CTA banner (games.blog_cta_image_url), keyed by
  * slug. ONE cookie-free cached read shared by every CTA band on every public
- * page, so it never makes a route dynamic. Tagged GAME_DIRECTORY_TAG: the
- * admin upload (uploadGameBlogCtaImage) already revalidates that tag.
+ * page, so it never makes a route dynamic. Its own tag (not the site-wide
+ * game directory): a banner upload refreshes only the pages with a CTA band,
+ * instead of every page on the site (2026-10-06 cache audit).
  */
 const getCtaBannerMap = unstable_cache(
   async (): Promise<Record<string, string | null>> => {
@@ -30,7 +31,7 @@ const getCtaBannerMap = unstable_cache(
     }
   },
   ['game-cta-banners'],
-  { tags: [GAME_DIRECTORY_TAG], revalidate: 86400 },
+  { tags: [GAME_CTA_BANNERS_TAG], revalidate: 86400 },
 )
 
 /** The ONE CTA background for a game (admin upload → static art). */

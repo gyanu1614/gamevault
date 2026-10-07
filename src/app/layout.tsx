@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/config/site'
 import { TITLE_TEMPLATE } from '@/lib/seo/title'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 // Two display faces still load via next/font/google (it downloads and
 // self-hosts them at build time): Archivo for the seller-card titles and
@@ -101,6 +101,19 @@ const bigShoulders = Roboto_Condensed({
   variable: '--font-numeral',
 })
 
+/**
+ * viewport-fit=cover: the page runs under the iPhone status bar and home
+ * indicator so the safe-area insets are real numbers (they're 0 otherwise,
+ * which left every env(safe-area-inset-bottom) bar unprotected). Top chrome
+ * clears it through --safe-top (globals.css).
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#16171B',
+}
+
 export const metadata: Metadata = {
   // Canonical domain for every absolute URL Next emits (OG, twitter,
   // canonical). './' canonical = self-referencing per route — declares
@@ -161,6 +174,7 @@ export default function RootLayout({
             never shows that hero. Removed in Step 1c/Fix 1. */}
       </head>
       <body className={`${inter.variable} ${figtree.variable} ${jetbrainsMono.variable} ${archivo.variable} ${bigShoulders.variable} font-sans antialiased`} style={{ '--font-display': 'var(--font-inter)', '--font-body': 'var(--font-inter)' } as React.CSSProperties}>
+        <div aria-hidden className="safe-top-fill" />
         <Providers>
           <LayoutWrapper footerGameLinks={<FooterGameLinks />}>
             {children}

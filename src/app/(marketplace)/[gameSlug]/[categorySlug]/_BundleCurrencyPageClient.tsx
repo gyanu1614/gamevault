@@ -116,6 +116,7 @@ export default function BundleCurrencyPageClient({
   blogRail,
   guide,
   gameImageUrl,
+  trademark,
 }: {
   data: BundleCurrencyPageData
   /** SEO intro sentence (live stats), server-computed so it lands in
@@ -127,6 +128,8 @@ export default function BundleCurrencyPageClient({
   guide?: React.ReactNode
   /** Game art for the How It Works price tile backdrop. */
   gameImageUrl?: string | null
+  /** Per-game trademark line under the payments strip (lib/seo/trademark). */
+  trademark?: string | null
 }) {
   // V19/P24/P4 — Region selection defaults to the first enabled region.
   // When admin disabled regions entirely we use empty string as a
@@ -307,7 +310,7 @@ export default function BundleCurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art (game watermark, shield
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
-    <main className="relative isolate min-h-screen pb-12">
+    <main className="relative isolate min-h-screen overflow-x-clip pb-12">
       <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
@@ -650,7 +653,7 @@ export default function BundleCurrencyPageClient({
 
       {/* ─── HOW IT WORKS — compact curved band with bundle copy. */}
       <HowItWorksBand
-        title={`How to Buy ${data.unitLabel} on DropMarket`}
+        title={`How to Buy ${data.unitLabel} Safely`}
         highlight={cheapestBundleHighlight}
         steps={[
           { title: 'Pick Your Bundle', body: 'Choose your platform, region and bundle, then compare sellers.' },
@@ -663,8 +666,7 @@ export default function BundleCurrencyPageClient({
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
         <FaqSection
-          title={`${data.unitLabel} FAQ`}
-          sub={`Quick answers about buying ${data.gameName} ${data.unitLabel} on DropMarket.`}
+          title="Frequently Asked Questions"
           items={data.faq}
           className="mt-8 sm:mt-10"
         />
@@ -677,7 +679,7 @@ export default function BundleCurrencyPageClient({
       </div>
 
       {/* ─── ACCEPTED PAYMENTS — full-bleed wordmark marquee. */}
-      <PaymentsMarquee />
+      <PaymentsMarquee disclaimer={trademark} />
     </main>
   )
 }

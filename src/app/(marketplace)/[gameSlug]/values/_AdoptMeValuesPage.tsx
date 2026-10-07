@@ -8,6 +8,7 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
 import { HubHero } from '@/components/content/HubHero'
 import AdoptMeValuesClient from './_AdoptMeValuesClient'
+import { ValueItemIndex } from '@/components/values/ValueItemIndex'
 import { getAdoptMePets } from './_adoptMeData'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
@@ -165,6 +166,14 @@ export default async function AdoptMeValuesPage() {
               intro={ADOPT_ME_VALUES_INTRO}
             />
           )}
+
+          {/* Every pet page linked in the server HTML (the table above is
+              client-rendered and paged). */}
+          <ValueItemIndex
+            className="mt-14 !px-0"
+            title="All Adopt Me Pet Values A–Z"
+            items={pets.filter((p) => p.hasPage).map((p) => ({ href: `/adopt-me/values/${p.slug}`, name: p.name }))}
+          />
 
           {/* Shared end-of-page CTA with the per-game background hero. */}
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />

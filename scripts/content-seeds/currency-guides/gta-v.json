@@ -54,6 +54,59 @@
       "a": "Yes. GTA+ members get GTA$500,000 each month while the membership is active, along with other perks."
     }
   ],
+  "page": {
+    "subtitle": "What GTA$ is, how much you can save on GTA Online money, how it reaches you and how to buy it safely.",
+    "what_is": {
+      "heading": "What Is GTA$?",
+      "text": "GTA$ is the money in GTA Online. You spend it on cars, properties, businesses, weapons and clothes, and the big buys cost millions."
+    },
+    "savings": {
+      "heading": "How Much Do You Save on GTA$?",
+      "text": "Shark Cards sell GTA$ at fixed prices. Sellers here set their own, and many charge less for the same amount.",
+      "amounts": [
+        250000,
+        600000,
+        1500000,
+        4250000,
+        10000000
+      ],
+      "tip_amount": 4250000
+    },
+    "delivery": {
+      "text": "Players can't send GTA$ to each other, so each seller's delivery note says what they need from you.",
+      "steps": [
+        {
+          "title": "Pick Your Platform",
+          "body": "Choose an offer for PC, PlayStation or Xbox.",
+          "icon": "cart"
+        },
+        {
+          "title": "Read the Note",
+          "body": "The seller's delivery note says exactly what they need.",
+          "icon": "seller"
+        },
+        {
+          "title": "Send the Details",
+          "body": "Share those details in the order chat after checkout.",
+          "icon": "chat"
+        },
+        {
+          "title": "GTA$ Arrives",
+          "body": "Check your character's bank balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "GTA Online has no way to give money to other players, so GTA$ can't arrive as a trade."
+    },
+    "safety_text": "Every order is covered and every seller is ID-checked. Read the delivery note before you pay, and change your password after if you share a login.",
+    "faq_pick": [
+      "Can You Give Money to Other Players in GTA Online?",
+      "Do I need to share my password?",
+      "How much GTA$ is in a Megalodon Shark Card?",
+      "Does GTA+ give you money every month?",
+      "How fast is delivery?"
+    ]
+  },
   "trademark_owner": "Take-Two Interactive Software, Inc. (Rockstar Games)",
   "sources": [
     "https://store.playstation.com/en-us/product/UP1004-PPSA03420_00-GTAVPS5CASHPACK2",

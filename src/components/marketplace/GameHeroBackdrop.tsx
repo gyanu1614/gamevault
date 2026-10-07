@@ -23,7 +23,7 @@ import { GameHeroArt, type GameHeroSize } from './GameHeroArt'
  * Loading (no Next image optimizer, no layout shift):
  *   • the LQIP is a data: URL painted inline, so the band is never empty;
  *   • the image is a plain <img srcset sizes="100vw" fetchpriority="high">
- *     of pre-sized WebPs (960 / 1600 / 2400) — a phone fetches ~960 w;
+ *     of pre-sized AVIFs (960 / 1600 / 1920; older uploads WebP) — a phone fetches ~960 w;
  *   • ReactDOM.preload puts <link rel=preload as=image imagesrcset> in the
  *     <head>, so the download starts with the HTML, not after JS;
  *   • it renders OUTSIDE the page's Suspense boundary, so it ships in the
@@ -38,7 +38,7 @@ export async function GameHeroBackdrop({
   children,
 }: {
   gameSlug: string
-  /** market = category / listing pages, landing = /<game>, hub = values & co, tall = sell / value item. */
+  /** market = category / listing pages and the /<game> landing, hub = values & co, tall = sell / value item. */
   size?: GameHeroSize
   children?: ReactNode
 }) {

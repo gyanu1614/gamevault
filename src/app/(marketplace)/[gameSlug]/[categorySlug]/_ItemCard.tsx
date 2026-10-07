@@ -254,7 +254,9 @@ export default function ItemCard({
           SAME vertical space. Without this the strip collapses on owned
           listings and the card ends up shorter than its neighbours, which
           broke row alignment in the detail-page carousel. */}
-      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-white/[0.07] bg-[#17181C] transition-colors group-hover:bg-[#1C1D22]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
+      {/* Price + seller tray: one step LIGHTER than the card body (owner,
+          2026-10-06: the old near-black tray matched the page ground). */}
+      <div className="pointer-events-none relative z-10 mt-auto flex items-center justify-between gap-3 bg-[#24252B] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors group-hover:bg-[#2A2B31]" style={{ minHeight: '58px', padding: 'calc(var(--gap-card) * 0.6) var(--gap-card)' }}>
         {/* Price / unit — left. Optional strikethrough original + a small
             lowest-price icon (tooltip-on-hover, no default text). */}
         <div className="flex min-w-0 shrink-0 items-baseline gap-1.5 whitespace-nowrap">

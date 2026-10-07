@@ -48,6 +48,66 @@
       "a": "New items from crates, spins, trades or booth buys get a short trade lock. Hover over the item to see how long is left."
     }
   ],
+  "page": {
+    "subtitle": "What Blade Ball Tokens are, how they reach you in the Trade Plaza and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Blade Ball Tokens?",
+      "text": "Tokens are Blade Ball's trading money. You spend them at the Trade Plaza on sword skins, emotes and explosions from other players' booths.",
+      "spend_intro": "You can also buy Robux and other Roblox game currencies here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Diamonds in 99 Nights in the Forest",
+          "href": "/99-nights-in-the-forest/buy-currency"
+        },
+        {
+          "label": "Sheckles in Grow a Garden 2",
+          "href": "/grow-a-garden-2/buy-currency"
+        },
+        {
+          "label": "Gems in Anime Dice",
+          "href": "/anime-dice/buy-currency"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "Tokens move through the Trade Plaza, so you only share your Roblox username.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your Roblox username in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "List an Item",
+          "body": "Join Blade Ball, go to the Trade Plaza and list an item.",
+          "icon": "store"
+        },
+        {
+          "title": "Seller Buys It",
+          "body": "The seller buys it from your booth for the Tokens.",
+          "icon": "seller"
+        },
+        {
+          "title": "Tokens Arrive",
+          "body": "Check your Token balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "The Trade Plaza keeps a small cut of each sale, so agree with the seller who covers it."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "How do you get Tokens in Blade Ball for free?",
+      "Why Did I Get Fewer Tokens Than My Booth Price?",
+      "Why can't I sell an item I just got?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Blade Ball is a Roblox experience; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://bloxswaps.com/blog/how-to-get-tokens-in-blade-ball",

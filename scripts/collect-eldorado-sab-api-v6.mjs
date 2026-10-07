@@ -78,8 +78,8 @@ function parseArgs(argv) {
     }
   }
 
-  if (!Number.isInteger(options.maxBrainrots) || options.maxBrainrots < 1 || options.maxBrainrots > 250) {
-    throw new Error("--max-brainrots must be an integer from 1 to 250");
+  if (!Number.isInteger(options.maxBrainrots) || options.maxBrainrots < 1 || options.maxBrainrots > 500) {
+    throw new Error("--max-brainrots must be an integer from 1 to 500");
   }
   if (
     !Number.isFinite(options.refreshAfterHours) ||

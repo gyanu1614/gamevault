@@ -1,5 +1,5 @@
 import { PUBLISHER_FORBIDS_RMT, type CurrencyGuide as Guide, type OurPrices } from '@/lib/currency-guides'
-import { getGameReviewStats, getGuideLinks } from '@/lib/currency-guides/server'
+import { getRelatedPages } from '@/lib/currency-guides/server'
 import { CurrencyGuide } from './CurrencyGuide'
 
 /**
@@ -21,16 +21,15 @@ export async function CurrencyGuideSection({
   ours: OurPrices
   iconUrl?: string | null
 }) {
-  const [reviews, links] = await Promise.all([getGameReviewStats(gameId), getGuideLinks(guide, gameName)])
+  const related = await getRelatedPages(guide, gameName)
   return (
     <CurrencyGuide
       guide={guide}
       gameName={gameName}
       ours={ours}
-      reviews={reviews}
-      links={links}
-      iconUrl={iconUrl}
+      related={related}
       rmtPublisher={PUBLISHER_FORBIDS_RMT[guide.game] ?? null}
+      iconUrl={iconUrl}
     />
   )
 }

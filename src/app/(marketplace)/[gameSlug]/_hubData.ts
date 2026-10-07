@@ -33,20 +33,27 @@ export async function getHubCategoryStats(
 }
 
 /** The currency card's art + unit suffix (per-unit games only, as the title does). */
-export async function getHubCurrency(gameSlug: string): Promise<{ iconUrl: string | null; unitSuffix: string | null }> {
+export async function getHubCurrency(
+  gameSlug: string,
+): Promise<{ iconUrl: string | null; unitSuffix: string | null; unitsPerPrice: number | null }> {
   const cfg = await fetchCategoryConfigBySlug(gameSlug, 'currency')
-  if (!cfg) return { iconUrl: null, unitSuffix: null }
+  if (!cfg) return { iconUrl: null, unitSuffix: null, unitsPerPrice: null }
   const perUnit = !!cfg.unit_label && (cfg.bundles?.length ?? 0) === 0
   return {
     iconUrl: cfg.currency_icon_url ?? null,
     unitSuffix: perUnit ? quantityUnit(cfg.quantity_granularity, cfg.unit_label) : null,
+    // How many units the listed price buys (1, 1,000 or 1,000,000): turns
+    // "from $0.0052/Robux" into "1,000 Robux costs about $5.20" in the FAQ.
+    unitsPerPrice: perUnit
+      ? cfg.quantity_granularity === 'million' ? 1_000_000 : cfg.quantity_granularity === 'thousand' ? 1_000 : 1
+      : null,
   }
 }
 
 /**
  * Item and account offers for the hub's two rows, mapped to the catalog's
  * ItemOffer shape (the real ItemCard). The newest 60 of each kind; the model
- * then orders them best offer first.
+ * then orders them top selling first (pickTopSelling).
  */
 export async function getHubOffers(
   gameId: string,
@@ -66,7 +73,7 @@ export async function getHubOffers(
       .from('listings')
       .select(
         `
-        id, slug, title, price, original_price, delivery_time,
+        id, slug, title, price, original_price, delivery_time, sales,
         quantity, is_unlimited, images, template_data, status,
         seller:public_profiles!listings_seller_id_fkey(
           id, username, shop_name, shop_slug, avatar_url, seller_tier,

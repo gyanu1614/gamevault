@@ -56,8 +56,18 @@
      BetaBanner keeps updated as the banner scrolls away (0 when there's no
      banner). Anything that hardcodes 60px instead of this var ends up hidden
      UNDER the navbar as soon as an announcement banner is mounted. */
-  --navbar-bottom: calc(60px + var(--beta-banner-offset, 0px));
+  --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
+
+  /* iPhone status-bar area (0 everywhere else). The root viewport is
+     viewport-fit=cover (layout.tsx), so the page runs under the status bar:
+     <body> is padded by it, every fixed top bar sits below it, and
+     .safe-top-fill paints it (owner, 2026-10-06: page content showed above
+     the sticky bars on iPhone Safari). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  /* Where fixed top chrome starts: below the status bar, or below the beta
+     banner while it's on screen (its offset already counts the status bar). */
+  --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles */
   --navbar-bg:               rgba(29, 30, 35, 0.78);
@@ -65,7 +75,7 @@
   --navbar-dropdown-bg:      #1D1E23;
 
   /* Footer */
-  --footer-bg: #16171B;
+  --footer-bg: #0F1013;
   --footer-top-glow: radial-gradient(48% 100% at 50% 0%, rgba(86,184,127,0.06), transparent 70%);
 
   --color-glow-violet:      #16171B;
@@ -480,10 +490,10 @@
   pointer-events: none;
   background: var(--color-bg-base);
 }
-.game-hero[data-size='market'],
-.game-hero[data-size='landing'] { top: calc(-1 * var(--navbar-bottom, 60px)); }
+.game-hero[data-size='market'] { top: calc(-1 * var(--navbar-bottom, 60px)); }
+/* Category pages AND the game landing (owner, 2026-10-06: the landing's own
+   taller band read "full and stretched"; one band for both). */
 .game-hero[data-size='market'] { --game-hero-h: calc(var(--navbar-bottom, 60px) + clamp(360px, 38vw, 560px)); }
-.game-hero[data-size='landing'] { --game-hero-h: calc(var(--navbar-bottom, 60px) + clamp(440px, 46vw, 680px)); }
 .game-hero[data-size='hub'] { --game-hero-h: clamp(440px, 42vw, 620px); }
 .game-hero[data-size='tall'] { --game-hero-h: clamp(560px, 54vw, 800px); }
 /* LQIP: a ~24 px image stretched + blurred under the real one, so the band
@@ -2380,7 +2390,7 @@
 /* Desktop navbar is 84px tall (pill + py-3); keep the shared edge var honest. */
 @media (min-width: 1024px) {
   :root {
-    --navbar-bottom: calc(84px + var(--beta-banner-offset, 0px));
+    --navbar-bottom: calc(84px + var(--chrome-top));
     --navbar-height: 84px;
   }
 }
@@ -2435,6 +2445,23 @@
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* PaymentsMarquee — a slow sheen sweeps the floating marks. A mask on the
+   track only (not an overlay), so it lights the marks and never the page. */
+.pm-mark { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45)); }
+@media (prefers-reduced-motion: no-preference) {
+  .pm-track {
+    -webkit-mask-image: linear-gradient(100deg, rgba(0, 0, 0, 0.62) 42%, #000 50%, rgba(0, 0, 0, 0.62) 58%);
+    mask-image: linear-gradient(100deg, rgba(0, 0, 0, 0.62) 42%, #000 50%, rgba(0, 0, 0, 0.62) 58%);
+    -webkit-mask-size: 300% 100%;
+    mask-size: 300% 100%;
+    animation: pm-sheen 8s ease-in-out infinite;
+  }
+}
+@keyframes pm-sheen {
+  0% { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+  70%, 100% { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+}
+
 /* The currency icon on the first tile floats, slowly. */
 @media (prefers-reduced-motion: no-preference) {
   .hiw-coin { animation: hiw-float 5s ease-in-out infinite; }
@@ -2844,4 +2871,15 @@
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
     mask-image: linear-gradient(to bottom, #000 calc(100% - 150px), rgba(0, 0, 0, 0.5) calc(100% - 70px), transparent);
   }
+}
+
+/* The iPhone status-bar strip (see --safe-top): body clears it, this paints it. */
+body { padding-top: var(--safe-top); }
+.safe-top-fill {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--safe-top);
+  z-index: 90;
+  pointer-events: none;
+  background: var(--color-bg-base);
 }

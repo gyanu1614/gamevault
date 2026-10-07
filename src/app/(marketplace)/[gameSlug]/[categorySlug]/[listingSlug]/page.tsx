@@ -5,6 +5,7 @@
  * SEO-friendly URL: /fortnite/accounts/rare-og-account-abc123 (no /marketplace prefix)
  */
 
+import { listingMeta } from '@/lib/seo/listing-meta'
 import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
@@ -129,16 +130,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     notFound()
   }
 
+  // Seller text cleaned for the results snippet (lib/seo/listing-meta).
+  const meta = listingMeta({
+    title: listing.title,
+    description: listing.description,
+    price: listing.price,
+    gameName: listing.game.name,
+    categoryName: listing.category.name,
+  })
+
   return {
     // Never index a non-active listing (owner/admin preview) or a test/demo
     // seller's listing (SEO hygiene).
     ...(listing.status !== 'active' || listing.seller?.is_test
       ? { robots: { index: false, follow: false } }
       : {}),
-    // Root template appends " | DropMarket"; game/category stay in the
-    // description. Long seller titles are truncated to keep ≤60 chars.
-    title: listing.title.length > 48 ? `${listing.title.slice(0, 48).trimEnd()}…` : listing.title,
-    description: listing.description || `Buy ${listing.title} on DropMarket. Covered by SafeDrop Protection. Price: $${listing.price}`,
+    // Root template appends " | DropMarket".
+    title: meta.title,
+    description: meta.description,
     keywords: [
       listing.game.name.toLowerCase(),
       listing.category.name.toLowerCase(),
@@ -146,8 +155,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${listing.game.name.toLowerCase()} for sale`
     ],
     openGraph: {
-      title: listing.title,
-      description: listing.description,
+      title: meta.title,
+      description: meta.description,
       images: listing.images || [],
       type: 'website'
     }

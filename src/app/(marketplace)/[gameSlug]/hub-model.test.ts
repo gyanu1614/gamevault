@@ -103,5 +103,13 @@ describe('hubPitch', () => {
       'Buy and sell Roblox Robux from verified sellers.',
     )
     expect(hubPitch('Evomon', [])).toBe('Buy and sell Evomon from verified sellers.')
+    // More than three categories: the first three, then "and more" (one line on desktop).
+    const many = buildHubCards(
+      'roblox',
+      [cat('r', 'Robux', 'buy-robux', 'currency'), cat('i', 'Items', 'buy-items', 'items'), cat('a', 'Accounts', 'buy-accounts', 'account'), cat('g', 'Gift Cards', 'buy-gift-cards', 'gift_card')],
+      {},
+      null,
+    )
+    expect(hubPitch('Roblox', many)).toBe('Buy and sell Roblox Robux, items, accounts and more from verified sellers.')
   })
 })

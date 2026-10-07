@@ -53,6 +53,66 @@
       "a": "No. The Farmers Market only takes Trade Tokens. Sheckles are for the main game's shops."
     }
   ],
+  "page": {
+    "subtitle": "What Grow a Garden Trade Tokens are, how they reach you and how to buy them safely.",
+    "what_is": {
+      "heading": "What Are Trade Tokens in Grow a Garden?",
+      "text": "Trade Tokens are the money of the Farmers Market in Grow a Garden. You spend them on pets and crops at other players' booths, where Sheckles don't work.",
+      "spend_intro": "Other Roblox games have their own money too, and you can buy it here, like",
+      "links": [
+        {
+          "label": "Robux",
+          "href": "/roblox/buy-robux"
+        },
+        {
+          "label": "Sheckles in Grow a Garden 2",
+          "href": "/grow-a-garden-2/buy-currency"
+        },
+        {
+          "label": "Tokens in Blade Ball",
+          "href": "/blade-ball/buy-currency"
+        },
+        {
+          "label": "Diamonds in 99 Nights in the Forest",
+          "href": "/99-nights-in-the-forest/buy-currency"
+        }
+      ]
+    },
+    "delivery": {
+      "text": "The seller joins your game and hands the Tokens over, so you only share your Roblox username.",
+      "steps": [
+        {
+          "title": "Send Your Username",
+          "body": "Share your @ username, not your display name, in the order chat.",
+          "icon": "chat"
+        },
+        {
+          "title": "Accept the Request",
+          "body": "Accept the seller's friend request and stay in Grow a Garden.",
+          "icon": "seller"
+        },
+        {
+          "title": "Seller Joins You",
+          "body": "The seller joins and hands over the Tokens.",
+          "icon": "gift"
+        },
+        {
+          "title": "Tokens Arrive",
+          "body": "Check your Token balance, then confirm the order.",
+          "icon": "currency"
+        }
+      ],
+      "tip": "Brand-new Roblox accounts can't trade in Grow a Garden for about a week."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "faq_pick": [
+      "Can You Trade in Grow a Garden With a New Account?",
+      "Can you buy Sheckles with Robux in Grow a Garden?",
+      "Can you use Sheckles in the Farmers Market?",
+      "How fast is delivery?",
+      "Do I need to share my password?"
+    ]
+  },
   "trademark_owner": "Grow a Garden is a Roblox experience; Roblox is a trademark of Roblox Corporation",
   "sources": [
     "https://growagarden.fandom.com/wiki/Trade_World",

@@ -10,11 +10,18 @@
  * redesigned shell — nothing else wraps it here.
  */
 
+import type { Metadata } from 'next'
 import SellerRegistration from './SellerRegistration'
 import AuthGate from './components/AuthGate'
 import { getAllGames } from '@/lib/utils/games'
 import { getGameCategories } from './_redesign/game-categories'
 import type { SectionsByGameId } from './_redesign/components'
+
+// The signed-in application form: not a search landing page (/early-seller is).
+export const metadata: Metadata = {
+  title: 'Seller Application',
+  robots: { index: false, follow: true },
+}
 
 export default async function SellerRegisterPage() {
   const games = await getAllGames()
