@@ -21,45 +21,40 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 import { CANCEL_REQUEST_MIN_DELIVERY_HOURS } from '@/lib/legal/protection-windows'
 
+// Talking tone, the answer first (owner, 2026-10-06; same voice as the game
+// hub FAQ). At most six questions.
 const ITEMS = [
   {
-    q: 'Is it safe to buy game items on DropMarket?',
-    a: 'Yes. Every order is covered by SafeDrop Protection at no extra cost — there is no tier to upgrade to for the basics. If your item does not arrive, or it is not what the listing described, you get your money back in full.',
+    q: 'Is DropMarket safe?',
+    a: 'Yes, it is safe. Every order comes with SafeDrop Protection for free. If your item never arrives, or it isn\u2019t what the listing said, you get 100% of your money back.',
   },
   {
     q: 'How fast will I get my item?',
-    a: 'Most orders are delivered within 20 minutes of buying, and many land in five to ten. Each listing shows that seller\u2019s own delivery time before you pay, so you know what you are committing to at checkout.',
+    a: 'Most orders arrive within 20 minutes, and many in 5 to 10. You see each seller\u2019s delivery time before you pay, so you know what to expect.',
   },
   {
-    q: 'What if my item is late or never arrives?',
-    a: `Once the seller\u2019s delivery time passes you can open a dispute straight from your order, and our team steps in. If that delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, you can ask to cancel and take a refund instead of waiting.`,
+    q: 'What if my item never arrives?',
+    a: `Once the delivery time passes, open a dispute from your order and our team steps in. If the delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, you can cancel and get a refund instead of waiting.`,
   },
   {
-    q: 'What if the item is not what was described?',
-    a: 'Check your order before you confirm it. If it does not match the listing, open a dispute from the order and our team reviews the evidence from both sides. A confirmed mismatch means a full refund.',
+    q: 'What if it isn\u2019t what the listing said?',
+    a: 'Check it before you confirm the order. If it doesn\u2019t match, open a dispute and we look at what both sides send us. If we confirm the mismatch, you get a full refund.',
   },
   {
     q: 'Who am I buying from?',
-    a: 'Real players and verified sellers. Every seller completes identity verification before they can list anything, and their rating and sales history sit on each listing so you can see who you are dealing with.',
+    a: 'Real players. Every seller verifies their ID before they can list anything, and you can see their rating and past sales on every listing.',
   },
   {
     q: 'What can I buy, and how do I pay?',
-    a: 'In-game currency, items and accounts, across every game we support. Pay with local payment methods through Payssion, or in crypto through BTCPay.',
+    a: 'Game currency, items and accounts for every game we list. Pay with a local payment method or with crypto; you see every option at checkout before you pay.',
   },
 ]
 
 export function HomeFaq() {
   return (
     <section className="page-measure">
-      <header className="text-center">
-        <h2 className="section-title">
-          Frequently Asked{' '}
-          <span style={{ color: 'var(--color-accent-text)' }}>Questions</span>
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-[15px] leading-[1.5] text-text-secondary">
-          Everything you need to know before your first order
-        </p>
-      </header>
+      {/* Title only, no subtitle (owner, 2026-10-06), as on every FAQ. */}
+      <h2 className="section-title text-center">Frequently Asked Questions</h2>
 
       {/* defaultOpen -1: every card closed on load, so the section reads as a
           compact list rather than one expanded block. */}

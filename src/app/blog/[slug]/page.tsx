@@ -17,6 +17,7 @@ import { ChevronLeft } from 'lucide-react'
 import { getFlatPosts, getPost } from '@/lib/blog/posts'
 import { SITE_NAME, SITE_URL } from '@/config/site'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
+import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: post.title,
       description: post.excerpt,
       url: `/blog/${post.slug}`,
-      images: post.cover ? [post.cover] : [],
+      images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
       type: 'article',
       publishedTime: post.publishedAt,
     },

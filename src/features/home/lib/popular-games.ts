@@ -204,3 +204,17 @@ export async function getPopularGames(limit = 8): Promise<PopularGameCard[]> {
     .sort((a, b) => b.listingCount - a.listingCount)
     .slice(0, limit)
 }
+
+/**
+ * Live offers across the marketplace (active, non-test sellers), for the
+ * homepage Why Buy line. Same cached read as the grid above (HOME_LISTINGS_TAG),
+ * ids only; never a HEAD count (it breaks keep-alive on this client).
+ */
+export async function getLiveOfferCount(): Promise<number> {
+  const { data } = await createHomeListingsReadClient()
+    .from('listings')
+    .select('id, seller:public_profiles!listings_seller_id_fkey!inner(is_test)')
+    .eq('status', 'active')
+    .eq('seller.is_test', false)
+  return data?.length ?? 0
+}

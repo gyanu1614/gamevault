@@ -115,6 +115,7 @@ export default function HowItWorksBand({
   sub,
   steps = DEFAULT_STEPS,
   highlight,
+  className,
 }: {
   /** The section's H2: write it as the search phrase. */
   title?: string
@@ -124,11 +125,13 @@ export default function HowItWorksBand({
   steps?: HowItWorksStepCopy[]
   /** A live figure shown on the first tile (e.g. the cheapest price). */
   highlight?: HowItWorksHighlight | null
+  /** Overrides, e.g. the homepage drops the band's own vertical padding (its rhythm gap spaces it). */
+  className?: string
 }) {
   const [s1, s2, s3, s4] = steps.length === 4 ? steps : DEFAULT_STEPS
 
   return (
-    <section aria-labelledby="how-it-works-title" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+    <section aria-labelledby="how-it-works-title" className={cn('mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8', className)}>
       <header className="text-center">
         <h2 id="how-it-works-title" className="section-title">
           {title}

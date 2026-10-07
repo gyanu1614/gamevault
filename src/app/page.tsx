@@ -2,6 +2,7 @@ import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { PopularGames } from '@/features/home/components/PopularGames'
+import { getLiveOfferCount } from '@/features/home/lib/popular-games'
 import { LatestListings } from '@/features/home/components/LatestListings'
 import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 
@@ -9,8 +10,9 @@ export const metadata: Metadata = {
   // `absolute`: the brand already leads this title, so skip the layout's
   // "| DropMarket" suffix (it rendered "DropMarket | … | DropMarket").
   title: { absolute: 'DropMarket | Buy & Sell Game Accounts, Items & Currency Safely' },
+  // ≤155 characters so the snippet isn't cut (2026-10-06 crawl: was 193).
   description:
-    'The trusted marketplace for gaming accounts, items, and currency. Buy and sell Roblox, Fortnite, Valorant, and LoL assets with SafeDrop Protection on every order. Lowest fees, instant delivery.',
+    'Buy and sell Roblox, Fortnite, Valorant and more: game currency, items and accounts from ID-verified sellers, with SafeDrop Protection on every order.',
   keywords: [
     'buy game accounts', 'sell game items', 'gaming marketplace',
     'roblox accounts', 'fortnite accounts', 'valorant accounts',
@@ -49,7 +51,8 @@ const SCHEMAS = [
   organization(),
 ]
 
-export default function Page() {
+export default async function Page() {
+  const liveOffers = await getLiveOfferCount()
   return (
     <>
       {/* JSON-LD */}
@@ -66,6 +69,7 @@ export default function Page() {
       <HomePage
         popularGames={<PopularGames />}
         latestListings={<LatestListings />}
+        liveOffers={liveOffers}
       />
     </>
   )

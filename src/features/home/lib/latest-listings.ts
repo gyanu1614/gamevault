@@ -4,6 +4,7 @@
 // listing mutation revalidates — an untagged read would never refresh here.
 import { createHomeListingsReadClient } from '@/lib/listings/read-client'
 import { listingUrl } from '@/lib/listings/url'
+import { quantityUnit, type QuantityGranularity } from '@/lib/currency/quantity-unit'
 
 export interface LatestListing {
   id: string
@@ -25,10 +26,15 @@ export interface LatestListing {
   /** Account cards: delivery promise, the one fact every account listing has. */
   deliveryTime: string | null
   /**
-   * Phone card background: the currency's own icon for currency listings,
-   * the item image for items, else the game logo. Null when none exists.
+   * The card's picture: the currency's own icon for currency listings, the
+   * item image for items, else the game's cover art. Null when none exists.
    */
-  bgImage: string | null
+  art: string | null
+  /**
+   * Per-unit currency: what the price covers ("Robux", "K", "M"), shown as
+   * "$0.0052/Robux" like the game hub. Null for everything else.
+   */
+  priceSuffix: string | null
 }
 
 /**
@@ -99,20 +105,32 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
 
   const rows = (data ?? []) as unknown as Row[]
 
-  // Currency icons (the logo beside each currency page title) for the games
-  // that have a currency listing here. One small read of two JSON fields.
+  // Currency icon and unit (the logo beside each currency page title, and
+  // what one price covers) for the games that have a currency listing here.
+  // One small read of three JSON fields.
   const currencyGameIds = Array.from(
     new Set(rows.filter((r) => r.category.type === 'currency').map((r) => r.game.id)),
   )
   const currencyIcon = new Map<string, string>()
+  const currencyUnit = new Map<string, string>()
   if (currencyGameIds.length > 0) {
     const { data: cfgs } = await supabase
       .from('category_configs')
-      .select('game_id, icon:config->>currency_icon_url')
+      .select(
+        'game_id, icon:config->>currency_icon_url, unit:config->>unit_label, granularity:config->>quantity_granularity',
+      )
       .eq('category_type', 'currency')
       .in('game_id', currencyGameIds)
-    for (const c of (cfgs ?? []) as Array<{ game_id: string; icon: string | null }>) {
+    for (const c of (cfgs ?? []) as Array<{
+      game_id: string
+      icon: string | null
+      unit?: string | null
+      granularity?: QuantityGranularity | null
+    }>) {
       if (c.icon) currencyIcon.set(c.game_id, c.icon)
+      if (c.unit || c.granularity === 'thousand' || c.granularity === 'million') {
+        currencyUnit.set(c.game_id, quantityUnit(c.granularity, c.unit))
+      }
     }
   }
 
@@ -141,11 +159,12 @@ export async function getLatestListings(limit = 24): Promise<LatestListing[]> {
     cardType: cardTypeFor(row.category.type),
     quantity: row.quantity ?? null,
     deliveryTime: row.delivery_time ?? null,
-    bgImage:
+    art:
       (row.category.type === 'currency' ? currencyIcon.get(row.game.id) : undefined) ??
       (cardTypeFor(row.category.type) === 'item' ? row.images?.[0] : undefined) ??
       row.game.image_url ??
       null,
+    priceSuffix: row.category.type === 'currency' ? (currencyUnit.get(row.game.id) ?? null) : null,
   }))
 
   // Bucket by game (each bucket already cheapest-first from the query), then

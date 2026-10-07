@@ -81,7 +81,7 @@ describe('getLatestListings category join', () => {
         row('acc', { slug: 'buy-accounts', name: 'Adopt Me Accounts', type: 'account' }, { images: null }),
         row('itm', { slug: 'buy-pets', name: 'Pets', type: 'items' }),
       ],
-      category_configs: [{ game_id: 'g-am', icon: 'https://cdn.example/bucks.png' }],
+      category_configs: [{ game_id: 'g-am', icon: 'https://cdn.example/bucks.png', unit: 'Bucks', granularity: 'unit' }],
     })
     const listings = await getLatestListings()
     const byId = new Map(listings.map((l) => [l.id, l]))
@@ -90,7 +90,8 @@ describe('getLatestListings category join', () => {
       categoryType: 'currency',
       categoryLabel: 'Bucks',
       cardType: 'currency',
-      bgImage: 'https://cdn.example/bucks.png',
+      art: 'https://cdn.example/bucks.png',
+      priceSuffix: 'Bucks',
       // Currency listings have no page: the card links the currency page.
       href: '/adopt-me/buy-bucks?offer=cur',
     })
@@ -98,7 +99,8 @@ describe('getLatestListings category join', () => {
     expect(byId.get('itm')).toMatchObject({
       categoryType: 'items',
       cardType: 'item',
-      bgImage: 'https://cdn.example/itm.png',
+      art: 'https://cdn.example/itm.png',
+      priceSuffix: null,
     })
 
     // The currency-icon lookup is keyed off the type column too.
