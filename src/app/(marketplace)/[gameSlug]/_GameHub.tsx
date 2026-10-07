@@ -338,7 +338,6 @@ export function GameHub({
             iconUrl={currencyIconUrl || (spotlight.icon.startsWith('/icons/categories/') ? null : spotlight.icon)}
             accent={currencyAccent}
             fromLabel={spotlight.fromLabel}
-            count={spotlight.count}
             avgDelivery={spotlight.avgDelivery}
           />
         )}

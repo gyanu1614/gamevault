@@ -18,6 +18,11 @@ import { CurrencyCoinArt } from './CurrencyCoinArt'
  * Server component for the copy and link (in the HTML); the art is the one
  * client island.
  */
+/** "8 minutes" → "8 Minutes" (owner: Title Case in the line). */
+function titleCaseUnits(text: string): string {
+  return text.replace(/\b([a-z])/g, (m) => m.toUpperCase())
+}
+
 export function CurrencyBuyCard({
   gameName,
   name,
@@ -25,7 +30,6 @@ export function CurrencyBuyCard({
   iconUrl,
   accent,
   fromLabel,
-  count,
   avgDelivery,
   className,
 }: {
@@ -37,7 +41,6 @@ export function CurrencyBuyCard({
   /** "r,g,b" from getImageAccent; neutral when null. */
   accent: string | null
   fromLabel: string | null
-  count: number
   avgDelivery: string | null
   className?: string
 }) {
@@ -46,21 +49,22 @@ export function CurrencyBuyCard({
       <div className="flex min-h-[176px] flex-col justify-center gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div className="min-w-0 max-w-[30rem]">
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: `rgb(${rgb})` }}>
-            {gameName} Currency
+            {gameName}
           </p>
           <h2 id="hub-currency" className="mt-1.5 text-[26px] font-bold leading-tight tracking-[-0.02em] text-text-primary sm:text-[30px]">
             Buy {name}
           </h2>
-          <p className="mt-1.5 text-[14px] text-text-secondary">
+          {/* From-price, then delivery: one line with a dot from sm up, two rows on a phone. */}
+          <p className="mt-1.5 flex flex-col gap-0.5 text-[14px] text-text-secondary sm:flex-row sm:items-center sm:gap-0">
             {fromLabel ? (
               <>
-                From <span className="font-semibold tabular-nums text-text-primary">{fromLabel}</span>
-                <span aria-hidden className="mx-1.5 text-text-tertiary">·</span>
-                {count.toLocaleString('en-US')} {count === 1 ? 'Offer' : 'Offers'}
+                <span>
+                  From <span className="font-semibold tabular-nums text-text-primary">{fromLabel}</span>
+                </span>
                 {avgDelivery && (
                   <>
-                    <span aria-hidden className="mx-1.5 text-text-tertiary">·</span>
-                    Delivered in about {avgDelivery}
+                    <span aria-hidden className="mx-2 hidden text-text-tertiary sm:inline">·</span>
+                    <span>Delivered in about {titleCaseUnits(avgDelivery)}</span>
                   </>
                 )}
               </>
