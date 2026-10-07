@@ -159,7 +159,7 @@ export default function GameSubNav({
         {/* ── Game name / logo ───────────────────────────────────────── */}
         <Link
           href={`/${gameSlug}`}
-          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
+          className="group flex flex-shrink-0 items-center gap-2 rounded-full px-2.5 py-2 transition-colors hover:bg-bg-raised-hover sm:px-3.5 sm:py-1.5 md:pl-0 md:hover:bg-transparent max-md:max-w-[42%] max-md:gap-1.5 max-md:px-1.5 max-md:py-1"
         >
           <img
             src={resolvedGameImage}
