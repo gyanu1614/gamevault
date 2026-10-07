@@ -298,7 +298,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
       <div className="relative">
         {/* One row: entity + copyright on the left, statutory links on the
             right. Stacks and centres below sm. */}
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 pb-10 pt-4 text-center sm:flex-row sm:justify-between sm:gap-6 sm:text-left lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 pb-4 pt-4 text-center sm:flex-row sm:justify-between sm:gap-6 sm:text-left lg:px-8">
           <p className="text-xs leading-relaxed text-text-tertiary">
             © {new Date().getFullYear()} {COMPANY.name} · Registered in{' '}
             {COMPANY.jurisdiction}
@@ -318,7 +318,11 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
             ))}
           </nav>
         </div>
-
+        {/* The not-affiliated line every marketplace carries (owner,
+            2026-10-06). One line on desktop. */}
+        <p className="mx-auto max-w-7xl px-4 pb-8 text-center text-[11.5px] leading-5 text-text-tertiary sm:text-left lg:px-8">
+          All game names, logos and trademarks belong to their owners. {COMPANY.name} is an independent marketplace and isn&apos;t affiliated with, sponsored or endorsed by any game publisher.
+        </p>
       </div>
     </footer>
   )

@@ -364,8 +364,7 @@ export function GameHub({
         {hasCategories && <SellCta gameSlug={gameSlug} gameName={gameName} />}
 
         <FaqSection
-          title={`${gameName} FAQ`}
-          sub={`What players ask before buying ${spotlight ? spotlight.name : `${gameName} items`}.`}
+          title="Frequently Asked Questions"
           items={faq}
         />
 

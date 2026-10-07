@@ -83,13 +83,27 @@ const pageSchema = z
     delivery: z
       .object({
         text,
-        steps: z.array(z.object({ title: text, body: text }).strict()).min(3).max(5),
+        steps: z
+          .array(
+            z
+              .object({
+                title: text,
+                body: text,
+                /** The step's icon (DeliverySteps); "currency" draws the currency's own icon. */
+                icon: z.enum(['pass', 'link', 'seller', 'currency', 'chat', 'gift', 'key', 'store', 'check', 'cart']).optional(),
+              })
+              .strict(),
+          )
+          .min(3)
+          .max(5),
         /** One line, starts "Did You Know?" or "Tip:" in the UI. */
         tip: text.optional(),
       })
       .strict(),
     safety_text: text,
     support: z.object({ heading: text, text }).strict().optional(),
+    /** The currency page's FAQ, chosen and ordered: up to 6 question texts from the merged list. */
+    faq_pick: z.array(text).max(6).optional(),
     /** Questions for the game hub's FAQ, written for this game. */
     hub_faq: z.array(z.object({ q: text, a: text }).strict()).optional(),
   })

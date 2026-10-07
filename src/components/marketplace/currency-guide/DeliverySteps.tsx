@@ -11,10 +11,51 @@ import { Fragment } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
+import { TicketIcon } from '@phosphor-icons/react/dist/csr/Ticket'
+import { LinkIcon } from '@phosphor-icons/react/dist/csr/Link'
+import { HandCoinsIcon } from '@phosphor-icons/react/dist/csr/HandCoins'
+import { ChatCircleDotsIcon } from '@phosphor-icons/react/dist/csr/ChatCircleDots'
+import { GiftIcon } from '@phosphor-icons/react/dist/csr/Gift'
+import { KeyIcon } from '@phosphor-icons/react/dist/csr/Key'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/csr/Storefront'
+import { SealCheckIcon } from '@phosphor-icons/react/dist/csr/SealCheck'
+import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
+
+export type StepIcon = 'pass' | 'link' | 'seller' | 'currency' | 'chat' | 'gift' | 'key' | 'store' | 'check' | 'cart'
 
 export interface DeliveryStep {
   title: string
   body: string
+  icon?: StepIcon
+}
+
+const ICONS: Record<Exclude<StepIcon, 'currency'>, PhosphorIcon> = {
+  pass: TicketIcon,
+  link: LinkIcon,
+  seller: HandCoinsIcon,
+  chat: ChatCircleDotsIcon,
+  gift: GiftIcon,
+  key: KeyIcon,
+  store: StorefrontIcon,
+  check: SealCheckIcon,
+  cart: ShoppingCartIcon,
+}
+
+/** The step's mark: its icon, the currency's own icon, or (no icon set) its number. */
+function StepMark({ step, n, currencyIconUrl }: { step: DeliveryStep; n: number; currencyIconUrl?: string | null }) {
+  if (step.icon === 'currency' && currencyIconUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
+      <img src={currencyIconUrl} alt="" aria-hidden className="mx-auto h-12 w-12 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
+    )
+  }
+  const Icon = step.icon && step.icon !== 'currency' ? ICONS[step.icon] : null
+  return (
+    <span aria-hidden className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[rgba(45,212,191,0.12)] text-[#5EEAD4]">
+      {Icon ? <Icon size={24} weight="duotone" /> : <span className="text-[15px] font-semibold tabular-nums">{n}</span>}
+    </span>
+  )
 }
 
 const EASE = [0.16, 1, 0.3, 1] as const
@@ -23,7 +64,7 @@ function FlowArrow({ vertical, delay }: { vertical: boolean; delay: number }) {
   const reduce = useReducedMotion()
   const Icon = vertical ? CaretDownIcon : CaretRightIcon
   return (
-    <span aria-hidden className={vertical ? 'flex h-8 items-center justify-center md:hidden' : 'hidden items-center pt-4 md:flex'}>
+    <span aria-hidden className={vertical ? 'flex h-8 items-center justify-center md:hidden' : 'hidden items-center pt-5 md:flex'}>
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
@@ -39,7 +80,7 @@ function FlowArrow({ vertical, delay }: { vertical: boolean; delay: number }) {
   )
 }
 
-export function DeliverySteps({ steps }: { steps: DeliveryStep[] }) {
+export function DeliverySteps({ steps, currencyIconUrl }: { steps: DeliveryStep[]; currencyIconUrl?: string | null }) {
   const reduce = useReducedMotion()
   return (
     <ol className="mx-auto mt-8 flex max-w-4xl flex-col items-stretch md:flex-row md:items-start md:justify-center">
@@ -52,9 +93,8 @@ export function DeliverySteps({ steps }: { steps: DeliveryStep[] }) {
             viewport={{ once: true, margin: '0px 0px -10% 0px' }}
             transition={{ duration: 0.5, ease: EASE, delay: i * 0.12 }}
           >
-            <span className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-[rgba(45,212,191,0.12)] text-[15px] font-semibold tabular-nums text-[#5EEAD4]">
-              {i + 1}
-            </span>
+            <StepMark step={s} n={i + 1} currencyIconUrl={currencyIconUrl} />
+            <span className="sr-only">Step {i + 1}: </span>
             <p className="mt-3 text-[15px] font-semibold text-text-primary">{s.title}</p>
             <p className="mx-auto mt-1 max-w-[15rem] text-[13.5px] leading-5 text-text-secondary">{s.body}</p>
           </motion.li>

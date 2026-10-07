@@ -37,7 +37,32 @@ describe('password FAQ rule', () => {
 
   it('Robux keeps "never": delivery is a game pass', () => {
     const faq = applyGuideToFaq(ADMIN_FAQ, getCurrencyGuide('roblox'))
-    expect(faq[1].a).toBe(ADMIN_FAQ[1].a)
+    expect(faq.find((f) => /password/i.test(f.q))?.a).toBe(ADMIN_FAQ[1].a)
+  })
+})
+
+describe('six questions at most', () => {
+  it("Roblox shows its picked six, in the guide's order", () => {
+    const admin = [
+      { q: 'How fast is delivery?', a: 'a' },
+      { q: 'Is buying Robux safe?', a: 'b' },
+      { q: 'Do I need to share my password?', a: 'c' },
+      { q: 'What payment methods do you accept?', a: 'd' },
+      { q: "What's your refund policy?", a: 'e' },
+    ]
+    const faq = applyGuideToFaq(admin, getCurrencyGuide('roblox'))
+    expect(faq.map((f) => f.q)).toEqual([
+      'Is buying Robux safe?',
+      'How fast is delivery?',
+      'Why is my Robux pending?',
+      "How many Robux do I get after Roblox's 30% fee?",
+      'Do I need to share my password?',
+      'Is there a Robux generator?',
+    ])
+  })
+  it('a guide without a pick is capped at six', () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ q: `Q${i}?`, a: 'a' }))
+    expect(applyGuideToFaq(many, getCurrencyGuide('fortnite'))).toHaveLength(6)
   })
 })
 
@@ -46,7 +71,8 @@ describe('faq_extra merge', () => {
     const guide = getCurrencyGuide('fortnite')!
     const faq = applyGuideToFaq(ADMIN_FAQ, guide)
     expect(faq.slice(0, 2).map((f) => f.q)).toEqual(ADMIN_FAQ.map((f) => f.q))
-    expect(faq.slice(2)).toEqual(guide.faq_extra)
+    const support = guide.support_topic ? [{ q: guide.support_topic.heading, a: guide.support_topic.paragraphs.slice(0, 2).join(' ') }] : []
+    expect(faq.slice(2)).toEqual([...guide.faq_extra, ...support])
   })
 
   it('skips a guide question the admin list already asks (same words, any case or punctuation)', () => {
@@ -54,6 +80,12 @@ describe('faq_extra merge', () => {
     const dup = { q: guide.faq_extra[0].q.toUpperCase().replace('?', ''), a: 'Admin copy.' }
     const faq = applyGuideToFaq([dup], guide)
     expect(faq.filter((f) => f.q.toLowerCase().startsWith(guide.faq_extra[0].q.toLowerCase().slice(0, 10)))).toHaveLength(1)
-    expect(faq).toHaveLength(guide.faq_extra.length)
+    expect(faq).toHaveLength(guide.faq_extra.length + (guide.support_topic ? 1 : 0))
+  })
+
+  it("adds the game's support question once (Roblox lists its own pending answer)", () => {
+    const roblox = getCurrencyGuide('roblox')!
+    const faq = applyGuideToFaq([], roblox)
+    expect(faq.filter((f) => /pending/i.test(f.q))).toHaveLength(1)
   })
 })

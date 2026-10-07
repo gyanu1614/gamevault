@@ -33,8 +33,6 @@ describe('buildHubFaq', () => {
       "What's the cheapest way to buy Robux?",
       'Can I buy Roblox items with real money?',
       'Can I buy a Roblox account?',
-      'How can I pay for Robux?',
-      'How fast is Roblox delivery?',
     ])
   })
 
@@ -44,8 +42,7 @@ describe('buildHubFaq', () => {
     )
     expect(roblox[3].a).toContain('the same amount for about $5.20, almost half price')
     for (const f of roblox) expect(f.a.startsWith('On DropMarket')).toBe(false)
-    expect(roblox[6].a).toContain('USDT, Bitcoin and Pix')
-    expect(roblox[7].a).toContain('about 8 minutes')
+    expect(roblox).toHaveLength(6)
   })
 
   it('drops questions with nothing true to say', () => {

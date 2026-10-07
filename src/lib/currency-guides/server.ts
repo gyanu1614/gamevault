@@ -84,44 +84,39 @@ export async function getGuideLinks(guide: CurrencyGuide, gameName: string): Pro
   }
 }
 
-function stripGame(currency: string, gameName: string): string {
-  const rest = currency.toLowerCase().startsWith(`${gameName.toLowerCase()} `) ? currency.slice(gameName.length + 1) : currency
-  return rest.charAt(0).toUpperCase() + rest.slice(1)
+export interface RelatedPageLink {
+  href: string
+  label: string
+  /** game_categories.type, for the category icon. */
+  type: string | null
 }
 
-export interface CurrencyPageCard {
+interface LivePage {
   gameSlug: string
   gameName: string
-  /** "Diamonds", "Tokens". */
-  currencyName: string
-  href: string
-  iconUrl: string | null
+  ecosystem: string | null
+  slug: string
+  name: string
+  type: string | null
   offers: number
 }
 
 /**
- * Every enabled currency page with at least one live offer, with its
- * admin-uploaded currency icon: the guide's games-currency carousel. One
- * cached read for all pages (listing counts move slowly; the nightly cron and
- * any game edit refresh it through GAME_DIRECTORY_TAG). Fails open to none.
+ * Every enabled category page with at least one live offer (test sellers
+ * left out). One cached read for every guide; the nightly cron and any game
+ * edit refresh it through GAME_DIRECTORY_TAG. Fails open to none.
  */
-const readCurrencyPages = unstable_cache(
-  async (): Promise<Array<CurrencyPageCard & { ecosystem: string | null }>> => {
+const readLivePages = unstable_cache(
+  async (): Promise<LivePage[]> => {
     try {
       const db = createAnonClient() as any
-      const [cats, cfgs, listings, testSellers] = await Promise.all([
+      const [cats, listings, testSellers] = await Promise.all([
         db
           .from('game_categories')
-          .select('id, slug, game:games!inner(id, slug, name, ecosystem, is_active)')
-          .eq('type', 'currency')
+          .select('id, slug, name, type, game:games!inner(slug, name, ecosystem, is_active)')
           .eq('is_enabled', true)
           .eq('game.is_active', true)
-          .limit(500),
-        db
-          .from('category_configs')
-          .select('game_id, config->currency_icon_url, config->unit_label')
-          .eq('category_type', 'currency')
-          .limit(1000),
+          .limit(3000),
         db.from('listings').select('game_category_id, seller_id').eq('status', 'active').limit(20_000),
         getTestSellerIds(),
       ])
@@ -131,68 +126,44 @@ const readCurrencyPages = unstable_cache(
         if (hidden.has(l.seller_id)) continue
         count.set(l.game_category_id, (count.get(l.game_category_id) ?? 0) + 1)
       }
-      const cfgByGame = new Map<string, { currency_icon_url: string | null; unit_label: string | null }>()
-      for (const c of (cfgs.data ?? []) as { game_id: string; currency_icon_url: string | null; unit_label: string | null }[]) {
-        cfgByGame.set(c.game_id, c)
-      }
-      const out: Array<CurrencyPageCard & { ecosystem: string | null }> = []
-      for (const c of (cats.data ?? []) as { id: string; slug: string; game: { id: string; slug: string; name: string; ecosystem: string | null } }[]) {
+      const out: LivePage[] = []
+      for (const c of (cats.data ?? []) as { id: string; slug: string; name: string | null; type: string | null; game: { slug: string; name: string; ecosystem: string | null } }[]) {
         const offers = count.get(c.id) ?? 0
         if (offers === 0) continue
-        const cfg = cfgByGame.get(c.game.id)
-        const guide = getCurrencyGuide(c.game.slug)
-        out.push({
-          gameSlug: c.game.slug,
-          gameName: c.game.name,
-          // "Blade Ball Tokens" under "Blade Ball" reads twice: drop the game.
-          currencyName: stripGame(guide?.currency ?? cfg?.unit_label ?? 'Currency', c.game.name),
-          href: `/${c.game.slug}/${c.slug}`,
-          iconUrl: cfg?.currency_icon_url ?? null,
-          offers,
-          ecosystem: c.game.ecosystem,
-        })
+        out.push({ gameSlug: c.game.slug, gameName: c.game.name, ecosystem: c.game.ecosystem, slug: c.slug, name: c.name ?? c.slug, type: c.type, offers })
       }
       return out.sort((a, b) => b.offers - a.offers || a.gameName.localeCompare(b.gameName))
     } catch {
       return []
     }
   },
-  ['currency-guide-currency-pages-v2'],
+  ['currency-guide-live-pages-v1'],
   { tags: [GAME_DIRECTORY_TAG], revalidate: 86_400 },
 )
 
 /**
- * The carousel for one guide: Roblox-family guides show Roblox experiences'
- * currencies; other games show the other popular currencies. Never the page's
- * own game; 20 at most.
+ * "More Roblox Games" (owner, 2026-10-06): this game's other categories with
+ * offers, then the busiest other games of the same family, one page each
+ * (Adopt Me Items, Steal a Brainrot Items…). Ten links at most.
  */
-export async function getRelatedCurrencyPages(guide: CurrencyGuide): Promise<CurrencyPageCard[]> {
-  const all = await readCurrencyPages()
+export async function getRelatedPages(
+  guide: CurrencyGuide,
+  gameName: string,
+  currentType: string = 'currency',
+  max = 10,
+): Promise<RelatedPageLink[]> {
+  const pages = await readLivePages()
   const roblox = guideFamily(guide) === 'roblox'
-  return all
-    .filter((p) => p.gameSlug !== guide.game && (roblox ? p.ecosystem === 'roblox' : p.ecosystem !== 'roblox'))
-    .slice(0, 20)
-    .map(({ ecosystem: _e, ...p }) => p)
-}
-
-/** This game's enabled categories that have live offers (the "More <Game>" links), in admin order. */
-export async function getGameCategoriesWithOffers(gameSlug: string): Promise<Array<{ href: string; name: string; type: string | null }>> {
-  try {
-    const db = createAnonClient() as any
-    const { data: cats } = await db
-      .from('game_categories')
-      .select('id, slug, name, type, sort_order, game:games!inner(slug)')
-      .eq('game.slug', gameSlug)
-      .eq('is_enabled', true)
-      .order('sort_order', { ascending: true })
-    const ids = ((cats ?? []) as { id: string }[]).map((c) => c.id)
-    if (ids.length === 0) return []
-    const { data: rows } = await db.from('listings').select('game_category_id').eq('status', 'active').in('game_category_id', ids).limit(5_000)
-    const live = new Set(((rows ?? []) as { game_category_id: string }[]).map((l) => l.game_category_id))
-    return ((cats ?? []) as { id: string; slug: string; name: string | null; type: string | null }[])
-      .filter((c) => live.has(c.id))
-      .map((c) => ({ href: `/${gameSlug}/${c.slug}`, name: c.name ?? c.slug, type: c.type }))
-  } catch {
-    return []
+  const own = pages
+    .filter((p) => p.gameSlug === guide.game && p.type !== currentType)
+    .map((p) => ({ href: `/${p.gameSlug}/${p.slug}`, label: `${gameName} ${p.name}`, type: p.type }))
+  const seen = new Set<string>([guide.game])
+  const others: RelatedPageLink[] = []
+  for (const p of pages) {
+    if (seen.has(p.gameSlug)) continue
+    if (roblox ? p.ecosystem !== 'roblox' : p.ecosystem === 'roblox') continue
+    seen.add(p.gameSlug)
+    others.push({ href: `/${p.gameSlug}/${p.slug}`, label: `${p.gameName} ${p.name}`, type: p.type })
   }
+  return [...own, ...others].slice(0, max)
 }

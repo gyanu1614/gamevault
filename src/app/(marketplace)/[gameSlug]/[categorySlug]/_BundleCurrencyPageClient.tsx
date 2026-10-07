@@ -307,7 +307,7 @@ export default function BundleCurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art (game watermark, shield
     // emblem) inside main's stacking context — same as the flexible
     // currency page.
-    <main className="relative isolate min-h-screen pb-12">
+    <main className="relative isolate min-h-screen overflow-x-clip pb-12">
       <SearchParamsBridge onParams={applyOfferLink} />
       {/* Header — currency icon + SEO title + tagline */}
       <header className="relative overflow-hidden border-b border-border-subtle">
@@ -663,8 +663,7 @@ export default function BundleCurrencyPageClient({
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
         <FaqSection
-          title={`${data.unitLabel} FAQ`}
-          sub={`Quick answers about buying ${data.gameName} ${data.unitLabel} on DropMarket.`}
+          title="Frequently Asked Questions"
           items={data.faq}
           className="mt-8 sm:mt-10"
         />

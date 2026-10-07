@@ -322,7 +322,7 @@ export default function CurrencyPageClient({
     // `isolate` keeps the -z-10 backdrop art INSIDE main's stacking
     // context — without it the logo would sink below the page's own
     // hero backdrop layer and disappear.
-    <main className="relative isolate min-h-screen pb-12 pt-3 sm:pt-4">
+    <main className="relative isolate min-h-screen overflow-x-clip pb-12 pt-3 sm:pt-4">
       <SearchParamsBridge onParams={applyOfferLink} />
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* V14b — No outer wrapping card. Each section is its own surface
@@ -435,8 +435,7 @@ export default function CurrencyPageClient({
       <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* ─── FAQ — admin-configured items (same text as the FAQPage JSON-LD). */}
         <FaqSection
-          title={`${data.currency.name} FAQ`}
-          sub={`Quick answers about buying ${data.currency.game} ${data.currency.name} on DropMarket.`}
+          title="Frequently Asked Questions"
           items={data.faq}
           className="mt-8 sm:mt-10"
         />

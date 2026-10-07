@@ -16,8 +16,7 @@ import { WarningIcon } from '@phosphor-icons/react/dist/ssr/Warning'
 import Link from '@/components/navigation/AppLink'
 import { ValueCallout } from '@/components/values/ValueCallout'
 import { buildPriceRows, guideFamily, type CurrencyGuide as Guide, type OurPrices, type PriceRow } from '@/lib/currency-guides'
-import type { CurrencyPageCard } from '@/lib/currency-guides/server'
-import { CurrencyCarousel } from './CurrencyCarousel'
+import type { RelatedPageLink } from '@/lib/currency-guides/server'
 import { DeliverySteps, type DeliveryStep } from './DeliverySteps'
 
 /**
@@ -44,12 +43,12 @@ export interface CurrencyGuideProps {
   gameName: string
   /** This page's live offers, for the "Sellers Here" column. */
   ours: OurPrices
-  /** This game's categories with live offers (More <Game>). */
-  categories: Array<{ href: string; name: string; type: string | null }>
-  /** Other games' currency pages for the carousel. */
-  currencyPages: CurrencyPageCard[]
+  /** "More Roblox Games": this game's other categories + other games' pages (≤ 10). */
+  related: RelatedPageLink[]
   /** Publisher whose rules forbid buying the currency (GTA$, Roubles). */
   rmtPublisher?: string | null
+  /** The currency's admin-uploaded icon (the last delivery step's mark). */
+  iconUrl?: string | null
 }
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -123,16 +122,39 @@ function Block({
       aria-labelledby={id}
       className={
         band
-          ? 'mt-10 scroll-mt-24 rounded-2xl bg-[linear-gradient(180deg,#1D1E23_0%,#18191D_100%)] px-5 py-10 sm:mt-12 sm:px-12 sm:py-14'
-          : 'mt-10 scroll-mt-24 px-1 py-6 sm:mt-12 sm:py-8'
+          ? 'relative isolate mt-16 scroll-mt-24 px-1 py-12 sm:mt-20 sm:py-16'
+          : 'mt-12 scroll-mt-24 px-1 py-4 sm:mt-16 sm:py-6'
       }
     >
+      {band && <BandGround />}
       <h3 id={id} className="text-[24px] font-bold leading-tight tracking-[-0.02em] text-text-primary [text-wrap:balance] sm:text-[30px]">
         {title}
       </h3>
-      {lead && <p className="mx-auto mt-3 max-w-4xl text-[16px] leading-[26px] text-text-secondary [text-wrap:pretty]">{lead}</p>}
+      {lead && <p className="mx-auto mt-3 max-w-6xl text-[16px] leading-[26px] text-text-secondary [text-wrap:pretty]">{lead}</p>}
       {children}
     </section>
+  )
+}
+
+const BAND = '#1B1C21'
+/** A soft wave, 1440 × 40, filled to the bottom edge. */
+const WAVE = 'M0 40 V22 C 180 4 380 0 620 12 C 860 24 1080 34 1260 22 C 1340 17 1400 12 1440 10 V40 Z'
+
+/**
+ * A band's ground: one flat tone (no gradient, so no seam against the page),
+ * edge to edge, with a soft wave on its top and bottom edges instead of a
+ * straight cut (owner, 2026-10-06). The page <main> clips the overflow.
+ */
+function BandGround() {
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2" style={{ background: BAND }}>
+      <svg className="absolute bottom-[calc(100%-1px)] left-0 h-6 w-full sm:h-10" viewBox="0 0 1440 40" preserveAspectRatio="none">
+        <path d={WAVE} fill={BAND} />
+      </svg>
+      <svg className="absolute left-0 top-[calc(100%-1px)] h-6 w-full -scale-y-100 sm:h-10" viewBox="0 0 1440 40" preserveAspectRatio="none">
+        <path d={WAVE} fill={BAND} />
+      </svg>
+    </span>
   )
 }
 
@@ -150,29 +172,35 @@ function Tip({ label, children, tone = 'blue', icon }: { label: string; children
 /* ── Savings table ───────────────────────────────────────────────── */
 
 function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
+  // A real table (owner, 2026-10-06: "a nice full table, not just lines"):
+  // one rounded box, a filled header row, each row a full-width cell band.
+  const th = 'px-4 py-3.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-text-tertiary sm:px-6'
+  const td = 'px-4 py-4 sm:px-6'
   return (
-    <div className="mx-auto mt-8 max-w-3xl overflow-x-auto text-left">
-      <table className="w-full border-collapse text-[15px] tabular-nums">
-        <caption className="sr-only">{`${currency} prices: ${officialLabel} compared with sellers here`}</caption>
-        <thead>
-          <tr className="text-[12px] font-medium uppercase tracking-[0.06em] text-text-tertiary">
-            <th scope="col" className="pb-3 pr-4 font-medium">{currency}</th>
-            <th scope="col" className="pb-3 pr-4 text-right font-medium">{officialLabel}</th>
-            <th scope="col" className="pb-3 pr-4 text-right font-medium">Sellers Here</th>
-            <th scope="col" className="pb-3 text-right font-medium">You Save</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.amount} className="border-t border-white/[0.07]">
-              <th scope="row" className="py-3.5 pr-4 font-semibold text-text-primary">{num.format(r.amount)}</th>
-              <td className="py-3.5 pr-4 text-right text-text-tertiary">{r.officialUsd != null ? usd.format(r.officialUsd) : '—'}</td>
-              <td className="py-3.5 pr-4 text-right font-semibold text-text-primary">{r.oursUsd != null ? usd.format(r.oursUsd) : '—'}</td>
-              <td className="py-3.5 text-right font-medium text-[#3FD986]">{r.savePct != null ? `${r.savePct}%` : '—'}</td>
+    <div className="mx-auto mt-8 max-w-4xl overflow-hidden rounded-xl bg-[#1D1E23] text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.8)]">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[15px] tabular-nums">
+          <caption className="sr-only">{`${currency} prices: ${officialLabel} compared with sellers here`}</caption>
+          <thead className="bg-[#24252B]">
+            <tr>
+              <th scope="col" className={th}>Amount</th>
+              <th scope="col" className={`${th} text-right`}>{officialLabel}</th>
+              <th scope="col" className={`${th} text-right`}>Sellers Here</th>
+              <th scope="col" className={`${th} text-right`}>You Save</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.amount} className={i % 2 === 1 ? 'bg-white/[0.015]' : undefined}>
+                <th scope="row" className={`${td} whitespace-nowrap font-semibold text-text-primary`}>{formatAmount(currency, r.amount)}</th>
+                <td className={`${td} text-right text-text-tertiary`}>{r.officialUsd != null ? usd.format(r.officialUsd) : '—'}</td>
+                <td className={`${td} text-right text-[16px] font-bold text-text-primary`}>{r.oursUsd != null ? usd.format(r.oursUsd) : '—'}</td>
+                <td className={`${td} text-right font-semibold text-[#3FD986]`}>{r.savePct != null ? `${r.savePct}%` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -196,9 +224,32 @@ const CATEGORY_ICON: Record<string, ComponentType<IconProps>> = {
   service: RocketLaunchIcon,
 }
 
+const GLYPH: Record<string, string> = { currency: 'currency', items: 'items', account: 'accounts', service: 'boosting', top_up: 'top-up' }
+
+/** The house category glyph (public/icons/categories), drawn white through a mask, floating. */
+function CategoryMark({ type }: { type: string | null }) {
+  const src = `/icons/categories/${GLYPH[type ?? ''] ?? 'items'}.svg`
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-8 w-8 bg-white/85 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:bg-white"
+      style={{
+        WebkitMaskImage: `url(${src})`,
+        maskImage: `url(${src})`,
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+      }}
+    />
+  )
+}
+
 /* ── The guide ───────────────────────────────────────────────────── */
 
-export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages, rmtPublisher }: CurrencyGuideProps) {
+export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, iconUrl }: CurrencyGuideProps) {
   const c = guide.currency
   const page = pageCopy(guide)
   const noPassword = guide.delivery.no_password
@@ -206,8 +257,9 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
   const allRows = buildPriceRows(guide, ours)
   const rows = page.savings ? page.savings.amounts.map((a) => allRows.find((r) => r.amount === a)).filter((r): r is PriceRow => !!r) : []
   const showTable = rows.some((r) => r.officialUsd != null)
-  const tipRow = page.savings && 'tip_amount' in page.savings && page.savings.tip_amount
-    ? rows.find((r) => r.amount === page.savings!.tip_amount)
+  const tipAmount = page.savings && 'tip_amount' in page.savings ? page.savings.tip_amount : undefined
+  const tipRow = tipAmount
+    ? rows.find((r) => r.amount === tipAmount)
     : rows.filter((r) => r.officialUsd != null && r.oursUsd != null).at(-1)
   const tipSave = tipRow?.officialUsd != null && tipRow.oursUsd != null ? Math.round(tipRow.officialUsd - tipRow.oursUsd) : 0
   const officialLabel = guide.game === 'roblox' ? 'On Roblox' : 'Official Store'
@@ -220,45 +272,37 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
       ? { icon: LockKeyIcon, tint: '245,196,81', title: 'Keep Your Password', body: 'Delivery never needs your login.' }
       : { icon: KeyIcon, tint: '245,196,81', title: 'Access Explained First', body: "Your seller says what's needed before you pay." },
   ]
-  const more = categories.filter((cat) => cat.type !== 'currency')
 
   return (
     <section id="currency-guide" aria-labelledby="currency-guide-title" className="mx-auto mt-16 w-full max-w-7xl text-center sm:mt-24">
+      {/* One title, and "what it is" as its subtitle (owner, 2026-10-06: the
+          guide title and "What Is Robux?" read as two competing titles). */}
       <header>
         <h2 id="currency-guide-title" className="text-[28px] font-bold leading-tight tracking-[-0.025em] text-text-primary [text-wrap:balance] sm:text-[36px]">
           {guideTitle(gameName, c)}
         </h2>
-        <p className="mx-auto mt-3 max-w-4xl text-[17px] leading-7 text-text-secondary [text-wrap:pretty]">{page.subtitle}</p>
+        <p className="mx-auto mt-4 max-w-6xl text-[16px] leading-[26px] text-text-secondary [text-wrap:pretty] sm:text-[17px] sm:leading-7">
+          {page.what_is.text}
+          {'links' in page.what_is && page.what_is.links && page.what_is.links.length > 0 && (
+            <>
+              {' '}
+              {page.what_is.spend_intro}{' '}
+              {page.what_is.links.map((l, i, all) => (
+                <span key={l.href}>
+                  <Link href={l.href} className="font-medium text-text-primary underline decoration-white/25 underline-offset-[3px] transition-colors hover:decoration-white/70">
+                    {l.label}
+                  </Link>
+                  {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' and ' : '.'}
+                </span>
+              ))}
+            </>
+          )}
+        </p>
       </header>
-
-      {/* 1 — What it is, and where else you can spend money on this site. */}
-      <Block
-        id="guide-what"
-        title={page.what_is.heading}
-        lead={
-          <>
-            {page.what_is.text}
-            {'links' in page.what_is && page.what_is.links && page.what_is.links.length > 0 && (
-              <>
-                {' '}
-                {page.what_is.spend_intro}{' '}
-                {page.what_is.links.map((l, i, all) => (
-                  <span key={l.href}>
-                    <Link href={l.href} className="font-medium text-text-primary underline decoration-white/25 underline-offset-[3px] transition-colors hover:decoration-white/70">
-                      {l.label}
-                    </Link>
-                    {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' and ' : '.'}
-                  </span>
-                ))}
-              </>
-            )}
-          </>
-        }
-      />
 
       {/* 2 — Savings: five packs, official price against the cheapest seller here. */}
       {page.savings && showTable && (
-        <Block id="guide-prices" band title={page.savings.heading} lead={page.savings.text}>
+        <Block id="guide-prices" title={page.savings.heading}>
           <SavingsTable rows={rows} currency={c} officialLabel={officialLabel} />
           {tipRow && tipSave >= 2 && (
             <Tip label="Tip" icon={PiggyBankIcon}>
@@ -269,8 +313,8 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
       )}
 
       {/* 3 — Delivery, step by step. */}
-      <Block id="guide-delivery" title={guide.delivery.heading} lead={page.delivery.text}>
-        <DeliverySteps steps={steps} />
+      <Block id="guide-delivery" band title={guide.delivery.heading} lead={page.delivery.text}>
+        <DeliverySteps steps={steps} currencyIconUrl={iconUrl} />
         {'tip' in page.delivery && page.delivery.tip && (
           <Tip label="Did You Know?" icon={LightbulbIcon}>
             {page.delivery.tip}
@@ -281,7 +325,6 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
       {/* 4 — Safety. */}
       <Block
         id="guide-safety"
-        band
         title={`Is It Safe to Buy ${c}?`}
         lead={
           rmtPublisher
@@ -305,49 +348,47 @@ export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages
         )}
       </Block>
 
-      {/* 5 — The game's own support question. */}
-      {page.support && <Block id="guide-help" title={page.support.heading} lead={page.support.text} />}
+      {/* The game's support question ("Why is my Robux pending?") lives in the
+          page FAQ (applyGuideToFaq), not as a one-line section here. */}
 
-      {/* 6 — More of this game: floating icon links, only categories with offers. */}
-      <Block id="guide-more" band title={`More ${gameName}`}>
-        <ul className="mx-auto mt-7 flex max-w-3xl flex-wrap items-start justify-center gap-x-10 gap-y-6">
-          {[{ href: `/${guide.game}`, name: `${gameName} Marketplace`, type: 'hub' }, ...more].map((l) => {
-            const Icon = l.type === 'hub' ? StorefrontIcon : (CATEGORY_ICON[l.type ?? ''] ?? PackageIcon)
-            return (
+      {/* 6 — One links section: this game's other categories, then the busiest
+          other games (owner, 2026-10-06: merged "More Roblox" and the
+          currency carousel; category glyphs, not game art; ten at most). */}
+      {related.length > 0 && (
+        <Block id="guide-more" band title={guideFamily(guide) === 'roblox' ? 'More Roblox Games' : 'More Popular Games'}>
+          <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5">
+            {related.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
-                  className="group flex flex-col items-center gap-2 rounded-md px-2 py-1 text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                  className="group flex flex-col items-center gap-2.5 rounded-md px-2 py-1 text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 >
-                  <span aria-hidden className="text-text-primary drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:-translate-y-0.5">
-                    <Icon size={28} weight="duotone" />
-                  </span>
-                  {l.type === 'hub' ? l.name : `${gameName} ${l.name}`}
+                  <CategoryMark type={l.type} />
+                  <span className="text-center leading-snug">{l.label}</span>
                 </Link>
               </li>
-            )
-          })}
-        </ul>
-      </Block>
-
-      {/* 7 — Other games' currencies. */}
-      {currencyPages.length > 0 && (
-        <Block id="guide-currencies" title={guideFamily(guide) === 'roblox' ? 'Roblox Games Currencies' : 'More Game Currencies'}>
-          <CurrencyCarousel items={currencyPages} />
+            ))}
+          </ul>
         </Block>
       )}
 
-      <p className="mx-auto mt-14 max-w-3xl text-[12px] leading-5 text-text-tertiary">
+      <p className="mx-auto mt-14 text-[12px] leading-5 text-text-tertiary">
         {trademarkLine(guide.trademark_owner, gameName, c)}
       </p>
     </section>
   )
 }
 
-function trademarkLine(owner: string, gameName: string, currency: string): string {
+/**
+ * The not-affiliated line: names the marks, says we're independent and not
+ * affiliated, sponsored or endorsed. One line on desktop (owner, 2026-10-06).
+ */
+export function trademarkLine(owner: string, gameName: string, currency: string): string {
   const stop = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
+  const who = owner.replace(/[.\s]+$/, '')
   if (/\btrademark\b/i.test(owner)) {
-    return `${stop(owner)} DropMarket is an independent marketplace and isn't affiliated with or endorsed by them.`
+    return `${stop(owner)} DropMarket is independent and isn't affiliated with, sponsored or endorsed by them.`
   }
-  return `${gameName} and ${currency} are trademarks of ${stop(owner)} DropMarket is an independent marketplace and isn't affiliated with or endorsed by ${stop(owner)}`
+  const marks = currency.toLowerCase().includes(gameName.toLowerCase()) ? currency : `${gameName} and ${currency}`
+  return `${marks} are trademarks of ${who}. DropMarket is independent and isn't affiliated with, sponsored or endorsed by ${who}.`
 }

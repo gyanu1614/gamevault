@@ -129,7 +129,9 @@ export function buildHubFaq(input: HubFaqInput): HubFaqItem[] {
       : `Most orders arrive within minutes. Every listing shows the seller's own delivery time, so you know before you pay.`,
   })
 
-  return out
+  // Six at most (owner, 2026-10-06), in the order above: price, safety, how
+  // to buy, cheapest, the game's own question, items.
+  return out.slice(0, 6)
 }
 
 /** The official pack closest to 1,000 units with a USD price (the "how much is 1000 X" search). */
