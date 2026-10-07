@@ -1033,7 +1033,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     'border-b backdrop-blur-2xl backdrop-saturate-150',
                     // Pages with a sub-navbar drop the hairline so navbar +
                     // sub-nav read as one block with a single bottom edge.
-                    hasSubNav ? 'border-b-transparent' : 'border-b-[rgba(255,255,255,0.08)]',
+                    hasSubNav ? 'border-b-transparent' : 'border-b-[rgba(255,255,255,0.08)] [[data-subnav]_&]:border-b-transparent',
                     'bg-[var(--navbar-bg,rgba(29,30,35,0.78))]',
                     'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]',
                   ),

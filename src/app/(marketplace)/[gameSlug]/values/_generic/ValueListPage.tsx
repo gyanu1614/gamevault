@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { ValueItemIndex } from '@/components/values/ValueItemIndex'
 import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList, faqPage, itemList } from '@/lib/seo/jsonld'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -170,6 +171,13 @@ async function ValueListBody({
           chromaHubHref: hasHubPage(gameSlug, 'chromas') ? `/${gameSlug}/chromas` : null,
           inventoryHref: hasHubPage(gameSlug, 'inventory') ? `/${gameSlug}/inventory` : null,
         })}
+      />
+
+      {/* Every item page linked in the server HTML (the grid above pages). */}
+      <ValueItemIndex
+        className="pt-12"
+        title={`All ${hub.shortName} Values A–Z`}
+        items={rows.filter((r) => r.href).map((r) => ({ href: r.href!, name: r.name }))}
       />
 
       <HubBuyCta gameName={theme.name} gameSlug={gameSlug} buyHref={buyHref} />

@@ -28,7 +28,19 @@ import { EXPAND_TRANSITION } from '@/components/ui/expand'
 const COLLAPSED = 158
 
 
-export function GamesDirectoryCollapse({ children }: { children: React.ReactNode }) {
+export function GamesDirectoryCollapse({
+  children,
+  collapsed = COLLAPSED,
+  fade = 'var(--footer-bg)',
+  label = 'Show All',
+}: {
+  children: React.ReactNode
+  /** Collapsed height in px (the footer's default shows ~1.5 rows). */
+  collapsed?: number
+  /** The ground the fade melts into (the footer by default). */
+  fade?: string
+  label?: string
+}) {
   const [open, setOpen] = useState(false)
   const reduce = useReducedMotion()
   const transition = reduce ? { duration: 0 } : EXPAND_TRANSITION
@@ -37,7 +49,7 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
     <div>
       <motion.div
         initial={false}
-        animate={{ height: open ? 'auto' : COLLAPSED }}
+        animate={{ height: open ? 'auto' : collapsed }}
         transition={transition}
         className="relative overflow-hidden"
       >
@@ -55,7 +67,7 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
           style={{
             background:
               // Fades to the FOOTER's ground (it lives in the footer panel).
-              'linear-gradient(to top, var(--footer-bg) 12%, color-mix(in srgb, var(--footer-bg) 72%, transparent) 55%, transparent 100%)',
+              `linear-gradient(to top, ${fade} 12%, color-mix(in srgb, ${fade} 72%, transparent) 55%, transparent 100%)`,
             backdropFilter: 'blur(3px)',
             WebkitBackdropFilter: 'blur(3px)',
             maskImage: 'linear-gradient(to top, #000 40%, transparent)',
@@ -78,7 +90,7 @@ export function GamesDirectoryCollapse({ children }: { children: React.ReactNode
           onClick={() => setOpen((v) => !v)}
           className="inline-flex h-8 items-center gap-1.5 px-2 text-[14px] font-bold text-white transition-opacity duration-200 [text-shadow:0_1px_10px_rgba(0,0,0,0.8)] hover:opacity-80"
         >
-          {open ? 'Show Less' : 'Show All'}
+          {open ? 'Show Less' : label}
           <ChevronDown
             aria-hidden
             className={`h-4 w-4 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}

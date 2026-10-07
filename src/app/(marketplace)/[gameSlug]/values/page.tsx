@@ -20,6 +20,7 @@ import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import AdoptMeValuesPage from './_AdoptMeValuesPage'
 import GenericValuesHubPage from './_generic/ValuesHubPage'
 import ValueListPage from './_generic/ValueListPage'
+import { ValueItemIndex } from '@/components/values/ValueItemIndex'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { valueListHub } from '@/lib/values/hub-config'
 import { getGameContentTheme } from '@/lib/content/theme'
@@ -644,6 +645,14 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
           buyHref="/steal-a-brainrot/buy-items"
         />
       )}
+
+      {/* Every brainrot page linked in the server HTML (the directory above
+          is client-rendered and paged). */}
+      <ValueItemIndex
+        className="pt-12"
+        title="All Steal a Brainrot Values A–Z"
+        items={brainrots.map((b) => ({ href: `/steal-a-brainrot/values/${b.slug}`, name: b.name }))}
+      />
 
       {/* Guides strip — flows this high-authority page's equity into blog
           content (self-hides if the game has no tagged posts). */}
