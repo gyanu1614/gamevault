@@ -49,6 +49,50 @@ const officialPricesSchema = z
   })
   .strict()
 
+/** An internal link inside guide copy ("Diamonds in 99 Nights in the Forest"). */
+const guideLinkSchema = z.object({ label: text, href: z.string().regex(/^\/[a-z0-9/-]+$/) }).strict()
+
+/**
+ * The on-page guide copy, written by hand per game (owner, 2026-10-06): every
+ * section is a heading + one or two plain lines a 10-year-old can read. The
+ * long fact fields above stay the source of truth for numbers and the FAQ.
+ */
+const pageSchema = z
+  .object({
+    subtitle: text,
+    what_is: z
+      .object({
+        heading: text,
+        text,
+        /** "Many Roblox games have their own currency too, like" — then the links. */
+        spend_intro: text.optional(),
+        links: z.array(guideLinkSchema).max(6).optional(),
+      })
+      .strict(),
+    savings: z
+      .object({
+        heading: text,
+        text,
+        /** The official packs to compare, in order (5 at most). */
+        amounts: z.array(z.number().int().positive()).min(2).max(5),
+        /** The pack the "You save about $X" tip quotes. */
+        tip_amount: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
+    delivery: z
+      .object({
+        text,
+        steps: z.array(z.object({ title: text, body: text }).strict()).min(3).max(5),
+        /** One line, starts "Did You Know?" or "Tip:" in the UI. */
+        tip: text.optional(),
+      })
+      .strict(),
+    safety_text: text,
+    support: z.object({ heading: text, text }).strict().optional(),
+  })
+  .strict()
+
 export const currencyGuideSchema = z
   .object({
     game: z.string().regex(/^[a-z0-9-]+$/),
@@ -71,6 +115,7 @@ export const currencyGuideSchema = z
       .nullable()
       .optional(),
     faq_extra: z.array(z.object({ q: text, a: text }).strict()).default([]),
+    page: pageSchema.optional(),
     trademark_owner: text,
     sources: z.array(z.string().url()).default([]),
     confidence: z.enum(['high', 'medium', 'low']),

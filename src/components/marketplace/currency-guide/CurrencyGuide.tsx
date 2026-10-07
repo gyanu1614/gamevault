@@ -1,65 +1,58 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { IconProps } from '@phosphor-icons/react'
-import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
-import { ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock'
+import { CoinsIcon } from '@phosphor-icons/react/dist/ssr/Coins'
+import { GiftIcon } from '@phosphor-icons/react/dist/ssr/Gift'
 import { IdentificationCardIcon } from '@phosphor-icons/react/dist/ssr/IdentificationCard'
 import { KeyIcon } from '@phosphor-icons/react/dist/ssr/Key'
 import { LightbulbIcon } from '@phosphor-icons/react/dist/ssr/Lightbulb'
 import { LockKeyIcon } from '@phosphor-icons/react/dist/ssr/LockKey'
+import { PackageIcon } from '@phosphor-icons/react/dist/ssr/Package'
 import { PiggyBankIcon } from '@phosphor-icons/react/dist/ssr/PiggyBank'
+import { RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch'
 import { ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
-import { StarIcon } from '@phosphor-icons/react/dist/ssr/Star'
+import { StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront'
+import { UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle'
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr/Warning'
 import Link from '@/components/navigation/AppLink'
 import { ValueCallout } from '@/components/values/ValueCallout'
-import { WaySectionHead } from '@/app/(marketplace)/[gameSlug]/values/_generic/WaySectionHead'
-import { MARKET_CARD } from '@/lib/ui/surfaces'
-import { cn } from '@/lib/utils'
-import {
-  bestSaving,
-  buildPriceRows,
-  cheapestUnitPrice,
-  formatCheckedAt,
-  type CurrencyGuide as Guide,
-  type OurPrices,
-  type PriceRow,
-} from '@/lib/currency-guides'
-import type { GuideLinks } from '@/lib/currency-guides/links'
-import { GuideFrame, type GuideNavItem } from './GuideFrame'
-import { GuideReveal } from './GuideReveal'
+import { buildPriceRows, guideFamily, type CurrencyGuide as Guide, type OurPrices, type PriceRow } from '@/lib/currency-guides'
+import type { CurrencyPageCard } from '@/lib/currency-guides/server'
+import { CurrencyCarousel } from './CurrencyCarousel'
+import { DeliverySteps, type DeliveryStep } from './DeliverySteps'
 
 /**
- * "<Currency> Guide: Prices, Delivery and Safety", the closing section of a
- * currency page (after the FAQ). Owner-approved design, 2026-10-05.
+ * "<Game> <Currency> Guide", the closing section of a currency page (after
+ * the FAQ). Owner rules, 2026-10-06 (memory: currency-guide-design-rules):
+ * on the page itself (no card, no table of contents), every section a
+ * centred heading + one or two plain lines, then:
  *
- * ONE surface, sub-sections as plain rows on hairlines (no card-in-card),
- * numbered toned heads, at most one slim callout per section. Server-rendered:
- * every word is in the HTML; the client bits (jump rail, fold, reveal) only
- * move it. Data: the researched fact sheet (lib/currency-guides) + this page's
- * live offers + the cached directory and review reads.
+ *   What is it      where you spend it, linked to our other currency pages
+ *   Savings         5 packs: official price (grey) vs sellers here, tip line
+ *   Delivery        steps joined by moving arrows, one-line tip
+ *   Safety          three points with floating icons
+ *   Support topic   ("Why Is My Robux Pending?")
+ *   More <Game>     floating icon links, only categories with offers
+ *   Currencies      looping carousel of other games' currency pages
+ *
+ * Copy comes from the guide's hand-written `page` block; a guide without one
+ * falls back to its long fact fields until it is written. Server component:
+ * every word is in the HTML; the arrows and carousel are small client islands.
  */
 
 export interface CurrencyGuideProps {
   guide: Guide
   gameName: string
-  /** This page's live offers, for the "DropMarket" column. */
+  /** This page's live offers, for the "Sellers Here" column. */
   ours: OurPrices
-  /** Real rating for the game: only passed with ≥10 reviews. */
-  reviews: { count: number; average: number } | null
-  links: GuideLinks
-  /** Admin-uploaded currency icon (category_configs.currency_icon_url). */
-  iconUrl?: string | null
+  /** This game's categories with live offers (More <Game>). */
+  categories: Array<{ href: string; name: string; type: string | null }>
+  /** Other games' currency pages for the carousel. */
+  currencyPages: CurrencyPageCard[]
   /** Publisher whose rules forbid buying the currency (GTA$, Roubles). */
   rmtPublisher?: string | null
 }
 
-const TEAL = '#5EEAD4'
-const TEAL_RGB = '45,212,191'
-/** Anchors clear the navbar (and the phone sub-nav). */
-const SCROLL_MT = 'scroll-mt-[calc(var(--navbar-bottom)+76px)] md:scroll-mt-[calc(var(--navbar-bottom)+24px)]'
-
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-const usdFine = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 4 })
 const num = new Intl.NumberFormat('en-US')
 
 /** "1,000 Robux"; GTA$ reads as a prefix: "GTA$250,000". */
@@ -73,513 +66,261 @@ export function splitLead(text: string): [string, string] {
   return m ? [m[1], m[2]] : [text.trim(), '']
 }
 
-function perLabel(per: number, currency: string): string {
-  if (per === 1_000_000) return `per 1M ${currency}`
-  if (per === 1_000) return `per 1K ${currency}`
-  return `per ${num.format(per)} ${currency}`
+/** "Roblox Robux Guide"; "Blade Ball Tokens Guide" when the currency already names the game. */
+export function guideTitle(gameName: string, currency: string): string {
+  const name = currency.toLowerCase().includes(gameName.toLowerCase()) ? currency : `${gameName} ${currency}`
+  return `${name} Guide: Prices, Delivery and Safety`
+}
+
+/** The guide's on-page copy: the hand-written block, or a fallback from the fact fields. */
+export function pageCopy(guide: Guide) {
+  const c = guide.currency
+  if (guide.page) return guide.page
+  const packs = guide.official_prices?.packages ?? []
+  return {
+    subtitle: `What ${c} ${/s$/i.test(c) ? 'are' : 'is'}, how much you can save, how delivery works and how to buy safely.`,
+    what_is: { heading: `What ${/s$/i.test(c) ? 'Are' : 'Is'} ${c}?`, text: splitLead(guide.what_is.paragraphs[0])[0] },
+    savings: packs.length >= 2
+      ? {
+          heading: `How Much Do You Save on ${c}?`,
+          text: `Sellers here set their own prices, so the same ${c} often costs less than the official store.`,
+          amounts: packs.slice(0, 5).map((p) => p.amount),
+        }
+      : undefined,
+    delivery: {
+      text: guide.delivery.typical_time ? splitLead(guide.delivery.typical_time)[0] : `Here is how ${c} reaches your account.`,
+      steps: guide.delivery.steps.slice(0, 4).map((s, i) => ({ title: `Step ${i + 1}`, body: splitLead(s)[0] })),
+    },
+    safety_text: 'Every order is covered, and every seller is ID-checked before they can list.',
+    support: guide.support_topic ? { heading: guide.support_topic.heading, text: splitLead(guide.support_topic.paragraphs[0])[0] } : undefined,
+  }
+}
+
+/* ── Building blocks ─────────────────────────────────────────────── */
+
+function Block({ id, title, lead, children }: { id: string; title: string; lead?: ReactNode; children?: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="mt-16 scroll-mt-24 sm:mt-20">
+      <h3 id={id} className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-text-primary [text-wrap:balance] sm:text-[26px]">
+        {title}
+      </h3>
+      {lead && <p className="mx-auto mt-3 max-w-2xl text-[15.5px] leading-7 text-text-secondary [text-wrap:pretty]">{lead}</p>}
+      {children}
+    </section>
+  )
+}
+
+/** A slim one-line tip (blue) under a section; wraps only on narrow screens. */
+function Tip({ label, children, tone = 'blue', icon }: { label: string; children: ReactNode; tone?: 'blue' | 'yellow'; icon: ComponentType<IconProps> }) {
+  return (
+    <div className="mx-auto mt-8 w-fit max-w-full text-left">
+      <ValueCallout tone={tone} icon={icon} title={label}>
+        {children}
+      </ValueCallout>
+    </div>
+  )
+}
+
+/* ── Savings table ───────────────────────────────────────────────── */
+
+function SavingsTable({ rows, currency, officialLabel }: { rows: PriceRow[]; currency: string; officialLabel: string }) {
+  return (
+    <div className="mx-auto mt-8 max-w-2xl overflow-x-auto text-left">
+      <table className="w-full border-collapse text-[15px] tabular-nums">
+        <caption className="sr-only">{`${currency} prices: ${officialLabel} compared with sellers here`}</caption>
+        <thead>
+          <tr className="text-[12px] font-medium uppercase tracking-[0.06em] text-text-tertiary">
+            <th scope="col" className="pb-3 pr-4 font-medium">{currency}</th>
+            <th scope="col" className="pb-3 pr-4 text-right font-medium">{officialLabel}</th>
+            <th scope="col" className="pb-3 pr-4 text-right font-medium">Sellers Here</th>
+            <th scope="col" className="pb-3 text-right font-medium">You Save</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.amount} className="border-t border-white/[0.07]">
+              <th scope="row" className="py-3.5 pr-4 font-semibold text-text-primary">{num.format(r.amount)}</th>
+              <td className="py-3.5 pr-4 text-right text-text-tertiary">{r.officialUsd != null ? usd.format(r.officialUsd) : '—'}</td>
+              <td className="py-3.5 pr-4 text-right font-semibold text-text-primary">{r.oursUsd != null ? usd.format(r.oursUsd) : '—'}</td>
+              <td className="py-3.5 text-right font-medium text-[#3FD986]">{r.savePct != null ? `${r.savePct}%` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/* ── Floating icon row (safety, more) ────────────────────────────── */
+
+function FloatIcon({ icon: Icon, tint }: { icon: ComponentType<IconProps>; tint: string }) {
+  return (
+    <span aria-hidden className="inline-flex drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" style={{ color: `rgb(${tint})` }}>
+      <Icon size={30} weight="duotone" />
+    </span>
+  )
+}
+
+const CATEGORY_ICON: Record<string, ComponentType<IconProps>> = {
+  currency: CoinsIcon,
+  items: PackageIcon,
+  account: UserCircleIcon,
+  top_up: CoinsIcon,
+  gift_card: GiftIcon,
+  service: RocketLaunchIcon,
+}
+
+/* ── The guide ───────────────────────────────────────────────────── */
+
+export function CurrencyGuide({ guide, gameName, ours, categories, currencyPages, rmtPublisher }: CurrencyGuideProps) {
+  const c = guide.currency
+  const page = pageCopy(guide)
+  const noPassword = guide.delivery.no_password
+
+  const allRows = buildPriceRows(guide, ours)
+  const rows = page.savings ? page.savings.amounts.map((a) => allRows.find((r) => r.amount === a)).filter((r): r is PriceRow => !!r) : []
+  const showTable = rows.some((r) => r.officialUsd != null)
+  const tipRow = page.savings && 'tip_amount' in page.savings && page.savings.tip_amount
+    ? rows.find((r) => r.amount === page.savings!.tip_amount)
+    : rows.filter((r) => r.officialUsd != null && r.oursUsd != null).at(-1)
+  const tipSave = tipRow?.officialUsd != null && tipRow.oursUsd != null ? Math.round(tipRow.officialUsd - tipRow.oursUsd) : 0
+  const officialLabel = guide.game === 'roblox' ? 'On Roblox' : 'Official Store'
+
+  const steps: DeliveryStep[] = page.delivery.steps
+  const safety: { icon: ComponentType<IconProps>; tint: string; title: string; body: string }[] = [
+    { icon: ShieldCheckIcon, tint: '63,217,134', title: 'Every Order Covered', body: "Not delivered or not as described? You get a full refund." },
+    { icon: IdentificationCardIcon, tint: '94,234,212', title: 'ID-Checked Sellers', body: 'Every seller passes an ID check before they can sell.' },
+    noPassword
+      ? { icon: LockKeyIcon, tint: '245,196,81', title: 'Keep Your Password', body: 'Delivery never needs your login.' }
+      : { icon: KeyIcon, tint: '245,196,81', title: 'Access Explained First', body: "Your seller says what's needed before you pay." },
+  ]
+  const more = categories.filter((cat) => cat.type !== 'currency')
+
+  return (
+    <section id="currency-guide" aria-labelledby="currency-guide-title" className="mx-auto mt-16 max-w-5xl px-4 text-center sm:mt-24 sm:px-6">
+      <header>
+        <h2 id="currency-guide-title" className="text-[26px] font-bold leading-tight tracking-[-0.025em] text-text-primary [text-wrap:balance] sm:text-[34px]">
+          {guideTitle(gameName, c)}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-[16px] leading-7 text-text-secondary [text-wrap:pretty]">{page.subtitle}</p>
+      </header>
+
+      {/* 1 — What it is, and where else you can spend money on this site. */}
+      <Block
+        id="guide-what"
+        title={page.what_is.heading}
+        lead={
+          <>
+            {page.what_is.text}
+            {'links' in page.what_is && page.what_is.links && page.what_is.links.length > 0 && (
+              <>
+                {' '}
+                {page.what_is.spend_intro}{' '}
+                {page.what_is.links.map((l, i, all) => (
+                  <span key={l.href}>
+                    <Link href={l.href} className="font-medium text-text-primary underline decoration-white/25 underline-offset-[3px] transition-colors hover:decoration-white/70">
+                      {l.label}
+                    </Link>
+                    {i < all.length - 2 ? ', ' : i === all.length - 2 ? ' and ' : '.'}
+                  </span>
+                ))}
+              </>
+            )}
+          </>
+        }
+      />
+
+      {/* 2 — Savings: five packs, official price against the cheapest seller here. */}
+      {page.savings && showTable && (
+        <Block id="guide-prices" title={page.savings.heading} lead={page.savings.text}>
+          <SavingsTable rows={rows} currency={c} officialLabel={officialLabel} />
+          {tipRow && tipSave >= 2 && (
+            <Tip label="Tip" icon={PiggyBankIcon}>
+              You save about {usd.format(tipSave).replace(/\.00$/, '')} on {formatAmount(c, tipRow.amount)} when you buy here.
+            </Tip>
+          )}
+        </Block>
+      )}
+
+      {/* 3 — Delivery, step by step. */}
+      <Block id="guide-delivery" title={guide.delivery.heading} lead={page.delivery.text}>
+        <DeliverySteps steps={steps} />
+        {'tip' in page.delivery && page.delivery.tip && (
+          <Tip label="Did You Know?" icon={LightbulbIcon}>
+            {page.delivery.tip}
+          </Tip>
+        )}
+      </Block>
+
+      {/* 4 — Safety. */}
+      <Block
+        id="guide-safety"
+        title={`Is It Safe to Buy ${c}?`}
+        lead={
+          rmtPublisher
+            ? `Your order is covered here, but ${rmtPublisher}'s rules don't allow buying ${c} outside the game, and ${rmtPublisher} can act on accounts it links to a sale.`
+            : page.safety_text
+        }
+      >
+        <ul className="mx-auto mt-9 grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6">
+          {safety.map((f) => (
+            <li key={f.title} className="flex flex-col items-center">
+              <FloatIcon icon={f.icon} tint={f.tint} />
+              <p className="mt-3 text-[15px] font-semibold text-text-primary">{f.title}</p>
+              <p className="mx-auto mt-1 max-w-[15rem] text-[13.5px] leading-5 text-text-secondary">{f.body}</p>
+            </li>
+          ))}
+        </ul>
+        {rmtPublisher && (
+          <Tip label="Before You Buy" tone="yellow" icon={WarningIcon}>
+            Only buy what you&apos;re comfortable risking on your account.
+          </Tip>
+        )}
+      </Block>
+
+      {/* 5 — The game's own support question. */}
+      {page.support && <Block id="guide-help" title={page.support.heading} lead={page.support.text} />}
+
+      {/* 6 — More of this game: floating icon links, only categories with offers. */}
+      <Block id="guide-more" title={`More ${gameName}`}>
+        <ul className="mx-auto mt-7 flex max-w-3xl flex-wrap items-start justify-center gap-x-10 gap-y-6">
+          {[{ href: `/${guide.game}`, name: `${gameName} Marketplace`, type: 'hub' }, ...more].map((l) => {
+            const Icon = l.type === 'hub' ? StorefrontIcon : (CATEGORY_ICON[l.type ?? ''] ?? PackageIcon)
+            return (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="group flex flex-col items-center gap-2 rounded-md px-2 py-1 text-[14px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                >
+                  <span aria-hidden className="text-text-primary drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:-translate-y-0.5">
+                    <Icon size={28} weight="duotone" />
+                  </span>
+                  {l.type === 'hub' ? l.name : `${gameName} ${l.name}`}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </Block>
+
+      {/* 7 — Other games' currencies. */}
+      {currencyPages.length > 0 && (
+        <Block id="guide-currencies" title={guideFamily(guide) === 'roblox' ? 'Roblox Games Currencies' : 'More Game Currencies'}>
+          <CurrencyCarousel items={currencyPages} />
+        </Block>
+      )}
+
+      <p className="mx-auto mt-14 max-w-3xl text-[12px] leading-5 text-text-tertiary">
+        {trademarkLine(guide.trademark_owner, gameName, c)}
+      </p>
+    </section>
+  )
 }
 
 function trademarkLine(owner: string, gameName: string, currency: string): string {
-  // Sentence-form owners ("Blade Ball is a Roblox experience; Roblox is a
-  // trademark of Roblox Corporation") already name the marks.
-  // "Epic Games, Inc." already ends a sentence: no second full stop.
   const stop = (t: string) => (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
   if (/\btrademark\b/i.test(owner)) {
     return `${stop(owner)} DropMarket is an independent marketplace and isn't affiliated with or endorsed by them.`
   }
   return `${gameName} and ${currency} are trademarks of ${stop(owner)} DropMarket is an independent marketplace and isn't affiliated with or endorsed by ${stop(owner)}`
-}
-
-export function CurrencyGuide(props: CurrencyGuideProps) {
-  const { guide, gameName, ours, iconUrl } = props
-  const c = guide.currency
-  const support = guide.support_topic ?? null
-
-  const nav: GuideNavItem[] = [
-    { id: 'guide-what', label: `What ${/s$/i.test(c) ? 'Are' : 'Is'} ${c}`, folded: false },
-    { id: 'guide-prices', label: 'Official vs DropMarket', folded: false },
-    { id: 'guide-delivery', label: 'How Delivery Works', folded: true },
-    { id: 'guide-safety', label: 'Is It Safe', folded: true },
-    ...(support ? [{ id: 'guide-help', label: support.heading, folded: true }] : []),
-    { id: 'guide-more', label: `More ${gameName}`, folded: true },
-  ]
-  const n = (id: string) => nav.findIndex((x) => x.id === id) + 1
-
-  const open = (
-    <>
-      <GuideReveal index={0}>
-        <WhatIsSection guide={guide} n={n('guide-what')} />
-      </GuideReveal>
-      <GuideReveal index={1}>
-        <PricesSection guide={guide} ours={ours} n={n('guide-prices')} />
-      </GuideReveal>
-    </>
-  )
-  const folded = (
-    <>
-      <GuideReveal index={0}>
-        <DeliverySection guide={guide} n={n('guide-delivery')} />
-      </GuideReveal>
-      <GuideReveal index={1}>
-        <SafetySection {...props} n={n('guide-safety')} />
-      </GuideReveal>
-      {support && (
-        <GuideReveal index={2}>
-          <GuideRow id="guide-help" n={n('guide-help')} title={support.heading} tone="neutral">
-            <Paragraphs items={support.paragraphs} />
-          </GuideRow>
-        </GuideReveal>
-      )}
-      <GuideReveal index={3}>
-        <MoreSection gameName={gameName} links={props.links} n={n('guide-more')} />
-      </GuideReveal>
-    </>
-  )
-
-  return (
-    <section
-      id="currency-guide"
-      aria-labelledby="currency-guide-title"
-      className={cn('relative isolate mx-auto mt-12 max-w-5xl overflow-hidden rounded-lg sm:mt-16', MARKET_CARD)}
-    >
-      {/* A soft teal light from the top corner, and the currency's own icon,
-          large and faint. Decorative only. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background: `radial-gradient(55% 60% at 100% 0%, rgba(${TEAL_RGB},0.07) 0%, rgba(${TEAL_RGB},0.02) 45%, transparent 75%)`,
-        }}
-      />
-      {iconUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded icon, served as-is
-        <img
-          src={iconUrl}
-          alt=""
-          aria-hidden
-          loading="lazy"
-          decoding="async"
-          className="pointer-events-none absolute -right-8 -top-10 -z-10 h-[220px] w-[220px] rotate-[-12deg] object-contain opacity-[0.05] max-sm:hidden"
-        />
-      )}
-
-      <div className="p-5 sm:p-8">
-        <header className="flex items-center gap-4">
-          {iconUrl && (
-            <span
-              className="hidden h-14 w-14 shrink-0 place-items-center rounded-lg sm:grid"
-              style={{ background: `radial-gradient(closest-side, rgba(${TEAL_RGB},0.20), rgba(${TEAL_RGB},0.04) 70%, rgba(255,255,255,0.03))` }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded icon, served as-is */}
-              <img src={iconUrl} alt="" loading="lazy" decoding="async" className="h-9 w-9 object-contain" />
-            </span>
-          )}
-          <div className="min-w-0">
-            <h2
-              id="currency-guide-title"
-              className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-primary sm:text-[26px]"
-            >
-              {c} Guide: Prices, Delivery and Safety
-            </h2>
-            <p className="mt-1.5 text-[14px] text-text-secondary">
-              What {c} {/s$/i.test(c) ? 'are' : 'is'}, what {/s$/i.test(c) ? 'they cost' : 'it costs'}, how delivery works and how your order is covered.
-            </p>
-          </div>
-        </header>
-
-        <div className="mt-7 border-t border-white/[0.07] pt-7">
-          <GuideFrame
-            nav={nav}
-            open={open}
-            folded={folded}
-            foldLabel={`Read the Full ${c} Guide`}
-            foldHint={`Delivery, safety${support ? ', common questions' : ''} and more`}
-          />
-        </div>
-
-        <p className="mt-8 border-t border-white/[0.07] pt-5 text-[12px] leading-5 text-text-tertiary">
-          {trademarkLine(guide.trademark_owner, gameName, c)}
-        </p>
-      </div>
-    </section>
-  )
-}
-
-/* ── Building blocks ─────────────────────────────────────────────── */
-
-function GuideRow({
-  id,
-  n,
-  title,
-  tone,
-  aside,
-  first = false,
-  children,
-}: {
-  id: string
-  n: number
-  title: string
-  tone: 'neutral' | 'green' | 'teal'
-  /** Beside the heading (the "No Password Needed" chip). */
-  aside?: ReactNode
-  first?: boolean
-  children: ReactNode
-}) {
-  return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className={cn(SCROLL_MT, !first && 'mt-7 border-t border-white/[0.07] pt-7')}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <WaySectionHead n={n} title={title} tone={tone} id={`${id}-title`} />
-        {aside}
-      </div>
-      <div className="mt-5">{children}</div>
-    </section>
-  )
-}
-
-/** Paragraphs, the first sentence of the first one in bold: answer first. */
-function Paragraphs({ items }: { items: string[] }) {
-  return (
-    <div className="space-y-3 text-[15px] leading-7 text-text-secondary">
-      {items.map((p, i) => {
-        if (i > 0) return <p key={i}>{p}</p>
-        const [lead, rest] = splitLead(p)
-        return (
-          <p key={i}>
-            <strong className="font-semibold text-text-primary">{lead}</strong>
-            {rest ? ` ${rest}` : null}
-          </p>
-        )
-      })}
-    </div>
-  )
-}
-
-function IconTile({ icon: Icon, tint }: { icon: ComponentType<IconProps>; tint?: string }) {
-  return (
-    <span
-      aria-hidden
-      className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
-      style={{ background: tint ? `rgba(${tint},0.12)` : 'rgba(255,255,255,0.07)', color: tint ? `rgb(${tint})` : undefined }}
-    >
-      <Icon size={18} weight="duotone" />
-    </span>
-  )
-}
-
-/* ── 1. What Is ──────────────────────────────────────────────────── */
-
-function WhatIsSection({ guide, n }: { guide: Guide; n: number }) {
-  return (
-    <GuideRow id="guide-what" n={n} title={guide.what_is.heading} tone="neutral" first>
-      <Paragraphs items={guide.what_is.paragraphs} />
-    </GuideRow>
-  )
-}
-
-/* ── 2. Prices ───────────────────────────────────────────────────── */
-
-function PricesSection({ guide, ours, n }: { guide: Guide; ours: OurPrices; n: number }) {
-  const c = guide.currency
-  const op = guide.official_prices
-  const rows = buildPriceRows(guide, ours)
-  const best = bestSaving(rows)
-  const cheapest = rows.length === 0 ? cheapestUnitPrice(ours) : null
-  const checked = formatCheckedAt(guide.checked_at)
-  const where = op?.packages[0]?.where
-  const oursWhat = ours.kind === 'bundle' ? 'the cheapest live Global or US offer for that pack' : 'the cheapest live offer for that exact amount'
-
-  return (
-    <GuideRow id="guide-prices" n={n} title={op?.heading ?? `${c} Prices on DropMarket`} tone="teal">
-      {rows.length > 0 ? (
-        <>
-          <p className="text-[14px] leading-6 text-text-secondary">
-            Official prices from {where}, checked {checked}. The DropMarket price is {oursWhat}, before the service fee.
-          </p>
-          <PriceTable rows={rows} currency={c} />
-        </>
-      ) : op ? null : (
-        <p className="text-[15px] leading-7 text-text-secondary">
-          There&apos;s no official cash price list for {c}, so there&apos;s nothing to compare against.{' '}
-          {cheapest ? "Here's what DropMarket sellers charge right now." : 'No seller has stock on DropMarket right now.'}
-        </p>
-      )}
-
-      {op?.note && <p className="mt-4 text-[14px] leading-6 text-text-secondary">{op.note}</p>}
-
-      {op?.extras && op.extras.length > 0 && (
-        <dl className="mt-4 divide-y divide-white/[0.06] rounded-md bg-white/[0.03] px-4">
-          {op.extras.map((x) => (
-            <div key={x.label} className="grid gap-x-6 gap-y-0.5 py-2.5 text-[14px] leading-6 sm:grid-cols-[190px_minmax(0,1fr)]">
-              <dt className="font-medium text-text-primary">{x.label}</dt>
-              <dd className="text-text-secondary">{x.detail}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {best && best.officialUsd != null && best.oursUsd != null && (
-        <ValueCallout tone="blue" icon={PiggyBankIcon} title={`Biggest Saving: ${best.savePct}% on ${formatAmount(c, best.amount)}`} className="mt-5">
-          {usd.format(best.oursUsd)} on DropMarket against {usd.format(best.officialUsd)} at the official store.
-        </ValueCallout>
-      )}
-      {cheapest && (
-        <ValueCallout tone="blue" icon={PiggyBankIcon} title={`Cheapest Right Now: ${usdFine.format(cheapest.usd)} ${perLabel(cheapest.per, c)}`} className="mt-5">
-          From a live offer on this page. Prices move as sellers update them.
-        </ValueCallout>
-      )}
-    </GuideRow>
-  )
-}
-
-/**
- * One table, two layouts: columns from md up (the DropMarket column is a
- * quiet teal band running to the edge, the saving pill inside it); on phones
- * each row becomes a small stacked block (amount, then Official | DropMarket)
- * with the column names drawn from data-label. No horizontal scroll.
- */
-function PriceTable({ rows, currency }: { rows: PriceRow[]; currency: string }) {
-  const cellLabel = 'max-md:before:mb-0.5 max-md:before:block max-md:before:text-[11.5px] max-md:before:font-medium max-md:before:text-text-tertiary max-md:before:content-[attr(data-label)]'
-  const band = { background: `rgba(${TEAL_RGB},0.06)` }
-  const line = 'md:border-t md:border-white/[0.06]'
-  return (
-    <table className="mt-4 w-full border-separate border-spacing-0 text-[14px] tabular-nums">
-      <caption className="sr-only">
-        Official {currency} prices against the cheapest DropMarket price for the same amount
-      </caption>
-      <thead className="max-md:hidden">
-        <tr className="text-left text-[12.5px] text-text-tertiary">
-          <th scope="col" className="w-[34%] pb-2 pr-4 font-medium">Amount</th>
-          <th scope="col" className="w-[24%] pb-2 pr-4 font-medium">Official Price</th>
-          <th scope="col" className="rounded-t-md px-4 pb-2 pt-2 font-medium" style={{ ...band, color: TEAL }}>
-            DropMarket
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => {
-          const last = i === rows.length - 1
-          return (
-            <tr
-              key={`${r.amount}-${i}`}
-              className="max-md:grid max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-2 max-md:border-t max-md:border-white/[0.06] max-md:py-3"
-            >
-              <td className={cn('py-2.5 pr-4 align-middle max-md:col-span-2 max-md:py-0', line)}>
-                <span className="font-medium text-text-primary">{formatAmount(currency, r.amount)}</span>
-                {(r.label || r.appAmount) && (
-                  <span className="mt-0.5 block text-[12px] text-text-tertiary md:mt-0.5">
-                    {r.label ?? `${num.format(r.appAmount!)} in the app`}
-                  </span>
-                )}
-              </td>
-              <td
-                data-label="Official Price"
-                className={cn('py-2.5 pr-4 align-middle text-text-secondary max-md:py-1.5', line, cellLabel)}
-              >
-                {r.officialUsd != null ? usd.format(r.officialUsd) : `${num.format(r.officialRobux ?? 0)} Robux`}
-              </td>
-              <td
-                data-label="DropMarket"
-                className={cn('px-4 py-2.5 align-middle max-md:rounded-md max-md:px-2.5 max-md:py-1.5', line, last && 'md:rounded-b-md', cellLabel)}
-                style={band}
-              >
-                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  {r.oursUsd != null ? (
-                    <span className="font-semibold" style={{ color: TEAL }}>
-                      {usd.format(r.oursUsd)}
-                    </span>
-                  ) : (
-                    <span className="text-text-tertiary">
-                      <span aria-hidden>—</span>
-                      <span className="sr-only">No live offer for this amount</span>
-                    </span>
-                  )}
-                  {r.savePct != null && (
-                    <span
-                      className="inline-flex items-center rounded-md px-1.5 py-px text-[11.5px] font-semibold"
-                      style={{ background: `rgba(${TEAL_RGB},0.12)`, color: TEAL }}
-                    >
-                      Save {r.savePct}%
-                    </span>
-                  )}
-                </span>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
-}
-
-/* ── 3. Delivery ─────────────────────────────────────────────────── */
-
-const SELLER_STEPS_FALLBACK = 'Your seller sends delivery steps in the order chat.'
-
-function DeliverySection({ guide, n }: { guide: Guide; n: number }) {
-  const d = guide.delivery
-  const unclear = d.method === 'unclear_see_notes'
-  return (
-    <GuideRow
-      id="guide-delivery"
-      n={n}
-      title={d.heading}
-      tone="neutral"
-      aside={
-        d.no_password === true ? (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(63,217,134,0.10)] px-2.5 py-1 text-[12.5px] font-semibold text-[#3FD986]">
-            <LockKeyIcon aria-hidden size={14} weight="duotone" />
-            No Password Needed
-          </span>
-        ) : null
-      }
-    >
-      {d.steps.length > 0 ? (
-        <ol className="relative space-y-4">
-          {/* The thread between the numbers. */}
-          <span aria-hidden className="absolute bottom-3 left-[13.5px] top-3 w-px bg-white/[0.08]" />
-          {d.steps.map((step, i) => {
-            const [lead, rest] = splitLead(step)
-            return (
-              <li key={i} className="relative flex items-start gap-3.5">
-                <span
-                  aria-hidden
-                  className="relative grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#2A2B31] text-[13px] font-semibold tabular-nums text-text-primary"
-                >
-                  {i + 1}
-                </span>
-                <p className="min-w-0 pt-0.5 text-[15px] leading-6 text-text-secondary">
-                  <span className="sr-only">Step {i + 1}: </span>
-                  <span className="font-medium text-text-primary">{lead}</span>
-                  {rest ? ` ${rest}` : null}
-                </p>
-              </li>
-            )
-          })}
-        </ol>
-      ) : (
-        <p className="text-[15px] leading-7 text-text-secondary">{SELLER_STEPS_FALLBACK}</p>
-      )}
-
-      {unclear && d.steps.length > 0 ? (
-        <ValueCallout tone="yellow" icon={LightbulbIcon} title="Good To Know" className="mt-5">
-          {[SELLER_STEPS_FALLBACK, d.typical_time].filter(Boolean).join(' ')}
-        </ValueCallout>
-      ) : d.typical_time ? (
-        <ValueCallout tone="blue" icon={ClockIcon} title="Delivery Time" className="mt-5">
-          {d.typical_time}
-        </ValueCallout>
-      ) : null}
-    </GuideRow>
-  )
-}
-
-/* ── 4. Is It Safe ───────────────────────────────────────────────── */
-
-function SafetySection({ guide, reviews, rmtPublisher, gameName, n }: CurrencyGuideProps & { n: number }) {
-  const c = guide.currency
-  const noPassword = guide.delivery.no_password
-  const facts: { icon: ComponentType<IconProps>; tint?: string; title: string; body: string }[] = [
-    { icon: ShieldCheckIcon, tint: '63,217,134', title: 'SafeDrop Protection', body: 'Item Guaranteed or Full Refund.' },
-    { icon: IdentificationCardIcon, title: 'ID-Verified Sellers', body: 'Every seller passes an ID check before they can list.' },
-    noPassword
-      ? { icon: LockKeyIcon, title: 'Your Password Stays Yours', body: 'Delivery never needs your login.' }
-      : { icon: KeyIcon, title: 'Access Explained Up Front', body: "Your seller says what's needed before you pay." },
-  ]
-  if (reviews) {
-    facts.push({
-      icon: StarIcon,
-      tint: '250,204,21',
-      title: `Rated ${reviews.average.toFixed(1)} out of 5`,
-      body: `From ${num.format(reviews.count)} buyer reviews on ${gameName} orders.`,
-    })
-  }
-
-  return (
-    <GuideRow id="guide-safety" n={n} title={`Is It Safe to Buy ${c} on DropMarket?`} tone="green">
-      <p className="text-[15px] leading-7 text-text-secondary">
-        {rmtPublisher ? (
-          <>
-            {/* OWNER: wording for games whose publisher bans buying the currency (README safety flags). */}
-            <strong className="font-semibold text-text-primary">
-              DropMarket covers your order, but {rmtPublisher}&apos;s rules don&apos;t allow buying {c} outside the game.
-            </strong>{' '}
-            {rmtPublisher} can remove {c} or suspend accounts it links to a sale. SafeDrop Protection covers the delivery, not what {rmtPublisher} does afterwards.
-          </>
-        ) : (
-          <>
-            <strong className="font-semibold text-text-primary">Yes. Every order is covered by SafeDrop Protection.</strong>{' '}
-            If your {c} doesn&apos;t arrive as described, you get a full refund.
-          </>
-        )}
-      </p>
-
-      <ul className={cn('mt-5 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', facts.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
-        {facts.map((f) => (
-          <li key={f.title} className="flex items-start gap-3">
-            <IconTile icon={f.icon} tint={f.tint} />
-            <div className="min-w-0">
-              <p className="text-[14px] font-semibold leading-5 text-text-primary">{f.title}</p>
-              <p className="mt-0.5 text-[13px] leading-5 text-text-secondary">{f.body}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      {rmtPublisher ? (
-        <ValueCallout tone="yellow" icon={WarningIcon} title="Before You Buy" className="mt-5">
-          Only buy what you&apos;re comfortable risking on your account.
-        </ValueCallout>
-      ) : noPassword === false ? (
-        <ValueCallout tone="yellow" icon={LightbulbIcon} title="Good To Know" className="mt-5">
-          If you share a login for delivery, change your password once the order is complete.
-        </ValueCallout>
-      ) : null}
-    </GuideRow>
-  )
-}
-
-/* ── 6. More on DropMarket ───────────────────────────────────────── */
-
-const CHIP =
-  'group inline-flex h-9 items-center gap-2 rounded-md bg-white/[0.05] px-3 text-[13px] font-medium text-text-secondary ' +
-  'transition-colors duration-200 hover:bg-white/[0.09] hover:text-text-primary ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
-
-function MoreSection({ gameName, links, n }: { gameName: string; links: GuideLinks; n: number }) {
-  return (
-    <GuideRow id="guide-more" n={n} title={`More ${gameName} on DropMarket`} tone="neutral">
-      <ul className="flex flex-wrap gap-2">
-        {links.game.map((l) => (
-          <li key={l.href}>
-            <Link href={l.href} className={CHIP}>
-              {l.label}
-              <CaretRightIcon aria-hidden size={12} weight="bold" className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {links.related.length > 0 && (
-        <>
-          <p className="mt-5 text-[13px] font-medium text-text-tertiary">Other Game Currencies</p>
-          <ul className="mt-2.5 flex flex-wrap gap-2">
-            {links.related.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className={CHIP}>
-                  {l.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element -- game icon, served as-is
-                    <img src={l.imageUrl} alt="" loading="lazy" decoding="async" className="h-5 w-5 rounded-[4px] object-cover" />
-                  )}
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </GuideRow>
-  )
 }

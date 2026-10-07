@@ -13,20 +13,74 @@
     "heading": "Robux Prices: Official Store vs DropMarket",
     "note": "Roblox gives up to 25% more Robux when you buy on the web, on a computer or with a gift card. In the mobile and console apps the same money buys less, for example $9.99 gets you 1,000 Robux on the web and 800 in the app.",
     "packages": [
-      { "amount": 270, "usd": 2.99, "app_amount": 240, "where": "roblox.com (web)" },
-      { "amount": 500, "usd": 4.99, "app_amount": 400, "where": "roblox.com (web)" },
-      { "amount": 1000, "usd": 9.99, "app_amount": 800, "where": "roblox.com (web)" },
-      { "amount": 1500, "usd": 14.99, "app_amount": 1200, "where": "roblox.com (web)" },
-      { "amount": 2000, "usd": 19.99, "app_amount": 1700, "where": "roblox.com (web)" },
-      { "amount": 3625, "usd": 34.99, "app_amount": 3150, "where": "roblox.com (web)" },
-      { "amount": 5250, "usd": 49.99, "app_amount": 4500, "where": "roblox.com (web)" },
-      { "amount": 11000, "usd": 99.99, "app_amount": 10000, "where": "roblox.com (web)" },
-      { "amount": 24000, "usd": 199.99, "app_amount": 22500, "where": "roblox.com (web)" }
+      {
+        "amount": 270,
+        "usd": 2.99,
+        "app_amount": 240,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 500,
+        "usd": 4.99,
+        "app_amount": 400,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 1000,
+        "usd": 9.99,
+        "app_amount": 800,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 1500,
+        "usd": 14.99,
+        "app_amount": 1200,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 2000,
+        "usd": 19.99,
+        "app_amount": 1700,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 3625,
+        "usd": 34.99,
+        "app_amount": 3150,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 5250,
+        "usd": 49.99,
+        "app_amount": 4500,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 11000,
+        "usd": 99.99,
+        "app_amount": 10000,
+        "where": "roblox.com (web)"
+      },
+      {
+        "amount": 24000,
+        "usd": 199.99,
+        "app_amount": 22500,
+        "where": "roblox.com (web)"
+      }
     ],
     "extras": [
-      { "label": "Roblox Plus", "detail": "$4.99/mo, no Robux included: 10% off items (20% from the third month), free Robux transfers, unlimited trading" },
-      { "label": "Plus 500 / 1000 / 2000", "detail": "$8.99 / $12.99 / $21.99 a month, with 500 / 1,000 / 2,000 Robux each month" },
-      { "label": "Roblox Premium", "detail": "No longer sold to new members since Roblox Plus launched on April 30, 2026" }
+      {
+        "label": "Roblox Plus",
+        "detail": "$4.99/mo, no Robux included: 10% off items (20% from the third month), free Robux transfers, unlimited trading"
+      },
+      {
+        "label": "Plus 500 / 1000 / 2000",
+        "detail": "$8.99 / $12.99 / $21.99 a month, with 500 / 1,000 / 2,000 Robux each month"
+      },
+      {
+        "label": "Roblox Premium",
+        "detail": "No longer sold to new members since Roblox Plus launched on April 30, 2026"
+      }
     ],
     "source": "https://www.roblox.com/upgrades/robux"
   },
@@ -64,6 +118,10 @@
     {
       "q": "Is there a Robux generator?",
       "a": "No. Roblox says there's no such thing as a Robux generator, and any site or game that offers one is a scam."
+    },
+    {
+      "q": "What is Roblox Plus?",
+      "a": "Roblox Plus is Roblox's monthly membership. Plus costs $4.99 a month and gives you 10% off items (20% from the third month), free Robux transfers and unlimited trading. Plus 500, Plus 1000 and Plus 2000 cost $8.99, $12.99 and $21.99 a month and add that many Robux every month. It replaced Roblox Premium for new members on April 30, 2026."
     }
   ],
   "trademark_owner": "Roblox Corporation",
@@ -80,5 +138,70 @@
     "https://devforum.roblox.com/t/30-days-have-passed-and-robux-is-still-pending/4643285"
   ],
   "confidence": "high",
-  "notes": "Package prices and app amounts read from the JSON embedded in roblox.com/upgrades/robux (USD, fetched from a US IP on 2026-10-05; field nonPromotionalPlatformRobuxAmount = app/console amount). Plus prices from the same page; a third-party source said Plus 1000 = $13.49 but the Roblox page says $12.99. The 30% pass fee is widely documented (creator docs) but I did not fetch a Roblox page stating it; medium confidence on the wording only. Pass pending length: Roblox publishes no number for passes; '5 to 7 days' comes from our own live Roblox seller listing and community reports, '30 days' from Roblox's Limited-resale article and devforum staff replies. Direct Robux transfers: the Sending/Receiving article says 16+ age check (under-16 needs parent approval) while the Roblox Plus article says 18+ (under-18 needs parent approval); I wrote 'both sides need an age check' to stay true to both. One live seller also asks buyers to be age-verified (16+) and to restore/make the experience public; that's a seller rule, not a Roblox rule, so it's left out of the generic steps."
+  "notes": "Package prices and app amounts read from the JSON embedded in roblox.com/upgrades/robux (USD, fetched from a US IP on 2026-10-05; field nonPromotionalPlatformRobuxAmount = app/console amount). Plus prices from the same page; a third-party source said Plus 1000 = $13.49 but the Roblox page says $12.99. The 30% pass fee is widely documented (creator docs) but I did not fetch a Roblox page stating it; medium confidence on the wording only. Pass pending length: Roblox publishes no number for passes; '5 to 7 days' comes from our own live Roblox seller listing and community reports, '30 days' from Roblox's Limited-resale article and devforum staff replies. Direct Robux transfers: the Sending/Receiving article says 16+ age check (under-16 needs parent approval) while the Roblox Plus article says 18+ (under-18 needs parent approval); I wrote 'both sides need an age check' to stay true to both. One live seller also asks buyers to be age-verified (16+) and to restore/make the experience public; that's a seller rule, not a Roblox rule, so it's left out of the generic steps.",
+  "page": {
+    "subtitle": "What Robux is, how much you can save, how it gets to your account and how to buy it safely.",
+    "what_is": {
+      "heading": "What Is Robux?",
+      "text": "Robux is the money of Roblox. You spend it on avatar items, game passes and boosts in any Roblox game.",
+      "spend_intro": "Many Roblox games have their own currency too, and you can buy those here, like",
+      "links": [
+        {
+          "label": "Diamonds in 99 Nights in the Forest",
+          "href": "/99-nights-in-the-forest/buy-currency"
+        },
+        {
+          "label": "Tokens in Blade Ball",
+          "href": "/blade-ball/buy-currency"
+        },
+        {
+          "label": "Sheckles in Grow a Garden 2",
+          "href": "/grow-a-garden-2/buy-currency"
+        },
+        {
+          "label": "Gems in Anime Dice",
+          "href": "/anime-dice/buy-currency"
+        }
+      ]
+    },
+    "savings": {
+      "heading": "How Much Do You Save on Robux?",
+      "text": "Roblox sells Robux at fixed prices. Sellers here set their own, and most charge a lot less for the same Robux.",
+      "amounts": [
+        500,
+        1000,
+        5250,
+        11000,
+        24000
+      ],
+      "tip_amount": 11000
+    },
+    "delivery": {
+      "text": "Robux reaches you through a game pass, so you never share your password.",
+      "steps": [
+        {
+          "title": "Make a Game Pass",
+          "body": "Create a pass in your game and put it on sale."
+        },
+        {
+          "title": "Send the Link",
+          "body": "Share your username and the pass link in the order chat."
+        },
+        {
+          "title": "Seller Buys It",
+          "body": "The seller buys your pass, usually within minutes."
+        },
+        {
+          "title": "Robux Arrives",
+          "body": "It shows as Pending, then moves into your balance."
+        }
+      ],
+      "tip": "Roblox keeps Robux from a pass sale as Pending for about 5 to 7 days before you can spend it."
+    },
+    "safety_text": "Yes. Every order is covered, every seller is ID-checked, and you never give out your password.",
+    "support": {
+      "heading": "Why Is My Robux Pending?",
+      "text": "Roblox holds Robux from a pass sale for a few days to stop fraud. It usually clears in 5 to 7 days. Still pending after 30? Contact Roblox Support."
+    }
+  }
 }

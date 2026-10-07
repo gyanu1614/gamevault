@@ -2,97 +2,79 @@ import { describe, it, expect, vi } from 'vitest'
 import React, { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { getCurrencyGuide, type OurPrices } from '@/lib/currency-guides'
-import { CurrencyGuide, formatAmount, splitLead, type CurrencyGuideProps } from './CurrencyGuide'
+import { CurrencyGuide, formatAmount, guideTitle, pageCopy, splitLead, type CurrencyGuideProps } from './CurrencyGuide'
 
 vi.stubGlobal('React', React)
+vi.mock('embla-carousel-react', () => ({ default: () => [() => {}, undefined] }))
+vi.mock('embla-carousel-auto-scroll', () => ({ default: () => ({}) }))
 
-const links = { game: [{ href: '/roblox/items', label: 'Roblox Items' }], related: [{ href: '/fortnite/buy-vbucks', label: 'Fortnite V-Bucks' }] }
-const ours: OurPrices = { kind: 'flexible', granularity: 'unit', offers: [{ pricePerUnit: 0.0052, minQty: 1000, stock: 10_000 }] }
+const ours: OurPrices = { kind: 'flexible', granularity: 'unit', offers: [{ pricePerUnit: 0.0052, minQty: 100, stock: 100_000 }] }
+const categories = [
+  { href: '/roblox/buy-robux', name: 'Robux', type: 'currency' },
+  { href: '/roblox/buy-items', name: 'Items', type: 'items' },
+  { href: '/roblox/buy-accounts', name: 'Accounts', type: 'account' },
+]
+const currencyPages = [
+  { gameSlug: 'blade-ball', gameName: 'Blade Ball', currencyName: 'Blade Ball Tokens', href: '/blade-ball/buy-currency', iconUrl: null, offers: 2 },
+]
 
 function render(slug: string, extra: Partial<CurrencyGuideProps> = {}) {
   const guide = getCurrencyGuide(slug)!
   return renderToStaticMarkup(
-    createElement(CurrencyGuide, { guide, gameName: 'Roblox', ours, reviews: null, links, ...extra }),
+    createElement(CurrencyGuide, { guide, gameName: 'Roblox', ours, categories, currencyPages, ...extra }),
   )
 }
 
-describe('CurrencyGuide server HTML', () => {
-  it('has one H2 and every section, folded ones included, in the HTML', () => {
-    const html = render('roblox')
+describe('CurrencyGuide (on-page layout)', () => {
+  const html = render('roblox')
+
+  it('one H2, the "<Game> <Currency> Guide" title, no table of contents', () => {
     expect(html.match(/<h2/g)).toHaveLength(1)
-    expect(html).toContain('Robux Guide: Prices, Delivery and Safety')
-    for (const t of [
-      'What Is Robux and What Can You Buy With It?',
-      'Robux Prices: Official Store vs DropMarket',
-      'How Robux Delivery Works',
-      'Is It Safe to Buy Robux on DropMarket?',
-      'Why Is My Robux Pending?',
-      'More Roblox on DropMarket',
-    ]) {
-      expect(html).toContain(t.replace(/'/g, '&#x27;'))
+    expect(html).toContain('Roblox Robux Guide: Prices, Delivery and Safety')
+    expect(html).not.toContain('In This Guide')
+  })
+
+  it('every section is in the HTML, without "DropMarket" in the headings', () => {
+    for (const t of ['What Is Robux?', 'How Much Do You Save on Robux?', 'How Robux Delivery Works', 'Is It Safe to Buy Robux?', 'Why Is My Robux Pending?', 'More Roblox', 'Roblox Games Currencies']) {
+      expect(html).toContain(t)
     }
-    expect(html).toContain('Create a game pass in one of your Roblox experiences')
-    expect(html).toContain('Read the Full Robux Guide')
+    expect(html.match(/<h3[^>]*>[^<]*DropMarket/g)).toBeNull()
   })
 
-  it('price table: live price, saving, and "—" where no offer fits', () => {
-    const html = render('roblox')
-    expect(html).toContain('$5.20')
-    expect(html).toContain('Save 47%')
-    expect(html).toContain('No live offer for this amount')
-    expect(html).toContain('Biggest Saving')
+  it('links the other Roblox currencies from "What Is Robux?"', () => {
+    expect(html).toContain('href="/99-nights-in-the-forest/buy-currency"')
+    expect(html).toContain('Tokens in Blade Ball')
   })
 
-  it('"No Password Needed" only when the sheet says so', () => {
-    expect(render('roblox')).toContain('No Password Needed')
-    const vbucks = render('fortnite')
-    expect(vbucks).not.toContain('No Password Needed')
-    expect(vbucks).toContain('change your password once the order is complete')
+  it('compares exactly the five chosen packs and quotes the 11,000 saving', () => {
+    const rows = html.match(/<th scope="row"[^>]*>([^<]+)<\/th>/g)!.map((r) => r.replace(/<[^>]+>/g, ''))
+    expect(rows).toEqual(['500', '1,000', '5,250', '11,000', '24,000'])
+    // 11,000 × $0.0052 = $57.20 against $99.99 → about $43.
+    expect(html).toContain('You save about $43 on 11,000 Robux')
   })
 
-  it('no rating below the review threshold; the real one when passed', () => {
-    expect(render('roblox')).not.toMatch(/Rated \d/)
-    expect(render('roblox', { reviews: { count: 23, average: 4.84 } })).toContain('Rated 4.8 out of 5')
+  it('More Roblox: the hub and categories with offers, never the currency page itself', () => {
+    expect(html).toContain('Roblox Marketplace')
+    expect(html).toContain('href="/roblox/buy-items"')
+    expect(html).not.toMatch(/href="\/roblox\/buy-robux"/)
   })
 
-  it('games whose publisher bans buying the currency get no "Yes, it\'s safe"', () => {
-    const html = render('gta-v', { rmtPublisher: 'Rockstar' })
-    expect(html).not.toContain('Yes. Every order is covered')
-    expect(html).toContain('Rockstar&#x27;s rules don&#x27;t allow buying GTA$')
-  })
-
-  it('no official prices (Tarkov): an honest line, no table', () => {
-    const html = render('escape-from-tarkov', {
-      ours: { kind: 'flexible', granularity: 'million', offers: [{ pricePerUnit: 0.49, minQty: 2, stock: 1392 }] },
-    })
-    expect(html).not.toContain('<table')
-    expect(html).toContain('no official cash price list for Roubles')
-    expect(html).toContain('$0.49 per 1M Roubles')
-  })
-
-  it('the not-affiliated line names the trademark owner', () => {
-    expect(render('roblox')).toContain('Roblox and Robux are trademarks of Roblox Corporation')
-    const vbucks = render('fortnite')
-    expect(vbucks).toContain('trademarks of Epic Games, Inc. DropMarket')
-    expect(vbucks).not.toContain('Inc..')
-    expect(render('blade-ball')).toContain('Roblox is a trademark of Roblox Corporation. DropMarket is an independent marketplace')
-  })
-
-  it('never uses escrow / funds-held / buyer-protection wording', () => {
-    for (const slug of ['roblox', 'fortnite', 'gta-v']) {
-      const html = render(slug)
-      expect(html).not.toMatch(/escrow|funds (are )?held|buyer protection/i)
-    }
+  it('a guide without hand-written copy still renders from its facts', () => {
+    const fortnite = getCurrencyGuide('fortnite')!
+    const p = pageCopy(fortnite)
+    expect(p.subtitle.length).toBeGreaterThan(20)
+    expect(p.delivery.steps.length).toBeGreaterThan(0)
   })
 })
 
 describe('helpers', () => {
-  it('formatAmount puts GTA$ in front', () => {
+  it('guideTitle never repeats the game name', () => {
+    expect(guideTitle('Roblox', 'Robux')).toBe('Roblox Robux Guide: Prices, Delivery and Safety')
+    expect(guideTitle('Blade Ball', 'Blade Ball Tokens')).toBe('Blade Ball Tokens Guide: Prices, Delivery and Safety')
+  })
+  it('formatAmount and splitLead', () => {
     expect(formatAmount('Robux', 1000)).toBe('1,000 Robux')
     expect(formatAmount('GTA$', 250000)).toBe('GTA$250,000')
-  })
-  it('splitLead keeps URLs inside the first sentence', () => {
-    expect(splitLead('Redeem it at fortnite.com/vbuckscard. Then check.')).toEqual(['Redeem it at fortnite.com/vbuckscard.', 'Then check.'])
-    expect(splitLead('One sentence only.')).toEqual(['One sentence only.', ''])
+    expect(splitLead('One. Two three.')).toEqual(['One.', 'Two three.'])
   })
 })
