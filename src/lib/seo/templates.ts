@@ -78,6 +78,22 @@ export interface GameSeoInput {
   } | null
 }
 
+const HUB_TITLE_MAX = 47
+
+/** "Roblox Marketplace: Buy Robux, Items & Accounts", trimmed to fit. */
+export function gameHubTitle(name: string, categoryLabels: string[]): string {
+  const base = `${name} Marketplace`
+  const labels = categoryLabels.map((l) => l.trim()).filter(Boolean)
+  for (let n = Math.min(3, labels.length); n >= 1; n--) {
+    const shown = labels.slice(0, n)
+    const list = shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(', ')} & ${shown[shown.length - 1]}`
+    const t = `${base}: Buy ${list}`
+    if (t.length <= HUB_TITLE_MAX) return t
+  }
+  const fallback = `${base}: Buy & Sell Safely`
+  return fallback.length <= HUB_TITLE_MAX ? fallback : base
+}
+
 export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
   const { name } = input
   const o = input.overrides ?? {}
@@ -86,13 +102,11 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
     : ['items', 'currency', 'accounts']
   const primary = cats.slice(0, 3).map(lc).join(', ')
 
-  // Title stays ≤60 chars after the " | DropMarket" suffix the layout adds.
-  const titleTemplate =
-    name.length > 12
-      ? `Buy & Sell ${name} Items & Currency`
-      : input.hasAccounts
-        ? `Buy & Sell ${name} Items, Currency & Accounts`
-        : `Buy & Sell ${name} Items & Currency`
+  // "Roblox Marketplace: Buy Robux, Items & Accounts" — the phrase the hub
+  // ranks for ("<game> marketplace") plus the buyer's words, from the game's
+  // real category names. ≤ 47 characters so the " | DropMarket" suffix keeps
+  // it ≤ 60 (owner/SEO audit 2026-10-06).
+  const titleTemplate = gameHubTitle(name, input.categoryLabels ?? [])
 
   const descTemplate = clamp(
     `Buy and sell ${name} digital goods on DropMarket. Compare verified seller offers for ${primary}, delivery times, prices and SafeDrop Protection.`,

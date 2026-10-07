@@ -15,7 +15,7 @@ import { UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle'
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr/Warning'
 import Link from '@/components/navigation/AppLink'
 import { ValueCallout } from '@/components/values/ValueCallout'
-import { buildPriceRows, guideFamily, type CurrencyGuide as Guide, type OurPrices, type PriceRow } from '@/lib/currency-guides'
+import { buildPriceRows, formatCheckedAt, guideFamily, type CurrencyGuide as Guide, type OurPrices, type PriceRow } from '@/lib/currency-guides'
 import type { RelatedPageLink } from '@/lib/currency-guides/server'
 import { DeliverySteps, type DeliveryStep } from './DeliverySteps'
 
@@ -304,6 +304,10 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
       {page.savings && showTable && (
         <Block id="guide-prices" title={page.savings.heading}>
           <SavingsTable rows={rows} currency={c} officialLabel={officialLabel} />
+          {/* Where the official numbers come from, and how fresh they are. */}
+          <p className="mx-auto mt-3 max-w-4xl text-left text-[12.5px] leading-5 text-text-tertiary">
+            Official prices from {guide.official_prices?.packages[0]?.where ?? 'the official store'}, checked {formatCheckedAt(guide.checked_at)}. Sellers Here is the cheapest live offer for that exact amount, before the service fee.
+          </p>
           {tipRow && tipSave >= 2 && (
             <Tip label="Tip" icon={PiggyBankIcon}>
               You save about {usd.format(tipSave).replace(/\.00$/, '')} on {formatAmount(c, tipRow.amount)} when you buy here.

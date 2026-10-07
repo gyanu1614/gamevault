@@ -122,14 +122,13 @@ function HubHeader({
           </span>
         )}
         <div className="min-w-0">
-          <p className="mb-1.5 text-[13px] font-semibold uppercase leading-none tracking-[0.08em] text-text-secondary sm:text-[14px]">
-            Marketplace
-          </p>
+          {/* "<Game> Marketplace": the phrase the hub ranks for, as the H1
+              (2026-10-06 audit: the bare game name matched no search). */}
           <h1
             className="font-black tracking-tight text-text-primary"
             style={{ fontSize: 'var(--fs-page-title)', lineHeight: 1.05, fontWeight: 'var(--fw-heading)', letterSpacing: '-0.02em' }}
           >
-            {gameName}
+            {gameName} Marketplace
           </h1>
         </div>
       </div>
