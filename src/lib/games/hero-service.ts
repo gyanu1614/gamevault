@@ -31,7 +31,7 @@ import {
   resolveGameHero,
   type GameHero,
 } from './hero'
-import { heroColumnsFor, type ProcessedHero } from './hero-image'
+import { heroColumnsFor, type HeroCrop, type ProcessedHero } from './hero-image'
 
 export interface HeroGameRow {
   id: string
@@ -57,7 +57,7 @@ export interface HeroStore {
 
 export interface HeroDeps {
   store: HeroStore
-  processImage(gameId: string, bytes: Uint8Array): Promise<ProcessedHero>
+  processImage(gameId: string, bytes: Uint8Array, crop?: HeroCrop | null): Promise<ProcessedHero>
   /** Refresh every page of this game (revalidateTag(gameHeroTag(slug))). */
   revalidateGame(slug: string): void
   supabaseUrl: string | undefined
@@ -121,6 +121,7 @@ export async function processHeroCore(
   gameId: unknown,
   sourcePath: unknown,
   focalY?: unknown,
+  crop?: unknown,
 ): Promise<HeroResult> {
   const game = await loadGame(deps, gameId)
   if ('error' in game) return { ok: false, error: game.error }
@@ -138,11 +139,13 @@ export async function processHeroCore(
     if (!bytes || bytes.byteLength === 0) return { ok: false, error: 'The upload did not arrive. Try again.' }
     if (bytes.byteLength > GAME_HERO_MAX_BYTES) return { ok: false, error: 'Hero image must be 6 MB or smaller.' }
 
-    const processed = await deps.processImage(game.id, bytes)
+    const region = parseHeroCrop(crop)
+    if (region === false) return { ok: false, error: 'The crop is not valid. Choose the area again.' }
+    const processed = await deps.processImage(game.id, bytes, region)
     if (!processed.ok) return { ok: false, error: processed.error }
 
     for (const v of processed.variants) {
-      const up = await deps.store.upload(v.path, v.bytes, 'image/webp')
+      const up = await deps.store.upload(v.path, v.bytes, 'image/avif')
       if (up.error) {
         console.error('[game-hero] variant upload failed', up.error)
         await deps.store.remove(processed.variants.map((x) => x.path))
@@ -170,6 +173,20 @@ export async function processHeroCore(
     // The untouched source never outlives the request.
     await deps.store.remove([sourcePath]).catch(() => {})
   }
+}
+
+/**
+ * The admin's crop rectangle (source pixels) from the client: undefined/null
+ * → no crop, a well-formed rectangle → it, anything else → false.
+ */
+export function parseHeroCrop(value: unknown): HeroCrop | null | false {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'object') return false
+  const { x, y, width, height } = value as Record<string, unknown>
+  const nums = [x, y, width, height]
+  if (!nums.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0)) return false
+  if ((width as number) < 1 || (height as number) < 1) return false
+  return { x: x as number, y: y as number, width: width as number, height: height as number }
 }
 
 export async function setHeroFocalCore(deps: HeroDeps, gameId: unknown, focalY: unknown): Promise<HeroResult> {

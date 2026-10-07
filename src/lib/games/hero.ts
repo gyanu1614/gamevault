@@ -28,6 +28,9 @@ export const GAME_HERO_EXT: Record<GameHeroMime, string> = {
   'image/avif': 'avif',
 }
 
+/** Narrowest hero area the admin may choose (= HERO_MIN_WIDTH in hero-image.ts, which stays import-free). */
+export const GAME_HERO_MIN_WIDTH = 1280
+
 /** Vertical focal point, 0 (top) – 100 (bottom). 50 = centred. */
 export const GAME_HERO_FOCAL_DEFAULT = 50
 export const GAME_HERO_FOCAL_STEP = 5

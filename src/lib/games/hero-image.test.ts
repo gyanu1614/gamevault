@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import sharp from 'sharp'
 import {
-  HERO_WEBP_QUALITY,
+  HERO_MAX_BYTES,
+  clampCrop,
   heroColumnsFor,
   heroContentHash,
   heroVariantPath,
@@ -27,17 +28,17 @@ async function fixture(width: number, height: number, format: 'jpeg' | 'png' = '
 }
 
 describe('heroWidthsFor', () => {
-  it('960 / 1600 / 2400, never upscaled, the source width added between steps', () => {
-    expect(heroWidthsFor(3000)).toEqual([960, 1600, 2400])
-    expect(heroWidthsFor(2400)).toEqual([960, 1600, 2400])
-    expect(heroWidthsFor(2000)).toEqual([960, 1600, 2000])
+  it('960 / 1600 / 1920, never upscaled, the source width added between steps', () => {
+    expect(heroWidthsFor(3000)).toEqual([960, 1600, 1920])
+    expect(heroWidthsFor(1920)).toEqual([960, 1600, 1920])
+    expect(heroWidthsFor(1800)).toEqual([960, 1600, 1800])
     expect(heroWidthsFor(1600)).toEqual([960, 1600])
     expect(heroWidthsFor(1300)).toEqual([960, 1300])
   })
 })
 
 describe('processHeroImage', () => {
-  it('a 3000 × 1500 JPEG → WebP at 960 / 1600 / 2400, content-hashed names, tiny LQIP', async () => {
+  it('a 3000 × 1500 JPEG → AVIF at 960 / 1600 / 1920, each under 100 KB, content-hashed names, tiny LQIP', async () => {
     const input = await fixture(3000, 1500)
     const res = await processHeroImage(GAME, input)
     expect(res.ok).toBe(true)
@@ -48,13 +49,15 @@ describe('processHeroImage', () => {
     expect(res.hash).toBe(hash)
     expect([res.sourceWidth, res.sourceHeight]).toEqual([3000, 1500])
     expect(res.variants.map((v) => [v.width, v.height, v.path])).toEqual([
-      [960, 480, `${GAME}/${hash}-960.webp`],
-      [1600, 800, `${GAME}/${hash}-1600.webp`],
-      [2400, 1200, `${GAME}/${hash}-2400.webp`],
+      [960, 480, `${GAME}/${hash}-960.avif`],
+      [1600, 800, `${GAME}/${hash}-1600.avif`],
+      [1920, 960, `${GAME}/${hash}-1920.avif`],
     ])
     for (const v of res.variants) {
       const meta = await sharp(v.bytes).metadata()
-      expect([meta.format, meta.width]).toEqual(['webp', v.width])
+      expect([meta.format, meta.width]).toEqual(['heif', v.width])
+      expect(meta.compression).toBe('av1')
+      expect(v.bytes.byteLength).toBeLessThanOrEqual(HERO_MAX_BYTES)
       // Metadata stripped: no EXIF carried over.
       expect(meta.exif).toBeUndefined()
     }
@@ -75,7 +78,29 @@ describe('processHeroImage', () => {
     const b = await fixture(1400, 801)
     expect(heroContentHash(a)).toBe(heroContentHash(new Uint8Array(a)))
     expect(heroContentHash(a)).not.toBe(heroContentHash(b))
-    expect(heroVariantPath(GAME, 'abc', 960)).toBe(`${GAME}/abc-960.webp`)
+    expect(heroVariantPath(GAME, 'abc', 960)).toBe(`${GAME}/abc-960.avif`)
+    // The same file cut differently is a different hero.
+    expect(heroContentHash(a, { x: 0, y: 0, width: 1400, height: 500 })).not.toBe(heroContentHash(a))
+  })
+
+  it('cuts the chosen area: a 3000 × 2000 source cropped to 2570 × 1000 → 1920 × 747 top file', async () => {
+    const res = await processHeroImage(GAME, await fixture(3000, 2000), { x: 200, y: 500, width: 2570, height: 1000 })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect([res.sourceWidth, res.sourceHeight]).toEqual([2570, 1000])
+    expect(res.variants.map((v) => [v.width, v.height])).toEqual([[960, 374], [1600, 623], [1920, 747]])
+  })
+
+  it('refuses a crop narrower than 1280 px and one outside the image', async () => {
+    const narrow = await processHeroImage(GAME, await fixture(3000, 2000), { x: 0, y: 0, width: 1000, height: 400 })
+    expect(!narrow.ok && narrow.error).toMatch(/wider area/i)
+    const outside = await processHeroImage(GAME, await fixture(1400, 800), { x: 5000, y: 0, width: 1400, height: 500 })
+    expect(!outside.ok && outside.error).toMatch(/outside/i)
+  })
+
+  it('clampCrop rounds and keeps the rectangle inside the image', () => {
+    expect(clampCrop({ x: 10.4, y: -3, width: 5000, height: 99.6 }, 2000, 1000)).toEqual({ x: 10, y: 0, width: 1990, height: 100 })
+    expect(clampCrop({ x: NaN, y: 0, width: 1, height: 1 }, 10, 10)).toBeNull()
   })
 
   it('a 1400 px PNG keeps its own width as the top size (no upscaling)', async () => {
@@ -91,9 +116,6 @@ describe('processHeroImage', () => {
     expect(await processHeroImage(GAME, new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]))).toMatchObject({ ok: false })
   })
 
-  it('quality is the documented 72', () => {
-    expect(HERO_WEBP_QUALITY).toBe(72)
-  })
 })
 
 describe('heroColumnsFor', () => {

@@ -208,7 +208,7 @@ for (const [slug, src] of sources) {
   const bucket = supabase.storage.from(GAME_HERO_BUCKET)
   let upErr = null
   for (const v of processed.variants) {
-    const { error } = await bucket.upload(v.path, v.bytes, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
+    const { error } = await bucket.upload(v.path, v.bytes, { contentType: 'image/avif', upsert: true, cacheControl: '31536000' })
     if (error) {
       upErr = error
       break
