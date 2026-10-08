@@ -96,6 +96,9 @@ export async function POST(request: Request): Promise<Response> {
     if (hasHubPage(gameSlug, 'values')) {
       revalidatePath(`/${gameSlug}/values`)
       revalidated.push(`/${gameSlug}/values`)
+      // The full list the page fetches after hydration (lib/values/lazy-list.ts).
+      revalidatePath(`/${gameSlug}/values/rows.json`)
+      revalidated.push(`/${gameSlug}/values/rows.json`)
     }
     if (hasHubPage(gameSlug, 'calculator')) {
       revalidatePath(`/${gameSlug}/calculator`)

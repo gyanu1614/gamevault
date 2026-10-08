@@ -2,7 +2,6 @@ import { SITE_URL } from '@/config/site'
 import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { PopularGames } from '@/features/home/components/PopularGames'
-import { getLiveOfferCount } from '@/features/home/lib/popular-games'
 import { LatestListings } from '@/features/home/components/LatestListings'
 import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 import { seoMeta } from '@/lib/seo/fit'
@@ -10,26 +9,27 @@ import { seoMeta } from '@/lib/seo/fit'
 export const metadata: Metadata = seoMeta({
   // `absolute`: the brand already leads this title, so skip the layout's
   // "| DropMarket" suffix (it rendered "DropMarket | … | DropMarket").
-  // Brand first, ≤60 characters (Bing flags longer titles; Google cuts them).
-  title: { absolute: 'DropMarket: Buy & Sell Game Accounts, Items & Currency' },
+  // Owner-approved 2026-10-07 ("A + 1"), the Eldorado / GameBoost / igitems
+  // format: brand, then a short tagline matching the hero H1. ≤60 characters.
+  title: { absolute: "DropMarket - The Gamer's Marketplace" },
   // ≤155 characters so the snippet isn't cut (2026-10-06 crawl: was 193).
   description:
-    'Buy and sell Roblox, Fortnite, Valorant and more: game currency, items and accounts from ID-verified sellers, with SafeDrop Protection on every order.',
+    'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
   keywords: [
     'buy game accounts', 'sell game items', 'gaming marketplace',
     'roblox accounts', 'fortnite accounts', 'valorant accounts',
     'lol accounts', 'game currency', 'safe game trading', 'safedrop protection gaming marketplace',
   ],
   openGraph: {
-    title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop Protection',
+    title: "DropMarket - The Gamer's Marketplace",
+    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
     type: 'website',
     siteName: 'DropMarket',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DropMarket — Safe Gaming Marketplace',
-    description: 'Buy and sell game assets with SafeDrop Protection',
+    title: "DropMarket - The Gamer's Marketplace",
+    description: 'Buy and sell game items, accounts, currency, top ups and boosting safely. ID-verified sellers, fast delivery and a full refund if it never arrives.',
   },
 })
 
@@ -56,8 +56,7 @@ const SCHEMAS = [
   organization(),
 ]
 
-export default async function Page() {
-  const liveOffers = await getLiveOfferCount()
+export default function Page() {
   return (
     <>
       {/* JSON-LD */}
@@ -74,7 +73,6 @@ export default async function Page() {
       <HomePage
         popularGames={<PopularGames />}
         latestListings={<LatestListings />}
-        liveOffers={liveOffers}
       />
     </>
   )

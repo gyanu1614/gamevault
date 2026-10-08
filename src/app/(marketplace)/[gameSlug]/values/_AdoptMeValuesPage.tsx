@@ -14,7 +14,15 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HUB_GROUND } from '@/components/values/styles'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
-import { pack } from '@/lib/serialize/columnar'
+import { countFacets, initialValueList } from '@/lib/values/lazy-list'
+import {
+  ADOPT_ME_DEFAULT_SORT,
+  ADOPT_ME_DEFAULT_VARIANT,
+  ADOPT_ME_DEFAULT_VIEW,
+  ADOPT_ME_PAGE_SIZE,
+  filterSortPets,
+  popularPetSlugs,
+} from './_adoptMeListModel'
 
 /**
  * /adopt-me/values — the Adopt Me pillar page. Kept as its own component so the
@@ -151,7 +159,23 @@ export default async function AdoptMeValuesPage() {
               body="The Adopt Me pet database could not be loaded. Please check again shortly."
             />
           ) : (
-            <AdoptMeValuesClient packedPets={pack(pets)} />
+            // The default view's first page only; the client fetches the rest
+            // (lib/values/lazy-list.ts — the full list made this page 1.2 MB).
+            <AdoptMeValuesClient
+              initial={initialValueList(
+                filterSortPets(pets, {
+                  query: '',
+                  view: ADOPT_ME_DEFAULT_VIEW,
+                  sort: ADOPT_ME_DEFAULT_SORT,
+                  variant: ADOPT_ME_DEFAULT_VARIANT,
+                }),
+                {
+                  pageSize: ADOPT_ME_PAGE_SIZE,
+                  facets: countFacets(pets, { rarity: (p) => p.rarity }),
+                  extra: { popular: popularPetSlugs(pets) },
+                },
+              )}
+            />
           )}
 
           {/* SEO content package — intro, "how we price", rendered FAQ (schema

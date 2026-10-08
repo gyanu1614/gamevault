@@ -13,7 +13,6 @@
 import type { ReactNode } from 'react'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
-import { WhyBuyCard } from '@/components/marketplace/WhyBuyCard'
 import { HeroFilm } from '../components/HeroFilm'
 import { SellerCta } from '../components/SellerCta'
 import { HomeFaq } from '../components/HomeFaq'
@@ -25,19 +24,16 @@ import { PreFooterCtaBand } from '../components/PreFooterCtaBand'
  * in from the route (page.tsx).
  *
  * Owner, 2026-10-06 curation: the same sections as the game hubs, so the site
- * reads as one product: How It Works band, the seller CTA, a six-question FAQ,
- * Why Buy, and the payments strip above the footer. The duplicate Top Selling
+ * reads as one product: How It Works band, the seller CTA, a six-question FAQ
+ * and the payments strip above the footer. The duplicate Top Selling
  * Games rail is gone (Popular Games already shows them).
  */
 export function HomePage({
   popularGames,
   latestListings,
-  liveOffers = 0,
 }: {
   popularGames?: ReactNode
   latestListings?: ReactNode
-  /** Live offers across the marketplace, for the Why Buy offers line. */
-  liveOffers?: number
 }) {
   return (
     <div className="page-stage">
@@ -59,9 +55,6 @@ export function HomePage({
 
         <HomeFaq />
 
-        <div className="page-measure">
-          <WhyBuyCard gameSlug="home" withArt={false} subject="Game Items" count={liveOffers} fromPrice={null} />
-        </div>
       </div>
 
       {/* Pre-footer CTA band — section 7. Deliberately OUTSIDE `.page-rhythm`:

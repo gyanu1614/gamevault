@@ -1,7 +1,7 @@
 import 'server-only'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
-import type { AdoptMePetItem, AdoptMeVariantValue } from './_AdoptMeValuesClient'
+import type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
 /**
  * Server-side loader for the Adopt Me value list. Reads the two catalog tables

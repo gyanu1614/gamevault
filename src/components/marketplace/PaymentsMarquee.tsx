@@ -21,15 +21,31 @@ type Mark =
   | { key: string; label: string; kind: 'coin'; src: string }
   | { key: string; label: string; kind: 'word'; text: string }
 
-const MARKS: Mark[] = [
-  ...CHECKOUT_COINS.map((c): Mark => ({ key: c.key, label: c.label, kind: 'coin', src: CHECKOUT_COINS_MONO[c.key] })),
-  ...payssionSelectorMethods().map((m): Mark => {
+/**
+ * Owner, 2026-10-07: only real marks ("Trustly, Pix and more, not fake
+ * ones"). A method set in plain type (SPEI, Boleto, PSE…) read as made up, so
+ * the strip shows the checkout methods that have a real logo, best known
+ * first, then the coins. Every method is still in the screen-reader list.
+ */
+const LEAD = ['trustly', 'pix_br', 'paysafecard', 'blik_pl', 'p24_pl']
+const LOGO_METHODS = payssionSelectorMethods()
+  .filter((m) => {
     const mono = PAYMENT_METHOD_MONO[m.pmId]
-    return mono && 'logo' in mono
-      ? { key: m.pmId, label: m.label, kind: 'logo', src: mono.logo }
-      : { key: m.pmId, label: m.label, kind: 'word', text: mono && 'wordmark' in mono ? mono.wordmark : m.label }
-  }),
+    return !!mono && 'logo' in mono
+  })
+  .sort((a, b) => {
+    const ai = LEAD.indexOf(a.pmId)
+    const bi = LEAD.indexOf(b.pmId)
+    return (ai < 0 ? LEAD.length : ai) - (bi < 0 ? LEAD.length : bi)
+  })
+
+const MARKS: Mark[] = [
+  ...LOGO_METHODS.map((m): Mark => ({ key: m.pmId, label: m.label, kind: 'logo', src: (PAYMENT_METHOD_MONO[m.pmId] as { logo: string }).logo })),
+  ...CHECKOUT_COINS.map((c): Mark => ({ key: c.key, label: c.label, kind: 'coin', src: CHECKOUT_COINS_MONO[c.key] })),
 ]
+
+/** Every way to pay, for screen readers (the strip shows the logo ones). */
+const ALL_LABELS = [...payssionSelectorMethods().map((m) => m.label), ...CHECKOUT_COINS.map((c) => c.label)]
 
 function MarkView({ mark }: { mark: Mark }) {
   const base =
@@ -62,7 +78,7 @@ export function PaymentsMarquee({ disclaimer }: { disclaimer?: string | null } =
         Accepted at Checkout
       </h2>
       {/* Screen readers get the list once, in plain words. */}
-      <p className="sr-only">{MARKS.map((m) => m.label).join(', ')}</p>
+      <p className="sr-only">{ALL_LABELS.join(', ')}</p>
 
       <div className="relative">
         <div

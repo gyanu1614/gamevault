@@ -27,7 +27,21 @@ import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { SAB_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
-import { unpack, type Packed } from '@/lib/serialize/columnar'
+import type { InitialValueList } from '@/lib/values/lazy-list'
+import { useValueListRows } from '@/lib/values/useValueListRows'
+import { ValueCardSkeleton } from './_generic/ValueListSkeleton'
+import {
+  asNumber,
+  filterSortBrainrots,
+  SAB_DEFAULT_OBTAIN,
+  SAB_DEFAULT_SORT,
+  SAB_DEFAULT_VIEW,
+  SAB_PAGE_SIZE,
+  type BrainrotDirectoryItem,
+  type SabSort,
+} from './_sabListModel'
+
+export type { BrainrotDirectoryItem, CardMutation } from './_sabListModel'
 
 const rarityMeta = (r: string) => sharedRarityMeta('steal-a-brainrot', r)
 /** Rarest first — the order players think in, not alphabetical. */
@@ -39,64 +53,7 @@ const RARITY_ORDER = SAB_RARITIES.map((r) => r.key)
  * on down the same ranking to the end of the catalog.
  */
 
-/**
- * One mutation option for the in-card switcher. Prices are the REAL reputable
- * cheapest/average for that mutation (null → the card shows "No Sales"; we never
- * estimate). `income` is that mutation's income per second, `multiplier` its
- * income multiplier vs default.
- */
-export type CardMutation = {
-  slug: string
-  name: string
-  multiplier: number | null
-  income: number | null
-  cheapest_usd: number | null
-  average_usd: number | null
-}
-
-export type BrainrotDirectoryItem = {
-  id: string
-  name: string
-  slug: string
-  rarity: string
-  obtainability: string
-  base_income_per_second: number | string | null
-  image_url: string | null
-  display_price_usd: number | string | null
-  display_price_label: string
-  display_price_source: string
-  confidence_label: string
-  /** Every mutation this item has metadata for, with real per-mutation prices
-   * (absent/null = no sales). Drives the in-card mutation switcher. */
-  mutations?: CardMutation[]
-  /**
-   * Low/high of the real listings behind the value. Retained for items not yet
-   * priced by the reputable path (fallback range display).
-   */
-  market_low_usd?: number | null
-  market_high_usd?: number | null
-  /**
-   * Reputable-seller prices: cheapest (lowest 100+ review listing) and average
-   * (typical reputable price). When present these are the buyer-facing pair —
-   * the row shows "Cheapest $X" and the headline "Market price" is the average.
-   */
-  cheapest_usd?: number | null
-  average_usd?: number | null
-  /**
-   * Listings/sales we actually observed behind this item's price. Legacy
-   * popularity proxy — kept as the tiebreaker; the primary Popular ordering is
-   * now popularity_rank.
-   */
-  sample_size?: number | null
-  /**
-   * Real marketplace popularity rank (1 = most popular), from Eldorado's
-   * usePopularItems ordering. The Popular tab sorts by this; null-rank items
-   * (never seen in the popular feed) sort after all ranked items.
-   */
-  popularity_rank?: number | null
-}
-
-type SortOption = 'value-desc' | 'name' | 'income-desc' | 'income-asc'
+type SortOption = SabSort
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'value-desc', label: 'Highest Value' },
@@ -107,16 +64,6 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 
 /** 'popular' | 'all' | a rarity name. Exactly one is ever active. */
 type View = string
-
-interface ValuesDirectoryClientProps {
-  brainrots: BrainrotDirectoryItem[]
-}
-
-function asNumber(value: number | string | null | undefined): number | null {
-  if (value == null) return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 function formatMoney(value: number | string | null): string | null {
   const amount = asNumber(value)
@@ -130,51 +77,24 @@ function formatMoney(value: number | string | null): string | null {
   }).format(amount)
 }
 
-function compareIncome(
-  a: BrainrotDirectoryItem,
-  b: BrainrotDirectoryItem,
-  direction: 'asc' | 'desc',
-): number {
-  const aIncome = asNumber(a.base_income_per_second)
-  const bIncome = asNumber(b.base_income_per_second)
-
-  if (aIncome == null && bIncome == null) return a.name.localeCompare(b.name)
-  if (aIncome == null) return 1
-  if (bIncome == null) return -1
-
-  return direction === 'asc' ? aIncome - bIncome : bIncome - aIncome
-}
-
-/** Highest value first, unpriced items last (never sorted as if they were $0). */
-function compareValue(a: BrainrotDirectoryItem, b: BrainrotDirectoryItem): number {
-  const av = asNumber(a.display_price_usd)
-  const bv = asNumber(b.display_price_usd)
-  if (av == null && bv == null) return a.name.localeCompare(b.name)
-  if (av == null) return 1
-  if (bv == null) return -1
-  return bv - av
-}
-
 /**
  * `useSearchParams` requires a Suspense boundary (Next.js). The default export
  * wraps the inner component so the value page can render it directly, matching
  * the pattern used by _BrowseClient.
  */
-export default function ValuesDirectoryClient({ packedBrainrots }: { packedBrainrots: Packed }) {
-  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
-  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
-  // is too long").
-  const brainrots = useMemo(() => unpack<BrainrotDirectoryItem[]>(packedBrainrots), [packedBrainrots])
+export default function ValuesDirectoryClient({ initial }: { initial: InitialValueList }) {
   return (
     <Suspense fallback={null}>
-      <ValuesDirectoryClientInner brainrots={brainrots} />
+      <ValuesDirectoryClientInner initial={initial} />
     </Suspense>
   )
 }
 
-function ValuesDirectoryClientInner({
-  brainrots,
-}: ValuesDirectoryClientProps) {
+function ValuesDirectoryClientInner({ initial }: { initial: InitialValueList }) {
+  // The default view's first page ships in the page; every row arrives from
+  // rows.json right after hydration (lib/values/lazy-list.ts — the full list
+  // made this page 1.7 MB).
+  const { rows: brainrots, ready, failed, retry } = useValueListRows<BrainrotDirectoryItem>('steal-a-brainrot', initial)
   // Filters live in the URL so they SURVIVE navigation: click an item, hit Back,
   // and the same view/search/sort/page you left is restored (and the filtered
   // view is shareable/bookmarkable). State is seeded from the query params on
@@ -195,110 +115,57 @@ function ValuesDirectoryClientInner({
   )
 
   // Only rarities present in the data get a tile, in rarest-first order.
-  const rarities = useMemo(() => {
-    const present = new Set(brainrots.map((b) => b.rarity).filter(Boolean))
-    const known = RARITY_ORDER.filter((r) => present.has(r))
-    const unknown = [...present].filter((r) => !RARITY_ORDER.includes(r)).sort()
-    return [...known, ...unknown]
-  }, [brainrots])
-
-  // Per-rarity counts for the tiles (Secret 42, Mythic 11…).
+  // Per-rarity counts for the tiles (Secret 42, Mythic 11…): from the page
+  // until the full list is here.
   const rarityCounts = useMemo(() => {
+    if (!ready) return initial.facets.rarity ?? {}
     const m: Record<string, number> = {}
     for (const b of brainrots) m[b.rarity] = (m[b.rarity] ?? 0) + 1
     return m
-  }, [brainrots])
+  }, [brainrots, ready, initial.facets])
+
+  const rarities = useMemo(() => {
+    const present = new Set(Object.keys(rarityCounts))
+    const known = RARITY_ORDER.filter((r) => present.has(r))
+    const unknown = [...present].filter((r) => !RARITY_ORDER.includes(r)).sort()
+    return [...known, ...unknown]
+  }, [rarityCounts])
 
   const obtainabilityOptions = useMemo(
     () =>
-      Array.from(
-        new Set(brainrots.map((brainrot) => brainrot.obtainability).filter(Boolean)),
+      (ready
+        ? Array.from(new Set(brainrots.map((brainrot) => brainrot.obtainability).filter(Boolean)))
+        : Object.keys(initial.facets.obtain ?? {})
       ).sort((a, b) => a.localeCompare(b)),
-    [brainrots],
+    [brainrots, ready, initial.facets],
   )
 
-  // 24 = a multiple of every grid width (2/3/4/6), so the last row of the card
-  // grid always fills evenly instead of stranding one card on its own row.
-  const PAGE_SIZE = 24
+  const PAGE_SIZE = SAB_PAGE_SIZE
   const searching = query.trim().length > 0
   // A search should look through everything, not just the 10 popular rows —
   // otherwise searching from the landing view mostly returns nothing.
   const effectiveView = searching && view === 'popular' ? 'all' : view
 
-  const filteredBrainrots = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+  const filteredBrainrots = useMemo(
+    () => (ready ? filterSortBrainrots(brainrots, { query, view, obtainability, sort }) : brainrots),
+    [brainrots, ready, obtainability, query, sort, view],
+  )
 
-    const filtered = brainrots.filter((brainrot) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        `${brainrot.name} ${brainrot.rarity} ${brainrot.obtainability}`
-          .toLowerCase()
-          .includes(normalizedQuery)
-
-      const matchesRarity =
-        effectiveView === 'popular' ||
-        effectiveView === 'all' ||
-        brainrot.rarity === effectiveView
-
-      const matchesObtainability =
-        obtainability === 'all' || brainrot.obtainability === obtainability
-
-      return matchesQuery && matchesRarity && matchesObtainability
-    })
-
-    // Popular = a BLEND of real marketplace popularity AND cash value, so the
-    // tab surfaces items that are both traded a lot AND worth something — not
-    // popular-but-worthless junk. We rank each item on both axes independently
-    // (popularity_rank from Eldorado's usePopularItems; value rank from the
-    // corrected market price) and sort by the AVERAGE of the two rank positions.
-    // An item strong on both (e.g. #4 popular, #6 valuable) beats one that is
-    // wildly popular but near-worthless (#2 popular, #300 valuable). Items
-    // missing a rank on either axis take that axis's worst position, so they
-    // sink behind anything ranked on both.
-    if (effectiveView === 'popular') {
-      const n = filtered.length
-      // Value rank: 0 = most valuable. Unpriced items get the worst position.
-      const byValue = [...filtered].sort(compareValue)
-      const valueRank = new Map<string, number>()
-      byValue.forEach((item, i) => valueRank.set(item.id, i))
-
-      // Popularity rank: Eldorado's is 1-based and sparse (not every item is in
-      // the feed). Rerank the ones that ARE present into a dense 0-based order,
-      // so the two axes are on the same scale; absent items take the worst.
-      const byPop = [...filtered]
-        .filter((item) => item.popularity_rank != null)
-        .sort((a, b) => (a.popularity_rank as number) - (b.popularity_rank as number))
-      const popRank = new Map<string, number>()
-      byPop.forEach((item, i) => popRank.set(item.id, i))
-
-      const blended = (item: BrainrotDirectoryItem) => {
-        const pr = popRank.has(item.id) ? popRank.get(item.id)! : n
-        const vr = valueRank.has(item.id) ? valueRank.get(item.id)! : n
-        return (pr + vr) / 2
-      }
-
-      return [...filtered].sort((a, b) => {
-        const diff = blended(a) - blended(b)
-        if (diff !== 0) return diff
-        // Tie-break: more observed activity, then higher value.
-        const act = (asNumber(b.sample_size) ?? 0) - (asNumber(a.sample_size) ?? 0)
-        return act !== 0 ? act : compareValue(a, b)
-      })
-    }
-
-    return [...filtered].sort((a, b) => {
-      if (sort === 'income-desc') return compareIncome(a, b, 'desc')
-      if (sort === 'income-asc') return compareIncome(a, b, 'asc')
-      if (sort === 'name') return a.name.localeCompare(b.name)
-      return compareValue(a, b)
-    })
-  }, [brainrots, effectiveView, obtainability, query, sort])
-
-  const totalPages = Math.max(1, Math.ceil(filteredBrainrots.length / PAGE_SIZE))
   const [page, setPage] = useState(() => {
     const p = Number(searchParams.get('page'))
     return Number.isInteger(p) && p > 0 ? p : 1
   })
+  const isDefaultView =
+    !searching &&
+    view === SAB_DEFAULT_VIEW &&
+    obtainability === SAB_DEFAULT_OBTAIN &&
+    sort === SAB_DEFAULT_SORT &&
+    page === 1
+  // Before the full list arrives only the default first page is known; any
+  // other view waits for it rather than filtering one page.
+  const pending = !ready && !isDefaultView
+  const filteredCount = ready ? filteredBrainrots.length : initial.total
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE))
 
   /**
    * Paging without this left you stranded at the bottom of the page, staring
@@ -348,8 +215,13 @@ function ValuesDirectoryClientInner({
   const currentPage = Math.min(page, totalPages)
 
   const visibleBrainrots = useMemo(
-    () => filteredBrainrots.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredBrainrots, currentPage],
+    () =>
+      ready
+        ? filteredBrainrots.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+        : pending
+          ? []
+          : filteredBrainrots,
+    [filteredBrainrots, currentPage, ready, pending],
   )
 
   const filtersActive =
@@ -364,7 +236,7 @@ function ValuesDirectoryClientInner({
 
   const rarityOptions = [
     { key: 'popular', label: 'Popular', color: '#4FB477' },
-    { key: 'all', label: 'All', color: '#9AA6A0', count: brainrots.length },
+    { key: 'all', label: 'All', color: '#9AA6A0', count: ready ? brainrots.length : initial.total },
     ...rarities.map((r) => ({
       key: r,
       label: rarityMeta(r).label,
@@ -420,17 +292,23 @@ function ValuesDirectoryClientInner({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="text-text-secondary">
+{pending ? (
+            <>Loading every Brainrot…</>
+          ) : (
+            <>
           Showing{' '}
           <span className="font-semibold tabular-nums text-text-primary">
-            {filteredBrainrots.length === 0
+            {filteredCount === 0
               ? '0'
               : `${((currentPage - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(
                   currentPage * PAGE_SIZE,
-                  filteredBrainrots.length,
+                  filteredCount,
                 ).toLocaleString()}`}
           </span>{' '}
-          of <span className="tabular-nums">{filteredBrainrots.length.toLocaleString()}</span>{' '}
+          of <span className="tabular-nums">{filteredCount.toLocaleString()}</span>{' '}
           Brainrots
+            </>
+          )}
           {/* Trust line, inline on the results row. */}
           <span className="ml-2.5 hidden items-center gap-1.5 align-middle sm:inline-flex">
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#4FB477]" />
@@ -456,7 +334,24 @@ function ValuesDirectoryClientInner({
         )}
       </div>
 
-      {visibleBrainrots.length === 0 ? (
+      {pending && failed ? (
+        <ValuesEmptyState
+          className="mt-6"
+          title="Couldn't Load Every Brainrot"
+          body="Check your connection and try again."
+          action={
+            <button type="button" onClick={retry} className={`mt-5 ${VALUE_BTN_SECONDARY}`}>
+              Try Again
+            </button>
+          }
+        />
+      ) : pending ? (
+        <div aria-busy aria-label="Loading Brainrots" className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 12 }, (_, i) => (
+            <ValueCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : visibleBrainrots.length === 0 ? (
         <ValuesEmptyState
           className="mt-6"
           title="No Brainrots Found"
