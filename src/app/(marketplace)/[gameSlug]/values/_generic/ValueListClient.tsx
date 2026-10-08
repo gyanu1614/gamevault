@@ -27,34 +27,25 @@ import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
 import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
+import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { rarityMeta } from '@/lib/values/rarity'
-import { matchesValueListTab, type ValueListHubConfig } from '@/lib/values/hub-config'
-import { unpack, type Packed } from '@/lib/serialize/columnar'
+import { type ValueListHubConfig } from '@/lib/values/hub-config'
+import type { InitialValueList } from '@/lib/values/lazy-list'
+import { useValueListRows } from '@/lib/values/useValueListRows'
+import { ValueCardSkeleton } from './ValueListSkeleton'
+import {
+  filterSortValueRows,
+  valueListTabCounts,
+  VALUE_LIST_DEFAULT_SORT as DEFAULT_SORT,
+  VALUE_LIST_DEFAULT_VIEW as DEFAULT_VIEW,
+  VALUE_LIST_PAGE_SIZE as PAGE_SIZE,
+  type ValueListRow,
+  type ValueListSort as Sort,
+} from './valueListModel'
 
-/** One list row, as the server hands it over (light: no obtain/history). */
-export interface ValueListRow {
-  id: string
-  slug: string
-  name: string
-  rarity: string | null
-  itemType: string | null
-  imageUrl: string | null
-  /** The item page, or null when the item has none (commons, unpriced). */
-  href: string | null
-  cheapestUsd: number | null
-  marketUsd: number | null
-  /** Reputable live listings behind the price at the last daily check. */
-  listedNow: number
-  /** 7-day change in percent; null without two days of history. */
-  trendPct: number | null
-}
+export type { ValueListRow } from './valueListModel'
 
-type Sort = 'price-desc' | 'price-asc' | 'movers' | 'listed' | 'name'
-
-const PAGE_SIZE = 25
-const DEFAULT_VIEW = 'all'
-const DEFAULT_SORT: Sort = 'price-desc'
 /** Adopt Me's cash teal — "Cheapest" reads the same on every hub. */
 const CHEAPEST_TEAL = '#54DDBE'
 /** Moves smaller than this are noise, not a trend. */
@@ -69,7 +60,7 @@ const usd = (v: number) =>
 export default function ValueListClient({
   gameSlug,
   gameName,
-  packedRows,
+  initial,
   hub,
   hasTrends,
   freshness,
@@ -77,8 +68,8 @@ export default function ValueListClient({
 }: {
   gameSlug: string
   gameName: string
-  /** pack(rows) — see src/lib/serialize/columnar.ts. */
-  packedRows: Packed
+  /** The default view's first page + toolbar counts; the rest is fetched (lib/values/lazy-list.ts). */
+  initial: InitialValueList
   hub: Pick<ValueListHubConfig, 'tabs' | 'itemTypeLabels' | 'pageRarities' | 'searchPlaceholder' | 'imageSource'>
   /** At least one item has a 7-day change — gates the Movers sort. */
   hasTrends: boolean
@@ -87,10 +78,8 @@ export default function ValueListClient({
   chromaHubHref?: string | null
 }) {
   const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
-  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
-  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
-  // is too long").
-  const rows = useMemo(() => unpack<ValueListRow[]>(packedRows), [packedRows])
+  // First page from the HTML, every row once rows.json lands (a few hundred ms).
+  const { rows, ready, failed, retry } = useValueListRows<ValueListRow>(gameSlug, initial)
   const reduceMotion = useReducedMotion()
   const listTopRef = useRef<HTMLDivElement>(null)
 
@@ -115,13 +104,11 @@ export default function ValueListClient({
   )
 
   // Tabs with no items are not offered (a tile that empties the grid is noise).
-  const visibleTabs = useMemo(
-    () =>
-      tabs
-        .map((t) => ({ ...t, count: rows.filter((r) => matchesValueListTab(t, r)).length }))
-        .filter((t) => t.count > 0),
-    [tabs, rows],
-  )
+  // Counts come with the page until the full list is here.
+  const visibleTabs = useMemo(() => {
+    const counts = ready ? valueListTabCounts(tabs, rows) : initial.facets.tab ?? {}
+    return tabs.map((t) => ({ ...t, count: counts[t.key] ?? 0 })).filter((t) => t.count > 0)
+  }, [tabs, rows, ready, initial.facets])
 
   const seedFromUrl = useCallback(
     (params: URLSearchParams) => {
@@ -139,39 +126,22 @@ export default function ValueListClient({
     [seeded, visibleTabs, sortOptions],
   )
 
+  const isDefaultView = !query.trim() && view === DEFAULT_VIEW && sort === DEFAULT_SORT && page === 1
+  // Before the full list arrives only the default first page is known; any
+  // other view waits for it (pending) rather than filtering one page.
+  const pending = !ready && !isDefaultView
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    if (!ready) return rows
     const tab = view === DEFAULT_VIEW ? null : visibleTabs.find((t) => t.key === view) ?? null
-    const list = rows.filter((r) => (!q || r.name.toLowerCase().includes(q)) && matchesValueListTab(tab, r))
-    const priceOf = (r: ValueListRow) => r.cheapestUsd ?? -1
-    return [...list].sort((a, b) => {
-      // Unpriced items always sink, whatever the sort.
-      const ap = a.cheapestUsd != null
-      const bp = b.cheapestUsd != null
-      if (ap !== bp && sort !== 'name') return ap ? -1 : 1
-      switch (sort) {
-        case 'price-asc':
-          return priceOf(a) - priceOf(b)
-        case 'movers': {
-          const am = a.trendPct == null ? -1 : Math.abs(a.trendPct)
-          const bm = b.trendPct == null ? -1 : Math.abs(b.trendPct)
-          return bm - am || priceOf(b) - priceOf(a)
-        }
-        case 'listed':
-          return b.listedNow - a.listedNow || priceOf(b) - priceOf(a)
-        case 'name':
-          return a.name.localeCompare(b.name)
-        default:
-          return priceOf(b) - priceOf(a) || a.name.localeCompare(b.name)
-      }
-    })
-  }, [rows, query, view, sort, visibleTabs])
+    return filterSortValueRows(rows, { query, tab, sort })
+  }, [rows, ready, query, view, sort, visibleTabs])
+  const filteredCount = ready ? filtered.length : initial.total
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
-  const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length)
+  const visible = ready ? filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE) : pending ? [] : filtered
+  const rangeStart = filteredCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, filteredCount)
 
   const goToPage = (next: number) => {
     setPage(next)
@@ -194,7 +164,7 @@ export default function ValueListClient({
   }, [seeded, query, view, sort, safePage])
 
   const filterOptions = [
-    { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: rows.length },
+    { key: DEFAULT_VIEW, label: 'All', color: '#9AA6A0', count: ready ? rows.length : initial.total },
     ...visibleTabs.map((t) => ({ key: t.key, label: t.label, color: t.color, count: t.count })),
   ]
 
@@ -255,17 +225,40 @@ export default function ValueListClient({
 
         <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-text-secondary">
-            Showing{' '}
+            {pending ? (
+            <>Loading every item…</>
+          ) : (
+            <>
+Showing{' '}
             <span className="font-semibold tabular-nums text-text-primary">
-              {filtered.length === 0 ? '0' : `${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()}`}
+              {filteredCount === 0 ? '0' : `${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()}`}
             </span>{' '}
-            of <span className="tabular-nums">{filtered.length.toLocaleString()}</span> items
+            of <span className="tabular-nums">{filteredCount.toLocaleString()}</span> items
+            </>
+          )}
           </p>
           <FreshnessBadge {...freshness} />
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {pending && failed ? (
+        <ValuesEmptyState
+          className="mt-6"
+          title="Couldn't Load Every Item"
+          body="Check your connection and try again."
+          action={
+            <button type="button" onClick={retry} className={`mt-5 ${VALUE_BTN_SECONDARY}`}>
+              Try Again
+            </button>
+          }
+        />
+      ) : pending ? (
+        <div aria-busy aria-label="Loading items" className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 10 }, (_, i) => (
+            <ValueCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
         <ValuesEmptyState className="mt-6" title="No Items Found" body="Try changing the search or filters." />
       ) : (
         <motion.div

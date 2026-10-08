@@ -12,12 +12,20 @@ import { getHubNavData } from '@/lib/content/hubNav'
 import { getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { HUB_GROUND } from '@/components/values/styles'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
-import { getValueItems, getValueTrends, getValuesFreshness } from '@/lib/values/data'
-import { valueItemHasPage, valueListHub, type ValueListHubConfig } from '@/lib/values/hub-config'
+import { getValuesFreshness } from '@/lib/values/data'
+import { valueListHub, type ValueListHubConfig } from '@/lib/values/hub-config'
 import { ValuesSeo, VALUES_SEO_LINK as linkCls, type ValuesFaqItem } from '../_ValuesSeo'
-import ValueListClient, { type ValueListRow } from './ValueListClient'
+import ValueListClient from './ValueListClient'
 import { ValueListSkeleton } from './ValueListSkeleton'
-import { pack } from '@/lib/serialize/columnar'
+import { initialValueList } from '@/lib/values/lazy-list'
+import { getValueListRows } from './valueListRows'
+import {
+  filterSortValueRows,
+  valueListTabCounts,
+  VALUE_LIST_DEFAULT_SORT,
+  VALUE_LIST_PAGE_SIZE,
+  type ValueListRow,
+} from './valueListModel'
 
 /**
  * Value LIST hub for a game on the values_* pipeline (Murder Mystery 2 first):
@@ -91,30 +99,10 @@ async function ValueListBody({
   buyHref: string
 }) {
   const theme = getGameContentTheme(gameSlug)
-  const [items, trends, freshness] = await Promise.all([
-    getValueItems(gameSlug, { kinds: ['item'] }),
-    getValueTrends(gameSlug, 7),
+  const [{ rows, hasTrends }, freshness] = await Promise.all([
+    getValueListRows(gameSlug),
     getValuesFreshness(gameSlug),
   ])
-
-  const rows: ValueListRow[] = items.map((i) => {
-    const priced = i.price?.cheapestUsd != null
-    return {
-      id: i.id,
-      slug: i.slug,
-      name: i.name,
-      rarity: i.rarity,
-      itemType: i.itemType,
-      imageUrl: i.imageUrl,
-      href: valueItemHasPage(gameSlug, { rarity: i.rarity, priced })
-        ? `/${gameSlug}/values/${i.slug}`
-        : null,
-      cheapestUsd: i.price?.cheapestUsd ?? null,
-      marketUsd: i.price?.averageUsd ?? null,
-      listedNow: i.price?.sampleSize ?? 0,
-      trendPct: trends.pctByItem[i.id] ?? null,
-    }
-  })
 
   if (rows.length === 0) {
     return (
@@ -144,9 +132,17 @@ async function ValueListBody({
       <ValueListClient
         gameSlug={gameSlug}
         gameName={theme.name}
-        packedRows={pack(rows)}
+        // The default view's first page only; the client fetches the rest
+        // (lib/values/lazy-list.ts — the full list made this page 843 KB).
+        initial={initialValueList(
+          filterSortValueRows(rows, { query: '', tab: null, sort: VALUE_LIST_DEFAULT_SORT }),
+          {
+            pageSize: VALUE_LIST_PAGE_SIZE,
+            facets: { tab: valueListTabCounts(hub.tabs, rows) },
+          },
+        )}
         hub={hub}
-        hasTrends={Object.keys(trends.pctByItem).length > 0}
+        hasTrends={hasTrends}
         freshness={{
           lastChangedAt: freshness.lastChangedAt,
           listingCount: freshness.listingCount,

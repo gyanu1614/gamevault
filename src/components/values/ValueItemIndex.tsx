@@ -1,4 +1,3 @@
-import Link from '@/components/navigation/AppLink'
 import { GamesDirectoryCollapse } from '@/components/games-directory-collapse'
 
 /**
@@ -32,12 +31,13 @@ export function ValueItemIndex({
       </h2>
       <div className="mt-5">
         <GamesDirectoryCollapse collapsed={220} fade="var(--color-bg-base)" label={`Show All ${items.length.toLocaleString('en-US')}`}>
-          <ul className="columns-2 gap-x-8 sm:columns-3 lg:columns-5">
+          {/* Styled from the list, and plain <a>: 500 links each carrying their
+              own classes and a client Link reference were ~150 KB of the page
+              (2026-10-07, Bing "HTML size is too long"). */}
+          <ul className="columns-2 gap-x-8 sm:columns-3 lg:columns-5 [&_a]:text-[13.5px] [&_a]:text-text-secondary [&_a]:transition-colors [&_a:hover]:text-text-primary [&_li]:break-inside-avoid [&_li]:py-1">
             {sorted.map((it) => (
-              <li key={it.href} className="break-inside-avoid py-1">
-                <Link href={it.href} className="text-[13.5px] text-text-secondary transition-colors hover:text-text-primary">
-                  {it.name}
-                </Link>
+              <li key={it.href}>
+                <a href={it.href}>{it.name}</a>
               </li>
             ))}
           </ul>

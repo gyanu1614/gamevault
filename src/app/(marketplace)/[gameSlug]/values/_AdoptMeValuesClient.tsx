@@ -33,52 +33,35 @@ import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { MARKET_SECONDARY_GAP } from '@/lib/values/pricing'
 import { ADOPT_ME_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
-import { unpack, type Packed } from '@/lib/serialize/columnar'
+import type { InitialValueList } from '@/lib/values/lazy-list'
+import { useValueListRows } from '@/lib/values/useValueListRows'
+import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
+import { ValueCardSkeleton } from './_generic/ValueListSkeleton'
+import {
+  ADOPT_ME_DEFAULT_SORT,
+  ADOPT_ME_DEFAULT_VARIANT,
+  ADOPT_ME_DEFAULT_VIEW,
+  ADOPT_ME_PAGE_SIZE,
+  filterSortPets,
+  popularPetSlugs,
+  type AdoptMePetItem,
+  type AdoptMeSort,
+  type AdoptMeView,
+} from './_adoptMeListModel'
+
+export type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
 const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
 const RARITY_ORDER = ADOPT_ME_RARITIES.map((r) => r.key)
-
-/* ── Data shape passed from the server ────────────────────────────────────── */
-export interface AdoptMeVariantValue {
-  variant: Variant
-  tradeValue: number | null
-  /** Headline cash = reputable market (average) when present, else legacy value. */
-  cashUsd: number | null
-  /** Lowest reputable-seller price (100+ reviews). Null until priced. */
-  cheapestUsd: number | null
-  /** Reputable market price (median of cheapest reputable listings). */
-  averageUsd: number | null
-  isEstimated: boolean
-  confidence: string
-}
-export interface AdoptMePetItem {
-  slug: string
-  name: string
-  rarity: string
-  imageUrl: string | null
-  topTradeValue: number
-  /** Market demand rank (1 = most in-demand). Drives the Popular ordering;
-   *  null-rank pets sort after ranked ones. */
-  demandRank: number | null
-  /** True when a /adopt-me/values/{slug} page exists — only then is the row a link. */
-  hasPage: boolean
-  values: Record<Variant, AdoptMeVariantValue | undefined>
-}
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
 
-const POPULAR_COUNT = 12
-const PAGE_SIZE = 25
+const PAGE_SIZE = ADOPT_ME_PAGE_SIZE
 
-type View = 'popular' | 'all' | string
-type Sort =
-  | 'value-desc'
-  | 'value-asc'
-  | 'cash-desc'
-  | 'cash-asc'
-  | 'name'
+type View = AdoptMeView
+type Sort = AdoptMeSort
 
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'value-desc', label: 'Highest Trade Value' },
@@ -90,19 +73,19 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
 
 // useSearchParams() requires a Suspense boundary; the wrapper provides it so the
 // page can render this client directly (mirrors SAB's ValuesDirectoryClient).
-export default function AdoptMeValuesClient({ packedPets }: { packedPets: Packed }) {
-  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
-  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
-  // is too long").
-  const pets = useMemo(() => unpack<AdoptMePetItem[]>(packedPets), [packedPets])
+export default function AdoptMeValuesClient({ initial }: { initial: InitialValueList }) {
   return (
     <Suspense fallback={null}>
-      <AdoptMeValuesClientInner pets={pets} />
+      <AdoptMeValuesClientInner initial={initial} />
     </Suspense>
   )
 }
 
-function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
+function AdoptMeValuesClientInner({ initial }: { initial: InitialValueList }) {
+  // The default view's first page ships in the page; every pet arrives from
+  // rows.json right after hydration (lib/values/lazy-list.ts — the full list
+  // made this page 1.2 MB).
+  const { rows: pets, ready, failed, retry } = useValueListRows<AdoptMePetItem>('adopt-me', initial)
   // Filters live in the URL so they SURVIVE navigation: tap a pet, hit Back, and
   // the same variant/search/view/sort/page is restored (and the view is
   // shareable/bookmarkable). Seeded from the query params on mount; a sync effect
@@ -126,67 +109,42 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
     return Number.isInteger(p) && p > 0 ? p : 1
   })
 
-  // Demand-first ordering: lower demand_rank = more popular (rank 1 first);
-  // null-rank pets fall to the end, tiebroken by top trade value. This is the
-  // Popular ORDERING — Popular is not a 12-item cut, it runs the WHOLE list
-  // most-in-demand first and pages through everything (mirrors SAB).
-  const byDemand = (a: AdoptMePetItem, b: AdoptMePetItem) => {
-    const ar = a.demandRank ?? Infinity
-    const br = b.demandRank ?? Infinity
-    if (ar !== br) return ar - br
-    return b.topTradeValue - a.topTradeValue
-  }
-
-  // The top few by demand still get a "Popular" tag on their card.
+  // The top few by demand get a "Popular" tag (from the page until all pets are here).
   const popularSlugs = useMemo(
-    () => new Set([...pets].sort(byDemand).slice(0, POPULAR_COUNT).map((p) => p.slug)),
-    [pets],
-  )
-
-  const raritiesPresent = useMemo(
-    () => RARITY_ORDER.filter((r) => pets.some((p) => p.rarity === r)),
-    [pets],
+    () => new Set(ready ? popularPetSlugs(pets) : ((initial.extra?.popular as string[] | undefined) ?? [])),
+    [pets, ready, initial.extra],
   )
 
   // Per-rarity counts for the tab labels (Legendary 42, Ultra-Rare 11…).
   const rarityCounts = useMemo(() => {
+    if (!ready) return initial.facets.rarity ?? {}
     const m: Record<string, number> = {}
     for (const p of pets) m[p.rarity] = (m[p.rarity] ?? 0) + 1
     return m
-  }, [pets])
+  }, [pets, ready, initial.facets])
+
+  const raritiesPresent = useMemo(() => RARITY_ORDER.filter((r) => (rarityCounts[r] ?? 0) > 0), [rarityCounts])
 
   const valueOf = (p: AdoptMePetItem) => p.values[variant]
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    // Popular is an ORDERING, not a filter — it keeps the full list and only
-    // changes the sort, so paging carries through every pet. A rarity chip still
-    // filters to that rarity; 'all' is the whole list A-Z/by-sort.
-    let list = pets.filter((p) => {
-      if (q && !p.name.toLowerCase().includes(q)) return false
-      if (view === 'popular' || view === 'all') return true
-      return p.rarity === view
-    })
-    list = [...list].sort((a, b) => {
-      if (sort === 'name') return a.name.localeCompare(b.name)
-      if (sort === 'cash-desc' || sort === 'cash-asc') {
-        // Cheapest is the buyer-facing headline; sort on it, unpriced last.
-        const ac = a.values[variant]?.cheapestUsd ?? a.values[variant]?.cashUsd ?? -1
-        const bc = b.values[variant]?.cheapestUsd ?? b.values[variant]?.cashUsd ?? -1
-        return sort === 'cash-asc' ? ac - bc : bc - ac
-      }
-      // Default (value-desc) in the Popular view means "most in demand first".
-      if (view === 'popular' && sort === 'value-desc') return byDemand(a, b)
-      const av = a.values[variant]?.tradeValue ?? -1
-      const bv = b.values[variant]?.tradeValue ?? -1
-      return sort === 'value-asc' ? av - bv : bv - av
-    })
-    return list
-  }, [pets, query, view, sort, variant])
+  const isDefaultView =
+    !query.trim() &&
+    variant === ADOPT_ME_DEFAULT_VARIANT &&
+    view === ADOPT_ME_DEFAULT_VIEW &&
+    sort === ADOPT_ME_DEFAULT_SORT &&
+    page === 1
+  // Before the full list arrives only the default first page is known; any
+  // other view waits for it rather than filtering one page.
+  const pending = !ready && !isDefaultView
+  const filtered = useMemo(
+    () => (ready ? filterSortPets(pets, { query, view, sort, variant }) : pets),
+    [pets, ready, query, view, sort, variant],
+  )
+  const filteredCount = ready ? filtered.length : initial.total
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
-  const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const visible = ready ? filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE) : pending ? [] : filtered
   const resetPage = () => setPage(1)
   // Paging scrolls back to the top so the new page isn't stranded below the
   // pagination bar. Instant for reduced-motion users.
@@ -197,8 +155,8 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
     window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
   }
 
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length)
+  const rangeStart = filteredCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, filteredCount)
 
   // Mirror the current variant/filter/sort/page into the URL (replace, so typing
   // doesn't spam history). Because the state lives in the URL, tapping a pet and
@@ -219,7 +177,7 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
 
   const rarityOptions = [
     { key: 'popular', label: 'Popular', color: '#4FB477' },
-    { key: 'all', label: 'All', color: '#9AA6A0', count: pets.length },
+    { key: 'all', label: 'All', color: '#9AA6A0', count: ready ? pets.length : initial.total },
     ...raritiesPresent.map((r) => ({
       key: r,
       label: rarityMeta(r).label,
@@ -280,14 +238,37 @@ function AdoptMeValuesClientInner({ pets }: { pets: AdoptMePetItem[] }) {
       )}
 
       <p className="mt-3 text-sm text-text-secondary">
-        Showing{' '}
+        {pending ? (
+            <>Loading every pet…</>
+          ) : (
+            <>
+Showing{' '}
         <span className="font-semibold tabular-nums text-text-primary">
-          {filtered.length === 0 ? '0' : `${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()}`}
+          {filteredCount === 0 ? '0' : `${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()}`}
         </span>{' '}
-        of <span className="tabular-nums">{filtered.length.toLocaleString()}</span> pets
+        of <span className="tabular-nums">{filteredCount.toLocaleString()}</span> pets
+            </>
+          )}
       </p>
 
-      {visible.length === 0 ? (
+      {pending && failed ? (
+        <ValuesEmptyState
+          className="mt-6"
+          title="Couldn't Load Every Pet"
+          body="Check your connection and try again."
+          action={
+            <button type="button" onClick={retry} className={`mt-5 ${VALUE_BTN_SECONDARY}`}>
+              Try Again
+            </button>
+          }
+        />
+      ) : pending ? (
+        <div aria-busy aria-label="Loading pets" className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 10 }, (_, i) => (
+            <ValueCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
         <ValuesEmptyState className="mt-6" title="No Pets Found" body="Try changing the search or filters." />
       ) : (
         // Each card carries its own variant picker that reprices its footer,
