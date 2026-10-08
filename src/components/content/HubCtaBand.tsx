@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { gameCtaSources } from '@/lib/content/game-cta-art'
+import { gameNameFromSlug } from '@/components/marketplace/GameHeroArt'
 import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 
@@ -95,7 +96,7 @@ export function HubCtaBand({
             key={src}
             ref={imgRef}
             src={src}
-            alt=""
+            alt={`${gameNameFromSlug(gameSlug)} background art`}
             aria-hidden
             loading="lazy"
             decoding="async"

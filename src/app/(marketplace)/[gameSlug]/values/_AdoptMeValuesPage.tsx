@@ -14,6 +14,7 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubGuidesStrip } from '@/components/content/HubGuidesStrip'
 import { HUB_GROUND } from '@/components/values/styles'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
+import { pack } from '@/lib/serialize/columnar'
 
 /**
  * /adopt-me/values — the Adopt Me pillar page. Kept as its own component so the
@@ -150,7 +151,7 @@ export default async function AdoptMeValuesPage() {
               body="The Adopt Me pet database could not be loaded. Please check again shortly."
             />
           ) : (
-            <AdoptMeValuesClient pets={pets} />
+            <AdoptMeValuesClient packedPets={pack(pets)} />
           )}
 
           {/* SEO content package — intro, "how we price", rendered FAQ (schema

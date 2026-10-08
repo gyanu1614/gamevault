@@ -17,6 +17,7 @@ export function ValueArt({
   pixelated = false,
   className = '',
   priority = false,
+  'aria-hidden': ariaHidden,
 }: {
   src: string | null | undefined
   alt: string
@@ -24,6 +25,8 @@ export function ValueArt({
   pixelated?: boolean
   className?: string
   priority?: boolean
+  /** Hide from screen readers when the name is already visible next to the art. */
+  'aria-hidden'?: boolean
 }) {
   const [failed, setFailed] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -38,6 +41,7 @@ export function ValueArt({
       <span
         role="img"
         aria-label={alt}
+        aria-hidden={ariaHidden}
         className={`flex items-center justify-center rounded-md bg-white/[0.04] text-text-disabled ${className}`}
         style={{ width: size, height: size }}
       >
@@ -57,6 +61,7 @@ export function ValueArt({
       ref={imgRef}
       src={src}
       alt={alt}
+      aria-hidden={ariaHidden}
       width={size}
       height={size}
       loading={priority ? 'eager' : 'lazy'}

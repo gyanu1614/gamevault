@@ -28,6 +28,7 @@ import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 /**
@@ -131,7 +132,7 @@ async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[]; days: n
   return { gainers, losers, days: dates.length }
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: {
   params: Promise<{ gameSlug: string }>
@@ -296,4 +297,11 @@ function MoverList({ title, icon, moves }: { title: string; icon: 'up' | 'down';
       </ul>
     </div>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

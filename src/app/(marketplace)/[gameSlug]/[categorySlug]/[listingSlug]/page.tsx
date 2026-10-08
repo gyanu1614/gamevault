@@ -25,6 +25,7 @@ import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
 import { getActiveGame, getEnabledCategory } from '../_routeGate'
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { currencyListingRedirect, isCurrencyCategoryType } from '@/lib/listings/url'
+import { seoMeta } from '@/lib/seo/fit'
 
 // V15p — Empty taxonomy for ad-hoc ItemOffer shaping in the similar-
 // offers carousel. The detail page doesn't need the filter chain, so we
@@ -87,7 +88,7 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   })
 })
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, categorySlug, listingSlug } = await params
   const currencyTarget = await resolveCurrencyRedirect(gameSlug, categorySlug, listingSlug)
   if (currencyTarget) permanentRedirect(currencyTarget)
@@ -529,4 +530,11 @@ async function ListingDetailPage({ params }: PageProps) {
       />
     </>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

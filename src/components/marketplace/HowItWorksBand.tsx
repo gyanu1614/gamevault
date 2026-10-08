@@ -41,6 +41,8 @@ export interface HowItWorksHighlight {
   note?: string
   /** The currency's own icon (Robux, V-Bucks), floated on the right. */
   iconUrl?: string | null
+  /** Alt text for the currency icon (e.g. "Robux icon"). */
+  iconAlt?: string
   /** Game art, blurred and dimmed behind the figure. */
   backdropUrl?: string | null
 }
@@ -81,7 +83,7 @@ function Progress({ step, tone }: { step: number; tone: 'blue' | 'green' }) {
  * Owner, 2026-10-05: a plain teal "7 Roblox Offers" box "doesn't look good";
  * wanted the Robux icon. 2026-10-06: drop the backdrop box (card in card).
  */
-function Highlight({ label, value, note, iconUrl }: HowItWorksHighlight) {
+function Highlight({ label, value, note, iconUrl, iconAlt }: HowItWorksHighlight) {
   // No box of its own (owner, 2026-10-06: no card in card): the figure on the
   // left, the currency icon floating on the right, straight on the tile.
   return (
@@ -95,7 +97,7 @@ function Highlight({ label, value, note, iconUrl }: HowItWorksHighlight) {
         // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
         <img
           src={iconUrl}
-          alt=""
+          alt={iconAlt ?? 'Currency icon'}
           aria-hidden
           loading="lazy"
           decoding="async"

@@ -308,7 +308,7 @@ async function ChromasBody({ gameSlug, ctx, u, buyHref }: { gameSlug: string; ct
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
               src={art.imageUrl}
-              alt=""
+              alt={`${art.name} artwork`}
               aria-hidden
               loading="lazy"
               decoding="async"

@@ -115,7 +115,8 @@ export async function FooterGameLinks() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={g.icon}
-                  alt=""
+                  alt={`${g.name} logo`}
+                  aria-hidden
                   width={22}
                   height={22}
                   loading="lazy"

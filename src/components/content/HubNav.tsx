@@ -417,7 +417,8 @@ function GameMark({
       <img
         ref={imgRef}
         src={imageUrl}
-        alt=""
+        alt={`${name} logo`}
+        aria-hidden
         onError={() => setFailed(true)}
         className={`${box} shrink-0 rounded-md object-cover`}
       />

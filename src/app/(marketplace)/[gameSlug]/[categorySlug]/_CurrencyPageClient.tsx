@@ -261,6 +261,7 @@ export default function CurrencyPageClient({
       value: unitPrice(min),
       note: `per ${per} · ${allOffers.length} ${allOffers.length === 1 ? 'seller' : 'sellers'} live now`,
       iconUrl: data.currency.iconUrl ?? null,
+      iconAlt: `${data.currency.name} icon`,
       backdropUrl: gameImageUrl ?? null,
     }
   }, [allOffers, data.currency, gameImageUrl])
@@ -383,7 +384,7 @@ export default function CurrencyPageClient({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={`/watermarks/${gameSlug}.webp`}
-              alt=""
+              alt={`${data.currency.game} logo art`}
               aria-hidden
               onError={(e) => { e.currentTarget.style.display = 'none' }}
               className="pointer-events-none absolute -left-32 -top-8 -z-10 hidden h-[22rem] w-[22rem] -rotate-12 select-none object-contain opacity-[0.35] lg:block"
@@ -505,7 +506,8 @@ function SectionHeader({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={iconUrl}
-              alt=""
+              alt={`${title} icon`}
+              aria-hidden
               className="h-14 w-14 flex-shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
             />
           ) : (
@@ -768,7 +770,7 @@ function HeroCard({
               src="/icons/safedrop-emblem.avif"
               width={128}
               height={128}
-              alt=""
+              alt="SafeDrop Protection emblem"
               aria-hidden
               className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-50"
             />
@@ -990,7 +992,7 @@ function FilterChips({
   const tab = (iconSrc: string, label: string, shortLabel: string) => (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={iconSrc} alt="" aria-hidden draggable={false} width={18} height={18} className="hidden h-[18px] w-[18px] select-none object-contain sm:block" />
+      <img src={iconSrc} alt={`${label} icon`} aria-hidden draggable={false} width={18} height={18} className="hidden h-[18px] w-[18px] select-none object-contain sm:block" />
       <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">{shortLabel}</span>
     </>

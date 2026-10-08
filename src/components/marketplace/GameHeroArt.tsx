@@ -9,6 +9,15 @@ import { cn } from '@/lib/utils'
  * "Hero recipe"; see GameHeroBackdrop for how it is placed and loaded.
  */
 
+/** "adopt-me" → "Adopt Me": enough for an image's alt text without a DB read. */
+export function gameNameFromSlug(slug: string): string {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
 /** Band height per surface (globals.css `.game-hero[data-size]`). */
 export type GameHeroSize = 'market' | 'hub' | 'tall'
 
@@ -16,10 +25,13 @@ export function GameHeroArt({
   hero,
   size,
   className,
+  alt = 'Game background art',
 }: {
   hero: GameHero
   size: GameHeroSize
   className?: string
+  /** Short description of the art (the band itself stays aria-hidden). */
+  alt?: string
 }) {
   const style = { '--game-hero-focal': `${hero.focalY}%` } as CSSProperties
   return (
@@ -37,7 +49,7 @@ export function GameHeroArt({
           src={hero.src}
           srcSet={hero.kind === 'upload' ? hero.srcSet : undefined}
           sizes={hero.kind === 'upload' ? '100vw' : undefined}
-          alt=""
+          alt={alt}
           fetchPriority="high"
           decoding="async"
           draggable={false}

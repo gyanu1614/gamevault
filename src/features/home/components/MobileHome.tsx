@@ -400,7 +400,8 @@ function MobileSearchGameLogo({ game }: { game: NonNullable<NavCatRow['game']> }
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src={src}
-      alt=""
+      alt={`${game.name} logo`}
+      aria-hidden
       loading="lazy"
       onError={() => setSrc((current) => (current !== usableFallback ? usableFallback : null))}
       className="h-12 w-12 shrink-0 rounded-[11px] object-cover shadow-[0_7px_16px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.10]"
@@ -732,7 +733,7 @@ export function MobileTrustRows() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={img}
-            alt=""
+            alt={`${claim} icon`}
             aria-hidden
             style={{ ['--icon-glow' as string]: glow } as React.CSSProperties}
             className="relative h-10 w-10 object-contain [filter:drop-shadow(0_6px_8px_rgba(0,0,0,0.55))_drop-shadow(0_0_12px_var(--icon-glow))]"

@@ -625,7 +625,7 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
         <img
           key={d.src + d.size}
           src={d.src}
-          alt=""
+          alt="Gold coin decoration"
           aria-hidden
           loading="lazy"
           decoding="async"
@@ -688,7 +688,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
       {cta.art ? (
         <Image
           src={cta.art.src}
-          alt=""
+          alt="Seller illustration"
+          aria-hidden
           width={cta.art.width}
           height={cta.art.height}
           priority={false}
@@ -711,7 +712,7 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
   const figure = cta.art && (
     <Image
       src={cta.art.src}
-      alt=""
+      alt="Seller illustration"
       aria-hidden
       width={cta.art.width}
       height={cta.art.height}
@@ -830,7 +831,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
             />
             <img
               src={d.src}
-              alt=""
+              alt="Coin decoration"
+              aria-hidden
               width={d.w}
               height={d.h}
               loading="lazy"
@@ -868,7 +870,8 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
         >
           <Image
             src={card3.src}
-            alt=""
+            alt="Seller illustration"
+            aria-hidden
             width={card3.width}
             height={card3.height}
             priority={false}
@@ -923,7 +926,7 @@ export function SellerCtaCard({ cta }: { cta: SellerCta }) {
         )}
         <Image
           src={cta.figureLeft.src}
-          alt=""
+          alt="Seller illustration"
           aria-hidden
           width={cta.figureLeft.width}
           height={cta.figureLeft.height}

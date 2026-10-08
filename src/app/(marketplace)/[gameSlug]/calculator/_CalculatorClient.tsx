@@ -408,7 +408,7 @@ function CashTab({
                     active ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]',
                   )}
                 >
-                  <ValueArt src={brainrot.imageUrl} alt="" size={46} className="shrink-0" />
+                  <ValueArt src={brainrot.imageUrl} alt={brainrot.name} aria-hidden size={46} className="shrink-0" />
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="truncate text-[14px] font-semibold text-text-primary">
                       {brainrot.name}
@@ -1132,7 +1132,7 @@ function TradeTab({
        Price mode and the value list are for). */
     <div>
       <div className={`${VALUE_TILE} flex items-center gap-3 p-3`}>
-        <ValueArt src={pendingBrainrot.imageUrl} alt="" size={48} className="shrink-0" />
+        <ValueArt src={pendingBrainrot.imageUrl} alt={pendingBrainrot.name} aria-hidden size={48} className="shrink-0" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-text-primary">
             {pendingBrainrot.name}
@@ -1285,7 +1285,7 @@ function TradeTab({
                   href={item.buyHref}
                   className="group grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
                 >
-                  <ValueArt src={item.imageUrl} alt="" size={44} />
+                  <ValueArt src={item.imageUrl} alt={item.name} aria-hidden size={44} />
 
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate text-[14.5px] font-semibold text-text-primary">
@@ -1510,7 +1510,7 @@ function EntryEditor({
   return (
     <div>
       <div className={`${VALUE_TILE} flex items-center gap-4 p-4`}>
-        <ValueArt src={brainrot?.imageUrl} alt="" size={80} className="shrink-0" />
+        <ValueArt src={brainrot?.imageUrl} alt={brainrot?.name ?? 'Unknown Brainrot'} aria-hidden size={80} className="shrink-0" />
 
         <div className="min-w-0">
           <p className="font-semibold text-text-primary">

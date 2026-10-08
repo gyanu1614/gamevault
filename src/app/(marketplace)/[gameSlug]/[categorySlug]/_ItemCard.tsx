@@ -53,7 +53,8 @@ function SellerAvatar({ seller, size = 34 }: { seller: ItemOffer['seller']; size
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={seller.avatarUrl}
-        alt=""
+        alt={`${sellerDisplayName(seller)} avatar`}
+        aria-hidden
         style={{ width: size, height: size }}
         className="shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
       />

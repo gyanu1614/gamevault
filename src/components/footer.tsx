@@ -22,6 +22,7 @@ import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { DISCORD_INVITE_URL } from '@/lib/config/social'
+import { foundingHref } from '@/lib/seo/founding-href'
 
 /* ── Company details (UK e-commerce law + payment-provider requirement) ── */
 
@@ -48,7 +49,7 @@ const LINK_GROUPS: Array<{
       { name: 'Browse Listings', href: '/browse' },
       // Beta: the become-seller wizard is post-launch; motivated sellers should
       // land on the founding-seller waitlist, not a dead end.
-      { name: 'Become a Founding Seller', href: '/early-seller?src=footer' },
+      { name: 'Become a Founding Seller', href: foundingHref('footer') },
       { name: 'Seller Fees', href: '/sell/fees' },
       { name: 'Blog', href: '/blog' },
       { name: 'Company', href: '/company' },

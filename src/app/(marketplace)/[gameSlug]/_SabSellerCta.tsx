@@ -17,6 +17,7 @@
 
 import { HubCtaBand } from '@/components/content/HubCtaBand'
 import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
+import { foundingHref } from '@/lib/seo/founding-href'
 
 interface HubSellerCtaProps {
   /** Game slug — the /early-seller source tag + the per-game backdrop file. */
@@ -45,7 +46,7 @@ export async function SabSellerCta({ gameSlug, gameName, src }: HubSellerCtaProp
       }
       body="Founding-seller rate, locked for life. You only pay when something sells."
       ctaLabel={`Sell ${gameName}`}
-      ctaHref={`/early-seller?src=${src}`}
+      ctaHref={foundingHref(src)}
     />
   )
 }

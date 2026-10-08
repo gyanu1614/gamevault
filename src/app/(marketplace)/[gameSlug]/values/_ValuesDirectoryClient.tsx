@@ -27,6 +27,7 @@ import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
 import { SAB_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
+import { unpack, type Packed } from '@/lib/serialize/columnar'
 
 const rarityMeta = (r: string) => sharedRarityMeta('steal-a-brainrot', r)
 /** Rarest first — the order players think in, not alphabetical. */
@@ -159,10 +160,14 @@ function compareValue(a: BrainrotDirectoryItem, b: BrainrotDirectoryItem): numbe
  * wraps the inner component so the value page can render it directly, matching
  * the pattern used by _BrowseClient.
  */
-export default function ValuesDirectoryClient(props: ValuesDirectoryClientProps) {
+export default function ValuesDirectoryClient({ packedBrainrots }: { packedBrainrots: Packed }) {
+  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
+  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
+  // is too long").
+  const brainrots = useMemo(() => unpack<BrainrotDirectoryItem[]>(packedBrainrots), [packedBrainrots])
   return (
     <Suspense fallback={null}>
-      <ValuesDirectoryClientInner {...props} />
+      <ValuesDirectoryClientInner brainrots={brainrots} />
     </Suspense>
   )
 }

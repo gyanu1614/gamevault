@@ -85,7 +85,8 @@ export function BlogCard({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={post.cover}
-              alt=""
+              alt={post.title}
+              aria-hidden
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />
@@ -127,7 +128,8 @@ export function BlogCard({
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={post.cover}
-            alt=""
+            alt={post.title}
+            aria-hidden
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />

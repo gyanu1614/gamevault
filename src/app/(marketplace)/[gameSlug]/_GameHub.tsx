@@ -47,7 +47,7 @@ const CARD_HOVER = MARKET_CARD_HOVER
 const RISE = 'animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none'
 
 /** House category glyphs are single-colour SVGs: draw them white via mask. */
-function CategoryGlyph({ src, className }: { src: string; className?: string }) {
+function CategoryGlyph({ src, alt, className }: { src: string; alt: string; className?: string }) {
   if (src.startsWith('/icons/categories/')) {
     return (
       <span
@@ -67,7 +67,7 @@ function CategoryGlyph({ src, className }: { src: string; className?: string }) 
     )
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" aria-hidden loading="lazy" decoding="async" className={cn('object-contain', className)} />
+  return <img src={src} alt={alt} aria-hidden loading="lazy" decoding="async" className={cn('object-contain', className)} />
 }
 
 function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -111,7 +111,7 @@ function HubHeader({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={gameImageUrl}
-            alt=""
+            alt={`${gameName} logo`}
             width={72}
             height={72}
             className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]"
@@ -165,6 +165,7 @@ function hubHighlight({
       value: price,
       note: per ? `per ${per} · ${offers}` : offers,
       iconUrl: icon,
+      iconAlt: `${spotlight.name} icon`,
       backdropUrl: gameImageUrl,
     }
   }
@@ -194,7 +195,7 @@ function CategoryButtons({ cards, gameName }: { cards: HubCard[]; gameName: stri
               )}
             >
               <span aria-hidden className="grid h-8 w-8 place-items-center rounded-md bg-white/[0.06] transition-colors group-hover:bg-white/[0.1]">
-                <CategoryGlyph src={card.icon} className="h-[18px] w-[18px]" />
+                <CategoryGlyph src={card.icon} alt={`${card.name} icon`} className="h-[18px] w-[18px]" />
               </span>
               {card.name}
               {card.count > 0 && (

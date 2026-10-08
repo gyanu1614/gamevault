@@ -16,10 +16,12 @@ export function GuideBackdrop({
   gameSlug,
   src,
   position = '50% 30%',
+  alt = 'Game background art',
 }: {
   gameSlug: string
   src?: string
   position?: string
+  alt?: string
 }) {
   const sources = gameCtaSources(gameSlug, src)
   const [index, setIndex] = useState(0)
@@ -30,7 +32,7 @@ export function GuideBackdrop({
     <img
       key={current}
       src={current}
-      alt=""
+      alt={alt}
       aria-hidden
       loading="lazy"
       onError={() => setIndex((i) => i + 1)}

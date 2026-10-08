@@ -238,7 +238,7 @@ async function EventBody({
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
               src={art}
-              alt=""
+              alt={`${e.name} item artwork`}
               aria-hidden
               loading="lazy"
               decoding="async"

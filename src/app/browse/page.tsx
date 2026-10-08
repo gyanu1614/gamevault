@@ -19,6 +19,7 @@ import { getGameIcon } from '@/features/home/lib/game-icons'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import BrowseClient from './_BrowseClient'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * The server shell is a static game/category directory; the live listing grid
@@ -26,7 +27,7 @@ import BrowseClient from './_BrowseClient'
  */
 export const revalidate = 900
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'Browse the Marketplace — Accounts, Currency, Items & Boosts',
   description:
     'Browse every game on DropMarket. Buy and sell accounts, in-game currency, items, top-ups and boosting. Every order is covered by SafeDrop Protection: Item Guaranteed or Full Refund.',
@@ -47,17 +48,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: `${SITE_URL}/browse`,
   },
-}
-
-/* The five core buying categories, keyed by the DB metadata.type each
-   game's categories carry. Used to build per-game deep links + the
-   "Browse by category" shortcut row. */
-const CATEGORY_SHORTCUTS = [
-  { label: 'Currency', type: 'currency', blurb: 'Coins, gold, V-Bucks and more' },
-  { label: 'Items', type: 'items', blurb: 'Skins, gear and rare drops' },
-  { label: 'Accounts', type: 'account', blurb: 'Ready-to-play game accounts' },
-  { label: 'Boosting', type: 'service', blurb: 'Rank-ups from pro players' },
-] as const
+})
 
 const FAQS = [
   {
@@ -103,25 +94,13 @@ async function getBrowseDirectory() {
   const list = games ?? []
   if (list.length === 0) return { games: [] as (GameRow & { href: string })[] }
 
-  // First active category per game → the card links to a real page.
-  const { data: cats } = (await supabase
-    .from('game_categories')
-    .select('game_id, slug, sort_order')
-    .in('game_id', list.map((g) => g.id))
-    .eq('is_enabled', true)
-    .order('sort_order', { ascending: true })) as unknown as {
-      data: { game_id: string; slug: string }[] | null
-    }
-
-  const firstCat = new Map<string, string>()
-  for (const c of cats ?? []) {
-    if (!firstCat.has(c.game_id)) firstCat.set(c.game_id, c.slug)
-  }
-
   return {
     games: list.map((g) => ({
       ...g,
-      href: firstCat.has(g.id) ? `/${g.slug}/${firstCat.get(g.id)}` : `/${g.slug}/buy-currency`,
+      // The game hub: it always exists for an active game (2026-10-07 Bing
+      // scan: a game with no enabled category got an invented /buy-currency
+      // link that 404s).
+      href: `/${g.slug}`,
     })),
   }
 }
@@ -156,27 +135,6 @@ export default async function BrowsePage() {
         </p>
       </header>
 
-      {/* Category shortcuts — internal link row. */}
-      <section aria-labelledby="browse-categories" className="mb-10">
-        <h2 id="browse-categories" className="mb-4 text-[18px] font-bold tracking-[-0.01em] text-text-primary sm:text-[20px]">
-          Browse by Category
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {CATEGORY_SHORTCUTS.map((c) => (
-            <Link
-              key={c.type}
-              href={`/browse?category=${c.type}`}
-              className={`group rounded-lg p-4 ${MARKET_CARD} ${MARKET_CARD_HOVER}`}
-            >
-              <span className="block text-[15px] font-bold text-text-primary">
-                {c.label}
-              </span>
-              <span className="mt-0.5 block text-[12px] leading-snug text-text-tertiary">{c.blurb}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* Game directory — the SEO payload: an internal link to every
           active game's marketplace page. */}
       {games.length > 0 && (
@@ -194,7 +152,8 @@ export default async function BrowsePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={g.image_url || getGameIcon(g.slug)}
-                  alt=""
+                  alt={`${g.name} logo`}
+                  aria-hidden
                   loading="lazy"
                   className="h-9 w-9 shrink-0 rounded-md object-cover"
                 />

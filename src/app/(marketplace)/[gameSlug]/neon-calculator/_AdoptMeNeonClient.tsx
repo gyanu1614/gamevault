@@ -49,7 +49,7 @@ export default function AdoptMeNeonClient({ pets }: { pets: CalcPet[] }) {
       >
         <span className="flex items-center gap-3">
           {pet ? (
-            <ValueArt src={pet.imageUrl} alt="" size={36} />
+            <ValueArt src={pet.imageUrl} alt={pet.name} aria-hidden size={36} />
           ) : (
             <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/[0.06] text-text-tertiary">
               <MagnifyingGlassIcon size={16} weight="bold" aria-hidden />

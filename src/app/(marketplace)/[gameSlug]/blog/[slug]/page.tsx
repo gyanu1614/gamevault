@@ -27,6 +27,7 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 
@@ -92,7 +93,7 @@ type GameRow = {
   blog_cta_image_url?: string | null
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: {
   params: Promise<{ gameSlug: string; slug: string }>
@@ -138,7 +139,6 @@ export default async function GameBlogArticle({
   // instead of being pushed right by an empty 220px rail.
   const hasToc = toc.length >= 2
 
-  const buyHref = `/${gameSlug}/buy-items`
   // Honest date byline: show "Updated {date}" only when the post was actually
   // edited after publishing (updatedAt > publishedAt); otherwise "Published".
   // Previously this always said "Updated" using the publish date — a soft
@@ -159,6 +159,9 @@ export default async function GameBlogArticle({
   // "Related tools" links — routes a reader to the money page matching their
   // intent, keyed by post type. Gated on the game actually having that route
   // (hubNav.tools / sellHref) so no link is ever dead; distinct keyword anchors.
+  // The game's real items page, else its hub (2026-10-07 Bing scan: Valorant
+  // has no buy-items category, the hard-coded link 404'd).
+  const buyHref = hubNav.itemsHref ?? `/${gameSlug}`
   const hasValues = hubNav.tools.includes('values')
   const hasCalculator = hubNav.tools.includes('calculator')
   const TOOL = {
@@ -261,7 +264,8 @@ export default async function GameBlogArticle({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/logo-mark-white.avif"
-                alt=""
+                alt="DropMarket logo"
+                aria-hidden
                 width={26}
                 height={26}
                 className="h-[26px] w-[26px] object-contain"
@@ -301,11 +305,11 @@ export default async function GameBlogArticle({
             {post.cover && (
               <div className="mb-10 overflow-hidden border border-[#1E2723]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={post.cover} alt="" className="w-full object-cover" />
+                <img src={post.cover} alt={post.title} className="w-full object-cover" />
               </div>
             )}
 
-            <ArticleBody body={post.body} />
+            <ArticleBody body={post.body} imageAlt={post.title} />
 
             {/* Related tools — sends the reader to the money page matching this
                 post's intent, each with a distinct keyword-rich anchor. Uses the
@@ -405,4 +409,11 @@ export default async function GameBlogArticle({
       />
 </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

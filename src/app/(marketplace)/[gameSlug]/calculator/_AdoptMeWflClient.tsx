@@ -241,7 +241,7 @@ function Side({
                 className={`${VALUE_TILE} p-3`}
               >
                 <div className="mb-2.5 flex items-center gap-3">
-                  <ValueArt src={pet.imageUrl} alt="" size={40} className="shrink-0" />
+                  <ValueArt src={pet.imageUrl} alt={pet.name} aria-hidden size={40} className="shrink-0" />
                   <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text-primary">{pet.name}</p>
                   <div className="text-right">
                     <p className="text-[18px] font-bold leading-none tabular-nums" style={{ color: CASH_COLOR }}>
@@ -316,7 +316,7 @@ function PetLines({
         const v = pet.values[e.variant]
         return (
           <li key={e.id} className={`flex items-center gap-2.5 ${right ? 'flex-row-reverse text-right' : ''}`}>
-            <ValueArt src={pet.imageUrl} alt="" size={36} className="shrink-0" />
+            <ValueArt src={pet.imageUrl} alt={pet.name} aria-hidden size={36} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-body-sm font-semibold text-text-primary">{pet.name}</p>
               <p className="truncate text-caption text-text-tertiary">{VARIANT_LABEL[e.variant]}</p>

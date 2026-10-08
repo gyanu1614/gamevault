@@ -118,7 +118,8 @@ export function SwooshLink({
                   <div className="flex items-center gap-3">
                     <Image
                       src="/brand/logo-mark-white.avif"
-                      alt=""
+                      alt="DropMarket logo"
+                      aria-hidden
                       width={44}
                       height={44}
                       priority

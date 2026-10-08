@@ -54,7 +54,8 @@ export function TopUpsBanner() {
                   the content, floating on the same bob animation. */}
               <img
                 src="/characters/raptor.webp"
-                alt=""
+                alt="Raptor mascot illustration"
+                aria-hidden
                 loading="lazy"
                 decoding="async"
                 className="mascot unflip"

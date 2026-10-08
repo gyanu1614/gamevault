@@ -179,7 +179,7 @@ async function BoxesBody({ gameSlug, ctx, o, buyHref }: { gameSlug: string; ctx:
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
               src={art}
-              alt=""
+              alt="Box item artwork"
               aria-hidden
               loading="lazy"
               decoding="async"

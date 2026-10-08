@@ -25,12 +25,13 @@ import FoundingRail from './_components/FoundingRail'
 import FoundingContent from './_components/FoundingContent'
 import FoundingNavbar from './_components/FoundingNavbar'
 import type { MarqueeGame } from './_components/GameMarquee'
+import { seoMeta } from '@/lib/seo/fit'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'Founding Seller HQ',
   description: 'Your founding-seller status, the latest updates, and the door to start selling on DropMarket.',
   robots: { index: false, follow: false },
-}
+})
 
 export const dynamic = 'force-dynamic'
 

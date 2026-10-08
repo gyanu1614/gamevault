@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ItemRoutePage, itemRouteMetadata } from '../../_itemRoute'
+import { seoMeta } from '@/lib/seo/fit'
 
 // ISR (static-first rule); see ../page.tsx. Canonical = the item page.
 export const revalidate = 86400
@@ -13,10 +14,17 @@ interface PageProps {
   params: Promise<{ gameSlug: string; categorySlug: string; itemSlug: string; variant: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   return itemRouteMetadata(await params)
 }
 
 export default async function ItemVariantListingsPage({ params }: PageProps) {
   return <ItemRoutePage params={await params} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

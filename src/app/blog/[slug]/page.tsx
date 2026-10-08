@@ -18,6 +18,7 @@ import { getFlatPosts, getPost } from '@/lib/blog/posts'
 import { SITE_NAME, SITE_URL } from '@/config/site'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
+import { seoMeta } from '@/lib/seo/fit'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -34,7 +35,7 @@ export function generateStaticParams() {
   return getFlatPosts().map((p) => ({ slug: p.slug }))
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const post = getPost(slug)
   // ROUTE-008 — 404 from metadata rather than returning a "Post Not Found"
@@ -196,7 +197,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={post.cover}
-            alt=""
+            alt={post.title}
             className="mt-8 aspect-[2/1] w-full rounded-2xl object-cover ring-1 ring-border-subtle"
           />
         )}
@@ -207,4 +208,11 @@ export default async function BlogPostPage({ params }: PageProps) {
       </article>
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

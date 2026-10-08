@@ -257,7 +257,7 @@ async function FreeItemsBody({
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
               src={seer.imageUrl}
-              alt=""
+              alt={`${seer.name} artwork`}
               aria-hidden
               loading="lazy"
               decoding="async"

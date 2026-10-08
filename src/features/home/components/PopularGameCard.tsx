@@ -78,7 +78,7 @@ export function PopularGameCard({ game }: Props) {
           {!artFailed && (
             <Image
               src={`/games/art/${game.slug}.png`}
-              alt=""
+              alt={`${game.name} artwork`}
               aria-hidden
               fill
               sizes="(min-width:1280px) 190px, (min-width:1024px) 25vw, 33vw"

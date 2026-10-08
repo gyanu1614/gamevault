@@ -304,7 +304,7 @@ export default function ItemsPageClient({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={gameImageUrl}
-                alt=""
+                alt={`${gameName} logo`}
                 className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-[72px] sm:w-[72px]"
               />
             ) : (

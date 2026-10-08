@@ -101,7 +101,7 @@ export function WhyCard({ icon: Icon, img, title, body, tone = 'lime', index = 0
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={img}
-            alt=""
+            alt={`${title} icon`}
             aria-hidden
             style={{ ['--icon-glow' as string]: t.glow } as React.CSSProperties}
             className="h-[56px] w-[56px] flex-none object-contain [filter:drop-shadow(0_8px_10px_rgba(0,0,0,0.55))_drop-shadow(0_0_16px_var(--icon-glow))] transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105"

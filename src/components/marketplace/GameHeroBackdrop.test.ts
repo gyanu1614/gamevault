@@ -35,7 +35,7 @@ describe('GameHeroArt', () => {
     expect(img).toMatch(/fetchPriority="high"|fetchpriority="high"/)
     expect(img).toContain('decoding="async"')
     expect(img).not.toContain('loading="lazy"')
-    expect(img).toContain('alt=""')
+    expect(img).toContain('alt="Game background art"')
     for (const layer of ['game-hero__veil', 'game-hero__light', 'game-hero__fade']) expect(html).toContain(layer)
     expect(html).toContain('aria-hidden="true"')
   })

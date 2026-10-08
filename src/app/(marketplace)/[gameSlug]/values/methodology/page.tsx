@@ -28,6 +28,7 @@ import ValueListMethodology from '../_generic/ValueListMethodology'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { valueListHub } from '@/lib/values/hub-config'
 import { getGameContentTheme } from '@/lib/content/theme'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 86400
 /**
@@ -47,7 +48,7 @@ export function generateStaticParams() {
   return contentHubSlugsFor('methodology').map((gameSlug) => ({ gameSlug }))
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: {
   params: Promise<{ gameSlug: string }>
@@ -295,4 +296,11 @@ export default async function MethodologyPage({
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

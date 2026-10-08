@@ -36,7 +36,7 @@ export const pageTitle = (c: CopyCtx) => `${c.shortName} Inventory Value Calcula
 export const metaTitle = (c: CopyCtx) => `${c.shortName} Inventory Value Calculator: Your Inventory Worth in USD`
 
 export function metaDescription(c: CopyCtx, s: InventoryStats): string {
-  return `Add your ${c.gameName} items and see what your inventory is worth in real money. ${n(s.priced)} ${c.shortName} items priced in USD from ${n(s.listings)} live listings by professional sellers. Share it as an image or a Discord trade ad.`
+  return `See what your ${c.gameName} inventory is worth in real money: ${n(s.priced)} ${c.shortName} items priced in USD from ${n(s.listings)} live listings. Share it as an image.`
 }
 
 /** The answer-first lead under the H1: how it works, where the prices come from. */

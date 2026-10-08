@@ -181,7 +181,7 @@ function LiveOrderGameIcon({ game }: { game?: { slug?: string | null; image_url?
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
-          alt=""
+          alt="Game icon"
           aria-hidden
           width={44}
           height={44}
@@ -1253,7 +1253,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src="/characters/sleepy-pup.webp"
-                              alt=""
+                              alt="Sleepy puppy illustration"
                               aria-hidden
                               width={112}
                               height={112}
@@ -1370,7 +1370,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src="/characters/box-cat.webp"
-                              alt=""
+                              alt="Cat in a box illustration"
                               aria-hidden
                               width={112}
                               height={112}
@@ -1442,7 +1442,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-                      alt=""
+                      alt={`${user.profile?.username || 'User'} avatar`}
+                      aria-hidden
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15"
@@ -1561,7 +1562,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     className="flex items-center gap-2.5"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-white.avif" alt="" width={96} height={96} className="h-7 w-7" />
+                    <img src="/brand/logo-mark-white.avif" alt="DropMarket logo" aria-hidden width={96} height={96} className="h-7 w-7" />
                     <span className="text-[16px] font-bold tracking-[-0.01em] text-white">DropMarket</span>
                   </Link>
                   <button
@@ -1653,7 +1654,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                       src={game.iconSrc}
-                                      alt=""
+                                      alt={`${game.name} logo`}
+                                      aria-hidden
                                       width={44}
                                       height={44}
                                       loading="lazy"
@@ -1847,7 +1849,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                               >
                                 {game.image_url && game.image_url !== '' ? (
                                   // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={game.image_url} alt="" className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
+                                  <img src={game.image_url} alt={`${game.name} logo`} aria-hidden className="h-9 w-9 shrink-0 rounded-[8px] object-cover ring-1 ring-white/[0.10]" />
                                 ) : (
                                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.08] text-[9px] font-bold text-white/45">
                                     {game.name.slice(0, 2).toUpperCase()}
@@ -2082,7 +2084,8 @@ function CategoryDropdown({
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={game.image_url}
-                              alt=""
+                              alt={`${game.name} logo`}
+                              aria-hidden
                               width={40}
                               height={40}
                               className="h-10 w-10 shrink-0 rounded-[8px] object-contain"
@@ -2156,7 +2159,8 @@ function CategoryDropdown({
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={game.image_url}
-                                  alt=""
+                                  alt={`${game.name} logo`}
+                                  aria-hidden
                                   width={32}
                                   height={32}
                                   loading="lazy"
@@ -2638,7 +2642,8 @@ function GlobalSearch({
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 src={m.game.image_url}
-                                alt=""
+                                alt={`${m.game.name} logo`}
+                                aria-hidden
                                 className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"
                               />
                             ) : (
@@ -2694,7 +2699,8 @@ function GlobalSearch({
                                             /* eslint-disable-next-line @next/next/no-img-element */
                                             <img
                                               src={c.iconUrl}
-                                              alt=""
+                                              alt={`${c.label} icon`}
+                                              aria-hidden
                                               className="h-7 w-7 rounded-md object-contain"
                                             />
                                           )
@@ -2744,7 +2750,8 @@ function GlobalSearch({
                                         /* eslint-disable-next-line @next/next/no-img-element */
                                         <img
                                           src={h.gameImage}
-                                          alt=""
+                                          alt={`${h.gameName} logo`}
+                                          aria-hidden
                                           className="h-8 w-8 shrink-0 rounded-md object-cover ring-1 ring-white/10"
                                         />
                                       ) : (

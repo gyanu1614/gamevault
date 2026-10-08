@@ -27,6 +27,7 @@ import type { ListingWithRelations } from '@/types/database'
 import { listingUrl } from '@/lib/listings/url'
 
 import { SITE_URL } from '@/config/site'
+import { seoMeta } from '@/lib/seo/fit'
 
 const BASE_URL = SITE_URL
 
@@ -42,7 +43,7 @@ export async function generateStaticParams() {
 /* Metadata                                                             */
 /* ------------------------------------------------------------------ */
 
-export async function generateMetadata(
+async function generateMetadataRaw(
   { params }: { params: { seoSlug: string } },
   _parent: ResolvingMetadata,
 ): Promise<Metadata> {
@@ -443,4 +444,11 @@ export default async function SEOLandingPage({
       </main>
     </>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

@@ -33,6 +33,7 @@ import { RarityFilterBar } from '@/components/values/RarityFilterBar'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { MARKET_SECONDARY_GAP } from '@/lib/values/pricing'
 import { ADOPT_ME_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
+import { unpack, type Packed } from '@/lib/serialize/columnar'
 
 const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
 const RARITY_ORDER = ADOPT_ME_RARITIES.map((r) => r.key)
@@ -89,7 +90,11 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
 
 // useSearchParams() requires a Suspense boundary; the wrapper provides it so the
 // page can render this client directly (mirrors SAB's ValuesDirectoryClient).
-export default function AdoptMeValuesClient({ pets }: { pets: AdoptMePetItem[] }) {
+export default function AdoptMeValuesClient({ packedPets }: { packedPets: Packed }) {
+  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
+  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
+  // is too long").
+  const pets = useMemo(() => unpack<AdoptMePetItem[]>(packedPets), [packedPets])
   return (
     <Suspense fallback={null}>
       <AdoptMeValuesClientInner pets={pets} />

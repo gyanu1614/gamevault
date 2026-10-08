@@ -4,6 +4,7 @@ import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import FreeItemsPage, { freeCopyCtx, freePageNumbers } from './_FreeItemsPage'
 import { metaDescription, metaTitle } from './_freeItemsCopy'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/free-items — the honest free-items guide (MM2). Static (ISR): the
@@ -23,7 +24,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const data = hasHubPage(gameSlug, 'freeItems') ? freePageNumbers(gameSlug) : null
   if (!data) return { title: 'Guide Not Found' }
@@ -44,4 +45,11 @@ export default async function FreeItemsRoute({ params }: PageProps) {
   // dynamicParams=false is not enforced on Vercel: reject out-of-set slugs here.
   if (!hasHubPage(gameSlug, 'freeItems') || !freePageNumbers(gameSlug)) notFound()
   return <FreeItemsPage gameSlug={gameSlug} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

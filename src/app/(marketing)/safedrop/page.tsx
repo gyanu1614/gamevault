@@ -36,6 +36,7 @@ import {
   hoursAsDaysTitle,
   protectionWindowSummary,
 } from '@/lib/legal/protection-windows'
+import { seoMeta } from '@/lib/seo/fit'
 
 /*
  * FAQ answers that quote windows are built from @/lib/legal/protection-windows,
@@ -48,7 +49,7 @@ const FAQ_AFTER_CONFIRM = `Yes, if something is wrong. For ${DISPUTE_WINDOW_LABE
 const FAQ_FEE = 'SafeDrop Protection is included free on every order. There is nothing to upgrade.'
 const FAQ_SELLER_PAID = `Your sale proceeds are credited to your Seller Balance when the order completes. They can be withdrawn ${COMPLETION_HOLD_HOURS} hours after the buyer confirms delivery, or straight away when the order completes automatically at the end of its protection window. A dispute opened within ${DISPUTE_WINDOW_LABEL} of delivery sets that order's amount aside until it is decided.`
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'SafeDrop Protection',
   description:
     "SafeDrop Protection is included on every DropMarket order. Not delivered or not as described? You get your money back.",
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
       'SafeDrop Protection on every DropMarket order. Get what you ordered, or your money back',
     type: 'website'
   }
-}
+})
 
 export default function SafeDropPage() {
   // Schema.org FAQPage structured data for SEO

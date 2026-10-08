@@ -18,6 +18,7 @@ import { usePathname } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { IconRocket, IconArrowRight } from '@tabler/icons-react'
 import { useEffect, useRef } from 'react'
+import { foundingHref } from '@/lib/seo/founding-href'
 
 const AMBER = '#F5C451'
 
@@ -118,7 +119,7 @@ export function BetaBanner() {
         {/* Right — CTA. Rectangular soft-corner button, not a pill. Verb +
             scarcity beats the vague role-ask; ?src tags the funnel source. */}
         <Link
-          href="/early-seller?src=banner"
+          href={foundingHref('banner')}
           onClick={() => track('seller_cta_click', { source: 'banner' })}
           className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-[#F5C451]/35 bg-[#F5C451]/[0.08] px-3 py-[7px] text-[12px] font-semibold text-[#F5C451] transition-colors hover:border-[#F5C451]/55 hover:bg-[#F5C451]/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C451]/50 sm:text-[12.5px]"
         >

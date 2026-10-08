@@ -4,6 +4,7 @@ import { contentHubSlugsFor, hasHubPage } from '@/lib/content/theme'
 import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import InventoryPage, { inventoryCopyCtx, loadInventory } from './_InventoryPage'
 import { metaDescription, metaTitle } from './_inventoryCopy'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/inventory — the Inventory Worth tool (MM2). Static (ISR): the page
@@ -25,7 +26,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   if (!hasHubPage(gameSlug, 'inventory')) return { title: 'Calculator Not Found' }
   const ctx = inventoryCopyCtx(gameSlug)
@@ -46,4 +47,11 @@ export default async function InventoryRoute({ params }: PageProps) {
   // dynamicParams=false is not enforced on Vercel: reject out-of-set slugs here.
   if (!hasHubPage(gameSlug, 'inventory')) notFound()
   return <InventoryPage gameSlug={gameSlug} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }
