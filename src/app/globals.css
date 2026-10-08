@@ -488,7 +488,30 @@
   height: var(--game-hero-h, 520px);
   overflow: hidden;
   pointer-events: none;
-  background: var(--color-bg-base);
+  /* The band fades its own alpha to zero (owner, 2026-10-08: "a straight
+     line… we want the fade fully smooth, fading to zero"). It used to paint
+     an opaque bg-base and fade a bg-base overlay over its bottom — wherever
+     the page ground under it isn't exactly bg-base, the band's bottom edge
+     showed as a line. A mask melts into ANY ground. The stops follow an
+     ease-out curve (no linear knee to see). */
+  -webkit-mask-image: var(--game-hero-mask);
+  mask-image: var(--game-hero-mask);
+}
+:root {
+  --game-hero-mask: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.92) 48%,
+    rgba(0, 0, 0, 0.78) 57%,
+    rgba(0, 0, 0, 0.6) 65%,
+    rgba(0, 0, 0, 0.42) 72%,
+    rgba(0, 0, 0, 0.26) 79%,
+    rgba(0, 0, 0, 0.14) 85%,
+    rgba(0, 0, 0, 0.06) 91%,
+    rgba(0, 0, 0, 0.02) 96%,
+    transparent 100%
+  );
 }
 .game-hero[data-size='market'] { top: calc(-1 * var(--navbar-bottom, 60px)); }
 /* Category pages AND the game landing (owner, 2026-10-06: the landing's own
@@ -527,14 +550,6 @@
 }
 .game-hero__veil { position: absolute; inset: 0; background: var(--hero-veil); }
 .game-hero__light { position: absolute; inset: -10% -10% auto; height: 95%; background: var(--hero-light); }
-/* The homepage fades its last 18 % into the ground; a band that content
-   keeps scrolling over needs a longer run so there is never a seam. */
-.game-hero__fade {
-  position: absolute;
-  inset: auto 0 0;
-  height: 46%;
-  background: linear-gradient(180deg, transparent, var(--color-bg-base));
-}
 /* The homepage film pushes into its art as you scroll; the band does the
    same, on the compositor (scroll-driven, no JS). Off under reduced motion
    and in browsers without scroll timelines (the art just sits still). */
@@ -560,17 +575,21 @@
 
 .hero-film {
   position: relative;
-  height: 175vh;
+  /* Capped in px as well as vh (2026-10-08): Google renders pages in a very
+     tall window (often the page's full height), where 175vh / 100svh made
+     the stage thousands of px tall with the headline far below the fold of
+     its screenshot — the live test showed the hero art and no text. */
+  height: min(175vh, 1925px);
   /* Popular Games rides up into the stage's lower, faded third as the
      stage releases, instead of waiting for the whole stage to scroll
      past. The stage's bottom fade makes the overlap seamless. */
-  margin-bottom: -18svh;
+  margin-bottom: max(-18svh, -198px);
 }
 
 .hero-film__stage {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: min(100svh, 1100px);
   min-height: 620px;
   overflow: clip;
   isolation: isolate;
@@ -634,7 +653,7 @@
 /* Phones: sit the column a little above centre (optical centre), so it
    doesn't float with a big empty band under it. */
 @media (max-width: 639px) {
-  .hero-film__copy { padding-bottom: 12svh; }
+  .hero-film__copy { padding-bottom: min(12svh, 120px); }
 }
 
 /* The search results read left to right even in the centred column. */
@@ -1116,7 +1135,7 @@
 }
 
 @media (max-width: 1023px) {
-  .hero-film { height: 150vh; margin-bottom: -12svh; }
+  .hero-film { height: min(150vh, 1650px); margin-bottom: max(-12svh, -132px); }
 }
 
 /* Reduced motion: no film. One static stage, the statement beat dropped,

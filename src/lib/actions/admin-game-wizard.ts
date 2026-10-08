@@ -29,6 +29,14 @@ import {
   type GameEcosystem,
 } from '@/lib/games/validate-game'
 
+/**
+ * CTA banners are AVIF (≤100 KB, encodeAvifUnder). The game-covers bucket only
+ * accepts PNG/JPEG/WebP ("mime type image/avif is not supported", owner,
+ * 2026-10-08); game-heroes is the image bucket that takes AVIF (migration
+ * 20261005000116), written by the service role only.
+ */
+const CTA_BUCKET = 'game-heroes'
+
 // ─── Service-role client (matches admin-games.ts) ─────────────────────────────
 
 function getAdminSupabase() {
@@ -666,23 +674,23 @@ export async function uploadGameBlogCtaImage(
       .maybeSingle()
     const oldUrl = (existing as { blog_cta_image_url: string | null } | null)
       ?.blog_cta_image_url
+    // Old banners live in game-covers (PNG/JPEG era) or game-heroes (AVIF).
     if (oldUrl) {
-      const marker = '/game-covers/'
-      const idx = oldUrl.indexOf(marker)
-      if (idx >= 0) {
+      for (const bucket of ['game-covers', CTA_BUCKET]) {
+        const marker = `/${bucket}/`
+        const idx = oldUrl.indexOf(marker)
+        if (idx < 0) continue
         const oldPath = oldUrl.slice(idx + marker.length)
-        if (oldPath.startsWith('blog-cta/')) {
-          await supabase.storage.from('game-covers').remove([oldPath])
-        }
+        if (oldPath.startsWith('blog-cta/')) await supabase.storage.from(bucket).remove([oldPath])
       }
     }
 
     const { error: upErr } = await supabase.storage
-      .from('game-covers')
+      .from(CTA_BUCKET)
       .upload(path, encoded, { contentType: 'image/avif', cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
-    const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)
+    const { data: urlData } = supabase.storage.from(CTA_BUCKET).getPublicUrl(path)
     const publicUrl = urlData.publicUrl
 
     const { error: updErr } = await supabase

@@ -36,7 +36,10 @@ describe('GameHeroArt', () => {
     expect(img).toContain('decoding="async"')
     expect(img).not.toContain('loading="lazy"')
     expect(img).toContain('alt="Game background art"')
-    for (const layer of ['game-hero__veil', 'game-hero__light', 'game-hero__fade']) expect(html).toContain(layer)
+    for (const layer of ['game-hero__veil', 'game-hero__light']) expect(html).toContain(layer)
+    // The band fades its own alpha (--game-hero-mask), never a bg-base overlay
+    // that shows as a line over any other ground (2026-10-08).
+    expect(html).not.toContain('game-hero__fade')
     expect(html).toContain('aria-hidden="true"')
   })
 
