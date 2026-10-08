@@ -17,6 +17,7 @@ import { valueItemHasPage, valueListHub, type ValueListHubConfig } from '@/lib/v
 import { ValuesSeo, VALUES_SEO_LINK as linkCls, type ValuesFaqItem } from '../_ValuesSeo'
 import ValueListClient, { type ValueListRow } from './ValueListClient'
 import { ValueListSkeleton } from './ValueListSkeleton'
+import { pack } from '@/lib/serialize/columnar'
 
 /**
  * Value LIST hub for a game on the values_* pipeline (Murder Mystery 2 first):
@@ -143,7 +144,7 @@ async function ValueListBody({
       <ValueListClient
         gameSlug={gameSlug}
         gameName={theme.name}
-        rows={rows}
+        packedRows={pack(rows)}
         hub={hub}
         hasTrends={Object.keys(trends.pctByItem).length > 0}
         freshness={{

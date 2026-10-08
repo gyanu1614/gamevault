@@ -40,6 +40,8 @@ import { HubCtaBand } from '@/components/content/HubCtaBand'
 import { getGameCtaImage } from '@/lib/content/game-cta-art.server'
 import { SellChoiceModal, SellFinalCta } from './_SellChoiceModal'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
+import { foundingHref } from '@/lib/seo/founding-href'
+import { seoMeta } from '@/lib/seo/fit'
 
 const AMBER = '#F5C451'
 
@@ -103,7 +105,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const game = await getSellPageGame(gameSlug)
   if (!game) return { title: 'Not Found' }
@@ -318,7 +320,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                 <p className="mt-1 text-[13.5px] leading-relaxed text-[#98A398]">
                   Reserve your spot as a{' '}
                   <Link
-                    href={`/early-seller?src=${gameSlug}-sell-step`}
+                    href={foundingHref(`${gameSlug}-sell-step`)}
                     className="font-semibold text-[#8FBF9C] underline-offset-2 transition-colors hover:text-[#A6D9B6] hover:underline"
                   >
                     founding seller
@@ -436,4 +438,11 @@ export default async function SellLandingPage({ params }: PageProps) {
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

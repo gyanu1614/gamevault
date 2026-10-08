@@ -80,7 +80,8 @@ export function BannerMelt({
           {/* eslint-disable-next-line @next/next/no-img-element -- images are served unoptimized (next.config) */}
           <img
             src={src}
-            alt=""
+            alt="Store banner background"
+            aria-hidden
             decoding="async"
             className="h-full w-full scale-[1.08] object-cover blur-[24px] saturate-[1.1]"
             style={{ objectPosition: bannerObjectPosition(focalY) }}
@@ -119,7 +120,7 @@ export function StoreBannerArt({
         /* eslint-disable-next-line @next/next/no-img-element -- images are served unoptimized (next.config) */
         <img
           src={custom.url}
-          alt=""
+          alt="Store banner"
           aria-hidden
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"

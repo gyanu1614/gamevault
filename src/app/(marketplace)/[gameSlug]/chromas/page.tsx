@@ -5,6 +5,7 @@ import { chromaStats } from '@/lib/values/chromas'
 import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import ChromasPage, { chromaCopyCtx, chromaUnboxMaths, loadChromas } from './_ChromasPage'
 import { metaDescription, metaTitle } from './_chromasCopy'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/chromas — the Chroma hub (MM2). Static (ISR): the refresh is
@@ -24,7 +25,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const u = hasHubPage(gameSlug, 'chromas') ? chromaUnboxMaths(gameSlug) : null
   if (!u) return { title: 'Chromas Not Found' }
@@ -46,4 +47,11 @@ export default async function ChromasRoute({ params }: PageProps) {
   // dynamicParams=false is not enforced on Vercel: reject out-of-set slugs here.
   if (!hasHubPage(gameSlug, 'chromas') || !chromaUnboxMaths(gameSlug)) notFound()
   return <ChromasPage gameSlug={gameSlug} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

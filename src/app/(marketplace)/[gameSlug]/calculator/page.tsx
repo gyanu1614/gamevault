@@ -20,6 +20,7 @@ import CalculatorClient, {
 import AdoptMeCalculatorPage from './_AdoptMeCalculatorPage'
 import { getValueStock } from '@/lib/value-listings/stock-server'
 import { HUB_GROUND } from '@/components/values/styles'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 /**
@@ -86,7 +87,7 @@ type TradePriceRow = {
   is_trade_ready: boolean
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
@@ -439,4 +440,11 @@ export default async function SabCalculatorPage({ params }: PageProps) {
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

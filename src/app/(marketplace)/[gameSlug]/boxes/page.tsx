@@ -5,6 +5,7 @@ import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import BoxesHubPage from './_BoxesHubPage'
 import { hubMetaDescription, hubMetaTitle } from './_boxesCopy'
 import { boxesCopyCtx, loadBoxes, shopOddsFor } from './_boxesData'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/boxes — MM2 Box Odds. Static (ISR): the box seed is build time and
@@ -24,7 +25,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const o = hasHubPage(gameSlug, 'boxes') ? shopOddsFor(gameSlug) : null
   if (!o) return { title: 'Box Odds Not Found' }
@@ -47,4 +48,11 @@ export default async function BoxesRoute({ params }: PageProps) {
   // dynamicParams=false is not enforced on Vercel: reject out-of-set slugs here.
   if (!hasHubPage(gameSlug, 'boxes') || !shopOddsFor(gameSlug)) notFound()
   return <BoxesHubPage gameSlug={gameSlug} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

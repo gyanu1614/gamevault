@@ -87,7 +87,7 @@ export function CurrencyBuyCard({
   return (
     <section aria-labelledby="hub-currency" className={cn('relative isolate overflow-hidden rounded-xl', MARKET_CARD, className)}>
       {iconUrl ? (
-        <CurrencyCoinArt src={iconUrl} className="relative">
+        <CurrencyCoinArt src={iconUrl} alt={`${name} icon`} className="relative">
           <div className="relative">{body}</div>
         </CurrencyCoinArt>
       ) : (

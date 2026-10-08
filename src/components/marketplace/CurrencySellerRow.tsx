@@ -61,7 +61,8 @@ function SellerAvatar({ name, url, hue, size }: { name: string; url?: string | n
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={url}
-        alt=""
+        alt={`${name} avatar`}
+        aria-hidden
         className="shrink-0 rounded-full object-cover"
         style={{ width: size, height: size }}
       />

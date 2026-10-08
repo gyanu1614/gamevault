@@ -99,7 +99,7 @@ export function ValueItemHowToGet({
         // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
         <img
           src={imageUrl}
-          alt=""
+          alt={`${itemName} artwork`}
           aria-hidden
           loading="lazy"
           decoding="async"

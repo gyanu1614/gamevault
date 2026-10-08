@@ -41,6 +41,7 @@ import { getCurrencyGuide } from '@/lib/currency-guides'
 import { formatStatPrice } from '@/lib/seo/page-stats'
 import { CHECKOUT_COINS } from '@/lib/payments/method-marks'
 import { payssionSelectorMethods } from '@/lib/payments/providers/payssion/methods'
+import { seoMeta } from '@/lib/seo/fit'
 
 interface PageProps {
   params: Promise<{
@@ -111,7 +112,7 @@ const getGameData = cache(async function getGameData(gameSlug: string) {
   }
 })
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   const supabase = createAnonClient()
 
@@ -446,4 +447,11 @@ export default async function GameBrowsePage({ params }: PageProps) {
     </div>
     </GameHeroBackdrop>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

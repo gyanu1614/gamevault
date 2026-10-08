@@ -30,6 +30,8 @@ import { RarityLabel } from '@/components/values/ValueCard'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { rarityMeta } from '@/lib/values/rarity'
 import { socialTitle, stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
+import { seoMeta } from '@/lib/seo/fit'
+import { pack } from '@/lib/serialize/columnar'
 
 export const revalidate = 3600
 /**
@@ -77,7 +79,7 @@ type DirectoryTradePriceRow = {
   external_sample_size: number | string | null
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
@@ -593,7 +595,8 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
                   {m.imageUrl && (
                     <ValueArt
                       src={m.imageUrl}
-                      alt=""
+                      alt={m.name}
+                      aria-hidden
                       size={68}
                       pixelated
                       className="shrink-0"
@@ -630,7 +633,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
             body="The Brainrot database could not be loaded. Please check again shortly."
           />
         ) : (
-          <ValuesDirectoryClient brainrots={brainrots} />
+          <ValuesDirectoryClient packedBrainrots={pack(brainrots)} />
         )}
       </section>
 
@@ -678,4 +681,11 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

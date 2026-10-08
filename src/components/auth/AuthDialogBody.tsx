@@ -295,7 +295,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                   {/* Mobile brand — the hero pane (and its lockup) is md+. */}
                   <div className="flex items-center justify-center gap-2 pt-7 md:hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/brand/logo-mark-ink.png" alt="" className="h-7 w-7 object-contain" />
+                    <img src="/brand/logo-mark-ink.png" alt="DropMarket logo" aria-hidden className="h-7 w-7 object-contain" />
                     <span className="text-[18px] font-bold tracking-tight" style={{ color: PALETTE.forest }}>
                       DropMarket
                     </span>
@@ -371,7 +371,8 @@ function HeroPanel({ mode }: { mode: AuthMode }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/auth/hero.png"
-        alt=""
+        alt="Sign in artwork"
+        aria-hidden
         className="auth-photo-settle absolute inset-0 h-full w-full object-cover"
       />
       {/* Directional scrims, hero-style: dark at the seam edge + the

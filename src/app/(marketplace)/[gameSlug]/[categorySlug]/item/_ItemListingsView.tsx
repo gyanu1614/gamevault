@@ -43,7 +43,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
           /* eslint-disable-next-line @next/next/no-img-element -- catalogue art from storage, same as the value pages */
           <img
             src={item.imageUrl}
-            alt=""
+            alt={item.name}
             width={72}
             height={72}
             loading="eager"
@@ -140,7 +140,7 @@ export function ItemListingsView({ gameSlug, data }: { gameSlug: string; data: D
                     >
                       {s.imageUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element -- catalogue art */
-                        <img src={s.imageUrl} alt="" width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
+                        <img src={s.imageUrl} alt={s.name} aria-hidden width={48} height={48} loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-contain" />
                       ) : null}
                       <span className="min-w-0">
                         <span className="block truncate font-semibold text-text-primary" style={{ fontSize: 'var(--fs-meta)' }}>{s.name}</span>

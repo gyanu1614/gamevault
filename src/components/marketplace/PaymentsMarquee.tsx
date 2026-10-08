@@ -41,7 +41,7 @@ function MarkView({ mark }: { mark: Mark }) {
     return (
       <span className={`${base} gap-2.5`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- static mark in /public */}
-        <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-10 w-10" />
+        <img src={mark.src} alt={`${mark.label} logo`} aria-hidden loading="lazy" decoding="async" className="h-10 w-10" />
         <span className="text-[27px] font-bold tracking-[-0.02em] text-white">{mark.label}</span>
       </span>
     )
@@ -49,7 +49,7 @@ function MarkView({ mark }: { mark: Mark }) {
   return (
     <span className={base}>
       {/* eslint-disable-next-line @next/next/no-img-element -- static mark in /public */}
-      <img src={mark.src} alt="" loading="lazy" decoding="async" className="h-9 w-auto max-w-[190px] object-contain" />
+      <img src={mark.src} alt={mark.label} loading="lazy" decoding="async" className="h-9 w-auto max-w-[190px] object-contain" />
     </span>
   )
 }

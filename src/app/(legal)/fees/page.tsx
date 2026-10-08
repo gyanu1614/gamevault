@@ -16,6 +16,7 @@ import { getLegalDoc, type LegalDoc } from '@/lib/legal/documents'
 import { LegalPage } from '@/components/legal/LegalPage'
 import { buyerFeeTableBlock, getPublicBuyerFees } from '@/lib/fees/buyer-public-rates'
 import { PUBLIC_PAYMENT_PROVIDER_KEYS } from '@/lib/legal/payment-processors'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 86400
 
@@ -29,10 +30,10 @@ function withBuyerFeeTable(base: LegalDoc, block: ReturnType<typeof buyerFeeTabl
   }
 }
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: `${doc?.title ?? 'Legal'}`,
   description: doc?.description,
-}
+})
 
 export default async function Page() {
   if (!doc) notFound()

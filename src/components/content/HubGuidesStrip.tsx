@@ -60,7 +60,8 @@ export async function HubGuidesStrip({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={p.cover}
-                  alt=""
+                  alt={p.title}
+                  aria-hidden
                   loading="lazy"
                   className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                 />

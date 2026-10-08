@@ -43,11 +43,21 @@ const ICONS: Record<Exclude<StepIcon, 'currency'>, PhosphorIcon> = {
 }
 
 /** The step's mark: its icon, the currency's own icon, or (no icon set) its number. */
-function StepMark({ step, n, currencyIconUrl }: { step: DeliveryStep; n: number; currencyIconUrl?: string | null }) {
+function StepMark({
+  step,
+  n,
+  currencyIconUrl,
+  currencyName,
+}: {
+  step: DeliveryStep
+  n: number
+  currencyIconUrl?: string | null
+  currencyName?: string
+}) {
   if (step.icon === 'currency' && currencyIconUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded currency icon
-      <img src={currencyIconUrl} alt="" aria-hidden className="mx-auto h-12 w-12 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
+      <img src={currencyIconUrl} alt={currencyName ? `${currencyName} icon` : 'Currency icon'} aria-hidden className="mx-auto h-12 w-12 object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.45)]" />
     )
   }
   const Icon = step.icon && step.icon !== 'currency' ? ICONS[step.icon] : null
@@ -80,7 +90,15 @@ function FlowArrow({ vertical, delay }: { vertical: boolean; delay: number }) {
   )
 }
 
-export function DeliverySteps({ steps, currencyIconUrl }: { steps: DeliveryStep[]; currencyIconUrl?: string | null }) {
+export function DeliverySteps({
+  steps,
+  currencyIconUrl,
+  currencyName,
+}: {
+  steps: DeliveryStep[]
+  currencyIconUrl?: string | null
+  currencyName?: string
+}) {
   const reduce = useReducedMotion()
   return (
     <ol className="mx-auto mt-8 flex max-w-4xl flex-col items-stretch md:flex-row md:items-start md:justify-center">
@@ -93,7 +111,7 @@ export function DeliverySteps({ steps, currencyIconUrl }: { steps: DeliveryStep[
             viewport={{ once: true, margin: '0px 0px -10% 0px' }}
             transition={{ duration: 0.5, ease: EASE, delay: i * 0.12 }}
           >
-            <StepMark step={s} n={i + 1} currencyIconUrl={currencyIconUrl} />
+            <StepMark step={s} n={i + 1} currencyIconUrl={currencyIconUrl} currencyName={currencyName} />
             <span className="sr-only">Step {i + 1}: </span>
             <p className="mt-3 text-[15px] font-semibold text-text-primary">{s.title}</p>
             <p className="mx-auto mt-1 max-w-[15rem] text-[13.5px] leading-5 text-text-secondary">{s.body}</p>

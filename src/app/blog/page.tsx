@@ -23,15 +23,16 @@ import { ArrowRight } from 'lucide-react'
 import { getAllPublishedPosts } from '@/lib/blog/db'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { BlogCard } from '@/components/blog/BlogCard'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'Blog — Trading Guides & Safety Tips',
   description:
     'Trading guides, item value breakdowns, and marketplace safety tips from the DropMarket team.',
   alternates: { canonical: '/blog' },
-}
+})
 
 /** A post's canonical URL: nested under its game when it has one, else flat. */
 function postHref(post: { slug: string; primaryGameSlug: string | null }): string {
@@ -125,7 +126,7 @@ export default async function BlogIndexPage() {
                       <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white/[0.04] text-body-sm font-bold text-text-tertiary">
                         {game?.image_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={game.image_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                          <img src={game.image_url} alt={`${name} logo`} aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                         ) : (
                           name.charAt(0).toUpperCase()
                         )}

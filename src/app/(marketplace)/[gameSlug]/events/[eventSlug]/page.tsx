@@ -7,6 +7,7 @@ import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import EventPage from '../_EventPage'
 import { eventsCopyCtx } from '../_EventsHubPage'
 import { eventMetaDescription, eventMetaTitle } from '../_eventsCopy'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/events/[eventSlug] — one event page. Closed set: every published
@@ -30,7 +31,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string; eventSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, eventSlug } = await params
   if (!hasHubPage(gameSlug, 'events')) return { title: 'Event Not Found' }
   const data = await getValueEvent(gameSlug, eventSlug)
@@ -57,4 +58,11 @@ export default async function EventRoute({ params }: PageProps) {
   const head = await getValueEventHead(gameSlug, eventSlug)
   if (!head) notFound()
   return <EventPage gameSlug={gameSlug} head={head} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

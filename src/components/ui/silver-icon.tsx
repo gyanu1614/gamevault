@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
  * silver-glass-3d-icons memory note. Swap `src` freely; the material
  * stays consistent.
  */
-export function SilverIcon({ src, className }: { src: string; className?: string }) {
+export function SilverIcon({ src, className, alt = 'Icon' }: { src: string; className?: string; alt?: string }) {
   const mask: React.CSSProperties = {
     WebkitMaskImage: `url(${src})`,
     maskImage: `url(${src})`,
@@ -26,7 +26,7 @@ export function SilverIcon({ src, className }: { src: string; className?: string
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
-        alt=""
+        alt={alt}
         aria-hidden
         loading="lazy"
         decoding="async"

@@ -488,7 +488,7 @@ export default function ListingDetailClient({
                       )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      <img src={img} alt={`${listing.title} thumbnail ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
                     </button>
                   ))}
                 </div>
@@ -560,7 +560,7 @@ export default function ListingDetailClient({
                   src="/icons/safedrop-emblem.avif"
                   width={128}
                   height={128}
-                  alt=""
+                  alt="SafeDrop Protection emblem"
                   aria-hidden
                   className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-50"
                 />
@@ -573,7 +573,8 @@ export default function ListingDetailClient({
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={listing.seller.avatarUrl}
-                      alt=""
+                      alt={`${sellerName} avatar`}
+                      aria-hidden
                       className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
                     />
                   ) : (
@@ -1084,7 +1085,8 @@ function OtherSellerRow({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={offer.imageUrl}
-                alt=""
+                alt={offer.name}
+                aria-hidden
                 className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-border-subtle"
               />
             ) : (
@@ -1123,7 +1125,8 @@ function OtherSellerRow({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={offer.seller.avatarUrl}
-                  alt=""
+                  alt={`${sellerName} avatar`}
+                  aria-hidden
                   className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
                 />
               ) : (

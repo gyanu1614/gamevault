@@ -161,6 +161,7 @@ export default function BundleCurrencyPageClient({
       value: best.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
       note: `${best.name} · ${sellers} ${sellers === 1 ? 'seller' : 'sellers'} live now`,
       iconUrl: data.currencyIconUrl,
+      iconAlt: `${data.unitLabel} icon`,
       backdropUrl: gameImageUrl ?? null,
     }
   }, [data.offers, data.bundles, data.unitLabel, data.currencyIconUrl, gameImageUrl])
@@ -321,7 +322,8 @@ export default function BundleCurrencyPageClient({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={data.currencyIconUrl}
-              alt=""
+              alt={`${data.unitLabel} icon`}
+              aria-hidden
               className="h-14 w-14 shrink-0 rounded-xl object-contain sm:h-[60px] sm:w-[60px]"
             />
           ) : (
@@ -508,7 +510,8 @@ export default function BundleCurrencyPageClient({
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={bundle.icon_url}
-                              alt=""
+                              alt={bundle.name}
+                              aria-hidden
                               className="max-h-full max-w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.06]"
                             />
                           ) : (
@@ -596,7 +599,7 @@ export default function BundleCurrencyPageClient({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/watermarks/${data.gameSlug}.webp`}
-            alt=""
+            alt={`${data.gameName} logo art`}
             aria-hidden
             onError={(e) => { e.currentTarget.style.display = 'none' }}
             className="pointer-events-none absolute -top-20 right-0 -z-10 hidden h-80 w-80 rotate-12 select-none object-contain opacity-40 lg:block"
@@ -776,7 +779,8 @@ function OptionTiles({
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={o.icon}
-                    alt=""
+                    alt={o.label}
+                    aria-hidden
                     className={cn(
                       'shrink-0 object-contain drop-shadow-[0_6px_8px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105',
                       variant === 'pill' ? 'h-6 w-6' : 'h-8 w-8',
@@ -864,7 +868,7 @@ function OfferPanel({
         src="/icons/safedrop-emblem.avif"
         width={128}
         height={128}
-        alt=""
+        alt="SafeDrop Protection emblem"
         aria-hidden
         className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rotate-12 select-none opacity-[0.32]"
       />

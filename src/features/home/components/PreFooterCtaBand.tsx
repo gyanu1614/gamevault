@@ -117,7 +117,7 @@ export function PreFooterCtaBand({
           >
             <Image
               src={artSrc}
-              alt=""
+              alt="Game marketplace background art"
               aria-hidden
               fill
               sizes="100vw"

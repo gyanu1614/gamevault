@@ -48,7 +48,8 @@ export default function FoundingRail({ name, joinNumber, cap, claimed }: Foundin
       {/* Hero photo — same asset as the seller application */}
       <Image
         src="/assets/heroes/sell.avif"
-        alt=""
+        alt="Game seller hero art"
+        aria-hidden
         fill
         priority
         sizes="(max-width: 1024px) 100vw, 38vw"

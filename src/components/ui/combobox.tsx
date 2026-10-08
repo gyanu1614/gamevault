@@ -141,7 +141,7 @@ export function Combobox({
           <span className="flex min-w-0 items-center gap-2">
             {iconInTrigger && selected?.icon_url && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={selected.icon_url} alt="" className="h-5 w-5 shrink-0 rounded object-cover" />
+              <img src={selected.icon_url} alt={selected.label} aria-hidden className="h-5 w-5 shrink-0 rounded object-cover" />
             )}
             <span className={cn('truncate', !selected && 'text-text-tertiary')}>
               {selected?.label ?? placeholder}
@@ -232,7 +232,8 @@ export function Combobox({
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={o.icon_url}
-                          alt=""
+                          alt={o.label}
+                          aria-hidden
                           className="h-5 w-5 shrink-0 rounded object-cover"
                         />
                       )}

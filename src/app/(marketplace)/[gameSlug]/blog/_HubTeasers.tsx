@@ -117,7 +117,7 @@ function TradePet({
   return (
     <div className={`flex flex-1 flex-col items-center gap-2.5 p-4 text-center ${VALUE_TILE}`}>
       <span className={VALUE_LABEL}>{side}</span>
-      <ValueArt src={pet.imageUrl} alt="" size={64} className="shrink-0" />
+      <ValueArt src={pet.imageUrl} alt={pet.name} aria-hidden size={64} className="shrink-0" />
       <span className="text-[14px] font-semibold leading-tight text-text-primary">
         {pet.name}
       </span>

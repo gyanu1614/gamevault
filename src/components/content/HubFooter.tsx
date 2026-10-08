@@ -87,7 +87,7 @@ export function HubFooter({
       name: FOOTER_TOOL_NAME[tool](gameName),
       href: `/${gameSlug}/${HUB_TOOL_PATH[tool]}`,
     })),
-    { name: 'Pricing Methodology', href: `/${gameSlug}/values/methodology` },
+    ...(hasHubPage(gameSlug, 'methodology') ? [{ name: 'Pricing Methodology', href: `/${gameSlug}/values/methodology` }] : []),
   ]
 
   const shopLinks: HubFooterLink[] = [

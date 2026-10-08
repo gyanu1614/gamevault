@@ -37,7 +37,7 @@ function Art({ listing }: { listing: LatestListing }) {
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={src}
-        alt=""
+        alt={listing.title}
         aria-hidden
         loading="lazy"
         onError={() => setFailed(true)}
@@ -50,7 +50,7 @@ function Art({ listing }: { listing: LatestListing }) {
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src={src}
-      alt=""
+      alt={listing.title}
       aria-hidden
       loading="lazy"
       onError={() => setFailed(true)}

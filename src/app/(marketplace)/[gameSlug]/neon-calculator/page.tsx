@@ -13,6 +13,7 @@ import AdoptMeNeonClient from './_AdoptMeNeonClient'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { HUB_GROUND } from '@/components/values/styles'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 /**
@@ -49,7 +50,7 @@ const NEON_FAQ = [
   },
 ]
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug } = await params
   if (gameSlug !== 'adopt-me') return { title: 'Not Found' }
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -140,4 +141,11 @@ export default async function NeonCalculatorPage({ params }: PageProps) {
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

@@ -36,7 +36,7 @@ function MarqueeTile({ item, gameSlug }: { item: HubTeaserItem; gameSlug: string
       draggable={false}
       className="flex w-[268px] shrink-0 select-none items-center gap-3 rounded-md bg-white/[0.04] p-4 transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
-      <ValueArt src={item.imageUrl} alt="" size={44} className="shrink-0" />
+      <ValueArt src={item.imageUrl} alt={item.name} aria-hidden size={44} className="shrink-0" />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-[13px] font-semibold text-text-primary">

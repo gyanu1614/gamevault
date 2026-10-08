@@ -203,7 +203,8 @@ export function HeroFilm() {
         <motion.div aria-hidden className="hero-film__art-bg" style={{ scale: artScale, x: artX }}>
           <Image
             src={HERO_ART_SRC}
-            alt=""
+            alt="Game marketplace hero art"
+            aria-hidden
             fill
             sizes="100vw"
             priority
@@ -237,6 +238,10 @@ export function HeroFilm() {
                 whole layer, so the grid spotlight still tracks around it. */}
             <motion.div className="mx-auto max-w-[680px] text-center" style={{ pointerEvents: copyEvents }}>
               <h1 className="hero-film__title">
+                {/* The brand in the H1 for search engines and screen readers
+                    (Google's site-name signals include the home headings); the
+                    visible line stays the design. */}
+                <span className="sr-only">DropMarket: </span>
                 {/* The smaller lead-in line; the crown sits on "Gamer's".
                     The line box is padded up so the reveal mask doesn't clip
                     the crown, which pokes above the cap height. */}
@@ -294,7 +299,7 @@ export function HeroFilm() {
           {/* data-nav-fill-at: the homepage navbar fills just before this
               line scrolls under it (navbar-floating.tsx). */}
           <p className="hero-film__badge" data-nav-fill-at>
-            <Image src="/icons/safedrop-emblem.avif" alt="" width={30} height={30} />
+            <Image src="/icons/safedrop-emblem.avif" alt="SafeDrop Protection emblem" aria-hidden width={30} height={30} />
             SafeDrop Protection
           </p>
 
@@ -314,7 +319,7 @@ export function HeroFilm() {
           <ul className="hero-film__proof">
             {PROOF.map((item) => (
               <li key={item.label}>
-                <SilverIcon src={item.icon} className="h-6 w-6 shrink-0" />
+                <SilverIcon src={item.icon} alt={`${item.label} icon`} className="h-6 w-6 shrink-0" />
                 {item.label}
               </li>
             ))}

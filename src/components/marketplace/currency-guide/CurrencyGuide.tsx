@@ -318,7 +318,7 @@ export function CurrencyGuide({ guide, gameName, ours, related, rmtPublisher, ic
 
       {/* 3 — Delivery, step by step. */}
       <Block id="guide-delivery" band title={guide.delivery.heading} lead={page.delivery.text}>
-        <DeliverySteps steps={steps} currencyIconUrl={iconUrl} />
+        <DeliverySteps steps={steps} currencyIconUrl={iconUrl} currencyName={c} />
         {'tip' in page.delivery && page.delivery.tip && (
           <Tip label="Did You Know?" icon={LightbulbIcon}>
             {page.delivery.tip}

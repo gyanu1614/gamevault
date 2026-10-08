@@ -17,7 +17,17 @@ import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } fro
 
 const SPRING = { stiffness: 140, damping: 18, mass: 0.6 }
 
-export function CurrencyCoinArt({ src, children, className }: { src: string; children: ReactNode; className?: string }) {
+export function CurrencyCoinArt({
+  src,
+  children,
+  className,
+  alt = 'Currency icon',
+}: {
+  src: string
+  children: ReactNode
+  className?: string
+  alt?: string
+}) {
   const ref = useRef<HTMLDivElement | null>(null)
   const reduce = useReducedMotion()
   const px = useMotionValue(0)
@@ -42,7 +52,7 @@ export function CurrencyCoinArt({ src, children, className }: { src: string; chi
     <div ref={ref} onPointerMove={onMove} onPointerLeave={onLeave} className={className} style={{ perspective: 900 }}>
       <motion.img
         src={src}
-        alt=""
+        alt={alt}
         aria-hidden
         draggable={false}
         className="pointer-events-none absolute -right-16 top-[calc(50%-120px)] h-[240px] w-[240px] select-none object-contain opacity-[0.16] [mask-image:linear-gradient(105deg,transparent_8%,#000_55%)] sm:-right-10 sm:top-[calc(50%-170px)] sm:h-[340px] sm:w-[340px] sm:opacity-[0.22]"

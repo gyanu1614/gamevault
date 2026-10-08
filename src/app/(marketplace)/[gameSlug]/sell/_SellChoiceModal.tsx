@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { HubCtaBand } from '@/components/content/HubCtaBand'
 import { SpotlightCard } from '@/components/ui/spotlight-card'
+import { foundingHref } from '@/lib/seo/founding-href'
 
 export function SellChoiceModal({
   gameName,
@@ -63,7 +64,7 @@ export function SellChoiceModal({
             className="group relative border border-[#1A211A] bg-[#0B0F0C] p-6 transition-colors hover:border-[#24352A]"
           >
             <Link
-              href={`/early-seller?src=${gameSlug}-sell-modal`}
+              href={foundingHref(`${gameSlug}-sell-modal`)}
               aria-label="Join the founding waitlist"
               className="absolute inset-0 z-10"
             />

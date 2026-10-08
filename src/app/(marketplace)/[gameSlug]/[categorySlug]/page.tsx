@@ -84,6 +84,7 @@ import { loadItemsTaxonomy, listingToOffer as listingToItemOffer } from './_item
 const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 import { resolveItemBySlug } from './_itemResolver'
 import { SabNavExtras } from '../values/_SabNavExtras'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * Step 7a — static-first. This route rendered per request (2,000 renders a
@@ -173,7 +174,7 @@ function emptyDescriptionFor(gameName: string, categoryName: string): string {
   return variants[pickVariant(`${gameName}|${categoryName}|d`, variants.length)]
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, categorySlug } = await params
 
   // Shared with the route gate and the body (cache()d, anon client).
@@ -265,7 +266,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: seoOverride(
       category.seo_description,
       hasListings
-        ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live listings from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
+        ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live ${stats.count === 1 ? 'listing' : 'listings'} from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
         : emptyDescriptionFor(game.name, category.name),
     ),
     keywords: [
@@ -1030,3 +1031,9 @@ async function CategoryBrowsePage({ params }: PageProps) {
   )
 }
 
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
+}

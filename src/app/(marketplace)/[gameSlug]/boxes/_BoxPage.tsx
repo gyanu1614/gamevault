@@ -212,7 +212,7 @@ async function BoxBody({
             // eslint-disable-next-line @next/next/no-img-element -- catalogue art, served as-is
             <img
               src={v.art}
-              alt=""
+              alt={`${v.box.name} artwork`}
               aria-hidden
               loading="lazy"
               decoding="async"

@@ -25,6 +25,7 @@ import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
 import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
 import { cache } from 'react'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 3600
 /**
@@ -110,7 +111,7 @@ function formatCardDate(iso: string): string {
   return Number.isFinite(d.getTime()) ? CARD_DATE.format(d) : ''
 }
 
-export async function generateMetadata({
+async function generateMetadataRaw({
   params,
 }: {
   params: Promise<{ gameSlug: string }>
@@ -271,23 +272,26 @@ export default async function GameBlogIndex({
 
         {/* Sample items come from the game's own theme, never a hardcoded
             fixture — so an Adopt Me visitor sees Adopt Me pets, not Brainrots. */}
-        <CalculatorTeaser
-          gameSlug={gameSlug}
-          example={{
-            title: 'Check a trade before you accept it',
-            // "observed sale prices" only once we hold real sales; a game still
-            // on derived estimates says so instead of overclaiming.
-            body: hasPricing
-              ? 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against observed sale prices.'
-              : 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against current estimated values.',
-            offer: theme.calculatorExample.offer,
-            give: theme.calculatorExample.give,
-            letter: theme.calculatorExample.letter,
-            verdict: theme.calculatorExample.verdict,
-            qualifier: theme.calculatorExample.qualifier,
-          }}
-          realExample={calcExample}
-        />
+        {/* Only where the game has a calculator (Valorant's linked a 404). */}
+        {hubNav.tools.includes('calculator') && (
+          <CalculatorTeaser
+            gameSlug={gameSlug}
+            example={{
+              title: 'Check a trade before you accept it',
+              // "observed sale prices" only once we hold real sales; a game still
+              // on derived estimates says so instead of overclaiming.
+              body: hasPricing
+                ? 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against observed sale prices.'
+                : 'Put one item on each side, pick the variant, and see whether the offer is a win, fair or a loss against current estimated values.',
+              offer: theme.calculatorExample.offer,
+              give: theme.calculatorExample.give,
+              letter: theme.calculatorExample.letter,
+              verdict: theme.calculatorExample.verdict,
+              qualifier: theme.calculatorExample.qualifier,
+            }}
+            realExample={calcExample}
+          />
+        )}
 
         {/* Seller CTA — the blog surfaces carry the SELLER band (guide-readers
             are researching how to sell/trade); price/tool pages carry buy. */}
@@ -302,4 +306,11 @@ export default async function GameBlogIndex({
       />
     </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

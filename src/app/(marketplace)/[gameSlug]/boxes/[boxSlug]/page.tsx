@@ -6,6 +6,7 @@ import { socialTitle, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import BoxPage from '../_BoxPage'
 import { boxMetaDescription, boxMetaTitle } from '../_boxesCopy'
 import { boxesCopyCtx, loadBoxes, shopOddsFor } from '../_boxesData'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * /[game]/boxes/[boxSlug] — one box. Closed set: every box in the seed of
@@ -25,7 +26,7 @@ interface PageProps {
   params: Promise<{ gameSlug: string; boxSlug: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, boxSlug } = await params
   const box = hasHubPage(gameSlug, 'boxes') && shopOddsFor(gameSlug) ? getBox(gameSlug, boxSlug) : null
   if (!box) return { title: 'Box Not Found' }
@@ -50,4 +51,11 @@ export default async function BoxRoute({ params }: PageProps) {
   const box = getBox(gameSlug, boxSlug)
   if (!box) notFound()
   return <BoxPage gameSlug={gameSlug} box={box} />
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

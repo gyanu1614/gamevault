@@ -19,7 +19,7 @@ export default function Step3Delivery({
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src="/how-it-works/step-3.avif"
-      alt=""
+      alt="Fast delivery illustration"
       aria-hidden="true"
       width={640}
       height={640}

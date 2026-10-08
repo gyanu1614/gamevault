@@ -19,7 +19,7 @@ export default function Step4Confirm({
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src="/how-it-works/step-4.avif"
-      alt=""
+      alt="Confirm delivery illustration"
       aria-hidden="true"
       width={640}
       height={640}

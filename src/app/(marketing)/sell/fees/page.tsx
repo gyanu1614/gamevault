@@ -27,11 +27,13 @@ import { TierIcon } from '@/components/seller/tiers/TierIcon'
 import { MARKET_CARD } from '@/lib/ui/surfaces'
 import { JsonLd, faqPage } from '@/lib/seo/jsonld'
 import { getPublicFeeSchedule, getPublicWithdrawalTerms, describeWithdrawalFee, formatScheduleDateUtc, type PublicFeeSchedule } from '@/lib/fees/public-rates'
+import { foundingHref } from '@/lib/seo/founding-href'
+import { seoMeta } from '@/lib/seo/fit'
 
 export const revalidate = 86400
 export const dynamic = 'force-static'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'Seller Fees',
   description:
     'What it costs to sell on DropMarket: commission by category, per-game rates, the rank discount ladder and the founding-seller programme — read live from the fee table checkout uses.',
@@ -43,7 +45,7 @@ export const metadata: Metadata = {
     url: '/sell/fees',
     type: 'website',
   },
-}
+})
 
 const fmtDate = formatScheduleDateUtc
 const pct = (n: number) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}%`
@@ -159,7 +161,7 @@ export default async function SellerFeesPage() {
               <b className="text-text-primary">{s.founding.months} months</b>. The founding rate replaces the rank
               discount while it runs; after that the rank ladder applies as usual.
             </p>
-            <CardLink href="/early-seller?src=sell-fees">Become a Founding Seller</CardLink>
+            <CardLink href={foundingHref('sell-fees')}>Become a Founding Seller</CardLink>
           </Card>
         </div>
 

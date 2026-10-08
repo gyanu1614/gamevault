@@ -35,6 +35,7 @@ import { getGameContentTheme } from '@/lib/content/theme'
 import { socialTitle } from '@/lib/seo/title'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { seoMeta } from '@/lib/seo/fit'
 
 /**
  * The page SHELL is static content — an item's name, rarity, artwork, income
@@ -450,7 +451,7 @@ async function getRelatedBrainrots(brainrot: BrainrotRow): Promise<BrainrotRow[]
     .slice(0, 20)
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const { gameSlug, itemSlug } = await params
 
   if (gameSlug === 'adopt-me') {
@@ -464,8 +465,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // to 82 and was cut in results). The price leads the description.
     const title = `${pet.name} Value in Adopt Me (${monthYear})`
     const fr = pet.variants.find((v) => v.variant === 'FR') ?? pet.variants[0]
-    const priceLead = fr?.cashUsd != null ? ` A Fly Ride ${pet.name} sells for about $${fr.cashUsd.toFixed(2)}.` : ''
-    const description = `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} See its cash value in USD and trade value for Normal, Fly Ride, Neon and Mega, updated ${monthYear}.`
+    const usd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const priceLead = fr?.cashUsd != null ? ` A Fly Ride sells for about $${usd(fr.cashUsd)}.` : ''
+    // ≤155 characters: question, price, then what the page has (seoMeta trims
+    // the tail clause on long pet names, never the price).
+    const description = `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} Cash and trade values for every variant, updated ${monthYear}.`
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
     // names — "worth in real money / USD / can you sell". Per-pet, not the dead
@@ -509,7 +513,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     const cheapest = price!.cheapestUsd!
     const title = `${item.name} Value in ${listHub.shortName} (${monthYear}) — Price in USD`
-    const description = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toFixed(2)} from reputable sellers, across ${price!.sampleSize} live listings — real US dollars, updated daily, not value points.`
+    const description = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${price!.sampleSize} live ${price!.sampleSize === 1 ? 'listing' : 'listings'} from reputable sellers, updated daily.`
     const canonical = `/${gameSlug}/values/${item.slug}`
     return {
       title,
@@ -911,4 +915,11 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       />
 </main>
   )
+}
+
+/** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
+export async function generateMetadata(
+  ...args: Parameters<typeof generateMetadataRaw>
+): Promise<Metadata> {
+  return seoMeta(await generateMetadataRaw(...args))
 }

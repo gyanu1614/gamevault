@@ -2,7 +2,7 @@ import * as ReactDOM from 'react-dom'
 import type { ReactNode } from 'react'
 import { getGameHero } from '@/lib/games/hero.server'
 import type { GameHero } from '@/lib/games/hero'
-import { GameHeroArt, type GameHeroSize } from './GameHeroArt'
+import { GameHeroArt, gameNameFromSlug, type GameHeroSize } from './GameHeroArt'
 
 /**
  * GameHeroBackdrop — the game's ONE hero background, behind the top of every
@@ -46,7 +46,7 @@ export async function GameHeroBackdrop({
   preloadGameHero(hero)
   return (
     <div className="game-hero-scope">
-      <GameHeroArt hero={hero} size={size} />
+      <GameHeroArt hero={hero} size={size} alt={`${gameNameFromSlug(gameSlug)} background art`} />
       <div className="relative z-20">{children}</div>
     </div>
   )

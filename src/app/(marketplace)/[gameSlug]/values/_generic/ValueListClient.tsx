@@ -30,6 +30,7 @@ import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { rarityMeta } from '@/lib/values/rarity'
 import { matchesValueListTab, type ValueListHubConfig } from '@/lib/values/hub-config'
+import { unpack, type Packed } from '@/lib/serialize/columnar'
 
 /** One list row, as the server hands it over (light: no obtain/history). */
 export interface ValueListRow {
@@ -68,7 +69,7 @@ const usd = (v: number) =>
 export default function ValueListClient({
   gameSlug,
   gameName,
-  rows,
+  packedRows,
   hub,
   hasTrends,
   freshness,
@@ -76,7 +77,8 @@ export default function ValueListClient({
 }: {
   gameSlug: string
   gameName: string
-  rows: ValueListRow[]
+  /** pack(rows) — see src/lib/serialize/columnar.ts. */
+  packedRows: Packed
   hub: Pick<ValueListHubConfig, 'tabs' | 'itemTypeLabels' | 'pageRarities' | 'searchPlaceholder' | 'imageSource'>
   /** At least one item has a 7-day change — gates the Movers sort. */
   hasTrends: boolean
@@ -85,6 +87,10 @@ export default function ValueListClient({
   chromaHubHref?: string | null
 }) {
   const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
+  // Columnar on the wire (src/lib/serialize/columnar.ts): the key names go once,
+  // not once per row — this page's HTML was over a megabyte (Bing: "HTML size
+  // is too long").
+  const rows = useMemo(() => unpack<ValueListRow[]>(packedRows), [packedRows])
   const reduceMotion = useReducedMotion()
   const listTopRef = useRef<HTMLDivElement>(null)
 

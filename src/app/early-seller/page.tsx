@@ -22,8 +22,9 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import SellerFlowLoader from '@/app/account/become-seller/_redesign/components/SellerFlowLoader'
 import FoundingSignupClient from './_FoundingSignupClient'
 import type { SignupGame } from './_FoundingSignupClient'
+import { seoMeta } from '@/lib/seo/fit'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = seoMeta({
   title: 'Become a Founding Seller — First 100 Get Lower Fees',
   description:
     'Join DropMarket as one of the first 100 sellers and lock in lower fees, early access, and a founding-seller badge. Reserve your spot.',
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
     url: '/early-seller',
     type: 'website',
   },
-}
+})
 
 export const dynamic = 'force-dynamic'
 

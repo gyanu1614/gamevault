@@ -99,7 +99,8 @@ function Avatar({ user, className }: { user: any; className?: string }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={getAvatarUrl(user.profile?.avatar_url, user.profile?.username || 'user')}
-      alt=""
+      alt={`${user.profile?.username || 'User'} avatar`}
+      aria-hidden
       width={44}
       height={44}
       className={cn('h-11 w-11 shrink-0 rounded-full object-cover ring-1 ring-white/10', className)}

@@ -76,7 +76,8 @@ export function GuideCard({
           // eslint-disable-next-line @next/next/no-img-element -- remote cover art
           <img
             src={post.cover}
-            alt=""
+            alt={post.title}
+            aria-hidden
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />

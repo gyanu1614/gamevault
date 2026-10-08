@@ -68,7 +68,8 @@ export function FeaturedGuide({
             // eslint-disable-next-line @next/next/no-img-element -- remote cover art
             <img
               src={cover}
-              alt=""
+              alt={title}
+              aria-hidden
               // object-position ~35% (left of centre) so a centred-subject cover
               // pulls its pets into the visible left part of the panel instead
               // of hiding under the right-side fade — without clipping them off.

@@ -49,7 +49,7 @@ export interface ShareCardProps {
   totals: InventoryTotals
 }
 
-function Art({ src, size, rgb }: { src: string | null; size: number; rgb: string }) {
+function Art({ src, alt, size, rgb }: { src: string | null; alt: string; size: number; rgb: string }) {
   return (
     <div
       style={{
@@ -67,7 +67,8 @@ function Art({ src, size, rgb }: { src: string | null; size: number; rgb: string
         // eslint-disable-next-line @next/next/no-img-element -- captured to PNG, must be a plain CORS image
         <img
           src={src}
-          alt=""
+          alt={alt}
+          aria-hidden
           crossOrigin="anonymous"
           width={Math.round(size * 0.82)}
           height={Math.round(size * 0.82)}
@@ -82,7 +83,7 @@ function Brand({ size }: { size: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- captured to PNG */}
-      <img src="/brand/logo-mark-lime.png" alt="" width={size} height={size} style={{ width: size, height: size }} />
+      <img src="/brand/logo-mark-lime.png" alt="DropMarket logo" aria-hidden width={size} height={size} style={{ width: size, height: size }} />
       <span style={{ fontSize: size * 0.62, fontWeight: 800, letterSpacing: '-0.02em', color: INK }}>DropMarket</span>
     </div>
   )
@@ -127,7 +128,7 @@ export const InventoryShareCard = forwardRef<HTMLDivElement, ShareCardProps>(fun
                   key={l.item.slug}
                   style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '14px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}
                 >
-                  <Art src={l.item.imageUrl} size={84} rgb={hexToRgb(r.color)} />
+                  <Art src={l.item.imageUrl} alt={l.item.name} size={84} rgb={hexToRgb(r.color)} />
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: 24, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {l.item.name}
@@ -165,7 +166,7 @@ export const InventoryShareCard = forwardRef<HTMLDivElement, ShareCardProps>(fun
           const r = rarityMeta(gameSlug, l.item.rarity)
           return (
             <div key={l.item.slug} style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <Art src={l.item.imageUrl} size={60} rgb={hexToRgb(r.color)} />
+              <Art src={l.item.imageUrl} alt={l.item.name} size={60} rgb={hexToRgb(r.color)} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 26, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {l.item.name}

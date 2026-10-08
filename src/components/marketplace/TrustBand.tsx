@@ -75,7 +75,7 @@ export function TrustBand({ className }: { className?: string }) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.img}
-                  alt=""
+                  alt={`${item.label} icon`}
                   aria-hidden
                   loading="lazy"
                   decoding="async"

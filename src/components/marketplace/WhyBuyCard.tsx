@@ -64,7 +64,7 @@ export async function WhyBuyCard({
         .filter(Boolean)
         .join(' ')}
     >
-      {art && <GuideBackdrop gameSlug={gameSlug} src={art} />}
+      {art && <GuideBackdrop gameSlug={gameSlug} src={art} alt={`${subject} background art`} />}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -80,7 +80,7 @@ export async function WhyBuyCard({
         <ul className="mx-auto mt-7 grid max-w-5xl grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
           {why.map((w) => (
             <li key={w.title} className="flex items-center gap-3">
-              <SilverIcon src={w.icon} className="h-6 w-6 shrink-0" />
+              <SilverIcon src={w.icon} alt={`${w.title} icon`} className="h-6 w-6 shrink-0" />
               <p className="text-[15px] font-semibold leading-snug text-text-primary">{w.title}</p>
             </li>
           ))}

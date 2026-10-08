@@ -185,7 +185,8 @@ export function ItemPickerDialog({
                           ) : null}
                           <ValueArt
                             src={it.imageUrl}
-                            alt=""
+                            alt={it.name}
+                            aria-hidden
                             size={64}
                             pixelated={pixelated}
                             className="transition-transform duration-200 group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:scale-100"

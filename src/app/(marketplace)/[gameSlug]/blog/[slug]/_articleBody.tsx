@@ -190,7 +190,7 @@ function Table({ rows, keyId }: { rows: string[]; keyId: number }) {
 }
 
 /** Own-line image; alt "center"/"wide" tokens set alignment + width. */
-function Figure({ alt, src, keyId }: { alt: string; src: string; keyId: number }) {
+function Figure({ alt, src, keyId, fallbackAlt }: { alt: string; src: string; keyId: number; fallbackAlt: string }) {
   const tokens = alt.trim().toLowerCase().split(/\s+/)
   const center = tokens.includes('center')
   const wide = tokens.includes('wide')
@@ -207,7 +207,7 @@ function Figure({ alt, src, keyId }: { alt: string; src: string; keyId: number }
       {/* eslint-disable-next-line @next/next/no-img-element -- CMS-uploaded photo */}
       <img
         src={src}
-        alt={showCaption ? caption : ''}
+        alt={showCaption ? caption : fallbackAlt}
         loading="lazy"
         className={`border border-[#1E2723] bg-[#0E1A11] object-contain ${center && !wide ? 'max-w-[520px]' : 'w-full'}`}
       />
@@ -220,7 +220,14 @@ function Figure({ alt, src, keyId }: { alt: string; src: string; keyId: number }
   )
 }
 
-export function ArticleBody({ body }: { body: string[] }) {
+export function ArticleBody({
+  body,
+  imageAlt = 'Guide illustration',
+}: {
+  body: string[]
+  /** Alt for an inline image that has no caption of its own (the post title). */
+  imageAlt?: string
+}) {
   // Flatten all blocks into one line stream so multi-line constructs inside a
   // single block (numbered lists, tables) parse correctly.
   const lines = body.flatMap((block) => block.split('\n'))
@@ -345,7 +352,7 @@ export function ArticleBody({ body }: { body: string[] }) {
     // ── Own-line image
     const img = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
     if (img) {
-      blocks.push(<Figure key={key++} alt={img[1]} src={img[2]} keyId={key} />)
+      blocks.push(<Figure key={key++} alt={img[1]} src={img[2]} keyId={key} fallbackAlt={imageAlt} />)
       i += 1
       continue
     }

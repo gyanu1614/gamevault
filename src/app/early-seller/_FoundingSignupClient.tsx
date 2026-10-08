@@ -10,6 +10,7 @@
 import { useMemo, useRef, useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { readFoundingSrc } from '@/lib/seo/founding-href'
 import { Percent, ArrowUp, Check, ChevronDown, X, ArrowRight, CircleCheck } from 'lucide-react'
 import { FOUNDING_FEE_PERK_LABEL } from '@/lib/config/founding-seller'
 import { submitEarlySeller } from '@/lib/actions/early-seller'
@@ -55,7 +56,8 @@ export default function FoundingSignupClient({
   progress?: FoundingProgress | null
   games: SignupGame[]
 }) {
-  const src = useSearchParams().get('src') || undefined
+  // Attribution tag: `#src=` (crawlable links), or a legacy `?src=`; read at submit.
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
@@ -137,7 +139,7 @@ export default function FoundingSignupClient({
           sells: sells.trim() || undefined,
           monthlyVolume: volume || undefined,
           games: gamesPayload.length ? gamesPayload : undefined,
-          source: src,
+          source: readFoundingSrc(window.location.hash, searchParams),
         })
         if (res.ok) {
           setSubmitted(true)
@@ -169,7 +171,7 @@ export default function FoundingSignupClient({
         className="relative flex w-full flex-col overflow-hidden px-8 pb-10 pt-16 lg:w-[38%] lg:px-12 lg:pb-12 lg:pt-16"
         style={{ backgroundColor: C.forest3 }}
       >
-        <Image src="/assets/heroes/sell.avif" alt="" fill priority sizes="38vw" className="object-cover" />
+        <Image src="/assets/heroes/sell.avif" alt="Game seller hero art" aria-hidden fill priority sizes="38vw" className="object-cover" />
         <div
           aria-hidden
           className="absolute inset-0"
@@ -324,7 +326,7 @@ export default function FoundingSignupClient({
                               style={{ backgroundColor: on ? C.tint : 'transparent' }}
                             >
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md">
-                                <Image src={g.logo} alt="" width={24} height={24} className="h-6 w-6 object-contain" />
+                                <Image src={g.logo} alt={`${g.name} logo`} aria-hidden width={24} height={24} className="h-6 w-6 object-contain" />
                               </span>
                               <span className="flex-1 text-[14px] font-semibold" style={{ color: on ? C.forest : C.ink }}>{g.name}</span>
                               {on && <Check className="h-4 w-4" style={{ color: C.forest2 }} strokeWidth={2.5} />}
@@ -436,7 +438,7 @@ function Tag({ logo, label, onRemove }: { logo?: string; label: string; onRemove
       className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-[5px] text-[13px] font-semibold"
       style={{ backgroundColor: C.tint, borderColor: C.line, color: C.forest }}
     >
-      {logo && <Image src={logo} alt="" width={16} height={16} className="h-4 w-4 object-contain" />}
+      {logo && <Image src={logo} alt={`${label} logo`} aria-hidden width={16} height={16} className="h-4 w-4 object-contain" />}
       {label}
       <span
         role="button"
