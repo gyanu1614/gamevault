@@ -382,6 +382,15 @@ function groupBySource(records) {
 // last 25 scheduled runs died precisely here. The upsert is idempotent, so a
 // retry is safe for intermediate batches too.
 const SEND_MAX_ATTEMPTS = 4;
+/**
+ * The PUBLISH batch gets a longer, patient retry (2026-10-07: batch 54 of 54
+ * failed four times in 7 minutes — 504, 546, "canceling statement due to lock
+ * timeout" — while the Adopt Me / MM2 reprices ran against the same database,
+ * and the backoff was 2/4/6 s, far too short to outwait them). Waits of 30 s,
+ * 60 s, 120 s, 180 s: about six minutes for the other writers to finish.
+ */
+const PUBLISH_MAX_ATTEMPTS = 5;
+const PUBLISH_BACKOFF_MS = [30_000, 60_000, 120_000, 180_000];
 
 /**
  * PostgREST/Postgres SQLSTATEs that will NEVER succeed on retry, whatever HTTP
@@ -448,12 +457,22 @@ export function isRetryableImportError(error) {
 const pause = (milliseconds) =>
   new Promise((done) => setTimeout(done, milliseconds));
 
+export function retryPlan(options) {
+  return options?.publish === false
+    ? { maxAttempts: SEND_MAX_ATTEMPTS, backoffMs: (attempt) => 2000 * attempt }
+    : {
+        maxAttempts: PUBLISH_MAX_ATTEMPTS,
+        backoffMs: (attempt) => PUBLISH_BACKOFF_MS[Math.min(attempt, PUBLISH_BACKOFF_MS.length) - 1],
+      };
+}
+
 async function sendBatchWithRetry(options, label) {
   let lastError = null;
+  const { maxAttempts, backoffMs: backoffFor } = retryPlan(options);
 
   for (
     let attempt = 1;
-    attempt <= SEND_MAX_ATTEMPTS;
+    attempt <= maxAttempts;
     attempt += 1
   ) {
     try {
@@ -462,13 +481,13 @@ async function sendBatchWithRetry(options, label) {
       lastError = error;
       if (
         !isRetryableImportError(error) ||
-        attempt === SEND_MAX_ATTEMPTS
+        attempt === maxAttempts
       ) {
         break;
       }
-      const backoffMs = 2000 * attempt;
+      const backoffMs = backoffFor(attempt);
       console.warn(
-        `\n${label} failed (attempt ${attempt}/${SEND_MAX_ATTEMPTS}: ` +
+        `\n${label} failed (attempt ${attempt}/${maxAttempts}: ` +
           `${error.message}) — retrying in ${backoffMs}ms…`,
       );
       await pause(backoffMs);
