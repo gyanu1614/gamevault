@@ -77,7 +77,7 @@ export function PopularGameCard({ game }: Props) {
 
           {!artFailed && (
             <Image
-              src={`/games/art/${game.slug}.png`}
+              src={`/games/art/${game.slug}.webp`}
               alt={`${game.name} artwork`}
               aria-hidden
               fill

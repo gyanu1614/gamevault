@@ -94,6 +94,25 @@ export function gameHubTitle(name: string, categoryLabels: string[]): string {
   return fallback.length <= HUB_TITLE_MAX ? fallback : base
 }
 
+/** Words a buyer uses for each category; brand names (Robux, V-Bucks) keep their case. */
+const GENERIC_CATEGORY = /^(items?|accounts?|currency|boosting|top ?ups?|gift cards?|services?|coaching|keys?|skins?|pets?)$/i
+
+/**
+ * "pets, items and accounts" / "Robux, items and accounts" from the game's real
+ * category labels (≤3), the game name stripped ("Roblox Items" → "items").
+ */
+export function hubThings(name: string, categoryLabels: string[]): string {
+  const strip = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+`, 'i')
+  const words = [...new Set(
+    categoryLabels
+      .map((l) => l.trim().replace(strip, ''))
+      .filter(Boolean)
+      .map((l) => (GENERIC_CATEGORY.test(l) ? l.toLowerCase() : l)),
+  )].slice(0, 3)
+  if (words.length === 0) return 'items, accounts and currency'
+  return words.length === 1 ? words[0] : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+}
+
 export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
   const { name } = input
   const o = input.overrides ?? {}
@@ -108,9 +127,14 @@ export function resolveGameSeo(input: GameSeoInput): ResolvedSeo {
   // it ≤ 60 (owner/SEO audit 2026-10-06).
   const titleTemplate = gameHubTitle(name, input.categoryLabels ?? [])
 
+  // Owner-approved 2026-10-07 after the competitor study (GameBoost: "from
+  // verified sellers… secure checkout, quick delivery"; Eldorado: buy + the
+  // things + delivery): "Buy Adopt Me pets, items and accounts safely from
+  // verified sellers. Fast delivery, secure checkout and a full refund if it
+  // never arrives." No price, no claims we can't back.
   const descTemplate = clamp(
-    `Buy and sell ${name} digital goods on DropMarket. Compare verified seller offers for ${primary}, delivery times, prices and SafeDrop Protection.`,
-    160,
+    `Buy ${name} ${hubThings(name, input.categoryLabels ?? [])} safely from verified sellers. Fast delivery, secure checkout and a full refund if it never arrives.`,
+    155,
   )
 
   const h1Template = `Buy and Sell ${name} on DropMarket`

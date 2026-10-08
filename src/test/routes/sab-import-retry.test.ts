@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isRetryableImportError } from '../../../scripts/import-sab-market-json.mjs'
+import { isRetryableImportError, retryPlan } from '../../../scripts/import-sab-market-json.mjs'
 
 /**
  * ROUTE-011. The final publish:true call re-aggregates the whole dataset
@@ -193,5 +193,21 @@ describe('isRetryableImportError — ROUTE-017 Invalid URL is permanent', () => 
         message: 'fetch failed for url https://example.com',
       }),
     ).toBe(true)
+  })
+})
+
+describe('retryPlan (2026-10-07: the publish batch lost to a 7-minute lock storm)', () => {
+  it('intermediate batches keep the quick 2 s / 4 s / 6 s retry', () => {
+    const p = retryPlan({ publish: false })
+    expect(p.maxAttempts).toBe(4)
+    expect([1, 2, 3].map(p.backoffMs)).toEqual([2000, 4000, 6000])
+  })
+  it('the publish batch waits out other writers: 30 s, 60 s, 120 s, 180 s', () => {
+    const p = retryPlan({ publish: true })
+    expect(p.maxAttempts).toBe(5)
+    expect([1, 2, 3, 4].map(p.backoffMs)).toEqual([30_000, 60_000, 120_000, 180_000])
+  })
+  it('publish defaults to true, as sendBatch does', () => {
+    expect(retryPlan({}).maxAttempts).toBe(5)
   })
 })

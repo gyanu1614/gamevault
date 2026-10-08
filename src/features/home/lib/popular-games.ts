@@ -83,7 +83,8 @@ const SHORT_CHIP_LABEL: Record<string, string> = {
  *
  * A card is mostly its artwork, so a game without art renders as an empty
  * placeholder frame and drags the whole grid down. Only games with a file at
- * `/public/games/art/<slug>.png` belong here — add the art, then add the
+ * `/public/games/art/<slug>.webp` belong here (600px wide, ~45 KB: images are
+ * served unoptimized, so the file IS what every phone downloads) — add the art, then add the
  * slug. Every other game stays fully live at its own URL; it just isn't
  * featured on the homepage.
  *

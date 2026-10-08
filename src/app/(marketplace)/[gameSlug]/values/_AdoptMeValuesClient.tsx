@@ -36,7 +36,7 @@ import { ADOPT_ME_RARITIES, rarityMeta as sharedRarityMeta } from '@/lib/values/
 import type { InitialValueList } from '@/lib/values/lazy-list'
 import { useValueListRows } from '@/lib/values/useValueListRows'
 import { VALUE_BTN_SECONDARY } from '@/components/values/styles'
-import { ValueCardSkeleton } from './_generic/ValueListSkeleton'
+import { ValueCardSkeleton, ValueListSkeleton } from './_generic/ValueListSkeleton'
 import {
   ADOPT_ME_DEFAULT_SORT,
   ADOPT_ME_DEFAULT_VARIANT,
@@ -75,7 +75,10 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
 // page can render this client directly (mirrors SAB's ValuesDirectoryClient).
 export default function AdoptMeValuesClient({ initial }: { initial: InitialValueList }) {
   return (
-    <Suspense fallback={null}>
+    // A skeleton of the same shape, not null: the list reads the URL, so it
+    // renders after hydration, and an empty fallback let it push the whole page
+    // down when it appeared (CLS 0.6 on /adopt-me/values, 2026-10-07).
+    <Suspense fallback={<ValueListSkeleton />}>
       <AdoptMeValuesClientInner initial={initial} />
     </Suspense>
   )
