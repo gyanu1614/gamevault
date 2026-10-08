@@ -32,18 +32,20 @@ function utcHhMm(d: Date): string {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
-function badgeText(props: FreshnessBadgeProps): string | null {
+export function badgeText(props: FreshnessBadgeProps): string | null {
   if ('lastChangedAt' in props) {
     const { lastChangedAt, listingCount, sourceCount } = props
     if (!lastChangedAt || listingCount <= 0) return null
     const when = new Date(lastChangedAt)
     if (Number.isNaN(when.getTime())) return null
     const marketplaces = Math.max(1, sourceCount)
-    return (
-      `Market price · updated ${utcHhMm(when)} UTC · from ${listingCount.toLocaleString('en-US')} ` +
-      `${listingCount === 1 ? 'listing' : 'listings'} across ${marketplaces} ` +
-      `${marketplaces === 1 ? 'marketplace' : 'marketplaces'}`
-    )
+    const listings = `${listingCount.toLocaleString('en-US')} ${listingCount === 1 ? 'listing' : 'listings'}`
+    const across = `${marketplaces} ${marketplaces === 1 ? 'marketplace' : 'marketplaces'}`
+    // Joined as parts, not as template literals split with `+`: the production
+    // server build dropped the trailing spaces of the split literals ("10,132listings
+    // across 1marketplace") while the client kept them — a hydration mismatch
+    // (React #425) on /murder-mystery-2/values, 2026-10-07.
+    return ['Market price', '·', 'updated', `${utcHhMm(when)} UTC`, '·', 'from', listings, 'across', across].join(' ')
   }
   if (!props.updatedAt) return null
   const date = new Date(props.updatedAt)
