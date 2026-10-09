@@ -52,14 +52,24 @@ export const detailsSchema = z.object({
 export type DetailsInput = z.input<typeof detailsSchema>
 
 /** Store name: 3–50 chars, letters/digits plus space . ' & - ; must start with a letter or digit. */
-export const STORE_NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} .'&-]{1,48}[\p{L}\p{N}.!]?$/u
+/** Names that read as staff or the brand; never a store. */
+export const RESERVED_STORE_NAMES = new Set([
+  'dropmarket', 'drop_market', 'admin', 'administrator', 'support', 'official', 'staff', 'moderator', 'mod', 'help', 'security', 'safedrop',
+])
+
+/**
+ * One word, like a handle (owner, 2026-10-09): letters, numbers and
+ * underscore, 3–20 characters, no spaces. It is the store URL as typed,
+ * lower-cased: `GGTrading` → /shop/ggtrading. Uniqueness ignores case.
+ */
 export const storeNameSchema = z
   .string()
   .trim()
   .min(3, 'At least 3 characters')
-  .max(50, 'At most 50 characters')
-  .refine((s) => STORE_NAME_RE.test(s), 'Letters, numbers, spaces and . \' & - only')
-  .refine((s) => /[\p{L}\p{N}]{2}/u.test(s.replace(/[^\p{L}\p{N}]/gu, '')), 'Add a few more letters or numbers')
+  .max(20, 'At most 20 characters')
+  .refine((s) => /^[A-Za-z0-9_]+$/.test(s), 'One word: letters, numbers and _ only, no spaces')
+  .refine((s) => /[A-Za-z]/.test(s), 'Add at least one letter')
+  .refine((s) => !RESERVED_STORE_NAMES.has(s.toLowerCase().replace(/_/g, '')), 'That name is reserved')
 
 export const typedNameSchema = z
   .string()

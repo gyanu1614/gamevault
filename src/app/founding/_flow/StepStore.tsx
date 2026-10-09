@@ -68,7 +68,7 @@ export function StepStore({
       <span className="inline-flex items-center gap-1.5 text-text-tertiary"><CircleNotch className="h-3.5 w-3.5 animate-spin" aria-hidden /> Checking…</span>
     ) : check.state === 'ok' ? (
       <span className="inline-flex items-center gap-1.5 text-success"><Check weight="bold" className="h-3.5 w-3.5" aria-hidden /> Available</span>
-    ) : 'This is the name buyers see on every listing. 3–50 characters.'
+    ) : 'One word, 3–20 characters, letters, numbers and _ only. It is also your store link.'
 
   return (
     <StepCard title="Set Up Your Store" lead="Pick a name buyers will remember, and a logo so your listings stand out.">
@@ -79,7 +79,7 @@ export function StepStore({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={INPUT_CLS}
-            placeholder="e.g. Pixel Pets Trading"
+            placeholder="e.g. PixelPets"
             maxLength={50}
             autoComplete="organization"
             aria-invalid={check.state === 'bad' || undefined}
