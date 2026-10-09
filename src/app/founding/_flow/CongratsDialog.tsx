@@ -19,8 +19,8 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 
 const NEXT = [
   'Create your first listing. It takes about two minutes.',
-  'It goes live and buyers can message you about it.',
-  'Buyers message you here. Deliver once a purchase is made, and the sale is done.',
+  'Buyers find it, message you here, and pay before you deliver.',
+  'Deliver once the purchase is made, and the sale is done. SafeDrop Protection covers every order.',
 ]
 
 export function CongratsDialog({

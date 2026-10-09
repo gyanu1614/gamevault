@@ -117,7 +117,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
         <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
           {stage >= 5 ? (
             <div className="rounded-lg bg-bg-raised p-5 sm:p-6">
-              <DoneScreen shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isVerified={state.isVerified} isFounding={state.isFounding} />
+              <DoneScreen shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} />
             </div>
           ) : (
             <StepChecklist
