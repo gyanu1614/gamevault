@@ -55,6 +55,18 @@ export default function EmailConfirmedToast() {
           description: 'Sign in and we can resend it.',
         })
         open('login', { redirect: postLoginRedirect })
+      } else if (authError === 'oauth_unverified_email') {
+        // Supabase refuses to link a provider email the provider has not
+        // verified (Discord lets accounts sign in unverified).
+        toast.error('Verify Your Discord Email First', {
+          description: 'Confirm your email on Discord, or log in with your password.',
+        })
+        open('login', { redirect: postLoginRedirect })
+      } else if (authError === 'oauth_no_email') {
+        toast.error('No Email Shared', {
+          description: 'That account has no verified email. Use another sign-in method.',
+        })
+        open('login', { redirect: postLoginRedirect })
       } else {
         toast.error('Confirmation Failed', {
           description: 'Try the link again or request a new one.',

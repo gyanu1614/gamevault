@@ -8,6 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import RouteProgress from '@/components/global/RouteProgress'
 import AccessDeniedToast from '@/components/global/AccessDeniedToast'
 import EmailConfirmedToast from '@/components/global/EmailConfirmedToast'
+import PasswordGate from '@/components/auth/PasswordGate'
 import { AuthDialogProvider } from '@/components/auth/AuthDialog'
 import { IntentPrefetch } from '@/components/navigation/IntentPrefetch'
 import { AuthProvider } from '@/hooks/use-auth'
@@ -60,6 +61,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <Suspense fallback={null}>
                 <EmailConfirmedToast />
               </Suspense>
+              {/* Required password after Google/Discord sign-in — client half
+                  of the gate (the middleware covers protected routes). */}
+              <PasswordGate />
               {children}
             </AuthDialogProvider>
           </AuthProvider>

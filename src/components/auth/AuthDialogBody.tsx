@@ -40,6 +40,7 @@ import { stashPendingSignupAvatar, downscaleAvatarDataUrl } from '@/lib/auth/pen
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -322,6 +323,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                         <LoginForm
                           onSuccess={handleAuthSuccess}
                           onSwitchToSignup={() => onModeChange('signup')}
+                          oauthNext={redirectRef.current}
                         />
                       </div>
                     ) : (
@@ -333,6 +335,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                           onSuccess={handleAuthSuccess}
                           onSwitchToLogin={() => onModeChange('login')}
                           onRequiresConfirmation={setPendingVerifyEmail}
+                          oauthNext={redirectRef.current}
                         />
                       </div>
                     )}
@@ -464,10 +467,12 @@ const loginSchema = z.object({
 type LoginData = z.infer<typeof loginSchema>
 
 function LoginForm({
-  onSuccess, onSwitchToSignup,
+  onSuccess, onSwitchToSignup, oauthNext,
 }: {
   onSuccess: () => void
   onSwitchToSignup: () => void
+  /** Post-auth destination for the Google/Discord round trip (null = stay here). */
+  oauthNext: string | null
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -533,6 +538,8 @@ function LoginForm({
         <p className={eyebrowCls}>Sign In</p>
         <h2 className={headingCls}>Continue To Your Account</h2>
       </header>
+
+      <OAuthButtons next={oauthNext} tone="light" className="auth-reveal auth-reveal-1" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <div className="auth-reveal auth-reveal-1 space-y-1.5">
@@ -663,12 +670,14 @@ type SignupData = z.infer<typeof signupSchema>
 type UsernameStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken'
 
 function SignupForm({
-  onSuccess, onSwitchToLogin, onRequiresConfirmation,
+  onSuccess, onSwitchToLogin, onRequiresConfirmation, oauthNext,
 }: {
   onSuccess: () => void
   onSwitchToLogin: () => void
   /** Email-confirmation mode: swap the dialog to the "Check Your Inbox" view. */
   onRequiresConfirmation: (email: string) => void
+  /** Post-auth destination for the Google/Discord round trip (null = stay here). */
+  oauthNext: string | null
 }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -825,6 +834,8 @@ function SignupForm({
         <p className={eyebrowCls}>Sign Up</p>
         <h2 className={headingCls}>Create Your Account</h2>
       </header>
+
+      <OAuthButtons next={oauthNext} tone="light" className="auth-reveal auth-reveal-1" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {/* Industry-standard order: name → username → email → password.
@@ -1046,7 +1057,7 @@ function SignupForm({
           <div className={errorBoxCls}>
             {error === 'EMAIL_TAKEN' ? (
               <>
-                This email is already registered.{' '}
+                This email already has an account.{' '}
                 <button
                   type="button"
                   onClick={onSwitchToLogin}
@@ -1054,6 +1065,7 @@ function SignupForm({
                 >
                   Sign In Instead
                 </button>
+                , or use Google or Discord above if that is how you joined.
               </>
             ) : (
               error
