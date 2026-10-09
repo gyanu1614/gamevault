@@ -79,40 +79,50 @@ export function StepChecklist({
             const current = stage === step.id
             return (
               <li key={step.id} className="min-w-0">
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                  <motion.div
-                    className={cn('h-full rounded-full', done ? 'bg-lime-text' : current ? 'bg-white' : 'bg-transparent')}
-                    initial={false}
-                    animate={{ width: done ? '100%' : current ? '35%' : '0%' }}
-                    transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
-                  />
-                </div>
-                <p className={cn('mt-1.5 hidden truncate text-[11.5px] font-medium sm:block', done ? 'text-lime-text' : current ? 'text-text-primary' : 'text-text-tertiary')}>
-                  {step.label}
-                </p>
+                {/* A done segment is a button: it reopens that step. */}
+                <Segment
+                  as={done && !finished ? 'button' : 'div'}
+                  onClick={done && !finished ? () => onOpen(step.id) : undefined}
+                  active={open === step.id}
+                  label={done ? `Change ${step.label}` : undefined}
+                >
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                    <motion.div
+                      className={cn('h-full rounded-full', done ? 'bg-lime-text' : current ? 'bg-white' : 'bg-transparent')}
+                      initial={false}
+                      animate={{ width: done ? '100%' : current ? '35%' : '0%' }}
+                      transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
+                    />
+                  </div>
+                  <p className={cn('mt-1.5 hidden truncate text-[11.5px] font-medium sm:block', done ? 'text-lime-text' : current ? 'text-text-primary' : 'text-text-tertiary')}>
+                    {done ? <><Check weight="bold" className="mr-1 inline h-3 w-3 -translate-y-px" aria-hidden />{step.label}</> : step.label}
+                  </p>
+                </Segment>
               </li>
             )
           })}
         </ol>
+        {doneCount > 0 && !finished && (
+          <p className="mt-2.5 text-caption text-text-tertiary">Finished a step? Click it above to change it.</p>
+        )}
       </div>
 
       <ol className="mt-5" aria-label="Setup steps">
         {CHECKLIST_STEPS.map((step) => {
           const isDone = stage > step.id
           const isOpen = open === step.id && !finished
-          const isUpcoming = !isDone && stage !== step.id
-          // Only the current step (and the done ones, collapsed, so they can
-          // be changed) — the progress bar above already names what is left.
-          if (isUpcoming) return null
+          // One row only: the step being worked on (the current one, or a
+          // finished one the user reopened from the bar). The bar is the map.
+          if (!isOpen) return null
           return (
             <li key={step.id} className="border-t border-white/[0.05]">
               <RowHeader
                 number={step.id}
-                label={isDone && !isOpen ? step.done : step.label}
+                label={step.label}
                 time={secondsLabel(step.seconds)}
-                state={isDone ? 'done' : isUpcoming ? 'upcoming' : 'current'}
+                state={isDone ? 'done' : 'current'}
                 open={isOpen}
-                onClick={isDone && !finished ? () => onOpen(step.id) : undefined}
+                onClick={undefined}
                 reduce={!!reduce}
               />
               <AnimatePresence initial={false}>
@@ -140,6 +150,34 @@ export function StepChecklist({
       </ol>
     </div>
   )
+}
+
+function Segment({
+  as,
+  onClick,
+  active,
+  label,
+  children,
+}: {
+  as: 'button' | 'div'
+  onClick?: () => void
+  active: boolean
+  label?: string
+  children: React.ReactNode
+}) {
+  const cls = cn(
+    'block w-full rounded-md text-left transition-[background-color,transform] duration-200',
+    as === 'button' && 'cursor-pointer px-1 py-1 -mx-1 -my-1 hover:bg-white/[0.05] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+    active && as === 'button' && 'bg-white/[0.05]',
+  )
+  if (as === 'button') {
+    return (
+      <button type="button" onClick={onClick} aria-label={label} className={cls}>
+        {children}
+      </button>
+    )
+  }
+  return <div className={cls}>{children}</div>
 }
 
 function RowHeader({
