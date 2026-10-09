@@ -32,7 +32,7 @@ export function DoneScreen({
   const name = shopName ?? 'Your store'
   const steps = [
     { Icon: PlusCircle, tile: 'bg-lime-tint-bg text-lime-text', text: 'Create a listing. It takes about two minutes and buyers see it as soon as it is live.' },
-    { Icon: Eye, tile: 'bg-info-bg text-info', text: 'Listings over $100 get a quick check by our team first while you are new.' },
+    { Icon: Eye, tile: 'bg-info-bg text-info', text: 'Check your store page. That is what buyers see when they open your listings.' },
     isVerified
       ? { Icon: SealCheck, tile: 'bg-lime-tint-bg text-lime-text', text: 'You are verified: withdraw whenever your balance clears.' }
       : { Icon: IdentificationCard, tile: 'bg-warning-bg text-warning', text: 'Verify your identity when you make your first withdrawal.' },

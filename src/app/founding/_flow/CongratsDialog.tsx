@@ -19,7 +19,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 
 const NEXT = [
   'Create your first listing. It takes about two minutes.',
-  'It goes live right away. Listings over $100 get a quick check first while you are new.',
+  'It goes live and buyers can message you about it.',
   'Buyers message you here. Deliver once a purchase is made, and the sale is done.',
 ]
 
