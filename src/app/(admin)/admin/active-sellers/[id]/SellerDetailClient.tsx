@@ -683,7 +683,10 @@ export default function SellerDetailClient({
           <Section title="Signup" sub="What they told us on /founding: where they are, how to reach them, what they sell.">
             {detail.onboarding ? (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px] sm:grid-cols-3">
+                <div><dt className="text-text-tertiary">Full name</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.full_name ?? '—'}</dd></div>
+                <div className="col-span-2"><dt className="text-text-tertiary">Address</dt><dd className="mt-0.5 font-medium text-text-primary">{[detail.onboarding.address_line, detail.onboarding.city].filter(Boolean).join(', ') || '—'}</dd></div>
                 <div><dt className="text-text-tertiary">Country</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.country ?? '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Expected sales</dt><dd className="mt-0.5 font-medium text-text-primary">{({ under_100: 'Under $100 / mo', '100_500': '$100–500 / mo', '500_2000': '$500–2,000 / mo', '2000_plus': 'Over $2,000 / mo' } as Record<string, string>)[detail.onboarding.expected_volume ?? ''] ?? '—'}</dd></div>
                 <div><dt className="text-text-tertiary">Discord</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.discord ? `@${detail.onboarding.discord.replace(/^@/, '')}` : '—'}</dd></div>
                 <div><dt className="text-text-tertiary">Came from</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.source ?? '—'}</dd></div>
                 <div><dt className="text-text-tertiary">Started</dt><dd className="mt-0.5 font-medium text-text-primary">{new Date(detail.onboarding.started_at).toLocaleDateString('en-GB', { dateStyle: 'medium' })}</dd></div>

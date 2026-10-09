@@ -64,6 +64,10 @@ export interface FoundingFlowState {
     sells: SellsEntry[]
     discord: string | null
     isAdult: boolean
+    fullName: string | null
+    addressLine: string | null
+    city: string | null
+    expectedVolume: string | null
   } | null
   store: { name: string | null; logoUploadedAt: string | null } | null
   agreement: { signedAt: string; version: string } | null
@@ -125,7 +129,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
   const s = svc()
   const [{ data: profile }, { data: ob }, { data: ag }] = await Promise.all([
     s.from('profiles').select('id, email, full_name, username, avatar_url, role, is_verified, founding_seller, shop_slug, shop_name, seller_tier').eq('id', user.id).maybeSingle(),
-    s.from('seller_onboarding').select('country, sells, discord, is_adult_confirmed_at, store_name, logo_uploaded_at, completed_at').eq('user_id', user.id).maybeSingle(),
+    s.from('seller_onboarding').select('country, sells, discord, is_adult_confirmed_at, store_name, logo_uploaded_at, completed_at, full_name, address_line, city, expected_volume').eq('user_id', user.id).maybeSingle(),
     s.from('seller_agreements').select('signed_at, agreement_version').eq('user_id', user.id).eq('agreement_version', version).order('signed_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
@@ -136,9 +140,13 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
         sells: Array.isArray(ob.sells) ? (ob.sells as SellsEntry[]) : [],
         discord: ob.discord ?? null,
         isAdult: Boolean(ob.is_adult_confirmed_at),
+        fullName: ob.full_name ?? null,
+        addressLine: ob.address_line ?? null,
+        city: ob.city ?? null,
+        expectedVolume: ob.expected_volume ?? null,
       }
     : null
-  const detailsDone = Boolean(details && details.country && details.isAdult && details.sells.length > 0)
+  const detailsDone = Boolean(details && details.country && details.isAdult && details.sells.length > 0 && details.fullName && details.addressLine && details.city)
   const storeDone = Boolean(ob?.store_name)
   // Only worth a lookup while step 2 has nothing saved (one auth round trip).
   const discordHandle = ob?.discord ? null : await lookupDiscordHandle(user.id)
@@ -186,6 +194,10 @@ export async function saveFoundingDetails(input: DetailsInput): Promise<{ succes
         country: d.country,
         sells: d.sells,
         discord: d.discord || null,
+        full_name: d.fullName,
+        address_line: d.addressLine,
+        city: d.city,
+        expected_volume: d.expectedVolume,
         is_adult_confirmed_at: new Date().toISOString(),
         ...(d.source ? { source: d.source } : {}),
         current_step: 3,

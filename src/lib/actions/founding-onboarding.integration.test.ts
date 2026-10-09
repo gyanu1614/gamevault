@@ -61,11 +61,11 @@ describe.skipIf(!hasEnv)('founding onboarding actions (integration)', () => {
     expect(state.agreementVersion).toMatch(/^v\d/)
 
     // 2. details: refused on bad input, saved on good
-    const bad = await a.saveFoundingDetails({ country: 'ZZ', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true })
+    const bad = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'ZZ', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true })
     expect(bad.success).toBe(false)
-    const noAge = await a.saveFoundingDetails({ country: 'GB', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: false as unknown as true })
+    const noAge = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'GB', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: false as unknown as true })
     expect(noAge.success).toBe(false)
-    const ok = await a.saveFoundingDetails({ country: 'gb', sells: [{ game: 'adopt-me', categories: ['items', 'currency'] }], discord: '@trader.one', isAdult: true, source: 'banner' })
+    const ok = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'gb', sells: [{ game: 'adopt-me', categories: ['items', 'currency'] }], discord: '@trader.one', isAdult: true, source: 'banner' })
     expect(ok).toEqual({ success: true })
     state = await a.getFoundingFlowState()
     expect(state.stage).toBe(3)

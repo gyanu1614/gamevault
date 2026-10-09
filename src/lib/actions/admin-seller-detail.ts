@@ -208,6 +208,10 @@ export interface SellerDetail {
   onboarding: {
     country: string | null
     discord: string | null
+    full_name: string | null
+    address_line: string | null
+    city: string | null
+    expected_volume: string | null
     sells: string[]
     current_step: number | null
     started_at: string
@@ -447,13 +451,17 @@ export async function getSellerDetail(userId: string): Promise<{
     try {
       const { data: ob } = await (service as any)
         .from('seller_onboarding')
-        .select('country, discord, sells, current_step, created_at, completed_at, source')
+        .select('country, discord, sells, current_step, created_at, completed_at, source, full_name, address_line, city, expected_volume')
         .eq('user_id', userId)
         .maybeSingle()
       if (ob) {
         onboarding = {
           country: ob.country ?? null,
           discord: ob.discord ?? null,
+          full_name: ob.full_name ?? null,
+          address_line: ob.address_line ?? null,
+          city: ob.city ?? null,
+          expected_volume: ob.expected_volume ?? null,
           sells: Array.isArray(ob.sells) ? ob.sells.map((x: any) => (typeof x === 'string' ? x : x?.name ?? x?.slug)).filter(Boolean) : [],
           current_step: ob.current_step ?? null,
           started_at: ob.created_at,
