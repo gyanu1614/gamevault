@@ -34,6 +34,7 @@ import {
   WalletIcon,
 } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
 import { HeroBackdrop } from '@/components/hero-backdrop'
@@ -126,7 +127,9 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
       const { data } = await query
       return data || []
     },
-    refetchInterval: 15000,
+    // The navbar's notifications realtime channel invalidates this key on
+    // INSERT; the poll is a visible-tab-only fallback.
+    ...foregroundPoll(POLL_MS.notificationsPage),
   })
 
   // Unread count
@@ -141,7 +144,6 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
       .eq('id', id)
     queryClient.invalidateQueries({ queryKey: ['notifications-page', userId] })
     queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
-    queryClient.invalidateQueries({ queryKey: ['unread-notifications-list', userId] })
   }
 
   const markAllRead = async () => {
@@ -155,7 +157,6 @@ export default function NotificationsClient({ userId, initialNotifications }: Pr
       .eq('is_read', false)
     queryClient.invalidateQueries({ queryKey: ['notifications-page', userId] })
     queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
-    queryClient.invalidateQueries({ queryKey: ['unread-notifications-list', userId] })
     setMarking(false)
   }
 

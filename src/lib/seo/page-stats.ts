@@ -9,17 +9,11 @@
  * share a single fetch within the same request.
  */
 
-import * as React from 'react'
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
 import { getPausedSellerIds } from '@/lib/actions/seller-presence'
 import { getTestSellerIds } from '@/lib/seo/public-hygiene'
 import { parseDeliveryMinutes } from '@/lib/utils/delivery-time'
-
-// React.cache exists at runtime in Next 14's bundled React, but the
-// project's stable @types/react only declares it in canary typings —
-// read it off the namespace with a no-op fallback so tsc stays green.
-const requestMemo: <T extends (...args: any[]) => any>(fn: T) => T =
-  (React as any).cache ?? ((fn: any) => fn)
+import { requestMemo } from '@/lib/revalidation/request-memo'
 
 export interface CategoryStats {
   /** Number of active listings. */
@@ -57,9 +51,14 @@ function formatAvgDelivery(avgMinutes: number): string {
 /**
  * Live stats for all ACTIVE listings in a (game, category) pair.
  * Single lightweight select — price + delivery_time only.
+ *
+ * `hiddenSellerIds` (paused ∪ test, lib/seo/hidden-sellers) lets a caller that
+ * loops categories (the game hub) resolve the set once; left out, it is read
+ * here through the per-render memoised loaders. Pass the SAME array to every
+ * call of a render — React cache() keys arguments by identity.
  */
 export const getCategoryStats = requestMemo(
-  async (gameId: string, categoryId: string): Promise<CategoryStats> => {
+  async (gameId: string, categoryId: string, hiddenSellerIds?: readonly string[]): Promise<CategoryStats> => {
     // Cookie-free (Step 7a): this runs inside ISR pages' metadata and body.
     // Tagged with the category, so a listing mutation refreshes the numbers
     // and not just the page shell (lib/listings/read-client).
@@ -69,22 +68,18 @@ export const getCategoryStats = requestMemo(
     // count/low price either. (The flexible-currency minQty>=100 client
     // filter is intentionally NOT mirrored here — stats describe the
     // full active book.)
-    const [pausedSellerIds, testSellerIds] = await Promise.all([
-      getPausedSellerIds(),
-      getTestSellerIds(),
-    ])
     // SEO hygiene: exclude BOTH offline (paused) and test/demo sellers so the
     // advertised count / low price / delivery in titles + JSON-LD reflect only
     // real, buyable listings.
-    const hiddenSellerIds = Array.from(new Set([...pausedSellerIds, ...testSellerIds]))
+    const hidden = hiddenSellerIds ?? (await readHiddenSellerIds())
     let query = supabase
       .from('listings')
       .select('price, delivery_time')
       .eq('game_id', gameId)
       .eq('game_category_id', categoryId)
       .eq('status', 'active')
-    if (hiddenSellerIds.length > 0) {
-      query = query.not('seller_id', 'in', `(${hiddenSellerIds.join(',')})`)
+    if (hidden.length > 0) {
+      query = query.not('seller_id', 'in', `(${hidden.join(',')})`)
     }
     const { data, error } = await query as any
 
@@ -112,3 +107,9 @@ export const getCategoryStats = requestMemo(
     }
   },
 )
+
+/** Paused ∪ test, paused first — same order as lib/seo/hidden-sellers. */
+async function readHiddenSellerIds(): Promise<string[]> {
+  const [pausedSellerIds, testSellerIds] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
+  return Array.from(new Set([...pausedSellerIds, ...testSellerIds]))
+}

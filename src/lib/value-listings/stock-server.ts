@@ -3,8 +3,8 @@ import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { categoryListingsTag } from '@/lib/revalidation/listings'
 import { GAME_DIRECTORY_TAG } from '@/lib/revalidation/tags'
-import { getPausedSellerIds } from '@/lib/actions/seller-presence'
-import { getTestSellerIds } from '@/lib/seo/public-hygiene'
+import { getHiddenSellerIds } from '@/lib/seo/hidden-sellers'
+import { requestMemo } from '@/lib/revalidation/request-memo'
 import { valuesTag } from '@/lib/values/revalidation'
 import { valueItemStockTag, valueStockTag } from './tags'
 import { aggregateStock } from './stock'
@@ -81,14 +81,22 @@ export const getItemsPair = unstable_cache(
   { revalidate: 604800, tags: [GAME_DIRECTORY_TAG] },
 )
 
-/** Live, linked listings of the game — all of them, or one item's. */
-async function readValueListings(
-  gameSlug: string,
+/**
+ * Live, linked listings of the game — all of them, or one item's.
+ *
+ * Runs INSIDE the listings unstable_cache callbacks below, so it loads
+ * nothing shared itself: the hidden sellers (paused ∪ test) and the
+ * catalogue are resolved by the caller, outside the callback, and passed in.
+ * Called inside the callback, Next 14.2 skipped those reads' own data cache
+ * and hit the database on every miss of this entry (2026-10-09: 17.7k test-
+ * seller, 17.5k paused-seller and 7.4k Adopt Me catalogue reads a day).
+ */
+export async function readValueListings(
   pair: ItemsPair,
   itemSlug: string | null,
+  hidden: readonly string[],
+  catalog: LoadedCatalog | null,
 ): Promise<ValueListingRow[]> {
-  const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
-  const hidden = [...new Set([...paused, ...test])]
   let q: any = (createAnonClient() as any)
     .from('listings')
     .select(VALUE_LISTING_SELECT)
@@ -106,7 +114,6 @@ async function readValueListings(
   // Re-check each stored link against today's matcher: a link written by
   // an older matcher ("Fairy Bat Dragon NFR" → Bat Dragon) stays in the
   // row until the listing is edited, but must never show on the item page.
-  const catalog = await getValueCatalog(gameSlug)
   if (!catalog) return rows
   return rows.filter(
     (r) =>
@@ -119,8 +126,12 @@ async function readValueListings(
 export async function getValueListings(gameSlug: string): Promise<{ pair: ItemsPair; rows: ValueListingRow[] } | null> {
   const pair = await getItemsPair(gameSlug)
   if (!pair) return null
+  // Resolved here, outside the cached callback (see readValueListings). A
+  // pause / test flag change refreshes this entry through the seller's
+  // listings (revalidateListingSurfaces → the items-pair category tag).
+  const [hidden, catalog] = await Promise.all([getHiddenSellerIds(), getValueCatalog(gameSlug)])
   const rows = await unstable_cache(
-    async (): Promise<ValueListingRow[]> => readValueListings(gameSlug, pair, null),
+    async (): Promise<ValueListingRow[]> => readValueListings(pair, null, hidden, catalog),
     ['value-listings', 'whole-name-v2', gameSlug, pair.pairId],
     { revalidate: 86400, tags: [valueStockTag(gameSlug), categoryListingsTag(pair.pairId), valuesTag(gameSlug)] },
   )()
@@ -149,8 +160,12 @@ export async function getValueItemListings(
 ): Promise<{ pair: ItemsPair; rows: ValueListingRow[] } | null> {
   const pair = await getItemsPair(gameSlug)
   if (!pair) return null
+  // Outside the cached callback (see readValueListings); a pause / test flag
+  // change refreshes this entry through the seller's linked listings
+  // (revalidateListingSurfaces → valueItemStockTag).
+  const [hidden, catalog] = await Promise.all([getHiddenSellerIds(), getValueCatalog(gameSlug)])
   const rows = await unstable_cache(
-    async (): Promise<ValueListingRow[]> => readValueListings(gameSlug, pair, itemSlug),
+    async (): Promise<ValueListingRow[]> => readValueListings(pair, itemSlug, hidden, catalog),
     ['value-item-listings', 'whole-name-v2', gameSlug, pair.pairId, itemSlug],
     { revalidate: 86400, tags: [valueItemStockTag(gameSlug, itemSlug), valuesTag(gameSlug)] },
   )()
@@ -174,8 +189,10 @@ export async function getValueStock(gameSlug: string): Promise<{ pair: ItemsPair
 /**
  * The game's value catalogue (items + variants) for public pages. Tagged with
  * the values pages' own `values:<game>` tag, so a catalogue edit refreshes it.
+ * Memoised per render (requestMemo); never call it inside another
+ * unstable_cache callback — resolve it first and pass it in.
  */
-export async function getValueCatalog(gameSlug: string): Promise<LoadedCatalog | null> {
+export const getValueCatalog = requestMemo(async (gameSlug: string): Promise<LoadedCatalog | null> => {
   const pair = await getItemsPair(gameSlug)
   if (!pair) return null
   return unstable_cache(
@@ -190,4 +207,4 @@ export async function getValueCatalog(gameSlug: string): Promise<LoadedCatalog |
     ['value-catalog', gameSlug],
     { revalidate: 86400, tags: [valuesTag(gameSlug)] },
   )()
-}
+})

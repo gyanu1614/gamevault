@@ -8,8 +8,11 @@ name: Adopt Me Weekly Catalog
 on:
   workflow_dispatch: {}
   schedule:
-    # 06:00 UTC every Saturday — after Friday's Adopt Me update has landed.
-    - cron: "0 6 * * 6"
+    # 14:20 UTC every Saturday — after Friday's Adopt Me update has landed.
+    # Was 06:00, inside the daily values-pricing window (02:10 + up to 5 h,
+    # Adopt Me's own reprice included). Shares its clock slot with the Sunday
+    # backup on a different day (src/test/routes/db-heavy-schedule.test.ts).
+    - cron: "20 14 * * 6"
 
 concurrency:
   group: adopt-me-weekly-catalog

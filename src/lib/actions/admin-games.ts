@@ -302,7 +302,7 @@ export async function uploadGameIcon(
       .from('category-icons')
       .upload(filePath, buffer, {
         contentType: fileData.type,
-        cacheControl: '3600',
+        cacheControl: '31536000', // unique path per upload: immutable
         upsert: true,
       })
 

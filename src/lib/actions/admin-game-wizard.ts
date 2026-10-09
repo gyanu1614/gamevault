@@ -381,7 +381,7 @@ export async function uploadGameLogoV2(
       .from('category-icons')
       .upload(filePath, buffer, {
         contentType: fileData.type,
-        cacheControl: '3600',
+        cacheControl: '31536000', // unique path per upload: immutable
         upsert: true,
       })
     if (upErr) return { success: false, error: upErr.message }
@@ -452,7 +452,8 @@ export async function uploadGameCoverV2(
 
     const { error: upErr } = await supabase.storage
       .from('game-covers')
-      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+      // Unique path per upload (`covers/{gameId}-{Date.now()}`): immutable.
+      .upload(path, buffer, { contentType: fileData.type, cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
     const { data: urlData } = supabase.storage.from('game-covers').getPublicUrl(path)

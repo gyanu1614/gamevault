@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { createClient } from '@/lib/supabase/client'
 import { updatePresenceOnline, updatePresenceOffline } from '@/lib/actions/seller-presence'
 import { isSellerOnline } from '@/lib/presence/online'
@@ -245,13 +246,14 @@ export function formatLastSeen(lastSeenAt: string): string {
  * Polled, not realtime: seller_presence is not in the supabase_realtime
  * publication, so a postgres_changes subscription never fires. One shared
  * React Query entry per seller, so the header and chat dots on the same page
- * make one request a minute between them (the heartbeat writes every 2).
+ * make one request every 2 minutes between them, visible tab only (the
+ * heartbeat writes every 2).
  */
 export function useSellerOnline(sellerId: string | null | undefined): boolean | null {
   const { data, isLoading } = useQuery({
     queryKey: ['seller-online', sellerId],
     enabled: !!sellerId,
-    refetchInterval: 60_000,
+    ...foregroundPoll(POLL_MS.sellerPresence),
     staleTime: 30_000,
     queryFn: async () => {
       const { data: row } = await createClient()
@@ -273,7 +275,8 @@ export type PresenceSnapshot = { is_online: boolean | null; last_seen_at: string
  *
  * Marketplace pages are ISR (24 h safety net), so presence baked into their
  * HTML can be a day old. Read it fresh in the browser — 100 ids per request,
- * refreshed every 60 s — and judge it with isSellerOnline. null until the
+ * refreshed every 2 min while the tab is visible — and judge it with
+ * isSellerOnline. null until the
  * first read lands, so the server HTML and the first client render agree.
  */
 export function useSellersPresence(sellerIds: readonly string[]): Record<string, PresenceSnapshot> | null {
@@ -284,7 +287,7 @@ export function useSellersPresence(sellerIds: readonly string[]): Record<string,
   const { data } = useQuery({
     queryKey: ['sellers-presence', ids],
     enabled: ids.length > 0,
-    refetchInterval: 60_000,
+    ...foregroundPoll(POLL_MS.sellerPresence),
     staleTime: 30_000,
     queryFn: async () => {
       const supabase = createClient()

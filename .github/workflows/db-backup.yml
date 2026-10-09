@@ -1,6 +1,13 @@
 name: Database Backup
 
-# Nightly encrypted logical backup of the production Supabase database.
+# Weekly encrypted logical backup of the production Supabase database.
+#
+# WEEKLY since 2026-10-09 (owner-approved): the daily data dump was 413 MB and
+# growing ~8 MB/day — most of the free plan's 5 GB egress (6.3 GB used) — and
+# it ran on top of the pricing/retention jobs that pushed the Nano instance
+# into swap. The data pass also skips the bulk tables a re-crawl rebuilds
+# (see `exclude=` below); their DDL is still in the schema pass, so a restore
+# recreates them empty and the next pricing run refills them.
 #
 # The dump is never written anywhere unencrypted beyond the runner's ephemeral
 # disk: it is gzipped and then encrypted to an age PUBLIC key held in repo
@@ -14,8 +21,13 @@ name: Database Backup
 on:
   workflow_dispatch:
   schedule:
-    # 05:00 UTC daily.
-    - cron: "0 5 * * *"
+    # 14:20 UTC Sundays. GitHub starts this repo's schedules 5–7 h late, by
+    # about the same amount for every workflow on a day, so cron spacing is
+    # real spacing: this sits ≥3 h clear of values pricing (02:10), SAB
+    # retention (10:40) and trend radar (18:47 / 22:41) — pinned by
+    # src/test/routes/db-heavy-schedule.test.ts. The Saturday catalogue
+    # refresh shares the clock slot on a different day.
+    - cron: "20 14 * * 0"
 
 concurrency:
   group: db-backup
@@ -76,14 +88,29 @@ jobs:
       # concatenated: schema (DDL) first, then data (INSERTs, with triggers
       # disabled via session_replication_role). Restoring the combined file with
       # psql replays them in that order, which is what a fresh project needs.
+      #
+      # The data pass skips tables whose rows are re-crawled or derived, never
+      # anything a user, an order or the money ledger wrote. `--exclude` acts on
+      # the data-only pass only (`supabase db dump --help`, CLI 2.109); each
+      # table gets its own flag (a comma list would keep a leading space).
       - name: Dump the database (schema + data, public and auth)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
+          exclude=(
+            public.sab_market_raw_listings       # SAB crawl rows; re-crawled daily, >30 d rolled into sab_raw_listing_daily
+            public.sab_market_evidence_display   # derived from the raw rows by sab_refresh_evidence_display (~220 MB at plateau)
+            public.values_raw_listings           # generic values-pipeline crawl rows
+            public.adopt_me_market_raw_listings  # Adopt Me crawl rows
+            public.value_funnel_events           # analytics clicks, not business records
+            public.rate_limits                   # short-lived rate-limit counters
+          )
+          args=()
+          for t in "${exclude[@]}"; do args+=(--exclude "$t"); done
           supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql --schema public,auth
           test -s schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f data.sql --schema public,auth --data-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f data.sql --schema public,auth --data-only "${args[@]}"
           test -s data.sql
           cat schema.sql data.sql > dump.sql
           rm -f schema.sql data.sql
@@ -129,13 +156,13 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
-            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set — the nightly backup failed and nobody was paged."
+            echo "::warning::DISCORD_OPS_WEBHOOK_URL is not set — the weekly backup failed and nobody was paged."
             exit 0
           fi
           # jq -Rs builds a correctly escaped JSON string, so no shell value is
           # ever interpolated into the payload unquoted.
           payload="$(jq -nc \
-            --arg content "🔴 **Nightly DB backup ${OUTCOME}** — no new backup was stored. Backups expire after 30 days, so repeated failures end with nothing to restore from. Run: ${RUN_URL}" \
+            --arg content "🔴 **Weekly DB backup ${OUTCOME}** — no new backup was stored. Backups expire after 30 days (~4 weekly copies), so repeated failures end with nothing to restore from. Run: ${RUN_URL}" \
             '{content: $content, allowed_mentions: {parse: []}}')"
           code="$(curl -sS -o /tmp/alert.out -w '%{http_code}' \
             -X POST -H 'content-type: application/json' \

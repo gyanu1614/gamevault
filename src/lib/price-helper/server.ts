@@ -2,8 +2,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { categoryListingsTag } from '@/lib/revalidation/listings'
-import { getPausedSellerIds } from '@/lib/actions/seller-presence'
-import { getTestSellerIds } from '@/lib/seo/public-hygiene'
+import { getHiddenSellerIds } from '@/lib/seo/hidden-sellers'
 import { valueItemPriceTag, valuesTag } from '@/lib/values/revalidation'
 import { getItemsPair, getValueCatalog } from '@/lib/value-listings/stock-server'
 import { readCurrencyOffers, readItemPrice } from './readers'
@@ -33,16 +32,12 @@ const loaders: HintDeps = {
     )()
   },
 
-  loadCurrencyOffers(gameCategoryId, bundleId) {
+  async loadCurrencyOffers(gameCategoryId, bundleId) {
+    // Outside the cached callback: inside it, Next 14.2 skips the hidden-
+    // seller reads' own cache (lib/seo/hidden-sellers).
+    const hiddenSellerIds = await getHiddenSellerIds()
     return unstable_cache(
-      async () => {
-        const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
-        return readCurrencyOffers(createAnonClient() as any, {
-          gameCategoryId,
-          bundleId,
-          hiddenSellerIds: [...new Set([...paused, ...test])],
-        })
-      },
+      async () => readCurrencyOffers(createAnonClient() as any, { gameCategoryId, bundleId, hiddenSellerIds }),
       ['price-helper-currency', gameCategoryId, bundleId ?? ''],
       { revalidate: 3600, tags: [categoryListingsTag(gameCategoryId)] },
     )()

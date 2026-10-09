@@ -23,8 +23,10 @@ on:
     # Daily (Gyanu 2026-09-22: only prices are sub-daily). Was every 6h; a
     # game trending is a multi-day signal, and each run is a Roblox-paced
     # crawl, so four passes a day bought resolution nothing reads.
-    - cron: '17 6 * * *'     # collect + prepare, once a day (offset from other crons)
-    - cron: '41 4 * * *'     # nightly rollup + decay
+    # Re-timed 2026-10-09 so no two DB-heavy jobs meet even when GitHub
+    # starts them 5–7 h late (src/test/routes/db-heavy-schedule.test.ts).
+    - cron: '47 18 * * *'    # collect + prepare, once a day (was 17 6)
+    - cron: '41 22 * * *'    # nightly rollup + decay (was 41 4)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -86,7 +88,7 @@ jobs:
           retention-days: 14
 
   nightly:
-    if: github.event_name == 'workflow_dispatch' && inputs.job == 'nightly' || github.event.schedule == '41 4 * * *'
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'nightly' || github.event.schedule == '41 22 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

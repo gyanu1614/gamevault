@@ -736,7 +736,8 @@ export async function uploadOptionIcon(
 
     const { error: upErr } = await supabase.storage
       .from('attribute-icons')
-      .upload(path, buffer, { contentType: fileData.type, cacheControl: '3600', upsert: true })
+      // Unique path per upload (`options/{optionId}-{Date.now()}`): immutable.
+      .upload(path, buffer, { contentType: fileData.type, cacheControl: '31536000', upsert: true })
     if (upErr) return { success: false, error: upErr.message }
 
     const { data: urlData } = supabase.storage.from('attribute-icons').getPublicUrl(path)

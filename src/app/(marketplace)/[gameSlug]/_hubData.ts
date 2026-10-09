@@ -12,8 +12,7 @@ import 'server-only'
  */
 
 import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
-import { getPausedSellerIds } from '@/lib/actions/seller-presence'
-import { getTestSellerIds } from '@/lib/seo/public-hygiene'
+import { getHiddenSellerIds } from '@/lib/seo/hidden-sellers'
 import { getCategoryStats } from '@/lib/seo/page-stats'
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
@@ -26,8 +25,11 @@ export async function getHubCategoryStats(
   gameId: string,
   categories: HubCategory[],
 ): Promise<Record<string, HubCategoryStat>> {
+  // One hidden-seller set for every category (and getHubOffers): per-render
+  // memoised, so the hub reads paused / test sellers once, not per category.
+  const hidden = await getHiddenSellerIds()
   const rows = await Promise.all(
-    categories.map(async (c) => [c.id, await getCategoryStats(gameId, c.id)] as const),
+    categories.map(async (c) => [c.id, await getCategoryStats(gameId, c.id, hidden)] as const),
   )
   return Object.fromEntries(rows)
 }
@@ -64,8 +66,7 @@ export async function getHubOffers(
   if (itemIds.length === 0 && accountIds.length === 0) return { items: [], accounts: [] }
 
   const supabase = createCategoryListingsReadClient([...itemIds, ...accountIds])
-  const [paused, test] = await Promise.all([getPausedSellerIds(), getTestSellerIds()])
-  const hidden = Array.from(new Set([...paused, ...test]))
+  const hidden = await getHiddenSellerIds()
 
   const load = async (ids: string[], taxonomySlug: 'items' | 'accounts'): Promise<ItemOffer[]> => {
     if (ids.length === 0) return []

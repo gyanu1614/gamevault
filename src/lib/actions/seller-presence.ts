@@ -11,6 +11,7 @@ import { createAnonClient } from '@/lib/supabase/anon'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { PAUSED_SELLERS_TAG } from '@/lib/revalidation/tags'
+import { requestMemo } from '@/lib/revalidation/request-memo'
 
 /**
  * Update seller presence to online
@@ -261,7 +262,7 @@ export async function setStorePaused(paused: boolean): Promise<{
  * show listings than to blank the catalogue on a transient read error).
  */
 export async function getPausedSellerIds(): Promise<string[]> {
-  return readPausedSellerIds()
+  return memoPausedSellerIds()
 }
 
 // Step 7b — identical on every category page (~600 prerendered at build), so
@@ -286,6 +287,10 @@ const readPausedSellerIds = unstable_cache(
   ['paused-seller-ids'],
   { tags: [PAUSED_SELLERS_TAG], revalidate: 3600 },
 )
+// Per-render memo: one read per render even when the data cache is skipped
+// (nested unstable_cache, on-demand ISR). Module-local — a 'use server' file
+// may only export async functions.
+const memoPausedSellerIds = requestMemo(() => readPausedSellerIds())
 
 /** Read the current seller's store-paused flag (false on any error). */
 export async function getMyStorePaused(): Promise<boolean> {

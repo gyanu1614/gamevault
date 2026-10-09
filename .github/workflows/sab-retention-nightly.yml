@@ -9,12 +9,17 @@ name: SAB Raw Listing Retention (nightly)
 # So raw detail older than 30 days is rolled into a per-day summary
 # (sab_raw_listing_daily) and the rows are pruned.
 #
-# Runs at 04:40 UTC — inside the gap between the 03:00 and 06:00 crawls, so it
-# never competes with a collection run for the same rows.
+# Runs at 10:40 UTC (2026-10-09; was 04:40). GitHub starts this repo's
+# schedules 5–7 h late by about the same amount for every workflow on a day,
+# and at 04:40 this landed beside the backup, the trend-radar rollup and the
+# pricing tail — the pile-up that swapped the free-plan database. 10:40 is
+# ≥3 h after values pricing (02:10 + up to 5 h) can end, so it never prunes
+# while a crawl writes the same rows. Pinned by
+# src/test/routes/db-heavy-schedule.test.ts.
 
 on:
   schedule:
-    - cron: "40 4 * * *"
+    - cron: "40 10 * * *"
   workflow_dispatch:
     inputs:
       retain_days:

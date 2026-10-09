@@ -381,7 +381,7 @@ async function uploadProfilePicture(userId: string, file: File): Promise<string 
     const { data, error } = await supabase.storage
       .from('profile-pictures')
       .upload(fileName, file, {
-        cacheControl: '3600',
+        cacheControl: '31536000', // unique path per upload: immutable
         upsert: true, // Allow overwrite
       })
 

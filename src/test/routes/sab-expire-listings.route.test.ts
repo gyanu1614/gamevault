@@ -22,14 +22,20 @@
  *      or duplicate rows. A skipped row that carried its group's newest
  *      fetched_at would drag that group's max backwards and expire listings that
  *      are still live.
+ *   4. pages are KEYSET reads (id > last id, LIMIT 1000), never .range() OFFSET:
+ *      OFFSET re-walks every earlier row on each page, and the scan took 1,677 s
+ *      on 2026-10-09 while it sat on the free-plan database beside the backup.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Page = { rows: any[] } | { error: { message: string; code?: string } }
 
-/** Queued outcomes per range-start offset; each read shifts one off. */
-const readPlan = new Map<number, Page[]>()
-const readCalls: { from: number; to: number; ordered: string[] }[] = []
+/**
+ * Queued outcomes per keyset cursor (the `id > cursor` bound; null = first
+ * page); each read shifts one off.
+ */
+const readPlan = new Map<string | null, Page[]>()
+const readCalls: { after: string | null; limit: number; ordered: string[] }[] = []
 const writeCalls: { ids: string[] }[] = []
 let writePlan: Page[] = []
 
@@ -48,7 +54,7 @@ vi.mock('@/lib/supabase/service', () => ({
         : { data: args.p_ids.length, error: null }
     },
     from() {
-      const state: any = { ordered: [] }
+      const state: any = { ordered: [], after: null }
       const builder: any = {
         select: () => builder,
         eq: () => builder,
@@ -56,14 +62,24 @@ vi.mock('@/lib/supabase/service', () => ({
           state.ordered.push(col)
           return builder
         },
+        gt: (col: string, value: string) => {
+          if (col !== 'id') throw new Error(`keyset bound must be on id, got ${col}`)
+          state.after = value
+          return builder
+        },
         update: () => {
           throw new Error(
             'per-row UPDATE is what timed out — expire through sab_end_listings()',
           )
         },
-        range: async (from: number, to: number) => {
-          readCalls.push({ from, to, ordered: [...state.ordered] })
-          const queue = readPlan.get(from) ?? []
+        range: () => {
+          throw new Error(
+            '.range() is OFFSET paging — 1,677 s on 2026-10-09; page by id > last id',
+          )
+        },
+        limit: async (limit: number) => {
+          readCalls.push({ after: state.after, limit, ordered: [...state.ordered] })
+          const queue = readPlan.get(state.after) ?? []
           const outcome = queue.shift() ?? { rows: [] }
           if ('error' in outcome) return { data: null, error: outcome.error }
           return { data: outcome.rows, error: null }
@@ -103,7 +119,7 @@ beforeEach(() => {
 describe('ROUTE-018 — transient read failures are retried', () => {
   it('recovers from a Gateway Timeout — the failure actually observed', () => {
     // The exact details string from the 2026-09-13 run.
-    readPlan.set(0, [
+    readPlan.set(null, [
       { error: { message: 'Gateway Timeout' } },
       { rows: [listing('a', FRESH)] },
     ])
@@ -114,12 +130,12 @@ describe('ROUTE-018 — transient read failures are retried', () => {
       expect(body.success).toBe(true)
       expect(body.active_listings_scanned).toBe(1)
       // Page 0 was attempted twice: the failure, then the success.
-      expect(readCalls.filter((c) => c.from === 0)).toHaveLength(2)
+      expect(readCalls.filter((c) => c.after === null)).toHaveLength(2)
     })
   })
 
   it('recovers from a Postgres statement timeout (57014)', async () => {
-    readPlan.set(0, [
+    readPlan.set(null, [
       {
         error: {
           message: 'canceling statement due to statement timeout',
@@ -136,7 +152,7 @@ describe('ROUTE-018 — transient read failures are retried', () => {
       success: true,
       active_listings_scanned: 1,
     })
-    expect(readCalls.filter((c) => c.from === 0)).toHaveLength(2)
+    expect(readCalls.filter((c) => c.after === null)).toHaveLength(2)
   })
 
   // Real timers: the route spends its actual 1s+2s+3s linear backoff, so this
@@ -146,7 +162,7 @@ describe('ROUTE-018 — transient read failures are retried', () => {
   // the following test.
   it('gives up after 4 attempts and reports the read failure', async () => {
     const timeout = { error: { message: 'Gateway Timeout' } }
-    readPlan.set(0, [timeout, timeout, timeout, timeout])
+    readPlan.set(null, [timeout, timeout, timeout, timeout])
 
     const response = await callRoute()
 
@@ -156,11 +172,11 @@ describe('ROUTE-018 — transient read failures are retried', () => {
       details: 'Gateway Timeout',
     })
     // Exactly PAGE_MAX_ATTEMPTS, not an unbounded loop.
-    expect(readCalls.filter((c) => c.from === 0)).toHaveLength(4)
+    expect(readCalls.filter((c) => c.after === null)).toHaveLength(4)
   }, 15_000)
 
   it('fails FAST on a non-transient error — a retry could not help', async () => {
-    readPlan.set(0, [
+    readPlan.set(null, [
       {
         error: {
           message: 'column sab_market_raw_listings.nope does not exist',
@@ -173,13 +189,13 @@ describe('ROUTE-018 — transient read failures are retried', () => {
 
     expect(response.status).toBe(500)
     // One attempt only: no backoff spent on an error that can never succeed.
-    expect(readCalls.filter((c) => c.from === 0)).toHaveLength(1)
+    expect(readCalls.filter((c) => c.after === null)).toHaveLength(1)
   })
 })
 
 describe('ROUTE-018 — pagination is stably ordered', () => {
   it('orders every page by the primary key', async () => {
-    readPlan.set(0, [{ rows: [listing('a', FRESH)] }])
+    readPlan.set(null, [{ rows: [listing('a', FRESH)] }])
 
     await callRoute()
 
@@ -190,22 +206,42 @@ describe('ROUTE-018 — pagination is stably ordered', () => {
     for (const call of readCalls) expect(call.ordered).toEqual(['id'])
   })
 
-  it('pages until a short page, requesting contiguous non-overlapping ranges', async () => {
+  it('pages by keyset (id > last id of the previous page) until a short page', async () => {
     const full = Array.from({ length: 1000 }, (_, i) =>
-      listing(`id-${i}`, FRESH),
+      listing(`id-${String(i).padStart(4, '0')}`, FRESH),
     )
-    readPlan.set(0, [{ rows: full }])
-    readPlan.set(1000, [{ rows: [listing('id-1000', FRESH)] }])
+    readPlan.set(null, [{ rows: full }])
+    readPlan.set('id-0999', [{ rows: [listing('id-1000', FRESH)] }])
 
     const response = await callRoute()
 
     await expect(response.json()).resolves.toMatchObject({
       active_listings_scanned: 1001,
     })
-    expect(readCalls.map((c) => [c.from, c.to])).toEqual([
-      [0, 999],
-      [1000, 1999],
+    // Same rows as the old OFFSET pages, but each page starts at an index seek
+    // instead of re-walking every earlier row.
+    expect(readCalls.map((c) => [c.after, c.limit])).toEqual([
+      [null, 1000],
+      ['id-0999', 1000],
     ])
+  })
+
+  it('a retried page keeps its cursor: no row is skipped or read twice', async () => {
+    const full = Array.from({ length: 1000 }, (_, i) =>
+      listing(`id-${String(i).padStart(4, '0')}`, FRESH),
+    )
+    readPlan.set(null, [{ rows: full }])
+    readPlan.set('id-0999', [
+      { error: { message: 'Gateway Timeout' } },
+      { rows: [listing('id-1000', FRESH)] },
+    ])
+
+    const response = await callRoute()
+
+    await expect(response.json()).resolves.toMatchObject({
+      active_listings_scanned: 1001,
+    })
+    expect(readCalls.map((c) => c.after)).toEqual([null, 'id-0999', 'id-0999'])
   })
 })
 
@@ -215,7 +251,7 @@ describe('ROUTE-018 — the expiry decision still holds', () => {
     // over the grace window, so it is expired.
     const newest = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const old = new Date(Date.now() - 60 * 60 * 1000 - 10 * 60 * 60 * 1000).toISOString()
-    readPlan.set(0, [{ rows: [listing('new', newest), listing('old', old)] }])
+    readPlan.set(null, [{ rows: [listing('new', newest), listing('old', old)] }])
     writePlan = [{ error: { message: 'Gateway Timeout' } }, { rows: [] }]
 
     const response = await callRoute()
@@ -233,7 +269,7 @@ describe('ROUTE-018 — the expiry decision still holds', () => {
     // Group last crawled 100h ago — past RECENT_CRAWL_HOURS (36).
     const stale = new Date(Date.now() - 100 * 60 * 60 * 1000).toISOString()
     const older = new Date(Date.now() - 200 * 60 * 60 * 1000).toISOString()
-    readPlan.set(0, [{ rows: [listing('a', stale), listing('b', older)] }])
+    readPlan.set(null, [{ rows: [listing('a', stale), listing('b', older)] }])
 
     const response = await callRoute()
 

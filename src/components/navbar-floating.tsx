@@ -13,6 +13,9 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } 
 import * as Popover from '@radix-ui/react-popover'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
+import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
+import { splitActiveOrders } from '@/lib/orders/active-orders-split'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { cn } from '@/lib/utils'
 import { safeInternalPath } from '@/lib/utils/safe-link'
@@ -527,88 +530,38 @@ export function Navbar({
     toast.success(next ? 'Store is now offline — your offers are hidden' : 'Store is back online')
   }, [offlineMode, pendingOffline])
 
-  // Get unread message count
-  const { data: unreadData } = useQuery({
-    queryKey: ['unread-messages', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
+  // Unread message count — shared with the account sidebar (one query key,
+  // one request); chat realtime invalidates it, the poll is a fallback.
+  const unreadCount = useUnreadMessagesCount(user?.id)
 
-      // First get all conversation IDs where I'm involved
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`) as any
-
-      if (!conversations || conversations.length === 0) return 0
-
-      const conversationIds = conversations.map((c: any) => c.id)
-
-      // Count unread messages in those conversations where I'm not the sender
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact' })
-        .in('conversation_id', conversationIds)
-        .neq('sender_id', user.id)
-        .eq('is_read', false).limit(1)
-
-      return count || 0
-    },
-    enabled: !!user,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time feel
-  })
-
-  const unreadCount = unreadData || 0
-
-  // Get unread notification count
-  const { data: notificationCount } = useQuery({
+  // Unread notifications: the count AND the latest five in ONE request
+  // (count comes back in Content-Range alongside the rows). Realtime-backed —
+  // the channel below invalidates it on INSERT — so the poll is a slow,
+  // visible-tab-only fallback.
+  const { data: notificationData } = useQuery({
     queryKey: ['unread-notifications', user?.id],
     queryFn: async () => {
-      if (!user?.id) return 0
+      if (!user?.id) return { count: 0, items: [] as any[] }
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
-      const { count } = await supabase
+      const { data, count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
-        .eq('is_read', false)
+        .eq('is_read', false) // Only unread notifications
         // Workstream E — chat messages live under the Messages badge, not the
         // bell. Exclude legacy 'new_message' rows so they stop polluting the
         // bell count.
-        .neq('type', 'new_message').limit(1)
-
-      return count || 0
-    },
-    enabled: !!user,
-    // Poll fallback only — the realtime subscription below flips the bell
-    // instantly on INSERT, so the poll can relax to 60s.
-    refetchInterval: 60000,
-  })
-
-  // Get recent UNREAD notifications for dropdown
-  const { data: notifications } = useQuery({
-    queryKey: ['unread-notifications-list', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return []
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_read', false) // Only unread notifications
-        .neq('type', 'new_message') // Workstream E — bell excludes chat rows
+        .neq('type', 'new_message')
         .order('created_at', { ascending: false })
         .limit(5)
 
-      if (error) return []
-      return data || []
+      if (error) return { count: 0, items: [] as any[] }
+      return { count: count || 0, items: data || [] }
     },
     enabled: !!user,
-    refetchInterval: 60000, // Realtime-backed; poll is a slow fallback
+    ...foregroundPoll(POLL_MS.navNotifications),
   })
 
   // Workstream E — Realtime bell. Subscribe to INSERTs on the current user's
@@ -638,7 +591,10 @@ export function Navbar({
           },
           () => {
             queryClient.invalidateQueries({ queryKey: ['unread-notifications', userId] })
-            queryClient.invalidateQueries({ queryKey: ['unread-notifications-list', userId] })
+            // The /notifications inbox, when open, refreshes on the same event.
+            queryClient.invalidateQueries({ queryKey: ['notifications-page', userId] })
+            // New-order and order-status notices mean Live Orders changed too.
+            queryClient.invalidateQueries({ queryKey: ['active-orders-navbar', userId] })
           },
         )
         .subscribe()
@@ -652,10 +608,12 @@ export function Navbar({
     }
   }, [user?.id, queryClient])
 
-  const unreadNotificationCount = notificationCount || 0
-  const recentNotifications = notifications || []
+  const unreadNotificationCount = notificationData?.count || 0
+  const recentNotifications = notificationData?.items || []
 
-  // Fetch active orders for Activity dropdown
+  // Fetch active orders for Activity dropdown — buying and selling in ONE
+  // request, split client-side. Refreshed by the notifications channel above
+  // (new order / status notices) and on focus; the poll is a fallback.
   const { data: activeOrdersData } = useQuery({
     queryKey: ['active-orders-navbar', user?.id],
     queryFn: async () => {
@@ -667,27 +625,17 @@ export function Navbar({
       // an order until the payment is confirmed, so 'pending' is dropped from
       // the selling set.
       const ACTIVE_BUYING = ['pending', 'paid', 'processing', 'delivering']
-      const ACTIVE_SELLING = ['paid', 'processing', 'delivering']
-      const [buyResult, sellResult] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
-          .eq('buyer_id', user.id)
-          .in('status', ACTIVE_BUYING)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        supabase
-          .from('orders')
-          .select('id, order_number, status, total_amount, created_at, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
-          .eq('seller_id', user.id)
-          .in('status', ACTIVE_SELLING)
-          .order('created_at', { ascending: false })
-          .limit(5),
-      ])
-      return { buying: buyResult.data || [], selling: sellResult.data || [] }
+      const { data } = await supabase
+        .from('orders')
+        .select('id, order_number, status, total_amount, created_at, buyer_id, seller_id, listing:listings!orders_listing_id_fkey(title, game:games(slug, image_url))')
+        .in('status', ACTIVE_BUYING)
+        .or(`buyer_id.eq.${user.id},and(seller_id.eq.${user.id},status.neq.pending)`)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      return splitActiveOrders((data || []) as any[], user.id)
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    ...foregroundPoll(POLL_MS.navActiveOrders),
   })
   // V63 — Wallet balance for the profile-menu Wallet row (sellers).
   // Ledger-backed store credit (wallet-ledger); the legacy wallet_balances
@@ -718,8 +666,7 @@ export function Navbar({
       .update as any)({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', notificationId)
 
-    // Refetch notifications
-    queryClient.invalidateQueries({ queryKey: ['unread-notifications-list', user.id] })
+    // Refetch notifications (count + list are one query)
     queryClient.invalidateQueries({ queryKey: ['unread-notifications', user.id] })
   }
 

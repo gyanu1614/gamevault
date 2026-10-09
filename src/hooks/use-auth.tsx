@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { POLL_MS, isTabVisible, shouldPollSellerApproval } from '@/lib/polling/intervals'
 import { uploadProfileAvatar } from '@/lib/actions/auth'
 import { readPendingSignupAvatar, clearPendingSignupAvatar } from '@/lib/auth/pending-avatar'
 import type { User } from '@supabase/supabase-js'
@@ -503,12 +504,21 @@ function useAuthState(): AuthContextValue {
   // Requires those tables in the supabase_realtime publication (see
   // supabase/migrations/*_realtime_seller_lifecycle.sql). If the publication
   // change is skipped the channel silently receives nothing, so a
-  // visibilitychange + 60s poll fallback re-fetches the profile as a safety net.
+  // visibilitychange + 60s poll fallback re-fetches the profile as a safety net
+  // — only while an application is in flight, and never in a hidden tab.
   //
   // Scope: only authenticated, not-yet-approved users, and it tears down the
   // moment approval lands — no permanent extra websocket per anonymous visitor.
   const userId = user?.id
   const isApprovedSeller = user?.isApprovedSeller || false
+  const approvalStateRef = useRef({
+    isApprovedSeller,
+    sellerApplicationStatus: user?.sellerApplicationStatus ?? null,
+  })
+  approvalStateRef.current = {
+    isApprovedSeller,
+    sellerApplicationStatus: user?.sellerApplicationStatus ?? null,
+  }
   useEffect(() => {
     if (!userId || isApprovedSeller) return
 
@@ -555,6 +565,18 @@ function useAuthState(): AuthContextValue {
 
     const channel = supabase
       .channel(`seller-app:${userId}`)
+      // A buyer who applies in this tab: the INSERT marks the application in
+      // flight, which is what switches the profile poll fallback on.
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'seller_applications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => applyAppStatus((payload.new as any)?.status ?? null)
+      )
       .on(
         'postgres_changes',
         {
@@ -579,17 +601,22 @@ function useAuthState(): AuthContextValue {
 
     // Fallback: re-fetch the profile on tab focus + a slow poll, so a missed
     // realtime window (publication not enabled / websocket dropped) still
-    // resolves approval without a hard reload.
+    // resolves approval without a hard reload. Only while an application is
+    // actually in flight (buyers who never applied have nothing to wait for)
+    // and only in a visible tab — a hidden tab catches up on its next focus.
+    // Read through a ref: the effect deliberately does not re-run on status.
     const refetch = async () => {
-      if (!active) return
+      if (!active || !shouldPollSellerApproval(approvalStateRef.current)) return
       const profile = await fetchProfileWithRetry(supabase, userId, 1)
       if (profile) mergeProfilePayload(profile as unknown as Record<string, unknown>)
     }
     const onVisible = () => {
-      if (document.visibilityState === 'visible') refetch()
+      if (isTabVisible()) refetch()
     }
     document.addEventListener('visibilitychange', onVisible)
-    const pollId = setInterval(refetch, 60000)
+    const pollId = setInterval(() => {
+      if (isTabVisible()) refetch()
+    }, POLL_MS.sellerApproval)
 
     return () => {
       active = false

@@ -14,10 +14,15 @@
 import { createAnonClient } from '@/lib/supabase/anon'
 import { unstable_cache } from 'next/cache'
 import { TEST_SELLERS_TAG } from '@/lib/revalidation/tags'
+import { requestMemo } from '@/lib/revalidation/request-memo'
 
-/** Ids of test/demo seller accounts to exclude from public listing queries. */
+/**
+ * Ids of test/demo seller accounts to exclude from public listing queries.
+ * Memoised per render (requestMemo): never call it inside another
+ * unstable_cache callback — resolve it first and pass the ids in.
+ */
 export async function getTestSellerIds(): Promise<string[]> {
-  return readTestSellerIds()
+  return memoTestSellerIds()
 }
 
 // Step 7b — identical on every prerendered category page: one tagged cache
@@ -43,6 +48,7 @@ const readTestSellerIds = unstable_cache(
   ['test-seller-ids'],
   { tags: [TEST_SELLERS_TAG], revalidate: 3600 },
 )
+const memoTestSellerIds = requestMemo(() => readTestSellerIds())
 
 /**
  * Apply the test-seller exclusion to a Supabase listings query. No-op when

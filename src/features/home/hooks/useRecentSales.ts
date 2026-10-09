@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { createClient } from '@/lib/supabase/client'
 
 export interface SoldItem {
@@ -62,6 +63,6 @@ export function useRecentSales() {
       return rows.length >= MIN_RECENT_SALES ? rows : []
     },
     staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    ...foregroundPoll(POLL_MS.recentSales),
   })
 }
