@@ -35,6 +35,7 @@ import {
   type CurrencyConfig,
 } from '@/lib/types/category-configs'
 import { PlatformFieldsSection } from './PlatformFieldsSection'
+import { DeliveryMethodsSection } from './DeliveryMethodsSection'
 import { CurrencyPricingRules } from './CurrencyPricingRules'
 import { priceRulesForSave } from '@/lib/currency/price-rules'
 import { parseRuleTexts, ruleTextsOf, type RuleTexts } from '@/lib/currency/price-rule-form'
@@ -293,6 +294,12 @@ export function CurrencyConfigForm({ gameId }: { gameId: string }) {
         gameId={gameId}
         value={draft.platform_fields}
         onChange={(platform_fields) => patch({ platform_fields })}
+      />
+
+      {/* ── Delivery method (Gamepass, UID / Login …): off by default ── */}
+      <DeliveryMethodsSection
+        value={draft.delivery_methods}
+        onChange={(delivery_methods) => patch({ delivery_methods })}
       />
 
       {/* ── V19/P24 — Fixed bundles list ── */}

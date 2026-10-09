@@ -52,7 +52,8 @@ const ORDER_DETAIL_EMBEDS = `
     region,
     game_id,
     game_category_id,
-    bundle_id
+    bundle_id,
+    delivery_method_type
   )`
 
 /**

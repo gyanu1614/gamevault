@@ -118,7 +118,7 @@ export function AccountConfigForm({ gameId }: { gameId: string }) {
       </FormSection>
 
       <FormSection
-        title="Delivery Methods"
+        title="Delivery Types"
         subtitle="Which delivery types sellers can pick from when creating a listing. At least one stays on."
       >
         <div className="grid gap-2 sm:grid-cols-2">

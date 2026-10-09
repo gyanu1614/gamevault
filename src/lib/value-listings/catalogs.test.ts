@@ -44,4 +44,33 @@ describe('amVariantKey', () => {
     expect(amVariantKey('MEGA')).toBe('mega-neon')
     expect(amVariantKey('N')).toBe('normal')
   })
+
+  it('MM2: the picked knife / gun / pet field is the identity (chroma is its own row)', () => {
+    const c = buildValueCatalog('murder-mystery-2', {
+      items: [
+        { slug: 'lightbringer', name: 'Lightbringer' },
+        { slug: 'chroma-lightbringer', name: 'Chroma Lightbringer' },
+      ],
+    })!
+    expect(matchListingToValueItem({ title: '', templateData: { 'select-gun': 'chroma-lightbringer' } }, c.catalog)).toEqual({
+      itemSlug: 'chroma-lightbringer',
+      variant: null,
+    })
+    expect(matchListingToValueItem({ title: '', templateData: { 'select-knife': 'lightbringer' } }, c.catalog)?.itemSlug).toBe(
+      'lightbringer',
+    )
+  })
+
+  it('Steal an Egg: the most specific pick wins (egg / pet over area)', () => {
+    const c = buildValueCatalog('steal-an-egg', {
+      items: [
+        { slug: 'forest', name: 'Forest' },
+        { slug: 'luminous-egg', name: 'Luminous Egg' },
+      ],
+    })!
+    expect(
+      matchListingToValueItem({ title: '', templateData: { 'egg-area': 'forest', 'select-egg': 'luminous-egg' } }, c.catalog)?.itemSlug,
+    ).toBe('luminous-egg')
+    expect(matchListingToValueItem({ title: '', templateData: { 'egg-area': 'forest' } }, c.catalog)?.itemSlug).toBe('forest')
+  })
 })

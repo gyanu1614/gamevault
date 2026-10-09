@@ -28,6 +28,7 @@ import { orderPaymentMethodLabel } from '@/lib/orders/payment-method-label'
 import { cancelRequestEligibility } from '@/lib/orders/cancel-request-eligibility'
 import { redactOrderFor } from '@/lib/orders/redact'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
+import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
 import { OrderClient } from './_OrderClient'
 import { PaymentReturnHandler } from './_PaymentReturnHandler'
 
@@ -399,6 +400,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
     bundleId: (order.listing as any)?.bundle_id ?? null,
     listingImage: order.listing?.images?.[0] ?? null,
   })
+  // Currency delivery method (Gamepass, UID / Login …), named from the
+  // game's config even if an admin has since switched the field off.
+  const deliveryMethod = findDeliveryMethod(currencyCfg, (order.listing as any)?.delivery_method_type)
   const gameName       = game?.name
   const categoryName   = category?.name
 
@@ -526,6 +530,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         refundToSource={refundToSource}
         cancelRequest={cancelRequest}
         itemTitle={listingTitle ?? 'Order Details'}
+        deliveryMethod={deliveryMethod}
         gameName={gameName ?? null}
         gameIconUrl={game?.image_url ?? null}
         categoryName={categoryName ?? null}

@@ -387,7 +387,7 @@ function OffersTable({ title, rows }: { title: string; rows: MockOffer[] }) {
                   <span className="inline-flex items-center gap-1">Stock <ArrowUpDown className="h-3 w-3 opacity-60" /></span>
                 </th>
                 <th className="px-3 py-3 whitespace-nowrap">Min Quantity</th>
-                <th className="px-3 py-3 whitespace-nowrap">Delivery Method</th>
+                <th className="px-3 py-3 whitespace-nowrap">Delivery Type</th>
                 <th className="px-3 py-3 whitespace-nowrap">Offer ID</th>
                 <th className="px-3 py-3 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1">Updated <ArrowUpDown className="h-3 w-3 opacity-60" /></span>

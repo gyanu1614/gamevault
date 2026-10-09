@@ -53,6 +53,11 @@ import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
+import { DeliveryMethodFilter } from '@/components/marketplace/DeliveryMethodFilter'
+import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
+import { methodsInUse } from '@/lib/currency/delivery-methods'
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 import { CurrencySellerRow, SellerIdentity, type SellerIdentityData } from '@/components/marketplace/CurrencySellerRow'
 
 export interface BundleOffer {
@@ -80,6 +85,8 @@ export interface BundleOffer {
   bundleId: string
   region: string | null
   platform: string | null
+  /** Currency delivery method id (config.delivery_methods), or null. */
+  deliveryMethodId?: string | null
 }
 
 export interface BundleCurrencyPageData {
@@ -104,6 +111,8 @@ export interface BundleCurrencyPageData {
    */
   platforms: PlatformOption[]
   offers: BundleOffer[]
+  /** Delivery methods the admin turned on for this game ([] / absent = off). */
+  deliveryMethods?: CurrencyDeliveryMethod[]
   // V19/P24/P7.d — How it works + FAQ blocks. Same shape and same
   // source (currency category config) as the flexible page.
   steps: CurrencyStep[]
@@ -210,6 +219,10 @@ export default function BundleCurrencyPageClient({
   // Clears whenever the upstream selection changes (bundle, region,
   // platform), since the picked listing may not survive a re-filter.
   const [pickedListingId, setPickedListingId] = useState<string>('')
+  // Delivery method filter (only methods some live offer uses).
+  const filterMethods = useMemo(() => methodsInUse(data.deliveryMethods ?? [], data.offers), [data.deliveryMethods, data.offers])
+  const methodById = useMemo(() => new Map((data.deliveryMethods ?? []).map((m) => [m.id, m])), [data.deliveryMethods])
+  const [methodFilter, setMethodFilter] = useState<string | null>(null)
 
   // Offers filtered to the currently-picked (bundle, region) combo,
   // sorted ascending by price. Index 0 = best seller (recommended);
@@ -226,10 +239,12 @@ export default function BundleCurrencyPageClient({
         // V19/P24/P7 — Platform match: same permissive rule. Null
         // platform on the listing means "any platform" (legacy data).
         if (platform && o.platform && o.platform !== platform) return false
+        // Delivery method: strict — an offer without one doesn't match.
+        if (methodFilter && (o.deliveryMethodId ?? null) !== methodFilter) return false
         return true
       })
       .sort((a, b) => a.pricePerBundle - b.pricePerBundle)
-  }, [data.offers, bundleId, region, platform])
+  }, [data.offers, bundleId, region, platform, methodFilter])
 
   // Currency offer links (`?seller=&offer=` — the listing URL 308s here, and
   // My Offers / store / cards link here directly): pin that seller's offer by
@@ -409,6 +424,20 @@ export default function BundleCurrencyPageClient({
         </section>
       )}
 
+      {filterMethods.length > 0 && (
+        <section className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+          <h2 className="text-[15px] font-bold text-text-primary">Delivery Method</h2>
+          <DeliveryMethodFilter
+            methods={filterMethods}
+            value={methodFilter}
+            onChange={(id) => {
+              setMethodFilter(id)
+              setPickedListingId('')
+            }}
+          />
+        </section>
+      )}
+
       {/* V52 — pt bumped (was pt-4): the selector rows above and the
           bundle grid read as separate sections, not one blob. */}
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 pt-10 sm:px-6 sm:pt-12 lg:grid-cols-[1fr_360px] lg:items-stretch lg:gap-8 lg:px-8">
@@ -575,6 +604,7 @@ export default function BundleCurrencyPageClient({
             )}
           </div>
           <OfferPanel
+            method={activeOffer?.deliveryMethodId ? methodById.get(activeOffer.deliveryMethodId) ?? null : null}
             bestOffer={activeOffer}
             qty={cappedQty}
             setQty={setQty}
@@ -631,6 +661,7 @@ export default function BundleCurrencyPageClient({
                   <SellerRow
                     key={o.listingId}
                     offer={o}
+                    method={o.deliveryMethodId ? methodById.get(o.deliveryMethodId) ?? null : null}
                     isOwn={!!viewerId && o.sellerId === viewerId}
                     onSelect={() => {
                       setPickedListingId(o.listingId)
@@ -836,7 +867,10 @@ function OfferPanel({
   setQty,
   isOwn,
   onBuy,
+  method = null,
 }: {
+  /** The offer's delivery method (Gamepass…), when the game uses them. */
+  method?: CurrencyDeliveryMethod | null
   bestOffer: BundleOffer | null
   qty: number
   setQty: (n: number) => void
@@ -895,6 +929,20 @@ function OfferPanel({
           }
         />
       </div>
+
+      {method && (
+        <div className="border-t border-white/[0.07] py-3.5">
+          <KeyValue
+            label="Delivery Method"
+            value={
+              <span className="inline-flex items-center gap-1">
+                {method.label}
+                <DeliveryMethodInfo label={method.label} description={method.description} />
+              </span>
+            }
+          />
+        </div>
+      )}
 
       {/* 3) Delivery instructions — always render, falls back to a
           generic line so the row never disappears. */}
@@ -1021,10 +1069,12 @@ function SellerRow({
   offer,
   isOwn,
   onSelect,
+  method = null,
 }: {
   offer: BundleOffer
   isOwn: boolean
   onSelect: () => void
+  method?: CurrencyDeliveryMethod | null
 }) {
   // D1 (2026-10-04) — the shared row, same as the flexible currency page.
   return (
@@ -1034,6 +1084,7 @@ function SellerRow({
       metrics={[
         { icon: Inventory2RoundedIcon, label: 'Stock', value: offer.stock.toLocaleString('en-US'), width: 100 },
         { icon: ScheduleRoundedIcon, label: 'Delivery', value: offer.deliveryLabel, width: 110 },
+        ...(method ? [{ icon: SwapHorizRoundedIcon, label: 'Method', value: method.label, width: 130 }] : []),
       ]}
       price={formatPrice(offer.pricePerBundle)}
       priceCaption="per bundle"

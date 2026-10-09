@@ -6,10 +6,25 @@ import {
   hasSupabaseSessionCookie,
   isBecomeSellerRoute,
 } from '@/lib/auth/become-seller-redirect'
+import { ingestRequestHeaders, ingestUpstream, trailingSlashRedirectUrl } from '@/lib/analytics/ingest-proxy'
 import { isPasswordGateExempt, needsPassword, setPasswordUrl } from '@/lib/auth/oauth'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Growth point 1 — PostHog on our own path, our cookies stripped
+  // (src/lib/analytics/ingest-proxy.ts). Before any auth work.
+  const ingest = ingestUpstream(pathname, request.nextUrl.search)
+  if (ingest) {
+    return NextResponse.rewrite(ingest, {
+      request: { headers: ingestRequestHeaders(request.headers, ingest.hostname) },
+    })
+  }
+
+  // next.config sets skipTrailingSlashRedirect (PostHog's endpoints end in
+  // "/"), so the usual "/path/" → "/path" redirect is applied here instead.
+  const slashless = trailingSlashRedirectUrl(request.url)
+  if (slashless) return NextResponse.redirect(slashless, 308)
 
   // Forward pathname to server components (used by admin layout for MFA gate)
   const requestHeaders = new Headers(request.headers)

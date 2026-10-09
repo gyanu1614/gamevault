@@ -75,6 +75,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { CheckoutNavbar } from '../_components/CheckoutNavbar'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { sellerStatText } from '@/lib/seller/stat-line'
+import { track } from '@/lib/analytics/client'
+import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 // ─── Ivory Ledger tokens (design_handoff_checkout Option 1a) ────────────────
 const T = {
@@ -547,9 +550,11 @@ interface CheckoutFormProps {
    *  fee, from eligibleMethods() on the server (the same call createCheckout
    *  refuses against). Hidden / over-cap methods are already absent. */
   methods: ClientMethod[]
+  /** Currency delivery method the seller hands the order over with, or null. */
+  deliveryMethod?: CurrencyDeliveryMethod | null
 }
 
-export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods }: CheckoutFormProps) {
+export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], initialQty, bundleSummary, buyerCountry, methods, deliveryMethod = null }: CheckoutFormProps) {
   const router = useRouter()
 
   // Flat selector (checkout regions, 2026-09-26): rails local to the
@@ -604,6 +609,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [useWallet, setUseWallet] = useState(false)
 
   const subtotal = listing.price * quantity
+
+  // Growth point 1 — buyer funnel step 3. Once per listing; later quantity
+  // changes are the same checkout.
+  useEffect(() => {
+    track('checkout_started', { listing_id: listing.id, qty: quantity })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing.id])
   // The service fee (marketplace + processing) is the database's quote for
   // the picked method, promo and store credit. When store credit covers the
   // whole order at the wallet row's quote (zero fee), the order is a 'wallet'
@@ -679,7 +691,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
     const result = await validatePromoCode(promoInput, subtotal)
     setPromoResult(result)
     setPromoValidating(false)
-    if (result.valid) toast.success(`Promo Applied: ${result.description}`)
+    if (result.valid) {
+      toast.success(`Promo Applied: ${result.description}`)
+      // Creator / coupon codes: which code, not who typed it.
+      track('promo_code_applied', { code: result.code?.toUpperCase() ?? null, listing_id: listing.id })
+    }
     else toast.error(result.error || 'Invalid Promo Code')
   }
   const handleRemovePromo = () => {
@@ -726,6 +742,13 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
         setPaying(false)
         return
       }
+      // Growth point 1 — buyer funnel step 4 (step 5, order_paid, is sent by
+      // the server once payment is confirmed). Beacon: a redirect follows.
+      track(
+        'checkout_submitted',
+        { listing_id: listing.id, order_id: result.orderId ?? null, method: payMethod, subtotal_usd: subtotal, has_promo: !!promoResult?.valid },
+        { beacon: true },
+      )
       if (result.fullyPaidByWallet && result.orderId) {
         payTab?.close()
         toast.success('Paid From Wallet — redirecting to your order…')
@@ -1211,6 +1234,15 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
             {fmtDelivery(deliveryTime)}
           </span>
         </div>
+        {deliveryMethod && (
+          <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
+            <span style={{ color: T.ink2 }}>Delivery Method</span>
+            <span className="inline-flex items-center gap-1 font-medium" style={{ color: T.ink }}>
+              {deliveryMethod.label}
+              <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-4 py-[7px]" style={{ borderColor: T.lineSubtle }}>
           <span style={{ color: T.ink2 }}>Quantity</span>
           <span className="font-medium" style={{ color: T.ink }}>

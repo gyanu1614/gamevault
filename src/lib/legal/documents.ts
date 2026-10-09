@@ -62,6 +62,9 @@ export const LEGAL_ENTITY = {
 /** The date every document changed in the 4 Oct 2026 round carries. */
 const UPDATED_2026_10_04 = { lastUpdated: '4 October 2026', version: 'v1.1' } as const
 
+/** Privacy + Cookie Policy: PostHog product analytics added (growth point 1). */
+const UPDATED_2026_10_08 = { lastUpdated: '8 October 2026', version: 'v1.2' } as const
+
 export type LegalBlock =
   | { t: 'p'; md: string }
   | { t: 'ul'; items: string[] }
@@ -1233,7 +1236,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Privacy Policy',
     description:
       'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, the providers we use, how long we keep data, transfers and your rights.',
-    ...UPDATED_2026_10_04,
+    ...UPDATED_2026_10_08,
     sections: [
       {
         h: 'Who we are',
@@ -1274,6 +1277,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
               ['Vercel', 'Hosts the website and provides cookieless, aggregated page analytics', 'Request data such as IP address, browser and pages visited'],
               ['Resend', 'Sends account and Order emails', 'Name, email address and the content of the email'],
               ['Sentry', 'Error monitoring', 'Technical details of errors (page, browser and device type)'],
+              ['PostHog (EU hosting)', 'Product analytics without cookies: which pages and buying or selling steps people complete', 'Request data such as IP address and browser, pages visited (without personal details in the address), steps taken, and your account ID if you are signed in'],
               ['Didit', 'Identity verification and sanctions / PEP / adverse-media screening for Sellers', 'ID document, selfie and liveness check, name, date of birth, address'],
               ...PAYMENT_PROCESSORS.map((x) => [x.name, sentence(x.role), PROCESSOR_DATA[x.name] ?? 'Order reference and amount']),
               ['Hetzner Online (Germany)', 'Hosts the server that runs BTCPay Server', 'Order reference, amount, payment address and transaction ID'],
@@ -1372,7 +1376,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Cookie Policy',
     description:
       'The cookies and browser storage DropMarket uses, what each one is for and how long it lasts, and how to control them.',
-    ...UPDATED_2026_10_04,
+    ...UPDATED_2026_10_08,
     sections: [
       {
         blocks: [
@@ -1419,6 +1423,9 @@ export const LEGAL_DOCS: LegalDoc[] = [
         blocks: [
           p(
             'We count page views with Vercel Web Analytics, which sets no cookies and stores nothing on your device; it reports aggregated visit data. Our error monitoring (Sentry) also sets no cookies.',
+          ),
+          p(
+            'We use PostHog to see which steps of buying and selling people complete, so we can fix the ones where they get stuck. It runs without cookies and stores nothing on your device, and it never receives your email or name. Its data is hosted in the EU.',
           ),
         ],
       },

@@ -7,7 +7,7 @@
  * listing, so the queue drains per listing, not per report.
  */
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { AdminEmpty, FilterChip, PageHeader, StatusBadge } from '../../components/kit'

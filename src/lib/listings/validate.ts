@@ -19,6 +19,7 @@ import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { resolveCurrencyPriceRules } from '@/lib/currency/price-rules'
 import { formatUnitPrice } from '@/lib/currency/price-format'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
+import { checkDeliveryMethod } from '@/lib/currency/delivery-methods'
 
 export const DELIVERY_METHODS = ['manual', 'instant'] as const
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number]
@@ -90,6 +91,8 @@ export const listingFields = {
   region: optionalLabel,
   platform: optionalLabel,
   bundle_id: z.string().trim().max(200).nullable().optional(),
+  /** Currency delivery method id (Gamepass…), checked against the config below. */
+  delivery_method_type: z.string().trim().max(100).nullable().optional(),
   status: z.enum(INSERT_STATUSES, { errorMap: () => ({ message: 'a new listing can only be a draft or active' }) }),
 }
 
@@ -120,6 +123,8 @@ export interface ListingWrite {
   region: string | null
   platform: string | null
   bundle_id: string | null
+  /** Currency delivery method id, or null (field off / not picked / not currency). */
+  delivery_method_type: string | null
   status: InsertStatus
 }
 
@@ -288,6 +293,9 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
   const orderMin = resolveOrderMinimumValue(price.value, minimum.value.min_quantity, ctx)
   if (!orderMin.ok) return orderMin
 
+  const method = checkDeliveryMethod(ctx.categoryType === 'currency' ? ctx.currencyConfig : null, v.delivery_method_type)
+  if (!method.ok) return method
+
   return {
     ok: true,
     value: {
@@ -304,6 +312,7 @@ export function validateListingWrite(raw: unknown, ctx: ListingRuleContext): Val
       region: v.region ?? null,
       platform: v.platform ?? null,
       bundle_id: minimum.value.bundle_id,
+      delivery_method_type: method.value,
       status: v.status,
     },
   }
@@ -370,6 +379,11 @@ export function validateListingPatch(
     const price = resolvePrice(p.price, ctx)
     if (!price.ok) return price
     p.price = price.value
+  }
+  if (p.delivery_method_type !== undefined) {
+    const method = checkDeliveryMethod(ctx.categoryType === 'currency' ? ctx.currencyConfig : null, p.delivery_method_type)
+    if (!method.ok) return method
+    p.delivery_method_type = method.value
   }
   if (p.original_price != null) {
     const op = resolvePrice(p.original_price, ctx, 'original price')

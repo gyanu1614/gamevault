@@ -85,6 +85,7 @@ const ItemsPageClient = dynamic(() => import('./_ItemsPageClient'))
 import { resolveItemBySlug } from './_itemResolver'
 import { SabNavExtras } from '../values/_SabNavExtras'
 import { seoMeta } from '@/lib/seo/fit'
+import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
 
 /**
  * Step 7a — static-first. This route rendered per request (2,000 renders a
@@ -477,7 +478,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .from('listings')
           .select(`
             id, description, price, quantity, delivery_time, is_unlimited,
-            bundle_id, region, platform,
+            bundle_id, region, platform, delivery_method_type,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
@@ -514,6 +515,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           bundleId: l.bundle_id,
           region: l.region ?? null,
           platform: l.platform ?? null,
+          deliveryMethodId: l.delivery_method_type ?? null,
         }))
       }
     }
@@ -544,6 +546,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           )
         : [],
       offers: bundleOffers,
+      deliveryMethods: activeDeliveryMethods(currencyConfig),
       // V19/P24/P7.d — Surface How it works + FAQ on the bundle page,
       // same shape and source as the flexible currency page uses.
       steps: currencyConfig?.steps ?? [],
@@ -656,6 +659,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
           .select(`
             id, title, description, price, original_price, quantity,
             min_quantity, delivery_method, delivery_time, is_unlimited,
+            delivery_method_type,
             seller:public_profiles!listings_seller_id_fkey(
               id, username, shop_name, shop_slug, avatar_url, seller_tier,
               seller_rating, total_reviews, total_sales, is_verified
@@ -696,6 +700,7 @@ async function CategoryBrowsePage({ params }: PageProps) {
         ...currencyShell,
         hero,
         sellers: rest,
+        deliveryMethods: activeDeliveryMethods(currencyConfig),
       }
     }
     // V21/P7.i — Surface the admin-uploaded category icon on the currency

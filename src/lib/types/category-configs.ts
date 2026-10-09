@@ -161,6 +161,29 @@ export interface CurrencyConfig {
    * they group above the count-based bundles.
    */
   bundles?: CurrencyBundle[]
+  /**
+   * How the seller hands the currency over (Roblox: Gamepass, In-Game Shop
+   * Gifts, UID / Login, Epic Gifting). Off by default; when on, the seller
+   * picks one per listing (stored as the method `id` in
+   * listings.delivery_method_type) and buyers can filter by it. Not the
+   * Manual / Instant "Delivery Type" (listings.delivery_method).
+   * Readers: src/lib/currency/delivery-methods.ts.
+   */
+  delivery_methods?: CurrencyDeliveryMethods
+}
+
+export interface CurrencyDeliveryMethod {
+  /** Stable id stored on listings; never reuse one for a different method. */
+  id: string
+  /** Seller + buyer label ("Gamepass"). */
+  label: string
+  /** Tooltip text: what this method means, in a line or two. */
+  description: string
+}
+
+export interface CurrencyDeliveryMethods {
+  enabled: boolean
+  options: CurrencyDeliveryMethod[]
 }
 
 export interface CurrencyBundle {

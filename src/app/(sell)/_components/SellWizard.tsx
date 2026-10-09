@@ -60,12 +60,10 @@ import {
   publishListing,
   updateListingFromWizard,
   fetchPublishPolicy,
-  fetchPriceGuidance,
   fetchListingForDuplicate,
   fetchExistingCurrencyListingId,
   fetchExistingBundleListingId,
   type SellerPublishPolicy,
-  type PriceGuidance,
   uploadSellImage,
   type SellGameOption,
 } from '@/lib/actions/sell-wizard'
@@ -73,12 +71,17 @@ import {
 // wizard knows the right unit label (Robux, Orbs, V-Bucks, ...) and
 // minimum-quantity rules. Replaces the static CURRENCY_UNIT_NAMES map.
 import { fetchCategoryConfigBySlug } from '@/lib/actions/admin-category-configs'
-import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, type PlatformFields, type PlatformFieldKind } from '@/lib/types/category-configs'
+import { normalizePlatformOptions, type CurrencyBundle, type CurrencyConfig, type CurrencyDeliveryMethod, type PlatformFields, type PlatformFieldKind } from '@/lib/types/category-configs'
 import { visiblePlatformKinds } from './PlatformFieldsBlock'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
 import { resolveMinQuantity } from '@/lib/currency/min-quantity'
 import { resolveCurrencyPriceRules, type CurrencyPriceRules } from '@/lib/currency/price-rules'
 import { formatUnitPrice } from '@/lib/currency/price-format'
+import type { HintInput } from '@/lib/price-helper/resolve'
+import { MarketPriceHint } from './MarketPriceHint'
+import { applyOptionSets } from '@/lib/sell/option-sets'
+import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
+import { DeliveryMethodPicker } from './DeliveryMethodPicker'
 import type {
   GlobalCategory,
   AttributeTemplateFull,
@@ -111,6 +114,7 @@ interface WizardSnapshot {
   // V19/P24/P3 — Bundle id for fixed-bundle currency listings.
   // Optional so old snapshots still parse.
   bundleId?: string
+  deliveryMethodType?: string
   title: string
   description: string
   price: string
@@ -390,10 +394,6 @@ export default function SellWizard({
   // info before they click Create Offer.
   const [policy, setPolicy] = useState<SellerPublishPolicy | null>(null)
 
-  // D2 — Price guidance for the chosen (game, category). Fetched whenever
-  // both are set; surfaced in the Pricing sub-card so the seller sees the
-  // going rate before they price too high/low.
-  const [priceGuidance, setPriceGuidance] = useState<PriceGuidance | null>(null)
   // V19/P2 — Per-(game, category) currency config (unit_label, min_quantity,
   // glyph, ...). Null until both selectedGame and selectedCategory resolve
   // AND the category is currency. Used by Step 3 thumbnail label and Step 4
@@ -421,6 +421,10 @@ export default function SellWizard({
   // platform_fields, NOT the game-level settings. Empty string when
   // the field isn't enabled for the chosen game.
   const [device, setDevice] = useState<string>('')
+  // Currency "Delivery Method" (Gamepass, UID / Login …): the method id from
+  // currencyConfig.delivery_methods; '' until picked. Not the Manual /
+  // Instant "Delivery Type" (deliveryMethod below).
+  const [deliveryMethodType, setDeliveryMethodType] = useState<string>('')
   // V19/P24/P3 — Bundle id for fixed-bundle currencies. Empty when
   // the currency is in flexible mode (no bundles defined for this
   // game) or the seller hasn't picked one yet. Required to publish
@@ -544,6 +548,7 @@ export default function SellWizard({
       setRegion(snap.region ?? '')
       setPlatform(snap.platform ?? '')
       setBundleId(snap.bundleId ?? '')
+      setDeliveryMethodType(snap.deliveryMethodType ?? '')
       setTitle(snap.title ?? '')
       setDescription(snap.description ?? '')
       setPrice(snap.price ?? '')
@@ -604,6 +609,7 @@ export default function SellWizard({
       region,
       platform,
       bundleId,
+      deliveryMethodType,
       title,
       description,
       price,
@@ -624,6 +630,7 @@ export default function SellWizard({
     selectedGame,
     region,
     platform,
+    deliveryMethodType,
     title,
     description,
     price,
@@ -693,6 +700,7 @@ export default function SellWizard({
       setRegion(d.region ?? '')
       setPlatform(d.platform ?? '')
       setBundleId((d as any).bundle_id ?? '')
+      setDeliveryMethodType(d.delivery_method_type ?? '')
       setFieldValues(d.template_data ?? {})
       setImages(d.images)
       if (isEditMode) {
@@ -779,20 +787,37 @@ export default function SellWizard({
   }, [selectedCategory, selectedGame])
 
 
-  // D2 — Fetch price guidance whenever (game, category) is set. Cheap
-  // RPC; runs in parallel with template-load. The Pricing card consumes it.
-  useEffect(() => {
-    if (!selectedCategory || !selectedGame) {
-      setPriceGuidance(null)
-      return
+  // Growth point 30 — what the market price helper asks about: the pair,
+  // plus (items only) the visible PICKED template answers keyed by slug, the
+  // same shape publish sends. Never the title: typing must not re-ask the
+  // server. Option labels ride along for the picked values only.
+  const priceHintInput = useMemo<HintInput | null>(() => {
+    if (!selectedGame?.game_category_id || !selectedCategory) return null
+    const isItems = selectedCategory.slug === 'items'
+    const templateData: Record<string, string> = {}
+    const optionLabels: Record<string, Record<string, string>> = {}
+    if (isItems && template) {
+      const byId = new Map<string, Attribute>()
+      for (const a of template.attributes) byId.set(a.id, a)
+      for (const a of template.attributes) {
+        // Dropdown picks only: a free-text field would re-ask on every key.
+        if (a.type !== 'select' && a.type !== 'image_select') continue
+        const v = fieldValues[a.id]
+        if (typeof v !== 'string' || !v || !isVisible(a, fieldValues, byId)) continue
+        templateData[a.slug] = v
+        const label = a.options?.find((o) => o.value === v)?.label
+        if (label) optionLabels[a.slug] = { [v]: label }
+      }
     }
-    let cancelled = false
-    fetchPriceGuidance(selectedGame.game_id, selectedCategory.slug).then((res) => {
-      if (cancelled) return
-      if (res.success) setPriceGuidance(res.data)
-    })
-    return () => { cancelled = true }
-  }, [selectedCategory, selectedGame])
+    return {
+      gameSlug: selectedGame.game_slug,
+      categorySlug: selectedCategory.slug,
+      gameCategoryId: selectedGame.game_category_id,
+      templateData,
+      optionLabels,
+      bundleId: bundleId || null,
+    }
+  }, [selectedGame, selectedCategory, template, fieldValues, bundleId])
 
   // V19/P2 — Fetch currency config when a currency category is chosen so the
   // wizard can render the unit label (Robux, Orbs, V-Bucks, ...) the admin
@@ -910,6 +935,12 @@ export default function SellWizard({
   // canPublish: gates the Create Offer button on step 3. Combines dynamic
   // attribute validity (allRequiredFilled) with the static fields and the
   // two R8 terms checkboxes.
+  // Currency delivery methods the admin turned on for this game ([] = off).
+  const deliveryMethods = useMemo(
+    () => (selectedCategory?.slug === 'currency' ? activeDeliveryMethods(currencyConfig) : []),
+    [selectedCategory, currencyConfig],
+  )
+
   const canPublish = useMemo(() => {
     if (!allRequiredFilled) return false
     // V13 — Currency listings skip Title + Photos requirements (server fills
@@ -933,13 +964,15 @@ export default function SellWizard({
       // V19/P24/P3 — Bundle currencies REQUIRE a bundle pick. Flexible
       // currencies (no bundles defined) skip this check.
       if ((currencyConfig?.bundles?.length ?? 0) > 0 && !bundleId) return false
+      // A game with delivery methods on needs one picked (from its list).
+      if (deliveryMethods.length > 0 && !deliveryMethods.some((m) => m.id === deliveryMethodType)) return false
     }
     // D1 — block clicking Create Offer when the seller is at their tier's
     // active-listing cap. The server enforces this too, but blocking the
     // button avoids the round-trip + error toast.
     if (policy?.at_listing_limit) return false
     return true
-  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos, policy, selectedCategory, currencyConfig, region, platform, device, bundleId])
+  }, [allRequiredFilled, title, images, price, quantity, agreeSellerRules, agreeTos, policy, selectedCategory, currencyConfig, region, platform, device, bundleId, deliveryMethods, deliveryMethodType])
 
   const handleImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -1026,6 +1059,7 @@ export default function SellWizard({
         // Wired all the way through PublishListingInput → DB column;
         // empty string becomes null so non-bundle listings stay clean.
         bundle_id: bundleId || null,
+        delivery_method_type: deliveryMethodType || null,
         status: (asDraft ? 'draft' : 'active') as 'draft' | 'active',
       }
       // V14k — Edit mode UPDATES the existing row; publish/duplicate INSERTs
@@ -1328,7 +1362,8 @@ export default function SellWizard({
                       collectDescendantIds(id, attrs).forEach((childId) => {
                         delete next[childId]
                       })
-                      return next
+                      // An option can fill other fields (MM2 item → rarity).
+                      return applyOptionSets(attrs, id, v, next)
                     })
                   }
                 />
@@ -1346,7 +1381,7 @@ export default function SellWizard({
                   onUpload={handleImages}
                   onRemoveImage={(i) => setImages((prev) => prev.filter((_, idx) => idx !== i))}
                   imageUploading={imageUploading}
-                  priceGuidance={priceGuidance}
+                  priceHintInput={priceHintInput}
                   categorySlug={selectedCategory.slug}
                   gameName={selectedGame.game_name}
                   gameSlug={selectedGame.game_slug}
@@ -1359,6 +1394,8 @@ export default function SellWizard({
                   region={region} onRegion={setRegion}
                   platform={platform} onPlatform={setPlatform}
                   device={device} onDevice={setDevice}
+                  deliveryMethods={deliveryMethods}
+                  deliveryMethodType={deliveryMethodType} onDeliveryMethodType={setDeliveryMethodType}
                   bundles={currencyConfig?.bundles ?? null}
                   bundleId={bundleId} onBundleId={setBundleId}
                   existingBundleListingId={existingBundleListingId}
@@ -2174,10 +2211,8 @@ interface Step4Props {
   onUpload: (files: FileList | null) => void
   onRemoveImage: (i: number) => void
   imageUploading: boolean
-  // D2 — Price guidance from recently sold listings for this (game,
-  // category). NULL until fetch resolves; when sample_size < 3 we still
-  // return a row but the p25/median/p75 fields are null.
-  priceGuidance: PriceGuidance | null
+  /** Growth point 30 — what the market price helper looks up (null = hidden). */
+  priceHintInput: HintInput | null
   // V13 — Category slug drives the field set. For 'currency' we hide
   // Title + Photos (auto-filled server-side) and rename Description to
   // Instructions.
@@ -2223,6 +2258,9 @@ interface Step4Props {
   region: string; onRegion: (v: string) => void
   platform: string; onPlatform: (v: string) => void
   device: string; onDevice: (v: string) => void
+  /** Currency delivery methods the admin turned on for this game ([] = hidden). */
+  deliveryMethods: CurrencyDeliveryMethod[]
+  deliveryMethodType: string; onDeliveryMethodType: (v: string) => void
   /**
    * V19/P24/P3 — Bundle list from admin currency config. When at
    * least one bundle exists, the seller MUST pick one — the wizard
@@ -2705,9 +2743,9 @@ function Step4Publish(p: Step4Props) {
                   </div>
                 )}
 
-                <PriceGuidanceCard
-                  guidance={p.priceGuidance}
-                  currentPrice={parseFloat(p.price)}
+                <MarketPriceHint
+                  input={p.priceHintInput}
+                  unit={isBundleMode ? 'bundle' : isCurrency ? suffix : null}
                 />
 
                 {!isCurrency && (
@@ -2768,7 +2806,20 @@ function Step4Publish(p: Step4Props) {
       </SubCard>
       )}
 
-      <SubCard title="Delivery Method">
+      {/* Currency delivery method (Gamepass, UID / Login …), per game,
+          admin-switched. The Manual / Instant card below is the
+          Delivery Type. */}
+      {p.deliveryMethods.length > 0 && (
+        <SubCard title="Delivery Method">
+          <DeliveryMethodPicker
+            methods={p.deliveryMethods}
+            value={p.deliveryMethodType}
+            onChange={p.onDeliveryMethodType}
+          />
+        </SubCard>
+      )}
+
+      <SubCard title="Delivery Type">
         <div>
           <RadioGroup
             value={p.deliveryMethod}
@@ -3306,106 +3357,6 @@ function BuyerCardPreview({
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── D2 — Price guidance band ──────────────────────────────────────────────
-
-/**
- * Shows a horizontal band representing the p25–p75 range of recent sold
- * prices for this (game, category), with a marker for the seller's current
- * price so they immediately see whether they're above / below market.
- *
- * Hidden until we have a meaningful sample (>= 3 sales in 60 days). When
- * the seller is way above p75 we tag the marker red; below p25 yellow;
- * inside the band lime.
- */
-function PriceGuidanceCard({
-  guidance, currentPrice,
-}: {
-  guidance: PriceGuidance | null
-  currentPrice: number
-}) {
-  if (!guidance || guidance.sample_size < 3 || guidance.p25 == null || guidance.p75 == null || guidance.median == null) {
-    return null
-  }
-
-  const { p25, median, p75, sample_size } = guidance
-  // Pad each end so the marker has room when the seller types something
-  // wildly off-band; clamp to [0, ∞).
-  const span = p75 - p25
-  const padded_min = Math.max(0, p25 - span * 0.5)
-  const padded_max = p75 + span * 0.5
-  const range = Math.max(0.01, padded_max - padded_min)
-
-  const hasValidPrice = Number.isFinite(currentPrice) && currentPrice > 0
-  const pricePct = hasValidPrice
-    ? Math.min(100, Math.max(0, ((currentPrice - padded_min) / range) * 100))
-    : null
-
-  const p25Pct    = ((p25    - padded_min) / range) * 100
-  const medianPct = ((median - padded_min) / range) * 100
-  const p75Pct    = ((p75    - padded_min) / range) * 100
-
-  const tone: 'good' | 'high' | 'low' | null = hasValidPrice
-    ? currentPrice > p75 ? 'high'
-    : currentPrice < p25 ? 'low'
-    : 'good'
-    : null
-
-  const toneCopy =
-    tone === 'high' ? `Above market — most sold for $${p25.toFixed(2)}–$${p75.toFixed(2)}.`
-    : tone === 'low' ? `Below market — most sold for $${p25.toFixed(2)}–$${p75.toFixed(2)}.`
-    : tone === 'good' ? `In the typical range. Median $${median.toFixed(2)}.`
-    : `Most recent sales went for $${p25.toFixed(2)}–$${p75.toFixed(2)} (median $${median.toFixed(2)}).`
-
-  const toneClass =
-    tone === 'high' ? 'text-error'
-    : tone === 'low' ? 'text-warning'
-    : tone === 'good' ? 'text-lime-text'
-    : 'text-text-secondary'
-
-  return (
-    <div className="mt-3 rounded-xl border border-border-subtle bg-bg-inset p-3">
-      <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-        <span>Recent sales</span>
-        <span>{sample_size} sold · last 60 days</span>
-      </div>
-
-      {/* Band */}
-      <div className="relative h-2 w-full rounded-full bg-bg-raised-hover">
-        <div
-          className="absolute inset-y-0 rounded-full bg-[rgba(86,184,127,0.40)]"
-          style={{ left: `${p25Pct}%`, width: `${Math.max(0, p75Pct - p25Pct)}%` }}
-        />
-        <div
-          className="absolute inset-y-0 w-px bg-lime-text"
-          style={{ left: `${medianPct}%` }}
-          aria-hidden
-        />
-        {pricePct !== null && (
-          <div
-            className={cn(
-              'absolute -top-1 h-4 w-1 -translate-x-1/2 rounded-full',
-              tone === 'high' && 'bg-error',
-              tone === 'low'  && 'bg-warning',
-              tone === 'good' && 'bg-lime',
-            )}
-            style={{ left: `${pricePct}%` }}
-            aria-hidden
-          />
-        )}
-      </div>
-
-      {/* Labels */}
-      <div className="mt-1.5 flex justify-between text-xs tabular-nums text-text-tertiary">
-        <span>${p25.toFixed(2)}</span>
-        <span>median ${median.toFixed(2)}</span>
-        <span>${p75.toFixed(2)}</span>
-      </div>
-
-      <p className={cn('mt-2 text-xs leading-snug', toneClass)}>{toneCopy}</p>
     </div>
   )
 }

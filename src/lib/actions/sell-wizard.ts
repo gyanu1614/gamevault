@@ -29,6 +29,8 @@ import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
+import { activeDeliveryMethods, resolveDeliveryMethodId } from '@/lib/currency/delivery-methods'
+import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import { screenImage } from '@/lib/images/screen'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
@@ -101,6 +103,8 @@ export interface DuplicatePrefill {
   /** What the review team asked to change (only meaningful while
    *  status === 'changes_requested'; internal notes otherwise). */
   moderation_notes: string | null
+  /** Currency delivery method id (Gamepass…), null when none. */
+  delivery_method_type: string | null
 }
 
 export async function fetchListingForDuplicate(
@@ -117,7 +121,7 @@ export async function fetchListingForDuplicate(
         id, seller_id, title, description, price, original_price,
         quantity, min_quantity, delivery_method, delivery_time,
         images, template_data, region, platform, game_id,
-        status, moderation_notes,
+        status, moderation_notes, delivery_method_type,
         game:games(slug),
         category:game_categories!listings_game_category_id_fkey(global_category:global_categories!game_categories_global_category_id_fkey(slug))
       `)
@@ -142,6 +146,7 @@ export async function fetchListingForDuplicate(
       game_id: string
       status: string
       moderation_notes: string | null
+      delivery_method_type: string | null
       game: { slug: string } | null
       category: { global_category: { slug: string } | null } | null
     }
@@ -173,6 +178,7 @@ export async function fetchListingForDuplicate(
         delivery_time: row.delivery_time,
         region: row.region,
         platform: row.platform,
+        delivery_method_type: row.delivery_method_type ?? null,
         template_data: row.template_data ?? {},
         images: Array.isArray(row.images) ? row.images : [],
         status: row.status,
@@ -242,6 +248,9 @@ export async function fetchExistingCurrencyListingId(
       .maybeSingle() as any
     const bundles = configRow?.config?.bundles
     if (Array.isArray(bundles) && bundles.length > 0) return null
+    // Same for delivery methods: one listing per method, so a second listing
+    // (another method) is legitimate; the publish-time guard catches dups.
+    if (activeDeliveryMethods(configRow?.config).length > 0) return null
 
     // Resolve the legacy currency category for this game. Same path
     // used by publishListing and the buyer page; keeps "what counts
@@ -562,6 +571,8 @@ export interface PublishListingInput {
    * currency and every other category.
    */
   bundle_id?: string | null
+  /** Currency delivery method id from config.delivery_methods (Gamepass…). */
+  delivery_method_type?: string | null
   status: 'draft' | 'active'
 }
 
@@ -665,9 +676,21 @@ export async function publishListing(input: PublishListingInput): Promise<Result
         } else {
           dupQuery = dupQuery.is('platform', null)
         }
+        if (activeDeliveryMethods(rules.currencyConfig).length > 0) {
+          dupQuery = v.delivery_method_type
+            ? dupQuery.eq('delivery_method_type', v.delivery_method_type)
+            : dupQuery.is('delivery_method_type', null)
+        }
       } else {
-        // Flexible mode: any non-bundle currency listing is a dup.
+        // Flexible mode: any non-bundle currency listing is a dup — per
+        // delivery method when the game has them on (one listing per
+        // method: a Gamepass offer and a Login offer are two listings).
         dupQuery = dupQuery.is('bundle_id', null)
+        if (activeDeliveryMethods(rules.currencyConfig).length > 0) {
+          dupQuery = v.delivery_method_type
+            ? dupQuery.eq('delivery_method_type', v.delivery_method_type)
+            : dupQuery.is('delivery_method_type', null)
+        }
       }
       const { data: existing } = await dupQuery.limit(1).maybeSingle() as any
       if (existing?.id) {
@@ -675,7 +698,9 @@ export async function publishListing(input: PublishListingInput): Promise<Result
           success: false,
           error: input.bundle_id
             ? 'You already list this bundle on this platform/region. Editing it instead.'
-            : 'You already have a currency listing for this game. Editing it instead.',
+            : v.delivery_method_type
+              ? 'You already list this currency with this delivery method. Editing it instead.'
+              : 'You already have a currency listing for this game. Editing it instead.',
           // Cast lets the client narrow on `existingId` without breaking
           // the Result<T> contract for other call sites.
           ...({ existingId: existing.id as string } as any),
@@ -709,6 +734,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       images: resolvedImages,
       template_data: v.template_data,
       region: v.region,
+      delivery_method_type: v.delivery_method_type,
       platform: v.platform,
       // V19/P24 — Bundle id for fixed-bundle currencies. NULL for
       // flexible currency listings and every non-currency listing.
@@ -866,6 +892,7 @@ export async function updateListingFromWizard(
       images: resolvedImages,
       template_data: v.template_data,
       region: v.region,
+      delivery_method_type: v.delivery_method_type,
       platform: v.platform,
       // V19/P24 — Bundle id propagated on edit too so the seller can
       // re-target a different bundle from the wizard.
@@ -993,7 +1020,14 @@ export async function fetchBulkCsvTemplate(
       'region', 'platform',
     ]
     const attrCols = template ? template.attributes.map((a) => a.slug) : []
-    const header = [...baseCols, ...attrCols]
+    // Currency games with delivery methods on get one more column; the
+    // seller types the method's name (resolveDeliveryMethodId).
+    const methods =
+      categorySlug === 'currency'
+        ? activeDeliveryMethods((await fetchCategoryConfig(gameId, 'currency').catch(() => null)) ?? null)
+        : []
+    const methodCols = methods.length > 0 ? ['currency_delivery_method'] : []
+    const header = [...baseCols, ...methodCols, ...attrCols]
 
     const example: Record<string, string> = {
       title: 'Example offer title',
@@ -1006,6 +1040,7 @@ export async function fetchBulkCsvTemplate(
       delivery_time: '1hr',
       region: '',
       platform: '',
+      currency_delivery_method: methods[0]?.label ?? '',
     }
     if (template) {
       for (const a of template.attributes) {
@@ -1056,6 +1091,8 @@ export interface BulkRow {
   /** Optional carry-over image URLs; bulk CSV can include image URLs
    *  comma-separated. Stored under `images` column in the CSV. */
   images: string[]
+  /** CSV `currency_delivery_method`: a method name ("Gamepass") or id. */
+  delivery_method_type?: string | null
 }
 
 export interface BulkPublishResult {
@@ -1160,6 +1197,7 @@ export async function bulkPublishListings(
             region: r.region ?? null,
             platform: r.platform ?? null,
             bundle_id: null,
+            delivery_method_type: resolveDeliveryMethodId(rules.currencyConfig, r.delivery_method_type),
             status: 'active',
           },
           rules,
@@ -1186,6 +1224,7 @@ export async function bulkPublishListings(
           template_data: v.template_data,
           region: v.region,
           platform: v.platform,
+          delivery_method_type: v.delivery_method_type,
           status: rowStatus(v.price),
           metadata: { source: 'bulk' },
         }

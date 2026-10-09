@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // PostHog's endpoints end in "/" (`/ingest/i/v0/e/`); Next's built-in
+  // trailing-slash redirect would bounce them. src/middleware.ts applies the
+  // same 308 to every other path (src/lib/analytics/ingest-proxy.ts).
+  skipTrailingSlashRedirect: true,
   experimental: {
     // Next 14 only loads src/instrumentation.ts when this is on. Sentry's
     // withSentryConfig sets it automatically for Next < 15, but it is written

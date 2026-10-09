@@ -286,3 +286,55 @@ describe('D3 — sub-cent per-unit prices for flexible currency', () => {
     expect(validateListingPatch({ min_quantity: 1 }, LOOSE, { ...ex, price: 0.005 } as typeof ex)).toMatchObject({ ok: false })
   })
 })
+
+describe('currency delivery method (Gamepass, UID / Login …) — admin list only', () => {
+  const ON = {
+    categoryType: 'currency' as const,
+    currencyConfig: {
+      min_quantity: 1,
+      bundles: [],
+      delivery_methods: { enabled: true, options: [{ id: 'gamepass', label: 'Gamepass', description: '' }] },
+    },
+  }
+  const OFF = { categoryType: 'currency' as const, currencyConfig: { min_quantity: 1, bundles: [] } }
+  const cur = { ...base, title: '', price: 0.01, quantity: 10 }
+
+  it('stores an offered method id', () => {
+    expect(validateListingWrite({ ...cur, delivery_method_type: 'gamepass' }, ON)).toMatchObject({
+      ok: true,
+      value: { delivery_method_type: 'gamepass' },
+    })
+  })
+
+  it('rejects a method the admin does not offer', () => {
+    expect(validateListingWrite({ ...cur, delivery_method_type: 'trade' }, ON)).toEqual({
+      ok: false,
+      error: 'Pick a delivery method from the list.',
+    })
+  })
+
+  it('stores nothing when the game has the field off, or for non-currency listings', () => {
+    expect(validateListingWrite({ ...cur, delivery_method_type: 'gamepass' }, OFF)).toMatchObject({ ok: true, value: { delivery_method_type: null } })
+    expect(validateListingWrite({ ...base, delivery_method_type: 'gamepass' }, ITEMS)).toMatchObject({ ok: true, value: { delivery_method_type: null } })
+  })
+
+  it('an empty pick stays allowed (bulk upload, older clients)', () => {
+    expect(validateListingWrite(cur, ON)).toMatchObject({ ok: true, value: { delivery_method_type: null } })
+  })
+})
+
+describe('quick edit (patch) — delivery method is checked against the admin list too', () => {
+  const ON = {
+    categoryType: 'currency' as const,
+    currencyConfig: { min_quantity: 1, bundles: [], delivery_methods: { enabled: true, options: [{ id: 'gamepass', label: 'Gamepass', description: '' }] } },
+  }
+  const row = { quantity: 100, min_quantity: 1, is_unlimited: false, delivery_method: 'manual', bundle_id: null }
+
+  it('accepts an offered method', () => {
+    expect(validateListingPatch({ delivery_method_type: 'gamepass' }, ON, row)).toMatchObject({ ok: true, value: { delivery_method_type: 'gamepass' } })
+  })
+
+  it('rejects one the admin does not offer', () => {
+    expect(validateListingPatch({ delivery_method_type: 'trade' }, ON, row)).toEqual({ ok: false, error: 'Pick a delivery method from the list.' })
+  })
+})

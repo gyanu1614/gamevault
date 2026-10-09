@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { SellerStats } from '@/components/seller/SellerStats'
 import type { SellerStatInput } from '@/lib/seller/stat-line'
+import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 interface PartyInfo {
   name: string
@@ -108,6 +110,8 @@ interface OrderDetailsCardProps {
   gameIconUrl?: string | null
   /** Item line label (listing title). */
   itemName?: string | null
+  /** Currency delivery method (Gamepass…), shown under the item with its (i). */
+  deliveryMethod?: CurrencyDeliveryMethod | null
   /** Delivery-info entries collected at checkout — typically
    *  `{ username, email, ... }` depending on the listing's needs.
    *  Renders one Row per filled field, or a single "Not Provided"
@@ -714,6 +718,7 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
     gameName,
     gameIconUrl,
     itemName,
+    deliveryMethod = null,
     deliveryInfo,
     onOpenDispute,
   } = props
@@ -768,6 +773,14 @@ export function OrderDetailsCard(props: OrderDetailsCardProps) {
           <Row label="Item">
             <span className="block max-w-[220px] truncate text-right font-semibold text-text-primary">
               {itemName}
+            </span>
+          </Row>
+        )}
+        {deliveryMethod && (
+          <Row label="Delivery Method">
+            <span className="inline-flex items-center gap-1 font-semibold text-text-primary">
+              {deliveryMethod.label}
+              <DeliveryMethodInfo label={deliveryMethod.label} description={deliveryMethod.description} />
             </span>
           </Row>
         )}

@@ -15,7 +15,7 @@
  * offer_number chip w/ copy — falls back to a short UUID prefix until
  * the add-offer-number migration runs), Delivery Time, Price (inline
  * PriceField — grey tick clean, lime tick dirty→save), Status, Stock,
- * Min Quantity, Delivery Method, Updated, ⋮ actions.
+ * Min Quantity, Delivery Type, Updated, ⋮ actions.
  *
  * Status display mapping (UI only, no schema change): active→Active,
  * paused→Paused, draft→Draft, archived+sold→Closed, suspended→
@@ -897,7 +897,7 @@ function OffersContent() {
                 <th className="px-3 py-3">Stock</th>
                 {showViews && <th className="px-3 py-3">Views</th>}
                 <th className="px-3 py-3 whitespace-nowrap">Min Quantity</th>
-                <th className="px-3 py-3 whitespace-nowrap">Delivery Method</th>
+                <th className="px-3 py-3 whitespace-nowrap">Delivery Type</th>
                 <th className="px-3 py-3 whitespace-nowrap">Offer ID</th>
                 <th className="px-3 py-3 whitespace-nowrap">Updated</th>
                 <th className="sticky right-0 z-10 w-24 bg-[linear-gradient(to_right,rgba(16,17,23,0)_0%,rgba(16,17,23,0.92)_42%,rgba(16,17,23,0.99)_68%)] py-3 pl-10 pr-5" />
