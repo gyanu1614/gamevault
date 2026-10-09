@@ -252,7 +252,12 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                   // V24 — Forest Ledger panel: ivory surface, deep forest
                   // drop shadow, no visible border. The hero photo pane
                   // supplies the dark half; the ivory canvas carries the form.
-                  'pointer-events-auto relative flex w-full overflow-hidden rounded-2xl bg-[#FAFAF7] shadow-[0_32px_80px_-20px_rgba(15,51,32,0.55)]',
+                  // Column below md so the form panel is a shrinkable flex
+                  // item (min-h-0) under the max-height — otherwise the panel
+                  // stretched past the modal and overflow-hidden clipped the
+                  // last line (the Sign In / Sign Up switch) at the end of
+                  // the scroll on phones. Row at md+ where the hero sits beside it.
+                  'pointer-events-auto relative flex w-full flex-col overflow-hidden rounded-2xl bg-[#FAFAF7] shadow-[0_32px_80px_-20px_rgba(15,51,32,0.55)] md:flex-row',
                   // Mobile: content-driven height capped to the DYNAMIC
                   // viewport (dvh) so iOS Safari's URL bar never clips the
                   // dialog edges; the fixed two-panel height only applies
@@ -292,7 +297,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                 </button>
 
                 {/* Left — form panel */}
-                <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
+                <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto md:w-1/2 md:flex-none">
                   {/* Mobile brand — the hero pane (and its lockup) is md+. */}
                   <div className="flex items-center justify-center gap-2 pt-7 md:hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

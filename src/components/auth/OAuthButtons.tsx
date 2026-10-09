@@ -4,9 +4,9 @@
  * "Continue with Google" / "Continue with Discord".
  *
  * Starts the Supabase OAuth flow from the browser client (it owns the PKCE
- * verifier cookie) and returns through /auth/callback, which sends a new
- * account to Set Your Password before `next`. `next` is sanitized again
- * server-side; here it only decides where the user comes back to.
+ * verifier cookie) and returns through the bare /auth/callback URL — the
+ * exact allow-list entry. `next` (where to land afterwards) travels in a
+ * short-lived cookie the callback reads, sanitizes again and clears.
  *
  * Two tones: `light` for the ivory auth modal, `dark` for the site's black
  * surfaces (founding flow). Real brand marks, flat surfaces, no glow.
@@ -15,13 +15,14 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { OAUTH_PROVIDERS, oauthCallbackUrl, type OAuthProvider } from '@/lib/auth/oauth'
+import { OAUTH_PROVIDERS, oauthCallbackUrl, oauthNextCookie, type OAuthProvider } from '@/lib/auth/oauth'
 import { cn } from '@/lib/utils'
 
 const LABELS: Record<OAuthProvider, string> = {
   google: 'Continue with Google',
   discord: 'Continue with Discord',
 }
+const SHORT: Record<OAuthProvider, string> = { google: 'Google', discord: 'Discord' }
 
 function GoogleMark({ className }: { className?: string }) {
   return (
@@ -84,9 +85,10 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
     setBusy(provider)
     onStart?.(provider)
     const target = next ?? `${window.location.pathname}${window.location.search}`
+    document.cookie = oauthNextCookie(target)
     const { error: err } = await createClient().auth.signInWithOAuth({
       provider,
-      options: { redirectTo: oauthCallbackUrl(window.location.origin, target) },
+      options: { redirectTo: oauthCallbackUrl(window.location.origin) },
     })
     if (err) {
       setError(`Could not open ${provider === 'google' ? 'Google' : 'Discord'}. Try again in a moment.`)
@@ -97,7 +99,10 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="grid gap-2.5">
+      {/* Stacked, full-sentence buttons on phones; side by side with the
+          short name on wider screens so they read as one row, not a stack
+          of two long bars above the form. */}
+      <div className="grid gap-2.5 sm:grid-cols-2">
         {OAUTH_PROVIDERS.map((provider) => (
           <button
             key={provider}
@@ -107,12 +112,12 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
             aria-label={LABELS[provider]}
             aria-busy={busy === provider}
             className={cn(
-              'relative flex h-11 w-full touch-manipulation items-center justify-center gap-3 rounded-xl border text-body-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed',
+              'inline-flex h-11 w-full touch-manipulation items-center justify-center gap-2.5 rounded-xl border px-4 text-body-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed',
               tone === 'dark' && 'rounded-md',
               t.button,
             )}
           >
-            <span className="absolute left-4 flex h-5 w-5 items-center justify-center">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center">
               {busy === provider ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : provider === 'google' ? (
@@ -121,7 +126,8 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
                 <DiscordMark className="h-[18px] w-[18px]" />
               )}
             </span>
-            <span>{LABELS[provider]}</span>
+            <span className="sm:hidden">{LABELS[provider]}</span>
+            <span className="hidden sm:inline">{SHORT[provider]}</span>
           </button>
         ))}
       </div>

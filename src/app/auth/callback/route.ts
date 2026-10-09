@@ -18,7 +18,23 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateUniqueGamerTag, syncProfileEmail } from '@/lib/actions/auth'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
-import { sanitizeNext, type OAuthUserLike } from '@/lib/auth/oauth'
+import { OAUTH_NEXT_COOKIE, sanitizeNext, type OAuthUserLike } from '@/lib/auth/oauth'
+
+/** Value of one cookie from the request's Cookie header, decoded. */
+function readCookie(request: Request, name: string): string | null {
+  const header = request.headers.get('cookie') ?? ''
+  for (const part of header.split(';')) {
+    const [k, ...rest] = part.trim().split('=')
+    if (k === name) {
+      try {
+        return decodeURIComponent(rest.join('='))
+      } catch {
+        return null
+      }
+    }
+  }
+  return null
+}
 
 /** Append a query key to a same-origin path that may already carry a query. */
 function withQuery(path: string, key: string, value: string) {
@@ -92,7 +108,15 @@ export async function GET(request: Request) {
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type')
   // Only same-origin relative paths, never an auth route — never off-site.
-  const next = sanitizeNext(searchParams.get('next'))
+  // Email links carry ?next=; the OAuth round trip carries it in a cookie
+  // (see OAUTH_NEXT_COOKIE) because the return URL must stay bare.
+  const oauthNext = readCookie(request, OAUTH_NEXT_COOKIE)
+  const next = sanitizeNext(searchParams.get('next') ?? oauthNext)
+  const redirect = (url: string) => {
+    const res = NextResponse.redirect(url)
+    if (oauthNext !== null) res.cookies.set(OAUTH_NEXT_COOKIE, '', { path: '/', maxAge: 0 })
+    return res
+  }
 
   // Append the success signal AFTER the same-origin sanitizer so a crafted
   // `next` can't smuggle its own query string ahead of ours. Only signup
@@ -118,7 +142,7 @@ export async function GET(request: Request) {
     })
     if (!error) {
       if (isEmailChange) await syncProfileEmail().catch(() => {})
-      return NextResponse.redirect(successUrl())
+      return redirect(successUrl())
     }
     console.error('[AuthCallback] verifyOtp failed:', error.message)
 
@@ -129,9 +153,9 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser()
     if (user) {
       if (isEmailChange) await syncProfileEmail().catch(() => {})
-      return NextResponse.redirect(successUrl())
+      return redirect(successUrl())
     }
-    return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)
+    return redirect(`${origin}/?auth_error=confirmation_failed`)
   }
 
   if (code) {
@@ -145,12 +169,12 @@ export async function GET(request: Request) {
     if (error) {
       console.error('[AuthCallback] Code exchange failed:', error.message)
       user = (await supabase.auth.getUser()).data.user
-      if (!user) return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)
+      if (!user) return redirect(`${origin}/?auth_error=confirmation_failed`)
     }
 
     if (isEmailChange) await syncProfileEmail().catch(() => {})
     if (user) await ensureOAuthProfile(user)
-    return NextResponse.redirect(successUrl())
+    return redirect(successUrl())
   }
 
   // No `code` — Supabase forwards failures as ?error/?error_code/
@@ -160,18 +184,18 @@ export async function GET(request: Request) {
   if (errorCode || searchParams.get('error')) {
     console.error('[AuthCallback] Verify error:', errorCode, description)
     if (errorCode === 'otp_expired') {
-      return NextResponse.redirect(`${origin}/?auth_error=link_expired`)
+      return redirect(`${origin}/?auth_error=link_expired`)
     }
     // Provider sign-in refused by Supabase. The two cases a user can act on:
     // Discord shared an email it has not verified (Supabase will not link it
     // to an existing account), or the provider shared no email at all.
     if (/unverified email/i.test(description)) {
-      return NextResponse.redirect(`${origin}${withQuery(next, 'auth_error', 'oauth_unverified_email')}`)
+      return redirect(`${origin}${withQuery(next, 'auth_error', 'oauth_unverified_email')}`)
     }
     if (/user email from external provider/i.test(description)) {
-      return NextResponse.redirect(`${origin}${withQuery(next, 'auth_error', 'oauth_no_email')}`)
+      return redirect(`${origin}${withQuery(next, 'auth_error', 'oauth_no_email')}`)
     }
   }
 
-  return NextResponse.redirect(`${origin}/?auth_error=confirmation_failed`)
+  return redirect(`${origin}/?auth_error=confirmation_failed`)
 }

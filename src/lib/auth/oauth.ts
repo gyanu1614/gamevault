@@ -10,6 +10,14 @@ export const OAUTH_PROVIDERS: readonly OAuthProvider[] = ['google', 'discord'] a
 
 export const SET_PASSWORD_PATH = '/auth/set-password'
 
+/**
+ * Where to land after the OAuth round trip. Carried in a short-lived cookie,
+ * NOT on the return URL: Supabase matches `redirectTo` against its allow-list
+ * (an exact `…/auth/callback` entry on prod), and a `?next=` query made it
+ * fall back to the Site URL. Same-site, so a cross-site callback cannot read it.
+ */
+export const OAUTH_NEXT_COOKIE = 'dm_oauth_next'
+
 /** Minimal shape of a Supabase user that the rules below read. */
 export interface OAuthUserLike {
   app_metadata?: {
@@ -60,10 +68,14 @@ export function sanitizeNext(next: string | null | undefined): string {
   return next
 }
 
-export function oauthCallbackUrl(origin: string, next: string | null | undefined): string {
-  const safe = sanitizeNext(next)
-  const base = `${origin}/auth/callback`
-  return safe === '/' ? base : `${base}?next=${encodeURIComponent(safe)}`
+/** The bare return URL — exactly what the allow-list holds. */
+export function oauthCallbackUrl(origin: string): string {
+  return `${origin}/auth/callback`
+}
+
+/** `document.cookie` string that stores a sanitized `next` for ten minutes. */
+export function oauthNextCookie(next: string | null | undefined): string {
+  return `${OAUTH_NEXT_COOKIE}=${encodeURIComponent(sanitizeNext(next))}; Path=/; Max-Age=600; SameSite=Lax`
 }
 
 export function setPasswordUrl(next: string | null | undefined): string {

@@ -164,8 +164,10 @@ additional_redirect_urls = [
   "https://127.0.0.1:3000",
   # Dev servers run on a per-worktree port; /auth/callback is the only app
   # route an OAuth or email link may land on (src/app/auth/callback/route.ts).
-  "http://localhost:*/auth/callback",
-  "http://127.0.0.1:*/auth/callback",
+  # `**` lets the email links keep their ?type=signup&next= query (an exact
+  # entry only matches the bare URL — Supabase then falls back to site_url).
+  "http://localhost:*/auth/callback**",
+  "http://127.0.0.1:*/auth/callback**",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

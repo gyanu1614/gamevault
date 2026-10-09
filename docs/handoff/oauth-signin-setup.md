@@ -65,6 +65,9 @@ Dev server for this chat: http://localhost:3025
 3. App env: nothing new. `NEXT_PUBLIC_APP_URL=http://localhost:3025` in this worktree's `.env.local` (I set that).
 4. Empty secrets are OK until you fill them: with `enabled = true` and a blank id the local GoTrue just refuses that provider with "provider not enabled".
 
+## Redirect allow-list gotcha (found 2026-10-09)
+Supabase matches `redirectTo` against the allow-list as a glob; an exact entry like `https://dropmarket.gg/auth/callback` does NOT match `…/auth/callback?next=/founding`, and Supabase then silently falls back to the Site URL. The OAuth buttons therefore return to the BARE callback URL and carry `next` in a 10-minute same-site cookie (`dm_oauth_next`), so the exact entries work as they are. The email links (`?type=signup&next=…`) still put `next` on the URL: to make them land on `next` instead of the homepage, change the prod entries to `https://dropmarket.gg/auth/callback**` (and the Vercel preview one the same way). That is a pre-existing gap, not introduced here.
+
 ## Rollout order (later, before deploy)
 1. C.1 + C.2 done in the dashboard (safe before deploy: nothing in the live app calls the providers yet).
 2. Merge + release. No `db push` needed unless the plan adds a migration.

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  OAUTH_NEXT_COOKIE,
   OAUTH_PROVIDERS,
   discordHandleFromUser,
+  oauthNextCookie,
   isPasswordGateExempt,
   needsPassword,
   oauthCallbackUrl,
@@ -66,15 +68,18 @@ describe('sanitizeNext', () => {
 })
 
 describe('urls', () => {
-  it('builds the callback URL and omits next for the homepage', () => {
-    expect(oauthCallbackUrl('http://localhost:3025', '/')).toBe('http://localhost:3025/auth/callback')
-    expect(oauthCallbackUrl('https://dropmarket.gg', '/account/orders?x=1')).toBe(
-      'https://dropmarket.gg/auth/callback?next=%2Faccount%2Forders%3Fx%3D1',
-    )
+  it('always returns to the bare callback URL (the exact allow-list entry), never with a query', () => {
+    expect(oauthCallbackUrl('http://localhost:3025')).toBe('http://localhost:3025/auth/callback')
+    expect(oauthCallbackUrl('https://dropmarket.gg')).toBe('https://dropmarket.gg/auth/callback')
   })
 
-  it('sanitizes next before putting it in the callback URL', () => {
-    expect(oauthCallbackUrl('https://dropmarket.gg', 'https://evil.com')).toBe('https://dropmarket.gg/auth/callback')
+  it('carries next in a short-lived, same-site cookie instead', () => {
+    const c = oauthNextCookie('/founding#src=banner')
+    expect(c.startsWith(`${OAUTH_NEXT_COOKIE}=${encodeURIComponent('/founding#src=banner')};`)).toBe(true)
+    expect(c).toContain('Path=/')
+    expect(c).toContain('Max-Age=600')
+    expect(c).toContain('SameSite=Lax')
+    expect(oauthNextCookie('https://evil.com')).toBe(`${OAUTH_NEXT_COOKIE}=${encodeURIComponent('/')}; Path=/; Max-Age=600; SameSite=Lax`)
   })
 
   it('builds the set-password URL with a sanitized next', () => {

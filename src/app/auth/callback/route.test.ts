@@ -54,10 +54,10 @@ const googleOnly: FakeUser = {
 }
 const emailUser: FakeUser = { id: 'u-email', email: 'buyer@x.y', app_metadata: { provider: 'email', providers: ['email'] }, identities: [] }
 
-async function hit(query: string) {
+async function hit(query: string, cookie?: string) {
   const { GET } = await import('./route')
-  const res = await GET(new Request(`http://localhost:3025/auth/callback${query}`))
-  return { status: res.status, location: res.headers.get('location') }
+  const res = await GET(new Request(`http://localhost:3025/auth/callback${query}`, cookie ? { headers: { cookie } } : undefined))
+  return { status: res.status, location: res.headers.get('location'), setCookie: res.headers.get('set-cookie') }
 }
 
 beforeEach(() => {
@@ -76,6 +76,19 @@ describe('/auth/callback — OAuth code exchange', () => {
     const r = await hit('?code=abc&next=%2Fadopt-me')
     expect(r.status).toBe(307)
     expect(r.location).toBe('http://localhost:3025/adopt-me')
+  })
+
+  it('reads next from the OAuth cookie (the return URL stays bare) and clears it', async () => {
+    state.user = googleOnly
+    const r = await hit('?code=abc', `dm_oauth_next=${encodeURIComponent('/founding#src=banner')}; other=1`)
+    expect(r.location).toBe('http://localhost:3025/founding#src=banner')
+    expect(r.setCookie).toMatch(/dm_oauth_next=;.*Max-Age=0/i)
+  })
+
+  it('a query next wins over the cookie, and the cookie is sanitized too', async () => {
+    state.user = emailUser
+    expect((await hit('?code=abc&next=%2Fadopt-me', 'dm_oauth_next=%2Ffounding')).location).toBe('http://localhost:3025/adopt-me')
+    expect((await hit('?code=abc', 'dm_oauth_next=https%3A%2F%2Fevil.com')).location).toBe('http://localhost:3025/')
   })
 
   it('lands an account that already has a password on next, unchanged', async () => {
