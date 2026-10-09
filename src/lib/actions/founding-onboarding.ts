@@ -337,6 +337,25 @@ export async function signFoundingAgreement(input: {
 
     revalidatePath('/founding')
     revalidatePath('/admin/active-sellers')
+    revalidatePath('/admin/all-sellers')
+    // The owner asked to hear about every new seller (2026-10-09): in-app + email.
+    try {
+      const { notifyAdmins } = await import('@/lib/utils/notifications')
+      const storeName = ob.store_name ?? data.shop_slug ?? 'a new store'
+      await notifyAdmins({
+        permission: 'sellers.view',
+        type: 'seller_signed_up',
+        title: `New seller: ${storeName}`,
+        message: `${user.email ?? 'A new seller'} finished signup${data.founding ? ' (Founding Seller)' : ''}.`,
+        link: `/admin/active-sellers/${user.id}`,
+        email: {
+          subject: `New seller on DropMarket: ${storeName}`,
+          body: `${storeName} just opened a store (${user.email ?? 'no email'}${data.founding ? ', Founding Seller' : ''}). Open the seller page: ${process.env.NEXT_PUBLIC_APP_URL ?? 'https://dropmarket.gg'}/admin/active-sellers/${user.id}`,
+        },
+      })
+    } catch (err) {
+      console.error('[founding] admin alert failed:', err)
+    }
     return { success: true, shopSlug: data.shop_slug ?? null }
   } catch (err: any) {
     console.error('[founding] signFoundingAgreement:', err?.message)

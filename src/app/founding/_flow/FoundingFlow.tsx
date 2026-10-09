@@ -122,7 +122,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
               <h1 className="text-heading text-text-primary sm:text-display">
                 Become a <span className="title-accent">Seller</span>
               </h1>
-              <p className="mt-3 text-body text-text-secondary sm:text-body-lg">Takes about 2 minutes. Then you start selling.</p>
+              <p className="mt-3 text-body text-text-secondary sm:text-body-lg">A short form about you and what you sell. Takes about 2 minutes, then your store is open.</p>
             </>
           )}
         </header>
