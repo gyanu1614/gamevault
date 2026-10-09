@@ -137,3 +137,17 @@ describe('parseArgs — --publish-only implies --send', () => {
     expect(() => parseArgs(['--publish-only'])).toThrow(/required/i)
   })
 })
+
+describe('buildBatchPlan — --no-publish (Eldorado crawl; the reprice publishes)', () => {
+  it('sends every batch without the publish step', () => {
+    const plan = buildBatchPlan(groups([['eldorado', listings(1_200)]]), { publish: false })
+    expect(plan.map((p) => p.batch.length)).toEqual([500, 500, 200])
+    expect(plan.every((p) => p.publish === false)).toBe(true)
+  })
+
+  it('parseArgs reads --no-publish (and --publish-only still wins)', () => {
+    expect(parseArgs(['feed.json', '--send', '--no-publish'])).toMatchObject({ send: true, publish: false })
+    expect(parseArgs(['feed.json', '--send'])).toMatchObject({ publish: true })
+    expect(parseArgs(['feed.json', '--publish-only', '--no-publish'])).toMatchObject({ publishOnly: true, publish: true })
+  })
+})

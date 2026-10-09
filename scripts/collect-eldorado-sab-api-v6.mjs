@@ -1804,7 +1804,8 @@ function runImporter(outputPath) {
   return new Promise((resolveImport, rejectImport) => {
     const child = spawn(
       process.execPath,
-      ["scripts/import-sab-market-json.mjs", outputPath, "--send"],
+      // --no-publish: the runner's reprice publishes (see the importer).
+      ["scripts/import-sab-market-json.mjs", outputPath, "--send", "--no-publish"],
       { cwd: process.cwd(), env: process.env, stdio: "inherit" },
     );
     child.once("error", rejectImport);

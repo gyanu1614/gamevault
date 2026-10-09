@@ -252,8 +252,13 @@ jobs:
 
   # ── Adopt Me: one Eldorado category crawl (~26 min, independent of pet count) ─
   adopt-me:
+    # After SAB, never alongside it: both load the same database, and Adopt
+    # Me's import + reprice overlapping SAB's import tail timed SAB out daily
+    # (2026-10-07/09). always(): SAB's outcome never blocks Adopt Me.
+    needs: sab
     if: >-
-      (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'adopt-me')
+      always()
+      && (github.event_name == 'schedule' || inputs.games == 'all' || inputs.games == 'adopt-me')
       && inputs.sab_publish_only_run_id == ''
     runs-on: ubuntu-latest
     timeout-minutes: 90
