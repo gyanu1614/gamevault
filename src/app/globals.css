@@ -1926,6 +1926,19 @@
 
 /* Checkout (owner, 2026-10-08): the same hero treatment, a step darker, so
    the payment form stays the loudest thing on the page. */
+/* /founding: a touch darker than hero-dim, weighted where the copy sits
+   (upper-left on desktop, top on phones) so the title and the store name
+   read on a bright screen too (owner, 2026-10-09). */
+.hero-dim-content > .hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 30% 30%, rgba(8, 9, 13, 0.42) 0%, rgba(8, 9, 13, 0.18) 55%, rgba(8, 9, 13, 0) 100%),
+    rgba(10, 10, 15, 0.26);
+  pointer-events: none;
+}
+
 .hero-dim-strong > .hero-backdrop::after {
   content: "";
   position: absolute;
