@@ -18,7 +18,7 @@
  * fetched only for the page being shown.
  */
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { requireAdmin } from './admin-permissions'
+import { requireRole } from './admin-permissions'
 import { deriveStage } from '@/lib/founding/onboarding'
 import {
   SELLERS_PAGE_SIZE,
@@ -40,7 +40,8 @@ function latestIso(...values: (string | null | undefined)[]): string | null {
 }
 
 export async function getAllSellers(filters: AllSellersFilters = {}): Promise<AllSellersResult> {
-  await requireAdmin()
+  // Emails, Discord handles and money for every signup: admins only.
+  await requireRole(['admin', 'super_admin'])
   const service = createServiceRoleClient() as any
 
   const [{ data: onboarding }, { data: sellers }] = await Promise.all([

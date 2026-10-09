@@ -354,11 +354,14 @@ export async function updateListing(
     // rejects this transition too (42501); refusing here gives a clear message.
     if (
       input.status === 'active' &&
-      ['rejected', 'changes_requested', 'pending_approval'].includes(listing.status)
+      ['rejected', 'changes_requested', 'pending_approval', 'suspended'].includes(listing.status)
     ) {
       return {
         success: false,
-        error: 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
+        error:
+          listing.status === 'suspended'
+            ? 'This listing was removed by moderation. Reply to the email we sent to appeal.'
+            : 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
       }
     }
 

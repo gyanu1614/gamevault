@@ -122,7 +122,7 @@ const RATE_LIMIT_SERVICE_ONLY = [
 const OPEN_SIGNUP_SERVICE_ONLY = [
   'open_seller_signup_version', 'seller_onboarding_complete', 'unverified_review_price_usd', 'founding_spot_cap',
   // Moderation tools (20261009020808)
-  'seller_strike_count', 'moderation_tools_version',
+  'seller_strike_count', 'seller_strike_issue', 'moderation_tools_version',
 ]
 
 async function dbP0Applied(): Promise<boolean> {

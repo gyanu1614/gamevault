@@ -9,7 +9,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 
-vi.mock('@/lib/actions/admin-permissions', () => ({ requireAdmin: async () => ({ id: 'test-admin', role: 'super_admin' }) }))
+vi.mock('@/lib/actions/admin-permissions', () => ({ requireAdmin: async () => ({ userId: 'test-admin', role: 'super_admin' }), requireRole: async () => ({ userId: 'test-admin', role: 'super_admin' }) }))
 vi.mock('@/lib/email', () => ({}))
 
 const { getAllSellers } = await import('./admin-all-sellers')

@@ -6,16 +6,19 @@
  *
  *   takedownListing   active → suspended with a reason; seller emailed;
  *                     strike (optional).
- *   restoreListing    suspended → active (the only way back; the listing
- *                     write guard blocks a plain update).
+ *   restoreListing    suspended → active (paused if the seller is
+ *                     restricted). The only way back: trg_listings_suspended_guard
+ *                     blocks every other status change off 'suspended'.
  *   removeListingImage  drops one URL from listings.images + the file;
  *                     a listing left with no image is taken down too.
  *   resetSellerAvatar  avatar → default robot, file deleted, picture
  *                     locked (profiles.avatar_locked_at); seller emailed.
- *   issueStrike / revokeStrike  seller_strikes rows; the 2nd active strike
- *                     restricts the store, the 3rd bans it (same path as
- *                     the manual Restrict / Ban, so listings pause and the
- *                     seller is told).
+ *   issueStrike / revokeStrike  one atomic RPC (seller_strike_issue): row +
+ *                     count + escalation. The 2nd active strike restricts,
+ *                     the 3rd bans — but ONLY when an admin issues it; a
+ *                     moderator's strike is recorded and admins are asked to
+ *                     decide the escalation (same rule as the Restrict / Ban
+ *                     buttons, which moderators do not have).
  *   listReports / resolveReport  buyer reports: Uphold = takedown + strike,
  *                     Dismiss = reopen the listing if it was auto-hidden.
  *
@@ -27,20 +30,23 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { requireRole, type AdminUser } from './admin-permissions'
 import { logAdminActivity } from '@/lib/admin/activity-log'
-import { createNotification } from '@/lib/utils/notifications'
+import { createNotification, notifyAdmins } from '@/lib/utils/notifications'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { sendImageRemovedEmail, sendListingTakenDownEmail, sendSellerStrikeEmail } from '@/lib/email'
-import { listingImagePathFromUrl, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
+import { isOwnedListingImagePath, listingImagePathFromUrl, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 
 type Result = { success: true } | { success: false; error: string }
 
 export type StrikeKind = 'listing_takedown' | 'image_removed' | 'avatar_reset' | 'report_upheld' | 'other'
 
 const MODERATORS = ['admin', 'super_admin', 'moderator'] as const
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function gate(): Promise<AdminUser> {
   return requireRole([...MODERATORS] as any)
 }
+
+const canEscalate = (admin: AdminUser) => admin.role === 'admin' || admin.role === 'super_admin'
 
 async function safeLog(params: Parameters<typeof logAdminActivity>[0]) {
   try {
@@ -79,19 +85,20 @@ export async function issueStrike(input: { sellerId: string; kind: StrikeKind; r
   const admin = await gate()
   const reason = input.reason.trim()
   if (reason.length < 3) return { success: false, error: 'Give a reason (at least 3 characters).' }
+  if (!UUID_RE.test(input.sellerId)) return { success: false, error: 'Bad seller id' }
   const service = createServiceRoleClient() as any
-  const { error } = await service.from('seller_strikes').insert({
-    seller_id: input.sellerId,
-    issued_by: admin.userId,
-    kind: input.kind,
-    reason,
-    listing_id: input.listingId ?? null,
+  const escalate = canEscalate(admin)
+  const { data, error } = await service.rpc('seller_strike_issue', {
+    p_seller: input.sellerId,
+    p_issued_by: admin.userId,
+    p_kind: input.kind,
+    p_reason: reason,
+    p_listing: input.listingId ?? null,
+    p_escalate: escalate,
   })
   if (error) return { success: false, error: error.message }
-  const { data: countData } = await service.rpc('seller_strike_count', { p_seller: input.sellerId })
-  const count = Number(countData ?? 0)
-
-  await escalate(service, admin, input.sellerId, count, reason)
+  const count = Number(data?.count ?? 0)
+  if (data?.escalated) await revalidate([], [input.sellerId])
 
   const seller = await sellerContact(service, input.sellerId)
   if (seller?.email) {
@@ -108,7 +115,21 @@ export async function issueStrike(input: { sellerId: string; kind: StrikeKind; r
     message: reason,
     link: '/account/restrictions',
   })
-  await safeLog({ action: 'seller.strike', actionCategory: 'seller', resourceType: 'seller', resourceId: input.sellerId, notes: reason, metadata: { kind: input.kind, count, listingId: input.listingId ?? null } })
+  // A moderator cannot restrict or ban: hand the decision to an admin.
+  if (!escalate && count >= 2) {
+    try {
+      await notifyAdmins({
+        permission: 'listings.moderate',
+        type: 'seller_strike_escalation',
+        title: `Seller at ${count} strikes needs a decision`,
+        message: `${displayName(seller)}: ${reason}`,
+        link: `/admin/active-sellers/${input.sellerId}`,
+      })
+    } catch {
+      /* best effort */
+    }
+  }
+  await safeLog({ action: 'seller.strike', actionCategory: 'seller', resourceType: 'seller', resourceId: input.sellerId, notes: reason, metadata: { kind: input.kind, count, listingId: input.listingId ?? null, escalated: Boolean(data?.escalated) } })
   return { success: true, count }
 }
 
@@ -130,33 +151,10 @@ export async function revokeStrike(strikeId: string): Promise<Result> {
   return { success: true }
 }
 
-/** 2 strikes → restricted, 3 → banned. Never downgrades a ban. */
-async function escalate(service: any, admin: AdminUser, sellerId: string, count: number, reason: string) {
-  if (count < 2) return
-  const seller = await sellerContact(service, sellerId)
-  if (!seller || seller.seller_status === 'banned') return
-  const status = count >= 3 ? 'banned' : 'restricted'
-  if (seller.seller_status === status) return
-  const now = new Date().toISOString()
-  const why = `${count >= 3 ? 'Third' : 'Second'} strike: ${reason}`
-  const { error } = await service
-    .from('profiles')
-    .update({ seller_status: status, seller_restriction_reason: why, seller_restricted_at: now, seller_restricted_by: admin.userId })
-    .eq('id', sellerId)
-  if (error) {
-    console.error('[ModerationTools] escalate failed:', error)
-    return
-  }
-  // Pause what is live, as the manual Restrict does.
-  await service.from('listings').update({ status: 'paused' }).eq('seller_id', sellerId).in('status', ['active', 'pending_approval'])
-  await service.from('seller_restrictions').insert({ seller_id: sellerId, restricted_by: admin.userId, restriction_type: status, reason: why, metadata: { source: 'strikes', count } })
-  await revalidate([], [sellerId])
-}
-
 /* ── Listings ───────────────────────────────────────────────────── */
 
 export async function takedownListing(input: { listingId: string; reason: string; strike?: boolean }): Promise<Result> {
-  const admin = await gate()
+  await gate()
   const reason = input.reason.trim()
   if (reason.length < 3) return { success: false, error: 'Give a reason (at least 3 characters).' }
   const supabase = await createClient()
@@ -164,8 +162,8 @@ export async function takedownListing(input: { listingId: string; reason: string
   const { data: listing } = await service.from('listings').select('id, title, seller_id, status').eq('id', input.listingId).maybeSingle()
   if (!listing) return { success: false, error: 'Listing not found' }
 
-  const { error } = await (supabase as any).rpc('takedown_listing', { listing_id: input.listingId, admin_id: admin.userId, reason })
-  if (error) return { success: false, error: error.message }
+  const { error } = await (supabase as any).rpc('takedown_listing', { listing_id: input.listingId, reason })
+  if (error) return { success: false, error: error.code === 'P0002' ? 'This listing is not live, so there is nothing to take down.' : error.message }
 
   const seller = await sellerContact(service, listing.seller_id)
   await createNotification({ userId: listing.seller_id, type: 'listing_taken_down', title: 'A listing was removed', message: `${listing.title}: ${reason}`, link: '/account/listings' })
@@ -186,15 +184,21 @@ export async function takedownListing(input: { listingId: string; reason: string
 }
 
 export async function restoreListing(listingId: string): Promise<Result> {
-  const admin = await gate()
+  await gate()
   const supabase = await createClient()
   const service = createServiceRoleClient() as any
   const { data: listing } = await service.from('listings').select('id, title, seller_id, status').eq('id', listingId).maybeSingle()
   if (!listing) return { success: false, error: 'Listing not found' }
   if (listing.status !== 'suspended') return { success: false, error: 'Only a taken-down listing can be restored.' }
-  const { error } = await (supabase as any).rpc('restore_listing', { listing_id: listingId, admin_id: admin.userId })
+  const { data: newStatus, error } = await (supabase as any).rpc('restore_listing', { listing_id: listingId })
   if (error) return { success: false, error: error.message }
-  await createNotification({ userId: listing.seller_id, type: 'listing_restored', title: 'A listing is back', message: `${listing.title} is live again.`, link: '/account/listings' })
+  await createNotification({
+    userId: listing.seller_id,
+    type: 'listing_restored',
+    title: 'A listing is back',
+    message: newStatus === 'paused' ? `${listing.title} was restored but stays paused while your store is restricted.` : `${listing.title} is live again.`,
+    link: '/account/listings',
+  })
   await safeLog({ action: 'listing.restore', actionCategory: 'moderation', resourceType: 'listing', resourceId: listingId, resourceName: listing.title })
   await revalidate([listingId], [listing.seller_id])
   revalidatePath(`/admin/active-sellers/${listing.seller_id}`)
@@ -214,8 +218,10 @@ export async function removeListingImage(input: { listingId: string; imageUrl: s
 
   const { error } = await service.from('listings').update({ images: remaining }).eq('id', input.listingId)
   if (error) return { success: false, error: error.message }
+  // Only a file inside THIS seller's folder is deleted: a URL pointing at
+  // another seller's file is dropped from the listing but left in storage.
   const path = listingImagePathFromUrl(input.imageUrl)
-  if (path) {
+  if (path && isOwnedListingImagePath(path, listing.seller_id)) {
     try {
       await service.storage.from(LISTING_IMAGE_BUCKET).remove([path])
     } catch (err) {
@@ -250,6 +256,7 @@ export async function resetSellerAvatar(input: { userId: string; reason: string;
   await gate()
   const reason = input.reason.trim()
   if (reason.length < 3) return { success: false, error: 'Give a reason (at least 3 characters).' }
+  if (!UUID_RE.test(input.userId)) return { success: false, error: 'Bad user id' }
   const service = createServiceRoleClient() as any
   const seller = await sellerContact(service, input.userId)
   if (!seller) return { success: false, error: 'User not found' }
@@ -261,7 +268,7 @@ export async function resetSellerAvatar(input: { userId: string; reason: string;
   if (error) return { success: false, error: error.message }
   try {
     const { data: files } = await service.storage.from('avatars').list(input.userId)
-    const names = (files ?? []).map((f: any) => `${input.userId}/${f.name}`)
+    const names = (files ?? []).map((f: any) => `${input.userId}/${f.name}`).filter((n: string) => isOwnedListingImagePath(n, input.userId))
     if (names.length) await service.storage.from('avatars').remove(names)
   } catch (err) {
     console.error('[ModerationTools] avatar delete failed:', err)
@@ -285,6 +292,7 @@ export async function resetSellerAvatar(input: { userId: string; reason: string;
 
 export async function unlockSellerAvatar(userId: string): Promise<Result> {
   await gate()
+  if (!UUID_RE.test(userId)) return { success: false, error: 'Bad user id' }
   const service = createServiceRoleClient() as any
   const { error } = await service.from('profiles').update({ avatar_locked_at: null }).eq('id', userId)
   if (error) return { success: false, error: error.message }
