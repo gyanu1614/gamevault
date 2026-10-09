@@ -677,6 +677,21 @@ export default function SellerDetailClient({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          <Section title="Signup" sub="What they told us on /founding: where they are, how to reach them, what they sell.">
+            {detail.onboarding ? (
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px] sm:grid-cols-3">
+                <div><dt className="text-text-tertiary">Country</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.country ?? '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Discord</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.discord ? `@${detail.onboarding.discord.replace(/^@/, '')}` : '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Came from</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.source ?? '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Started</dt><dd className="mt-0.5 font-medium text-text-primary">{new Date(detail.onboarding.started_at).toLocaleDateString('en-GB', { dateStyle: 'medium' })}</dd></div>
+                <div><dt className="text-text-tertiary">Finished</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.completed_at ? new Date(detail.onboarding.completed_at).toLocaleDateString('en-GB', { dateStyle: 'medium' }) : `Stuck at step ${detail.onboarding.current_step ?? '?'} of 4`}</dd></div>
+                <div className="col-span-2 sm:col-span-3"><dt className="text-text-tertiary">Sells</dt><dd className="mt-1 flex flex-wrap gap-1.5">{detail.onboarding.sells.length ? detail.onboarding.sells.map((g) => <span key={g} className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[12px] font-medium text-text-secondary">{g}</span>) : <span className="font-medium text-text-primary">—</span>}</dd></div>
+              </dl>
+            ) : (
+              <p className="text-[13px] text-text-tertiary">No open-signup record. This seller came through the older application flow.</p>
+            )}
+          </Section>
+
           <Section title="Seller Agreement" sub="Signed Seller Agency Agreement (open seller signup). Newest first.">
             {(detail.agreements ?? []).length === 0 ? (
               <p className="text-[13px] text-text-tertiary">

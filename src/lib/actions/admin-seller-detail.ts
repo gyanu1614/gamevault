@@ -190,6 +190,16 @@ export interface SellerDetail {
   agreements: SellerAgreementRow[]
   /** Original seller application, when the seller came through the flow. */
   application: { id: string; status: string; reviewed_at: string | null } | null
+  /** Open seller signup (/founding) answers; null for legacy sellers. */
+  onboarding: {
+    country: string | null
+    discord: string | null
+    sells: string[]
+    current_step: number | null
+    started_at: string
+    completed_at: string | null
+    source: string | null
+  } | null
 }
 
 const BALANCE_CURRENCIES = ['EUR', 'USD'] as const
@@ -418,7 +428,31 @@ export async function getSellerDetail(userId: string): Promise<{
       console.error('seller_agreements read failed:', err)
     }
 
+    // Open seller signup answers (country, Discord, games they sell).
+    let onboarding: SellerDetail['onboarding'] = null
+    try {
+      const { data: ob } = await (service as any)
+        .from('seller_onboarding')
+        .select('country, discord, sells, current_step, created_at, completed_at, source')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (ob) {
+        onboarding = {
+          country: ob.country ?? null,
+          discord: ob.discord ?? null,
+          sells: Array.isArray(ob.sells) ? ob.sells.map((x: any) => (typeof x === 'string' ? x : x?.name ?? x?.slug)).filter(Boolean) : [],
+          current_step: ob.current_step ?? null,
+          started_at: ob.created_at,
+          completed_at: ob.completed_at ?? null,
+          source: ob.source ?? null,
+        }
+      }
+    } catch (err) {
+      console.error('seller_onboarding read failed:', err)
+    }
+
     const detail: SellerDetail = {
+      onboarding,
       profile: {
         id: profile.id,
         username: profile.username ?? null,
