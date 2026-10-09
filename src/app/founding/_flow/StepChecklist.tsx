@@ -101,6 +101,9 @@ export function StepChecklist({
           const isDone = stage > step.id
           const isOpen = open === step.id && !finished
           const isUpcoming = !isDone && stage !== step.id
+          // Only the current step (and the done ones, collapsed, so they can
+          // be changed) — the progress bar above already names what is left.
+          if (isUpcoming) return null
           return (
             <li key={step.id} className="border-t border-white/[0.05]">
               <RowHeader
