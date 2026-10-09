@@ -458,6 +458,11 @@ export default function SellerDetailClient({
                   {shopName}
                 </h1>
                 <TierChip tier={profile.seller_tier} />
+                {profile.is_verified ? (
+                  <span className={cn(FLAG, 'bg-success-bg text-success')}>Verified</span>
+                ) : (
+                  <span className={cn(FLAG, 'bg-info-bg text-info')} title="Open signup: not identity-verified yet (no withdrawals until verified)">New Seller</span>
+                )}
                 {profile.kyc_status && (
                   <StatusBadge status={`KYC ${titleCase(profile.kyc_status)}`} tone={statusTone(profile.kyc_status)} />
                 )}
@@ -672,6 +677,35 @@ export default function SellerDetailClient({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          <Section title="Seller Agreement" sub="Signed Seller Agency Agreement (open seller signup). Newest first.">
+            {detail.agreements.length === 0 ? (
+              <p className="text-[13px] text-text-tertiary">
+                {detail.application ? 'Signed inside the original seller application (see Application below).' : 'No e-signature on file.'}
+              </p>
+            ) : (
+              <ul className={ROWS}>
+                {detail.agreements.map((a) => (
+                  <li key={a.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start">
+                    <div className="min-w-0 flex-1 text-[13px]">
+                      <p className="font-medium text-text-primary">
+                        {a.typed_name} <span className="text-text-tertiary">· {a.version}</span>
+                      </p>
+                      <p className="mt-0.5 text-text-secondary">{new Date(a.signed_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC</p>
+                      <p className="mt-0.5 truncate text-[12px] text-text-tertiary" title={a.user_agent ?? undefined}>
+                        IP {a.ip ?? '—'}{a.user_agent ? ` · ${a.user_agent.slice(0, 60)}${a.user_agent.length > 60 ? '…' : ''}` : ''}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-text-tertiary" title="SHA-256 of the agreement text as signed">{a.sha256.slice(0, 16)}…</p>
+                    </div>
+                    {a.signature_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.signature_url} alt={`Signature of ${a.typed_name}`} className="h-16 w-auto max-w-[220px] shrink-0 rounded-md bg-white object-contain p-1" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
           <Section title="Wallet & Payouts" sub="Balances, wallet activity and withdrawal requests.">
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {[

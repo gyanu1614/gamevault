@@ -24,6 +24,7 @@ import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import FoundingSellerBadge from '@/components/seller/FoundingSellerBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
 import { BANNER_MELT_RGB, StoreBannerArt } from '@/components/shop/StoreBannerArt'
 import { useAuth } from '@/hooks/use-auth'
@@ -128,6 +129,7 @@ export default function SellerProfileBanner({
                     <PopoverContent className="border-0">Verified by DropMarket</PopoverContent>
                   </Popover>
                 )}
+                {!isVerified && <NewSellerBadge className="text-[11.5px]" />}
                 {isFoundingSeller && <FoundingSellerBadge size="sm" />}
               </div>
 

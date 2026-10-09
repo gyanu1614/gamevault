@@ -1,13 +1,18 @@
 'use client'
 
 /**
- * BetaBanner — thin glassy amber announcement bar pinned to the very top
- * of the document (above the floating navbar, in normal flow so it scrolls
- * away naturally as the page moves down — classic Shopify/Vercel pattern).
+ * BetaBanner — the seller banner (growth point 5, 2026-10-08): a thin glassy
+ * bar pinned to the very top of the document (above the floating navbar, in
+ * normal flow so it scrolls away naturally as the page moves down).
  *
- * Left: "Beta" pill + status line. Right: an early-seller CTA that links to
- * the /early-seller waitlist form. Amber = "heads up, not an error" — sits
- * apart from the site's lime brand and its semantic red/green.
+ * Two variants, picked from the same `useAuth()` profile the navbar reads —
+ * no request, no redirect, no server round trip:
+ *   · everyone else (signed out, buyers): AMBER, "Sell Game Items for Real
+ *     Money" → /founding (list today, verify when you cash out);
+ *   · a seller (profiles.role === 'seller'): GREEN, "Your store is open.
+ *     Create your first listing and earn" → /sell/new.
+ * While auth is still resolving the amber variant shows (most visitors are
+ * not sellers), then it swaps without a layout change — same height.
  *
  * Hidden on admin/checkout/seller-application shells (those own their whole
  * canvas), matching LayoutWrapper's chrome rules.
@@ -16,15 +21,53 @@
 import Link from '@/components/navigation/AppLink'
 import { usePathname } from 'next/navigation'
 import { track } from '@vercel/analytics'
-import { IconRocket, IconArrowRight } from '@tabler/icons-react'
+import { IconRocket, IconArrowRight, IconBuildingStore } from '@tabler/icons-react'
 import { useEffect, useRef } from 'react'
 import { foundingHref } from '@/lib/seo/founding-href'
+import { useAuth } from '@/hooks/use-auth'
 
 const AMBER = '#F5C451'
+const GREEN = '#56B87F'
+
+type Variant = {
+  color: string
+  Icon: typeof IconRocket
+  lead: string
+  tail: string
+  cta: string
+  href: string
+  event: string
+  bg: string
+}
+
+const VISITOR: Variant = {
+  color: AMBER,
+  Icon: IconRocket,
+  lead: 'Sell Game Items for Real Money.',
+  tail: 'Start listing today, verify when you cash out.',
+  cta: 'Start Selling',
+  href: foundingHref('banner'),
+  event: 'seller_cta_click',
+  bg: 'bg-[#12100a]/90',
+}
+
+const SELLER: Variant = {
+  color: GREEN,
+  Icon: IconBuildingStore,
+  lead: 'Your store is open.',
+  tail: 'Create your first listing and earn.',
+  cta: 'Start Selling',
+  href: '/sell/new',
+  event: 'seller_first_listing_cta_click',
+  bg: 'bg-[#0b120e]/90',
+}
 
 export function BetaBanner() {
   const pathname = usePathname() || ''
   const ref = useRef<HTMLDivElement>(null)
+  const { profile } = useAuth()
+  const v = profile?.role === 'seller' ? SELLER : VISITOR
+  const { Icon } = v
 
   // Publish how much of the banner is still on-screen as a CSS var the
   // fixed navbar reads, so the floating navbar rides just below the banner
@@ -71,7 +114,9 @@ export function BetaBanner() {
     pathname.startsWith('/dev/sell-wizard-preview') ||
     (pathname.startsWith('/account') && !isOrderDetail) ||
     (pathname.startsWith('/seller') && !pathname.includes('/new') && !pathname.includes('/edit')) ||
-    pathname.startsWith('/kyc/complete')
+    pathname.startsWith('/kyc/complete') ||
+    // The signup flow itself owns its canvas (chrome-less).
+    pathname.startsWith('/founding')
 
   if (hidden) return null
 
@@ -79,52 +124,41 @@ export function BetaBanner() {
     <div
       ref={ref}
       role="region"
-      aria-label="Beta announcement"
-      className="relative z-[60] w-full border-b border-white/[0.07] bg-[#12100a]/90 backdrop-blur-xl backdrop-saturate-150"
+      aria-label="Sell on DropMarket"
+      className={`relative z-[60] w-full border-b border-white/[0.07] ${v.bg} backdrop-blur-xl backdrop-saturate-150 transition-colors duration-300`}
     >
-      {/* Thin amber accent rail along the top edge — the "chosen" detail
-          instead of a full amber wash. */}
+      {/* Thin accent rail along the top edge — the "chosen" detail instead
+          of a full colour wash. */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(to right, transparent, ${AMBER}66, transparent)` }}
+        style={{ background: `linear-gradient(to right, transparent, ${v.color}66, transparent)` }}
       />
 
       <div className="relative mx-auto flex min-h-[42px] max-w-[1400px] items-center justify-between gap-4 px-4 py-2 sm:px-6">
         {/* Left — status. Squared glyph badge (not a pill) + label + copy. */}
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <span
-            className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] border border-[#F5C451]/25 bg-[#F5C451]/10"
-            style={{ color: AMBER }}
+            className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] border"
+            style={{ color: v.color, borderColor: `${v.color}40`, backgroundColor: `${v.color}1A` }}
           >
-            <IconRocket className="h-[15px] w-[15px]" stroke={2} />
+            <Icon className="h-[15px] w-[15px]" stroke={2} />
           </span>
           <p className="truncate text-[12.5px] leading-tight text-text-secondary sm:text-[13px]">
-            <span
-              className="font-bold uppercase tracking-[0.08em]"
-              style={{ color: AMBER }}
-            >
-              Beta
-            </span>
-            <span aria-hidden className="mx-2 text-white/20">·</span>
-            <span className="font-semibold text-white">
-              Sell on DropMarket — keep more of every sale
-            </span>
-            <span className="hidden text-text-tertiary md:inline">
-              {' '}as a founding partner.
-            </span>
+            <span className="font-semibold text-white">{v.lead}</span>
+            <span className="hidden text-text-tertiary sm:inline"> {v.tail}</span>
           </p>
         </div>
 
         {/* Right — CTA. Rectangular soft-corner button, not a pill. Verb +
             scarcity beats the vague role-ask; ?src tags the funnel source. */}
         <Link
-          href={foundingHref('banner')}
-          onClick={() => track('seller_cta_click', { source: 'banner' })}
-          className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-[#F5C451]/35 bg-[#F5C451]/[0.08] px-3 py-[7px] text-[12px] font-semibold text-[#F5C451] transition-colors hover:border-[#F5C451]/55 hover:bg-[#F5C451]/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5C451]/50 sm:text-[12.5px]"
+          href={v.href}
+          onClick={() => track(v.event, { source: 'banner' })}
+          className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border px-3 py-[7px] text-[12px] font-semibold transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:text-[12.5px]"
+          style={{ color: v.color, borderColor: `${v.color}59`, backgroundColor: `${v.color}14` }}
         >
-          <span className="hidden sm:inline">Start Earning</span>
-          <span className="sm:hidden">Start Earning</span>
+          <span>{v.cta}</span>
           <IconArrowRight className="h-[15px] w-[15px] transition-transform group-hover:translate-x-0.5" stroke={2.2} />
         </Link>
       </div>

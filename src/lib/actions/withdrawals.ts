@@ -106,7 +106,7 @@ export async function getWithdrawalMethods(): Promise<{
 export interface WithdrawalQuote {
   ok: boolean
   refusal:
-    | 'method_unavailable' | 'not_a_seller' | 'account_age' | 'payout_details_freeze' | 'negative_balance' | 'open_withdrawal'
+    | 'method_unavailable' | 'kyc_required' | 'not_a_seller' | 'account_age' | 'payout_details_freeze' | 'negative_balance' | 'open_withdrawal'
     | 'payout_details_missing' | 'below_minimum' | 'above_maximum' | 'insufficient_available' | 'fee_exceeds_amount'
     | null
   message: string | null

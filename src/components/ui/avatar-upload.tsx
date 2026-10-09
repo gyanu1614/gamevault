@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { Upload, X, User } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { createAvatar } from '@dicebear/core'
-import { avataaars } from '@dicebear/collection'
+import { bottts } from '@dicebear/collection'
 
 interface AvatarUploadProps {
   onChange?: (file: File | null) => void
@@ -24,7 +24,7 @@ export const AvatarUpload = ({ onChange, username, defaultAvatar, size = 'md' }:
   // Generate random avatar using DiceBear
   const getRandomAvatar = () => {
     if (!username) return null
-    const avatar = createAvatar(avataaars, {
+    const avatar = createAvatar(bottts, {
       seed: username,
       size: 128,
     })

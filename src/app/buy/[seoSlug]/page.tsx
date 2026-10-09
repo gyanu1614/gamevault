@@ -246,7 +246,7 @@ export default async function SEOLandingPage({
                 </Link>
               )}
               <Link
-                href="/account/become-seller"
+                href="/founding#src=buy-landing"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
               >
                 Sell Instead
@@ -432,7 +432,7 @@ export default async function SEOLandingPage({
                   </Link>
                 )}
                 <Link
-                  href="/account/become-seller"
+                  href="/founding#src=buy-landing"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10] text-sm font-medium text-foreground transition-all duration-200"
                 >
                   Become a Seller

@@ -7,7 +7,8 @@
  *                           `hideTier` when the surface shows it elsewhere)
  *   full (listing page, shop, checkout, order page):
  *                           100% Positive · 12 Reviews · 34 Sold · 🏅 Gold
- *   no sales yet (both):    Verified Seller
+ *   no sales yet (both):    Verified Seller — or New Seller when unverified
+ *                           (open signup; `verified` = profiles.is_verified)
  *
  * Text size comes from `className` so it sits in each surface's scale.
  */
@@ -34,10 +35,10 @@ export function SellerStats({ variant = 'compact', hideTier = false, className, 
   const line = sellerStatLine(input)
   const label = sellerStatText(input)
 
-  if (line.kind === 'verified') {
+  if (line.kind === 'verified' || line.kind === 'new') {
     return (
-      <span className={cn('inline-flex items-center whitespace-nowrap font-semibold text-text-secondary', className)}>
-        Verified Seller
+      <span className={cn('inline-flex items-center whitespace-nowrap font-semibold', line.kind === 'new' ? 'text-text-tertiary' : 'text-text-secondary', className)}>
+        {line.kind === 'new' ? 'New Seller' : 'Verified Seller'}
       </span>
     )
   }

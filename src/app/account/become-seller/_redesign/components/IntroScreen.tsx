@@ -38,7 +38,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
         style={{ backgroundColor: PALETTE.forest3 }}
       >
         <Image
-          src="/assets/heroes/sell.avif"
+          src="/assets/heroes/founding.avif"
           alt=""
           fill
           priority
@@ -164,7 +164,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
             >
               <div className="relative aspect-video w-full">
                 <Image
-                  src="/assets/heroes/sell.avif"
+                  src="/assets/heroes/founding.avif"
                   alt=""
                   fill
                   sizes="(max-width: 640px) 100vw, 320px"

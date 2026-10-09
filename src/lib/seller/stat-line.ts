@@ -1,8 +1,9 @@
 /**
  * What a buyer-facing surface says about a seller (owner, 2026-09-29).
  *
- *   · no sales yet → "Verified Seller". There is no "New Seller": every
- *     seller passed KYC before listing.
+ *   · no sales yet → "Verified Seller" — or "New Seller" when the seller has
+ *     not verified their identity yet (open seller signup, 2026-10-08: sellers
+ *     list first and verify at their first withdrawal; profiles.is_verified).
  *   · otherwise → positive rating with its review count (from the first
  *     review; never a made-up score), total sold, and the tier by name
  *     ("Gold"; tier logos come later).
@@ -19,10 +20,13 @@ export interface SellerStatInput {
   reviews: number | null | undefined
   sales: number | null | undefined
   tier?: string | null
+  /** profiles.is_verified. Omitted = verified (older callers). */
+  verified?: boolean | null
 }
 
 export type SellerStatLine =
   | { kind: 'verified' }
+  | { kind: 'new' }
   | {
       kind: 'stats'
       /** Present only when there is at least one review. */
@@ -42,7 +46,7 @@ export function fmtPercent(p: number): string {
 export function sellerStatLine(s: SellerStatInput): SellerStatLine {
   const sales = n(s.sales)
   const reviews = n(s.reviews)
-  if (sales === 0 && reviews === 0) return { kind: 'verified' }
+  if (sales === 0 && reviews === 0) return s.verified === false ? { kind: 'new' } : { kind: 'verified' }
   const tier = tierByKey(s.tier)
   return {
     kind: 'stats',
@@ -57,6 +61,7 @@ export function sellerStatLine(s: SellerStatInput): SellerStatLine {
 export function sellerStatText(s: SellerStatInput): string {
   const line = sellerStatLine(s)
   if (line.kind === 'verified') return 'Verified Seller'
+  if (line.kind === 'new') return 'New Seller'
   return [
     line.rating ? `${line.rating.percent}% Positive` : null,
     line.rating ? `${line.rating.reviews.toLocaleString('en-US')} ${line.rating.reviews === 1 ? 'Review' : 'Reviews'}` : null,

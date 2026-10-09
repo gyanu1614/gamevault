@@ -126,8 +126,8 @@ export async function middleware(request: NextRequest) {
 
         if (isSellSurface && !(kind === 'seller' || kind === 'admin' || kind === 'applicant')) {
           // Buyers and accounts with no application in the pipeline start
-          // at the seller application, not inside the wizard.
-          return NextResponse.redirect(new URL('/account/become-seller', request.url))
+          // at the open seller signup (/founding), not inside the wizard.
+          return NextResponse.redirect(new URL('/founding', request.url))
         }
       }
 

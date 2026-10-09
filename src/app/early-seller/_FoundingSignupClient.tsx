@@ -171,7 +171,7 @@ export default function FoundingSignupClient({
         className="relative flex w-full flex-col overflow-hidden px-8 pb-10 pt-16 lg:w-[38%] lg:px-12 lg:pb-12 lg:pt-16"
         style={{ backgroundColor: C.forest3 }}
       >
-        <Image src="/assets/heroes/sell.avif" alt="Game seller hero art" aria-hidden fill priority sizes="38vw" className="object-cover" />
+        <Image src="/assets/heroes/founding.avif" alt="Game seller hero art" aria-hidden fill priority sizes="38vw" className="object-cover" />
         <div
           aria-hidden
           className="absolute inset-0"
