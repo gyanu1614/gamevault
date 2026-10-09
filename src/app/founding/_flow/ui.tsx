@@ -10,9 +10,17 @@ import * as React from 'react'
 import { CircleNotch } from '@phosphor-icons/react/dist/ssr/CircleNotch'
 import { cn } from '@/lib/utils'
 
+/**
+ * Founding surfaces (owner, 2026-10-09): no outer lines at rest. A card is a
+ * glass pane over the hero art; a hairline appears on hover / focus-within.
+ */
+export const GLASS_CARD =
+  'rounded-xl border border-transparent bg-[rgba(22,23,27,0.72)] backdrop-blur-xl backdrop-saturate-150 transition-[border-color,background-color] duration-300 hover:border-white/[0.08] focus-within:border-white/[0.1]'
+
+/** Inputs: a soft fill, no border until you hover or focus. */
 export const INPUT_CLS =
-  'h-11 w-full rounded-md border border-border-default bg-bg-overlay px-3.5 text-[16px] text-text-primary placeholder:text-text-tertiary transition-colors ' +
-  'hover:border-border-strong focus:border-focus-border focus:outline-none focus:ring-2 focus:ring-focus-soft sm:h-10 sm:text-body-sm ' +
+  'h-12 w-full rounded-lg border border-transparent bg-white/[0.05] px-4 text-[16px] text-text-primary placeholder:text-text-tertiary transition-[border-color,background-color] ' +
+  'hover:border-white/[0.1] hover:bg-white/[0.06] focus:border-white/25 focus:bg-white/[0.07] focus:outline-none sm:h-11 sm:text-body-sm ' +
   'disabled:cursor-not-allowed disabled:opacity-60'
 
 export function Field({
@@ -34,7 +42,7 @@ export function Field({
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
         <label htmlFor={htmlFor} className="text-body-sm font-medium text-text-primary">
           {label}
         </label>
@@ -86,7 +94,7 @@ export function PrimaryButton({
       {...rest}
       disabled={rest.disabled || busy}
       className={cn(
-        'inline-flex h-11 min-w-[160px] items-center justify-center gap-2 rounded-md bg-white px-5 text-body-sm font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-10',
+        'inline-flex h-12 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-white px-5 text-body-sm font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-11',
         className,
       )}
     >
@@ -102,7 +110,7 @@ export function GhostButton({ children, className, ...rest }: React.ButtonHTMLAt
       type="button"
       {...rest}
       className={cn(
-        'inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-body-sm font-medium text-text-secondary transition-colors hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 sm:h-10',
+        'inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-white/[0.1] px-4 text-body-sm font-medium text-text-secondary transition-colors hover:border-white/20 hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 sm:h-11',
         className,
       )}
     >
@@ -114,7 +122,7 @@ export function GhostButton({ children, className, ...rest }: React.ButtonHTMLAt
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null
   return (
-    <p role="alert" className="rounded-md bg-error-bg px-3 py-2.5 text-body-sm text-text-primary">
+    <p role="alert" className="rounded-lg bg-error-bg px-3.5 py-3 text-body-sm text-text-primary">
       {message}
     </p>
   )
@@ -131,9 +139,9 @@ export function StepActions({
   children: React.ReactNode
 }) {
   return (
-    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>{onBack && <GhostButton onClick={onBack} className="w-full sm:w-auto">{backLabel}</GhostButton>}</div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">{children}</div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">{children}</div>
     </div>
   )
 }

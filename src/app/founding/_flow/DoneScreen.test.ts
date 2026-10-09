@@ -18,7 +18,7 @@ vi.mock('framer-motion', () => ({ useReducedMotion: () => true }))
 
 describe('DoneScreen', () => {
   const html = renderToStaticMarkup(
-    createElement(DoneScreen, { shopName: 'GGTrading', shopSlug: 'ggtrading', logoUrl: null, isFounding: true }),
+    createElement(DoneScreen, { shopName: 'GGTrading', shopSlug: 'ggtrading', logoUrl: null, isFounding: true, isVerified: false, tier: 'bronze' }),
   )
 
   it('never tells a new seller to go verify', () => {

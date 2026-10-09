@@ -19,7 +19,6 @@ import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard, Ghos
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { safeSession } from '@/lib/safe-storage'
 import { createClient } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STORAGE_KEY = 'dm.founding.confirm'
@@ -175,8 +174,8 @@ export function StepAccount({
       title={mode === 'signup' ? 'Sign Up' : 'Log In'}
       lead={mode === 'signup' ? 'Email and a password. Your store name comes in step 3.' : 'Welcome back. Log in to pick up where you left off.'}
     >
-      <OAuthButtons next="/founding" tone="dark" dividerLabel="or use your email" className="mb-5" />
-      <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <OAuthButtons next="/founding" tone="dark" dividerLabel="or use your email" className="mb-6" />
+      <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
         <Field label="Email" htmlFor="f-email">
           <input id="f-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT_CLS} placeholder="you@example.com" />
         </Field>
@@ -185,17 +184,13 @@ export function StepAccount({
         </Field>
         <FormError message={error} />
         <StepActions>
-          <p className="text-body-sm text-text-tertiary">
-            {mode === 'signup' ? 'Already have an account?' : 'New here?'}{' '}
-            <button
-              type="button"
-              onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(null) }}
-              className={cn('font-medium text-text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring')}
-            >
-              {mode === 'signup' ? 'Log In' : 'Sign Up'}
-            </button>
-          </p>
-          <PrimaryButton busy={busy}>{mode === 'signup' ? 'Create Account' : 'Log In'}</PrimaryButton>
+          <GhostButton
+            onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(null) }}
+            className="w-full sm:w-auto"
+          >
+            {mode === 'signup' ? 'I Already Have an Account' : 'Create a New Account'}
+          </GhostButton>
+          <PrimaryButton busy={busy} className="w-full sm:w-auto">{mode === 'signup' ? 'Create Account' : 'Log In'}</PrimaryButton>
         </StepActions>
       </form>
     </StepCard>

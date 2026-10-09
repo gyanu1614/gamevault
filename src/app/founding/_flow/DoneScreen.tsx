@@ -16,6 +16,9 @@ import { ShieldCheck } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
 import { X } from '@phosphor-icons/react/dist/ssr/X'
 import { getAvatarUrl } from '@/lib/utils/avatar'
+import SellerTierBadge from '@/components/seller/tiers/SellerTierBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
+import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 
 const WHY_STAY = [
   { Icon: PlusCircle, tile: 'bg-lime-tint-bg text-lime-text', text: 'Create a listing. It takes about two minutes and buyers see it as soon as it is live.' },
@@ -40,7 +43,7 @@ const DONTS = [
 /** The house rules, two short columns on wide screens and stacked on a phone. */
 function HouseRules() {
   return (
-    <div className="mt-5 border-t border-white/[0.07] pt-5">
+    <div className="mt-6 border-t border-white/[0.05] pt-6">
       <h3 className="text-body-sm font-semibold text-text-primary">House Rules</h3>
       <p className="mt-0.5 text-caption text-text-tertiary">Keep to these and your store stays in good standing.</p>
       <div className="mt-3 grid gap-x-8 sm:grid-cols-2">
@@ -82,11 +85,15 @@ export function DoneScreen({
   shopSlug,
   logoUrl,
   isFounding,
+  isVerified,
+  tier,
 }: {
   shopName: string | null
   shopSlug: string | null
   logoUrl: string | null
   isFounding: boolean
+  isVerified: boolean
+  tier: string | null
 }) {
   const reduce = useReducedMotion()
   const name = shopName ?? 'Your store'
@@ -95,19 +102,26 @@ export function DoneScreen({
     <section aria-labelledby="founding-done-title">
       <div className="flex items-center gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element -- the seller's own logo / generated robot */}
-        <img src={getAvatarUrl(logoUrl, name)} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded-full bg-bg-overlay object-cover" />
+        <img src={getAvatarUrl(logoUrl, name)} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-full bg-bg-overlay object-cover ring-2 ring-white/[0.08]" />
         <div className="min-w-0">
-          <h2 id="founding-done-title" className="text-subheading text-text-primary">You&apos;re a Seller at DropMarket</h2>
-          <p className="mt-0.5 truncate text-body-sm text-text-secondary">
-            Store <span className="font-semibold text-text-primary">{name}</span> is open.
-            {isFounding && <> <span className="font-semibold text-lime-text">Founding Seller</span>, half-price fees for year one.</>}
+          <p className="text-caption font-medium uppercase tracking-wide text-text-tertiary">You&apos;re a Seller at DropMarket</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h2 id="founding-done-title" className="truncate text-heading leading-none text-lime-text">{name}</h2>
+            <span className="inline-flex items-center gap-1.5" aria-label={`${tier ?? 'bronze'} tier, ${isVerified ? 'verified' : 'new seller'}`}>
+              <SellerTierBadge tier={tier ?? 'bronze'} size={24} float={false} />
+              {isVerified ? <VerifiedBadge size={18} /> : <NewSellerBadge size={18} />}
+            </span>
+          </div>
+          <p className="mt-1.5 text-body-sm text-text-secondary">
+            Your store is open.
+            {isFounding && <> <span className="font-semibold text-text-primary">Founding Seller</span>, half-price fees for year one.</>}
           </p>
         </div>
       </div>
 
-      <ul className="mt-5">
+      <ul className="mt-6">
         {WHY_STAY.map(({ Icon, tile, text }, i) => (
-          <li key={text} className={`flex items-center gap-3.5 py-3 text-body-sm text-text-secondary ${i > 0 ? 'border-t border-white/[0.07]' : ''}`}>
+          <li key={text} className={`flex items-center gap-3.5 py-3.5 text-body-sm text-text-secondary ${i > 0 ? 'border-t border-white/[0.05]' : ''}`}>
             <span aria-hidden className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${tile}`}>
               <Icon weight="duotone" className="h-5 w-5" />
             </span>

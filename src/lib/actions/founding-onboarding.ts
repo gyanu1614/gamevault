@@ -53,6 +53,8 @@ export interface FoundingFlowState {
   /** profiles.role === 'seller' — the flow is finished. */
   isSeller: boolean
   isVerified: boolean
+  /** profiles.seller_tier (bronze for a fresh open-signup seller); null before completion. */
+  tier: string | null
   /** profiles.founding_seller — the half-price fee programme. */
   isFounding: boolean
   shopSlug: string | null
@@ -114,7 +116,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
 
   if (!user) {
     return {
-      signedIn: false, user: null, isSeller: false, isVerified: false, isFounding: false, shopSlug: null, shopName: null,
+      signedIn: false, user: null, isSeller: false, isVerified: false, tier: null, isFounding: false, shopSlug: null, shopName: null,
       details: null, store: null, agreement: null, agreementVersion: version, stage: 1, progress: await progressP,
       discordHandle: null,
     }
@@ -122,7 +124,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
 
   const s = svc()
   const [{ data: profile }, { data: ob }, { data: ag }] = await Promise.all([
-    s.from('profiles').select('id, email, full_name, username, avatar_url, role, is_verified, founding_seller, shop_slug, shop_name').eq('id', user.id).maybeSingle(),
+    s.from('profiles').select('id, email, full_name, username, avatar_url, role, is_verified, founding_seller, shop_slug, shop_name, seller_tier').eq('id', user.id).maybeSingle(),
     s.from('seller_onboarding').select('country, sells, discord, is_adult_confirmed_at, store_name, logo_uploaded_at, completed_at').eq('user_id', user.id).maybeSingle(),
     s.from('seller_agreements').select('signed_at, agreement_version').eq('user_id', user.id).eq('agreement_version', version).order('signed_at', { ascending: false }).limit(1).maybeSingle(),
   ])
@@ -151,6 +153,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
     },
     isSeller,
     isVerified: profile?.is_verified === true,
+    tier: profile?.seller_tier ?? null,
     isFounding: profile?.founding_seller === true,
     shopSlug: profile?.shop_slug ?? null,
     shopName: profile?.shop_name ?? null,
