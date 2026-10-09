@@ -85,17 +85,16 @@ describe('urls', () => {
 })
 
 describe('isPasswordGateExempt', () => {
-  it('exempts the set-password screen, the callback and the founding flow (step 1 hosts the panel)', () => {
+  it('exempts only the auth routes (the fallback page mounts its own modal)', () => {
     expect(isPasswordGateExempt('/auth/set-password')).toBe(true)
     expect(isPasswordGateExempt('/auth/callback')).toBe(true)
-    expect(isPasswordGateExempt('/founding')).toBe(true)
-    expect(isPasswordGateExempt('/founding/anything')).toBe(true)
   })
 
-  it('gates everything else', () => {
+  it('gates everything else, the founding flow included (the modal opens over it)', () => {
     expect(isPasswordGateExempt('/')).toBe(false)
     expect(isPasswordGateExempt('/account')).toBe(false)
-    expect(isPasswordGateExempt('/foundings')).toBe(false)
+    expect(isPasswordGateExempt('/founding')).toBe(false)
+    expect(isPasswordGateExempt('/authors')).toBe(false)
   })
 })
 

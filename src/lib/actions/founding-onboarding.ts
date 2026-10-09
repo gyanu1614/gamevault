@@ -28,6 +28,7 @@ import { rateLimitAction } from '@/lib/security/rate-limit'
 import { getLegalDoc, LEGAL_ENTITY } from '@/lib/legal/documents'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
 import { uploadProfileAvatar } from '@/lib/actions/auth'
+import { lookupDiscordHandle } from '@/lib/auth/discord-handle'
 import type { FoundingProgress } from '@/lib/config/founding-seller'
 import { slugify } from '@/lib/utils'
 import {
@@ -68,6 +69,8 @@ export interface FoundingFlowState {
   agreementVersion: string
   stage: FoundingStage
   progress: FoundingProgress | null
+  /** Discord username from the auth identity, for the step-2 prefill when nothing is saved yet. */
+  discordHandle: string | null
 }
 
 async function sessionUser() {
@@ -113,6 +116,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
     return {
       signedIn: false, user: null, isSeller: false, isVerified: false, isFounding: false, shopSlug: null, shopName: null,
       details: null, store: null, agreement: null, agreementVersion: version, stage: 1, progress: await progressP,
+      discordHandle: null,
     }
   }
 
@@ -134,6 +138,8 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
     : null
   const detailsDone = Boolean(details && details.country && details.isAdult && details.sells.length > 0)
   const storeDone = Boolean(ob?.store_name)
+  // Only worth a lookup while step 2 has nothing saved (one auth round trip).
+  const discordHandle = ob?.discord ? null : await lookupDiscordHandle(user.id)
 
   return {
     signedIn: true,
@@ -154,6 +160,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
     agreementVersion: version,
     stage: deriveStage({ signedIn: true, isSeller, details: detailsDone, store: storeDone, agreement: Boolean(ag) }),
     progress: await progressP,
+    discordHandle,
   }
 }
 

@@ -1,8 +1,8 @@
 /**
- * /auth/callback — OAuth return. A new Google/Discord account must be sent to
- * the Set Your Password screen; an account that already has a password lands
- * on `next` as before; a new OAuth account never keeps its email local-part
- * as its public username.
+ * /auth/callback — OAuth return. Every account lands on `next` (the Set Your
+ * Password modal opens there on its own; the middleware covers protected
+ * routes); a new OAuth account never keeps its email local-part as its
+ * public username or the provider photo as its avatar.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -71,11 +71,11 @@ beforeEach(() => {
 })
 
 describe('/auth/callback — OAuth code exchange', () => {
-  it('sends a password-less Google account to Set Your Password, carrying next', async () => {
+  it('lands a password-less Google account on next (the modal opens there)', async () => {
     state.user = googleOnly
-    const r = await hit('?code=abc&next=%2Faccount%2Forders')
+    const r = await hit('?code=abc&next=%2Fadopt-me')
     expect(r.status).toBe(307)
-    expect(r.location).toBe('http://localhost:3025/auth/set-password?next=%2Faccount%2Forders')
+    expect(r.location).toBe('http://localhost:3025/adopt-me')
   })
 
   it('lands an account that already has a password on next, unchanged', async () => {
@@ -84,16 +84,10 @@ describe('/auth/callback — OAuth code exchange', () => {
     expect(r.location).toBe('http://localhost:3025/account/orders')
   })
 
-  it('lets /founding host the password panel itself', async () => {
-    state.user = googleOnly
-    const r = await hit('?code=abc&next=%2Ffounding')
-    expect(r.location).toBe('http://localhost:3025/founding')
-  })
-
-  it('never follows an off-site next, even on the set-password hop', async () => {
+  it('never follows an off-site next', async () => {
     state.user = googleOnly
     const r = await hit('?code=abc&next=https%3A%2F%2Fevil.com')
-    expect(r.location).toBe('http://localhost:3025/auth/set-password')
+    expect(r.location).toBe('http://localhost:3025/')
   })
 
   it('gives a new OAuth account a gamer tag and the site avatar instead of the email handle and provider photo', async () => {

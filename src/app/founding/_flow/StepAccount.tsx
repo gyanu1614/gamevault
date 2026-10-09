@@ -2,15 +2,20 @@
 
 /**
  * Step 1 — sign up or log in. Signed in → a tick and Continue. Signed out →
- * email + password with a Log In / Sign Up switch, reusing the auth actions
- * (no new signup system). An email-confirmation wait survives a refresh via
- * safeSession (lib/safe-storage); the confirmation link lands back on /founding.
+ * Google / Discord buttons, then email + password with a Log In / Sign Up
+ * switch, reusing the auth actions (no new signup system). An
+ * email-confirmation wait survives a refresh via safeSession
+ * (lib/safe-storage); the confirmation link lands back on /founding, and so
+ * does the OAuth round trip (`next=/founding`); a Google/Discord account that
+ * has no password yet gets the site-wide Set Your Password modal over this
+ * page (PasswordGate) before it can continue.
  */
 import { useEffect, useState } from 'react'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
 import { EnvelopeSimple } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple'
 import { login, signup, resendConfirmationEmail, checkEmailAvailability, generateUniqueGamerTag, logout } from '@/lib/actions/auth'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard, GhostButton } from './ui'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { safeSession } from '@/lib/safe-storage'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -164,6 +169,7 @@ export function StepAccount({
       title={mode === 'signup' ? 'Sign Up' : 'Log In'}
       lead={mode === 'signup' ? 'Email and a password. Your store name comes in step 3.' : 'Welcome back. Log in to pick up where you left off.'}
     >
+      <OAuthButtons next="/founding" tone="dark" dividerLabel="or use your email" className="mb-5" />
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <Field label="Email" htmlFor="f-email">
           <input id="f-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT_CLS} placeholder="you@example.com" />

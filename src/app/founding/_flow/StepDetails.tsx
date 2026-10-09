@@ -23,12 +23,15 @@ export function StepDetails({
   games,
   categories,
   initial,
+  discordHint,
   onBack,
   onSaved,
 }: {
   games: Game[]
   categories: GameCategoryOptions[]
   initial: { country: string | null; sells: SellsEntry[]; discord: string | null; isAdult: boolean } | null
+  /** Discord username from a Discord sign-in; used only while nothing is saved. */
+  discordHint?: string | null
   onBack: () => void
   onSaved: () => Promise<void>
 }) {
@@ -43,7 +46,7 @@ export function StepDetails({
   const [cats, setCats] = useState<Record<string, SellerCategorySection[]>>(
     () => Object.fromEntries((initial?.sells ?? []).map((s) => [s.game, s.categories as SellerCategorySection[]])),
   )
-  const [discord, setDiscord] = useState(initial?.discord ?? '')
+  const [discord, setDiscord] = useState(initial?.discord ?? discordHint ?? '')
   const [isAdult, setIsAdult] = useState(initial?.isAdult ?? false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

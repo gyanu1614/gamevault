@@ -4,12 +4,12 @@
  * redirects Supabase sends when a provider sign-in fails.
  *
  * OAuth (feat/oauth-signin): every account must have a password. A brand-new
- * Google/Discord account has none, so after the code exchange it is sent to
- * /auth/set-password (carrying `next`) instead of its destination. /founding
- * is exempt: its step 1 hosts the same panel. The rule itself lives in
- * src/lib/auth/oauth.ts and is shared with the middleware and client gate.
- * The Discord username is NOT copied anywhere: src/lib/auth/discord-handle.ts
- * reads it from the auth identity when the founding flow needs it.
+ * Google/Discord account has none; it still lands on `next`, where the
+ * Set Your Password modal opens over the page (PasswordGate), and the
+ * middleware sends protected routes to /auth/set-password. The rule lives in
+ * src/lib/auth/oauth.ts. The Discord username is NOT copied anywhere:
+ * src/lib/auth/discord-handle.ts reads it from the auth identity when the
+ * founding flow needs it.
  */
 
 import { NextResponse } from 'next/server'
@@ -18,13 +18,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateUniqueGamerTag, syncProfileEmail } from '@/lib/actions/auth'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
-import {
-  isPasswordGateExempt,
-  needsPassword,
-  sanitizeNext,
-  setPasswordUrl,
-  type OAuthUserLike,
-} from '@/lib/auth/oauth'
+import { sanitizeNext, type OAuthUserLike } from '@/lib/auth/oauth'
 
 /** Append a query key to a same-origin path that may already carry a query. */
 function withQuery(path: string, key: string, value: string) {
@@ -155,14 +149,7 @@ export async function GET(request: Request) {
     }
 
     if (isEmailChange) await syncProfileEmail().catch(() => {})
-    if (user) {
-      await ensureOAuthProfile(user)
-      // Required password: a fresh OAuth account goes to the set-password
-      // screen first, then on to `next`. /founding keeps it inside step 1.
-      if (needsPassword(user) && !isPasswordGateExempt(next)) {
-        return NextResponse.redirect(`${origin}${setPasswordUrl(next)}`)
-      }
-    }
+    if (user) await ensureOAuthProfile(user)
     return NextResponse.redirect(successUrl())
   }
 

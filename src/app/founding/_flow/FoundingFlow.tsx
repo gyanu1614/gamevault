@@ -79,7 +79,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
 
   const renderStep = (id: FoundingStepId) => {
     if (id === 1) return <StepAccount signedIn={state.signedIn} email={state.user?.email ?? null} onContinue={next} onSignedIn={reload} />
-    if (id === 2) return <StepDetails games={games} categories={categories} initial={state.details} onBack={() => setOpen(1)} onSaved={reload} />
+    if (id === 2) return <StepDetails games={games} categories={categories} initial={state.details} discordHint={state.discordHandle} onBack={() => setOpen(1)} onSaved={reload} />
     if (id === 3) return <StepStore initialName={state.store?.name ?? null} initialLogoUrl={state.user?.avatarUrl ?? null} onBack={() => setOpen(2)} onSaved={reload} />
     return (
       <StepAgreement

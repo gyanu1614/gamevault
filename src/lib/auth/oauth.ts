@@ -39,13 +39,13 @@ export function needsPassword(user: OAuthUserLike | null | undefined): boolean {
   return !providers.includes('email')
 }
 
-/** Routes that must not bounce a password-less user to the set-password screen. */
+/**
+ * Routes where the client gate must not open the Set Your Password modal:
+ * the auth routes themselves (the fallback page mounts its own copy).
+ */
 export function isPasswordGateExempt(pathname: string | null | undefined): boolean {
   if (!pathname) return false
-  if (pathname === SET_PASSWORD_PATH || pathname.startsWith(SET_PASSWORD_PATH + '/')) return true
-  if (pathname.startsWith('/auth/')) return true
-  // /founding step 1 hosts its own password panel (wired after Chat A merges).
-  return pathname === '/founding' || pathname.startsWith('/founding/')
+  return pathname.startsWith('/auth/')
 }
 
 /**
