@@ -12,12 +12,24 @@ import { EnvelopeSimple } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple'
 import { login, signup, resendConfirmationEmail, checkEmailAvailability, generateUniqueGamerTag, logout } from '@/lib/actions/auth'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard, GhostButton } from './ui'
 import { safeSession } from '@/lib/safe-storage'
+import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STORAGE_KEY = 'dm.founding.confirm'
 
 type Mode = 'login' | 'signup'
+
+/**
+ * The server action set the auth cookie, but the browser's Supabase client is
+ * still holding "no session" — the navbar's useAuth() never sees SIGNED_IN
+ * until something hydrates it (same fix as AuthDialogBody V17d). refreshSession
+ * reads the cookie and broadcasts to every onAuthStateChange listener.
+ */
+async function syncClientSession(): Promise<void> {
+  const supabase = createClient()
+  await supabase.auth.refreshSession().catch(() => supabase.auth.getSession())
+}
 
 export function StepAccount({
   signedIn,
@@ -103,7 +115,7 @@ export function StepAccount({
           >
             {cooldown > 0 ? `Resend In ${cooldown}s` : 'Resend Email'}
           </GhostButton>
-          <PrimaryButton type="button" busy={busy} onClick={async () => { setBusy(true); await onSignedIn(); setBusy(false) }}>
+          <PrimaryButton type="button" busy={busy} onClick={async () => { setBusy(true); await syncClientSession(); await onSignedIn(); setBusy(false) }}>
             I&apos;ve Confirmed
           </PrimaryButton>
         </StepActions>
@@ -121,6 +133,7 @@ export function StepAccount({
       if (mode === 'login') {
         const res = await login({ email, password })
         if (res?.error) return setError(res.error)
+        await syncClientSession()
         await onSignedIn()
         return
       }
@@ -136,6 +149,7 @@ export function StepAccount({
         setConfirming(true)
         setCooldown(30)
       } else {
+        await syncClientSession()
         await onSignedIn()
       }
     } catch {

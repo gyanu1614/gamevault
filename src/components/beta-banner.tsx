@@ -9,8 +9,10 @@
  * no request, no redirect, no server round trip:
  *   · everyone else (signed out, buyers): AMBER, "Sell Game Items for Real
  *     Money" → /founding (list today, verify when you cash out);
- *   · a seller (profiles.role === 'seller'): GREEN, "Your store is open.
- *     Create your first listing and earn" → /sell/new.
+ *   · a seller (profiles.role === 'seller') with NO listing yet: GREEN, "Your
+ *     store is open. Create your first listing and earn" → /sell/new. Once
+ *     they have listed, the banner goes away for them (one bounded read per
+ *     session, cached in sessionStorage; cleared when they click through).
  * While auth is still resolving the amber variant shows (most visitors are
  * not sellers), then it swaps without a layout change — same height.
  *
@@ -22,9 +24,11 @@ import Link from '@/components/navigation/AppLink'
 import { usePathname } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { IconRocket, IconArrowRight, IconBuildingStore } from '@tabler/icons-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { foundingHref } from '@/lib/seo/founding-href'
 import { useAuth } from '@/hooks/use-auth'
+import { safeSession } from '@/lib/safe-storage'
+import { sellerHasListing } from '@/lib/actions/seller-banner'
 
 const AMBER = '#F5C451'
 const GREEN = '#56B87F'
@@ -66,7 +70,21 @@ export function BetaBanner() {
   const pathname = usePathname() || ''
   const ref = useRef<HTMLDivElement>(null)
   const { profile } = useAuth()
-  const v = profile?.role === 'seller' ? SELLER : VISITOR
+  const isSeller = profile?.role === 'seller'
+  // null = unknown yet (render nothing for a seller until we know)
+  const [hasListing, setHasListing] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!isSeller || !profile?.id) { setHasListing(null); return }
+    const key = `dm.banner.has-listing:${profile.id}`
+    const cached = safeSession.get(key)
+    if (cached === '1' || cached === '0') { setHasListing(cached === '1'); return }
+    let alive = true
+    sellerHasListing()
+      .then((v) => { if (!alive) return; setHasListing(v); safeSession.set(key, v ? '1' : '0') })
+      .catch(() => { if (alive) setHasListing(false) })
+    return () => { alive = false }
+  }, [isSeller, profile?.id])
+  const v = isSeller ? SELLER : VISITOR
   const { Icon } = v
 
   // Publish how much of the banner is still on-screen as a CSS var the
@@ -118,7 +136,9 @@ export function BetaBanner() {
     // The signup flow itself owns its canvas (chrome-less).
     pathname.startsWith('/founding')
 
-  if (hidden) return null
+  // A seller who already lists needs no nudge; while we do not know yet,
+  // show nothing rather than flash the wrong banner.
+  if (hidden || (isSeller && hasListing !== false)) return null
 
   return (
     <div
@@ -154,7 +174,11 @@ export function BetaBanner() {
             scarcity beats the vague role-ask; ?src tags the funnel source. */}
         <Link
           href={v.href}
-          onClick={() => track(v.event, { source: 'banner' })}
+          onClick={() => {
+            track(v.event, { source: 'banner' })
+            // They are off to list: forget the cached "no listing yet".
+            if (isSeller && profile?.id) safeSession.remove(`dm.banner.has-listing:${profile.id}`)
+          }}
           className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border px-3 py-[7px] text-[12px] font-semibold transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:text-[12.5px]"
           style={{ color: v.color, borderColor: `${v.color}59`, backgroundColor: `${v.color}14` }}
         >
