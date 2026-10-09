@@ -20,6 +20,7 @@ import type { Game } from '@/lib/utils/games'
 import type { GameCategoryOptions } from '@/app/account/become-seller/_redesign/game-categories-shared'
 import type { LegalDoc } from '@/lib/legal/documents'
 import { getFoundingFlowState, type FoundingFlowState } from '@/lib/actions/founding-onboarding'
+import { useAuth } from '@/hooks/use-auth'
 import type { FoundingStage, FoundingStepId } from '@/lib/founding/onboarding'
 import { StepChecklist } from './StepChecklist'
 import { WhySellPanel } from './WhySellPanel'
@@ -74,12 +75,22 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // The page was rendered with the session it had at request time. When the
+  // browser session changes underneath it — navbar Log Out, a sign-in in
+  // another tab, the OAuth return — re-resolve so step 1 never shows a tick
+  // for an account that is gone (or a form for one that is here).
+  const { user: authUser, loading: authLoading } = useAuth()
+  useEffect(() => {
+    if (authLoading) return
+    if (Boolean(authUser) !== state.signedIn) reload().catch(() => undefined)
+  }, [authLoading, authUser, state.signedIn, reload])
+
   const stage: FoundingStage = state.isSeller ? 5 : state.stage
   const next = () => setOpen(stage)
 
   const renderStep = (id: FoundingStepId) => {
     if (id === 1) return <StepAccount signedIn={state.signedIn} email={state.user?.email ?? null} onContinue={next} onSignedIn={reload} />
-    if (id === 2) return <StepDetails games={games} categories={categories} initial={state.details} onBack={() => setOpen(1)} onSaved={reload} />
+    if (id === 2) return <StepDetails games={games} categories={categories} initial={state.details} discordHint={state.discordHandle} onBack={() => setOpen(1)} onSaved={reload} />
     if (id === 3) return <StepStore initialName={state.store?.name ?? null} initialLogoUrl={state.user?.avatarUrl ?? null} onBack={() => setOpen(2)} onSaved={reload} />
     return (
       <StepAgreement

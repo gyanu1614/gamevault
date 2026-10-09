@@ -17,18 +17,28 @@ import { saveFoundingDetails } from '@/lib/actions/founding-onboarding'
 import { readFoundingSrc } from '@/lib/seo/founding-href'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard } from './ui'
 
-const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.iso2, label: c.name }))
+// Flag images from flagcdn.com (public domain), 40px wide, lazy; shown as a
+// 20×15 tile in the list and in the closed field.
+const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({
+  value: c.iso2,
+  label: c.name,
+  icon_url: `https://flagcdn.com/w40/${c.iso2.toLowerCase()}.png`,
+}))
+const FLAG_CLS = 'h-[15px] w-5 rounded-[2px]'
 
 export function StepDetails({
   games,
   categories,
   initial,
+  discordHint,
   onBack,
   onSaved,
 }: {
   games: Game[]
   categories: GameCategoryOptions[]
   initial: { country: string | null; sells: SellsEntry[]; discord: string | null; isAdult: boolean } | null
+  /** Discord username from a Discord sign-in; used only while nothing is saved. */
+  discordHint?: string | null
   onBack: () => void
   onSaved: () => Promise<void>
 }) {
@@ -43,7 +53,7 @@ export function StepDetails({
   const [cats, setCats] = useState<Record<string, SellerCategorySection[]>>(
     () => Object.fromEntries((initial?.sells ?? []).map((s) => [s.game, s.categories as SellerCategorySection[]])),
   )
-  const [discord, setDiscord] = useState(initial?.discord ?? '')
+  const [discord, setDiscord] = useState(initial?.discord ?? discordHint ?? '')
   const [isAdult, setIsAdult] = useState(initial?.isAdult ?? false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -83,11 +93,11 @@ export function StepDetails({
     <StepCard title="A Few Details" lead="Where you are and what you sell. Buyers see the games, not your country.">
       <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
         <Field label="Country" hint="Used for payouts and tax rules later.">
-          <Combobox value={country} onChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Choose your country" tone="neutral" ariaLabel="Country" />
+          <Combobox value={country} onChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Choose your country" tone="neutral" ariaLabel="Country" iconInTrigger iconClassName={FLAG_CLS} />
         </Field>
 
         <Field label="Games You Sell" hint="Pick every game you trade in. You can add more later.">
-          <GameMultiSelect games={games} selected={selectedIds} onChange={setSelectedIds} placeholder="Search And Select Games…" />
+          <GameMultiSelect games={games} selected={selectedIds} onChange={setSelectedIds} placeholder="Search And Select Games…" tone="neutral" />
         </Field>
 
         {selectedGames.length > 0 && (

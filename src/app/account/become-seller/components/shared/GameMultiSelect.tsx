@@ -22,6 +22,8 @@ interface GameMultiSelectProps {
   onChange: (ids: string[]) => void
   placeholder?: string
   invalid?: boolean
+  /** `lime` (default): glass panel + lime accent. `neutral`: card-grey panel, no accent (founding). */
+  tone?: 'lime' | 'neutral'
 }
 
 export default function GameMultiSelect({
@@ -30,6 +32,7 @@ export default function GameMultiSelect({
   onChange,
   placeholder = 'Search And Select Games…',
   invalid,
+  tone = 'lime',
 }: GameMultiSelectProps) {
   const [open, setOpen] = React.useState(false)
   // Phones: open on the list, not the keyboard (see useCoarsePointer).
@@ -70,7 +73,7 @@ export default function GameMultiSelect({
             className={cn(
               'flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-transparent px-3 text-sm transition-colors',
               'border-border-default text-text-primary hover:border-border-strong',
-              open && 'border-lime-tint-border',
+              open && (tone === 'neutral' ? 'border-text-secondary' : 'border-lime-tint-border'),
               invalid && !open && 'border-error ring-2 ring-error-bg'
             )}
           >
@@ -93,8 +96,10 @@ export default function GameMultiSelect({
             sideOffset={6}
             style={{ width: 'var(--radix-popover-trigger-width)' }}
             className={cn(
-              'z-50 overflow-hidden rounded-lg border border-border-subtle shadow-elevated',
-              'bg-[rgba(12,12,16,0.92)] backdrop-blur-2xl backdrop-saturate-150',
+              'z-50 overflow-hidden rounded-lg border shadow-elevated',
+              tone === 'neutral'
+                ? 'border-border-default bg-bg-overlay'
+                : 'border-border-subtle bg-[rgba(12,12,16,0.92)] backdrop-blur-2xl backdrop-saturate-150',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -144,7 +149,9 @@ export default function GameMultiSelect({
                         <span
                           className={cn(
                             'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors',
-                            isChecked ? 'border-lime bg-lime' : 'border-white/30 bg-white/5'
+                            isChecked
+                              ? (tone === 'neutral' ? 'border-white bg-white' : 'border-lime bg-lime')
+                              : 'border-white/30 bg-white/5'
                           )}
                         >
                           {isChecked && <Check className="h-3 w-3 text-black" strokeWidth={3} />}

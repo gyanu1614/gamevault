@@ -33,7 +33,10 @@ export default function EmailConfirmedToast() {
   useEffect(() => {
     const confirmed = searchParams?.get('confirmed')
     const authError = searchParams?.get('auth_error')
-    if (!confirmed && !authError) return
+    // Supabase itself lands here (Site URL) when a provider callback is
+    // replayed — back button, double tab — with ?error=…&error_code=….
+    const providerErrorCode = searchParams?.get('error_code')
+    if (!confirmed && !authError && !providerErrorCode) return
     if (firedRef.current) return
     firedRef.current = true
 
@@ -41,6 +44,9 @@ export default function EmailConfirmedToast() {
     const params = new URLSearchParams(searchParams?.toString() ?? '')
     params.delete('confirmed')
     params.delete('auth_error')
+    params.delete('error')
+    params.delete('error_code')
+    params.delete('error_description')
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname || '/')
 
@@ -49,10 +55,37 @@ export default function EmailConfirmedToast() {
     // otherwise they'd sign in and land on the homepage.
     const postLoginRedirect = pathname && pathname !== '/' ? pathname : undefined
 
+    if (providerErrorCode && !authError) {
+      if (providerErrorCode === 'bad_oauth_state') {
+        // The first visit of that callback already signed them in (or the
+        // state expired). Either way the link is spent.
+        toast.info('That Sign-In Link Was Already Used', {
+          description: 'If you are not signed in, use Continue with Google or Discord again.',
+        })
+      } else {
+        toast.error('Sign-In Did Not Complete', {
+          description: 'Try again, or use your email and password.',
+        })
+      }
+      return
+    }
+
     if (authError) {
       if (authError === 'link_expired') {
         toast.error('Confirmation Link Expired', {
           description: 'Sign in and we can resend it.',
+        })
+        open('login', { redirect: postLoginRedirect })
+      } else if (authError === 'oauth_unverified_email') {
+        // Supabase refuses to link a provider email the provider has not
+        // verified (Discord lets accounts sign in unverified).
+        toast.error('Verify Your Discord Email First', {
+          description: 'Confirm your email on Discord, or log in with your password.',
+        })
+        open('login', { redirect: postLoginRedirect })
+      } else if (authError === 'oauth_no_email') {
+        toast.error('No Email Shared', {
+          description: 'That account has no verified email. Use another sign-in method.',
         })
         open('login', { redirect: postLoginRedirect })
       } else {

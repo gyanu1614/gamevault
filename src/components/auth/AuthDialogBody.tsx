@@ -40,6 +40,7 @@ import { stashPendingSignupAvatar, downscaleAvatarDataUrl } from '@/lib/auth/pen
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -180,29 +181,24 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
           transform: scale(1.02);
         }
       }
-      /* Primary CTA — forest with a subtle 3D press; lime appears only as a
-         1px inner top light on hover (reserved-accent rule). */
+      /* Primary CTA — flat forest, one shade lighter on hover, a slight
+         press. No inset highlights, no glow. */
       .auth-cta {
         background-color: #14432a;
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.16),
-          inset 0 -2px 0 rgba(0, 0, 0, 0.28),
-          0 12px 24px -12px rgba(15, 51, 32, 0.5);
         transition:
           background-color 150ms ease,
-          box-shadow 150ms ease,
           transform 150ms ease,
           opacity 150ms ease;
       }
       .auth-cta:hover:not(:disabled) {
         background-color: #1b5e3a;
-        box-shadow:
-          inset 0 1px 0 rgba(163, 230, 53, 0.35),
-          inset 0 -2px 0 rgba(0, 0, 0, 0.28),
-          0 12px 24px -12px rgba(15, 51, 32, 0.5);
       }
       .auth-cta:active:not(:disabled) {
-        transform: translateY(1px);
+        transform: scale(0.99);
+      }
+      .auth-cta:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px #fafaf7, 0 0 0 4px rgba(26, 29, 25, 0.35);
       }
       .auth-cta:disabled {
         opacity: 0.6;
@@ -211,21 +207,22 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
       /* Light-world overrides for the shared AvatarUpload (its own styling
          is dark-world). Scoped to the auth modal wrapper only. */
       .auth-avatar-light div.cursor-pointer.rounded-full {
-        border-color: #e4e5de !important;
-        background-color: #ffffff !important;
+        border-color: transparent !important;
+        background-color: #eeefe8 !important;
       }
       .auth-avatar-light div.cursor-pointer.rounded-full:hover {
-        border-color: #c9ccc0 !important;
+        background-color: #e8e9e2 !important;
       }
       .auth-avatar-light > div > button[type='button'] {
-        background-color: #ffffff !important;
+        background-color: #eeefe8 !important;
         color: #1a1d19 !important;
-        border: 1px solid #e4e5de !important;
+        border: 0 !important;
+        border-radius: 6px !important;
         box-shadow: none !important;
         text-transform: capitalize; /* "Upload picture" → "Upload Picture" */
       }
       .auth-avatar-light > div > button[type='button']:hover {
-        background-color: #fafaf7 !important;
+        background-color: #e8e9e2 !important;
       }
     `}</style>
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -251,7 +248,12 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                   // V24 — Forest Ledger panel: ivory surface, deep forest
                   // drop shadow, no visible border. The hero photo pane
                   // supplies the dark half; the ivory canvas carries the form.
-                  'pointer-events-auto relative flex w-full overflow-hidden rounded-2xl bg-[#FAFAF7] shadow-[0_32px_80px_-20px_rgba(15,51,32,0.55)]',
+                  // Column below md so the form panel is a shrinkable flex
+                  // item (min-h-0) under the max-height — otherwise the panel
+                  // stretched past the modal and overflow-hidden clipped the
+                  // last line (the Sign In / Sign Up switch) at the end of
+                  // the scroll on phones. Row at md+ where the hero sits beside it.
+                  'pointer-events-auto relative flex w-full flex-col overflow-hidden rounded-lg bg-[#FAFAF7] shadow-[0_32px_80px_-20px_rgba(15,51,32,0.55)] md:flex-row',
                   // Mobile: content-driven height capped to the DYNAMIC
                   // viewport (dvh) so iOS Safari's URL bar never clips the
                   // dialog edges; the fixed two-panel height only applies
@@ -285,13 +287,13 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                   type="button"
                   aria-label="Close"
                   onClick={() => onOpenChange(false)}
-                  className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full text-[#5B6157] transition-colors hover:bg-black/5 hover:text-[#1A1D19] md:bg-white/[0.12] md:text-white md:backdrop-blur-md md:hover:bg-white/[0.22] md:hover:text-white"
+                  className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-md text-[#5B6157] transition-colors hover:bg-black/5 hover:text-[#1A1D19] md:bg-white/[0.12] md:text-white md:backdrop-blur-md md:hover:bg-white/[0.22] md:hover:text-white"
                 >
                   <X className="h-5 w-5" />
                 </button>
 
                 {/* Left — form panel */}
-                <div className="flex w-full flex-col overflow-y-auto md:w-1/2">
+                <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto md:w-1/2 md:flex-none">
                   {/* Mobile brand — the hero pane (and its lockup) is md+. */}
                   <div className="flex items-center justify-center gap-2 pt-7 md:hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -322,6 +324,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                         <LoginForm
                           onSuccess={handleAuthSuccess}
                           onSwitchToSignup={() => onModeChange('signup')}
+                          oauthNext={redirectRef.current}
                         />
                       </div>
                     ) : (
@@ -333,6 +336,7 @@ export default function AuthDialog({ open, onOpenChange, mode, onModeChange, red
                           onSuccess={handleAuthSuccess}
                           onSwitchToLogin={() => onModeChange('login')}
                           onRequiresConfirmation={setPendingVerifyEmail}
+                          oauthNext={redirectRef.current}
                         />
                       </div>
                     )}
@@ -464,10 +468,12 @@ const loginSchema = z.object({
 type LoginData = z.infer<typeof loginSchema>
 
 function LoginForm({
-  onSuccess, onSwitchToSignup,
+  onSuccess, onSwitchToSignup, oauthNext,
 }: {
   onSuccess: () => void
   onSwitchToSignup: () => void
+  /** Post-auth destination for the Google/Discord round trip (null = stay here). */
+  oauthNext: string | null
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -533,6 +539,8 @@ function LoginForm({
         <p className={eyebrowCls}>Sign In</p>
         <h2 className={headingCls}>Continue To Your Account</h2>
       </header>
+
+      <OAuthButtons next={oauthNext} tone="light" className="auth-reveal auth-reveal-1 pt-2" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <div className="auth-reveal auth-reveal-1 space-y-1.5">
@@ -663,12 +671,14 @@ type SignupData = z.infer<typeof signupSchema>
 type UsernameStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken'
 
 function SignupForm({
-  onSuccess, onSwitchToLogin, onRequiresConfirmation,
+  onSuccess, onSwitchToLogin, onRequiresConfirmation, oauthNext,
 }: {
   onSuccess: () => void
   onSwitchToLogin: () => void
   /** Email-confirmation mode: swap the dialog to the "Check Your Inbox" view. */
   onRequiresConfirmation: (email: string) => void
+  /** Post-auth destination for the Google/Discord round trip (null = stay here). */
+  oauthNext: string | null
 }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -826,6 +836,8 @@ function SignupForm({
         <h2 className={headingCls}>Create Your Account</h2>
       </header>
 
+      <OAuthButtons next={oauthNext} tone="light" className="auth-reveal auth-reveal-1 pt-2" />
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {/* Industry-standard order: name → username → email → password.
             First/Last are required; the avatar moved to a compact
@@ -902,7 +914,7 @@ function SignupForm({
                 disabled={loading}
                 aria-label="Roll a random gamer tag"
                 title="Roll a random gamer tag"
-                className="grid h-9 w-9 place-items-center rounded-lg text-[#5B6157] transition-colors hover:bg-[#F4F5EE] hover:text-[#14432A]"
+                className="grid h-9 w-9 place-items-center rounded-md text-[#5B6157] transition-colors hover:bg-[#E8E9E2] hover:text-[#14432A]"
               >
                 <Dices className="h-[18px] w-[18px]" />
               </button>
@@ -993,7 +1005,7 @@ function SignupForm({
         {/* Profile picture — compact optional row, moved down from the
             top of the form. The dicebear preview seeds from the typed
             username; a skipped upload can always be added in Settings. */}
-        <div className="auth-avatar-light auth-reveal auth-reveal-3 flex items-center gap-3 rounded-xl border border-[#E4E5DE] bg-white px-3.5 py-2">
+        <div className="auth-avatar-light auth-reveal auth-reveal-3 flex items-center gap-3 rounded-md border border-[#E4E5DE] bg-white px-3.5 py-2">
           <AvatarUpload
             onChange={setAvatarFile}
             username={usernameValue || 'gamervault'}
@@ -1046,7 +1058,7 @@ function SignupForm({
           <div className={errorBoxCls}>
             {error === 'EMAIL_TAKEN' ? (
               <>
-                This email is already registered.{' '}
+                This email already has an account.{' '}
                 <button
                   type="button"
                   onClick={onSwitchToLogin}
@@ -1054,6 +1066,7 @@ function SignupForm({
                 >
                   Sign In Instead
                 </button>
+                , or use Google or Discord above if that is how you joined.
               </>
             ) : (
               error
@@ -1120,7 +1133,7 @@ function VerifyEmailView({
   return (
     <div className="mx-auto my-auto w-full max-w-[400px] space-y-4">
       <div
-        className="auth-reveal flex h-12 w-12 items-center justify-center rounded-full"
+        className="auth-reveal flex h-12 w-12 items-center justify-center rounded-md"
         style={{ backgroundColor: 'rgba(27,94,58,0.08)' }}
       >
         <MailCheck className="h-5 w-5 text-[#1B5E3A]" />
@@ -1187,7 +1200,7 @@ function ResendConfirmationButton({ email }: { email: string }) {
       disabled={sending || cooldown > 0}
       // Explicit paper-chip styling: the login flow renders this inside the
       // light error box, whose red text would otherwise cascade in.
-      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#E4E5DE] bg-white text-[13px] font-medium text-[#1A1D19] transition-colors hover:bg-[#FAFAF7] disabled:pointer-events-none disabled:opacity-60"
+      className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[#E4E5DE] bg-white text-[13px] font-medium text-[#1A1D19] transition-colors hover:bg-[#FAFAF7] disabled:pointer-events-none disabled:opacity-60"
     >
       {sending ? (
         <>

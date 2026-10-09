@@ -6,6 +6,7 @@ import {
   hasSupabaseSessionCookie,
   isBecomeSellerRoute,
 } from '@/lib/auth/become-seller-redirect'
+import { isPasswordGateExempt, needsPassword, setPasswordUrl } from '@/lib/auth/oauth'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -68,6 +69,13 @@ export async function middleware(request: NextRequest) {
         const redirectUrl = new URL('/login', request.url)
         redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)
+      }
+
+      // Required password (Google/Discord sign-in): an account that has not
+      // set one yet may not use a protected route. `user` comes from the auth
+      // server, so the stored flag is read fresh. Rule: src/lib/auth/oauth.ts.
+      if (needsPassword(user) && !isPasswordGateExempt(pathname)) {
+        return NextResponse.redirect(new URL(setPasswordUrl(pathname), request.url))
       }
 
       // V17e / Beta C — Seller-only sections. Buyers and unapproved accounts
