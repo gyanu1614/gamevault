@@ -55,7 +55,7 @@ export default async function FoundingPage() {
   return (
     <>
       <HeroBackdropPreload name="founding" />
-      <HeroBackdrop name="founding" className="hero-dim">
+      <HeroBackdrop name="founding" className="hero-dim-content">
         <FoundingFlow
           initialState={state}
           games={games}

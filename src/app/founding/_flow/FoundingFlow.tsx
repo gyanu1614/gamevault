@@ -110,11 +110,11 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
 
       {/* Top padding doubles as the slot for the hero background (later). */}
       <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pt-32">
-        <header className="max-w-3xl">
+        <header className={stage >= 5 ? 'text-center' : 'max-w-3xl'}>
           {stage >= 5 ? (
             <>
-              <h1 className="text-heading text-text-primary sm:text-[36px] sm:leading-tight lg:whitespace-nowrap">
-                Welcome to the <span className="title-accent">DropMarket</span> Community
+              <h1 className="text-heading text-text-primary sm:text-[36px] sm:leading-tight">
+                Welcome to <span className="title-accent">DropMarket</span>
               </h1>
             </>
           ) : (
@@ -144,7 +144,11 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
               renderDone={() => null}
             />
           )}
-          <WhySellPanel progress={state.progress} />
+          {/* Right rail: sticks while the left column scrolls and sits in the
+              middle of the viewport (below the navbar) so it stays aligned. */}
+          <div className="lg:sticky lg:top-20 lg:flex lg:h-[calc(100vh-5rem)] lg:items-center lg:self-start">
+            <WhySellPanel progress={state.progress} className="w-full" />
+          </div>
         </div>
       </main>
 
