@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import RestrictionStatus from './RestrictionStatus'
+import RestrictionStatus, { type Strike } from './RestrictionStatus'
 import AccountPageHeader from '@/components/account/AccountPageHeader'
 import { AccountCard, AccountPage } from '@/components/account/AccountSurface'
 import { RestrictionsSkeleton } from './_RestrictionsSkeleton'
@@ -11,6 +11,7 @@ export default function RestrictionsPage() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
   const [restrictions, setRestrictions] = useState<any[]>([])
+  const [strikes, setStrikes] = useState<Strike[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,8 +39,17 @@ export default function RestrictionsPage() {
         .order('created_at', { ascending: false })
         .limit(10)
 
+      // Strikes (own rows only, by RLS): shown so the seller knows where they stand.
+      const { data: strikesData } = await (supabase as any)
+        .from('seller_strikes')
+        .select('id, kind, reason, created_at, revoked_at')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
       setProfile(profileData)
       setRestrictions(restrictionsData || [])
+      setStrikes((strikesData as Strike[] | null) || [])
       setLoading(false)
     }
 
@@ -60,5 +70,5 @@ export default function RestrictionsPage() {
     )
   }
 
-  return <RestrictionStatus profile={profile} restrictions={restrictions} />
+  return <RestrictionStatus profile={profile} restrictions={restrictions} strikes={strikes} />
 }
