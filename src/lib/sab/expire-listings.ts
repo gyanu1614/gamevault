@@ -124,24 +124,32 @@ type ServiceClient = ReturnType<typeof createServiceRoleClient>
  * that group's max backwards and can expire listings that are in fact still
  * live. `id` is the primary key, so ordering by it makes every page a clean,
  * gap-free, duplicate-free slice.
+ *
+ * KEYSET, not OFFSET (2026-10-09): pages are `id > <last id of the previous
+ * page> ORDER BY id LIMIT 1000`. `.range()` is OFFSET under the hood, so page N
+ * re-walked every earlier row — quadratic over ~40k+ active rows, 1,677 s on the
+ * free-plan database that day. A keyset page starts at a primary-key index seek,
+ * returns the same rows in the same order, and a retried page re-reads exactly
+ * its own slice because the cursor only advances after a successful page.
  */
 export async function readActiveListings(
   admin: ServiceClient,
 ): Promise<ActiveListing[]> {
   const rows: ActiveListing[] = []
+  /** Keyset cursor: the last id of the previous page (null = first page). */
+  let after: string | null = null
 
-  for (let page = 0; ; page += 1) {
-    const from = page * PAGE_SIZE
+  for (;;) {
     let lastError: { message?: string; code?: string } | null = null
     let data: ActiveListing[] | null = null
 
     for (let attempt = 1; attempt <= PAGE_MAX_ATTEMPTS; attempt += 1) {
-      const result = await (admin as any)
+      let query = (admin as any)
         .from('sab_market_raw_listings')
         .select('id,source_id,brainrot_id,fetched_at')
         .eq('listing_status', 'active')
-        .order('id', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1)
+      if (after !== null) query = query.gt('id', after)
+      const result = await query.order('id', { ascending: true }).limit(PAGE_SIZE)
 
       if (!result.error) {
         data = (result.data ?? []) as ActiveListing[]
@@ -156,7 +164,7 @@ export async function readActiveListings(
       }
 
       console.warn(
-        `sab_market_raw_listings: page ${from}+ failed (attempt ${attempt}/` +
+        `sab_market_raw_listings: page after ${after ?? 'start'} failed (attempt ${attempt}/` +
           `${PAGE_MAX_ATTEMPTS}: ${result.error.message}) — retrying…`,
       )
       await delay(1000 * attempt)
@@ -169,6 +177,7 @@ export async function readActiveListings(
     if (!data.length) break
     rows.push(...data)
     if (data.length < PAGE_SIZE) break
+    after = data[data.length - 1].id
   }
 
   return rows

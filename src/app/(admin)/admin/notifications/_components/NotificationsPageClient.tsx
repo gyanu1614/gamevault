@@ -14,6 +14,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Bell, Check, Checks, CircleNotch, FileText, Scales, ShieldWarning, UserPlus } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SegmentedTabs, TabCount } from '@/components/account/SegmentedTabs'
@@ -95,7 +96,7 @@ export default function NotificationsPageClient({
       return data || []
     },
     enabled: !!userId,
-    refetchInterval: 15000,
+    ...foregroundPoll(POLL_MS.adminPages),
     // V54 — Seed only the default "all" view; the unread tab fetches
     // client-side as before (switching back to "all" reuses the cache,
     // so this can never mis-seed the unread key with the full list).

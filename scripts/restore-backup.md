@@ -1,8 +1,10 @@
 # Restoring a database backup
 
-The `Database Backup` workflow (`.github/workflows/db-backup.yml`) publishes one
+The `Database Backup` workflow (`.github/workflows/db-backup.yml`) runs **weekly**
+(Sundays, 14:20 UTC, usually started 5–7 h late by GitHub) and publishes one
 artifact per run: `dump-<timestamp>.sql.gz.age`. It is a gzipped SQL dump of the
 `public` and `auth` schemas (schema + data), encrypted to an **age public key**.
+Artifacts are kept 30 days, so about four backups exist at any time.
 
 Only the holder of the matching **private key** can decrypt it. The private key
 is deliberately not in GitHub — CI can create backups but cannot read them.
@@ -144,6 +146,15 @@ must be reconfigured on the new project:
   `SUPABASE_SERVICE_ROLE_KEY`, and the anon key — in Vercel and in the repo secrets
   used by the other workflows.
 - Cron/webhook endpoints registered with external providers.
+
+Some tables restore **empty by design** — their data is skipped (the `exclude=`
+list in `db-backup.yml`) because a re-crawl rebuilds it: `sab_market_raw_listings`,
+`sab_market_evidence_display`, `values_raw_listings`, `adopt_me_market_raw_listings`,
+`value_funnel_events`, `rate_limits`. Their tables, indexes and policies are in the
+schema pass. Run **Values Pricing Daily** by hand after the restore to refill them;
+published prices (`sab_price_display`, `values_prices`, price history) are in the
+dump and keep serving until then. Do not run `sab_refresh_*` before that crawl —
+it would rebuild the displays from the empty raw tables.
 
 ---
 

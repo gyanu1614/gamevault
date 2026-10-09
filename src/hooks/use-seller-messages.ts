@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { messagesApi, Conversation, Message } from '@/lib/api/seller-compatible'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
@@ -25,9 +26,10 @@ export function useSellerMessages() {
   } = useQuery<Conversation[]>({
     queryKey: ['seller', 'messages', 'conversations'],
     queryFn: () => messagesApi.getConversations(),
-    refetchInterval: 30000, // Refetch every 30 seconds for new messages
+    // The messages realtime channel below invalidates this on every INSERT;
+    // the poll is a visible-tab-only fallback (focus refetch included).
+    ...foregroundPoll(POLL_MS.sellerConversations),
     refetchOnMount: 'always', // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
     staleTime: 0, // Consider data stale immediately to ensure fresh data
   })
 

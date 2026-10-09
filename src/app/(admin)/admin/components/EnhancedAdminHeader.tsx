@@ -53,6 +53,7 @@ import { orderNumberSearchPattern } from '@/lib/orders/order-number'
 import { OPEN_DISPUTE_STATUSES } from '@/lib/admin/status-sets'
 import type { AdminProfile } from './AdminChrome'
 import { NavIconButton, NavMenuDivider, NavPanel, NavPanelHeader, navMenuIconCls, navMenuRowCls } from '@/components/navbar/NavChrome'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 
 interface EnhancedAdminHeaderProps {
   role: string
@@ -179,7 +180,7 @@ export default function EnhancedAdminHeader({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Queue counts — "what needs me right now". 30s refresh.
+  // Queue counts — "what needs me right now". 60s refresh, visible tab only.
   const { data: quickStats } = useQuery({
     queryKey: ['admin-quick-stats', user.id],
     queryFn: async () => {
@@ -195,10 +196,10 @@ export default function EnhancedAdminHeader({
         highSeverityFraud: highFraud.count || 0,
       }
     },
-    refetchInterval: 30000,
+    ...foregroundPoll(POLL_MS.adminHeader),
   })
 
-  // Unread notifications — count + latest five. 10s refresh.
+  // Unread notifications — count + latest five. 60s refresh, visible tab only.
   const { data: notificationCount } = useQuery({
     queryKey: ['admin-unread-notifications', user.id],
     queryFn: async () => {
@@ -210,7 +211,7 @@ export default function EnhancedAdminHeader({
         .eq('is_read', false).limit(1)
       return count || 0
     },
-    refetchInterval: 10000,
+    ...foregroundPoll(POLL_MS.adminHeader),
   })
 
   const { data: notifications } = useQuery({
@@ -226,7 +227,7 @@ export default function EnhancedAdminHeader({
         .limit(5)
       return data || []
     },
-    refetchInterval: 10000,
+    ...foregroundPoll(POLL_MS.adminHeader),
   })
 
   // Entity search — users, applications, disputes, orders.

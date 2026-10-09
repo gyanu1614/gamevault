@@ -7,7 +7,7 @@ import Link from '@/components/navigation/AppLink'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
+import { useUnreadMessagesCount } from '@/hooks/use-unread-messages'
 import {
   LayoutDashboard,
   Package,
@@ -92,38 +92,9 @@ export default function AccountSidebar({ user }: AccountSidebarProps) {
     }
   }, [isMobileOpen])
 
-  // Get unread message count
-  const { data: unreadCount } = useQuery({
-    queryKey: ['unread-messages-sidebar', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      // First get all conversation IDs where I'm involved
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`) as any
-
-      if (!conversations || conversations.length === 0) return 0
-
-      const conversationIds = conversations.map((c: any) => c.id)
-
-      // Count unread messages in those conversations where I'm not the sender
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact' })
-        .in('conversation_id', conversationIds)
-        .neq('sender_id', user.id)
-        .eq('is_read', false).limit(1)
-
-      return count || 0
-    },
-    enabled: !!user?.id,
-    refetchInterval: 5000, // Refetch every 5 seconds
-    refetchOnWindowFocus: true,
-  })
+  // Unread message count — the SAME query as the navbar badge (one key, one
+  // request between them); chat realtime invalidates it, the poll is a fallback.
+  const unreadCount = useUnreadMessagesCount(user?.id)
 
   const isActive = (href: string) => {
     // Exact match for /account to avoid matching /account/*

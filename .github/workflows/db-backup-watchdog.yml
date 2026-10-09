@@ -13,14 +13,17 @@ name: Database Backup Watchdog
 # looks at the evidence instead of the process: it asks GitHub for the most
 # recent successful backup RUN and pages when that is older than the threshold.
 #
-# 26h, not 24h: the nightly is at 05:00 UTC, so a 24h window would alarm on
-# normal queueing jitter. 26h alarms after exactly one missed night.
+# 192h (8 days): the backup is WEEKLY since 2026-10-09 (Sundays 14:20 UTC,
+# started 5–7 h late by GitHub). A week plus a day of queueing slack never
+# alarms on a healthy cadence, and one missed Sunday alarms within a day or two.
+# The old 26h threshold would have paged six days out of seven.
 
 on:
   workflow_dispatch:
   schedule:
-    # 08:00 UTC daily — three hours after the nightly backup's 05:00 slot, so a
-    # slow-but-successful run has finished before this checks.
+    # 08:00 UTC daily. Read-only GitHub API call, no database access, so its
+    # slot does not matter for DB load; daily keeps the alarm within a day of
+    # the 8-day threshold being crossed.
     - cron: "0 8 * * *"
 
 concurrency:
@@ -43,12 +46,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           DISCORD_OPS_WEBHOOK_URL: ${{ secrets.DISCORD_OPS_WEBHOOK_URL }}
-          MAX_AGE_HOURS: "26"
+          MAX_AGE_HOURS: "192"
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
 
-          # Most recent SUCCESSFUL run of the nightly backup workflow.
+          # Most recent SUCCESSFUL run of the weekly backup workflow.
           last="$(gh api \
             "repos/${REPO}/actions/workflows/db-backup.yml/runs?status=success&per_page=1" \
             --jq '.workflow_runs[0].updated_at // empty')"
@@ -73,7 +76,7 @@ jobs:
 
           if [ -n "${DISCORD_OPS_WEBHOOK_URL:-}" ]; then
             payload="$(jq -nc \
-              --arg content "🔴 **No successful DB backup in ${age_hours}h** (threshold ${MAX_AGE_HOURS}h). The nightly backup is not running at all — check that the schedule is still enabled. Artifacts expire after 30 days. Watchdog: ${RUN_URL}" \
+              --arg content "🔴 **No successful DB backup in ${age_hours}h** (threshold ${MAX_AGE_HOURS}h). The weekly backup is not running at all — check that the schedule is still enabled. Artifacts expire after 30 days. Watchdog: ${RUN_URL}" \
               '{content: $content, allowed_mentions: {parse: []}}')"
             curl -sS -o /dev/null -X POST -H 'content-type: application/json' \
               --data "$payload" "$DISCORD_OPS_WEBHOOK_URL" || \

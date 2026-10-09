@@ -117,7 +117,7 @@ export async function uploadListingImage(
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, file, {
-        cacheControl: '3600',
+        cacheControl: '31536000', // unique path per upload: immutable
         upsert: false
       })
 

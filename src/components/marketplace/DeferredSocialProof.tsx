@@ -5,24 +5,17 @@ import { useEffect, useState } from 'react'
 
 import { whenIdleAfterLoad } from '@/lib/dom/when-idle-after-load'
 
-// Client-only widgets that are not part of the first view: each opens Supabase
-// calls (the purchase toast also holds a realtime socket). Loaded after the page
-// has loaded and the browser is idle, so they are not in the first-load window.
-const RecentPurchaseToast = dynamic(() => import('@/components/marketplace/RecentPurchaseToast'), { ssr: false })
-const DailyStatsToast = dynamic(
-  () => import('@/components/marketplace/RecentPurchaseToast').then((m) => m.DailyStatsToast),
-  { ssr: false },
-)
+// Client-only widget that is not part of the first view: it makes a Supabase
+// call (signed-in users only, once per tab session). Loaded after the page has
+// loaded and the browser is idle, so it is not in the first-load window.
+// (The realtime "Recent Purchase" toast that lived here was removed: it held an
+// `orders` socket for every visitor that RLS guaranteed would never fire.)
+const DailyStatsToast = dynamic(() => import('@/components/marketplace/RecentPurchaseToast'), { ssr: false })
 
-/** The two social-proof toasts, mounted once the page is idle. Renders nothing before that. */
+/** The social-proof toast, mounted once the page is idle. Renders nothing before that. */
 export function DeferredSocialProof() {
   const [ready, setReady] = useState(false)
   useEffect(() => whenIdleAfterLoad(() => setReady(true)), [])
   if (!ready) return null
-  return (
-    <>
-      <RecentPurchaseToast />
-      <DailyStatsToast />
-    </>
-  )
+  return <DailyStatsToast />
 }

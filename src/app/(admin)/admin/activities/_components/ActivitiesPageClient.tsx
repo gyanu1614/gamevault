@@ -11,6 +11,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { POLL_MS, foregroundPoll } from '@/lib/polling/intervals'
 import { getAllActivities } from '@/lib/actions/admin-dashboard'
 import { cn } from '@/lib/utils'
 import { CalendarBlank, CaretLeft, CaretRight, Scales, ShieldWarning, UserPlus, Warning } from '@phosphor-icons/react'
@@ -85,11 +86,11 @@ export default function ActivitiesPageClient({
       if (!result.success) throw new Error(result.error)
       return result.activities || []
     },
-    refetchInterval: 30000,
+    ...foregroundPoll(POLL_MS.adminPages),
     // V54 — Server-seeded: the page arrives rendered (no "Loading
     // activities…" flash on refresh). initialData counts as fresh for
     // staleTime, so no immediate client refetch either; the 30s polling
-    // interval still refreshes as before.
+    // interval (60s, visible tab only) still refreshes.
     initialData: initialActivities,
     staleTime: 60_000,
   })
