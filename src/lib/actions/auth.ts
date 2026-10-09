@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { screenImage } from '@/lib/images/screen'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateGamerTagCandidates } from '@/lib/username/gamer-names'
 import { redirect } from 'next/navigation'
@@ -501,6 +502,12 @@ export async function uploadProfileAvatar(avatarData: string) {
       return { error: 'Not authenticated' }
     }
 
+    // Moderation lock (admin avatar reset): the picture stays the default.
+    const { data: lock } = await (supabase.from('profiles').select('avatar_locked_at').eq('id', user.id).maybeSingle() as any)
+    if (lock?.avatar_locked_at) {
+      return { error: 'Your profile picture was locked by moderation. Reply to the email we sent to appeal.' }
+    }
+
     // Read the real type off the data URI instead of assuming PNG: the
     // client downscales to WebP (JPEG on older encoders), and storing those
     // bytes under contentType image/png made Storage serve a mislabelled
@@ -512,6 +519,8 @@ export async function uploadProfileAvatar(avatarData: string) {
 
     const [, contentType, subtype, base64Data] = match
     const buffer = Buffer.from(base64Data, 'base64')
+    const screened = await screenImage(new Uint8Array(buffer), contentType, 'avatar')
+    if (!screened.ok) return { error: screened.reason }
 
     // Defence in depth: the client downscales to ~30-80 KB, so anything
     // this large means the client-side step was bypassed.

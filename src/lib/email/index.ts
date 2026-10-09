@@ -1481,3 +1481,71 @@ export async function sendApplicantDraftsSubmittedEmail({
     return { success: false, error }
   }
 }
+
+/* ── Moderation tools (2026-10-09) ────────────────────────────────── */
+
+/** A listing was taken down by a moderator (or auto-hidden by reports). */
+export async function sendListingTakenDownEmail({ to, name, listingTitle, reason }: { to: string; name: string; listingTitle: string; reason: string }) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Listing removed — ${listingTitle}`,
+    html: emailShell({
+      preview: `${listingTitle} was removed from DropMarket.`,
+      icon: 'rejected',
+      heading: 'Listing removed',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — <strong style="color:${EMAIL_TOKENS.INK};">${escapeHtml(listingTitle)}</strong> has been removed from the marketplace and buyers can no longer see it.`) +
+        emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) +
+        emailText('If you think this was a mistake, reply to this email and a person will look at it. Repeated removals lead to a restricted store.') +
+        emailButton('Review Your Listings', `${APP_URL}/account/listings`) +
+        emailFooterNote('Our house rules: be respectful, deliver fast, describe items honestly, never trade off-site.'),
+    }),
+  })
+  return error ? { success: false, error } : { success: true, data }
+}
+
+/** An image was removed from a listing, or the profile picture was reset. */
+export async function sendImageRemovedEmail({ to, name, what, reason, locked }: { to: string; name: string; what: 'listing image' | 'profile picture'; reason: string; locked?: boolean }) {
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: what === 'profile picture' ? 'Your profile picture was reset' : 'An image was removed from your listing',
+    html: emailShell({
+      preview: what === 'profile picture' ? 'Your profile picture was reset by moderation.' : 'A listing image was removed by moderation.',
+      icon: 'notice',
+      heading: what === 'profile picture' ? 'Profile picture reset' : 'Image removed',
+      body:
+        emailText(`Hi ${escapeHtml(name)} — a moderator removed your ${what} because it broke our content rules.`) +
+        emailBox({ title: 'Why', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) +
+        (locked ? emailText('Your profile picture is now the default and cannot be changed. Reply to this email if you would like it unlocked.') : '') +
+        emailFooterNote('No nudity, gore, hate symbols, or other people\u2019s personal details in any image on DropMarket.'),
+    }),
+  })
+  return error ? { success: false, error } : { success: true, data }
+}
+
+/** A strike was issued; says where they stand (1 warning, 2 restricted, 3 banned). */
+export async function sendSellerStrikeEmail({ to, name, reason, count }: { to: string; name: string; reason: string; count: number }) {
+  const standing = count >= 3 ? 'Your store is now banned.' : count === 2 ? 'Your store is now restricted: you cannot publish new listings until a moderator lifts it.' : 'This is a warning. Two more and your store is banned.'
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+    to,
+    subject: count >= 3 ? 'Your store has been banned' : count === 2 ? 'Your store is restricted' : 'Warning: a strike on your store',
+    html: emailShell({
+      preview: `Strike ${Math.min(count, 3)} of 3 on your DropMarket store.`,
+      icon: count >= 2 ? 'rejected' : 'notice',
+      heading: `Strike ${Math.min(count, 3)} of 3`,
+      body:
+        emailText(`Hi ${escapeHtml(name)} — your store received a strike.`) +
+        emailBox({ title: 'Reason', html: `<span style="overflow-wrap:anywhere;">${escapeHtml(reason)}</span>` }) +
+        emailText(standing) +
+        emailButton('See Your Account Standing', `${APP_URL}/account/restrictions`) +
+        emailFooterNote('Strikes come from removed listings, removed images or upheld buyer reports. Reply to this email to appeal.'),
+    }),
+  })
+  return error ? { success: false, error } : { success: true, data }
+}

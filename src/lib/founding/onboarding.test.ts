@@ -32,7 +32,13 @@ describe('detailsSchema', () => {
 
 describe('storeNameSchema / typedNameSchema', () => {
   it('store names: 3–50, friendly characters only', () => {
-    expect(storeNameSchema.safeParse("Gyan's Pets & More").success).toBe(true)
+    expect(storeNameSchema.safeParse('GGTrading').success).toBe(true)
+    expect(storeNameSchema.safeParse('pet_palace_2').success).toBe(true)
+    expect(storeNameSchema.safeParse("Gyan's Pets & More").success).toBe(false)
+    expect(storeNameSchema.safeParse('Pet Palace').success).toBe(false)
+    expect(storeNameSchema.safeParse('123456').success).toBe(false)
+    expect(storeNameSchema.safeParse('DropMarket').success).toBe(false)
+    expect(storeNameSchema.safeParse('a'.repeat(21)).success).toBe(false)
     expect(storeNameSchema.safeParse('ab').success).toBe(false)
     expect(storeNameSchema.safeParse('<b>Shop</b>').success).toBe(false)
     expect(storeNameSchema.safeParse('---').success).toBe(false)

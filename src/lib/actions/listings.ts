@@ -23,6 +23,7 @@ import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listi
 import { checkListingImage, listingImagePathFor, listingImagePathFromUrl, isOwnedListingImagePath, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { toStoredImage } from '@/lib/images/resize-server'
+import { screenImage } from '@/lib/images/screen'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
 export interface ListingUpdateInput {
@@ -71,6 +72,8 @@ export async function uploadListingImage(
     }
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
+    const screened = await screenImage(checked.bytes, checked.image.mime, 'listing')
+    if (!screened.ok) return { success: false, error: screened.reason }
 
     // Shrink once before storing (<=1600 px WebP); unique path, cached a year.
     const stored = await toStoredImage(checked.bytes, checked.image.mime)
@@ -351,11 +354,14 @@ export async function updateListing(
     // rejects this transition too (42501); refusing here gives a clear message.
     if (
       input.status === 'active' &&
-      ['rejected', 'changes_requested', 'pending_approval'].includes(listing.status)
+      ['rejected', 'changes_requested', 'pending_approval', 'suspended'].includes(listing.status)
     ) {
       return {
         success: false,
-        error: 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
+        error:
+          listing.status === 'suspended'
+            ? 'This listing was removed by moderation. Reply to the email we sent to appeal.'
+            : 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
       }
     }
 

@@ -29,6 +29,7 @@ import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
+import { screenImage } from '@/lib/images/screen'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
  *  legacy categories row on the publish path. The user-bound client can't
@@ -1254,6 +1255,8 @@ export async function uploadSellImage(
     if (!(file instanceof File)) return { success: false, error: 'No file provided' }
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
+    const screened = await screenImage(checked.bytes, checked.image.mime, 'listing')
+    if (!screened.ok) return { success: false, error: screened.reason }
 
     // Shrink once before storing (<=1600 px WebP): images are served
     // unoptimized, so the stored file is what every buyer downloads. The
