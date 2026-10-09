@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { sellerStatLine, sellerStatText } from './stat-line'
 
 describe('seller stat line', () => {
-  it('no sales and no reviews → "Verified Seller", never "New Seller"', () => {
+  it('no sales, no reviews, unverified (open signup) → "New Seller"', () => {
+    expect(sellerStatLine({ ratingPercent: null, reviews: 0, sales: 0, verified: false })).toEqual({ kind: 'new' })
+    expect(sellerStatText({ ratingPercent: null, reviews: 0, sales: 0, verified: false })).toBe('New Seller')
+  })
+  it('no sales and no reviews → "Verified Seller" (verified or unknown)', () => {
     expect(sellerStatText({ ratingPercent: null, reviews: 0, sales: 0, tier: 'gold' })).toBe('Verified Seller')
     expect(sellerStatText({ ratingPercent: null, reviews: null, sales: undefined })).toBe('Verified Seller')
   })

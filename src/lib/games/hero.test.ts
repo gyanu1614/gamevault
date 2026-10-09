@@ -128,17 +128,17 @@ describe('resolveGameHero — upload → static art → none', () => {
 
   it('foreign URLs never render: falls back to the static art', () => {
     const hero = resolveGameHero(
-      'adopt-me',
-      { slug: 'adopt-me', hero_bg_url: 'https://evil.example/x.webp', hero_bg_srcset: { '1600': 'https://evil.example/x.webp' } },
+      'roblox',
+      { slug: 'roblox', hero_bg_url: 'https://evil.example/x.webp', hero_bg_srcset: { '1600': 'https://evil.example/x.webp' } },
       SB,
     )
-    expect(hero).toEqual({ kind: 'static', src: STATIC_GAME_HEROES['adopt-me'], focalY: 50 })
+    expect(hero).toEqual({ kind: 'static', src: STATIC_GAME_HEROES['roblox'], focalY: 50 })
   })
 
   it('no upload → the static art the repo ships for that game', () => {
-    expect(resolveGameHero('steal-a-brainrot', { slug: 'steal-a-brainrot', hero_bg_focal_y: 70 }, SB)).toEqual({
+    expect(resolveGameHero('valorant', { slug: 'valorant', hero_bg_focal_y: 70 }, SB)).toEqual({
       kind: 'static',
-      src: '/assets/heroes/steal-a-brainrot.avif',
+      src: '/hero/valorant.jpg',
       focalY: 70,
     })
     expect(resolveGameHero('fortnite', null, SB)).toMatchObject({ kind: 'static', src: '/hero/fortnite.jpg' })
@@ -146,6 +146,8 @@ describe('resolveGameHero — upload → static art → none', () => {
 
   it('no upload and no static art → neutral (never another game\'s art)', () => {
     expect(resolveGameHero('murder-mystery-2', null, SB)).toEqual({ kind: 'none', focalY: 50 })
+    // Adopt Me / Steal a Brainrot lost their static files on 2026-10-08 (admin heroes now).
+    expect(resolveGameHero('adopt-me', null, SB)).toEqual({ kind: 'none', focalY: 50 })
     expect(resolveGameHero('murder-mystery-2', { slug: 'murder-mystery-2', hero_bg_url: null }, SB).kind).toBe('none')
   })
 

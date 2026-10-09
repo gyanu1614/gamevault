@@ -48,7 +48,7 @@ export default function LeftRail({
     >
       {/* Hero photo */}
       <Image
-        src="/assets/heroes/sell.avif"
+        src="/assets/heroes/founding.avif"
         alt=""
         fill
         priority

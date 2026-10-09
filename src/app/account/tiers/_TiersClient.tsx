@@ -237,7 +237,7 @@ function RankHero({
           </div>
         ) : (
           <Link
-            href="/account/become-seller"
+            href="/founding#src=tiers"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-[14px] font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98]"
           >
             <StorefrontIcon size={16} weight="bold" aria-hidden />
@@ -319,7 +319,7 @@ function ProgressCard({ next, window: w, isSeller }: { next: RankConfig | null; 
         footerHint="Ranks are checked every day at 3 AM UTC."
         footerAction={
           <Link
-            href="/account/become-seller"
+            href="/founding#src=tiers"
             className="inline-flex h-10 items-center gap-2 rounded-md bg-white/[0.08] px-4 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.12]"
           >
             Become a Seller

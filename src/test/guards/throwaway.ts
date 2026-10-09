@@ -104,7 +104,9 @@ export async function activateFixtureListing(svc: SupabaseClient, listingId: str
 
 export async function promoteToEstablishedSeller(svc: SupabaseClient, userId: string): Promise<{ tier: string; entry: string }> {
   const t = await establishedTier(svc)
-  const { error } = await svc.from('profiles').update({ role: 'seller', seller_tier: t.tier, seller_status: 'active' }).eq('id', userId)
+  // An established seller is a VERIFIED one (today every approved seller is):
+  // the payout gate refuses an unverified seller first (kyc_required).
+  const { error } = await svc.from('profiles').update({ role: 'seller', seller_tier: t.tier, seller_status: 'active', is_verified: true }).eq('id', userId)
   if (error) throw new Error(`promote seller (${t.tier}): ${error.message}`)
   return t
 }
@@ -115,6 +117,8 @@ export const DEPENDENT_TABLES: ReadonlyArray<readonly [string, readonly string[]
   ['orders', ['buyer_id', 'seller_id']],
   ['listings', ['seller_id']],
   ['seller_applications', ['user_id']],
+  ['seller_onboarding', ['user_id']],
+  ['seller_agreements', ['user_id']],
   ['referral_earnings', ['referrer_id', 'referred_user_id']],
   ['notifications', ['user_id']],
   ['admin_roles', ['user_id']],

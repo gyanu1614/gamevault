@@ -44,12 +44,11 @@ export const GAME_HERO_FRAME_ASPECT = 1440 / 560
 
 /**
  * Art the repo already ships per game — the fallback behind the upload.
- * Steal a Brainrot / Adopt Me: the values-hub art. Fortnite / Roblox /
- * Valorant: the landing art. Any other game: neutral gradient.
+ * Fortnite / Roblox / Valorant: the landing art. Any other game: neutral
+ * gradient. (Steal a Brainrot / Adopt Me shipped static files until
+ * 2026-10-08; both now carry admin-uploaded heroes, so the files went.)
  */
 export const STATIC_GAME_HEROES: Readonly<Record<string, string>> = {
-  'steal-a-brainrot': '/assets/heroes/steal-a-brainrot.avif',
-  'adopt-me': '/assets/heroes/adopt-me.avif',
   fortnite: '/hero/fortnite.jpg',
   roblox: '/hero/roblox.jpg',
   valorant: '/hero/valorant.jpg',

@@ -39,6 +39,9 @@ const BUCKETS = {
   'listing-images': { public: true },
   'attribute-icons': { public: true },
   'profile-pictures': { public: true },
+  // Profile avatar = store logo (uploadProfileAvatar). Dashboard-made in prod
+  // (20260928174233 only caps it); the local seed recreates it.
+  avatars: { public: true },
   'blog-images': { public: true },
   // Seller store banners (20261004194021): public read, service-role writes only.
   'store-banners': { public: true },
@@ -47,6 +50,9 @@ const BUCKETS = {
   // Values catalogue art copied from wikis (20261005004438, MM2): public read,
   // service-role writes only (scripts/copy-values-images.mjs).
   'values-items': { public: true },
+  // Seller agreement signatures (20261008023032, open seller signup): PRIVATE,
+  // owner-read policy only, service-role writes.
+  'seller-signatures': { public: false },
 } as const
 
 let svc: SupabaseClient
@@ -95,10 +101,10 @@ describe.skipIf(!hasEnv)('DLT-003 — storage bucket ACLs are in version control
     ).toBeGreaterThan(0)
   })
 
-  it('the two private buckets are not readable with the anon key', async () => {
+  it('the private buckets are not readable with the anon key', async () => {
     if (!applied) return
     const anon = createClient(URL!, ANON!, { auth: { persistSession: false } })
-    for (const name of ['kyc-documents', 'delivery-evidence']) {
+    for (const name of Object.entries(BUCKETS).filter(([, v]) => !v.public).map(([k]) => k)) {
       const { data, error } = await anon.storage.from(name).list()
       // Either an explicit error, or an empty listing — never object names.
       expect(

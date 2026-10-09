@@ -222,12 +222,16 @@ export default function WithdrawPage() {
 
   const amountNum = parseFloat(amount) || 0
   const gate = overview?.gate
+  // The payout gate fails closed. KYC (kyc_required) comes first — the DB
+  // sends its own sentence, so an unmapped reason still reads correctly.
   const gateMessage = gate && !gate.eligible
     ? gate.reason === 'not_a_seller'
       ? 'Store credit is spent at checkout, with no service fee. To withdraw it instead, contact support@dropmarket.gg.'
       : gate.reason === 'account_age'
         ? `Withdrawals open ${gate.minAgeDays} days after your seller account is approved — from ${fmtDate(gate.unlockAt)}.`
-        : `You changed your payout details recently. Withdrawals reopen ${fmtDateTime(gate.freezeUntil)}.`
+        : gate.reason === 'payout_details_freeze'
+          ? `You changed your payout details recently. Withdrawals reopen ${fmtDateTime(gate.freezeUntil)}.`
+          : gate.message || 'Withdrawals are not available on this account yet.'
     : overview?.negative
       ? 'Your balance is below zero after a refund. Withdrawals reopen once new sales bring it back above zero.'
       : null

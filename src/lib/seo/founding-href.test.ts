@@ -3,7 +3,7 @@ import { foundingHref, readFoundingSrc } from './founding-href'
 
 describe('founding-seller attribution', () => {
   it('puts the tag in the hash, never a robots-blocked query', () => {
-    expect(foundingHref('footer')).toBe('/early-seller#src=footer')
+    expect(foundingHref('footer')).toBe('/founding#src=footer')
     expect(foundingHref('roblox-sell-modal')).not.toContain('?')
   })
   it('reads the hash first, then a legacy ?src=', () => {

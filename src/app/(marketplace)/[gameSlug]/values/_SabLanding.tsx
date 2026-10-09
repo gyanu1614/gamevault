@@ -95,7 +95,7 @@ export function SabLanding({
           icon: <UserIcon size={20} weight="bold" />,
           title: 'No accounts listed yet',
           body: 'Be the first to sell a Steal a Brainrot account.',
-          cta: { label: 'Become a Founding Seller', href: '/early-seller' },
+          cta: { label: 'Become a Founding Seller', href: '/founding#src=sab-landing' },
         }}
       />
 

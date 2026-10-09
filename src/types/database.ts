@@ -2063,6 +2063,79 @@ export type Database = {
         }
         Relationships: []
       }
+      email_preferences: {
+        Row: {
+          marketing: boolean
+          new_message: boolean
+          new_order: boolean
+          new_review: boolean
+          payout_processed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          marketing?: boolean
+          new_message?: boolean
+          new_order?: boolean
+          new_review?: boolean
+          payout_processed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          marketing?: boolean
+          new_message?: boolean
+          new_order?: boolean
+          new_review?: boolean
+          payout_processed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       fee_config_audit: {
         Row: {
           actor: string | null
@@ -2598,6 +2671,11 @@ export type Database = {
           display_name: string | null
           ecosystem: string | null
           emoji: string | null
+          hero_bg_blur: string | null
+          hero_bg_focal_y: number
+          hero_bg_srcset: Json | null
+          hero_bg_updated_at: string | null
+          hero_bg_url: string | null
           id: string
           image_source: string | null
           image_synced_at: string | null
@@ -2631,6 +2709,11 @@ export type Database = {
           display_name?: string | null
           ecosystem?: string | null
           emoji?: string | null
+          hero_bg_blur?: string | null
+          hero_bg_focal_y?: number
+          hero_bg_srcset?: Json | null
+          hero_bg_updated_at?: string | null
+          hero_bg_url?: string | null
           id?: string
           image_source?: string | null
           image_synced_at?: string | null
@@ -2664,6 +2747,11 @@ export type Database = {
           display_name?: string | null
           ecosystem?: string | null
           emoji?: string | null
+          hero_bg_blur?: string | null
+          hero_bg_focal_y?: number
+          hero_bg_srcset?: Json | null
+          hero_bg_updated_at?: string | null
+          hero_bg_url?: string | null
           id?: string
           image_source?: string | null
           image_synced_at?: string | null
@@ -3477,6 +3565,9 @@ export type Database = {
           template_version_used: number | null
           title: string
           updated_at: string
+          value_item_slug: string | null
+          value_matched_at: string | null
+          value_variant: string | null
           view_count: number
           views: number | null
         }
@@ -3518,6 +3609,9 @@ export type Database = {
           template_version_used?: number | null
           title: string
           updated_at?: string
+          value_item_slug?: string | null
+          value_matched_at?: string | null
+          value_variant?: string | null
           view_count?: number
           views?: number | null
         }
@@ -3559,6 +3653,9 @@ export type Database = {
           template_version_used?: number | null
           title?: string
           updated_at?: string
+          value_item_slug?: string | null
+          value_matched_at?: string | null
+          value_variant?: string | null
           view_count?: number
           views?: number | null
         }
@@ -5155,6 +5252,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           badges: string[] | null
+          banner_focal_y: number
           banner_preset: string | null
           banner_url: string | null
           bio: string | null
@@ -5218,6 +5316,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           badges?: string[] | null
+          banner_focal_y?: number
           banner_preset?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -5281,6 +5380,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           badges?: string[] | null
+          banner_focal_y?: number
           banner_preset?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -8183,6 +8283,88 @@ export type Database = {
           },
         ]
       }
+      seller_agreements: {
+        Row: {
+          agreement_sha256: string
+          agreement_slug: string
+          agreement_version: string
+          id: string
+          ip: unknown
+          signature_path: string
+          signed_at: string
+          typed_name: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          agreement_sha256: string
+          agreement_slug?: string
+          agreement_version: string
+          id?: string
+          ip?: unknown
+          signature_path: string
+          signed_at?: string
+          typed_name: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          agreement_sha256?: string
+          agreement_slug?: string
+          agreement_version?: string
+          id?: string
+          ip?: unknown
+          signature_path?: string
+          signed_at?: string
+          typed_name?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_agreements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       seller_applications: {
         Row: {
           accepted_anti_fraud_policy: boolean | null
@@ -8970,6 +9152,94 @@ export type Database = {
             foreignKeyName: "seller_notifications_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      seller_onboarding: {
+        Row: {
+          completed_at: string | null
+          country: string | null
+          created_at: string
+          current_step: number
+          discord: string | null
+          is_adult_confirmed_at: string | null
+          logo_uploaded_at: string | null
+          sells: Json
+          source: string | null
+          store_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          current_step?: number
+          discord?: string | null
+          is_adult_confirmed_at?: string | null
+          logo_uploaded_at?: string | null
+          sells?: Json
+          source?: string | null
+          store_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          current_step?: number
+          discord?: string | null
+          is_adult_confirmed_at?: string | null
+          logo_uploaded_at?: string | null
+          sells?: Json
+          source?: string | null
+          store_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_onboarding_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "seller_shop_banners"
             referencedColumns: ["seller_id"]
           },
@@ -10004,6 +10274,119 @@ export type Database = {
           },
         ]
       }
+      value_funnel_events: {
+        Row: {
+          created_at: string
+          event: string
+          game_slug: string
+          id: number
+          item_slug: string | null
+          listing_id: string | null
+          state: string | null
+          surface: string
+          variant: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          game_slug: string
+          id?: number
+          item_slug?: string | null
+          listing_id?: string | null
+          state?: string | null
+          surface: string
+          variant?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          game_slug?: string
+          id?: number
+          item_slug?: string | null
+          listing_id?: string | null
+          state?: string | null
+          surface?: string
+          variant?: string | null
+        }
+        Relationships: []
+      }
+      values_events: {
+        Row: {
+          checked_at: string
+          confidence: string
+          created_at: string
+          currency: string | null
+          ends_on: string | null
+          format: string | null
+          game_id: string
+          how_items_were_obtained: string | null
+          id: string
+          is_published: boolean
+          items: Json
+          name: string
+          season: string
+          slug: string
+          sources: Json
+          starts_on: string | null
+          status: string
+          summary: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          checked_at: string
+          confidence?: string
+          created_at?: string
+          currency?: string | null
+          ends_on?: string | null
+          format?: string | null
+          game_id: string
+          how_items_were_obtained?: string | null
+          id?: string
+          is_published?: boolean
+          items?: Json
+          name: string
+          season: string
+          slug: string
+          sources?: Json
+          starts_on?: string | null
+          status: string
+          summary: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          checked_at?: string
+          confidence?: string
+          created_at?: string
+          currency?: string | null
+          ends_on?: string | null
+          format?: string | null
+          game_id?: string
+          how_items_were_obtained?: string | null
+          id?: string
+          is_published?: boolean
+          items?: Json
+          name?: string
+          season?: string
+          slug?: string
+          sources?: Json
+          starts_on?: string | null
+          status?: string
+          summary?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "values_events_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       values_games: {
         Row: {
           created_at: string
@@ -10161,6 +10544,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "values_items_base_item_id_fkey"
+            columns: ["base_item_id"]
+            isOneToOne: false
+            referencedRelation: "values_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "values_items_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
@@ -10280,6 +10670,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      values_published_prices: {
+        Row: {
+          game_slug: string
+          item_slug: string
+          prices: Json
+          published_at: string
+          variant: string
+        }
+        Insert: {
+          game_slug: string
+          item_slug: string
+          prices?: Json
+          published_at?: string
+          variant: string
+        }
+        Update: {
+          game_slug?: string
+          item_slug?: string
+          prices?: Json
+          published_at?: string
+          variant?: string
+        }
+        Relationships: []
       }
       values_raw_listings: {
         Row: {
@@ -11420,6 +11834,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           badges: string[] | null
+          banner_focal_y: number | null
           banner_preset: string | null
           banner_url: string | null
           bio: string | null
@@ -11448,6 +11863,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           badges?: string[] | null
+          banner_focal_y?: number | null
           banner_preset?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -11476,6 +11892,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           badges?: string[] | null
+          banner_focal_y?: number | null
           banner_preset?: string | null
           banner_url?: string | null
           bio?: string | null
@@ -12533,6 +12950,18 @@ export type Database = {
         }
         Relationships: []
       }
+      value_funnel_daily: {
+        Row: {
+          cta_clicks: number | null
+          day: string | null
+          fallbacks_shown: number | null
+          game_slug: string | null
+          listings_opened: number | null
+          orders: number | null
+          value_views: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_alert_once: {
@@ -12647,6 +13076,7 @@ export type Database = {
         }
         Returns: Json
       }
+      founding_spot_cap: { Args: never; Returns: number }
       generate_listing_slug: {
         Args: { listing_id: string; title_text: string }
         Returns: string
@@ -12769,6 +13199,10 @@ export type Database = {
         Args: { required_permission: string }
         Returns: boolean
       }
+      increment_listing_views: {
+        Args: { listing_uuid: string }
+        Returns: undefined
+      }
       inventory_claim_for_order: { Args: { p_order_id: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin_safe: { Args: never; Returns: boolean }
@@ -12819,6 +13253,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      open_seller_signup_version: { Args: never; Returns: number }
       order_cancel_return_wallet: {
         Args: {
           p_allow_paid?: boolean
@@ -13439,6 +13874,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      seller_onboarding_complete: {
+        Args: { p_agreement_version: string; p_user: string }
+        Returns: Json
+      }
       seller_payout_details_set: {
         Args: {
           p_address_enc?: string
@@ -13458,6 +13897,7 @@ export type Database = {
       storage_declared_buckets: { Args: never; Returns: string[] }
       storage_policies_version: { Args: never; Returns: number }
       table_posture_version: { Args: never; Returns: number }
+      unverified_review_price_usd: { Args: never; Returns: number }
       upgrade_all_seller_tiers: { Args: never; Returns: number }
       user_wallet_balance: {
         Args: { p_currency: string; p_user_id: string }

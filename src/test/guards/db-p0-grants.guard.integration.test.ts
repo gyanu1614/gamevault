@@ -116,6 +116,11 @@ const RATE_LIMIT_SERVICE_ONLY = [
   'rate_limit_hit', 'rate_limits_cleanup', 'rate_limits_version',
 ]
 
+/** Open seller signup (20261008023032) + payout KYC gate (20261008021902). */
+const OPEN_SIGNUP_SERVICE_ONLY = [
+  'open_seller_signup_version', 'seller_onboarding_complete', 'unverified_review_price_usd', 'founding_spot_cap',
+]
+
 async function dbP0Applied(): Promise<boolean> {
   const { error } = await fx!.svc.rpc('db_p0_guards_version')
   return !error
@@ -295,7 +300,7 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
-      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY]) {
+      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY, ...OPEN_SIGNUP_SERVICE_ONLY]) {
         expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
         expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
       }

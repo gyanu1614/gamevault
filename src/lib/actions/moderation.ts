@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { UNVERIFIED_REVIEW_PRICE_USD } from '@/lib/fees'
 import { DEFAULT_TIER } from '@/lib/seller/tiers'
 import { logAdminActivity } from '@/lib/admin/activity-log'
 import { revalidatePath } from 'next/cache'
@@ -173,6 +174,20 @@ export async function getPendingListings(): Promise<{
           storePaused: paused.get(sid) ?? false,
           pendingCount: pendingCounts.get(sid) ?? 0,
         } satisfies SellerModerationContext
+        // Open seller signup: say WHY it is here. An unverified seller's
+        // listing over the review price is the new reason; the entry rank's
+        // first-N review is the old one.
+        const unverified = l.seller?.is_verified === false
+        const overLine = unverified && Number(l.price ?? 0) > UNVERIFIED_REVIEW_PRICE_USD
+        l.reviewReason = l.status !== 'pending_approval'
+          ? null
+          : overLine
+            ? `New seller · over $${UNVERIFIED_REVIEW_PRICE_USD}`
+            : l.sellerContext.approvedCount < l.sellerContext.threshold
+              ? `First ${l.sellerContext.threshold} listings`
+              : unverified
+                ? 'New seller'
+                : null
       }
     }
 

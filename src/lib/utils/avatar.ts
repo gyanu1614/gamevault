@@ -9,7 +9,7 @@
 export function generateDiceBearAvatar(username: string): string {
   // Return DiceBear API URL (60 bytes) instead of base64 data URI (5-6 KB)
   // This prevents HTTP 431 errors from session cookie overflow
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`
+  return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`
 }
 
 /**

@@ -327,7 +327,7 @@ export default async function SellLandingPage({ params }: PageProps) {
                   </Link>
                   , or if you&apos;re ready now,{' '}
                   <Link
-                    href="/account/become-seller"
+                    href="/founding#src=game-sell"
                     className="font-semibold text-[#8FBF9C] underline-offset-2 transition-colors hover:text-[#A6D9B6] hover:underline"
                   >
                     become a seller
