@@ -40,6 +40,7 @@ import {
   Ticket,
   UserPlus,
   X,
+  UsersThree,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { createClient } from '@/lib/supabase/client'
@@ -83,6 +84,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
   {
     title: 'Sellers',
     links: [
+      { label: 'Sellers', href: '/admin/all-sellers', icon: UsersThree, roles: ALL },
       { label: 'Seller Applications', href: '/admin/sellers', icon: UserPlus, roles: ['admin', 'moderator', 'super_admin'] },
       { label: 'Active Sellers', href: '/admin/active-sellers', icon: Storefront, roles: ALL },
       { label: 'Founding Sellers', href: '/admin/early-sellers', icon: RocketLaunch, roles: ['admin', 'super_admin'] },
