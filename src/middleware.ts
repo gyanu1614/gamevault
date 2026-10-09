@@ -7,6 +7,7 @@ import {
   isBecomeSellerRoute,
 } from '@/lib/auth/become-seller-redirect'
 import { ingestRequestHeaders, ingestUpstream, trailingSlashRedirectUrl } from '@/lib/analytics/ingest-proxy'
+import { isPasswordGateExempt, needsPassword, setPasswordUrl } from '@/lib/auth/oauth'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -85,6 +86,13 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
       }
 
+      // Required password (Google/Discord sign-in): an account that has not
+      // set one yet may not use a protected route. `user` comes from the auth
+      // server, so the stored flag is read fresh. Rule: src/lib/auth/oauth.ts.
+      if (needsPassword(user) && !isPasswordGateExempt(pathname)) {
+        return NextResponse.redirect(new URL(setPasswordUrl(pathname), request.url))
+      }
+
       // V17e / Beta C — Seller-only sections. Buyers and unapproved accounts
       // hitting any /account/listings* route get bounced to "/". This is the
       // authoritative server-side gate.
@@ -141,8 +149,8 @@ export async function middleware(request: NextRequest) {
 
         if (isSellSurface && !(kind === 'seller' || kind === 'admin' || kind === 'applicant')) {
           // Buyers and accounts with no application in the pipeline start
-          // at the seller application, not inside the wizard.
-          return NextResponse.redirect(new URL('/account/become-seller', request.url))
+          // at the open seller signup (/founding), not inside the wizard.
+          return NextResponse.redirect(new URL('/founding', request.url))
         }
       }
 

@@ -221,7 +221,18 @@ function LiveOrderRow({ order, onNavigate }: { order: any; onNavigate: () => voi
   )
 }
 
-export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = {}) {
+/**
+ * `transparent` — paint nothing until the page scrolls (the homepage's
+ * over-the-hero state), on a route that is not the homepage (/founding).
+ * `minimal` — logo left, auth / profile right, no category strip, no search:
+ * a focused task page (the seller signup) keeps the brand bar without the
+ * marketplace navigation pulling the visitor away.
+ */
+export function Navbar({
+  forceScrolled = false,
+  transparent = false,
+  minimal = false,
+}: { forceScrolled?: boolean; transparent?: boolean; minimal?: boolean } = {}) {
   const { user, loading } = useAuth()
   const authDialog = useAuthDialog()
   const queryClient = useQueryClient()
@@ -259,7 +270,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
   // Mobile: the bar floats transparent over the hero at the very top ONLY
   // on the homepage. Marketplace/category pages (which have a sub-navbar)
   // keep the solid bar so the two-bar unit reads as one solid block.
-  const overHero = pathname === '/'
+  const overHero = pathname === '/' || transparent
   // Marketplace category pages (/{game}/{category}) render GameSubNav right
   // below the navbar. On those, the navbar drops its bottom hairline so the
   // navbar + sub-nav merge into one seamless solid block on mobile.
@@ -1124,7 +1135,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
             </Link>
 
             {/* V21/P7.r — Divider hides while search is expanded. */}
-            {!searchExpanded && (
+            {!searchExpanded && !minimal && (
               <div className="hidden h-6 w-px bg-white/20 md:block" />
             )}
 
@@ -1134,7 +1145,8 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                 individual tab that was hovered. Centers the mega-menu
                 Stripe/Linear-style.
                 V21/P7.r — Collapses out when search is expanded. */}
-            {!searchExpanded && (
+            {minimal && <div className="hidden flex-1 md:block" aria-hidden />}
+            {!searchExpanded && !minimal && (
               <div
                 ref={navCategoriesRef}
                 className="hidden flex-1 items-center justify-center gap-1 md:flex"
@@ -1156,7 +1168,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
               </div>
             )}
 
-            {!searchExpanded && (
+            {!searchExpanded && !minimal && (
               <div className="hidden h-6 w-px bg-white/20 md:block" />
             )}
 
@@ -1175,7 +1187,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                   search. */}
               {/* V21/P7.ab — mr pushes the collapsed search bar left, away
                   from the icon cluster, for a bit more breathing room. */}
-              <div className={cn('hidden lg:block', searchExpanded ? 'flex-1' : 'mr-3 xl:mr-5')}>
+              {!minimal && <div className={cn('hidden lg:block', searchExpanded ? 'flex-1' : 'mr-3 xl:mr-5')}>
                 <GlobalSearch
                   navCatsData={navCatsData ?? []}
                   catConfigData={catConfigData ?? []}
@@ -1185,7 +1197,7 @@ export function Navbar({ forceScrolled = false }: { forceScrolled?: boolean } = 
                     window.location.href = `/browse?search=${encodeURIComponent(q)}`
                   }}
                 />
-              </div>
+              </div>}
 
               {/* R17 — Skeleton placeholders for Notifications + Messages +
                   Activity while auth is resolving, so the navbar's width is

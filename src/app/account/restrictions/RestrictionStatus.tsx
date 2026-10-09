@@ -22,7 +22,24 @@ interface Restriction {
   created_at: string
 }
 
+export interface Strike {
+  id: string
+  kind: string
+  reason: string
+  created_at: string
+  revoked_at: string | null
+}
+
+const STRIKE_LABEL: Record<string, string> = {
+  listing_takedown: 'Listing removed',
+  image_removed: 'Image removed',
+  avatar_reset: 'Profile picture reset',
+  report_upheld: 'Buyer report upheld',
+  other: 'Rule broken',
+}
+
 interface RestrictionStatusProps {
+  strikes?: Strike[]
   profile: {
     seller_status?: string | null
     seller_restriction_reason?: string | null
@@ -77,7 +94,8 @@ const MEANING: Record<'active' | 'restricted' | 'banned', { ok: boolean; text: s
   ],
 }
 
-export default function RestrictionStatus({ profile, restrictions }: RestrictionStatusProps) {
+export default function RestrictionStatus({ profile, restrictions, strikes = [] }: RestrictionStatusProps) {
+  const activeStrikes = strikes.filter((s) => !s.revoked_at).length
   const [showAll, setShowAll] = useState(false)
   const state: 'active' | 'restricted' | 'banned' =
     profile.seller_status === 'banned' ? 'banned' : profile.seller_status === 'restricted' ? 'restricted' : 'active'
@@ -93,6 +111,33 @@ export default function RestrictionStatus({ profile, restrictions }: Restriction
       <AccountPageHeader title="Account Status" subtitle="View and manage your seller restriction information" />
 
       <RevealGroup className="mt-6 space-y-4">
+        <RevealItem>
+          {/* Strikes: 1 warning · 2 restricted · 3 banned. */}
+          <section className="rounded-lg bg-bg-raised p-5 sm:p-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5" aria-label={`${activeStrikes} of 3 strikes`}>
+                {[1, 2, 3].map((n) => (
+                  <span key={n} className={cn('h-2.5 w-8 rounded-full', n <= activeStrikes ? (activeStrikes >= 3 ? 'bg-error' : 'bg-warning') : 'bg-white/[0.08]')} />
+                ))}
+              </div>
+              <p className="text-[14px] text-text-secondary">
+                <span className="font-semibold text-text-primary">{activeStrikes} of 3 strikes.</span>{' '}
+                {activeStrikes === 0 ? 'Keep to the house rules and it stays that way.' : activeStrikes === 1 ? 'One more restricts your store.' : activeStrikes === 2 ? 'One more bans your store.' : 'Your store is banned.'}
+              </p>
+            </div>
+            {strikes.length > 0 && (
+              <ul className="mt-4 divide-y divide-white/[0.06]">
+                {strikes.map((s) => (
+                  <li key={s.id} className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-[13px]', s.revoked_at && 'opacity-50')}>
+                    <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[11.5px] font-semibold text-text-secondary">{STRIKE_LABEL[s.kind] ?? s.kind}</span>
+                    <p className="min-w-0 flex-1 text-text-secondary">{s.reason}</p>
+                    <span className="text-[12px] text-text-tertiary">{fmtDateTime(s.created_at)}{s.revoked_at ? ' · withdrawn' : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </RevealItem>
         <RevealItem>
           <section className={cn('rounded-lg p-5 sm:p-6', tone.bg)}>
             <div className="flex flex-col items-start gap-4 sm:flex-row">

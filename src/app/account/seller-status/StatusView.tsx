@@ -143,7 +143,7 @@ export default function StatusView({
       {/* Backdrop photo + scrim (subtle, fades toward the bottom) */}
       <div className="fixed inset-0 z-0">
         <Image
-          src="/assets/heroes/sell.avif"
+          src="/assets/heroes/founding.avif"
           alt=""
           fill
           priority

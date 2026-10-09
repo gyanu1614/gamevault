@@ -118,7 +118,7 @@ export function SellerCta({ feeLine }: { feeLine?: string } = {}) {
           heading reads as the bento's own label rather than as a floating
           section header. The gap is the grid's own row gap, so the heading
           and the first row of cards pair up. */}
-      <h2 className="section-title">Sell Game Items for Real Money</h2>
+      <h2 className="section-title">Sell on DropMarket</h2>
 
       {/* One column until the cards are wide enough to sit side by side.
           The third card spans both columns on the bottom row. */}

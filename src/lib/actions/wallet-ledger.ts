@@ -198,7 +198,10 @@ export interface WalletOverview {
   negative: boolean
   gate: {
     eligible: boolean
-    reason: 'not_a_seller' | 'account_age' | 'payout_details_freeze' | null
+    reason: 'kyc_required' | 'not_a_seller' | 'account_age' | 'payout_details_freeze' | null
+    /** The DB's own sentence for this refusal (kyc_required today). Shown
+     *  verbatim for any reason the client does not map itself. */
+    message: string | null
     sellerSince: string | null
     unlockAt: string | null
     freezeUntil: string | null
@@ -232,6 +235,7 @@ export async function getMyWalletOverview(): Promise<{ success: boolean; overvie
         gate: {
           eligible: Boolean(d.gate?.eligible),
           reason: (d.gate?.reason ?? null) as WalletOverview['gate']['reason'],
+          message: typeof d.gate?.message === 'string' ? d.gate.message : null,
           sellerSince: d.gate?.seller_since ?? null,
           unlockAt: d.gate?.unlock_at ?? null,
           freezeUntil: d.gate?.freeze_until ?? null,

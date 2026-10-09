@@ -18,10 +18,12 @@ import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { snapshotListings, submitListingChanges } from '@/lib/seo/indexnow'
 import { DEFAULT_TIER, tierByKey } from '@/lib/seller/tiers'
 import { validateListingPatch } from '@/lib/listings/validate'
+import { needsUnverifiedPriceReview } from '@/lib/listings/publish-status'
 import { publishDenialFor, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
 import { checkListingImage, listingImagePathFor, listingImagePathFromUrl, isOwnedListingImagePath, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { toStoredImage } from '@/lib/images/resize-server'
+import { screenImage } from '@/lib/images/screen'
 
 /** Editable listing fields (updateListing). Category is fixed once published. */
 export interface ListingUpdateInput {
@@ -70,6 +72,8 @@ export async function uploadListingImage(
     }
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
+    const screened = await screenImage(checked.bytes, checked.image.mime, 'listing')
+    if (!screened.ok) return { success: false, error: screened.reason }
 
     // Shrink once before storing (<=1600 px WebP); unique path, cached a year.
     const stored = await toStoredImage(checked.bytes, checked.image.mime)
@@ -247,6 +251,8 @@ export async function getSellerProfile(): Promise<{
 interface OwnedListingRow {
   seller_id: string
   status: string
+  price: number | null
+  approved_by: string | null
   game_id: string
   game_category_id: string | null
   quantity: number
@@ -258,7 +264,34 @@ interface OwnedListingRow {
 }
 
 const OWNED_LISTING_SELECT =
-  'seller_id, status, game_id, game_category_id, price, quantity, min_quantity, is_unlimited, delivery_method, bundle_id, pair:game_categories!listings_game_category_id_fkey (type)'
+  'seller_id, status, approved_by, game_id, game_category_id, price, quantity, min_quantity, is_unlimited, delivery_method, bundle_id, pair:game_categories!listings_game_category_id_fkey (type)'
+
+/**
+ * Open seller signup — the offers-table mirror of the wizard's price review.
+ * An UNVERIFIED seller cannot keep a listing live above UNVERIFIED_REVIEW_PRICE_USD:
+ * a price change over the line (any status) or going live over the line
+ * without an approval lands in pending_approval. The DB trigger
+ * (check_listing_moderation) enforces the same rule and voids the old
+ * approval; deciding it here too returns the right status to the UI at once.
+ */
+function priceReviewStatus(
+  row: Pick<OwnedListingRow, 'status' | 'price' | 'approved_by'>,
+  patch: { price?: unknown; status?: unknown },
+  verified: boolean,
+): 'pending_approval' | null {
+  const nextPrice = patch.price !== undefined ? Number(patch.price) : Number(row.price ?? 0)
+  const nextStatus = typeof patch.status === 'string' ? patch.status : row.status
+  if (nextStatus !== 'active' || !needsUnverifiedPriceReview(verified, nextPrice)) return null
+  const priceChanged = patch.price !== undefined && Number(patch.price) !== Number(row.price ?? 0)
+  const goingLive = row.status !== 'active'
+  return priceChanged || (goingLive && !row.approved_by) ? 'pending_approval' : null
+}
+
+async function sellerIsVerified(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<boolean> {
+  const res = await (supabase.rpc as any)('get_seller_publish_policy', { p_user_id: userId })
+  if (res.error) throw new Error(res.error.message)
+  return (res.data as { is_verified?: boolean } | null)?.is_verified === true
+}
 
 /**
  * Update listing price — the offers-table inline price editor. Same validator
@@ -321,11 +354,14 @@ export async function updateListing(
     // rejects this transition too (42501); refusing here gives a clear message.
     if (
       input.status === 'active' &&
-      ['rejected', 'changes_requested', 'pending_approval'].includes(listing.status)
+      ['rejected', 'changes_requested', 'pending_approval', 'suspended'].includes(listing.status)
     ) {
       return {
         success: false,
-        error: 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
+        error:
+          listing.status === 'suspended'
+            ? 'This listing was removed by moderation. Reply to the email we sent to appeal.'
+            : 'This listing is under review or was rejected — resubmit it for moderation instead of re-activating it.',
       }
     }
 
@@ -337,6 +373,12 @@ export async function updateListing(
     // Auto-reactivate a sold-out listing when the seller restocks
     if (patch.quantity !== undefined && (patch.quantity as number) > 0 && listing.status === 'sold' && patch.status === undefined) {
       patch.status = 'active'
+    }
+
+    // Open seller signup: unverified + over the review line → review (see priceReviewStatus).
+    if (needsUnverifiedPriceReview(undefined, patch.price !== undefined ? Number(patch.price) : Number(listing.price ?? 0))) {
+      const held = priceReviewStatus(listing, patch, await sellerIsVerified(supabase, user.id))
+      if (held) patch.status = held
     }
 
     // IndexNow compares the listing before and after, so only a real change
@@ -426,14 +468,22 @@ export async function bulkUpdateListings(
     const service = createServiceRoleClient()
     const indexNowIds = eligible.map((r) => r.id)
     const indexNowBefore = await snapshotListings(service, indexNowIds)
+    // Open seller signup: one verification read for the whole batch; each row
+    // then decides for itself whether the patch sends it to review.
+    const mayNeedReview = eligible.some((r) =>
+      needsUnverifiedPriceReview(undefined, input.price !== undefined ? Number(input.price) : Number(r.price ?? 0)),
+    )
+    const verified = mayNeedReview ? await sellerIsVerified(supabase, user.id) : true
     let updated = 0
     for (const group of byContext.values()) {
       const rules = await loadListingRuleContext(supabase, group[0].game_id, group[0].pair?.type ?? 'items')
       for (const row of group) {
         const validated = validateListingPatch(input, rules, row)
         if (!validated.ok) return { success: false, error: validated.error }
+        const held = priceReviewStatus(row, validated.value as { price?: unknown; status?: unknown }, verified)
         const { error } = await (service.from('listings').update as any)({
           ...validated.value,
+          ...(held ? { status: held } : {}),
           updated_at: new Date().toISOString(),
         })
           .eq('id', row.id)

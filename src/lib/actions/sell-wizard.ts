@@ -22,7 +22,7 @@ import { findEnabledGameCategory } from '@/lib/categories'
 import { snapshotListings, submitIndexNow, submitListingChanges } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
 import { publishDenialMessage, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
-import { decidePublishStatus } from '@/lib/listings/publish-status'
+import { decidePublishStatus, needsUnverifiedPriceReview } from '@/lib/listings/publish-status'
 import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
@@ -31,6 +31,7 @@ import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
 import { activeDeliveryMethods, resolveDeliveryMethodId } from '@/lib/currency/delivery-methods'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
+import { screenImage } from '@/lib/images/screen'
 
 /** Service-role supabase client — bypasses RLS so we can self-heal a missing
  *  legacy categories row on the publish path. The user-bound client can't
@@ -643,7 +644,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     // D1: downgrade `active` → `pending_approval` when the tier requires it
     // (one rule with the drafts submitted on approval: decidePublishStatus).
     // GRO-08: an applicant's save is always a draft.
-    const finalStatus = isApplicant || !policy ? 'draft' : decidePublishStatus(policy, v.status)
+    const finalStatus = isApplicant || !policy ? 'draft' : decidePublishStatus(policy, v.status, v.price)
 
     // V19/P9 — One currency listing per (seller, game) in flexible
     // mode (Robux-style).
@@ -867,6 +868,18 @@ export async function updateListingFromWizard(
       v.status !== 'draft'
     const requestedStatus: 'draft' | 'active' = isApplicant ? 'draft' : v.status
 
+    // Open seller signup: an UNVERIFIED seller cannot keep a listing live above
+    // the review price. An edit that prices it over the line (or re-activates
+    // it there) goes to review, like a fresh publish would. The trigger cannot
+    // catch this case for an already-approved row (approved_by short-circuit).
+    let priceReview = false
+    if (!isApplicant && requestedStatus === 'active' && needsUnverifiedPriceReview(undefined, v.price)) {
+      const policyRes = await (supabase.rpc as any)('get_seller_publish_policy', { p_user_id: user.id })
+      if (policyRes.error) return { success: false, error: policyRes.error.message }
+      const verified = (policyRes.data as SellerPublishPolicy | null)?.is_verified === true
+      priceReview = needsUnverifiedPriceReview(verified, v.price) && existingStatus !== 'pending_approval'
+    }
+
     const updatePayload: Record<string, unknown> = {
       title: resolvedTitle || 'Untitled',
       description: v.description,
@@ -889,7 +902,7 @@ export async function updateListingFromWizard(
       // loop, which moves changes_requested/rejected back into review.
       ...(requestedStatus === 'draft'
         ? { status: 'draft' }
-        : isResubmit
+        : isResubmit || priceReview
           ? { status: 'pending_approval' }
           : {}),
     }
@@ -913,7 +926,7 @@ export async function updateListingFromWizard(
     // Bundle 2 — re-link after an edit (never blocks; see value-listings/link).
     await linkListingsToValueItems(getAdminSupabase(), [listingId])
     const finalStatus: string = (written as { status?: string } | null)?.status
-      ?? (requestedStatus === 'draft' ? 'draft' : isResubmit ? 'pending_approval' : existingStatus)
+      ?? (requestedStatus === 'draft' ? 'draft' : isResubmit || priceReview ? 'pending_approval' : existingStatus)
 
     // Moderation comms — the listing (re-)entered the review queue.
     if (finalStatus === 'pending_approval' && existingStatus !== 'pending_approval') {
@@ -1145,6 +1158,11 @@ export async function bulkPublishListings(
 
     const status =
       policy.auto_approve_bulk && !policy.needs_moderation ? 'active' : 'pending_approval'
+    // Open seller signup: an unverified seller's row priced above the review
+    // line is held even when the tier auto-approves bulk (same rule as single
+    // publish; the DB trigger is the safety net).
+    const rowStatus = (price: number) =>
+      status === 'active' && needsUnverifiedPriceReview(policy.is_verified, price) ? 'pending_approval' : status
 
     const failed: Array<{ line: number; error: string }> = []
     let ok = 0
@@ -1207,7 +1225,7 @@ export async function bulkPublishListings(
           region: v.region,
           platform: v.platform,
           delivery_method_type: v.delivery_method_type,
-          status,
+          status: rowStatus(v.price),
           metadata: { source: 'bulk' },
         }
         const { error } = await (listingsWriter.from('listings') as any).insert(payload)
@@ -1276,6 +1294,8 @@ export async function uploadSellImage(
     if (!(file instanceof File)) return { success: false, error: 'No file provided' }
     const checked = await checkListingImage(file)
     if (!checked.ok) return { success: false, error: checked.error }
+    const screened = await screenImage(checked.bytes, checked.image.mime, 'listing')
+    if (!screened.ok) return { success: false, error: screened.reason }
 
     // Shrink once before storing (<=1600 px WebP): images are served
     // unoptimized, so the stored file is what every buyer downloads. The

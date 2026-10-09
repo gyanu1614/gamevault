@@ -120,6 +120,11 @@ const nextConfig = {
   // SEO during the transition.
   async redirects() {
     return [
+      // Open seller signup (2026-10-08): every "become a seller" door is
+      // /founding. The waitlist page and the signup-to-apply funnel were in the
+      // sitemap and in inboxes, so they 308 rather than 404.
+      { source: '/early-seller', destination: '/founding', permanent: true },
+      { source: '/signup-become-seller', destination: '/founding', permanent: true },
       // The per-game content hub moved from /[game]/blogs to /[game]/blog, so
       // the whole site uses the singular form (the site-wide index was already
       // /blog). These URLs are in the sitemap and may be indexed, so both the

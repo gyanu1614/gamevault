@@ -62,6 +62,7 @@ import { StatStrip } from '@/components/account/AccountSurface'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { StatusBadge, adminBtn, adminBtnSm, type ChipTone } from '../../components/kit'
 import { TierChip } from '../../components/TierChip'
+import { ModerationPanel } from './ModerationPanel'
 
 /** Seller rank ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
@@ -458,6 +459,11 @@ export default function SellerDetailClient({
                   {shopName}
                 </h1>
                 <TierChip tier={profile.seller_tier} />
+                {profile.is_verified ? (
+                  <span className={cn(FLAG, 'bg-success-bg text-success')}>Verified</span>
+                ) : (
+                  <span className={cn(FLAG, 'bg-info-bg text-info')} title="Open signup: not identity-verified yet (no withdrawals until verified)">New Seller</span>
+                )}
                 {profile.kyc_status && (
                   <StatusBadge status={`KYC ${titleCase(profile.kyc_status)}`} tone={statusTone(profile.kyc_status)} />
                 )}
@@ -672,6 +678,52 @@ export default function SellerDetailClient({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          <ModerationPanel detail={detail} />
+
+          <Section title="Signup" sub="What they told us on /founding: where they are, how to reach them, what they sell.">
+            {detail.onboarding ? (
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px] sm:grid-cols-3">
+                <div><dt className="text-text-tertiary">Country</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.country ?? '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Discord</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.discord ? `@${detail.onboarding.discord.replace(/^@/, '')}` : '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Came from</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.source ?? '—'}</dd></div>
+                <div><dt className="text-text-tertiary">Started</dt><dd className="mt-0.5 font-medium text-text-primary">{new Date(detail.onboarding.started_at).toLocaleDateString('en-GB', { dateStyle: 'medium' })}</dd></div>
+                <div><dt className="text-text-tertiary">Finished</dt><dd className="mt-0.5 font-medium text-text-primary">{detail.onboarding.completed_at ? new Date(detail.onboarding.completed_at).toLocaleDateString('en-GB', { dateStyle: 'medium' }) : `Stuck at step ${detail.onboarding.current_step ?? '?'} of 4`}</dd></div>
+                <div className="col-span-2 sm:col-span-3"><dt className="text-text-tertiary">Sells</dt><dd className="mt-1 flex flex-wrap gap-1.5">{detail.onboarding.sells.length ? detail.onboarding.sells.map((g) => <span key={g} className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[12px] font-medium text-text-secondary">{g}</span>) : <span className="font-medium text-text-primary">—</span>}</dd></div>
+              </dl>
+            ) : (
+              <p className="text-[13px] text-text-tertiary">No open-signup record. This seller came through the older application flow.</p>
+            )}
+          </Section>
+
+          <Section title="Seller Agreement" sub="Signed Seller Agency Agreement (open seller signup). Newest first.">
+            {(detail.agreements ?? []).length === 0 ? (
+              <p className="text-[13px] text-text-tertiary">
+                {detail.application ? 'Signed inside the original seller application (see Application below).' : 'No e-signature on file.'}
+              </p>
+            ) : (
+              <ul className={ROWS}>
+                {(detail.agreements ?? []).map((a) => (
+                  <li key={a.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start">
+                    <div className="min-w-0 flex-1 text-[13px]">
+                      <p className="font-medium text-text-primary">
+                        {a.typed_name} <span className="text-text-tertiary">· {a.version}</span>
+                      </p>
+                      <p className="mt-0.5 text-text-secondary">{new Date(a.signed_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC</p>
+                      <p className="mt-0.5 truncate text-[12px] text-text-tertiary" title={a.user_agent ?? undefined}>
+                        IP {a.ip ?? '—'}{a.user_agent ? ` · ${a.user_agent.slice(0, 60)}${a.user_agent.length > 60 ? '…' : ''}` : ''}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-text-tertiary" title="SHA-256 of the agreement text as signed">{a.sha256.slice(0, 16)}…</p>
+                    </div>
+                    {a.signature_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.signature_url} alt={`Signature of ${a.typed_name}`} className="h-16 w-auto max-w-[220px] shrink-0 rounded-md bg-white object-contain p-1" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
           <Section title="Wallet & Payouts" sub="Balances, wallet activity and withdrawal requests.">
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {[

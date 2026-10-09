@@ -49,6 +49,7 @@ import { Crown } from 'lucide-react'
 import { SilverIcon } from '@/components/ui/silver-icon'
 import { GridSpotlight } from './GridSpotlight'
 import { HeroSearch } from './HeroSearch'
+import { HeroEyebrow } from '@/components/seller/SellerPrompt'
 
 /** Multi-game shortcuts. Every href was checked against production (200). */
 const SHORTCUTS = [
@@ -243,6 +244,15 @@ export function HeroFilm() {
           style={{ opacity: copyOpacity, y: copyY, filter: copyFilter }}
           {...inert(beat === 2)}
         >
+          {/* The seller prompt as a hero eyebrow: one line just under the
+              navbar, clear of the headline, no bar above the nav (owner,
+              2026-10-09). Absolute, so it never moves the copy. */}
+          <motion.div
+            className="hero-film__rise absolute inset-x-0 z-10 px-4"
+            style={{ top: 'calc(var(--navbar-bottom) + 18px)', pointerEvents: copyEvents }}
+          >
+            <HeroEyebrow />
+          </motion.div>
           <div className="page-measure">
             {/* Centred column. Only the column takes the pointer, never the
                 whole layer, so the grid spotlight still tracks around it. */}

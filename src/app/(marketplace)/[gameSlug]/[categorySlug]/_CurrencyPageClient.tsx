@@ -1051,8 +1051,9 @@ function FilterChips({
  *  or "Verified Seller" before the first sale); the header above it carries
  *  the full line with the tier. */
 function sellerFactText(offer: Offer): string {
-  const line = sellerStatLine({ ratingPercent: offer.rating, reviews: offer.reviews, sales: offer.sales, tier: offer.tier })
+  const line = sellerStatLine({ ratingPercent: offer.rating, reviews: offer.reviews, sales: offer.sales, tier: offer.tier, verified: offer.verified })
   if (line.kind === 'verified') return 'Verified Seller'
+  if (line.kind === 'new') return 'New Seller'
   return [
     line.rating ? `${line.rating.percent}% (${line.rating.reviews.toLocaleString('en-US')})` : null,
     line.sales > 0 ? `${line.sales.toLocaleString('en-US')} Sold` : null,

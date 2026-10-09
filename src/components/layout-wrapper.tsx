@@ -84,6 +84,10 @@ export function LayoutWrapper({
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
           the floating pill reads as an overlay above a page that already has
           its own left rail. */}
+      {/* The seller prompt (growth point 5) lives in the pages now — homepage
+          hero eyebrow, listings header card, listings empty state
+          (src/components/seller/SellerPrompt.tsx) — not in a bar above the
+          navbar. --beta-banner-offset stays at its 0px fallback. */}
       {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && (
         <Navbar forceScrolled={hasSidebar} />
       )}

@@ -8,7 +8,7 @@
  *
  * /test was a bare "Next.js is working!" stub with no referrers and was
  * deleted. The /dev/* previews are live design tools (referenced by
- * layout-wrapper.tsx and beta-banner.tsx), so they are kept and gated by a
+ * layout-wrapper.tsx), so they are kept and gated by a
  * server-side layout instead — three of them are client components and could
  * not call notFound() themselves.
  */

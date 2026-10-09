@@ -50,6 +50,8 @@ export interface ActiveSeller {
   seller_tier: string
   seller_status: string
   kyc_status: string | null
+  /** profiles.is_verified — false = an open-signup seller who has not verified yet. */
+  is_verified: boolean
   founding_seller: boolean
   is_test: boolean
   created_at: string
@@ -97,7 +99,7 @@ export async function getActiveSellers(filters?: ActiveSellersFilters): Promise<
     const { data: profiles, error } = await (service
       .from('profiles')
       .select(
-        'id, username, full_name, email, avatar_url, shop_name, seller_tier, seller_status, kyc_status, founding_seller, is_test, created_at, updated_at, total_sales, seller_rating, total_reviews',
+        'id, username, full_name, email, avatar_url, shop_name, seller_tier, seller_status, kyc_status, is_verified, founding_seller, is_test, created_at, updated_at, total_sales, seller_rating, total_reviews',
       )
       .eq('role', 'seller') as any)
 
@@ -203,6 +205,7 @@ export async function getActiveSellers(filters?: ActiveSellersFilters): Promise<
         seller_tier: p.seller_tier || DEFAULT_TIER,
         seller_status: p.seller_status || 'active',
         kyc_status: p.kyc_status ?? null,
+        is_verified: p.is_verified === true,
         founding_seller: p.founding_seller === true,
         is_test: p.is_test === true,
         created_at: p.created_at,

@@ -21,6 +21,7 @@
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { ReportListingLink } from '@/components/listings/ReportListingDialog'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Globe, Gamepad2, ArrowUpRight, Award, Sparkles, ChevronDown } from 'lucide-react'
@@ -28,6 +29,7 @@ import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -600,7 +602,7 @@ export default function ListingDetailClient({
                       <span className="truncate text-[13.5px] font-semibold text-text-primary group-hover:text-lime-text">
                         {sellerName}
                       </span>
-                      {listing.seller.verified && <VerifiedBadge size={14} />}
+                      {listing.seller.verified ? <VerifiedBadge size={14} /> : <NewSellerBadge />}
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11.5px] text-text-tertiary">
                       {/* "100% Positive · 12 Reviews · 34 Sold · Gold", or
@@ -611,6 +613,7 @@ export default function ListingDetailClient({
                         reviews={listing.seller.reviewCount}
                         sales={listing.seller.totalSales}
                         tier={listing.seller.tier}
+verified={listing.seller.verified}
                       />
                     </div>
                   </div>
@@ -708,6 +711,7 @@ export default function ListingDetailClient({
                         : BUY_CTA_LABEL}
                   </BuyButton>
                 )}
+                {!isOwn && !previewStatus && <ReportListingLink listingId={listing.id} signedIn={!!viewerId} />}
 
               </Card>
 
@@ -1128,6 +1132,7 @@ function OtherSellerRow({
                   reviews={offer.seller.reviewCount}
                   sales={offer.seller.sales}
                   tier={offer.seller.tier}
+verified={offer.seller.verified}
                 />
               </div>
             </div>
@@ -1152,13 +1157,14 @@ function OtherSellerRow({
                   <span className="truncate text-[12.5px] font-semibold text-text-primary">
                     {sellerName}
                   </span>
-                  {offer.seller.verified && <VerifiedBadge size={14} />}
+                  {offer.seller.verified ? <VerifiedBadge size={14} /> : <NewSellerBadge />}
                 </span>
                 <SellerStats
                   ratingPercent={offer.seller.ratingPercent}
                   reviews={offer.seller.reviewCount}
                   sales={offer.seller.sales}
                   tier={offer.seller.tier}
+verified={offer.seller.verified}
                   className="flex text-[11px]"
                 />
               </span>
@@ -1302,13 +1308,14 @@ function MiniCard({ listing, gameSlug }: { listing: MiniListing; gameSlug: strin
         </div>
         <div className="flex items-center gap-1.5 text-[11.5px] text-text-tertiary">
           <span className="min-w-0 truncate">{sellerName}</span>
-          {listing.seller.verified && <VerifiedBadge size={12} />}
+          {listing.seller.verified ? <VerifiedBadge size={12} /> : <NewSellerBadge />}
           <span aria-hidden>·</span>
           <SellerStats
             ratingPercent={listing.seller.ratingPercent}
             reviews={listing.seller.reviewCount}
             sales={listing.seller.totalSales}
             tier={listing.seller.tier}
+verified={listing.seller.verified}
           />
         </div>
       </div>

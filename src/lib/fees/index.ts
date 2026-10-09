@@ -95,3 +95,12 @@ export const WARRANTY_ACCOUNTS = {
 
 /** ADJUSTABLE to actual PSP fee once contracts sign. */
 export const CHARGEBACK_FEE_USD = 20
+
+/**
+ * Open seller signup (2026-10-08): a seller who has not verified their
+ * identity may list freely, but any listing priced ABOVE this (USD, the
+ * listing's `price` as stored) is held in the moderation queue first. The DB
+ * trigger (unverified_review_price_usd()) carries the same number — the
+ * open-seller-signup guard test keeps them equal.
+ */
+export const UNVERIFIED_REVIEW_PRICE_USD = 100

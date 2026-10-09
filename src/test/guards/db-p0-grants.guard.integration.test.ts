@@ -49,6 +49,8 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   'approve_listing', 'can_edit_review', 'check_seller_needs_moderation', 'checkout_wallet_hold_minor',
   'get_admin_role', 'get_my_permissions', 'get_seller_publish_policy', 'is_super_admin_safe',
   'reject_listing', 'reject_seller_application', 'request_listing_changes', 'withdraw_seller_application',
+  // Moderation tools (20261009020808): moderator RPCs (assert_moderator inside) + buyer report filing.
+  'takedown_listing', 'restore_listing', 'listing_report_file',
   // /sell security (20260925204757): "may this account sell?" — pinned to
   // auth.uid() for a JWT caller; evaluated by the listings INSERT policy and
   // the listing-images storage policy as the caller, and asked by the
@@ -114,6 +116,13 @@ const PR7_SERVICE_ONLY = [
 
 const RATE_LIMIT_SERVICE_ONLY = [
   'rate_limit_hit', 'rate_limits_cleanup', 'rate_limits_version',
+]
+
+/** Open seller signup (20261008023032) + payout KYC gate (20261008021902). */
+const OPEN_SIGNUP_SERVICE_ONLY = [
+  'open_seller_signup_version', 'seller_onboarding_complete', 'unverified_review_price_usd', 'founding_spot_cap',
+  // Moderation tools (20261009020808)
+  'seller_strike_count', 'seller_strike_issue', 'moderation_tools_version',
 ]
 
 async function dbP0Applied(): Promise<boolean> {
@@ -295,7 +304,7 @@ describe.skipIf(!hasEnv)('DB-P0 — function grants, view security_invoker, defa
       expect(p.views_without_security_invoker).toEqual([])
       expect([...p.anon_executable_definers].sort()).toEqual([...ANON_DEFINER_ALLOWLIST].sort())
       expect([...p.authenticated_executable_definers].sort()).toEqual(AUTHENTICATED_DEFINER_ALLOWLIST)
-      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY]) {
+      for (const fn of [...MONEY_ATOMICITY_SERVICE_ONLY, ...RATE_LIMIT_SERVICE_ONLY, ...PR7_SERVICE_ONLY, ...OPEN_SIGNUP_SERVICE_ONLY]) {
         expect(p.anon_executable_definers, `${fn} must not be anon-executable`).not.toContain(fn)
         expect(p.authenticated_executable_definers, `${fn} must not be authenticated-executable`).not.toContain(fn)
       }

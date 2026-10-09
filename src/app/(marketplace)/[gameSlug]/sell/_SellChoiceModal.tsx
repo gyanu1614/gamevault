@@ -8,7 +8,7 @@
  *
  * Two paths, each with an ETA:
  *   - Founding seller waitlist (amber) → /early-seller (ETA ~1 week)
- *   - Sign up & apply (green, fastest)  → /signup-become-seller (ETA ~12h)
+ *   - Sign up & apply (green, fastest)  → /founding (open signup, list today)
  *
  * The trigger is passed as children so the /sell page's own styled buttons
  * open it (no duplicate button styling here).
@@ -94,7 +94,7 @@ export function SellChoiceModal({
             className="group relative border border-[#1A211A] bg-[#0B0F0C] p-6 transition-colors hover:border-[#24352A]"
           >
             <Link
-              href="/signup-become-seller"
+              href="/founding#src=sell-choice"
               aria-label="Sign up and apply to sell"
               className="absolute inset-0 z-10"
             />

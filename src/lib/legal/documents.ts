@@ -789,13 +789,18 @@ export const LEGAL_DOCS: LegalDoc[] = [
           p(
             '11.1. The Seller’s Guide / Partner Rules and the Policies referenced in the Terms of Use are incorporated into and form an integral part of this Agreement, as updated from time to time. This Agreement is governed by the laws of England & Wales, and the Parties submit to the courts of England & Wales. If any provision is invalid, the remainder continues in effect. DropMarket may vary this Agreement on notice; continued use after the effective date constitutes acceptance.',
           ),
-          note(
-            '⚠️ NOT LEGAL ADVICE — solicitor sign-off pending. Open points for counsel: the interaction of the SafeDrop protection flow with the discharge-on-receipt / non-escrow requirement of the PSRs-2017 commercial-agent exclusion; the express “authority to conclude/bind” wording (clause 1.1); the Commercial Agents (Council Directive) Regulations 1993 position for the “goods” legs; and the consumer-facing cancellation/waiver mechanics in the Terms of Use.',
-          ),
         ],
       },
     ],
   },
+  // Seller Agency Agreement — pending solicitor sign-off (tracked here,
+  // stripped from the public text and from what sellers e-sign on /founding,
+  // owner 2026-10-08). Open points for counsel: the interaction of the
+  // SafeDrop protection flow with the discharge-on-receipt / non-escrow
+  // requirement of the PSRs-2017 commercial-agent exclusion; the express
+  // "authority to conclude/bind" wording (clause 1.1); the Commercial Agents
+  // (Council Directive) Regulations 1993 position for the "goods" legs; and
+  // the consumer-facing cancellation/waiver mechanics in the Terms of Use.
 
   /**
    * SafeDrop Protection Terms — v1 Model C (12 Jul 2026).

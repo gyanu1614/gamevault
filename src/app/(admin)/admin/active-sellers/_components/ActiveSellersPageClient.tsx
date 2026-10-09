@@ -46,6 +46,7 @@ import { TierChip } from '../../components/TierChip'
 
 type FilterStatus = 'all' | 'active' | 'restricted' | 'banned'
 type FilterTier = 'all' | SellerTier
+type FilterVerified = 'all' | 'verified' | 'new'
 
 function relativeTime(iso: string | null | undefined, now: number | null): string {
   if (!iso || now == null) return ''
@@ -88,6 +89,7 @@ export default function ActiveSellersPageClient({
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterTier, setFilterTier] = useState<FilterTier>('all')
   const [pausedOnly, setPausedOnly] = useState(false)
+  const [filterVerified, setFilterVerified] = useState<FilterVerified>('all')
   const [sortBy, setSortBy] = useState<ActiveSellerSort>('listings')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -126,6 +128,9 @@ export default function ActiveSellersPageClient({
     if (filterTier !== 'all') {
       filtered = filtered.filter((s) => s.seller_tier === filterTier)
     }
+    if (filterVerified !== 'all') {
+      filtered = filtered.filter((s) => (filterVerified === 'verified' ? s.is_verified : !s.is_verified))
+    }
     if (pausedOnly) {
       filtered = filtered.filter((s) => s.store_paused)
     }
@@ -161,7 +166,7 @@ export default function ActiveSellersPageClient({
     }
     const dir = sortOrder === 'asc' ? 1 : -1
     return [...filtered].sort((a, b) => (value(a) - value(b)) * dir)
-  }, [sellers, filterStatus, filterTier, pausedOnly, searchQuery, sortBy, sortOrder])
+  }, [sellers, filterStatus, filterTier, filterVerified, pausedOnly, searchQuery, sortBy, sortOrder])
 
   // ── CSV export of the filtered rows ──
   function handleExport() {
@@ -216,7 +221,7 @@ export default function ActiveSellersPageClient({
   }
 
   const stats = statsData
-  const filtered = searchQuery || filterStatus !== 'all' || filterTier !== 'all' || pausedOnly
+  const filtered = searchQuery || filterStatus !== 'all' || filterTier !== 'all' || filterVerified !== 'all' || pausedOnly
 
   return (
     <div className="space-y-5">
@@ -304,6 +309,17 @@ export default function ActiveSellersPageClient({
             <option value="active">Active</option>
             <option value="restricted">Restricted</option>
             <option value="banned">Banned</option>
+          </select>
+
+          <select
+            value={filterVerified}
+            onChange={(e) => setFilterVerified(e.target.value as FilterVerified)}
+            className={adminSelectCls}
+            aria-label="Filter by verification"
+          >
+            <option value="all">Verified + New</option>
+            <option value="verified">Verified Only</option>
+            <option value="new">New (Unverified) Only</option>
           </select>
 
           <FilterChip selected={pausedOnly} onClick={() => setPausedOnly((v) => !v)}>
@@ -434,6 +450,7 @@ function SellerRow({
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <p className="min-w-0 truncate text-[14px] font-semibold text-text-primary">{name}</p>
           <TierChip tier={seller.seller_tier} />
+          {!seller.is_verified && <span className={cn(FLAG, 'bg-info-bg text-info')} title="Open signup: not identity-verified yet (no withdrawals until verified)">New</span>}
           {seller.seller_status === 'restricted' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Restricted</span>}
           {seller.seller_status === 'banned' && <span className={cn(FLAG, 'bg-error-bg text-error')}>Banned</span>}
           {seller.store_paused && <span className={cn(FLAG, 'bg-warning-bg text-warning')}>Paused</span>}

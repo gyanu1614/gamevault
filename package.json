@@ -94,7 +94,7 @@
     "@tanstack/react-query-devtools": "^5.62.14",
     "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.7.6",
-    "canvas-confetti": "^1.9.3",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -125,6 +125,7 @@
     "recharts": "^3.7.0",
     "resend": "^6.9.1",
     "sharp": "^0.35.4",
+    "signature_pad": "^5.1.4",
     "sonner": "^1.7.3",
     "stripe": "^17.3.1",
     "tailwind-merge": "^2.6.0",
@@ -135,7 +136,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@types/canvas-confetti": "^1.6.4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.10.6",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.18",

@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { isUuid } from '@/lib/ids'
 import { CheckoutForm } from './CheckoutForm'
+import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 import { PURCHASES_ENABLED } from '@/lib/config/purchases'
 import BuyingOpensSoon from './_BuyingOpensSoon'
 import { eligibleMethods, toClientMethods } from '@/lib/payments/eligibility'
@@ -170,7 +171,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     // V19/P24/P7.bb — Full-bleed checkout: no max-width container, no
     // Back chip. The CheckoutForm's two halves now extend edge-to-edge
     // of the viewport. Browser back handles return navigation.
+    // Hero backdrop (owner, 2026-10-08): the checkout art, a step darker than
+    // other pages (hero-dim-strong) so the payment form stays the focus.
     <main className="w-full">
+      <HeroBackdropPreload name="checkout" ext="webp" />
+      <HeroBackdrop name="checkout" ext="webp" navbarOffset={0} className="hero-dim-strong">
       <CheckoutForm
         methods={toClientMethods(eligibility.methods)}
         listing={listing}
@@ -182,6 +187,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         buyerCountry={buyerCountry}
         deliveryMethod={deliveryMethod}
       />
+      </HeroBackdrop>
     </main>
   )
 }

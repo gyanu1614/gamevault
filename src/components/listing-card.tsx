@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { listingUrl } from '@/lib/listings/url'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 
 interface ListingCardProps {
   listing: ListingWithRelations
@@ -172,13 +173,14 @@ export function ListingCard({ listing, index = 0 }: ListingCardProps) {
                   <span className="truncate text-xs text-muted-foreground">
                     {sellerDisplayName(listing.seller)}
                   </span>
-                  {(listing.seller as any)?.is_verified && <VerifiedBadge size={12} />}
+                  {(listing.seller as any)?.is_verified ? <VerifiedBadge size={12} /> : (listing.seller as any)?.is_verified === false ? <NewSellerBadge /> : null}
                 </span>
                 <SellerStats
                   ratingPercent={sellerRatingPercent(listing.seller as any)}
                   reviews={Number((listing.seller as any)?.total_reviews ?? 0)}
                   sales={Number((listing.seller as any)?.total_sales ?? 0)}
                   tier={(listing.seller as any)?.seller_tier ?? null}
+                  verified={(listing.seller as any)?.is_verified ?? null}
                   className="text-[10.5px]"
                 />
               </span>

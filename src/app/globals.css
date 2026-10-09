@@ -52,10 +52,11 @@
   /* Y coordinate where the fixed mobile navbar ends — i.e. where any chrome
      that must sit directly BELOW it starts (game sub-nav, mobile dropdown
      panels and their scrims, the account drawer).
-     The mobile bar is 60px tall and rides at --beta-banner-offset, which
-     BetaBanner keeps updated as the banner scrolls away (0 when there's no
-     banner). Anything that hardcodes 60px instead of this var ends up hidden
-     UNDER the navbar as soon as an announcement banner is mounted. */
+     The mobile bar is 60px tall and rides at --beta-banner-offset: 0px
+     today (the seller prompt moved into the pages on 2026-10-08), but any
+     future announcement bar above the navbar sets it as it scrolls away.
+     Anything that hardcodes 60px instead of this var ends up hidden UNDER
+     the navbar as soon as such a bar is mounted. */
   --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
 
@@ -65,8 +66,8 @@
      .safe-top-fill paints it (owner, 2026-10-06: page content showed above
      the sticky bars on iPhone Safari). */
   --safe-top: env(safe-area-inset-top, 0px);
-  /* Where fixed top chrome starts: below the status bar, or below the beta
-     banner while it's on screen (its offset already counts the status bar). */
+  /* Where fixed top chrome starts: below the status bar, or below a top
+     announcement bar while it's on screen (its offset counts the status bar). */
   --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles */
@@ -1923,6 +1924,16 @@
   pointer-events: none;
 }
 
+/* Checkout (owner, 2026-10-08): the same hero treatment, a step darker, so
+   the payment form stays the loudest thing on the page. */
+.hero-dim-strong > .hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.48);
+  pointer-events: none;
+}
+
 .section-fade-bottom { position: relative; }
 .section-fade-bottom::after {
   content: "";
@@ -2901,4 +2912,30 @@ body { padding-top: var(--safe-top); }
   z-index: 90;
   pointer-events: none;
   background: var(--color-bg-base);
+}
+
+/* Seller prompt (hero eyebrow): a slow lime light sweeping through the
+   offer text — Aceternity-style text shimmer, no glow, no blur. The lead
+   stays plain white so the line is still one sentence, not a banner. */
+.seller-shimmer {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(255, 255, 255, 0.82) 35%,
+    #c8f06b 50%,
+    rgba(255, 255, 255, 0.82) 65%,
+    rgba(255, 255, 255, 0.82) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: seller-shimmer 4.5s ease-in-out infinite;
+}
+@keyframes seller-shimmer {
+  0% { background-position: 110% 0; }
+  100% { background-position: -40% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seller-shimmer { animation: none; color: #c8f06b; background: none; }
 }
