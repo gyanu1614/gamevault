@@ -17,16 +17,16 @@ describe('detailsSchema', () => {
     if (r.success) { expect(r.data.country).toBe('GB'); expect(r.data.discord).toBe('') }
   })
   it('refuses an unknown country, an empty sells list, an unknown category, and a minor', () => {
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, country: 'ZZ' }).success).toBe(false)
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, sells: [] }).success).toBe(false)
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, sells: [{ game: 'adopt-me', categories: ['weapons'] }] }).success).toBe(false)
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, isAdult: false }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, country: 'ZZ' }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, sells: [] }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, sells: [{ game: 'adopt-me', categories: ['weapons'] }] }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, isAdult: false }).success).toBe(false)
   })
   it('discord: strips a leading @, accepts new and legacy handles, refuses junk', () => {
     expect(detailsSchema.parse({ ...ok, discord: '@gyan.trades' }).discord).toBe('gyan.trades')
     expect(detailsSchema.parse({ ...ok, discord: 'Gyan#1234' }).discord).toBe('Gyan#1234')
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, discord: 'has spaces here' }).success).toBe(false)
-    expect(detailsSchema.safeParse({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', ...ok, discord: '<script>' }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, discord: 'has spaces here' }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, discord: '<script>' }).success).toBe(false)
   })
 })
 

@@ -113,7 +113,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
         <header className="max-w-3xl">
           {stage >= 5 ? (
             <>
-              <h1 className="text-heading text-text-primary sm:text-display lg:whitespace-nowrap">
+              <h1 className="text-heading text-text-primary sm:text-[36px] sm:leading-tight lg:whitespace-nowrap">
                 Welcome to the <span className="title-accent">DropMarket</span> Community
               </h1>
             </>
@@ -131,7 +131,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
           {stage >= 5 ? (
             <div>
               <StoreTitle shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} isVerified={state.isVerified} tier={state.tier} />
-              <div className={`${GLASS_CARD} mt-8 p-5 sm:p-7`}>
+              <div className={`${GLASS_CARD} mt-7 p-5 sm:p-6`}>
                 <DoneScreen />
               </div>
             </div>

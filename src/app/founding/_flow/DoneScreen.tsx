@@ -44,8 +44,8 @@ const DONTS = [
 function HouseRules() {
   return (
     <div className="mt-6 border-t border-white/[0.05] pt-6">
-      <h3 className="text-subheading text-text-primary">House Rules</h3>
-      <p className="mt-1 text-body-sm text-text-tertiary">Keep to these and your store stays in good standing.</p>
+      <h3 className="text-body font-semibold text-text-primary">House Rules</h3>
+      <p className="mt-0.5 text-caption text-text-tertiary">Keep to these and your store stays in good standing.</p>
       <div className="mt-4 grid gap-x-10 sm:grid-cols-2">
         <RuleList label="Do" Icon={Check} tone="text-lime-text" items={DOS} />
         <RuleList label="Don't" Icon={X} tone="text-error" items={DONTS} />
@@ -70,7 +70,7 @@ function RuleList({
       <p className={`text-body-sm font-semibold uppercase tracking-wide ${tone}`}>{label}</p>
       <ul className="mt-2">
         {items.map((text) => (
-          <li key={text} className="flex items-start gap-3 py-2 text-body text-text-secondary">
+          <li key={text} className="flex items-start gap-3 py-1.5 text-body-sm text-text-secondary">
             <Icon aria-hidden weight="bold" className={`mt-[4px] h-4 w-4 shrink-0 ${tone}`} />
             {text}
           </li>
@@ -104,12 +104,12 @@ export function StoreTitle({
   return (
     <div className="flex flex-col items-center text-center">
       {/* eslint-disable-next-line @next/next/no-img-element -- the seller's own logo / generated robot */}
-      <img src={getAvatarUrl(logoUrl, name)} alt="" width={88} height={88} className="h-[88px] w-[88px] rounded-full bg-bg-overlay object-cover ring-4 ring-white/[0.06]" />
+      <img src={getAvatarUrl(logoUrl, name)} alt="" width={72} height={72} className="h-[72px] w-[72px] rounded-full bg-bg-overlay object-cover ring-4 ring-white/[0.06]" />
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-        <h2 id="founding-done-title" className="text-display leading-none text-lime-text">{name}</h2>
+        <h2 id="founding-done-title" className="text-heading leading-none text-lime-text sm:text-[32px]">{name}</h2>
         <span className="inline-flex items-center gap-1.5" aria-label={`${tier ?? 'bronze'} tier, ${isVerified ? 'verified' : 'new seller'}`}>
-          <SellerTierBadge tier={tier ?? 'bronze'} size={28} float={false} />
-          {isVerified ? <VerifiedBadge size={20} /> : <NewSellerBadge size={20} />}
+          <SellerTierBadge tier={tier ?? 'bronze'} size={24} float={false} />
+          {isVerified ? <VerifiedBadge size={18} /> : <NewSellerBadge size={18} />}
         </span>
       </div>
       <p className="mt-2.5 text-body-sm text-text-secondary">
@@ -119,13 +119,13 @@ export function StoreTitle({
 
       {/* The two doors, front and centre. */}
       <div className="mt-6 flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:items-center">
-        <AppLink href="/sell/new" className="inline-flex h-12 items-center justify-center rounded-lg bg-white px-6 text-body font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+        <AppLink href="/sell/new" className="inline-flex h-11 items-center justify-center rounded-lg bg-white px-5 text-body-sm font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
           Start Selling
         </AppLink>
         {shopSlug && (
           <AppLink
             href={`/shop/${shopSlug}`}
-            className="relative inline-flex h-12 items-center justify-center overflow-hidden rounded-lg border border-lime-tint-border bg-lime-tint-bg px-6 text-body font-semibold text-lime-text transition-colors hover:bg-[rgba(86,184,127,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="relative inline-flex h-11 items-center justify-center overflow-hidden rounded-lg border border-lime-tint-border bg-lime-tint-bg px-5 text-body-sm font-semibold text-lime-text transition-colors hover:bg-[rgba(86,184,127,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             {!reduce && <ShineBorder duration={4} borderWidth={1} shineColor="rgba(163,230,53,0.9)" />}
             View Your Store
@@ -140,11 +140,11 @@ export function DoneScreen() {
 
   return (
     <section aria-labelledby="founding-done-title">
-      <h3 className="text-subheading text-text-primary">What Happens Now</h3>
+      <h3 className="text-body font-semibold text-text-primary">What Happens Now</h3>
       <ul className="mt-3">
         {WHY_STAY.map(({ Icon, tile, text }, i) => (
-          <li key={text} className={`flex items-center gap-4 py-4 text-body text-text-secondary ${i > 0 ? 'border-t border-white/[0.05]' : ''}`}>
-            <span aria-hidden className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tile}`}>
+          <li key={text} className={`flex items-center gap-3.5 py-3.5 text-body-sm text-text-secondary ${i > 0 ? 'border-t border-white/[0.05]' : ''}`}>
+            <span aria-hidden className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tile}`}>
               <Icon weight="duotone" className="h-5 w-5" />
             </span>
             {text}
