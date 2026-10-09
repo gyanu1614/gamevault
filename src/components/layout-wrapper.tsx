@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import { Navbar } from '@/components/navbar-floating'
-import { BetaBanner } from '@/components/beta-banner'
 import { Footer } from '@/components/footer'
 import { SellerPresenceHeartbeat } from '@/components/presence/SellerPresenceHeartbeat'
 
@@ -85,14 +84,12 @@ export function LayoutWrapper({
       {/* Sidebar'd account pages pin the navbar to its full-width bar mode:
           the floating pill reads as an overlay above a page that already has
           its own left rail. */}
-      {/* Seller banner (growth point 5): the one site-wide ask to sell; it
-          opens the open seller signup at /founding. Keeps the
-          --beta-banner-offset contract the navbar reads. */}
+      {/* The seller prompt (growth point 5) lives in the pages now — homepage
+          hero eyebrow, listings header card, listings empty state
+          (src/components/seller/SellerPrompt.tsx) — not in a bar above the
+          navbar. --beta-banner-offset stays at its 0px fallback. */}
       {!isAdminPage && !isCheckout && !isSellerApplication && !isValuesHub && !isSellWizard && (
-        <>
-          <BetaBanner />
-          <Navbar forceScrolled={hasSidebar} />
-        </>
+        <Navbar forceScrolled={hasSidebar} />
       )}
       {/* Approved sellers only: stamps their presence while the site is open. */}
       <SellerPresenceHeartbeat />

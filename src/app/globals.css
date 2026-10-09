@@ -52,10 +52,11 @@
   /* Y coordinate where the fixed mobile navbar ends — i.e. where any chrome
      that must sit directly BELOW it starts (game sub-nav, mobile dropdown
      panels and their scrims, the account drawer).
-     The mobile bar is 60px tall and rides at --beta-banner-offset, which
-     BetaBanner keeps updated as the banner scrolls away (0 when there's no
-     banner). Anything that hardcodes 60px instead of this var ends up hidden
-     UNDER the navbar as soon as an announcement banner is mounted. */
+     The mobile bar is 60px tall and rides at --beta-banner-offset: 0px
+     today (the seller prompt moved into the pages on 2026-10-08), but any
+     future announcement bar above the navbar sets it as it scrolls away.
+     Anything that hardcodes 60px instead of this var ends up hidden UNDER
+     the navbar as soon as such a bar is mounted. */
   --navbar-bottom: calc(60px + var(--chrome-top));
   --navbar-height: 60px;
 
@@ -65,8 +66,8 @@
      .safe-top-fill paints it (owner, 2026-10-06: page content showed above
      the sticky bars on iPhone Safari). */
   --safe-top: env(safe-area-inset-top, 0px);
-  /* Where fixed top chrome starts: below the status bar, or below the beta
-     banner while it's on screen (its offset already counts the status bar). */
+  /* Where fixed top chrome starts: below the status bar, or below a top
+     announcement bar while it's on screen (its offset counts the status bar). */
   --chrome-top: max(var(--safe-top), var(--beta-banner-offset, 0px));
 
   /* Navbar surface vars — used by navbar-floating.tsx inline styles */

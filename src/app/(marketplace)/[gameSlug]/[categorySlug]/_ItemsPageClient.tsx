@@ -15,7 +15,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
-import { Search, Gamepad2, ShieldCheck } from 'lucide-react'
+import { Search, Gamepad2, ShieldCheck, Store } from 'lucide-react'
+import { track } from '@vercel/analytics'
+import { SellerPromptCard } from '@/components/seller/SellerPrompt'
+import { useSellerPrompt } from '@/hooks/use-seller-prompt'
+import { SELLER_PROMPT_EVENT, listingsEmptyCopy, sellerPromptHref } from '@/lib/seller/seller-prompt'
 import { bestOfferId, sortOffers } from './_itemsSort'
 import ItemCard from './_ItemCard'
 import Link from 'next/link'
@@ -299,7 +303,7 @@ export default function ItemsPageClient({
           {/* Header — logo on the left, one-line "{Game} {Category}" title
               beside it, on every width (owner, 2026-09-28). The stats line
               stays in the HTML for search engines but is not shown. */}
-          <div className="mb-5 flex items-center gap-3.5 sm:mb-6 sm:gap-5">
+          <div className="mb-5 flex flex-wrap items-center gap-3.5 sm:mb-6 sm:gap-5">
             {gameImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -367,6 +371,8 @@ export default function ItemsPageClient({
               {introLine && <p className="sr-only">{introLine}</p>}
             </div>
           </div>
+            {/* Seller prompt beside the title; its own row on phones. */}
+            <SellerPromptCard gameName={gameName} categoryLabel={categoryLabel} className="w-full sm:ml-auto sm:w-auto sm:max-w-[440px]" />
 
           {/* Filter bar (owner, 2026-09-28): the filters on one full-width
               row, the search on its own full-width row below.
@@ -453,6 +459,9 @@ export default function ItemsPageClient({
             onClear={clearFilters}
             query={q.trim()}
             sellHref={`/${gameSlug}/sell?src=buy-search-empty`}
+            categoryEmpty={offers.length === 0}
+            gameName={gameName}
+            categoryLabel={categoryLabel}
             matches={closestByName(offers, q, 6).map((o) => (
               <ItemCard
                 key={o.id}
@@ -521,12 +530,20 @@ function EmptyState({
   query,
   sellHref,
   matches,
+  categoryEmpty,
+  gameName,
+  categoryLabel,
 }: {
   onClear: () => void
   query: string
   sellHref: string
   matches: React.ReactNode[]
+  /** No listings in this category at all (not a filter miss). */
+  categoryEmpty: boolean
+  gameName: string
+  categoryLabel: string
 }) {
+  if (categoryEmpty) return <CategoryEmptyState gameName={gameName} categoryLabel={categoryLabel} />
   return (
     <div className="space-y-8">
       <div className="flex flex-col items-center justify-center rounded-lg bg-bg-raised px-6 py-12 text-center">
@@ -571,6 +588,42 @@ function EmptyState({
           </div>
         </section>
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * The category has nothing in it yet: the seller prompt as the empty state
+ * ("Be the first to list …"). The words are the same for everyone; only the
+ * door changes — a seller goes straight to the wizard, everyone else to
+ * /founding — so the static HTML never flashes.
+ */
+function CategoryEmptyState({ gameName, categoryLabel }: { gameName: string; categoryLabel: string }) {
+  const { state, forgetCount } = useSellerPrompt()
+  const variant = state === 'seller' ? 'seller' : 'visitor'
+  const copy = listingsEmptyCopy(variant, gameName, categoryLabel)
+  return (
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-lime-tint-border bg-bg-raised px-6 py-12 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-lime-tint-bg text-lime-text">
+        <Store className="h-6 w-6" />
+      </div>
+      <h3 className="font-bold text-text-primary" style={{ fontSize: 'var(--fs-section)', lineHeight: 'var(--lh-section)' }}>
+        {copy.title}
+      </h3>
+      <p className="mt-2 max-w-sm leading-relaxed text-text-secondary" style={{ fontSize: 'var(--fs-meta)', lineHeight: 'var(--lh-body)' }}>
+        {copy.body}
+      </p>
+      <Link
+        href={sellerPromptHref(variant, 'listings-empty')}
+        onClick={() => {
+          track(SELLER_PROMPT_EVENT[variant], { source: 'listings-empty' })
+          if (variant === 'seller') forgetCount()
+        }}
+        className="mt-5 inline-flex items-center justify-center gap-1.5 rounded-md bg-lime px-5 font-bold text-text-inverse transition-colors hover:bg-lime-hover active:bg-lime-pressed"
+        style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
+      >
+        {copy.cta}
+      </Link>
     </div>
   )
 }
