@@ -49,9 +49,9 @@ export const GAME_HERO_FRAME_ASPECT = 1440 / 560
  * 2026-10-08; both now carry admin-uploaded heroes, so the files went.)
  */
 export const STATIC_GAME_HEROES: Readonly<Record<string, string>> = {
-  fortnite: '/hero/fortnite.jpg',
-  roblox: '/hero/roblox.jpg',
-  valorant: '/hero/valorant.jpg',
+  fortnite: '/hero/fortnite.webp',
+  roblox: '/hero/roblox.webp',
+  valorant: '/hero/valorant.webp',
 }
 
 /** The columns the public read selects. */

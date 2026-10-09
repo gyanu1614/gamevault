@@ -52,45 +52,26 @@ function useCta(
 }
 
 /**
- * Mount/unmount choreography shared by both surfaces: invisible-but-sized
- * while pending, fade + 6px rise when resolved, height folds to 0 on hide.
+ * Mount/unmount choreography shared by both surfaces. The visitor copy is in
+ * the static HTML and VISIBLE from the first paint (it is the homepage's LCP
+ * element — hiding it until auth resolved pushed LCP to 8 s, Lighthouse
+ * 2026-10-09). When auth resolves: a seller sees the words swap, an
+ * established seller (3+ listings) sees it fold away.
  */
-function Reveal({
-  state,
-  className = '',
-  children,
-}: {
-  state: SellerPromptState
-  className?: string
-  children: React.ReactNode
-}) {
+function Reveal({ state, className = '', children }: { state: SellerPromptState; className?: string; children: React.ReactNode }) {
   const reduce = useReducedMotion()
-  const resolved = state === 'visitor' || state === 'seller'
   const ease = [0.16, 1, 0.3, 1] as const
   return (
     <AnimatePresence initial={false}>
       {state !== 'hidden' && (
         <motion.div
           key="prompt"
-          aria-hidden={!resolved}
           initial={false}
-          animate={{
-            height: 'auto',
-            opacity: resolved ? 1 : 0,
-            y: resolved ? 0 : 6,
-          }}
-          exit={{ height: 0, opacity: 0, y: 0 }}
-          transition={
-            reduce
-              ? { duration: 0 }
-              : {
-                  height: { duration: 0.4, ease },
-                  opacity: { duration: 0.35, ease },
-                  y: { duration: 0.45, ease },
-                }
-          }
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={reduce ? { duration: 0 } : { height: { duration: 0.4, ease }, opacity: { duration: 0.3, ease } }}
           style={{ overflow: 'hidden' }}
-          className={`${className} ${resolved ? '' : 'pointer-events-none'}`}
+          className={className}
         >
           {children}
         </motion.div>
@@ -134,8 +115,7 @@ export function HeroEyebrow({ className = '' }: { className?: string }) {
         <Link
           href={cta.href}
           onClick={cta.onClick}
-          tabIndex={variant ? undefined : -1}
-          className={`group relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${BOX[variant ?? 'visitor']}`}
+                    className={`group relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${BOX[variant ?? 'visitor']}`}
         >
           {!reduce && <ShineBorder duration={6} borderWidth={1} shineColor="rgba(200,240,107,0.85)" />}
           <span className="sm:hidden">{copy.phoneCta}</span>
@@ -182,8 +162,7 @@ export function SellerPromptCard({
         <Link
           href={cta.href}
           onClick={cta.onClick}
-          tabIndex={variant ? undefined : -1}
-          className={`inline-flex h-10 shrink-0 items-center rounded-md px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+                    className={`inline-flex h-10 shrink-0 items-center rounded-md px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
             variant === 'seller' ? 'bg-lime text-text-inverse hover:bg-lime-hover active:bg-lime-pressed' : 'bg-white text-black hover:bg-white/90'
           }`}
         >
