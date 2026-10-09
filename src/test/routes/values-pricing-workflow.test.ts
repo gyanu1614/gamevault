@@ -61,7 +61,11 @@ describe('values-pricing-daily.yml', () => {
   })
 
   it("games are independent: one game's failure never blocks another", () => {
-    expect(J['adopt-me']).not.toMatch(/\n {4}needs:/)
+    // Adopt Me waits for SAB (both hammer the same database; its import and
+    // reprice overlapping SAB's publish timed SAB out daily, 2026-10-07/09)
+    // but runs whatever SAB's outcome.
+    expect(J['adopt-me']).toMatch(/(^|\n) {4}needs: sab\n/)
+    expect(J['adopt-me']).toMatch(/always\(\)/)
     expect(J['steal-an-egg']).not.toMatch(/\n {4}needs:/)
     expect(J['murder-mystery-2']).not.toMatch(/\n {4}needs:/)
     // SAB waits for its own G2G cross-check, but runs even when it failed.

@@ -171,9 +171,14 @@ function inversions(entries: LadderEntry[], tolerance: number): Array<[LadderEnt
 /**
  * Remove the outlier forms until the pet's ladder is consistent. Each round
  * withholds ONE form, preferring: a stored value nothing re-priced this run
- * (no current evidence) → the form in the most inversions → the one with the
- * fewest reputable listings → the lower form (a lower form above a higher one
- * is usually a mislabeled listing).
+ * (no current evidence) → the one with the fewest reputable listings → the
+ * form in the most inversions → the lower form (a lower form above a higher
+ * one is usually a mislabeled listing).
+ *
+ * Evidence before inversion count (2026-10-09): Fly Ride sits above Normal,
+ * Fly and Ride at once, so 2-3 catalogue-shop listings on each of those
+ * (flat ~$445 across forms) put FR in three inversions and withheld the
+ * pet's best-supported price (Bat Dragon FR: 25 listings; Owl FR).
  */
 function resolveLadder(
   entries: LadderEntry[],
@@ -193,8 +198,8 @@ function resolveLadder(
     candidates.sort(
       (a, b) =>
         Number(a.fresh) - Number(b.fresh) ||
-        (count.get(b.variant) ?? 0) - (count.get(a.variant) ?? 0) ||
         a.reputableCount - b.reputableCount ||
+        (count.get(b.variant) ?? 0) - (count.get(a.variant) ?? 0) ||
         LADDER_RANK[a.variant] - LADDER_RANK[b.variant],
     )
     const out = candidates[0]

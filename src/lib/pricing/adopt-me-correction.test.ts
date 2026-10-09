@@ -121,6 +121,32 @@ describe('planAdoptMeCorrection — ladder inversions', () => {
     expect(plan.corrections.map((c) => c.variant).sort()).toEqual(['FR', 'NEON', 'R'])
   })
 
+  it('keeps a well-supported Fly Ride over thin, catalogue-priced N / F / R above it (bat dragon, 2026-10-09)', () => {
+    // FR: 8 reputable listings $260-300. N / F / R: 2-3 listings each from
+    // catalogue shops at ~$445-960. FR used to be withheld for being in the
+    // most inversions, leaving the page without its most-traded price.
+    const plan = planAdoptMeCorrection([
+      ...real('bat-dragon', 'FR', [[260, 5200], [265, 8100], [270, 3300], [275, 12000], [280, 6400], [285, 9100], [289.99, 7700], [300, 15000]]),
+      ...real('bat-dragon', 'NFR', [[590, 5200], [600, 8100], [610, 3300], [615, 12000], [620, 6400], [625, 9100], [630, 7700], [640, 15000]]),
+      ...real('bat-dragon', 'N', [[444.47, 8452], [627.91, 5300], [627.91, 5300]]),
+      ...real('bat-dragon', 'F', [[445.51, 8452], [552.08, 5300]]),
+      ...real('bat-dragon', 'R', [[445.11, 8452], [960.12, 5300]]),
+    ])
+    expect(plan.corrections.map((c) => c.variant).sort()).toEqual(['FR', 'NFR'])
+    expect(plan.flagged.map((f) => f.variant).sort()).toEqual(['F', 'N', 'R'])
+  })
+
+  it('keeps the Fly Ride when a 2-listing Normal and Ride sit above it (owl, 2026-10-09)', () => {
+    const plan = planAdoptMeCorrection([
+      ...real('owl', 'FR', [[66, 5200], [68, 8100], [69.5, 3300], [70.94, 12000], [72, 6400], [74, 9100]]),
+      ...real('owl', 'NFR', [[165, 5200], [168, 8100], [171.54, 3300], [173, 12000], [176, 6400]]),
+      ...real('owl', 'N', [[120, 8452], [137.2, 5300]]),
+      ...real('owl', 'R', [[108, 8452], [116.7, 5300]]),
+    ])
+    expect(plan.corrections.map((c) => c.variant)).toContain('FR')
+    expect(plan.flagged.map((f) => f.variant).sort()).toEqual(['N', 'R'])
+  })
+
   it('a Fly Ride above the Neon is a real market (incomparable forms), not an inversion', () => {
     const plan = planAdoptMeCorrection([
       ...rep('cheap', 'FR', [9, 9.5, 10]),

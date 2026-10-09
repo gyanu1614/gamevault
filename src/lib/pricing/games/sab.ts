@@ -11,6 +11,7 @@
  * reconciles today's price-history row.
  */
 
+import { publishSabMarketEstimates } from './sab-publish'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import type { RepriceOptions, RepriceResult } from '@/lib/pricing/registry'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
@@ -314,6 +315,10 @@ async function runSabCorrectionUnlocked(
 
   const evidenceRefreshed = Number(evidenceRows ?? 0)
   console.log(`✅ sab_market_evidence_display refreshed: ${evidenceRefreshed} rows`)
+
+  // The crawl no longer publishes (--no-publish); this run does, from the
+  // evidence it just refreshed. Non-fatal by design — see sab-publish.ts.
+  await publishSabMarketEstimates(admin as any)
 
   const [
     catalog,

@@ -19,6 +19,13 @@ export function parseArgs(argv) {
   // meaningless as a dry run, so it implies --send.
   const publishOnly = argv.includes("--publish-only");
   const send = publishOnly || argv.includes("--send");
+  // --no-publish (2026-10-09): insert every batch and skip the edge function's
+  // publish chain; the runner's reprice (pnpm reprice --game=sab) refreshes the
+  // evidence, republishes the estimates and rebuilds sab_price_display itself.
+  // The edge publish ran under one 150 s wall-clock limit while the Adopt Me
+  // job loaded the same database, and timed SAB out before its reprice.
+  // --publish-only still publishes: it exists to do exactly that.
+  const publish = publishOnly || !argv.includes("--no-publish");
   const input = argv.find(
     (argument) => !argument.startsWith("--"),
   );
@@ -30,6 +37,7 @@ export function parseArgs(argv) {
   return {
     send,
     publishOnly,
+    publish,
     inputPath: resolve(process.cwd(), input),
   };
 }
@@ -572,7 +580,7 @@ async function sendBatch({
  * It is deliberately the SAME batch a full --send would have published on, so
  * the recovery path exercises the identical request.
  */
-export function buildBatchPlan(groups, { publishOnly = false } = {}) {
+export function buildBatchPlan(groups, { publishOnly = false, publish = true } = {}) {
   const batchPlan = [];
 
   for (const [sourceSlug, listings] of groups) {
@@ -592,6 +600,9 @@ export function buildBatchPlan(groups, { publishOnly = false } = {}) {
 
   if (!batchPlan.length) return batchPlan;
 
+  // --no-publish: every batch is a plain insert (the reprice publishes).
+  if (!publish && !publishOnly) return batchPlan;
+
   // Publish on the very last batch of the whole import.
   const final = batchPlan[batchPlan.length - 1];
   final.publish = true;
@@ -605,7 +616,7 @@ export function buildBatchPlan(groups, { publishOnly = false } = {}) {
 }
 
 async function main() {
-  const { send, publishOnly, inputPath } = parseArgs(
+  const { send, publishOnly, publish, inputPath } = parseArgs(
     process.argv.slice(2),
   );
 
@@ -698,6 +709,7 @@ async function main() {
   // See buildBatchPlan for why publishing happens once, on the final batch.
   const batchPlan = buildBatchPlan(groups, {
     publishOnly,
+    publish,
   });
 
   if (publishOnly && !batchPlan.length) {
