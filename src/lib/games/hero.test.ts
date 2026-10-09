@@ -138,10 +138,10 @@ describe('resolveGameHero — upload → static art → none', () => {
   it('no upload → the static art the repo ships for that game', () => {
     expect(resolveGameHero('valorant', { slug: 'valorant', hero_bg_focal_y: 70 }, SB)).toEqual({
       kind: 'static',
-      src: '/hero/valorant.jpg',
+      src: '/hero/valorant.webp',
       focalY: 70,
     })
-    expect(resolveGameHero('fortnite', null, SB)).toMatchObject({ kind: 'static', src: '/hero/fortnite.jpg' })
+    expect(resolveGameHero('fortnite', null, SB)).toMatchObject({ kind: 'static', src: '/hero/fortnite.webp' })
   })
 
   it('no upload and no static art → neutral (never another game\'s art)', () => {
