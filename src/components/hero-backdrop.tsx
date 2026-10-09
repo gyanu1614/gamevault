@@ -102,8 +102,7 @@ export function HeroBackdropPreload({
       as="image"
       href={`/assets/heroes/${name}.${ext}`}
       type={EXT_MIME[ext]}
-      // @ts-expect-error — fetchpriority is valid HTML; React types lag.
-      fetchpriority={priority}
+      fetchPriority={priority}
     />
   )
 }

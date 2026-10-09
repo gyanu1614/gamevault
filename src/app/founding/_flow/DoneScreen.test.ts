@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 ;(globalThis as any).React = React
-import { DoneScreen } from './DoneScreen'
+import { DoneScreen, StoreTitle } from './DoneScreen'
 
 vi.mock('@/components/navigation/AppLink', () => ({
   default: ({ href, children }: { href: string; children: unknown }) => createElement('a', { href }, children as never),
@@ -18,7 +18,10 @@ vi.mock('framer-motion', () => ({ useReducedMotion: () => true }))
 
 describe('DoneScreen', () => {
   const html = renderToStaticMarkup(
-    createElement(DoneScreen, { shopName: 'GGTrading', shopSlug: 'ggtrading', logoUrl: null, isFounding: true, isVerified: false, tier: 'bronze' }),
+    createElement('div', null,
+      createElement(StoreTitle, { shopName: 'GGTrading', shopSlug: 'ggtrading', logoUrl: null, isFounding: true, isVerified: false, tier: 'bronze' }),
+      createElement(DoneScreen, null),
+    ),
   )
 
   it('never tells a new seller to go verify', () => {

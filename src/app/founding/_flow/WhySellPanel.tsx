@@ -14,12 +14,14 @@ import { Crown } from '@phosphor-icons/react/dist/ssr/Crown'
 import { ShieldCheck } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
 import type { FoundingProgress } from '@/lib/config/founding-seller'
 import { GLASS_CARD } from './ui'
+import { ShineBorder } from '@/components/ui/shine-border'
 
-const WHY: ReadonlyArray<{ Icon: PhosphorIcon; tile: string; title: string; line: string }> = [
-  { Icon: Coins, tile: 'bg-lime-tint-bg text-lime-text', title: 'Lowest Selling Fees on the Market', line: 'Some of the lowest seller fees anywhere, so you keep more of what you make.' },
-  { Icon: Percent, tile: 'bg-warning-bg text-warning', title: 'Fees Get Even Cheaper', line: 'As an early seller you get 50% off all fees for your first year.' },
-  { Icon: Crown, tile: 'bg-[rgba(245,196,81,0.14)] text-[#F5C451]', title: 'Founding Badge', line: 'A badge on your store to show off and bring in more buyers. It is yours to keep.' },
-  { Icon: ShieldCheck, tile: 'bg-info-bg text-info', title: 'SafeDrop Protection', line: 'You only deliver once a purchase is made, so you never hand over an item first.' },
+/** Each tile carries a thin travelling line in its own colour (ShineBorder) — an effect, not a glow. */
+const WHY: ReadonlyArray<{ Icon: PhosphorIcon; tile: string; shine: string; title: string; line: string }> = [
+  { Icon: Coins, tile: 'bg-lime-tint-bg text-lime-text', shine: 'rgba(163,230,53,0.9)', title: 'Lowest Selling Fees on the Market', line: 'Some of the lowest seller fees anywhere, so you keep more of what you make.' },
+  { Icon: Percent, tile: 'bg-warning-bg text-warning', shine: 'rgba(245,196,81,0.9)', title: 'Fees Get Even Cheaper', line: 'As an early seller you get 50% off all fees for your first year.' },
+  { Icon: Crown, tile: 'bg-[rgba(245,196,81,0.14)] text-[#F5C451]', shine: 'rgba(255,214,120,0.95)', title: 'Founding Badge', line: 'A badge on your store to show off and bring in more buyers. It is yours to keep.' },
+  { Icon: ShieldCheck, tile: 'bg-info-bg text-info', shine: 'rgba(96,165,250,0.9)', title: 'SafeDrop Protection', line: 'You only deliver once a purchase is made, so you never hand over an item first.' },
 ]
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -33,11 +35,11 @@ export function WhySellPanel({ progress, className }: { progress: FoundingProgre
 
   return (
     <aside className={[GLASS_CARD, 'p-5 sm:p-6', className].filter(Boolean).join(' ')} aria-labelledby="why-sell-title">
-      <h2 id="why-sell-title" className="text-subheading text-text-primary">
-        Why Sell at <span className="seller-shimmer">DropMarket</span>
+      <h2 id="why-sell-title" className="text-center text-subheading text-text-primary">
+        Why Sell at <span className="title-accent">DropMarket</span>
       </h2>
-      <ul className="mt-3">
-        {WHY.map(({ Icon, tile, ...w }, i) => (
+      <ul className="mt-4">
+        {WHY.map(({ Icon, tile, shine, ...w }, i) => (
           <motion.li
             key={w.title}
             {...rise(i)}
@@ -45,8 +47,9 @@ export function WhySellPanel({ progress, className }: { progress: FoundingProgre
           >
             <span
               aria-hidden
-              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 ease-out group-hover:-translate-y-0.5 ${tile}`}
+              className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg transition-transform duration-300 ease-out group-hover:-translate-y-0.5 ${tile}`}
             >
+              {!reduce && <ShineBorder duration={7 + i} borderWidth={1} shineColor={shine} />}
               <Icon weight="duotone" className="h-5 w-5" />
             </span>
             <div className="min-w-0">

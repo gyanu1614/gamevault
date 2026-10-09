@@ -18,9 +18,9 @@ import { ShineBorder } from '@/components/ui/shine-border'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 
 const NEXT = [
-  'Create your first listing. It takes about two minutes.',
-  'Buyers find it, message you here, and pay before you deliver.',
-  'Deliver once the purchase is made, and the sale is done. SafeDrop Protection covers every order.',
+  'List an item. It takes two minutes and goes live right away.',
+  'A buyer pays first. Then you deliver, right here on DropMarket.',
+  'Every sale is protected. You get paid for every item you deliver.',
 ]
 
 export function CongratsDialog({

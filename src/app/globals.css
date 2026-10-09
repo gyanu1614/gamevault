@@ -2939,3 +2939,48 @@ body { padding-top: var(--safe-top); }
 @media (prefers-reduced-motion: reduce) {
   .seller-shimmer { animation: none; color: #c8f06b; background: none; }
 }
+
+/* Title accent (founding headings, 2026-10-09): the key word in brushed
+   silver with a thin lime rule that draws itself under it, and a soft white
+   light that sweeps the letters every few seconds. No colour wash. */
+.title-accent {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(
+    100deg,
+    #ffffff 0%,
+    #dfe5ec 30%,
+    #ffffff 48%,
+    #b9c2cf 70%,
+    #ffffff 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: title-accent-sweep 7s ease-in-out infinite;
+}
+.title-accent::after {
+  content: '';
+  position: absolute;
+  left: 0.02em;
+  right: 0.02em;
+  bottom: -0.06em;
+  height: 0.08em;
+  border-radius: 999px;
+  background: var(--color-accent-text);
+  transform-origin: left center;
+  animation: title-accent-rule 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+@keyframes title-accent-sweep {
+  0%, 55% { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+@keyframes title-accent-rule {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-accent { animation: none; }
+  .title-accent::after { animation: none; transform: none; }
+}

@@ -28,7 +28,7 @@ import { StepAccount } from './StepAccount'
 import { StepDetails } from './StepDetails'
 import { StepStore } from './StepStore'
 import { StepAgreement } from './StepAgreement'
-import { DoneScreen } from './DoneScreen'
+import { DoneScreen, StoreTitle } from './DoneScreen'
 import { GLASS_CARD } from './ui'
 import { CongratsDialog } from './CongratsDialog'
 
@@ -114,16 +114,13 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
           {stage >= 5 ? (
             <>
               <h1 className="text-heading text-text-primary sm:text-display lg:whitespace-nowrap">
-                Welcome to the <span className="seller-shimmer">DropMarket</span> Community
+                Welcome to the <span className="title-accent">DropMarket</span> Community
               </h1>
-              <p className="mt-3 text-body text-text-secondary sm:text-body-lg">
-                {state.shopName ? <>Your store <span className="font-medium text-text-primary">{state.shopName}</span> is open. Here is what to do next.</> : 'Your store is open. Here is what to do next.'}
-              </p>
             </>
           ) : (
             <>
               <h1 className="text-heading text-text-primary sm:text-display">
-                Become a <span className="seller-shimmer">Seller</span>
+                Become a <span className="title-accent">Seller</span>
               </h1>
               <p className="mt-3 text-body text-text-secondary sm:text-body-lg">Takes about 2 minutes. Then you start selling.</p>
             </>
@@ -132,8 +129,11 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
 
         <div className="mt-8 grid grid-cols-1 items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
           {stage >= 5 ? (
-            <div className={`${GLASS_CARD} p-5 sm:p-7`}>
-              <DoneScreen shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} isVerified={state.isVerified} tier={state.tier} />
+            <div>
+              <StoreTitle shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} isVerified={state.isVerified} tier={state.tier} />
+              <div className={`${GLASS_CARD} mt-8 p-5 sm:p-7`}>
+                <DoneScreen />
+              </div>
             </div>
           ) : (
             <StepChecklist
