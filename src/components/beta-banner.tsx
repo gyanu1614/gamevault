@@ -9,10 +9,12 @@
  * no request, no redirect, no server round trip:
  *   · everyone else (signed out, buyers): AMBER, "Sell Game Items for Real
  *     Money" → /founding (list today, verify when you cash out);
- *   · a seller (profiles.role === 'seller') with NO listing yet: GREEN, "Your
- *     store is open. Create your first listing and earn" → /sell/new. Once
- *     they have listed, the banner goes away for them (one bounded read per
- *     session, cached in sessionStorage; cleared when they click through).
+ *   · a seller (profiles.role === 'seller') with fewer than three listings:
+ *     GREEN, "Your store is open. Create your first listing and earn" →
+ *     /sell/new. Three listings, or the seller closing it (remembered on the
+ *     account), and it is gone for them.
+ * While auth resolves it paints a neutral bar of the same height, never the
+ * wrong colour (owner saw amber flash to green on login).
  * While auth is still resolving the amber variant shows (most visitors are
  * not sellers), then it swaps without a layout change — same height.
  *
@@ -23,12 +25,13 @@
 import Link from '@/components/navigation/AppLink'
 import { usePathname } from 'next/navigation'
 import { track } from '@vercel/analytics'
-import { IconRocket, IconArrowRight, IconBuildingStore } from '@tabler/icons-react'
+import { IconRocket, IconArrowRight, IconBuildingStore, IconX } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { foundingHref } from '@/lib/seo/founding-href'
 import { useAuth } from '@/hooks/use-auth'
 import { safeSession } from '@/lib/safe-storage'
-import { sellerHasListing } from '@/lib/actions/seller-banner'
+import { sellerListingCount, dismissSellerBanner } from '@/lib/actions/seller-banner'
+import { SELLER_BANNER_DISMISSED_KEY, SELLER_BANNER_LISTING_CAP } from '@/lib/seller/banner-dismiss'
 
 const AMBER = '#F5C451'
 const GREEN = '#56B87F'
@@ -69,19 +72,21 @@ const SELLER: Variant = {
 export function BetaBanner() {
   const pathname = usePathname() || ''
   const ref = useRef<HTMLDivElement>(null)
-  const { profile } = useAuth()
+  const { user, profile, loading } = useAuth()
   const isSeller = profile?.role === 'seller'
-  // null = unknown yet (render nothing for a seller until we know)
-  const [hasListing, setHasListing] = useState<boolean | null>(null)
+  const dismissedOnAccount = Boolean((user?.user_metadata as Record<string, unknown> | undefined)?.[SELLER_BANNER_DISMISSED_KEY])
+  const [dismissed, setDismissed] = useState(false)
+  // null = unknown yet; a seller's banner waits for the count (no wrong flash)
+  const [listings, setListings] = useState<number | null>(null)
   useEffect(() => {
-    if (!isSeller || !profile?.id) { setHasListing(null); return }
-    const key = `dm.banner.has-listing:${profile.id}`
+    if (!isSeller || !profile?.id) { setListings(null); return }
+    const key = `dm.banner.listings:${profile.id}`
     const cached = safeSession.get(key)
-    if (cached === '1' || cached === '0') { setHasListing(cached === '1'); return }
+    if (cached !== null && /^\d+$/.test(cached)) { setListings(Number(cached)); return }
     let alive = true
-    sellerHasListing()
-      .then((v) => { if (!alive) return; setHasListing(v); safeSession.set(key, v ? '1' : '0') })
-      .catch(() => { if (alive) setHasListing(false) })
+    sellerListingCount(SELLER_BANNER_LISTING_CAP)
+      .then((n) => { if (!alive) return; setListings(n); safeSession.set(key, String(n)) })
+      .catch(() => { if (alive) setListings(0) })
     return () => { alive = false }
   }, [isSeller, profile?.id])
   const v = isSeller ? SELLER : VISITOR
@@ -136,9 +141,18 @@ export function BetaBanner() {
     // The signup flow itself owns its canvas (chrome-less).
     pathname.startsWith('/founding')
 
-  // A seller who already lists needs no nudge; while we do not know yet,
-  // show nothing rather than flash the wrong banner.
-  if (hidden || (isSeller && hasListing !== false)) return null
+  if (hidden) return null
+  // A seller with three listings, or who closed it, needs no nudge.
+  if (isSeller && (dismissed || dismissedOnAccount || (listings !== null && listings >= SELLER_BANNER_LISTING_CAP))) return null
+  // Auth still resolving, or the seller's count still loading: a neutral bar
+  // of the same height, so nothing flashes and nothing jumps.
+  if (loading || (isSeller && listings === null)) {
+    return (
+      <div ref={ref} aria-hidden className="relative z-[60] w-full border-b border-white/[0.07] bg-[#121317]/90 backdrop-blur-xl">
+        <div className="mx-auto min-h-[42px] max-w-[1400px]" />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -177,7 +191,7 @@ export function BetaBanner() {
           onClick={() => {
             track(v.event, { source: 'banner' })
             // They are off to list: forget the cached "no listing yet".
-            if (isSeller && profile?.id) safeSession.remove(`dm.banner.has-listing:${profile.id}`)
+            if (isSeller && profile?.id) safeSession.remove(`dm.banner.listings:${profile.id}`)
           }}
           className="group inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border px-3 py-[7px] text-[12px] font-semibold transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:text-[12.5px]"
           style={{ color: v.color, borderColor: `${v.color}59`, backgroundColor: `${v.color}14` }}
@@ -185,6 +199,20 @@ export function BetaBanner() {
           <span>{v.cta}</span>
           <IconArrowRight className="h-[15px] w-[15px] transition-transform group-hover:translate-x-0.5" stroke={2.2} />
         </Link>
+        {isSeller && (
+          <button
+            type="button"
+            aria-label="Close this banner for good"
+            title="Don't show again"
+            onClick={() => {
+              setDismissed(true)
+              dismissSellerBanner().catch(() => undefined)
+            }}
+            className="ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-tertiary transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            <IconX className="h-4 w-4" stroke={2} />
+          </button>
+        )}
       </div>
     </div>
   )
