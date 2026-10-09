@@ -70,6 +70,17 @@ const getSellerProfile = cache(async function getSellerProfile(slug: string) {
   return { profile: null, error: shopSlugQuery.error || usernameQuery.error }
 })
 
+/**
+ * Open seller signup (2026-10-08): "is this a seller?" is profiles.role, not an
+ * approved application — sellers who signed up on /founding never have one.
+ * sell_access_kind is the one source of truth (seller | seller_blocked | …);
+ * a restricted seller's store still renders, as it did before.
+ */
+const isLiveSeller = cache(async function isLiveSeller(profileId: string): Promise<boolean> {
+  const { data } = await (getServiceClient().rpc as any)('sell_access_kind', { p_user: profileId })
+  return data === 'seller' || data === 'seller_blocked'
+})
+
 interface PageProps {
   params: Promise<{
     slug: string
@@ -84,11 +95,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { profile } = await getSellerProfile(slug)
 
   // Check if seller is approved
-  const hasApprovedApplication = profile?.seller_applications?.some(
-    (app: any) => app.status === 'approved'
-  )
-
-  if (!profile || !hasApprovedApplication) {
+  if (!profile || !(await isLiveSeller(profile.id))) {
     return {
       title: 'Shop Not Found',
       description: 'The requested seller shop could not be found.'
@@ -203,12 +210,10 @@ export default async function SellerShopPage({ params }: PageProps) {
 
   const { profile, error } = await getSellerProfile(slug)
 
-  // Check if seller is approved (has at least one approved application)
-  const hasApprovedApplication = profile?.seller_applications?.some(
-    (app: any) => app.status === 'approved'
-  )
-
-  if (error || !profile || !hasApprovedApplication) {
+  // A store exists for every account that may sell — the same answer the
+  // listings trigger and the middleware use (sell_access_kind), so an
+  // open-signup seller (no application row) has a store from day one.
+  if (error || !profile || !(await isLiveSeller(profile.id))) {
     notFound()
   }
 

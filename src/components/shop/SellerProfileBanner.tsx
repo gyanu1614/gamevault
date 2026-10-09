@@ -129,7 +129,7 @@ export default function SellerProfileBanner({
                     <PopoverContent className="border-0">Verified by DropMarket</PopoverContent>
                   </Popover>
                 )}
-                {!isVerified && <NewSellerBadge className="text-[11.5px]" />}
+                {!isVerified && <NewSellerBadge size={22} />}
                 {isFoundingSeller && <FoundingSellerBadge size="sm" />}
               </div>
 

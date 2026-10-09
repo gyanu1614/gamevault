@@ -38,7 +38,7 @@ export function SellerStats({ variant = 'compact', hideTier = false, className, 
   if (line.kind === 'verified' || line.kind === 'new') {
     return (
       <span className={cn('inline-flex items-center whitespace-nowrap font-semibold', line.kind === 'new' ? 'text-text-tertiary' : 'text-text-secondary', className)}>
-        {line.kind === 'new' ? 'New Seller' : 'Verified Seller'}
+        {line.kind === 'new' ? 'No Sales Yet' : 'Verified Seller'}
       </span>
     )
   }

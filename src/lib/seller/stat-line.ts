@@ -61,7 +61,7 @@ export function sellerStatLine(s: SellerStatInput): SellerStatLine {
 export function sellerStatText(s: SellerStatInput): string {
   const line = sellerStatLine(s)
   if (line.kind === 'verified') return 'Verified Seller'
-  if (line.kind === 'new') return 'New Seller'
+  if (line.kind === 'new') return 'No Sales Yet'
   return [
     line.rating ? `${line.rating.percent}% Positive` : null,
     line.rating ? `${line.rating.reviews.toLocaleString('en-US')} ${line.rating.reviews === 1 ? 'Review' : 'Reviews'}` : null,
