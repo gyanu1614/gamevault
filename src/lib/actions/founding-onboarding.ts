@@ -53,6 +53,8 @@ export interface FoundingFlowState {
   /** profiles.role === 'seller' — the flow is finished. */
   isSeller: boolean
   isVerified: boolean
+  /** profiles.seller_tier (bronze for a fresh open-signup seller); null before completion. */
+  tier: string | null
   /** profiles.founding_seller — the half-price fee programme. */
   isFounding: boolean
   shopSlug: string | null
@@ -62,6 +64,10 @@ export interface FoundingFlowState {
     sells: SellsEntry[]
     discord: string | null
     isAdult: boolean
+    fullName: string | null
+    addressLine: string | null
+    city: string | null
+    expectedVolume: string | null
   } | null
   store: { name: string | null; logoUploadedAt: string | null } | null
   agreement: { signedAt: string; version: string } | null
@@ -114,7 +120,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
 
   if (!user) {
     return {
-      signedIn: false, user: null, isSeller: false, isVerified: false, isFounding: false, shopSlug: null, shopName: null,
+      signedIn: false, user: null, isSeller: false, isVerified: false, tier: null, isFounding: false, shopSlug: null, shopName: null,
       details: null, store: null, agreement: null, agreementVersion: version, stage: 1, progress: await progressP,
       discordHandle: null,
     }
@@ -122,8 +128,8 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
 
   const s = svc()
   const [{ data: profile }, { data: ob }, { data: ag }] = await Promise.all([
-    s.from('profiles').select('id, email, full_name, username, avatar_url, role, is_verified, founding_seller, shop_slug, shop_name').eq('id', user.id).maybeSingle(),
-    s.from('seller_onboarding').select('country, sells, discord, is_adult_confirmed_at, store_name, logo_uploaded_at, completed_at').eq('user_id', user.id).maybeSingle(),
+    s.from('profiles').select('id, email, full_name, username, avatar_url, role, is_verified, founding_seller, shop_slug, shop_name, seller_tier').eq('id', user.id).maybeSingle(),
+    s.from('seller_onboarding').select('country, sells, discord, is_adult_confirmed_at, store_name, logo_uploaded_at, completed_at, full_name, address_line, city, expected_volume').eq('user_id', user.id).maybeSingle(),
     s.from('seller_agreements').select('signed_at, agreement_version').eq('user_id', user.id).eq('agreement_version', version).order('signed_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
@@ -134,9 +140,13 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
         sells: Array.isArray(ob.sells) ? (ob.sells as SellsEntry[]) : [],
         discord: ob.discord ?? null,
         isAdult: Boolean(ob.is_adult_confirmed_at),
+        fullName: ob.full_name ?? null,
+        addressLine: ob.address_line ?? null,
+        city: ob.city ?? null,
+        expectedVolume: ob.expected_volume ?? null,
       }
     : null
-  const detailsDone = Boolean(details && details.country && details.isAdult && details.sells.length > 0)
+  const detailsDone = Boolean(details && details.country && details.isAdult && details.sells.length > 0 && details.fullName && details.addressLine && details.city)
   const storeDone = Boolean(ob?.store_name)
   // Only worth a lookup while step 2 has nothing saved (one auth round trip).
   const discordHandle = ob?.discord ? null : await lookupDiscordHandle(user.id)
@@ -151,6 +161,7 @@ export async function getFoundingFlowState(): Promise<FoundingFlowState> {
     },
     isSeller,
     isVerified: profile?.is_verified === true,
+    tier: profile?.seller_tier ?? null,
     isFounding: profile?.founding_seller === true,
     shopSlug: profile?.shop_slug ?? null,
     shopName: profile?.shop_name ?? null,
@@ -183,6 +194,10 @@ export async function saveFoundingDetails(input: DetailsInput): Promise<{ succes
         country: d.country,
         sells: d.sells,
         discord: d.discord || null,
+        full_name: d.fullName,
+        address_line: d.addressLine,
+        city: d.city,
+        expected_volume: d.expectedVolume,
         is_adult_confirmed_at: new Date().toISOString(),
         ...(d.source ? { source: d.source } : {}),
         current_step: 3,
@@ -334,6 +349,25 @@ export async function signFoundingAgreement(input: {
 
     revalidatePath('/founding')
     revalidatePath('/admin/active-sellers')
+    revalidatePath('/admin/all-sellers')
+    // The owner asked to hear about every new seller (2026-10-09): in-app + email.
+    try {
+      const { notifyAdmins } = await import('@/lib/utils/notifications')
+      const storeName = ob.store_name ?? data.shop_slug ?? 'a new store'
+      await notifyAdmins({
+        permission: 'sellers.view',
+        type: 'seller_signed_up',
+        title: `New seller: ${storeName}`,
+        message: `${user.email ?? 'A new seller'} finished signup${data.founding ? ' (Founding Seller)' : ''}.`,
+        link: `/admin/active-sellers/${user.id}`,
+        email: {
+          subject: `New seller on DropMarket: ${storeName}`,
+          body: `${storeName} just opened a store (${user.email ?? 'no email'}${data.founding ? ', Founding Seller' : ''}). Open the seller page: ${process.env.NEXT_PUBLIC_APP_URL ?? 'https://dropmarket.gg'}/admin/active-sellers/${user.id}`,
+        },
+      })
+    } catch (err) {
+      console.error('[founding] admin alert failed:', err)
+    }
     return { success: true, shopSlug: data.shop_slug ?? null }
   } catch (err: any) {
     console.error('[founding] signFoundingAgreement:', err?.message)

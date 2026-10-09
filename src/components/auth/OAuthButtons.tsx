@@ -98,7 +98,7 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
   }
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-5', className)}>
       {/* Stacked, full-sentence buttons on phones; side by side with the
           short name on wider screens so they read as one row, not a stack
           of two long bars above the form. */}

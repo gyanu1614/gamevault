@@ -755,9 +755,13 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       .insert(insertPayload)
       // slug is DB-generated (set_listing_slug trigger) — read it back
       // so we can ping IndexNow with the live listing URL.
-      .select('id, slug')
+      .select('id, slug, status')
       .single()
     if (error) return { success: false, error: error.message }
+    // The DB trigger may have held it for review: tell the moderators.
+    if ((data as { status?: string }).status === 'pending_approval') {
+      await notifyModeratorsListingInReview(resolvedTitle || input.title || 'Untitled', 'new')
+    }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
     await linkListingsToValueItems(getAdminSupabase(), [(data as { id: string }).id])
 
@@ -930,7 +934,7 @@ export async function updateListingFromWizard(
 
     // Moderation comms — the listing (re-)entered the review queue.
     if (finalStatus === 'pending_approval' && existingStatus !== 'pending_approval') {
-      await notifyModeratorsListingResubmitted(resolvedTitle || 'Untitled')
+      await notifyModeratorsListingInReview(resolvedTitle || 'Untitled', 'resubmit')
     }
 
     revalidatePath('/account/listings')
@@ -951,42 +955,28 @@ export async function updateListingFromWizard(
 }
 
 /**
- * Tell the moderation team a listing is back in the queue. AWAITED but
- * wrapped so it can never fail the edit; service-role client because a
- * seller session can't read admin role rows or insert notifications for
- * other users under RLS.
+ * Tell the moderation team a listing is waiting (new, or back after an
+ * edit). In-app notification + email to every admin — the owner asked to
+ * never miss one (2026-10-09). Wrapped so it can never fail the publish.
  */
-async function notifyModeratorsListingResubmitted(title: string): Promise<void> {
-  await (async () => {
-    const { createServiceRoleClient } = await import('@/lib/supabase/service')
-    const service = createServiceRoleClient()
-
-    const { data: rolesWithPermission } = await service
-      .from('role_permissions')
-      .select('role')
-      .eq('permission', 'listings.moderate') as any
-    const roles = (rolesWithPermission || []).map((r: any) => r.role)
-    if (roles.length === 0) return
-
-    const { data: admins } = await service
-      .from('admin_roles')
-      .select('user_id')
-      .in('role', roles)
-      .eq('is_active', true) as any
-    const adminIds: string[] = (admins || []).map((a: any) => a.user_id)
-    if (adminIds.length === 0) return
-
-    await (service.from('notifications').insert as any)(
-      adminIds.map((adminId) => ({
-        user_id: adminId,
-        type: 'listing_resubmitted',
-        title: 'Listing Resubmitted',
-        message: `"${title}" was updated and resubmitted for review.`,
-        link: '/admin/moderation',
-        is_read: false,
-      }))
-    )
-  })().catch((err) => console.error('[SellWizard] Resubmit admin comms failed:', err))
+async function notifyModeratorsListingInReview(title: string, why: 'new' | 'resubmit'): Promise<void> {
+  try {
+    const { notifyAdmins } = await import('@/lib/utils/notifications')
+    const app = process.env.NEXT_PUBLIC_APP_URL ?? 'https://dropmarket.gg'
+    await notifyAdmins({
+      permission: 'listings.moderate',
+      type: why === 'new' ? 'listing_pending_review' : 'listing_resubmitted',
+      title: why === 'new' ? 'Listing waiting for review' : 'Listing resubmitted',
+      message: why === 'new' ? `"${title}" needs approval before it goes live.` : `"${title}" was updated and resubmitted for review.`,
+      link: '/admin/moderation',
+      email: {
+        subject: why === 'new' ? `Review needed: ${title}` : `Resubmitted for review: ${title}`,
+        body: `"${title}" is in the moderation queue. Review it here: ${app}/admin/moderation`,
+      },
+    })
+  } catch (err) {
+    console.error('[SellWizard] moderation alert failed:', err)
+  }
 }
 
 // ─── D5: Bulk CSV upload ────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import * as React from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
 import { cn } from '@/lib/utils'
+import { GLASS_CARD } from './ui'
 import type { FoundingStage, FoundingStepId } from '@/lib/founding/onboarding'
 
 export const CHECKLIST_STEPS: ReadonlyArray<{ id: FoundingStepId; label: string; done: string; seconds: number }> = [
@@ -52,49 +53,76 @@ export function StepChecklist({
 }) {
   const reduce = useReducedMotion()
   const doneCount = Math.min(stage - 1, 4)
-  const pct = (doneCount / 4) * 100
   const finished = stage >= 5
 
   return (
-    <div className="rounded-lg bg-bg-raised">
-      {/* Progress */}
-      <div className="px-5 pt-5 sm:px-6">
-        <p className="flex flex-wrap items-baseline gap-x-2 text-body-sm">
-          <span className="font-semibold text-text-primary">{doneCount} of 4 done</span>
-          <span aria-hidden className="text-text-tertiary">·</span>
-          <span className="text-text-secondary">{timeLeftLabel(stage)}</span>
-        </p>
-        <div
-          className="mt-3 h-1 w-full overflow-hidden rounded-full bg-bg-overlay"
+    <div className={GLASS_CARD}>
+      {/* Progress: four segments, one per step, with the step names under
+          them. Done = lime, current = white, upcoming = dim. */}
+      <div className="px-5 pt-5 sm:px-6 sm:pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-body-sm">
+            <span className="font-semibold text-text-primary">{doneCount} of 4 done</span>
+          </p>
+          <p className="text-caption text-text-tertiary">{timeLeftLabel(stage)}</p>
+        </div>
+        <ol
+          className="mt-3 grid grid-cols-4 gap-1.5"
           role="progressbar"
           aria-label="Setup progress"
           aria-valuemin={0}
           aria-valuemax={4}
           aria-valuenow={doneCount}
         >
-          <motion.div
-            className="h-full rounded-full bg-lime-text"
-            initial={false}
-            animate={{ width: `${Math.max(3, pct)}%` }}
-            transition={reduce ? { duration: 0 } : { duration: 0.5, ease: EASE }}
-          />
-        </div>
+          {CHECKLIST_STEPS.map((step) => {
+            const done = stage > step.id
+            const current = stage === step.id
+            return (
+              <li key={step.id} className="min-w-0">
+                {/* A done segment is a button: it reopens that step. */}
+                <Segment
+                  as={done && !finished ? 'button' : 'div'}
+                  onClick={done && !finished ? () => onOpen(step.id) : undefined}
+                  active={open === step.id}
+                  label={done ? `Change ${step.label}` : undefined}
+                >
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                    <motion.div
+                      className={cn('h-full rounded-full', done ? 'bg-lime-text' : current ? 'bg-white' : 'bg-transparent')}
+                      initial={false}
+                      animate={{ width: done ? '100%' : current ? '35%' : '0%' }}
+                      transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
+                    />
+                  </div>
+                  <p className={cn('mt-1.5 hidden truncate text-[11.5px] font-medium sm:block', done ? 'text-lime-text' : current ? 'text-text-primary' : 'text-text-tertiary')}>
+                    {done ? <><Check weight="bold" className="mr-1 inline h-3 w-3 -translate-y-px" aria-hidden />{step.label}</> : step.label}
+                  </p>
+                </Segment>
+              </li>
+            )
+          })}
+        </ol>
+        {doneCount > 0 && !finished && (
+          <p className="mt-2.5 text-caption text-text-tertiary">Finished a step? Click it above to change it.</p>
+        )}
       </div>
 
-      <ol className="mt-4" aria-label="Setup steps">
+      <ol className="mt-5" aria-label="Setup steps">
         {CHECKLIST_STEPS.map((step) => {
           const isDone = stage > step.id
           const isOpen = open === step.id && !finished
-          const isUpcoming = !isDone && stage !== step.id
+          // One row only: the step being worked on (the current one, or a
+          // finished one the user reopened from the bar). The bar is the map.
+          if (!isOpen) return null
           return (
-            <li key={step.id} className="border-t border-white/[0.07]">
+            <li key={step.id} className="border-t border-white/[0.05]">
               <RowHeader
                 number={step.id}
-                label={isDone && !isOpen ? step.done : step.label}
+                label={step.label}
                 time={secondsLabel(step.seconds)}
-                state={isDone ? 'done' : isUpcoming ? 'upcoming' : 'current'}
+                state={isDone ? 'done' : 'current'}
                 open={isOpen}
-                onClick={isDone && !finished ? () => onOpen(step.id) : undefined}
+                onClick={undefined}
                 reduce={!!reduce}
               />
               <AnimatePresence initial={false}>
@@ -107,7 +135,7 @@ export function StepChecklist({
                     transition={{ duration: reduce ? 0.15 : 0.32, ease: EASE }}
                     className="overflow-hidden"
                   >
-                    <div className="px-5 pb-6 pt-1 sm:px-6">{renderStep(step.id)}</div>
+                    <div className="px-5 pb-7 pt-2 sm:px-6">{renderStep(step.id)}</div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -115,13 +143,41 @@ export function StepChecklist({
           )
         })}
         {finished && (
-          <li className="border-t border-white/[0.07]">
+          <li className="border-t border-white/[0.05]">
             <div className="px-5 pb-6 pt-5 sm:px-6">{renderDone()}</div>
           </li>
         )}
       </ol>
     </div>
   )
+}
+
+function Segment({
+  as,
+  onClick,
+  active,
+  label,
+  children,
+}: {
+  as: 'button' | 'div'
+  onClick?: () => void
+  active: boolean
+  label?: string
+  children: React.ReactNode
+}) {
+  const cls = cn(
+    'block w-full rounded-md text-left transition-[background-color,transform] duration-200',
+    as === 'button' && 'cursor-pointer px-1 py-1 -mx-1 -my-1 hover:bg-white/[0.05] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+    active && as === 'button' && 'bg-white/[0.05]',
+  )
+  if (as === 'button') {
+    return (
+      <button type="button" onClick={onClick} aria-label={label} className={cls}>
+        {children}
+      </button>
+    )
+  }
+  return <div className={cls}>{children}</div>
 }
 
 function RowHeader({
@@ -145,7 +201,7 @@ function RowHeader({
     <span
       aria-hidden
       className={cn(
-        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-caption font-semibold tabular-nums',
+        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-caption font-semibold tabular-nums',
         state === 'done' && 'bg-lime-tint-bg text-lime-text',
         state === 'current' && 'bg-white text-black',
         state === 'upcoming' && 'bg-bg-overlay text-text-tertiary',
@@ -176,7 +232,7 @@ function RowHeader({
     </>
   )
   const cls = cn(
-    'flex h-14 w-full items-center gap-3 px-5 text-left sm:px-6',
+    'flex h-16 w-full items-center gap-3.5 px-5 text-left sm:px-6',
     state === 'upcoming' && 'opacity-80',
   )
   if (onClick) {

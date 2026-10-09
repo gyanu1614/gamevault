@@ -28,7 +28,8 @@ import { StepAccount } from './StepAccount'
 import { StepDetails } from './StepDetails'
 import { StepStore } from './StepStore'
 import { StepAgreement } from './StepAgreement'
-import { DoneScreen } from './DoneScreen'
+import { DoneScreen, StoreTitle } from './DoneScreen'
+import { GLASS_CARD } from './ui'
 import { CongratsDialog } from './CongratsDialog'
 
 export interface FoundingFlowProps {
@@ -109,26 +110,30 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
 
       {/* Top padding doubles as the slot for the hero background (later). */}
       <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pt-32">
-        <header className="max-w-2xl">
+        <header className="max-w-3xl">
           {stage >= 5 ? (
             <>
-              <h1 className="text-heading text-text-primary sm:text-display">Welcome to the DropMarket Community</h1>
-              <p className="mt-2 text-body text-text-secondary sm:text-body-lg">
-                {state.shopName ? <>Your store <span className="font-medium text-text-primary">{state.shopName}</span> is open. Here is what to do next.</> : 'Your store is open. Here is what to do next.'}
-              </p>
+              <h1 className="text-heading text-text-primary sm:text-[36px] sm:leading-tight lg:whitespace-nowrap">
+                Welcome to the <span className="title-accent">DropMarket</span> Community
+              </h1>
             </>
           ) : (
             <>
-              <h1 className="text-heading text-text-primary sm:text-display">Become a Seller</h1>
-              <p className="mt-2 text-body text-text-secondary sm:text-body-lg">Takes about 2 minutes. Then you start selling.</p>
+              <h1 className="text-heading text-text-primary sm:text-display">
+                Become a <span className="title-accent">Seller</span>
+              </h1>
+              <p className="mt-3 text-body text-text-secondary sm:text-body-lg">A short form about you and what you sell. Takes about 2 minutes, then your store is open.</p>
             </>
           )}
         </header>
 
-        <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+        <div className="mt-8 grid grid-cols-1 items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
           {stage >= 5 ? (
-            <div className="rounded-lg bg-bg-raised p-5 sm:p-6">
-              <DoneScreen shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} />
+            <div>
+              <StoreTitle shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} isVerified={state.isVerified} tier={state.tier} />
+              <div className={`${GLASS_CARD} mt-7 p-5 sm:p-6`}>
+                <DoneScreen />
+              </div>
             </div>
           ) : (
             <StepChecklist

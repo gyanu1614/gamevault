@@ -61,11 +61,11 @@ describe.skipIf(!hasEnv)('founding onboarding actions (integration)', () => {
     expect(state.agreementVersion).toMatch(/^v\d/)
 
     // 2. details: refused on bad input, saved on good
-    const bad = await a.saveFoundingDetails({ country: 'ZZ', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true })
+    const bad = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'ZZ', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true })
     expect(bad.success).toBe(false)
-    const noAge = await a.saveFoundingDetails({ country: 'GB', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: false as unknown as true })
+    const noAge = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'GB', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: false as unknown as true })
     expect(noAge.success).toBe(false)
-    const ok = await a.saveFoundingDetails({ country: 'gb', sells: [{ game: 'adopt-me', categories: ['items', 'currency'] }], discord: '@trader.one', isAdult: true, source: 'banner' })
+    const ok = await a.saveFoundingDetails({ fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500', country: 'gb', sells: [{ game: 'adopt-me', categories: ['items', 'currency'] }], discord: '@trader.one', isAdult: true, source: 'banner' })
     expect(ok).toEqual({ success: true })
     state = await a.getFoundingFlowState()
     expect(state.stage).toBe(3)
@@ -75,10 +75,10 @@ describe.skipIf(!hasEnv)('founding onboarding actions (integration)', () => {
     // 3. store name: validation + uniqueness, then saved
     expect((await a.checkStoreNameAvailable('ab')).available).toBe(false)
     expect((await a.checkStoreNameAvailable('<b>Shop</b>')).available).toBe(false)
-    const storeName = `OSS Store ${tag}`
+    const storeName = `OSS_Store_${tag}`
     expect((await a.checkStoreNameAvailable(storeName)).available).toBe(true)
     // a name already on another profile (the fixture seller's shop) is taken, case-insensitively
-    await fx!.svc.from('profiles').update({ shop_name: `Taken Shop ${tag}` }).eq('id', fx!.seller.id)
+    await fx!.svc.from('profiles').update({ shop_name: `Taken_Shop_${tag}` }).eq('id', fx!.seller.id)
     expect((await a.checkStoreNameAvailable(`taken shop ${tag}`)).available).toBe(false)
     // agreement before the store is refused
     const early = await a.signFoundingAgreement({ typedName: 'Guard Buyer', signatureDataUrl: pngDataUrl(), agreed: true })

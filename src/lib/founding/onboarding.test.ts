@@ -10,7 +10,7 @@ function pngDataUrl(bytes: number) {
 }
 
 describe('detailsSchema', () => {
-  const ok = { country: 'gb', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true as const }
+  const ok = { fullName: 'Guard Buyer', addressLine: '1 Test Street', city: 'Testville', expectedVolume: '100_500' as const, country: 'gb', sells: [{ game: 'adopt-me', categories: ['items'] }], isAdult: true as const }
   it('accepts a valid set and normalises the country code', () => {
     const r = detailsSchema.safeParse(ok)
     expect(r.success).toBe(true)

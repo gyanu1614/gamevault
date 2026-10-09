@@ -14,6 +14,7 @@ import { SECTION_LABELS, SECTION_ORDER, type GameCategoryOptions, type SellerCat
 import type { Game } from '@/lib/utils/games'
 import { detailsSchema, type SellsEntry } from '@/lib/founding/onboarding'
 import { saveFoundingDetails } from '@/lib/actions/founding-onboarding'
+import { EXPECTED_VOLUMES } from '@/lib/founding/onboarding'
 import { readFoundingSrc } from '@/lib/seo/founding-href'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard } from './ui'
 
@@ -36,7 +37,7 @@ export function StepDetails({
 }: {
   games: Game[]
   categories: GameCategoryOptions[]
-  initial: { country: string | null; sells: SellsEntry[]; discord: string | null; isAdult: boolean } | null
+  initial: { country: string | null; sells: SellsEntry[]; discord: string | null; isAdult: boolean; fullName?: string | null; addressLine?: string | null; city?: string | null; expectedVolume?: string | null } | null
   /** Discord username from a Discord sign-in; used only while nothing is saved. */
   discordHint?: string | null
   onBack: () => void
@@ -55,6 +56,10 @@ export function StepDetails({
   )
   const [discord, setDiscord] = useState(initial?.discord ?? discordHint ?? '')
   const [isAdult, setIsAdult] = useState(initial?.isAdult ?? false)
+  const [fullName, setFullName] = useState(initial?.fullName ?? '')
+  const [addressLine, setAddressLine] = useState(initial?.addressLine ?? '')
+  const [city, setCity] = useState(initial?.city ?? '')
+  const [expectedVolume, setExpectedVolume] = useState(initial?.expectedVolume ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -77,7 +82,7 @@ export function StepDetails({
     if (missing) return setError(`Pick what you sell in ${bySlug.get(missing.game)?.name ?? 'that game'}.`)
     if (!isAdult) return setError('You must be 18 or older to sell on DropMarket.')
     const source = typeof window !== 'undefined' ? readFoundingSrc(window.location.hash, new URLSearchParams(window.location.search)) : undefined
-    const parsed = detailsSchema.safeParse({ country, sells, discord, isAdult, source })
+    const parsed = detailsSchema.safeParse({ country, sells, discord, isAdult, source, fullName, addressLine, city, expectedVolume })
     if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? 'Check the form.')
     setBusy(true)
     try {
@@ -90,12 +95,8 @@ export function StepDetails({
   }
 
   return (
-    <StepCard title="A Few Details" lead="Where you are and what you sell. Buyers see the games, not your country.">
+    <StepCard title="A Few Details" lead="What you sell and who you are. Buyers see the games; your name and address stay with our team.">
       <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
-        <Field label="Country" hint="Used for payouts and tax rules later.">
-          <Combobox value={country} onChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Choose your country" tone="neutral" ariaLabel="Country" iconInTrigger iconClassName={FLAG_CLS} />
-        </Field>
-
         <Field label="Games You Sell" hint="Pick every game you trade in. You can add more later.">
           <GameMultiSelect games={games} selected={selectedIds} onChange={setSelectedIds} placeholder="Search And Select Games…" tone="neutral" />
         </Field>
@@ -132,6 +133,32 @@ export function StepDetails({
             })}
           </div>
         )}
+
+        <Field label="Expected Monthly Sales" htmlFor="f-volume" hint="A rough guess is fine. It helps us set your limits.">
+          <select id="f-volume" value={expectedVolume} onChange={(e) => setExpectedVolume(e.target.value)} className={INPUT_CLS}>
+            <option value="" disabled>Choose a range</option>
+            {EXPECTED_VOLUMES.map((v) => (
+              <option key={v.value} value={v.value}>{v.label}</option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Full Name" htmlFor="f-name" hint="As on your ID. Only our team sees it.">
+          <input id="f-name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={INPUT_CLS} placeholder="Alex Johnson" autoComplete="name" />
+        </Field>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Address" htmlFor="f-address">
+            <input id="f-address" value={addressLine} onChange={(e) => setAddressLine(e.target.value)} className={INPUT_CLS} placeholder="12 Market Street" autoComplete="address-line1" />
+          </Field>
+          <Field label="City" htmlFor="f-city">
+            <input id="f-city" value={city} onChange={(e) => setCity(e.target.value)} className={INPUT_CLS} placeholder="London" autoComplete="address-level2" />
+          </Field>
+        </div>
+
+        <Field label="Country" hint="Used for payouts and tax rules later.">
+          <Combobox value={country} onChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Choose your country" tone="neutral" ariaLabel="Country" iconInTrigger iconClassName={FLAG_CLS} />
+        </Field>
 
         <Field label="Discord Username" optional htmlFor="f-discord" hint="So buyers and our team can reach you fast.">
           <input id="f-discord" value={discord} onChange={(e) => setDiscord(e.target.value)} className={INPUT_CLS} placeholder="yourname" autoComplete="off" />

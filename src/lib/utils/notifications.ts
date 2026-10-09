@@ -110,16 +110,17 @@ export async function getAdminUserIdsWithPermission(permission: string): Promise
 
   try {
     // Get all roles that have this permission
-    const { data: rolesWithPermission } = await supabase
+    const { data: rolesWithPermissionRaw } = await supabase
       .from('role_permissions')
       .select('role')
       .eq('permission', permission)
 
-    if (!rolesWithPermission || rolesWithPermission.length === 0) {
-      return []
-    }
+    const rolesWithPermission = rolesWithPermissionRaw ?? []
 
-    const roles = rolesWithPermission.map((r: any) => r.role)
+    // Every admin/super_admin always counts: the permission table is thin on
+    // prod (only applications.review is seeded, 2026-10-09), and the owner
+    // got no signup / moderation alerts because of it.
+    const roles = Array.from(new Set([...rolesWithPermission.map((r: any) => r.role), 'admin', 'super_admin']))
 
     // Get all active admin users with these roles
     const { data: admins } = await supabase
@@ -150,18 +151,42 @@ export async function notifyAdmins({
   title,
   message,
   link,
+  email,
 }: {
   permission: string
   type: string
   title: string
   message: string
   link?: string
+  /** Also email every recipient (their profile email) — for the alerts the owner must not miss. */
+  email?: { subject: string; body: string }
 }) {
   const adminIds = await getAdminUserIdsWithPermission(permission)
 
   if (adminIds.length === 0) {
     console.warn(`[Notifications] No admins found with permission: ${permission}`)
     return
+  }
+
+  if (email) {
+    try {
+      const { sendAdminNoticeEmail } = await import('@/lib/email')
+      const { data: admins } = await createServiceRoleClient()
+        .from('profiles')
+        .select('email, full_name, username')
+        .in('id', adminIds)
+      await Promise.all(
+        ((admins ?? []) as any[])
+          .filter((a) => a.email)
+          .map((a) =>
+            sendAdminNoticeEmail({ to: a.email, name: a.full_name || a.username || 'there', subject: email.subject, bodyText: email.body }).catch((err) =>
+              console.error('[Notifications] admin email failed:', err),
+            ),
+          ),
+      )
+    } catch (err) {
+      console.error('[Notifications] admin email failed:', err)
+    }
   }
 
   // Create notifications for all admins in parallel

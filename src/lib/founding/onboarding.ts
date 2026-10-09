@@ -34,9 +34,21 @@ export type SellsEntry = z.infer<typeof sellsEntrySchema>
 /** Discord: new-style handle (2–32, lowercase letters/digits/._) or legacy Name#1234. */
 export const DISCORD_RE = /^(?:[a-z0-9._]{2,32}|[^#@:`\s]{2,32}#\d{4})$/
 
+export const EXPECTED_VOLUMES = [
+  { value: 'under_100', label: 'Under $100 a month' },
+  { value: '100_500', label: '$100 – $500 a month' },
+  { value: '500_2000', label: '$500 – $2,000 a month' },
+  { value: '2000_plus', label: 'Over $2,000 a month' },
+] as const
+export type ExpectedVolume = (typeof EXPECTED_VOLUMES)[number]['value']
+
 export const detailsSchema = z.object({
-  country: z.string().trim().toUpperCase().refine((c) => ISO2.has(c), 'Pick your country'),
   sells: z.array(sellsEntrySchema).min(1, 'Pick at least one game').max(40),
+  expectedVolume: z.enum(['under_100', '100_500', '500_2000', '2000_plus'], { errorMap: () => ({ message: 'Pick how much you expect to sell' }) }),
+  fullName: z.string().trim().min(2, 'Enter your full name').max(80),
+  addressLine: z.string().trim().min(3, 'Enter your street address').max(120),
+  city: z.string().trim().min(2, 'Enter your city').max(80),
+  country: z.string().trim().toUpperCase().refine((c) => ISO2.has(c), 'Pick your country'),
   discord: z
     .string()
     .trim()

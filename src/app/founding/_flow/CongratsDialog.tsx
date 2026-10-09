@@ -12,15 +12,13 @@ import { useEffect, useRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
-import AppLink from '@/components/navigation/AppLink'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { ShineBorder } from '@/components/ui/shine-border'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 
 const NEXT = [
-  'Create your first listing. It takes about two minutes.',
-  'Buyers find it, message you here, and pay before you deliver.',
-  'Deliver once the purchase is made, and the sale is done. SafeDrop Protection covers every order.',
+  'List an item. It takes two minutes and goes live right away.',
+  'A buyer pays first. Then you deliver, right here on DropMarket.',
+  'Every sale is protected. You get paid for every item you deliver.',
 ]
 
 export function CongratsDialog({
@@ -101,23 +99,15 @@ export function CongratsDialog({
           ))}
         </ol>
 
-        {/* Doors */}
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <AppLink
-            href="/sell/new"
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-white px-5 text-body-sm font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        {/* One door: close, and the welcome page behind it carries the CTAs. */}
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="inline-flex h-11 w-full items-center justify-center rounded-md bg-white px-5 text-body-sm font-semibold text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
-            Start Selling
-          </AppLink>
-          {shopSlug && (
-            <AppLink
-              href={`/shop/${shopSlug}`}
-              className="relative inline-flex h-11 flex-1 items-center justify-center overflow-hidden rounded-md border border-lime-tint-border bg-lime-tint-bg px-5 text-body-sm font-semibold text-lime-text transition-colors hover:bg-[rgba(86,184,127,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              {!reduce && <ShineBorder duration={4} borderWidth={1} shineColor="rgba(163,230,53,0.9)" />}
-              View Your Store
-            </AppLink>
-          )}
+            Let&apos;s Go
+          </button>
         </div>
       </DialogContent>
     </Dialog>
