@@ -68,6 +68,18 @@ export interface SellerListingRow {
   status: string
   created_at: string
   game_name: string | null
+  images: string[]
+  /** moderation_notes — the takedown / auto-hide reason when suspended. */
+  note: string | null
+}
+
+export interface SellerStrikeRow {
+  id: string
+  kind: string
+  reason: string
+  listing_id: string | null
+  created_at: string
+  revoked_at: string | null
 }
 
 export interface SellerOrderRow {
@@ -190,6 +202,8 @@ export interface SellerDetail {
   agreements: SellerAgreementRow[]
   /** Original seller application, when the seller came through the flow. */
   application: { id: string; status: string; reviewed_at: string | null } | null
+  /** Moderation: strikes (active + revoked), avatar lock, open buyer reports. */
+  moderation: { strikes: SellerStrikeRow[]; activeStrikes: number; avatarLockedAt: string | null; openReports: number }
   /** Open seller signup (/founding) answers; null for legacy sellers. */
   onboarding: {
     country: string | null
@@ -275,7 +289,7 @@ export async function getSellerDetail(userId: string): Promise<{
         .maybeSingle() as any,
       service
         .from('listings')
-        .select('id, title, price, status, created_at, game:games!listings_game_id_fkey(name)')
+        .select('id, title, price, status, created_at, images, moderation_notes, game:games!listings_game_id_fkey(name)')
         .eq('seller_id', userId)
         .order('created_at', { ascending: false }) as any,
       service
@@ -451,7 +465,27 @@ export async function getSellerDetail(userId: string): Promise<{
       console.error('seller_onboarding read failed:', err)
     }
 
+    // Moderation: strikes, avatar lock, open buyer reports on their listings.
+    let moderation: SellerDetail['moderation'] = { strikes: [], activeStrikes: 0, avatarLockedAt: null, openReports: 0 }
+    try {
+      const [{ data: strikes }, { data: lockRow }, { data: reportRows }] = await Promise.all([
+        (service as any).from('seller_strikes').select('id, kind, reason, listing_id, created_at, revoked_at').eq('seller_id', userId).order('created_at', { ascending: false }).limit(50),
+        (service as any).from('profiles').select('avatar_locked_at').eq('id', userId).maybeSingle(),
+        (service as any).from('listing_reports').select('id, listing:listings!inner(seller_id)').eq('status', 'open').eq('listing.seller_id', userId).limit(100),
+      ])
+      const rows = (strikes ?? []) as SellerStrikeRow[]
+      moderation = {
+        strikes: rows,
+        activeStrikes: rows.filter((r) => !r.revoked_at).length,
+        avatarLockedAt: lockRow?.avatar_locked_at ?? null,
+        openReports: Array.isArray(reportRows) ? reportRows.length : 0,
+      }
+    } catch (err) {
+      console.error('seller moderation read failed:', err)
+    }
+
     const detail: SellerDetail = {
+      moderation,
       onboarding,
       profile: {
         id: profile.id,
@@ -493,6 +527,8 @@ export async function getSellerDetail(userId: string): Promise<{
           status: l.status,
           created_at: l.created_at,
           game_name: l.game?.name ?? null,
+          images: Array.isArray(l.images) ? l.images.filter((u: unknown) => typeof u === 'string') : [],
+          note: l.moderation_notes ?? null,
         })),
       },
       orders: {

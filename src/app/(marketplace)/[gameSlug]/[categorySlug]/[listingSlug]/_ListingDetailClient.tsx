@@ -21,6 +21,7 @@
 import { sellerDisplayName, sellerShopSlug } from '@/lib/seller/identity'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { ReportListingLink } from '@/components/listings/ReportListingDialog'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Globe, Gamepad2, ArrowUpRight, Award, Sparkles, ChevronDown } from 'lucide-react'
@@ -697,6 +698,7 @@ verified={listing.seller.verified}
                         : BUY_CTA_LABEL}
                   </BuyButton>
                 )}
+                {!isOwn && !previewStatus && <ReportListingLink listingId={listing.id} signedIn={!!viewerId} />}
 
               </Card>
 

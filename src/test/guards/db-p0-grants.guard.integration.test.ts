@@ -49,6 +49,8 @@ const AUTHENTICATED_DEFINER_ALLOWLIST = [
   'approve_listing', 'can_edit_review', 'check_seller_needs_moderation', 'checkout_wallet_hold_minor',
   'get_admin_role', 'get_my_permissions', 'get_seller_publish_policy', 'is_super_admin_safe',
   'reject_listing', 'reject_seller_application', 'request_listing_changes', 'withdraw_seller_application',
+  // Moderation tools (20261009020808): moderator RPCs (assert_moderator inside) + buyer report filing.
+  'takedown_listing', 'restore_listing', 'listing_report_file',
   // /sell security (20260925204757): "may this account sell?" — pinned to
   // auth.uid() for a JWT caller; evaluated by the listings INSERT policy and
   // the listing-images storage policy as the caller, and asked by the
@@ -119,6 +121,8 @@ const RATE_LIMIT_SERVICE_ONLY = [
 /** Open seller signup (20261008023032) + payout KYC gate (20261008021902). */
 const OPEN_SIGNUP_SERVICE_ONLY = [
   'open_seller_signup_version', 'seller_onboarding_complete', 'unverified_review_price_usd', 'founding_spot_cap',
+  // Moderation tools (20261009020808)
+  'seller_strike_count', 'moderation_tools_version',
 ]
 
 async function dbP0Applied(): Promise<boolean> {

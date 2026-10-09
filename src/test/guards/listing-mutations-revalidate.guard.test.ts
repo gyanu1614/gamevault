@@ -118,6 +118,9 @@ describe('listing mutations revalidate the category surfaces', () => {
 
   it('pins the set of mutation paths', () => {
     expect(writers.map((w) => w.file).sort()).toEqual([
+      // Moderation tools (2026-10-09): takedown / restore / image removal /
+      // strike escalation — every path calls the seam.
+      'src/lib/actions/admin-moderation-tools.ts',
       'src/lib/actions/admin-seller-restrictions.ts',
       'src/lib/actions/instant-delivery.ts',
       'src/lib/actions/listings.ts',

@@ -62,6 +62,7 @@ import { StatStrip } from '@/components/account/AccountSurface'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { StatusBadge, adminBtn, adminBtnSm, type ChipTone } from '../../components/kit'
 import { TierChip } from '../../components/TierChip'
+import { ModerationPanel } from './ModerationPanel'
 
 /** Seller rank ladder, low → high, from the central module. */
 const SELLER_TIERS = TIER_KEYS
@@ -677,6 +678,8 @@ export default function SellerDetailClient({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          <ModerationPanel detail={detail} />
+
           <Section title="Signup" sub="What they told us on /founding: where they are, how to reach them, what they sell.">
             {detail.onboarding ? (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px] sm:grid-cols-3">
