@@ -15,7 +15,7 @@
  * builds links. Newest first always.
  */
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import { money } from '@/lib/seller/format-amount'
 import { useNow } from '@/hooks/use-now'
