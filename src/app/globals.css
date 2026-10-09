@@ -1923,6 +1923,16 @@
   pointer-events: none;
 }
 
+/* Checkout (owner, 2026-10-08): the same hero treatment, a step darker, so
+   the payment form stays the loudest thing on the page. */
+.hero-dim-strong > .hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.48);
+  pointer-events: none;
+}
+
 .section-fade-bottom { position: relative; }
 .section-fade-bottom::after {
   content: "";

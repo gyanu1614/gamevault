@@ -3,7 +3,7 @@
  * The middleware asks ONE question, the sell_access_kind RPC, and routes:
  *   seller / admin / applicant → through
  *   seller_blocked             → /account/restrictions
- *   none                       → /account/become-seller
+ *   none                       → /founding (open seller signup)
  * /account/listings* keeps its role gate; /seller* and /sell/fees are untouched.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -32,11 +32,11 @@ beforeEach(() => { h.user = { id: 'u-1' }; h.kind = 'none'; h.rpcCalls = [] })
 
 describe('ACC-07 — /sell surface gate', () => {
   for (const path of ['/sell', '/sell/new', '/sell/bulk', '/sell/edit/abc']) {
-    it(`${path}: a plain user is sent to /account/become-seller`, async () => {
+    it(`${path}: a plain user is sent to /founding`, async () => {
       h.kind = 'none'
       const r = await go(path)
       expect(r.status).toBe(307)
-      expect(r.location).toBe('http://localhost/account/become-seller')
+      expect(r.location).toBe('http://localhost/founding')
       expect(h.rpcCalls).toEqual(['sell_access_kind'])
     })
   }

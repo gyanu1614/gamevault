@@ -157,6 +157,27 @@ describe.skipIf(!hasEnv)('PR 7 Part 3 — withdrawal quote, gate, request, Payon
     expect(dead).toMatchObject({ ok: false, refusal: 'method_unavailable' })
   })
 
+  it('payout gate fails closed for an unverified seller: kyc_required before anything else', async () => {
+    // Open seller signup (2026-10-08): a seller lists before KYC, so the gate
+    // must refuse the very first withdrawal until profiles.is_verified is set —
+    // the same flag that shows the blue Verified badge.
+    await fx!.svc.from('profiles').update({ is_verified: false }).eq('id', fx!.seller.id)
+    try {
+      const gate = await rpc('seller_withdrawal_gate', { p_seller_id: fx!.seller.id })
+      expect(gate).toMatchObject({ eligible: false, reason: 'kyc_required' })
+      expect(gate.message).toMatch(/verify your identity/i)
+      const q = await quote(crypto.id, 100)
+      expect(q).toMatchObject({ ok: false, refusal: 'kyc_required' })
+      expect(q.message).toMatch(/verify your identity/i)
+      // and the request RPC refuses on the same quote (nothing is inserted)
+      const r = await rpc('withdrawal_request', { p_seller_id: fx!.seller.id, p_method_id: crypto.id, p_amount: 100 })
+      expect(r.requested).toBe(false)
+      expect(r.quote.refusal).toBe('kyc_required')
+    } finally {
+      await fx!.svc.from('profiles').update({ is_verified: true }).eq('id', fx!.seller.id)
+    }
+  })
+
   it('refusals, in order: account age → payout freeze → negative → open → details → minimum → insufficient', async () => {
     await fundSeller(20_000, 'a') // $200
     // 1. fresh seller → account_age with the unlock date

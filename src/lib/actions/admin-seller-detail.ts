@@ -25,6 +25,18 @@ const SELLER_TIERS = TIER_KEYS
 
 export type { SellerTier }
 
+export interface SellerAgreementRow {
+  id: string
+  version: string
+  signed_at: string
+  typed_name: string
+  ip: string | null
+  user_agent: string | null
+  sha256: string
+  /** Short-lived signed URL to the signature PNG (private bucket), or null. */
+  signature_url: string | null
+}
+
 export interface SellerDetailProfile {
   id: string
   username: string | null
@@ -38,6 +50,8 @@ export interface SellerDetailProfile {
   seller_status: string
   seller_restriction_reason: string | null
   seller_restricted_at: string | null
+  /** profiles.is_verified — the blue badge AND the payout gate. */
+  is_verified: boolean
   kyc_status: string | null
   founding_seller: boolean
   is_test: boolean
@@ -172,6 +186,8 @@ export interface SellerDetail {
     } | null
   }
   reviews: SellerReviewRow[]
+  /** Seller Agency Agreement e-signatures (open seller signup), newest first. */
+  agreements: SellerAgreementRow[]
   /** Original seller application, when the seller came through the flow. */
   application: { id: string; status: string; reviewed_at: string | null } | null
 }
@@ -238,7 +254,7 @@ export async function getSellerDetail(userId: string): Promise<{
       service
         .from('profiles')
         .select(
-          'id, username, full_name, email, avatar_url, shop_name, shop_slug, role, seller_tier, seller_status, seller_restriction_reason, seller_restricted_at, kyc_status, founding_seller, is_test, created_at, total_sales, seller_rating, total_reviews',
+          'id, username, full_name, email, avatar_url, shop_name, shop_slug, role, seller_tier, seller_status, seller_restriction_reason, seller_restricted_at, kyc_status, is_verified, founding_seller, is_test, created_at, total_sales, seller_rating, total_reviews',
         )
         .eq('id', userId)
         .maybeSingle() as any,
@@ -377,6 +393,31 @@ export async function getSellerDetail(userId: string): Promise<{
     const completionRate =
       countable === 0 ? 100 : Math.round((completedCount / countable) * 1000) / 10
 
+    // Open seller signup: the signed agreements (service role; the bucket is private
+    // so the signature image is a 10-minute signed URL).
+    const agreements: SellerAgreementRow[] = []
+    try {
+      const { data: agRows } = await (service as any)
+        .from('seller_agreements')
+        .select('id, agreement_version, signed_at, typed_name, ip, user_agent, agreement_sha256, signature_path')
+        .eq('user_id', userId)
+        .order('signed_at', { ascending: false })
+        .limit(10)
+      for (const a of (agRows ?? []) as any[]) {
+        let signature_url: string | null = null
+        if (a.signature_path) {
+          const { data: signed } = await (service as any).storage.from('seller-signatures').createSignedUrl(a.signature_path, 600)
+          signature_url = signed?.signedUrl ?? null
+        }
+        agreements.push({
+          id: a.id, version: a.agreement_version, signed_at: a.signed_at, typed_name: a.typed_name,
+          ip: a.ip ? String(a.ip) : null, user_agent: a.user_agent ?? null, sha256: a.agreement_sha256, signature_url,
+        })
+      }
+    } catch (err) {
+      console.error('seller_agreements read failed:', err)
+    }
+
     const detail: SellerDetail = {
       profile: {
         id: profile.id,
@@ -392,6 +433,7 @@ export async function getSellerDetail(userId: string): Promise<{
         seller_restriction_reason: profile.seller_restriction_reason ?? null,
         seller_restricted_at: profile.seller_restricted_at ?? null,
         kyc_status: profile.kyc_status ?? null,
+        is_verified: profile.is_verified === true,
         founding_seller: profile.founding_seller === true,
         is_test: profile.is_test === true,
         created_at: profile.created_at,
@@ -505,6 +547,7 @@ export async function getSellerDetail(userId: string): Promise<{
               }
             : null,
       },
+      agreements,
       reviews: (reviewsRes.data ?? []).map((r: any) => ({
         id: r.id,
         rating: r.rating != null ? Number(r.rating) : null,

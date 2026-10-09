@@ -26,6 +26,7 @@ import type Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import { Expand } from '@/components/ui/expand'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'
 import { sellerStatLine } from '@/lib/seller/stat-line'
 import { cn } from '@/lib/utils'
@@ -118,7 +119,7 @@ export function SellerIdentity({
           ) : (
             name
           )}
-          {seller.verified && <VerifiedBadge size={14} />}
+          {seller.verified ? <VerifiedBadge size={14} /> : <NewSellerBadge />}
           {line.kind === 'stats' && <TierIcon tier={seller.tier} size={14} className="h-3.5 w-3.5 shrink-0" />}
         </div>
         <SellerStats
@@ -126,6 +127,7 @@ export function SellerIdentity({
           reviews={seller.reviews}
           sales={seller.sales}
           tier={seller.tier}
+verified={seller.verified}
           hideTier
           className={cn(
             'text-[12px] leading-4 sm:text-[12.5px]',

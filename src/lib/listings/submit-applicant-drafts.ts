@@ -98,7 +98,7 @@ export async function submitApplicantDrafts(service: Client, userId: string): Pr
       result.skipped.push({ id: d.id, title: d.title, reason: `active-listing cap (${policy.listing_limit}) reached` })
       continue
     }
-    const status = decidePublishStatus(policy, 'active') as 'active' | 'pending_approval'
+    const status = decidePublishStatus(policy, 'active', validated.value.price) as 'active' | 'pending_approval'
     const metadata = { ...(d.metadata ?? {}) }
     delete metadata[APPLICANT_DRAFT_KEY]
     const { data: written, error: updErr } = await service

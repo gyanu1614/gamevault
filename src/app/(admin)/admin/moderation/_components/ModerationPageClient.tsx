@@ -1237,6 +1237,9 @@ function ListingRow({
             {listing.quantity != null && Number(listing.quantity) > 1 && (
               <span className="tabular-nums">×{listing.quantity}</span>
             )}
+            {listing.reviewReason && (
+              <span className="font-medium text-warning" title="Why this listing is in review">{listing.reviewReason}</span>
+            )}
             <span className="truncate">
               {listing.game?.name}
               {listing.category?.name ? ` · ${listing.category.name}` : ''}

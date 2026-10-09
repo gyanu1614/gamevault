@@ -16,7 +16,7 @@ export default function SellerFlowLoader({ label }: { label: string }) {
   return (
     <div className="fixed inset-0 z-[90]">
       <Image
-        src="/assets/heroes/sell.avif"
+        src="/assets/heroes/founding.avif"
         alt=""
         fill
         priority

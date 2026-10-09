@@ -1282,7 +1282,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   )
 
   return (
-    <div className="relative min-h-screen" style={{ background: T.page }}>
+    <div className="relative min-h-screen">
       <CheckoutNavbar user={user} buyerProfile={buyerProfile} />
 
       {/* Faint game art in the top-left corner, fading out by mid-page —

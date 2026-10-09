@@ -27,7 +27,7 @@ export function AvatarImage({
   className = '',
   unoptimized = true,
 }: AvatarImageProps) {
-  const [imgSrc, setImgSrc] = useState(src || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`)
+  const [imgSrc, setImgSrc] = useState(src || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`)
   const [hasError, setHasError] = useState(false)
 
   const handleError = () => {

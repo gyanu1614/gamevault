@@ -35,6 +35,7 @@ import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { TierIcon } from '@/components/seller/tiers/TierIcon'
 import { PencilSimpleIcon } from '@phosphor-icons/react'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
+import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { SellerStats } from '@/components/seller/SellerStats'
 import { formatDeliveryLabel, parseDeliveryMinutes } from '@/lib/utils/delivery-time'
 import type { ItemOffer } from './_itemsTypes'
@@ -324,7 +325,7 @@ export default function ItemCard({
                 <span className="truncate text-[13px] font-semibold text-text-primary">
                   {sellerName}
                 </span>
-                {offer.seller.verified && <VerifiedBadge size={13} />}
+                {offer.seller.verified ? <VerifiedBadge size={13} /> : <NewSellerBadge />}
                 <TierIcon tier={offer.seller.tier} size={14} />
               </div>
               <SellerStats
@@ -332,6 +333,7 @@ export default function ItemCard({
                 reviews={offer.seller.reviewCount}
                 sales={offer.seller.sales}
                 tier={offer.seller.tier}
+verified={offer.seller.verified}
                 hideTier
                 className="text-[12px]"
               />
