@@ -372,7 +372,7 @@ export default function ItemsPageClient({
             </div>
           </div>
             {/* Seller prompt beside the title; its own row on phones. */}
-            <SellerPromptCard gameName={gameName} categoryLabel={categoryLabel} className="w-full sm:ml-auto sm:w-auto sm:max-w-[440px]" />
+            <SellerPromptCard gameName={gameName} categoryLabel={categoryLabel} className="w-full sm:ml-auto sm:w-auto sm:max-w-[520px]" />
 
           {/* Filter bar (owner, 2026-09-28): the filters on one full-width
               row, the search on its own full-width row below.

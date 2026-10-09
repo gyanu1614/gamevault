@@ -2913,3 +2913,29 @@ body { padding-top: var(--safe-top); }
   pointer-events: none;
   background: var(--color-bg-base);
 }
+
+/* Seller prompt (hero eyebrow): a slow lime light sweeping through the
+   offer text — Aceternity-style text shimmer, no glow, no blur. The lead
+   stays plain white so the line is still one sentence, not a banner. */
+.seller-shimmer {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(255, 255, 255, 0.82) 35%,
+    #c8f06b 50%,
+    rgba(255, 255, 255, 0.82) 65%,
+    rgba(255, 255, 255, 0.82) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: seller-shimmer 4.5s ease-in-out infinite;
+}
+@keyframes seller-shimmer {
+  0% { background-position: 110% 0; }
+  100% { background-position: -40% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seller-shimmer { animation: none; color: #c8f06b; background: none; }
+}

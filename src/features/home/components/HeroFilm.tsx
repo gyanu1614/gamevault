@@ -244,13 +244,19 @@ export function HeroFilm() {
           style={{ opacity: copyOpacity, y: copyY, filter: copyFilter }}
           {...inert(beat === 2)}
         >
+          {/* The seller prompt as a hero eyebrow: one line just under the
+              navbar, clear of the headline, no bar above the nav (owner,
+              2026-10-09). Absolute, so it never moves the copy. */}
+          <motion.div
+            className="hero-film__rise absolute inset-x-0 z-10 px-4"
+            style={{ top: 'calc(var(--navbar-bottom) + 18px)', pointerEvents: copyEvents }}
+          >
+            <HeroEyebrow />
+          </motion.div>
           <div className="page-measure">
             {/* Centred column. Only the column takes the pointer, never the
                 whole layer, so the grid spotlight still tracks around it. */}
             <motion.div className="mx-auto max-w-[680px] text-center" style={{ pointerEvents: copyEvents }}>
-              {/* The seller prompt as a hero eyebrow: one line above the
-                  headline, no bar above the navbar (owner, 2026-10-08). */}
-              <HeroEyebrow className="hero-film__rise mb-5 sm:mb-6" />
               <h1 className="hero-film__title">
                 {/* The brand in the H1 for search engines and screen readers
                     (Google's site-name signals include the home headings); the

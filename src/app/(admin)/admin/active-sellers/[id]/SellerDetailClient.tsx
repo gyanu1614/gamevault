@@ -678,13 +678,13 @@ export default function SellerDetailClient({
 
         <div className="flex min-w-0 flex-col gap-5">
           <Section title="Seller Agreement" sub="Signed Seller Agency Agreement (open seller signup). Newest first.">
-            {detail.agreements.length === 0 ? (
+            {(detail.agreements ?? []).length === 0 ? (
               <p className="text-[13px] text-text-tertiary">
                 {detail.application ? 'Signed inside the original seller application (see Application below).' : 'No e-signature on file.'}
               </p>
             ) : (
               <ul className={ROWS}>
-                {detail.agreements.map((a) => (
+                {(detail.agreements ?? []).map((a) => (
                   <li key={a.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start">
                     <div className="min-w-0 flex-1 text-[13px]">
                       <p className="font-medium text-text-primary">

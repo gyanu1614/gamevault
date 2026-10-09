@@ -31,14 +31,21 @@ export function sellerPromptHref(variant: SellerPromptVariant, source: string): 
 /** Homepage eyebrow. */
 export const HERO_EYEBROW = {
   visitor: {
+    /** The catch, in lime. */
+    accent: 'Start Earning Today.',
     lead: 'Sell Items, Currency and Accounts',
-    tail: '50% off selling fees for a limited time',
+    /** Shimmered. */
+    tail: '50% Off Fees for a Limited Time',
     cta: 'Start Selling',
+    /** Phones: one full-width line, accent + button (owner, 2026-10-09). */
+    phoneCta: 'Apply',
   },
   seller: {
-    lead: 'Your store is open',
-    tail: 'Buyers are looking for your games right now',
-    cta: 'Create your first listing',
+    accent: 'Your Store Is Open.',
+    lead: 'Buyers Are Looking for Your Games',
+    tail: 'List Now and Get Paid on Every Sale',
+    cta: 'Create Your First Listing',
+    phoneCta: 'List Now',
   },
 } as const
 
@@ -47,7 +54,7 @@ export function listingsCardCopy(variant: SellerPromptVariant, gameName: string,
   const what = `${gameName} ${categoryLabel}`
   return variant === 'seller'
     ? { lead: 'Your store is open', tail: `List your ${what} and buyers here see them first.`, cta: 'Create a listing' }
-    : { lead: `Got ${what} to sell?`, tail: '50% off selling fees for a limited time.', cta: 'Start Selling' }
+    : { lead: `Got ${what} to sell?`, tail: '50% Off Fees for a Limited Time.', cta: 'Start Selling' }
 }
 
 /** Listings empty state: the category has no listings at all. */
@@ -58,7 +65,7 @@ export function listingsEmptyCopy(variant: SellerPromptVariant, gameName: string
     body:
       variant === 'seller'
         ? 'Buyers searching this page will see your listing first.'
-        : '50% off selling fees for a limited time. Buyers searching this page will see your listing first.',
+        : '50% Off Fees for a Limited Time. Buyers searching this page see your listing first.',
     cta: variant === 'seller' ? 'Create a listing' : 'Start Selling',
   }
 }
