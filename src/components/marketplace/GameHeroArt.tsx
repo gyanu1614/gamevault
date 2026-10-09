@@ -66,7 +66,6 @@ export function GameHeroOverlays() {
     <>
       <div className="game-hero__veil" />
       <div className="game-hero__light" />
-      <div className="game-hero__fade" />
     </>
   )
 }

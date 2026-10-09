@@ -141,7 +141,17 @@ export function HeroFilm() {
   // Reduced motion: every transform reads a progress that never moves, so
   // the stage renders once at its resting state.
   const still = useMotionValue(0)
-  const p = reduceMotion ? still : scrollYProgress
+  // A window taller than the film can't scroll through it, so the scrub has
+  // no meaning there (and framer reads it as finished, fading beat 1's copy
+  // out). Google's renderer is such a window: show the resting first beat.
+  const [fitsWindow, setFitsWindow] = useState(false)
+  useEffect(() => {
+    const check = () => setFitsWindow(window.innerHeight >= (filmRef.current?.offsetHeight ?? Infinity))
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  const p = reduceMotion || fitsWindow ? still : scrollYProgress
 
   // Which beat is on screen. Only flips at the midpoint, so this re-renders
   // twice per pass, not per frame. The hidden beat is made `inert`: faded

@@ -123,9 +123,23 @@ function useTypedExample(enabled: boolean) {
       timer = setTimeout(tick, wait)
     }
 
-    // Hold the first example fully typed before the cycle starts.
-    timer = setTimeout(tick, 2200)
-    return () => clearTimeout(timer)
+    // The cycle starts on the visitor's first interaction (pointer, touch,
+    // scroll, key), then holds the first example a beat. Starting on a timer
+    // re-painted this text at ~2.5 s, which made it the page's Largest
+    // Contentful Paint (Google stops measuring LCP at the first interaction).
+    const events = ['pointermove', 'pointerdown', 'touchstart', 'scroll', 'keydown'] as const
+    let started = false
+    const start = () => {
+      if (started) return
+      started = true
+      events.forEach((e) => window.removeEventListener(e, start))
+      timer = setTimeout(tick, 1200)
+    }
+    events.forEach((e) => window.addEventListener(e, start, { passive: true }))
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, start))
+      clearTimeout(timer)
+    }
   }, [enabled])
 
   return text
