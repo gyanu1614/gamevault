@@ -49,7 +49,7 @@ function DiscordMark({ className }: { className?: string }) {
 const TONE = {
   light: {
     button:
-      'border-[#E4E5DE] bg-white text-[#1A1D19] hover:bg-[#F6F7F2] focus-visible:ring-[#1B5E3A]/[0.18] disabled:opacity-60',
+      'bg-white text-[#1A1D19] shadow-[0_1px_2px_rgba(26,29,25,0.10),0_0_0_1px_rgba(26,29,25,0.05)] hover:bg-[#F6F7F2] focus-visible:ring-[#1A1D19]/[0.14] disabled:opacity-60',
     line: 'bg-[#E4E5DE]',
     text: 'text-[#5B6157]',
     error: 'text-[#B91C1C]',
@@ -112,8 +112,8 @@ export function OAuthButtons({ next, tone = 'light', dividerLabel = 'or use your
             aria-label={LABELS[provider]}
             aria-busy={busy === provider}
             className={cn(
-              'inline-flex h-11 w-full touch-manipulation items-center justify-center gap-2.5 rounded-xl border px-4 text-body-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed',
-              tone === 'dark' && 'rounded-md',
+              'inline-flex h-11 w-full touch-manipulation items-center justify-center gap-2.5 rounded-md px-4 text-body-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed',
+              tone === 'dark' && 'border',
               t.button,
             )}
           >

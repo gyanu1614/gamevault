@@ -62,6 +62,8 @@ export interface ComboboxProps {
   tone?: 'lime' | 'neutral'
   /** Show the selected option's icon in the closed trigger (default off). */
   iconInTrigger?: boolean
+  /** Classes for option icons (default: 20px square). Flags pass a 4:3 box. */
+  iconClassName?: string
 }
 
 export function Combobox({
@@ -78,6 +80,7 @@ export function Combobox({
   onBlur,
   tone = 'lime',
   iconInTrigger = false,
+  iconClassName = 'h-5 w-5 rounded',
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   // Phones: open on the list, not the keyboard (see useCoarsePointer).
@@ -141,7 +144,7 @@ export function Combobox({
           <span className="flex min-w-0 items-center gap-2">
             {iconInTrigger && selected?.icon_url && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={selected.icon_url} alt={selected.label} aria-hidden className="h-5 w-5 shrink-0 rounded object-cover" />
+              <img src={selected.icon_url} alt={selected.label} aria-hidden className={cn('shrink-0 object-cover', iconClassName)} />
             )}
             <span className={cn('truncate', !selected && 'text-text-tertiary')}>
               {selected?.label ?? placeholder}
@@ -234,7 +237,8 @@ export function Combobox({
                           src={o.icon_url}
                           alt={o.label}
                           aria-hidden
-                          className="h-5 w-5 shrink-0 rounded object-cover"
+                          loading="lazy"
+                          className={cn('shrink-0 object-cover', iconClassName)}
                         />
                       )}
                       <span className="flex-1 truncate">{o.label}</span>

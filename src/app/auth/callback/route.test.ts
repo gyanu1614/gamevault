@@ -14,9 +14,11 @@ const state: { user: FakeUser | null; exchangeError: { message: string } | null 
 }
 
 const verifyOtp = vi.fn(async () => ({ error: null }))
+const signOut = vi.fn(async () => ({ error: null }))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: {
+      signOut,
       exchangeCodeForSession: async () =>
         state.exchangeError ? { data: { user: null }, error: state.exchangeError } : { data: { user: state.user }, error: null },
       getUser: async () => ({ data: { user: state.user } }),
@@ -68,6 +70,7 @@ beforeEach(() => {
   profileUpdate.mockClear()
   profileInsert.mockClear()
   verifyOtp.mockClear()
+  signOut.mockClear()
 })
 
 describe('/auth/callback — OAuth code exchange', () => {
@@ -141,6 +144,38 @@ describe('/auth/callback — OAuth code exchange', () => {
     await hit('?code=abc')
     expect(profileUpdate).not.toHaveBeenCalled()
     expect(profileInsert).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when an unverified Discord email was linked onto an existing account', async () => {
+    // Only possible with "Confirm email" OFF on the auth server (every email
+    // then counts as verified for linking). Defence in depth: end the
+    // session and say why, instead of handing the attacker the account.
+    state.user = {
+      id: 'u-linked',
+      email: 'victim@x.y',
+      app_metadata: { provider: 'email', providers: ['email', 'discord'] },
+      identities: [
+        { provider: 'email', identity_data: { email: 'victim@x.y', email_verified: true } },
+        { provider: 'discord', identity_data: { email: 'victim@x.y', email_verified: false, full_name: 'attacker' } },
+      ],
+    }
+    const r = await hit('?code=abc&next=%2Fadopt-me')
+    expect(signOut).toHaveBeenCalled()
+    expect(r.location).toBe('http://localhost:3025/adopt-me?auth_error=oauth_unverified_email')
+    expect(profileUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not touch a sole, unverified Discord identity (nothing was linked)', async () => {
+    state.user = {
+      id: 'u-solo',
+      email: 'solo@x.y',
+      app_metadata: { provider: 'discord', providers: ['discord'] },
+      identities: [{ provider: 'discord', identity_data: { email: 'solo@x.y', email_verified: false } }],
+    }
+    profiles['u-solo'] = { id: 'u-solo', username: 'solo_chosen', avatar_url: null }
+    const r = await hit('?code=abc')
+    expect(signOut).not.toHaveBeenCalled()
+    expect(r.location).toBe('http://localhost:3025/')
   })
 
   it('maps a provider error for an unverified Discord email to a readable signal', async () => {

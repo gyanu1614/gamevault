@@ -36,6 +36,20 @@ function readCookie(request: Request, name: string): string | null {
   return null
 }
 
+/**
+ * An identity whose provider says the email is NOT verified, linked onto an
+ * account that already had another identity. Supabase only links verified
+ * emails — unless "Confirm email" is off on the auth server, which makes
+ * every email count as verified. Defence in depth for that misconfiguration:
+ * the session is ended and the user told why, instead of the account being
+ * handed to whoever controls the unverified provider login.
+ */
+function hasUnverifiedLinkedIdentity(user: OAuthUserLike): boolean {
+  const ids = user.identities ?? []
+  if (ids.length < 2) return false
+  return ids.some((i) => i.identity_data?.email_verified === false)
+}
+
 /** Append a query key to a same-origin path that may already carry a query. */
 function withQuery(path: string, key: string, value: string) {
   const sep = path.includes('?') ? '&' : '?'
@@ -172,6 +186,10 @@ export async function GET(request: Request) {
       if (!user) return redirect(`${origin}/?auth_error=confirmation_failed`)
     }
 
+    if (user && hasUnverifiedLinkedIdentity(user)) {
+      await supabase.auth.signOut().catch(() => {})
+      return redirect(`${origin}${withQuery(next, 'auth_error', 'oauth_unverified_email')}`)
+    }
     if (isEmailChange) await syncProfileEmail().catch(() => {})
     if (user) await ensureOAuthProfile(user)
     return redirect(successUrl())

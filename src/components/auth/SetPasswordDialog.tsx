@@ -17,8 +17,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { setInitialPassword } from '@/lib/actions/set-password'
-import { beginLogout } from '@/lib/auth/logout-signal'
-import { logout } from '@/lib/actions/auth'
+import { signOutInPlace } from '@/lib/auth/sign-out-in-place'
 import { cn } from '@/lib/utils'
 
 const MIN = 8
@@ -162,8 +161,8 @@ export function SetPasswordDialog({ open, email, provider, onSaved }: SetPasswor
               <button
                 type="button"
                 onClick={() => {
-                  beginLogout()
-                  logout().catch(() => undefined)
+                  // The gate closes on SIGNED_OUT; the page underneath stays.
+                  signOutInPlace().catch(() => undefined)
                 }}
                 className="font-medium text-text-secondary underline-offset-2 hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               >

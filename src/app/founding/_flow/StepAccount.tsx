@@ -13,7 +13,8 @@
 import { useEffect, useState } from 'react'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
 import { EnvelopeSimple } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple'
-import { login, signup, resendConfirmationEmail, checkEmailAvailability, generateUniqueGamerTag, logout } from '@/lib/actions/auth'
+import { login, signup, resendConfirmationEmail, checkEmailAvailability, generateUniqueGamerTag } from '@/lib/actions/auth'
+import { signOutInPlace } from '@/lib/auth/sign-out-in-place'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard, GhostButton } from './ui'
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { safeSession } from '@/lib/safe-storage'
@@ -89,8 +90,13 @@ export function StepAccount({
           </div>
           <button
             type="button"
-            onClick={() => { logout().catch(() => undefined) }}
-            className="ml-auto text-body-sm text-text-tertiary underline-offset-2 hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            disabled={busy}
+            onClick={async () => {
+              // Stay on /founding: step 1 re-renders as the sign-in form.
+              setBusy(true)
+              try { await signOutInPlace(); await onSignedIn() } finally { setBusy(false) }
+            }}
+            className="ml-auto text-body-sm text-text-tertiary underline-offset-2 hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
           >
             Not you? Sign Out
           </button>

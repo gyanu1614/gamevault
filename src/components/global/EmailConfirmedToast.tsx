@@ -33,7 +33,10 @@ export default function EmailConfirmedToast() {
   useEffect(() => {
     const confirmed = searchParams?.get('confirmed')
     const authError = searchParams?.get('auth_error')
-    if (!confirmed && !authError) return
+    // Supabase itself lands here (Site URL) when a provider callback is
+    // replayed — back button, double tab — with ?error=…&error_code=….
+    const providerErrorCode = searchParams?.get('error_code')
+    if (!confirmed && !authError && !providerErrorCode) return
     if (firedRef.current) return
     firedRef.current = true
 
@@ -41,6 +44,9 @@ export default function EmailConfirmedToast() {
     const params = new URLSearchParams(searchParams?.toString() ?? '')
     params.delete('confirmed')
     params.delete('auth_error')
+    params.delete('error')
+    params.delete('error_code')
+    params.delete('error_description')
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname || '/')
 
@@ -48,6 +54,21 @@ export default function EmailConfirmedToast() {
     // confirmation link was headed (the current path) after they log in —
     // otherwise they'd sign in and land on the homepage.
     const postLoginRedirect = pathname && pathname !== '/' ? pathname : undefined
+
+    if (providerErrorCode && !authError) {
+      if (providerErrorCode === 'bad_oauth_state') {
+        // The first visit of that callback already signed them in (or the
+        // state expired). Either way the link is spent.
+        toast.info('That Sign-In Link Was Already Used', {
+          description: 'If you are not signed in, use Continue with Google or Discord again.',
+        })
+      } else {
+        toast.error('Sign-In Did Not Complete', {
+          description: 'Try again, or use your email and password.',
+        })
+      }
+      return
+    }
 
     if (authError) {
       if (authError === 'link_expired') {
