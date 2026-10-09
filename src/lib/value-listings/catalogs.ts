@@ -17,6 +17,17 @@ export const VALUES_PIPELINE_GAMES: ReadonlySet<string> = new Set(['steal-an-egg
 
 export const VALUE_CATALOG_GAMES: readonly string[] = ['steal-a-brainrot', 'adopt-me', ...VALUES_PIPELINE_GAMES]
 
+/**
+ * Sell-form fields whose option value is the catalogue slug, per game, most
+ * specific first (the first picked one wins). MM2: one name list per item
+ * type (a chroma is its own row). Steal an Egg: a named egg or pet beats the
+ * area it comes from.
+ */
+const PIPELINE_IDENTITY_KEYS: Record<string, readonly string[]> = {
+  'murder-mystery-2': ['select-knife', 'select-gun', 'select-pet'],
+  'steal-an-egg': ['select-egg', 'select-pet', 'egg-area'],
+}
+
 /** Adopt Me value-page variant code → URL key (also the stored `value_variant`). */
 export const AM_VARIANT_KEY = {
   N: 'normal',
@@ -88,7 +99,9 @@ export function buildValueCatalog(
         gameSlug,
         items,
         variants: mutations.map((m) => ({ key: m.slug, names: [m.name] })),
-        identityKeys: ['select-brainrot'],
+        // The SAB items form splits the brainrot picker by rarity:
+        // select-brainrot, select-brainrot-2 … -8 (only one is shown at a time).
+        identityKeys: ['select-brainrot', ...Array.from({ length: 7 }, (_, i) => `select-brainrot-${i + 2}`)],
         variantKeys: ['mutation', 'select-mutation'],
         defaultVariant: 'default',
       },
@@ -114,7 +127,7 @@ export function buildValueCatalog(
     return {
       items,
       mutations: [],
-      catalog: { gameSlug, items, variants: [], identityKeys: ['select-item', 'item-name'] },
+      catalog: { gameSlug, items, variants: [], identityKeys: [...(PIPELINE_IDENTITY_KEYS[gameSlug] ?? []), 'select-item', 'item-name'] },
     }
   }
   return null

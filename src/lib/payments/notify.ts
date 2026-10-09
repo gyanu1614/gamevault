@@ -15,6 +15,8 @@ import type { CanonicalEvent } from '@/lib/payments/types'
 import { toDecimal } from '@/lib/money'
 import { emailAllowed } from '@/lib/email/preferences'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { orderPaidEvents } from '@/lib/analytics/order-events'
+import { captureServerEvent } from '@/lib/analytics/server'
 
 interface OrderComms {
   id: string
@@ -26,6 +28,7 @@ interface OrderComms {
   quantity: number
   listingTitle: string
   gameSlug: string | null
+  promoCodeId: string | null
   buyer: { email: string | null; name: string }
   seller: { email: string | null; name: string }
 }
@@ -35,7 +38,7 @@ async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
   const { data: order } = await supabase
     .from('orders')
     .select(
-      'id, order_number, buyer_id, seller_id, total_amount, seller_payout, quantity, listing:listings!orders_listing_id_fkey(title, game:game_id(slug))'
+      'id, order_number, buyer_id, seller_id, total_amount, seller_payout, quantity, promo_code_id, listing:listings!orders_listing_id_fkey(title, game:game_id(slug))'
     )
     .eq('id', orderId)
     .single() as any
@@ -62,9 +65,27 @@ async function fetchOrderComms(orderId: string): Promise<OrderComms | null> {
     quantity: order.quantity ?? 1,
     listingTitle: await orderItemTitleFor(order.id, order.listing?.title || 'your item'),
     gameSlug: order.listing?.game?.slug ?? null,
+    promoCodeId: order.promo_code_id ?? null,
     buyer: profile(order.buyer_id),
     seller: profile(order.seller_id),
   }
+}
+
+/**
+ * Growth point 1 — PostHog funnel ends (order_paid, seller_first_sale).
+ * No key → no reads, no sends. Bounded and swallowed inside captureServerEvent.
+ */
+async function capturePaidOrder(order: OrderComms): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || process.env.NODE_ENV === 'development') return
+  const events = await orderPaidEvents(createServiceRoleClient(), {
+    id: order.id,
+    buyer_id: order.buyer_id,
+    seller_id: order.seller_id,
+    total_amount: order.total_amount,
+    gameSlug: order.gameSlug,
+    promoCodeId: order.promoCodeId,
+  })
+  await Promise.all(events.map((e) => captureServerEvent(e)))
 }
 
 /** Insert an in-app notification with the service-role client (no session). */
@@ -189,6 +210,7 @@ export async function notifyOrderTransition(
           message: `${order.listingTitle} · #${orderNumber} · ${order.buyer.name}`,
           link: `/account/orders/${order.id}`,
         }),
+        capturePaidOrder(order),
       ])
       return
     }

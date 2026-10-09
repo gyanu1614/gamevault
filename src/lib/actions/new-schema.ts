@@ -286,20 +286,34 @@ export async function getAttributeTemplateFull(gameCategoryId: string): Promise<
     let rules: AttributeConditionalRule[] = []
 
     if (attrIds.length > 0) {
-      const [optsRes, rulesRes] = await Promise.all([
-        supabase
-          .from('attribute_options')
-          .select('*')
-          .in('attribute_id', attrIds)
-          .order('sort_order', { ascending: true }),
+      // Options are paged: PostgREST caps a read at 1000 rows, and a
+      // catalogue-backed form (MM2 item names, ~1,070 options) passes that.
+      // `id` breaks sort_order ties so pages never overlap or skip.
+      const readOptions = async (): Promise<AttributeOption[]> => {
+        const PAGE = 1000
+        const out: AttributeOption[] = []
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from('attribute_options')
+            .select('*')
+            .in('attribute_id', attrIds)
+            .order('sort_order', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, from + PAGE - 1)
+          if (error) throw error
+          out.push(...((data ?? []) as AttributeOption[]))
+          if (!data || data.length < PAGE) return out
+        }
+      }
+      const [optsData, rulesRes] = await Promise.all([
+        readOptions(),
         supabase
           .from('attribute_conditional_rules')
           .select('*')
           .in('attribute_id', attrIds),
       ])
-      if (optsRes.error)  throw optsRes.error
       if (rulesRes.error) throw rulesRes.error
-      opts  = (optsRes.data  ?? []) as AttributeOption[]
+      opts  = optsData
       rules = (rulesRes.data ?? []) as AttributeConditionalRule[]
     }
 

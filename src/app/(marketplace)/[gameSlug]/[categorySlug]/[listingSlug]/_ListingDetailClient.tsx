@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils'
 import ItemCard from '../_ItemCard'
 import type { ItemOffer } from '../_itemsTypes'
 import { NumberField } from '@/components/ui/number-field'
+import { track } from '@/lib/analytics/client'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
@@ -178,6 +179,18 @@ export default function ListingDetailClient({
   const [showMobileBar, setShowMobileBar] = useState(false)
   const isOwn = !!viewerId && viewerId === listing.seller.id
 
+  // Growth point 1 — buyer funnel step 2 (step 1 is PostHog's $pageview).
+  // Owner/admin previews of a non-live listing are not buyer views.
+  useEffect(() => {
+    if (previewStatus) return
+    track('listing_viewed', {
+      game: listing.gameSlug,
+      category: listing.categorySlug,
+      listing_id: listing.id,
+      price_usd: listing.price,
+    })
+  }, [listing.id, listing.gameSlug, listing.categorySlug, listing.price, previewStatus])
+
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
     if ('scrollRestoration' in window.history) {
@@ -290,7 +303,7 @@ export default function ListingDetailClient({
     }
     if (listing.deliveryMethod) {
       rows.push({
-        label: 'Delivery Method',
+        label: 'Delivery Type',
         value: listing.deliveryMethod === 'instant' ? 'Instant' : titleCase(listing.deliveryMethod),
       })
     }

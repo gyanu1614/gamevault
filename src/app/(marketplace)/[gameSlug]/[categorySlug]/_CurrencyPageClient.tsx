@@ -17,6 +17,7 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded'
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
 import { Card } from '@/components/ui/card'
 import { CollapsibleText } from '@/components/ui/collapsible-text'
 import { PhoneBuySheet } from './_PhoneBuySheet'
@@ -39,6 +40,10 @@ import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { findLinkedOffer, readCurrencyOfferLink } from '@/lib/listings/currency-offer-link'
 import { formatUnitPrice } from '@/lib/currency/price-format'
 import { CurrencySellerRow } from '@/components/marketplace/CurrencySellerRow'
+import { DeliveryMethodFilter } from '@/components/marketplace/DeliveryMethodFilter'
+import { DeliveryMethodInfo } from '@/components/marketplace/DeliveryMethodInfo'
+import { filterByDeliveryMethod, methodsInUse } from '@/lib/currency/delivery-methods'
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -225,6 +230,19 @@ export default function CurrencyPageClient({
   }
 
   const [filter, setFilter] = useState<'recommended' | 'cheapest' | 'fastest'>('recommended')
+  // Delivery method filter (Gamepass, UID / Login …) — only when the admin
+  // turned methods on and live offers use them.
+  const filterMethods = useMemo(() => methodsInUse(data.deliveryMethods ?? [], allOffers), [data.deliveryMethods, allOffers])
+  const methodById = useMemo(() => new Map((data.deliveryMethods ?? []).map((m) => [m.id, m])), [data.deliveryMethods])
+  const [methodFilter, setMethodFilter] = useState<string | null>(null)
+  const chooseMethod = (id: string | null) => {
+    setMethodFilter(id)
+    // The buy card follows the filter: swap in the best matching offer.
+    if (id && (activeOffer.deliveryMethodId ?? null) !== id) {
+      const best = [...filterByDeliveryMethod(allOffers, id)].sort((a, b) => (b.recommended ?? 0) - (a.recommended ?? 0))[0]
+      if (best) setActiveId(best.id)
+    }
+  }
   const heroRef = useRef<HTMLDivElement>(null)
 
   // V14v — Always land at the top on mount. Covers back/forward
@@ -267,13 +285,13 @@ export default function CurrencyPageClient({
   }, [allOffers, data.currency, gameImageUrl])
 
   const otherSellers = useMemo(() => {
-    const list = allOffers.filter((o) => o.id !== activeId)
+    const list = filterByDeliveryMethod(allOffers, methodFilter).filter((o) => o.id !== activeId)
     switch (filter) {
       case 'cheapest': return [...list].sort((a, b) => a.pricePerUnit - b.pricePerUnit)
       case 'fastest':  return [...list].sort((a, b) => a.deliveryMin - b.deliveryMin)
       default:         return [...list].sort((a, b) => (b.recommended ?? 0) - (a.recommended ?? 0))
     }
-  }, [allOffers, activeId, filter])
+  }, [allOffers, activeId, filter, methodFilter])
 
   const pickOffer = (id: string) => {
     setActiveId(id)
@@ -366,6 +384,7 @@ export default function CurrencyPageClient({
             buying={navigating}
             isOwnOffer={isOwnOffer}
             picked={activeOffer.id !== data.hero.id}
+            method={activeOffer.deliveryMethodId ? methodById.get(activeOffer.deliveryMethodId) ?? null : null}
           />
         </div>
 
@@ -401,6 +420,7 @@ export default function CurrencyPageClient({
             </div>
             <FilterChips filter={filter} setFilter={setFilter} />
           </div>
+          <DeliveryMethodFilter methods={filterMethods} value={methodFilter} onChange={chooseMethod} />
           <div className="mt-5 space-y-2">
             {otherSellers.length === 0 ? (
               <EmptyState />
@@ -417,6 +437,7 @@ export default function CurrencyPageClient({
                   }
                   onSelect={() => pickOffer(o.id)}
                   isOwn={!!viewerId && o.sellerId === viewerId}
+                  method={o.deliveryMethodId ? methodById.get(o.deliveryMethodId) ?? null : null}
                 />
               ))
             )}
@@ -609,7 +630,7 @@ function VariantSelector({ variant }: { variant: CurrencyPageData['currency']['v
 }
 
 function HeroCard({
-  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer, picked = false,
+  offer, unitLabel, granularity, qty, setQty, unit, total, onBuy, buying, isOwnOffer, picked = false, method = null,
 }: {
   offer: Offer
   unitLabel: string
@@ -626,6 +647,8 @@ function HeroCard({
   /** The buyer (or a seller's offer link) chose this offer over the
    *  recommended one — the badge then reads "Selected". */
   picked?: boolean
+  /** The offer's delivery method (Gamepass…), when the game uses them. */
+  method?: CurrencyDeliveryMethod | null
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const reduceMotion = useReducedMotion()
@@ -704,6 +727,17 @@ function HeroCard({
               {fmtMinutes(offer.deliveryMin, offer.deliveryMax)}
             </span>
           </div>
+          {method && (
+            <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] py-3.5">
+              <span className="text-[14px] font-semibold text-text-primary">
+                Delivery Method
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-text-secondary">
+                {method.label}
+                <DeliveryMethodInfo label={method.label} description={method.description} />
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] py-3.5">
             <span className="text-[14px] font-semibold text-text-primary">
               In Stock
@@ -1040,7 +1074,7 @@ function Fact({ icon: Icon, label, value }: { icon: typeof StarRoundedIcon; labe
 }
 
 function SellerRow({
-  offer, unitLabel, perLabel, onSelect, isOwn,
+  offer, unitLabel, perLabel, onSelect, isOwn, method = null,
 }: {
   offer: Offer
   /** Quantity suffix: 'K' / 'M' on bulk games, the currency name otherwise. */
@@ -1051,6 +1085,8 @@ function SellerRow({
   /** V14m — When true, the viewer owns this listing: a quiet "Yours" pill
    *  replaces Select (the expanded panel keeps the Edit Listing link). */
   isOwn?: boolean
+  /** The offer's delivery method (Gamepass…), when the game uses them. */
+  method?: CurrencyDeliveryMethod | null
 }) {
   const hasInstructions = !!offer.blurb?.trim()
   const delivery = offer.deliveryLabel || `${offer.deliveryMin}-${offer.deliveryMax} Min`
@@ -1073,10 +1109,12 @@ function SellerRow({
         { icon: Inventory2RoundedIcon, label: 'Stock', value: offer.stock.toLocaleString('en-US'), width: 120 },
         { icon: TuneRoundedIcon, label: 'Minimum', value: offer.minQty.toLocaleString('en-US'), width: 100 },
         { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery, width: 110 },
+        ...(method ? [{ icon: SwapHorizRoundedIcon, label: 'Method', value: method.label, width: 130 }] : []),
       ]}
       mobileMetrics={[
         { icon: Inventory2RoundedIcon, label: 'Stock', value: `${offer.stock.toLocaleString('en-US')} ${unitLabel}` },
         { icon: ScheduleRoundedIcon, label: 'Delivery', value: delivery },
+        ...(method ? [{ icon: SwapHorizRoundedIcon, label: 'Method', value: method.label }] : []),
       ]}
       price={unitPrice(offer.pricePerUnit)}
       priceCaption={`per ${perLabel}`}
@@ -1119,6 +1157,20 @@ function SellerRow({
                   label="Minimum Quantity"
                   value={`${offer.minQty.toLocaleString('en-US')} ${unitLabel} · ${money(offer.minQty * offer.pricePerUnit)}`}
                 />
+                {method && (
+                  <div className="col-span-2 flex items-center gap-2.5">
+                    <span className="grid h-8 w-8 flex-none place-items-center rounded-md bg-bg-overlay">
+                      <SwapHorizRoundedIcon className="text-text-tertiary" style={{ fontSize: 16 }} aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-text-tertiary">Delivery Method</div>
+                      <div className="flex items-center gap-1.5 text-[13px] font-bold text-text-primary">
+                        {method.label}
+                        <DeliveryMethodInfo label={method.label} description={method.description} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

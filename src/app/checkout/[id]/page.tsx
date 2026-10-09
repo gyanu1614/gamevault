@@ -8,6 +8,7 @@ import BuyingOpensSoon from './_BuyingOpensSoon'
 import { eligibleMethods, toClientMethods } from '@/lib/payments/eligibility'
 import { round2 } from '@/lib/fees'
 import { clampCheckoutQty } from './qty'
+import { findDeliveryMethod } from '@/lib/currency/delivery-methods'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -68,7 +69,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           .eq('id', user.id)
           .maybeSingle() as any)
       : Promise.resolve({ data: null }),
-    listing.bundle_id
+    // The currency config also names the listing's delivery method.
+    listing.bundle_id || listing.delivery_method_type
       ? (supabase
           .from('category_configs')
           .select('config')
@@ -111,6 +113,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       }
     }
   }
+
+  // Currency delivery method (Gamepass, UID / Login …): label + tooltip.
+  const deliveryMethod = findDeliveryMethod((configRes as any).data?.config, listing.delivery_method_type)
 
   // V75 — Last 5 reviews for the seller peek dialog (no profile
   // navigation from checkout — the reviews come to the buyer).
@@ -175,6 +180,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         initialQty={parsedQty}
         bundleSummary={bundleSummary}
         buyerCountry={buyerCountry}
+        deliveryMethod={deliveryMethod}
       />
     </main>
   )

@@ -36,6 +36,7 @@ import { getAvatarUrl } from '@/lib/utils/avatar'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 
 interface OrderClientProps {
   order: any
@@ -54,6 +55,8 @@ interface OrderClientProps {
     paidWith: string | null
   } | null
   itemTitle: string
+  /** Currency delivery method (Gamepass…) the order is handed over with, or null. */
+  deliveryMethod?: CurrencyDeliveryMethod | null
   /** Buyer / admin: what came back as store credit and whether the service
    *  fee was kept (buyer-fault cancel). null before any refund. */
   buyerRefund?: { credited: number; feeKept: boolean } | null
@@ -98,6 +101,7 @@ export function OrderClient(props: OrderClientProps) {
     refundToSource = null,
     cancelRequest = null,
     itemTitle,
+    deliveryMethod = null,
     gameName,
     gameIconUrl,
     categoryName,
@@ -572,6 +576,7 @@ export function OrderClient(props: OrderClientProps) {
               gameName={gameName}
               gameIconUrl={gameIconUrl}
               itemName={itemTitle}
+              deliveryMethod={deliveryMethod}
               // orders.delivery_details (jsonb). There is no delivery_info
               // column; reading it showed "Username: Not Provided" everywhere.
               deliveryInfo={(order as any).delivery_details ?? null}

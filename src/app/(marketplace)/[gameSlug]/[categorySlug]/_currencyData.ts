@@ -5,6 +5,7 @@
  * comes later — the page shape is what we're locking in now.
  */
 
+import type { CurrencyDeliveryMethod } from '@/lib/types/category-configs'
 import { sellerDisplayName, sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
 
 // V14r — Shared delivery formatter so buyer and seller surfaces agree.
@@ -49,6 +50,8 @@ export interface Offer {
   ladder?: VolumeTier[]
   payments?: Array<'card' | 'paypal' | 'crypto' | 'applepay'>
   recommended?: number
+  /** Currency delivery method id (Gamepass…; config.delivery_methods), or null. */
+  deliveryMethodId?: string | null
 }
 
 export interface Variant {
@@ -83,6 +86,8 @@ export interface CurrencyPageData {
   sellers: Offer[]
   faq: { q: string; a: string }[]
   steps: { n: number; title: string; body: string }[]
+  /** Delivery methods the admin turned on for this game ([] / absent = off). */
+  deliveryMethods?: CurrencyDeliveryMethod[]
 }
 
 // V24 — Removed the `ROBUX` demo constant. It held a fully-populated
@@ -270,6 +275,7 @@ export function listingToOffer(listing: any): Offer {
     deliveryLabel: formatDeliveryLabel(listing.delivery_time),
     blurb: (listing.description ?? '').trim(),
     recommended: Math.round(rating ?? 0),
+    deliveryMethodId: listing.delivery_method_type ?? null,
   }
 }
 

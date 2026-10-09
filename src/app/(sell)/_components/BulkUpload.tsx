@@ -108,7 +108,7 @@ function parseCsv(text: string): ParsedCsv {
     const baseKeys = new Set([
       'title', 'description', 'price', 'original_price', 'quantity',
       'min_quantity', 'delivery_method', 'delivery_time', 'region', 'platform',
-      'images',
+      'images', 'currency_delivery_method',
     ])
     const template_data: Record<string, unknown> = {}
     for (const k of header) {
@@ -134,6 +134,7 @@ function parseCsv(text: string): ParsedCsv {
       delivery_time: get('delivery_time') || null,
       region: get('region') || null,
       platform: get('platform') || null,
+      delivery_method_type: get('currency_delivery_method') || null,
       template_data,
       images,
     })

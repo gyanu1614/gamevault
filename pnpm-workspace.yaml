@@ -14,6 +14,7 @@ overrides:
 #                   (scripts/fill-game-icons.mjs -> src/lib/games/icons.ts)
 allowBuilds:
   "@sentry/cli": true
+  core-js: false # posthog-js dep; its postinstall only prints a funding banner
   esbuild: true
   sharp: true
   unrs-resolver: true

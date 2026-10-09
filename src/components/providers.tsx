@@ -11,6 +11,7 @@ import EmailConfirmedToast from '@/components/global/EmailConfirmedToast'
 import { AuthDialogProvider } from '@/components/auth/AuthDialog'
 import { IntentPrefetch } from '@/components/navigation/IntentPrefetch'
 import { AuthProvider } from '@/hooks/use-auth'
+import { PostHogBridge } from '@/components/analytics/PostHogBridge'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -60,6 +61,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <Suspense fallback={null}>
                 <EmailConfirmedToast />
               </Suspense>
+              {/* Growth point 1 — cookieless PostHog, loaded when idle. */}
+              <PostHogBridge />
               {children}
             </AuthDialogProvider>
           </AuthProvider>

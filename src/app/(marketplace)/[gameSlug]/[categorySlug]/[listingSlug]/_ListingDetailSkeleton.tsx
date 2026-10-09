@@ -88,7 +88,7 @@ export default function ListingDetailSkeleton() {
                 <Block className="h-4 w-4 shrink-0 rounded" />
               </div>
 
-              {/* Info rows — Delivery Time, Delivery Method, In Stock. */}
+              {/* Info rows — Delivery Time, Delivery Type, In Stock. */}
               {[0, 1, 2].map((i) => (
                 <div key={i} className="border-t border-border-subtle py-3.5">
                   <div className="flex h-[21.75px] items-center justify-between gap-3">
