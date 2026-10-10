@@ -46,6 +46,11 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   seller_presence: 'online/offline dot on public seller cards',
   profiles: 'DLT-001: anon holds a COLUMN-scoped grant on display fields only',
   public_profiles: 'DLT-001: the public projection view of profiles',
+  // SEO data gate (growth point 28): a static value page and the sitemap read
+  // these cookie-free to decide robots meta; they hold only public facts.
+  seo_settings: 'gate mode + planned date; COLUMN-scoped grant (updated_by, deploy id stay private)',
+  seo_value_evidence: 'offers tracked / history days / last price move per value page — the same numbers the page prints',
+  seo_index_overrides: "the owner's index/noindex decision per public value page path",
 
   // Values / pricing pages — public content by design.
   values_items: 'public value pages; RLS restricts to is_enabled',

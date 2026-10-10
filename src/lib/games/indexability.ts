@@ -114,3 +114,67 @@ export function categoryPageVerdict(input: {
   if (!input.gameActive || !input.categoryEnabled || !input.categoryBelongsToGame) return 'not-found'
   return isCategoryPageIndexable(input) ? 'index' : 'noindex'
 }
+
+// ── The value-page data gate (growth point 28) ──────────────────────────────
+// A value page ranks only when it carries enough of OUR data. The page's robots
+// meta and the sitemap both call valuePageVerdict with the same inputs (the
+// page reads its seo_value_evidence row, the sitemap reads them all), so a
+// listed page can never say noindex. The evidence is refreshed after every
+// price job (src/lib/seo/gate/refresh.ts).
+
+/** Offers we track behind the price. Owner-approved 2026-10-09 from the real distribution. */
+export const VALUE_GATE_MIN_OBSERVATIONS = 5
+/** Days with a price in the item's history. */
+export const VALUE_GATE_MIN_HISTORY_DAYS = 7
+
+/** report: computed and shown on /admin/seo, changes no robots meta. enforce: failing pages are noindex. */
+export type SeoGateMode = 'report' | 'enforce'
+
+export interface ValueEvidenceInput {
+  valueUsd: number | null
+  observations: number
+  historyDays: number
+}
+
+export function passesValueDataGate(e: ValueEvidenceInput): boolean {
+  return (
+    e.valueUsd != null &&
+    e.observations >= VALUE_GATE_MIN_OBSERVATIONS &&
+    e.historyDays >= VALUE_GATE_MIN_HISTORY_DAYS
+  )
+}
+
+export interface ValuePageIndexInput {
+  /** The page's rule before the gate (pipeline: isValueItemIndexable; SAB / Adopt Me: true). */
+  legacyIndexable: boolean
+  /** The page's seo_value_evidence row; null when it has none yet. */
+  evidence: (ValueEvidenceInput & { isProtected: boolean }) | null
+  mode: SeoGateMode
+  /** The owner's explicit decision for this URL (seo_index_overrides). */
+  override: 'index' | 'noindex' | null
+}
+
+export type ValuePageVerdictReason =
+  | 'override'
+  | 'legacy'
+  | 'report-only'
+  | 'passes'
+  | 'protected'
+  | 'fails-gate'
+  | 'no-evidence'
+
+/**
+ * Index or not, and why. Order: the owner's decision; the old per-source rule
+ * (a page that was noindex stays so); report mode changes nothing else; then the
+ * gate, except that a page Google has indexed or that earned clicks is never
+ * hidden automatically (it is flagged on /admin/seo for the owner instead).
+ */
+export function valuePageVerdict(input: ValuePageIndexInput): { index: boolean; reason: ValuePageVerdictReason } {
+  if (input.override) return { index: input.override === 'index', reason: 'override' }
+  if (!input.legacyIndexable) return { index: false, reason: 'legacy' }
+  if (input.mode === 'report') return { index: true, reason: 'report-only' }
+  if (!input.evidence) return { index: false, reason: 'no-evidence' }
+  if (passesValueDataGate(input.evidence)) return { index: true, reason: 'passes' }
+  if (input.evidence.isProtected) return { index: true, reason: 'protected' }
+  return { index: false, reason: 'fails-gate' }
+}

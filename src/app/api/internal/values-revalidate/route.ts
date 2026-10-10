@@ -10,8 +10,7 @@ import {
   valueItemPriceTag,
   valuesTag,
 } from '@/lib/values/revalidation'
-import { submitChangedValuePages } from '@/lib/seo/indexnow'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { runEvidenceRefresh } from '@/lib/seo/gate/run'
 
 /**
  * The ONE revalidation contract for every value game's pricing run (T1,
@@ -91,6 +90,13 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
+  // SEO evidence first (lib/seo/gate): offers tracked, days of history and the
+  // last MATERIAL price move per value page — the date the page prints, its
+  // dateModified and its sitemap lastmod. Run BEFORE the revalidation below so
+  // the rebuilt pages read it; it also logs the moved pages to the SEO change
+  // log (IndexNow via /api/cron/seo-indexnow) — the one value-change trigger.
+  const evidence = await runEvidenceRefresh(gameSlug)
+
   const revalidated: string[] = []
   const listPaths = (): void => {
     if (hasHubPage(gameSlug, 'values')) {
@@ -141,23 +147,15 @@ export async function POST(request: Request): Promise<Response> {
 
   const changedCount = full ? null : (changedSlugs?.length ?? 0)
 
-  // IndexNow: submit only the value pages whose cash value really moved against
-  // the game's previous daily snapshot. Skipped when nothing moved past the
-  // publish threshold (IndexNow's own bar is higher: 5% / $0.25). Steal a
-  // Brainrot is left to its own daily snapshot cron, which runs the same
-  // comparison. Production only, never throws.
-  const indexNowChanged =
-    gameSlug === 'steal-a-brainrot' || changedCount === 0
-      ? 0
-      : await submitChangedValuePages(createServiceRoleClient(), gameSlug)
-
   return internalJson({
     ok: true,
     game: gameSlug,
     mode: full ? 'full' : 'changed-items',
     changed_count: changedCount,
     revalidated,
-    indexnow_changed: indexNowChanged,
+    // Pages whose price moved materially (logged for IndexNow), and gate flips.
+    indexnow_changed: evidence?.moved.length ?? 0,
+    evidence: evidence ? { items: evidence.items, moved: evidence.moved.length, gate_flips: evidence.flipped.length } : null,
     revalidated_at: new Date().toISOString(),
   })
 }

@@ -2,9 +2,11 @@
 
 /**
  * Admin review actions for trend-radar games (/admin/games → Pending).
- * Thin: auth + service client + revalidation; the state machine lives in
+ * Thin: auth + service client + revalidation (+ the SEO change log on approve);
+ * the state machine lives in
  * lib/trend-radar/review.ts where the guard test exercises it directly.
  */
+import { submitGameIfLive } from '@/lib/seo/indexnow'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { SITE_URL } from '@/config/site'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
@@ -26,7 +28,8 @@ export async function fetchTrendReviewCounts(): Promise<{ pending: number; decli
 
 export async function approveTrendGame(gameId: string) {
   await requireAdmin()
-  const res = await approveGame(createServiceRoleClient(), gameId, {
+  const service = createServiceRoleClient()
+  const res = await approveGame(service, gameId, {
     webhookUrl: process.env.DISCORD_TREND_RADAR_WEBHOOK_URL ?? null,
     siteUrl: SITE_URL,
   })
@@ -35,6 +38,10 @@ export async function approveTrendGame(gameId: string) {
     revalidatePath(`/${res.slug}`)
     // Footer game directory renders on every route (unstable_cache).
     revalidateTag(GAME_DIRECTORY_TAG)
+    // The game just went live: log its indexable pages to the SEO change log
+    // (IndexNow via /api/cron/seo-indexnow) — the same verdicts as the pages'
+    // robots meta. Approving used to ping nothing.
+    await submitGameIfLive(service, gameId)
   }
   return res
 }

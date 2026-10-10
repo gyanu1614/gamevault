@@ -4,13 +4,52 @@ import { getAllPosts, getFlatPosts } from '@/lib/blog/posts'
 import { LANDING_PAGES } from '@/lib/seo/landingPages'
 import { isLandingPageIndexable } from '@/lib/seo/landingPageInventory'
 
-import type { SitemapInput } from '@/lib/seo/sitemap-builder'
+import { readGateConfig, REPORT_ONLY } from '@/lib/seo/gate/settings'
+
+import type { SitemapInput, ValueEvidenceRow } from '@/lib/seo/sitemap-builder'
 
 type Db = any
 
-/** Everything buildSitemap needs, read through `db` (the sitemap's Supabase client). */
+/**
+ * The value-page gate inputs. FAILS OPEN: if the evidence cannot be read the
+ * sitemap behaves as in report mode (nothing hidden), never as "no evidence".
+ */
+async function loadValueGate(db: Db): Promise<SitemapInput['valueGate']> {
+  try {
+    const [config, rows] = await Promise.all([
+      readGateConfig(db),
+      fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | string | null; price_moved_at: string | null; is_protected: boolean }>(
+        (from, to) =>
+          db
+            .from('seo_value_evidence')
+            .select('game_slug, item_slug, observations, history_days, value_usd, price_moved_at, is_protected')
+            .order('game_slug')
+            .order('item_slug')
+            .range(from, to),
+      ),
+    ])
+    const evidence = new Map<string, ValueEvidenceRow>(
+      rows.map((r) => [
+        `${r.game_slug}/${r.item_slug}`,
+        {
+          observations: r.observations,
+          historyDays: r.history_days,
+          valueUsd: r.value_usd == null ? null : Number(r.value_usd),
+          priceMovedAt: r.price_moved_at,
+          isProtected: r.is_protected,
+        },
+      ]),
+    )
+    return { mode: config.mode, overrides: config.overrides, evidence }
+  } catch (e) {
+    console.error('[sitemap] value gate read failed, listing as report mode:', e)
+    return { mode: REPORT_ONLY.mode, overrides: REPORT_ONLY.overrides, evidence: new Map() }
+  }
+}
+
+/** Everything buildSitemap needs, read through `db` (the anon client: the sitemap is static). */
 export async function loadSitemapInput(db: Db, baseUrl: string): Promise<SitemapInput> {
-  const [core, sab, adoptMe, pipeline, events, gamePosts, landingChecks] =
+  const [core, sab, adoptMe, pipeline, events, gamePosts, landingChecks, valueGate] =
     await Promise.all([
       loadCoreRows(db),
       fetchAllRows<SitemapInput['sabBrainrots'][number]>((from, to) =>
@@ -59,6 +98,7 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
           .range(from, to),
       ),
       Promise.all(LANDING_PAGES.map((page) => isLandingPageIndexable(page))),
+      loadValueGate(db),
     ])
 
   return {
@@ -88,5 +128,6 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
     posts: getAllPosts(),
     flatPosts: getFlatPosts(),
     landingSlugs: LANDING_PAGES.filter((_, i) => landingChecks[i]).map((p) => p.slug),
+    valueGate,
   }
 }

@@ -8,7 +8,7 @@ import sharp from 'sharp'
 const h = vi.hoisted(() => ({ kind: 'seller', uploads: [] as Array<{ path: string; opts: any }>, removes: [] as string[][] }))
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
-vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), submitIndexNow: vi.fn(async () => undefined) }))
+vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), logUrlEvents: vi.fn(async () => undefined) }))
 vi.mock('@/lib/actions/new-schema', () => ({ getGlobalCategories: vi.fn(), getGamesForGlobalCategory: vi.fn(), getAttributeTemplateFull: vi.fn() }))
 vi.mock('@/lib/revalidation/listings', () => ({ revalidateListingSurfaces: vi.fn(async () => ({ tags: [] })) }))
 vi.mock('@/lib/supabase/service', () => ({ createServiceRoleClient: () => ({}) }))

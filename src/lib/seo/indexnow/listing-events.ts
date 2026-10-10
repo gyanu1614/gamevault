@@ -1,5 +1,6 @@
 import { isMaterialValueChange } from './value-changes'
-import { submitIndexNow, type SubmitFn } from './submit'
+import type { SubmitFn } from './submit'
+import { logUrlEvents } from './log-events'
 import { isCurrencyCategoryType } from '@/lib/listings/url'
 
 /**
@@ -117,7 +118,7 @@ export async function submitListingChanges(
 ): Promise<void> {
   if (!before || !after) return
   try {
-    const submit = deps.submit ?? ((u, o) => submitIndexNow(u, o))
+    const submit = deps.submit ?? logUrlEvents
     const byEvent: Record<ListingEvent, string[]> = { published: [], edited: [], removed: [] }
     for (const id of new Set([...before.keys(), ...after.keys()])) {
       const b = before.get(id)

@@ -1,3 +1,5 @@
+import { readValuePageEvidence } from '@/lib/seo/gate/read'
+import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import { Suspense } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
@@ -5,7 +7,7 @@ import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { CalendarStarIcon } from '@phosphor-icons/react/dist/ssr/CalendarStar'
 import { DiamondIcon } from '@phosphor-icons/react/dist/ssr/Diamond'
 import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator'
-import { JsonLd, breadcrumbList, faqPage, productAggregate } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, productAggregate, valuePage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -61,13 +63,17 @@ export default async function ValueListItemPage({
 }) {
   const theme = getGameContentTheme(gameSlug)
   const hub = valueListHub(gameSlug)!
-  const [hubNav, howToGet, fromEvent] = await Promise.all([
+  const [hubNav, howToGet, fromEvent, evidence] = await Promise.all([
     getHubNavData(gameSlug),
     // Verified how-to-get facts (values_items.how_to_get), under the item's tags.
     getValueItemHowToGet(gameSlug, item.slug),
     // The event it came from (values_events), for the link back — item tags too.
     hasHubPage(gameSlug, 'events') ? getValueItemEvent(gameSlug, item.slug) : Promise.resolve(null),
+    // The ONE page date: the last material price move (seo_value_evidence) —
+    // the "As of" in the copy, the hero, dateModified and the sitemap lastmod.
+    readValuePageEvidence(gameSlug, item.slug),
   ])
+  const priceMovedAt = evidence?.priceMovedAt ?? null
 
   const rarity = rarityMeta(gameSlug, item.rarity)
   const typeLabel = (item.itemType && hub.itemTypeLabels[item.itemType]) || theme.itemNoun
@@ -100,7 +106,7 @@ export default async function ValueListItemPage({
     cheapestUsd,
     marketUsd: price?.averageUsd ?? null,
     listedNow: price?.sampleSize ?? 0,
-    priceChangedAt: price?.priceChangedAt ?? null,
+    priceChangedAt: priceMovedAt,
     counterpart: counterpart
       ? { name: counterpart.name, isChroma: counterpart === chroma, cheapestUsd: counterpart.price?.cheapestUsd ?? null }
       : null,
@@ -125,6 +131,28 @@ export default async function ValueListItemPage({
         ])}
       />
       <JsonLd data={faqPage(faq)} />
+      <JsonLd
+        data={valuePage({
+          name: `${item.name} Value in ${hub.shortName}`,
+          path,
+          description: withAnswer(
+            answerSentence({ name: item.name, valueUsd: cheapestUsd, offers: price?.sampleSize ?? 0, updatedAt: priceMovedAt }),
+            aboutSentence(copy),
+          ),
+          dateModified: priceMovedAt,
+          item:
+            cheapestUsd != null
+              ? {
+                  name: item.name,
+                  values: [
+                    { label: 'Cheapest price', valueUsd: cheapestUsd, offers: price?.sampleSize ?? undefined },
+                    ...(price?.averageUsd != null ? [{ label: 'Typical price', valueUsd: price.averageUsd }] : []),
+                    ...(counterpart?.price?.cheapestUsd != null ? [{ label: `${counterpart.name} cheapest price`, valueUsd: counterpart.price.cheapestUsd }] : []),
+                  ],
+                }
+              : undefined,
+        })}
+      />
       {/* Product + AggregateOffer: only a real, listing-backed price is an offer. */}
       {cheapestUsd != null && (price?.sampleSize ?? 0) > 0 && (
         <JsonLd
@@ -344,7 +372,7 @@ async function ItemBody({
           stats={stats}
           cheapestUsd={cheapestUsd}
           marketUsd={marketUsd}
-          priceChangedAt={price?.priceChangedAt ?? null}
+          priceChangedAt={copy.priceChangedAt}
           buy={buy}
           // Not "Sell <name> For Cash": long MM2 names ("Chroma Traveler's
           // Gun") overflow the 260px price column.

@@ -1,8 +1,11 @@
+import { readValuePageEvidence } from '@/lib/seo/gate/read'
+import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
+import { petHeadline } from './_petAnswer'
 import Link from '@/components/navigation/AppLink'
 import { withArticle } from '@/lib/text/article'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
-import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, faqPage, valuePage } from '@/lib/seo/jsonld'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { AdoptMePriceTrend } from './_AdoptMePriceTrend'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
@@ -113,12 +116,17 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   // This pet's FR cash value — used to rank similar pets by value proximity.
   const refFrUsd = fr?.cheapestUsd ?? fr?.cashUsd ?? null
 
-  const [hubNav, similar, buyData] = await Promise.all([
+  const [hubNav, similar, buyData, evidence] = await Promise.all([
     getHubNavData('adopt-me'),
     getSimilarPets(pet.rarity, pet.slug, refFrUsd),
     // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
     getValueItemBuyData('adopt-me', pet.slug),
+    // The ONE page date: the last material price move of any variant.
+    readValuePageEvidence('adopt-me', pet.slug),
   ])
+  const priceMovedAt = evidence?.priceMovedAt ?? null
+  // The answer sentence (snippet + JSON-LD, not shown on the page): Fly Ride, else the best-covered real price.
+  const headline = petHeadline(pet)
   const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const meta = rarityMeta(pet.rarity)
@@ -135,6 +143,23 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         ])}
       />
       <JsonLd data={faqPage(faq)} />
+      <JsonLd
+        data={valuePage({
+          name: `${pet.name} Value in Adopt Me`,
+          path: `/adopt-me/values/${pet.slug}`,
+          description: withAnswer(
+            headline ? answerSentence({ name: `${pet.name} (${headline.label})`, valueUsd: headline.cashUsd, offers: headline.listingsTracked, updatedAt: priceMovedAt }) : null,
+            `What ${withArticle(pet.name)} is worth in trade and in real money.`,
+          ),
+          dateModified: priceMovedAt,
+          item: {
+            name: pet.name,
+            values: pet.variants
+              .filter((v) => v.cashUsd != null && !v.isEstimated)
+              .map((v) => ({ label: `${v.label} value`, valueUsd: v.cashUsd!, offers: v.listingsTracked })),
+          },
+        })}
+      />
       {/* Product + Offer: the cash value is the Offer. Only emitted when we hold
           a real (non-null) cash number; an estimated/null price is not an offer. */}
       {fr?.cashUsd != null && (
@@ -175,6 +200,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
             What {withArticle(pet.name)} is worth in trade — and in real money.
           </p>
+
 
           {/* Interactive hero + variant grid — SAB's ItemHero layout, Adopt Me
               data (dual-axis, potion/Neon variants instead of mutations). */}

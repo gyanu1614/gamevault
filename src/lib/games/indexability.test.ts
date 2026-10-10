@@ -135,3 +135,66 @@ describe('isValueItemIndexable', () => {
     expect(isValueItemIndexable({ priced: true, sampleSize: null })).toBe(false)
   })
 })
+
+// ── The value-page data gate (growth point 28) ──────────────────────────────
+import {
+  passesValueDataGate,
+  valuePageVerdict,
+  VALUE_GATE_MIN_HISTORY_DAYS,
+  VALUE_GATE_MIN_OBSERVATIONS,
+  type ValuePageIndexInput,
+} from './indexability'
+
+describe('passesValueDataGate', () => {
+  it('is 5 offers we track and 7 days of history, owner-approved 2026-10-09', () => {
+    expect(VALUE_GATE_MIN_OBSERVATIONS).toBe(5)
+    expect(VALUE_GATE_MIN_HISTORY_DAYS).toBe(7)
+  })
+
+  it('needs a price, enough offers AND enough history', () => {
+    const ok = { valueUsd: 42, observations: 5, historyDays: 7 }
+    expect(passesValueDataGate(ok)).toBe(true)
+    expect(passesValueDataGate({ ...ok, observations: 4 })).toBe(false)
+    expect(passesValueDataGate({ ...ok, historyDays: 6 })).toBe(false)
+    expect(passesValueDataGate({ ...ok, valueUsd: null })).toBe(false)
+  })
+})
+
+describe('valuePageVerdict', () => {
+  const evidence = { valueUsd: 42, observations: 18, historyDays: 30, isProtected: false }
+  const thin = { valueUsd: 1.18, observations: 1, historyDays: 72, isProtected: false }
+  const v = (o: Partial<ValuePageIndexInput>) =>
+    valuePageVerdict({ legacyIndexable: true, evidence, mode: 'enforce', override: null, ...o })
+
+  it('indexes a page that passes the gate', () => {
+    expect(v({})).toEqual({ index: true, reason: 'passes' })
+  })
+
+  it('noindexes a page that fails the gate once enforced', () => {
+    expect(v({ evidence: thin })).toEqual({ index: false, reason: 'fails-gate' })
+  })
+
+  it('changes nothing in report mode: a failing page stays indexable', () => {
+    expect(v({ evidence: thin, mode: 'report' })).toEqual({ index: true, reason: 'report-only' })
+    expect(v({ evidence: null, mode: 'report' })).toEqual({ index: true, reason: 'report-only' })
+  })
+
+  it('never hides a page Google has indexed or that earned clicks, even when enforced', () => {
+    expect(v({ evidence: { ...thin, isProtected: true } })).toEqual({ index: true, reason: 'protected' })
+  })
+
+  it('treats a page with no evidence row yet as failing once enforced', () => {
+    expect(v({ evidence: null })).toEqual({ index: false, reason: 'no-evidence' })
+  })
+
+  it('keeps the old per-source rule: a page that was noindex stays noindex in either mode', () => {
+    expect(v({ legacyIndexable: false, mode: 'report' })).toEqual({ index: false, reason: 'legacy' })
+    expect(v({ legacyIndexable: false })).toEqual({ index: false, reason: 'legacy' })
+  })
+
+  it("lets the owner's explicit decision win over everything", () => {
+    expect(v({ override: 'noindex' })).toEqual({ index: false, reason: 'override' })
+    expect(v({ override: 'noindex', mode: 'report', evidence: { ...thin, isProtected: true } })).toEqual({ index: false, reason: 'override' })
+    expect(v({ override: 'index', evidence: thin, legacyIndexable: false })).toEqual({ index: true, reason: 'override' })
+  })
+})

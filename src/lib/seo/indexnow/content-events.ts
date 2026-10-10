@@ -1,6 +1,7 @@
 import { isGameHubIndexable, isGameSellPageIndexable } from '@/lib/games/indexability'
 
-import { submitIndexNow, type SubmitFn } from './submit'
+import type { SubmitFn } from './submit'
+import { logUrlEvents } from './log-events'
 
 /** Blog posts and game hubs: the content sections other than listings and values. */
 
@@ -19,7 +20,7 @@ export async function submitPostEvent(
   deps: { submit?: SubmitFn } = {},
 ): Promise<void> {
   try {
-    await (deps.submit ?? ((u, o) => submitIndexNow(u, o)))(postEventUrls(post), { reason: `post-${event}` })
+    await (deps.submit ?? logUrlEvents)(postEventUrls(post), { reason: `post-${event}` })
   } catch (e) {
     console.error('[indexnow] post submission failed (non-fatal):', e)
   }
@@ -63,7 +64,7 @@ export function gameRemovedUrls(slug: string): string[] {
 export async function submitGameLive(game: GameLiveInfo, deps: { submit?: SubmitFn } = {}): Promise<void> {
   try {
     const urls = gameLiveUrls(game)
-    if (urls.length > 0) await (deps.submit ?? ((u, o) => submitIndexNow(u, o)))(urls, { reason: 'game-live' })
+    if (urls.length > 0) await (deps.submit ?? logUrlEvents)(urls, { reason: 'game-live' })
   } catch (e) {
     console.error('[indexnow] game submission failed (non-fatal):', e)
   }
@@ -71,7 +72,7 @@ export async function submitGameLive(game: GameLiveInfo, deps: { submit?: Submit
 
 export async function submitGameRemoved(slug: string, deps: { submit?: SubmitFn } = {}): Promise<void> {
   try {
-    await (deps.submit ?? ((u, o) => submitIndexNow(u, o)))(gameRemovedUrls(slug), { reason: 'game-removed' })
+    await (deps.submit ?? logUrlEvents)(gameRemovedUrls(slug), { reason: 'game-removed' })
   } catch (e) {
     console.error('[indexnow] game submission failed (non-fatal):', e)
   }

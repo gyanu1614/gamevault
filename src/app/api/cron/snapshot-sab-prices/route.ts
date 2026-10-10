@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { submitChangedValuePages } from '@/lib/seo/indexnow'
+import { runEvidenceRefresh } from '@/lib/seo/gate/run'
 import { isCronAuthorized } from '@/lib/security/cron-auth'
 
 // Must be set in environment variables. No fallback — fail closed if unset
@@ -130,12 +130,10 @@ export async function GET(request: NextRequest) {
     const capturedCount = await captureFromCorrectedView(admin)
     console.log(`✅ Captured ${capturedCount} SAB price snapshot rows (corrected)`)
 
-    // Freshness signal: now that today's prices are captured, tell IndexNow about
-    // the value pages whose cash value REALLY moved (>= 5% and >= $0.25 against the
-    // previous daily snapshot; lib/seo/indexnow/value-changes.ts) so Bing/Yandex
-    // (+ ChatGPT search, which reads Bing's index) re-crawl exactly those.
-    // This replaced a job that re-sent all ~504 SAB URLs in one batch every day,
-    // which Bing flagged as "batch mode". Production only, never throws, and
+    // Freshness signal: now that today's snapshot is captured, refresh the SEO
+    // evidence (lib/seo/gate): days of history grow, and pages whose value REALLY
+    // moved (>= 5% and >= $0.25 against the anchor) are logged to the SEO change
+    // log, which /api/cron/seo-indexnow delivers to IndexNow. Never throws, and
     // never blocks the capture result.
     let indexNowChanged = 0
     let revalidatedCount = 0
@@ -149,7 +147,7 @@ export async function GET(request: NextRequest) {
         new Set((slugRows ?? []).map((r) => r.brainrot_slug).filter(Boolean)),
       ).map((slug) => `/steal-a-brainrot/values/${slug}`)
 
-      indexNowChanged = await submitChangedValuePages(admin, 'steal-a-brainrot')
+      indexNowChanged = (await runEvidenceRefresh('steal-a-brainrot'))?.moved.length ?? 0
 
       // Bust the ISR cache for every price-bearing SAB page so today's corrected
       // prices show the moment this cron finishes, instead of up to an hour later

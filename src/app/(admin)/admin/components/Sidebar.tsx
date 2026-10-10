@@ -42,6 +42,7 @@ import {
   X,
   UsersThree,
   Flag,
+  MagnifyingGlass,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { createClient } from '@/lib/supabase/client'
@@ -107,6 +108,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
     links: [
       { label: 'Games', href: '/admin/games', icon: GameController, roles: ['admin', 'super_admin'] },
       { label: 'Blog & Content', href: '/admin/blog', icon: Article, roles: ['admin', 'super_admin'] },
+      { label: 'SEO Health', href: '/admin/seo', icon: MagnifyingGlass, roles: ['admin', 'super_admin'] },
       { label: 'Promo Codes', href: '/admin/promos', icon: Ticket, roles: ['admin', 'super_admin'] },
     ],
   },

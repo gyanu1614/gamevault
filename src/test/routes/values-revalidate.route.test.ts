@@ -34,10 +34,10 @@ vi.mock('@/lib/security/internal-route-auth', () => ({
       : { ok: false, response: Response.json({ ok: false }, { status: 401 }) },
   internalJson: (body: unknown, status = 200) => Response.json(body, { status }),
 }))
-// IndexNow: which value pages really changed is decided in lib/seo/indexnow.
-const submitChangedValuePages = vi.fn(async (..._a: unknown[]) => 2)
-vi.mock('@/lib/seo/indexnow', () => ({ submitChangedValuePages: (...a: unknown[]) => submitChangedValuePages(...a) }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ marker: 'service-role' }) }))
+// SEO evidence (lib/seo/gate): which value pages really moved is decided there,
+// and it logs them for IndexNow.
+const runEvidenceRefresh = vi.fn(async (game: string) => ({ game, items: 5, moved: ['a', 'b'], flipped: [] as string[] }))
+vi.mock('@/lib/seo/gate/run', () => ({ runEvidenceRefresh: (game: string) => runEvidenceRefresh(game) }))
 
 async function post(game: string, body?: unknown, query = '') {
   const { POST } = await import('@/app/api/internal/values-revalidate/route')
@@ -58,7 +58,7 @@ describe('values-revalidate route — changed items (the scheduled path)', () =>
     authorized = true
     revalidatePath.mockClear()
     revalidateTag.mockClear()
-    submitChangedValuePages.mockClear()
+    runEvidenceRefresh.mockClear()
   })
 
   it('revalidates one price tag per moved item and the list tag — never the game tag', async () => {
@@ -74,14 +74,14 @@ describe('values-revalidate route — changed items (the scheduled path)', () =>
     expect(paths().some((p) => p.includes('[itemSlug]'))).toBe(false)
   })
 
-  it('zero changes: revalidates nothing at all (no tags, no paths, no IndexNow)', async () => {
+  it('zero changes: revalidates nothing at all (no tags, no paths)', async () => {
+    runEvidenceRefresh.mockResolvedValueOnce({ game: 'steal-an-egg', items: 5, moved: [], flipped: [] })
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const { status, body } = await post('steal-an-egg', { changedSlugs: [] })
     expect(status).toBe(200)
     expect(body.changed_count).toBe(0)
     expect(revalidateTag).not.toHaveBeenCalled()
     expect(revalidatePath).not.toHaveBeenCalled()
-    expect(submitChangedValuePages).not.toHaveBeenCalled()
     expect(log.mock.calls.flat().join(' ')).toContain('0 changed items')
     log.mockRestore()
   })
@@ -124,7 +124,7 @@ describe('values-revalidate route — ?full=1 escape hatch', () => {
     authorized = true
     revalidatePath.mockClear()
     revalidateTag.mockClear()
-    submitChangedValuePages.mockClear()
+    runEvidenceRefresh.mockClear()
   })
 
   it('revalidates the whole-game tag and every price page the game publishes', async () => {
@@ -151,24 +151,21 @@ describe('values-revalidate route — ?full=1 escape hatch', () => {
   })
 })
 
-describe('IndexNow after a republish: only value pages whose cash value moved', () => {
+describe('SEO evidence after a republish (the one value-change trigger)', () => {
   beforeEach(() => {
     authorized = true
-    submitChangedValuePages.mockClear()
+    runEvidenceRefresh.mockClear()
+    revalidateTag.mockClear()
   })
 
-  it.each(['adopt-me', 'steal-an-egg'])('%s: runs the change detector once when items moved', async (game) => {
+  it.each(['adopt-me', 'steal-an-egg', 'steal-a-brainrot'])('%s: refreshes the evidence once, BEFORE revalidating the pages', async (game) => {
     const { status, body } = await post(game, { changedSlugs: ['x'] })
     expect(status).toBe(200)
-    expect(submitChangedValuePages).toHaveBeenCalledTimes(1)
-    expect(submitChangedValuePages.mock.calls[0][1]).toBe(game)
+    expect(runEvidenceRefresh).toHaveBeenCalledTimes(1)
+    expect(runEvidenceRefresh.mock.calls[0][0]).toBe(game)
+    expect(runEvidenceRefresh.mock.invocationCallOrder[0]).toBeLessThan(revalidateTag.mock.invocationCallOrder[0])
     expect(body.indexnow_changed).toBe(2)
-  })
-
-  it('steal-a-brainrot: left to its daily snapshot cron (no double submission)', async () => {
-    const { body } = await post('steal-a-brainrot', { changedSlugs: ['x'] })
-    expect(submitChangedValuePages).not.toHaveBeenCalled()
-    expect(body.indexnow_changed).toBe(0)
+    expect(body.evidence).toEqual({ items: 5, moved: 2, gate_flips: 0 })
   })
 })
 

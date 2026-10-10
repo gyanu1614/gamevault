@@ -30,7 +30,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
-vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), submitIndexNow: vi.fn(async () => undefined) }))
+vi.mock('@/lib/seo/indexnow', () => ({ snapshotListings: vi.fn(async () => new Map()), submitListingChanges: vi.fn(async () => undefined), logUrlEvents: vi.fn(async () => undefined) }))
 vi.mock('@/lib/actions/new-schema', () => ({
   getGlobalCategories: vi.fn(), getGamesForGlobalCategory: vi.fn(), getAttributeTemplateFull: vi.fn(),
 }))
