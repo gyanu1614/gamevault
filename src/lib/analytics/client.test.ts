@@ -5,6 +5,9 @@ const ph = vi.hoisted(() => ({
   capture: vi.fn(),
   identify: vi.fn(),
   reset: vi.fn(),
+  set_config: vi.fn(),
+  startSessionRecording: vi.fn(),
+  stopSessionRecording: vi.fn(),
 }))
 vi.mock('posthog-js', () => ({ default: ph }))
 
@@ -28,7 +31,7 @@ describe('analytics client', () => {
     expect(ph.capture).not.toHaveBeenCalled()
   })
 
-  it('inits cookieless on our proxy path, with no autocapture or replay', async () => {
+  it('inits cookieless on our proxy path by default, with click autocapture and no replay', async () => {
     vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_x')
     const c = await freshClient()
     await c.startAnalytics()
@@ -39,8 +42,9 @@ describe('analytics client', () => {
       api_host: '/ingest',
       ui_host: 'https://eu.posthog.com',
       persistence: 'memory',
-      autocapture: false,
       disable_session_recording: true,
+      capture_heatmaps: false,
+      session_recording: { maskAllInputs: true, maskTextSelector: '[data-ph-mask]' },
       capture_pageview: 'history_change',
       person_profiles: 'identified_only',
     })
@@ -101,5 +105,39 @@ describe('analytics client', () => {
     const c = await freshClient()
     await Promise.all([c.startAnalytics(), c.startAnalytics()])
     expect(ph.init).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('analytics consent', () => {
+  // Node test env: give the client a window with a working localStorage.
+  const mem = new Map<string, string>()
+  const fakeStorage = {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => { mem.set(k, v) },
+    removeItem: (k: string) => { mem.delete(k) },
+  }
+  beforeEach(() => { mem.clear(); vi.stubGlobal('window', { localStorage: fakeStorage }) })
+  afterEach(() => vi.unstubAllGlobals())
+  it('Accept on an earlier visit inits with cookies and replay', async () => {
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_x')
+    fakeStorage.setItem('dm.analytics.consent', 'granted')
+    const c = await freshClient()
+    await c.startAnalytics()
+    const cfg = ph.init.mock.calls.at(-1)![1]
+    expect(cfg).toMatchObject({ persistence: 'localStorage+cookie', disable_session_recording: false, capture_heatmaps: true })
+  })
+
+  it('setAnalyticsConsent switches the running instance and remembers the choice', async () => {
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_x')
+    const c = await freshClient()
+    await c.startAnalytics()
+    c.setAnalyticsConsent('granted')
+    expect(fakeStorage.getItem('dm.analytics.consent')).toBe('granted')
+    expect(ph.set_config).toHaveBeenCalledWith(expect.objectContaining({ persistence: 'localStorage+cookie' }))
+    expect(ph.startSessionRecording).toHaveBeenCalled()
+    c.setAnalyticsConsent('denied')
+    expect(fakeStorage.getItem('dm.analytics.consent')).toBe('denied')
+    expect(ph.set_config).toHaveBeenLastCalledWith(expect.objectContaining({ persistence: 'memory', disable_session_recording: true }))
+    expect(ph.stopSessionRecording).toHaveBeenCalled()
   })
 })
