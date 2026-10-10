@@ -37,7 +37,7 @@ describe('refreshValueEvidence', () => {
     expect(await refreshValueEvidence(fakeDb({}), 'valorant')).toBeNull()
   })
 
-  it('writes one evidence row per page, unpriced pages included, and logs nothing on a first run', async () => {
+  it('writes one evidence row per page, unpriced pages included; a first run announces only the priced page as new', async () => {
     const db = fakeDb(
       {
         values_items: [
@@ -51,7 +51,9 @@ describe('refreshValueEvidence', () => {
     const record = vi.fn(async () => undefined)
     const r = await refreshValueEvidence(db, 'murder-mystery-2', { now: NOW, record, siteUrl: SITE })
     expect(r).toEqual({ game: 'murder-mystery-2', items: 2, moved: [], flipped: [] })
-    expect(record).not.toHaveBeenCalled()
+    // Never stored before + priced = a new page (report mode announces it); the unpriced one is not.
+    expect(record).toHaveBeenCalledTimes(1)
+    expect(record).toHaveBeenCalledWith(['/murder-mystery-2/values/harvester'], { reason: 'value-new:murder-mystery-2' })
     const harvester = db.upserts.find((u) => u.item_slug === 'harvester')
     expect(harvester).toMatchObject({ observations: 29, history_days: 4, value_usd: 12, passes_gate: false, price_moved_at: '2026-09-10T00:00:00.000Z' })
     expect(db.upserts.find((u) => u.item_slug === 'gingerscythe')).toMatchObject({ observations: 0, value_usd: null, passes_gate: false })
@@ -119,5 +121,30 @@ describe('adoptMeHeadline', () => {
     expect(adoptMeHeadline([{ variant: 'NFR', cashUsd: 600, offers: 15, estimated: false }, { variant: 'FR', cashUsd: 290, offers: 11, estimated: false }])?.variant).toBe('FR')
     expect(adoptMeHeadline([{ variant: 'FR', cashUsd: 290, offers: 0, estimated: true }, { variant: 'N', cashUsd: 50, offers: 3, estimated: false }, { variant: 'NFR', cashUsd: 600, offers: 9, estimated: false }])?.variant).toBe('NFR')
     expect(adoptMeHeadline([])).toBeNull()
+  })
+})
+
+describe('new pages are announced on day one (owner 2026-10-10)', () => {
+  it('logs a newly priced page as value-new, stores first seen, and skips pages already stored', async () => {
+    const db = fakeDb(
+      {
+        values_items: [
+          { slug: 'dragon-fruit', values_prices: { sample_size: 12, cheapest_usd: 20, price_changed_at: NOW } },
+          { slug: 'old-fruit', values_prices: { sample_size: 12, cheapest_usd: 5, price_changed_at: NOW } },
+          { slug: 'no-price', values_prices: null },
+        ],
+        seo_value_evidence: [{ item_slug: 'old-fruit', anchors: { '': 5 }, price_moved_at: '2026-09-01T00:00:00.000Z', passes_gate: true, passes_changed_at: null, first_seen_at: '2026-09-01T00:00:00.000Z' }],
+        seo_settings: [{ gate_mode: 'enforce' }],
+      },
+      [{ item_slug: 'old-fruit', series_key: '', ...days(10, 5) }],
+    )
+    const record = vi.fn(async () => undefined)
+    await refreshValueEvidence(db, 'murder-mystery-2', { now: NOW, record, siteUrl: SITE })
+    expect(record).toHaveBeenCalledWith(['/murder-mystery-2/values/dragon-fruit'], { reason: 'value-new:murder-mystery-2' })
+    expect(record).toHaveBeenCalledTimes(1)
+    const fresh = db.upserts.find((u) => u.item_slug === 'dragon-fruit')
+    // No history yet: first seen now, and it passes on offers alone even with the gate on.
+    expect(fresh).toMatchObject({ first_seen_at: NOW, passes_gate: true, history_days: 0 })
+    expect(db.upserts.find((u) => u.item_slug === 'old-fruit')).toMatchObject({ first_seen_at: '2026-09-01T00:00:00.000Z' })
   })
 })

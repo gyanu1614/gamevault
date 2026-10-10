@@ -61,7 +61,9 @@ describe('nextEvidence', () => {
   it('backfills an item with no history from its own source date, never "now"', () => {
     const r = nextEvidence({ current, series: {}, stored: null, now: NOW, isProtected: false })
     expect(r.row.priceMovedAt).toBe('2026-10-08T09:00:00.000Z')
-    expect(r.row.passesGate).toBe(false)
+    // No history yet, but a brand-new page with 18 offers passes on offers alone.
+    expect(r.row.passesGate).toBe(true)
+    expect(r.row.firstSeenAt).toBe(NOW)
   })
 
   const stored: StoredEvidence = {
@@ -100,5 +102,42 @@ describe('nextEvidence', () => {
     expect(r.row.isProtected).toBe(true)
     const same = nextEvidence({ current, series, stored, now: NOW, isProtected: false })
     expect(same.row.passesChangedAt).toBe(stored.passesChangedAt)
+  })
+})
+
+describe('first seen + new pages (owner 2026-10-10)', () => {
+  const now = '2026-10-10T12:00:00.000Z'
+  const cur = { observations: 9, valueUsd: 12, values: { '': 12 } }
+
+  it('takes first seen from the earliest priced history day, and lets a young page pass on offers', () => {
+    const series = { '': [{ day: '2026-10-08', value: 12 }, { day: '2026-10-09', value: 12 }] }
+    const r = nextEvidence({ current: cur, series, stored: null, now, isProtected: false })
+    expect(r.row.firstSeenAt).toBe('2026-10-08T00:00:00.000Z')
+    expect(r.row.historyDays).toBe(2)
+    expect(r.row.passesGate).toBe(true)
+    expect(r.isNewPage).toBe(true)
+  })
+
+  it('uses now for a priced page with no history yet, and never calls an unpriced page new', () => {
+    expect(nextEvidence({ current: cur, series: {}, stored: null, now, isProtected: false }).row.firstSeenAt).toBe(now)
+    const unpriced = nextEvidence({ current: { observations: 0, valueUsd: null, values: { '': null } }, series: {}, stored: null, now, isProtected: false })
+    expect(unpriced.row.firstSeenAt).toBeNull()
+    expect(unpriced.isNewPage).toBe(false)
+  })
+
+  it('keeps a stored first-seen date, backfills a missing one, and a stored page is not new', () => {
+    const stored: StoredEvidence = { anchors: { '': 12 }, priceMovedAt: null, passesGate: true, passesChangedAt: null, firstSeenAt: '2026-09-01T00:00:00.000Z' }
+    const r = nextEvidence({ current: cur, series: {}, stored, now, isProtected: false })
+    expect(r.row.firstSeenAt).toBe('2026-09-01T00:00:00.000Z')
+    expect(r.isNewPage).toBe(false)
+    const old = nextEvidence({ current: cur, series: { '': [{ day: '2026-09-05', value: 12 }] }, stored: { ...stored, firstSeenAt: null }, now, isProtected: false })
+    expect(old.row.firstSeenAt).toBe('2026-09-05T00:00:00.000Z')
+  })
+
+  it('a page that was priced but is no longer new needs 7 days of history again', () => {
+    const stored: StoredEvidence = { anchors: { '': 12 }, priceMovedAt: null, passesGate: true, passesChangedAt: null, firstSeenAt: '2026-09-20T00:00:00.000Z' }
+    const r = nextEvidence({ current: cur, series: { '': [{ day: '2026-10-09', value: 12 }] }, stored, now, isProtected: false })
+    expect(r.row.passesGate).toBe(false)
+    expect(r.gateFlipped).toBe(true)
   })
 })

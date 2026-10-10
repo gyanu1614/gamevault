@@ -13,6 +13,8 @@ import { readGateMode } from './settings'
  * nightly as a backstop): read the current prices + offer counts, the daily
  * history (seo_value_series) and the stored anchors, compute each page's
  * evidence (./evidence), write it, then
+ *  - log `value-new:<game>` for a page priced for the first time (a new game's
+ *    or item's page reaches IndexNow on day one);
  *  - log `value-change:<game>` for pages whose price moved materially (the
  *    value page plus the hub pages its number feeds: valuePageUrls) — this
  *    replaces the old per-run IndexNow comparison;
@@ -163,11 +165,11 @@ export async function refreshValueEvidence(
   const [current, series, stored, inspections, mode] = await Promise.all([
     loadCurrent(db, source, gameSlug),
     loadSeries(db, source, gameSlug),
-    fetchAllRows<{ item_slug: string; anchors: Record<string, number | null> | null; price_moved_at: string | null; passes_gate: boolean; passes_changed_at: string | null }>(
+    fetchAllRows<{ item_slug: string; anchors: Record<string, number | null> | null; price_moved_at: string | null; passes_gate: boolean; passes_changed_at: string | null; first_seen_at: string | null }>(
       (f, t) =>
         db
           .from('seo_value_evidence')
-          .select('item_slug, anchors, price_moved_at, passes_gate, passes_changed_at')
+          .select('item_slug, anchors, price_moved_at, passes_gate, passes_changed_at, first_seen_at')
           .eq('game_slug', gameSlug)
           .order('item_slug')
           .range(f, t),
@@ -180,7 +182,7 @@ export async function refreshValueEvidence(
   const storedBySlug = new Map<string, StoredEvidence>(
     stored.map((s) => [
       s.item_slug,
-      { anchors: s.anchors ?? {}, priceMovedAt: s.price_moved_at, passesGate: s.passes_gate, passesChangedAt: s.passes_changed_at },
+      { anchors: s.anchors ?? {}, priceMovedAt: s.price_moved_at, passesGate: s.passes_gate, passesChangedAt: s.passes_changed_at, firstSeenAt: s.first_seen_at },
     ]),
   )
   const protectedSlugs = new Set(
@@ -189,10 +191,13 @@ export async function refreshValueEvidence(
 
   const rows: Record<string, unknown>[] = []
   const moved: string[] = []
+  const fresh: string[] = []
   const flipped: { slug: string; passes: boolean }[] = []
   for (const [slug, cur] of current) {
     const r = nextEvidence({ current: cur, series: series.get(slug) ?? {}, stored: storedBySlug.get(slug) ?? null, now, isProtected: protectedSlugs.has(slug) })
     if (r.priceMoved) moved.push(slug)
+    // A brand-new priced page: announce it now (it used to wait for its first price move).
+    if (r.isNewPage && (mode === 'report' || r.row.passesGate)) fresh.push(slug)
     if (r.gateFlipped) flipped.push({ slug, passes: r.row.passesGate })
     rows.push({
       game_slug: gameSlug,
@@ -205,6 +210,7 @@ export async function refreshValueEvidence(
       passes_gate: r.row.passesGate,
       passes_changed_at: r.row.passesChangedAt,
       is_protected: r.row.isProtected,
+      first_seen_at: r.row.firstSeenAt,
       refreshed_at: now,
     })
   }
@@ -214,6 +220,7 @@ export async function refreshValueEvidence(
   }
 
   if (moved.length > 0) await record(valuePageUrls(gameSlug, moved), { reason: `value-change:${gameSlug}` })
+  if (fresh.length > 0) await record(fresh.map((slug) => `/${gameSlug}/values/${slug}`), { reason: `value-new:${gameSlug}` })
   if (mode === 'enforce') {
     const promoted = flipped.filter((f) => f.passes).map((f) => `/${gameSlug}/values/${f.slug}`)
     const demoted = flipped.filter((f) => !f.passes).map((f) => `/${gameSlug}/values/${f.slug}`)
