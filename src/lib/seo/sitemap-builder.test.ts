@@ -52,8 +52,8 @@ describe('which URLs are listed', () => {
     expect(urls({ listings: [] })).toContain(`${BASE}/valorant/buy-vp`)
   })
 
-  it('does not list an empty currency category whose config row is only the default', () => {
-    expect(urls({ listings: [], currencyConfigs: [{ game_id: 'g1', config: { faq: [], steps: [] }, updated_at: '2026-09-20T00:00:00Z' }] })).not.toContain(`${BASE}/valorant/buy-vp`)
+  it('lists an empty currency category even when its config row is only the default (currency always shows, owner 2026-10-10)', () => {
+    expect(urls({ listings: [], currencyConfigs: [{ game_id: 'g1', config: { faq: [], steps: [] }, updated_at: '2026-09-20T00:00:00Z' }] })).toContain(`${BASE}/valorant/buy-vp`)
   })
 
   it('keeps every sell page of an active game with an enabled category (they bring traffic on Bing)', () => {

@@ -75,6 +75,7 @@ export function computeCategoryPages(input: CategoryIndexInput): CategoryPageRow
         categoryBelongsToGame: true,
         buyableListingCount: s.count,
         hasCuratedContent,
+        isCurrency: c.type === 'currency',
       }),
     })
   }

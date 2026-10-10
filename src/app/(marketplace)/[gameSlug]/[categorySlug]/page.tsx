@@ -5,6 +5,7 @@
  * Apple/Spotify-inspired minimal dark theme with game vibe.
  */
 
+import { isCategoryPageIndexable } from '@/lib/games/indexability'
 import { quantityUnit } from '@/lib/currency/quantity-unit'
 import dynamic from 'next/dynamic'
 import React, { Suspense, cache } from 'react'
@@ -277,11 +278,12 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
       `${game.name.toLowerCase()} marketplace`,
     ],
     // Zero-listing money pages stay crawlable but unindexed until the
-    // first offer lands — UNLESS the page carries curated unique
-    // content (admin currency config with FAQ/steps).
-    ...(stats.count === 0 && !hasCuratedContent
-      ? { robots: { index: false, follow: true } }
-      : {}),
+    // first offer lands — UNLESS the page carries curated unique content
+    // (admin currency config with FAQ/steps) or is a currency page (always
+    // indexed, owner 2026-10-10). The shared rule; the sitemap applies it too.
+    ...(isCategoryPageIndexable({ buyableListingCount: stats.count, hasCuratedContent, isCurrency })
+      ? {}
+      : { robots: { index: false, follow: true } }),
     openGraph: {
       title: `${game.name} ${category.name} - DropMarket`,
       description: `Buy and sell ${game.name} ${category.name.toLowerCase()} safely`,

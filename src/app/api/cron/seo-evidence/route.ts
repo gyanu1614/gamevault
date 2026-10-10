@@ -19,11 +19,14 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const results = []
-  for (const game of VALUE_EVIDENCE_GAMES) {
-    const r = await runEvidenceRefresh(game)
-    results.push(r ? { game, items: r.items, moved: r.moved.length, gate_flips: r.flipped.length } : { game, error: 'refresh failed (see logs)' })
-  }
+  // In parallel: one after another, Steal a Brainrot + Adopt Me used up the
+  // 300 s budget and the run ended before the pipeline games (2026-10-10).
+  const results = await Promise.all(
+    VALUE_EVIDENCE_GAMES.map(async (game) => {
+      const r = await runEvidenceRefresh(game)
+      return r ? { game, items: r.items, moved: r.moved.length, gate_flips: r.flipped.length } : { game, error: 'refresh failed (see logs)' }
+    }),
+  )
   return NextResponse.json({ ok: results.every((r) => !('error' in r)), results, at: new Date().toISOString() })
 }
 

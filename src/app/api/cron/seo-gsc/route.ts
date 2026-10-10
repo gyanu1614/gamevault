@@ -13,8 +13,9 @@ import { postSeoAlerts } from '@/lib/seo/gsc/notify'
  * changed in the last 72 h plus a rotating sample (capped at 1,500 a day, under
  * Google's 2,000), Search Analytics per page and per section, the day's index
  * rate per section, and Discord alerts. Read-only against Google
- * (webmasters.readonly). One run inspects what fits in ~4 minutes; a second
- * run the same day continues where it stopped.
+ * (webmasters.readonly). One run inspects what fits in ~4 minutes; the next
+ * run continues where it stopped (hourly: .github/workflows/seo-hourly.yml;
+ * the vercel.json daily entry is the backstop).
  *
  * `?test-alert=1` posts a clearly labelled test message to the SEO webhook.
  * Auth: the CRON_SECRET bearer; unset → 401.

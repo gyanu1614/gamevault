@@ -49,7 +49,11 @@ That noindexes the failing pages, drops them from the sitemap (within the hour) 
 IndexNow. **Back To Report Only** reverses it the same way. Indexed / clicked pages are never
 auto-hidden; they wait on the "Pages That Need Your Call" list.
 
-## Crons (vercel.json, daily — repo rule)
+## Crons
+
+Hourly: `.github/workflows/seo-hourly.yml` (minute 25) calls `seo-indexnow` then `seo-gsc`, so IndexNow
+retries happen within the hour and the Google check covers the sitemap in about a day (1,500/day cap).
+The vercel.json entries below are the daily backstop (repo rule: vercel.json stays daily).
 
 | Path | UTC | Does |
 |---|---|---|
