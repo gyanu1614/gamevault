@@ -28,12 +28,13 @@ describe('computeCategoryPages: the page rule, applied to every enabled category
   })
 
   it('ignores listings from paused (Offline Mode) sellers: the grid hides them too (/grow-a-garden/buy-items)', () => {
-    const r = rows(input({ pausedSellerIds: new Set(['s1']) }))
+    // An items category: a currency page is indexed regardless (owner 2026-10-10).
+    const r = rows(input({ categories: [cat('c1', 'buy-items', 'g1')], pausedSellerIds: new Set(['s1']) }))
     expect(r[0]).toMatchObject({ buyableCount: 0, verdict: 'noindex' })
   })
 
   it('ignores listings priced at 0', () => {
-    expect(rows(input({ listings: [listing({ price: 0 })] }))[0]).toMatchObject({ buyableCount: 0, verdict: 'noindex' })
+    expect(rows(input({ categories: [cat('c1', 'buy-items', 'g1')], listings: [listing({ price: 0 })] }))[0]).toMatchObject({ buyableCount: 0, verdict: 'noindex' })
   })
 
   it('counts only listings of THIS game in THIS category', () => {
@@ -53,9 +54,9 @@ describe('computeCategoryPages: the page rule, applied to every enabled category
     expect(r.map((x) => `${x.gameSlug}/${x.categorySlug}`)).toEqual(['valorant/buy-vp'])
   })
 
-  it('indexes an empty currency category only when the game has curated content, and dates it from the config', () => {
+  it('indexes an empty currency category (always, owner 2026-10-10), dated from curated content when there is some', () => {
     const base = input({ listings: [] })
-    expect(rows(base)[0]).toMatchObject({ verdict: 'noindex', hasCuratedContent: false })
+    expect(rows(base)[0]).toMatchObject({ verdict: 'index', hasCuratedContent: false, lastmod: null })
     const curated = rows({
       ...base,
       currencyConfigs: [{ game_id: 'g1', config: { faq: [{}], steps: [] }, updated_at: '2026-09-20T08:00:00Z' }],
@@ -65,7 +66,8 @@ describe('computeCategoryPages: the page rule, applied to every enabled category
 
   it('a default config row with empty FAQ and steps is not curated content', () => {
     const r = rows(input({ listings: [], currencyConfigs: [{ game_id: 'g1', config: { faq: [], steps: [] }, updated_at: '2026-09-20T08:00:00Z' }] }))
-    expect(r[0]).toMatchObject({ verdict: 'noindex', hasCuratedContent: false })
+    // Still indexed (currency always is), but not dated by the default row.
+    expect(r[0]).toMatchObject({ verdict: 'index', hasCuratedContent: false, lastmod: null })
   })
 
   it('curated content applies to currency categories only', () => {
@@ -87,5 +89,23 @@ describe('computeCategoryPages: the page rule, applied to every enabled category
       }),
     )
     expect(r[0].lastmod).toBe('2026-09-25T00:00:00Z')
+  })
+})
+
+describe('currency pages in the sitemap (owner 2026-10-10)', () => {
+  it('lists an empty currency page, not an empty items page', async () => {
+    const { computeCategoryPages } = await import('./category-index')
+    const rows = computeCategoryPages({
+      games: [{ id: 'g', slug: 'tibia' }],
+      categories: [
+        { id: 'c1', slug: 'buy-currency', type: 'currency', game_id: 'g' },
+        { id: 'c2', slug: 'buy-items', type: 'items', game_id: 'g' },
+      ],
+      currencyConfigs: [],
+      listings: [],
+      pausedSellerIds: new Set(),
+    })
+    expect(rows.find((r) => r.categorySlug === 'buy-currency')?.verdict).toBe('index')
+    expect(rows.find((r) => r.categorySlug === 'buy-items')?.verdict).toBe('noindex')
   })
 })

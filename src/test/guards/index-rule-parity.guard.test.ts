@@ -30,9 +30,9 @@ describe('category page rule == shared rule', () => {
     const inline = /stats\.count\s*===\s*0\s*&&\s*!hasCuratedContent/.test(src)
     const shared = /isCategoryPageIndexable|categoryPageVerdict/.test(src)
     expect(inline || shared, 'the category page noindex rule changed: update lib/games/indexability.ts and the sitemap to match').toBe(true)
-    // The inline rule, evaluated by the shared function: same truth table.
-    for (const count of [0, 1, 7]) for (const curated of [false, true]) {
-      expect(isCategoryPageIndexable({ buyableListingCount: count, hasCuratedContent: curated })).toBe(!(count === 0 && !curated))
+    // The shared function's truth table: currency always, otherwise listings or curated content.
+    for (const count of [0, 1, 7]) for (const curated of [false, true]) for (const isCurrency of [false, true]) {
+      expect(isCategoryPageIndexable({ buyableListingCount: count, hasCuratedContent: curated, isCurrency })).toBe(isCurrency || !(count === 0 && !curated))
     }
   })
 

@@ -28,7 +28,7 @@ vi.mock('next/cache', () => ({
 }))
 
 describe('getIndexableCategoryPairs', () => {
-  it('follows the sitemap rule: enabled categories with a buyable listing or curated content, sorted', async () => {
+  it('follows the sitemap rule: enabled categories with a buyable listing, curated content, or currency, sorted', async () => {
     recorder = createSupabaseRecorder({
       games: [
         { id: 'g1', slug: 'roblox' },
@@ -58,6 +58,8 @@ describe('getIndexableCategoryPairs', () => {
     await expect(getIndexableCategoryPairs()).resolves.toEqual([
       { gameSlug: 'roblox', categorySlug: 'buy-items' },
       { gameSlug: 'roblox', categorySlug: 'buy-robux' },
+      // An empty currency page with only the default config: indexed (currency always shows).
+      { gameSlug: 'valorant', categorySlug: 'buy-vp' },
     ])
   })
 

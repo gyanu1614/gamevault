@@ -90,12 +90,15 @@ export function hasCuratedCurrencyContent(
  * Category page `/[game]/[category]` — indexable with at least one BUYABLE
  * listing (active, non-test seller, seller not paused, price above 0: exactly
  * what the page's own grid and stats show) or curated currency content.
+ * A currency page is ALWAYS indexable (owner 2026-10-10: currency pages always
+ * show, listings or not).
  */
 export function isCategoryPageIndexable(input: {
   buyableListingCount: number
   hasCuratedContent: boolean
+  isCurrency?: boolean
 }): boolean {
-  return input.buyableListingCount > 0 || input.hasCuratedContent
+  return !!input.isCurrency || input.buyableListingCount > 0 || input.hasCuratedContent
 }
 
 export type CategoryPageVerdict = 'not-found' | 'noindex' | 'index'
@@ -110,6 +113,7 @@ export function categoryPageVerdict(input: {
   categoryBelongsToGame: boolean
   buyableListingCount: number
   hasCuratedContent: boolean
+  isCurrency?: boolean
 }): CategoryPageVerdict {
   if (!input.gameActive || !input.categoryEnabled || !input.categoryBelongsToGame) return 'not-found'
   return isCategoryPageIndexable(input) ? 'index' : 'noindex'

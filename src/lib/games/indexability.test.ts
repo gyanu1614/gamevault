@@ -198,3 +198,15 @@ describe('valuePageVerdict', () => {
     expect(v({ override: 'index', evidence: thin, legacyIndexable: false })).toEqual({ index: true, reason: 'override' })
   })
 })
+
+describe('currency pages are always indexable (owner 2026-10-10)', () => {
+  it('indexes an enabled currency page with no listings and no FAQ', async () => {
+    const { isCategoryPageIndexable, categoryPageVerdict } = await import('./indexability')
+    expect(isCategoryPageIndexable({ buyableListingCount: 0, hasCuratedContent: false, isCurrency: true })).toBe(true)
+    expect(categoryPageVerdict({ gameActive: true, categoryEnabled: true, categoryBelongsToGame: true, buyableListingCount: 0, hasCuratedContent: false, isCurrency: true })).toBe('index')
+    // Non-currency categories keep the 1-listing rule.
+    expect(isCategoryPageIndexable({ buyableListingCount: 0, hasCuratedContent: false, isCurrency: false })).toBe(false)
+    // A disabled / foreign category still 404s.
+    expect(categoryPageVerdict({ gameActive: true, categoryEnabled: false, categoryBelongsToGame: true, buyableListingCount: 0, hasCuratedContent: false, isCurrency: true })).toBe('not-found')
+  })
+})
