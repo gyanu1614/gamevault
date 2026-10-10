@@ -31,6 +31,7 @@ import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
 import { VerifiedBadge } from '@/components/seller/VerifiedBadge'
 import { NewSellerBadge } from '@/components/seller/NewSellerBadge'
 import { useAuthDialog } from '@/components/auth/AuthDialog'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -126,7 +127,6 @@ export interface MiniListing {
 
 interface Props {
   listing: ListingForDetail
-  viewerId: string | null
   /** Set when this is an owner/admin preview of a NON-ACTIVE listing
    *  (the raw status, e.g. 'pending_approval'). Renders the preview
    *  banner and disables purchase — buying an unreviewed listing would
@@ -160,10 +160,14 @@ const PREVIEW_STATUS_LABELS: Record<string, string> = {
 }
 
 export default function ListingDetailClient({
-  listing, viewerId, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail,
+  listing, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail,
 }: Props) {
   const router = useRouter()
   const { open: openAuth } = useAuthDialog()
+  // The viewer comes from the client session, never the server render: the
+  // page is ISR (one cached HTML for everyone), see page.tsx.
+  const { user: viewer, loading: authLoading } = useAuth()
+  const viewerId = viewer?.id ?? null
   const [activeImg, setActiveImg] = useState(0)
   const [qty, setQty] = useState(1)
   // Description collapses past ~12 lines (15px × 1.75 ≈ 315px) with a
@@ -260,7 +264,10 @@ export default function ListingDetailClient({
     // buyer straight to checkout for this listing — they keep their context.
     // V14j — carry the picked quantity into checkout (?qty= deep-link);
     // without it multi-qty buys landed in checkout as Qty ×1.
-    if (!viewerId) {
+    // While the session is still loading, go straight to checkout (it is a
+    // protected page and signs the visitor in itself) instead of opening the
+    // sign-in dialog for someone who is already signed in.
+    if (!viewerId && !authLoading) {
       openAuth('login', { redirect: `/checkout/${listing.id}?qty=${qty}` })
       return
     }

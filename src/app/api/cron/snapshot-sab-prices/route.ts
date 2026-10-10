@@ -5,7 +5,11 @@
  * sourced from the public price catalog. Price history CANNOT be backfilled, so
  * this must run every day — each missed day is permanently lost data.
  *
- * Scheduled at 06:00 UTC (see vercel.json), after the other daily crons settle.
+ * Scheduled at 18:30 UTC (see vercel.json). Values Pricing Daily is set for
+ * 02:10 but GitHub starts it 5–7 h late and it can run up to 5 h, so before
+ * ~14 UTC this could record YESTERDAY's price as today's row (each day is
+ * written once and cannot be backfilled). Pinned by
+ * src/test/routes/db-heavy-schedule.test.ts.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -14,6 +14,7 @@
  *     full-page spinner after mount — per-row pending state only.
  */
 
+import { listingOwnerUrl } from '@/lib/listings/url'
 import React, { useMemo, useState } from 'react'
 import {
   useMutation,
@@ -146,12 +147,10 @@ function templateChips(td: unknown): { k: string; v: string }[] {
   return out
 }
 
-/** Preview path only when every URL segment actually exists. */
+/** The listing as admins see it: its live page, or the preview route while it
+ *  is not live (the public listing page serves active listings only). */
 function previewHref(listing: any): string | null {
-  if (listing?.game?.slug && listing?.category?.slug && listing?.slug) {
-    return `/${listing.game.slug}/${listing.category.slug}/${listing.slug}`
-  }
-  return null
+  return listing?.id ? listingOwnerUrl(listing) : null
 }
 
 const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`

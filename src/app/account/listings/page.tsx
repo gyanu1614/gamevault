@@ -75,7 +75,7 @@ import { cn } from '@/lib/utils'
 // ─── Offer sections ──────────────────────────────────────────────────────────
 
 import { classifyOfferType, type OfferType } from '@/lib/utils/offer-type'
-import { listingUrl } from '@/lib/listings/url'
+import { listingOwnerUrl, listingUrl } from '@/lib/listings/url'
 import { sellerShopSlug, type SellerIdentityInput } from '@/lib/seller/identity'
 import { accountInputCls } from '@/components/account/AccountSurface'
 import { ScrollRow } from '@/components/ui/scroll-row'
@@ -211,8 +211,18 @@ function displayTitle(l: Listing, type: OfferType, config?: CurrencyTitleConfig 
  *  listing page, currency offers the game's currency page with this seller's
  *  offer pinned (currency listings have no single-listing page). */
 function publicPath(l: Listing, sellerSlug: string | null): string {
+  return listingUrl(urlInput(l, sellerSlug))
+}
+
+/** What "View" opens: the live page, or the preview while the offer is not
+ *  live (the public page shows active offers only). */
+function viewPath(l: Listing, sellerSlug: string | null): string {
+  return listingOwnerUrl({ ...urlInput(l, sellerSlug), status: l.status })
+}
+
+function urlInput(l: Listing, sellerSlug: string | null) {
   const type = classifyOfferType(l.category?.type ?? undefined, l.category?.slug)
-  return listingUrl({
+  return {
     id: l.id,
     slug: (l.slug && l.slug.trim()) || l.id,
     game: l.game ?? null,
@@ -220,7 +230,7 @@ function publicPath(l: Listing, sellerSlug: string | null): string {
       ? { slug: l.category.slug, type: type === 'currency' ? 'currency' : (l.category.type ?? null) }
       : null,
     seller: sellerSlug ? { shop_slug: sellerSlug } : null,
-  })
+  }
 }
 
 const SORTS = [
@@ -653,8 +663,8 @@ function OffersContent() {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(publicPath(l, mySellerSlug), '_blank')}>
-          <ExternalLink className="h-4 w-4" /> View Public Offer
+        <DropdownMenuItem className={ITEM_CLS} onClick={() => window.open(viewPath(l, mySellerSlug), '_blank')}>
+          <ExternalLink className="h-4 w-4" /> {l.status === 'active' ? 'View Public Offer' : 'Preview Offer'}
         </DropdownMenuItem>
         <DropdownMenuItem className={ITEM_CLS} onClick={() => copyUrl(l)}>
           <Link2 className="h-4 w-4" /> Copy Public URL

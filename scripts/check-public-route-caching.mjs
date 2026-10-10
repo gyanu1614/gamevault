@@ -59,6 +59,7 @@ export const PRIVATE_SEGMENTS = new Set([
   'forgot-password',
   'founding',
   'kyc',
+  'listing-preview',
   'login',
   'messages',
   'notifications',
@@ -77,10 +78,6 @@ export const PRIVATE_SEGMENTS = new Set([
  * `src/app/` prefix, no `/page.tsx`).
  */
 export const GRANDFATHERED = {
-  // Listing detail: still resolves the viewer server-side (own-listing
-  // controls) and reads through the cookie client. Next candidate for the
-  // same treatment as [categorySlug].
-  '(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]': ['R1', 'R5'],
   // Legacy id resolver that 301s to the canonical listing URL; no params set.
   'listings/[id]': ['R1', 'R5'],
   // /buy landing pages: inventory resolver (lib/seo/landingPageInventory) is

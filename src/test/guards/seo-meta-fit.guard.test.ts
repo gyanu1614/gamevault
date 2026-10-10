@@ -22,7 +22,7 @@ const APP = join(ROOT, 'src/app')
 /** Not public, robots-blocked or noindex: their titles never show in a result. */
 const PRIVATE = [
   /^\((admin|admin-auth|seller|sell)\)\//,
-  /^(account|checkout|dev|orders|wallet|purchases|notifications|cart|kyc|auth|support|listings|reviews|shop|login|signup|signup-become-seller|forgot-password|api)\//,
+  /^(account|checkout|dev|orders|wallet|purchases|notifications|cart|kyc|auth|support|listings|listing-preview|reviews|shop|login|signup|signup-become-seller|forgot-password|api)\//,
 ]
 
 const EXEMPT: Record<string, string> = {

@@ -29,6 +29,8 @@ export default function robots(): MetadataRoute.Robots {
           '/purchases/',
           '/wallet/',
           '/checkout/',
+          // Seller/admin view of a non-live listing (session-only, noindex).
+          '/listing-preview/',
           // Internal design previews. ROUTE-002 gated them server-side (they
           // 404 on the live site via src/app/dev/layout.tsx), but the disallow
           // stays: it governs crawling on preview deployments, where the pages

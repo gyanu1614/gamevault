@@ -29,8 +29,10 @@
  *   - /[game] hub + SAB landing: tagged with every category of the game.
  *   - /[game]/[category]/item/…, value pages: unstable_cache under category /
  *     item stock tags (lib/value-listings/stock-server) — already correct.
- *   - /[game]/[category]/[listing]: per request (cookie client, uncached);
- *     only its pre-cookie currency-redirect read is cached → tagged.
+ *   - /[game]/[category]/[listing]: ISR since 2026-10-09; reads tagged with
+ *     the listing's category (the cross-category lookups with listings:home).
+ *     Its owner/admin preview (/listing-preview/[id]) is per request and out
+ *     of scope.
  *   - /: Latest Listings + game cards tagged `listings:home`.
  *   - /shop/[slug]: 60 s window, private client; storefront writes revalidate
  *     its concrete path (purges its fetches). Not in scope here.
@@ -59,12 +61,6 @@ const CONSTRUCTORS = [
 
 /** Files allowed to read listings on another client, at exactly this many reads. */
 const ALLOWED: Record<string, { count: number; reason: string }> = {
-  [`${MARKETPLACE}/[gameSlug]/[categorySlug]/[listingSlug]/page.tsx`]: {
-    count: 6,
-    reason:
-      'cookie client on a per-request route (GRANDFATHERED in check-public-route-caching): ' +
-      'reads after cookies() are not cached; its one pre-cookie read is tagged',
-  },
   [`${MARKETPLACE}/[gameSlug]/[categorySlug]/_itemResolver.ts`]: {
     count: 1,
     reason:
