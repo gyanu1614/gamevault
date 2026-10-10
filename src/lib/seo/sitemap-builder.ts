@@ -1,11 +1,13 @@
 import type { MetadataRoute } from 'next'
-import { isCurrencyCategoryType } from '@/lib/listings/url'
+import { VALUE_CATALOG_GAMES } from '@/lib/value-listings/catalogs'
 
 import { CONTENT_HUB_GAME_SLUGS, getGameContentTheme } from '@/lib/content/theme'
 import {
   isGameHubIndexable,
   isGameSellPageIndexable,
   isValueItemIndexable,
+  valuePageVerdict,
+  type SeoGateMode,
 } from '@/lib/games/indexability'
 import { LEGAL_DOCS } from '@/lib/legal/documents'
 import { valueItemHasPage } from '@/lib/values/hub-config'
@@ -28,8 +30,14 @@ import { SITE_PAGES_UPDATED, legalLastUpdatedIso } from '@/lib/seo/page-dates'
  *  3. URLs equal their canonical exactly, including the homepage (the bare
  *     origin, which is what next/metadata resolves "/" to).
  *
- * Sell pages stay (they earn traffic on Bing). No sitemap index: ~1,000 URLs is
- * far below the 50,000 limit and /sitemap.xml must stay the single entry point.
+ * Sell pages stay (they earn traffic on Bing). The sitemap is SPLIT by section
+ * (buildSitemapSections, served at /sitemaps/<section>.xml behind the
+ * /sitemap.xml index) so Search Console reports an index rate per page type.
+ *
+ * Value item pages: listed only when valuePageVerdict (the data gate) says
+ * index, and their lastmod is the last MATERIAL price move (seo_value_evidence
+ * price_moved_at) — the same value the page prints as "Updated" and puts in its
+ * JSON-LD dateModified.
  */
 export interface SitemapInput {
   baseUrl: string
@@ -71,6 +79,34 @@ export interface SitemapInput {
   flatPosts: { slug: string; publishedAt: string }[]
   /** Landing pages that have real inventory. */
   landingSlugs: string[]
+  /** The value-page data gate: mode, owner overrides (by path) and evidence keyed `${game}/${item}`. */
+  valueGate: {
+    mode: SeoGateMode
+    overrides: ReadonlyMap<string, 'index' | 'noindex'>
+    evidence: ReadonlyMap<string, ValueEvidenceRow>
+  }
+}
+
+export interface ValueEvidenceRow {
+  observations: number
+  historyDays: number
+  valueUsd: number | null
+  priceMovedAt: string | null
+  isProtected: boolean
+}
+
+/** One sitemap file per section, so Search Console shows the index rate per page type. */
+export type SitemapSection = 'static' | 'blog' | 'buy' | 'sell' | 'hubs' | `values-${string}`
+
+/** The verdict a value item page's robots meta gives, for the sitemap. */
+export function valueItemListed(input: SitemapInput, gameSlug: string, itemSlug: string, legacyIndexable: boolean): boolean {
+  const { mode, overrides, evidence } = input.valueGate
+  return valuePageVerdict({
+    legacyIndexable,
+    evidence: evidence.get(`${gameSlug}/${itemSlug}`) ?? null,
+    mode,
+    override: overrides.get(`/${gameSlug}/values/${itemSlug}`) ?? null,
+  }).index
 }
 
 type Entry = MetadataRoute.Sitemap[number]
@@ -79,7 +115,8 @@ const newest = (...dates: (string | null | undefined)[]): string | null =>
   dates.reduce<string | null>((acc, d) => (d && (!acc || d > acc) ? d : acc), null)
 const dated = (d: string | null | undefined) => (d ? { lastModified: d } : {})
 
-export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
+/** Every section's entries. URLs are unique across sections. */
+export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, MetadataRoute.Sitemap> {
   const { baseUrl } = input
   const at = (path: string) => `${baseUrl}${path}`
 
@@ -166,23 +203,39 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
   }))
 
   // ── content hubs: values, calculator, methodology, price index, items ────
+  // A value page's date is its last material price move (seo_value_evidence).
+  const movedAt = (game: string, slug: string) => input.valueGate.evidence.get(`${game}/${slug}`)?.priceMovedAt ?? null
+  const gameMovedAt = new Map<string, string>()
+  for (const [key, e] of input.valueGate.evidence) {
+    const game = key.slice(0, key.indexOf('/'))
+    const next = newest(gameMovedAt.get(game), e.priceMovedAt)
+    if (next) gameMovedAt.set(game, next)
+  }
+  // Hub pages print every item's price: their date is the newest move of any of
+  // them (before the first evidence refresh, the catalogue's own dates).
   const valuesUpdated = (slug: string): string | null => {
+    if (gameMovedAt.has(slug)) return gameMovedAt.get(slug)!
     if (slug === 'steal-a-brainrot') return newest(...input.sabBrainrots.map((i) => i.updated_at))
     if (slug === 'adopt-me') return newest(...input.adoptMePets.map((i) => i.updated_at))
     return newest(...input.pipelineItems.filter((i) => i.gameSlug === slug).map((i) => i.priceChangedAt))
   }
-  const itemsByGame: Record<string, { slug: string; updated_at: string | null }[]> = {
-    'steal-a-brainrot': input.sabBrainrots,
-    'adopt-me': input.adoptMePets,
+  const itemsByGame: Record<string, { slug: string; updated_at: string | null }[]> = {}
+  // Steal a Brainrot and Adopt Me pages have no older rule: only the gate.
+  for (const [game, rows] of [['steal-a-brainrot', input.sabBrainrots], ['adopt-me', input.adoptMePets]] as const) {
+    for (const r of rows) {
+      if (!valueItemListed(input, game, r.slug, true)) continue
+      ;(itemsByGame[game] ??= []).push({ slug: r.slug, updated_at: movedAt(game, r.slug) })
+    }
   }
   for (const i of input.pipelineItems) {
     // Same rules as the item page: it must exist (valueItemHasPage — a value-list
-    // hub has pages for its high tiers only), and its robots meta: priced and
-    // backed by enough live listings.
+    // hub has pages for its high tiers only), then its robots meta: the old
+    // thin-content floor (priced, enough live listings) and the data gate.
     if (!valueItemHasPage(i.gameSlug, { rarity: i.rarity ?? null, priced: true })) continue
-    if (!isValueItemIndexable({ priced: true, sampleSize: i.sampleSize })) continue
-    ;(itemsByGame[i.gameSlug] ??= []).push({ slug: i.slug, updated_at: i.priceChangedAt })
+    if (!valueItemListed(input, i.gameSlug, i.slug, isValueItemIndexable({ priced: true, sampleSize: i.sampleSize }))) continue
+    ;(itemsByGame[i.gameSlug] ??= []).push({ slug: i.slug, updated_at: movedAt(i.gameSlug, i.slug) })
   }
+  const valueItemPages = new Map<string, Entry[]>()
   const extraPathsByGame: Record<string, { path: string; priority: number }[]> = {
     'adopt-me': [{ path: 'neon-calculator', priority: 0.6 }],
   }
@@ -243,10 +296,12 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
     if (theme.pages.codes && freeGuideLastmod(slug)) {
       out.push({ url: at(`/${slug}/codes`), ...dated(freeGuideLastmod(slug)), changeFrequency: 'weekly', priority: 0.75 })
     }
+    const items: Entry[] = []
     for (const item of itemsByGame[slug] ?? []) {
       if (!item.slug) continue
-      out.push({ url: at(`/${slug}/values/${item.slug}`), ...dated(item.updated_at), changeFrequency: 'daily', priority: 0.7 })
+      items.push({ url: at(`/${slug}/values/${item.slug}`), ...dated(item.updated_at), changeFrequency: 'daily', priority: 0.7 })
     }
+    valueItemPages.set(slug, items)
     return out
   })
 
@@ -300,18 +355,29 @@ export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
 
   // Listing pages are noindex (2026-10-06) and never listed here: the category
   // pages above carry the listings.
-  const all = [
-    ...staticPages,
-    ...legalPages,
-    ...blogPages,
-    ...gameBlogIndexPages,
-    ...gameBlogPages,
-    ...landingPages,
-    ...hubPages,
-    ...gamePages,
-    ...sellPages,
-    ...categoryPages,
+  const sections: [SitemapSection, Entry[]][] = [
+    ['static', [...staticPages, ...legalPages]],
+    ['blog', [...blogPages, ...gameBlogIndexPages, ...gameBlogPages]],
+    ['buy', [...landingPages, ...categoryPages]],
+    ['hubs', [...hubPages, ...gamePages]],
+    ['sell', sellPages],
+    ...[...valueItemPages].map(([game, entries]) => [`values-${game}` as SitemapSection, entries] as [SitemapSection, Entry[]]),
   ]
-  // One entry per URL, first one wins.
-  return [...new Map(all.map((e) => [e.url, e])).values()]
+  // One entry per URL across all sections, first one wins.
+  const seen = new Set<string>()
+  const out = new Map<SitemapSection, MetadataRoute.Sitemap>()
+  for (const [section, entries] of sections) {
+    out.set(section, entries.filter((e) => (seen.has(e.url) ? false : (seen.add(e.url), true))))
+  }
+  return out
+}
+
+/** Every section's entries as one list (sitemap verification, IndexNow diffs). */
+export function buildSitemap(input: SitemapInput): MetadataRoute.Sitemap {
+  return [...buildSitemapSections(input).values()].flat()
+}
+
+/** The section ids, in index order: one values section per game with value item pages. */
+export function sitemapSectionIds(): SitemapSection[] {
+  return ['static', 'hubs', 'buy', 'sell', 'blog', ...VALUE_CATALOG_GAMES.map((g) => `values-${g}` as SitemapSection)]
 }

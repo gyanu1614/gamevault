@@ -20,7 +20,7 @@ import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { getGlobalCategories, getGamesForGlobalCategory, getAttributeTemplateFull } from '@/lib/actions/new-schema'
 import type { GlobalCategory, GameCategory, AttributeTemplateFull, Attribute } from '@/lib/actions/new-schema'
 import { findEnabledGameCategory } from '@/lib/categories'
-import { snapshotListings, submitIndexNow, submitListingChanges } from '@/lib/seo/indexnow'
+import { logUrlEvents, snapshotListings, submitListingChanges } from '@/lib/seo/indexnow'
 import { validateListingWrite, type ListingWrite } from '@/lib/listings/validate'
 import { publishDenialMessage, sellAccessKind, canUseSellSurface } from '@/lib/listings/access'
 import { decidePublishStatus, needsUnverifiedPriceReview } from '@/lib/listings/publish-status'
@@ -1258,14 +1258,14 @@ export async function bulkPublishListings(
       })
     }
 
-    // SEO — one IndexNow submission for the game hub + category page when bulk
+    // SEO — one change-log entry (IndexNow, via the cron) for the game hub + category page when bulk
     // rows went live. Individual listing URLs are skipped here (slugs
     // are DB-generated and not selected back in the loop); the sitemap
     // picks them up on the next crawl.
     if (ok > 0 && status === 'active') {
       const { data: pingGame } = await supabase.from('games').select('slug').eq('id', gameId).maybeSingle() as any
       if (pingGame?.slug) {
-        await submitIndexNow([`/${pingGame.slug}`, `/${pingGame.slug}/${gameCategory.slug}`], { reason: 'listing-published' })
+        await logUrlEvents([`/${pingGame.slug}`, `/${pingGame.slug}/${gameCategory.slug}`], { reason: 'listing-published' })
       }
     }
 

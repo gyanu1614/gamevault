@@ -9,6 +9,9 @@
     { "path": "/api/cron/discord-daily-post", "schedule": "45 18 * * *" },
     { "path": "/api/cron/check-sab-freshness", "schedule": "40 6 * * *" },
     { "path": "/api/cron/revalidate-listing-pages", "schedule": "35 4 * * *" },
-    { "path": "/api/cron/value-listing-refs", "schedule": "50 4 * * *" }
+    { "path": "/api/cron/value-listing-refs", "schedule": "50 4 * * *" },
+    { "path": "/api/cron/seo-evidence", "schedule": "10 5 * * *" },
+    { "path": "/api/cron/seo-indexnow", "schedule": "40 5 * * *" },
+    { "path": "/api/cron/seo-gsc", "schedule": "20 6 * * *" }
   ]
 }

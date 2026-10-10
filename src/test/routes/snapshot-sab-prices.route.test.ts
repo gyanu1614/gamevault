@@ -2,8 +2,9 @@
  * The daily SAB snapshot cron used to re-send EVERY Steal a Brainrot URL (~504)
  * to IndexNow in one batch each day, whether or not a price moved. Bing flagged it
  * as "batch mode" and said other new pages were never submitted. The cron now
- * submits only the pages whose cash value really moved (lib/seo/indexnow),
- * and still busts the ISR cache for every price page.
+ * refreshes the SEO evidence (lib/seo/gate), which logs only the pages whose
+ * cash value really moved for IndexNow, and still busts the ISR cache for every
+ * price page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -11,12 +12,10 @@ const revalidatePath = vi.fn()
 vi.mock('next/cache', () => ({ revalidatePath: (...a: unknown[]) => revalidatePath(...a) }))
 vi.mock('@/lib/security/cron-auth', () => ({ isCronAuthorized: () => true }))
 
-const submitChangedValuePages = vi.fn(async (..._a: unknown[]) => 3)
+const runEvidenceRefresh = vi.fn(async (game: string) => ({ game, items: 3, moved: ['alpha', 'beta', 'gamma'], flipped: [] as string[] }))
+vi.mock('@/lib/seo/gate/run', () => ({ runEvidenceRefresh: (game: string) => runEvidenceRefresh(game) }))
 const submitIndexNow = vi.fn(async (..._a: unknown[]) => undefined)
-vi.mock('@/lib/seo/indexnow', () => ({
-  submitChangedValuePages: (...a: unknown[]) => submitChangedValuePages(...a),
-  submitIndexNow: (...a: unknown[]) => submitIndexNow(...a),
-}))
+vi.mock('@/lib/seo/indexnow/submit', () => ({ submitIndexNow: (...a: unknown[]) => submitIndexNow(...a) }))
 
 // A tiny Supabase stand-in: the corrected view has three brainrots, upserts succeed.
 const VIEW_ROWS = ['alpha', 'beta', 'gamma'].map((slug, i) => ({
@@ -48,15 +47,15 @@ async function runCron() {
 describe('snapshot-sab-prices cron', () => {
   beforeEach(() => {
     revalidatePath.mockClear()
-    submitChangedValuePages.mockClear()
+    runEvidenceRefresh.mockClear()
     submitIndexNow.mockClear()
   })
 
-  it('submits through the change detector, once, for steal-a-brainrot', async () => {
+  it('refreshes the SEO evidence (the change detector), once, for steal-a-brainrot', async () => {
     const { status, body } = await runCron()
     expect(status).toBe(200)
-    expect(submitChangedValuePages).toHaveBeenCalledTimes(1)
-    expect(submitChangedValuePages.mock.calls[0][1]).toBe('steal-a-brainrot')
+    expect(runEvidenceRefresh).toHaveBeenCalledTimes(1)
+    expect(runEvidenceRefresh.mock.calls[0][0]).toBe('steal-a-brainrot')
     expect(body.indexnow_changed).toBe(3)
   })
 

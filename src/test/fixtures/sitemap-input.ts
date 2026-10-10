@@ -9,6 +9,14 @@ import type { SitemapInput } from '@/lib/seo/sitemap-builder'
  */
 export const SITEMAP_BASE = 'https://dropmarket.gg'
 
+const ev = (priceMovedAt: string, observations: number, historyDays: number) => ({
+  observations,
+  historyDays,
+  valueUsd: 10,
+  priceMovedAt,
+  isProtected: false,
+})
+
 export function sitemapFixture(over: Partial<SitemapInput> = {}): SitemapInput {
   return {
     baseUrl: SITEMAP_BASE,
@@ -62,6 +70,20 @@ export function sitemapFixture(over: Partial<SitemapInput> = {}): SitemapInput {
     posts: [{ publishedAt: '2026-08-01' }, { publishedAt: '2026-08-20' }],
     flatPosts: [{ slug: 'how-we-work', publishedAt: '2026-08-20' }],
     landingSlugs: ['buy-fortnite-accounts'],
+    // Report mode (the launch state): the gate lists every page the old rules
+    // list; the evidence supplies each value page's date (its last material move).
+    valueGate: {
+      mode: 'report',
+      overrides: new Map(),
+      evidence: new Map([
+        ['steal-a-brainrot/cavallo-virtuoso', ev('2026-09-30T00:00:00Z', 22, 30)],
+        ['steal-a-brainrot/tralalero', ev('2026-09-18T00:00:00Z', 2, 30)],
+        ['adopt-me/bat-dragon', ev('2026-09-15T00:00:00Z', 11, 69)],
+        ['adopt-me/shadow-dragon', ev('2026-09-12T00:00:00Z', 9, 4)],
+        ['steal-an-egg/golden-egg', ev('2026-09-22T00:00:00Z', 5, 18)],
+        ['murder-mystery-2/harvester', ev('2026-09-24T00:00:00Z', 63, 4)],
+      ]),
+    },
     ...over,
   }
 }

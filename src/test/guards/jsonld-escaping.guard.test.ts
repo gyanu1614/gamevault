@@ -99,3 +99,24 @@ describe('DLT-002 — no raw JSON.stringify reaches dangerouslySetInnerHTML', ()
     ).toEqual([])
   })
 })
+
+describe('valuePage JSON-LD (growth point 28)', () => {
+  it('carries the date, the answer sentence and the value table for machines only', async () => {
+    const { valuePage } = await import('@/lib/seo/jsonld')
+    const ld = valuePage({
+      name: 'Bat Dragon Value in Adopt Me',
+      path: '/adopt-me/values/bat-dragon',
+      description: 'Bat Dragon (Fly Ride) is worth about $285 · from 23 offers we track · Updated 9 Oct 2026.',
+      dateModified: '2026-10-09T08:00:00.000Z',
+      item: { name: 'Bat Dragon', values: [{ label: 'Fly Ride value', valueUsd: 285, offers: 23 }, { label: 'Neon Fly Ride value', valueUsd: 600.004 }] },
+    }) as any
+    expect(ld.dateModified).toBe('2026-10-09T08:00:00.000Z')
+    expect(ld.mainEntity.additionalProperty).toEqual([
+      { '@type': 'PropertyValue', name: 'Fly Ride value', value: 285, unitText: 'USD', description: 'from 23 offers we track' },
+      { '@type': 'PropertyValue', name: 'Neon Fly Ride value', value: 600, unitText: 'USD' },
+    ])
+    const bare = valuePage({ name: 'x', path: '/x', description: 'y', dateModified: null }) as any
+    expect(bare.dateModified).toBeUndefined()
+    expect(bare.mainEntity).toBeUndefined()
+  })
+})

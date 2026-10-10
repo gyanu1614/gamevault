@@ -145,7 +145,11 @@ describe('which URLs are listed', () => {
       { gameSlug: 'murder-mystery-2', slug: 'harvester', rarity: 'Ancient', priceChangedAt: '2026-10-05T00:00:00Z', sampleSize: 63 },
       { gameSlug: 'murder-mystery-2', slug: 'chroma-fang', rarity: 'Chroma', priceChangedAt: '2026-10-03T00:00:00Z', sampleSize: 37 },
     ]
-    expect(lastmod(`${BASE}/murder-mystery-2/inventory`, { pipelineItems })).toBe('2026-10-05T00:00:00Z')
+    // Before the first evidence refresh: the pipeline's own price dates.
+    const noEvidence = { ...fixture().valueGate, evidence: new Map() }
+    expect(lastmod(`${BASE}/murder-mystery-2/inventory`, { pipelineItems, valueGate: noEvidence })).toBe('2026-10-05T00:00:00Z')
+    // After it: the newest MATERIAL move of any item (the fixture's harvester moved 2026-09-24).
+    expect(lastmod(`${BASE}/murder-mystery-2/inventory`, { pipelineItems })).toBe('2026-09-24T00:00:00Z')
     expect(urls({ pipelineItems: [] })).not.toContain(`${BASE}/murder-mystery-2/inventory`)
     expect(urls({ pipelineItems }).filter((u) => u.endsWith('/inventory'))).toEqual([`${BASE}/murder-mystery-2/inventory`])
   })
@@ -222,5 +226,54 @@ describe('the homepage URL is exactly its canonical', () => {
   it('is the bare origin, which is what next/metadata resolves "/" to', () => {
     expect(urls()).toContain(BASE)
     expect(urls()).not.toContain(`${BASE}/`)
+  })
+})
+
+describe('the value-page data gate (growth point 28)', () => {
+  const gate = (o: Partial<SitemapInput['valueGate']>) => ({ valueGate: { ...fixture().valueGate, ...o } })
+
+  it('lists every value page in report mode (nothing hidden before the owner switches it on)', () => {
+    const all = urls()
+    expect(all).toContain(`${BASE}/steal-a-brainrot/values/tralalero`) // 2 offers: fails the gate
+    expect(all).toContain(`${BASE}/murder-mystery-2/values/harvester`) // 4 days: fails the gate
+  })
+
+  it('drops the pages that fail once enforced, and keeps those that pass', () => {
+    const all = urls(gate({ mode: 'enforce' }))
+    expect(all).not.toContain(`${BASE}/steal-a-brainrot/values/tralalero`)
+    expect(all).not.toContain(`${BASE}/murder-mystery-2/values/harvester`)
+    expect(all).not.toContain(`${BASE}/adopt-me/values/shadow-dragon`)
+    expect(all).toContain(`${BASE}/steal-a-brainrot/values/cavallo-virtuoso`)
+    expect(all).toContain(`${BASE}/adopt-me/values/bat-dragon`)
+  })
+
+  it('keeps a failing page Google has indexed (protected), and obeys the owner overrides in any mode', () => {
+    const evidence = new Map(fixture().valueGate.evidence)
+    evidence.set('steal-a-brainrot/tralalero', { ...evidence.get('steal-a-brainrot/tralalero')!, isProtected: true })
+    expect(urls(gate({ mode: 'enforce', evidence }))).toContain(`${BASE}/steal-a-brainrot/values/tralalero`)
+    const overrides = new Map([['/adopt-me/values/bat-dragon', 'noindex' as const]])
+    expect(urls(gate({ overrides }))).not.toContain(`${BASE}/adopt-me/values/bat-dragon`)
+  })
+
+  it("dates a value page by its last material price move, and a values hub by the newest of its items'", () => {
+    const evidence = new Map(fixture().valueGate.evidence)
+    evidence.set('adopt-me/bat-dragon', { ...evidence.get('adopt-me/bat-dragon')!, priceMovedAt: '2026-10-08T09:25:40.988Z' })
+    expect(lastmod(`${BASE}/adopt-me/values/bat-dragon`, gate({ evidence }))).toBe('2026-10-08T09:25:40.988Z')
+    expect(lastmod(`${BASE}/adopt-me/values`, gate({ evidence }))).toBe('2026-10-08T09:25:40.988Z')
+  })
+})
+
+describe('sections', () => {
+  it('splits the sitemap by page type with every URL in exactly one section', async () => {
+    const { buildSitemapSections } = await import('@/lib/seo/sitemap-builder')
+    const sections = buildSitemapSections(fixture())
+    const flat = [...sections.values()].flat().map((e) => e.url)
+    expect(new Set(flat).size).toBe(flat.length)
+    expect(flat.sort()).toEqual(urls().sort())
+    expect(sections.get('values-adopt-me')!.map((e) => e.url)).toEqual([`${BASE}/adopt-me/values/bat-dragon`, `${BASE}/adopt-me/values/shadow-dragon`])
+    expect(sections.get('sell')!.every((e) => e.url.endsWith('/sell'))).toBe(true)
+    expect(sections.get('buy')!.map((e) => e.url)).toContain(`${BASE}/valorant/buy-vp`)
+    expect(sections.get('static')!.map((e) => e.url)).toContain(BASE)
+    expect(sections.get('hubs')!.map((e) => e.url)).toContain(`${BASE}/adopt-me/values`)
   })
 })

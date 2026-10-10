@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   checkAll,
+  checkCrawlerRoutes,
   staleGrandfathers,
   GRANDFATHERED,
   MIXED_ACTION_MODULES,
@@ -34,6 +35,13 @@ describe('public-route caching guard', () => {
       .filter((r) => r.violations.length)
       .map((r) => `${r.route}\n${r.violations.map((v) => `    ${v.rule}: ${v.detail}`).join('\n')}`)
     expect(failing, failing.join('\n\n')).toEqual([])
+  })
+
+  it('the sitemap index, its section files and robots.txt read cookie-free and stay static', () => {
+    const crawler = checkCrawlerRoutes()
+    expect(crawler.map((r) => r.route)).toEqual(['sitemap.xml/route.ts', 'sitemaps/[file]/route.ts', 'robots.ts'])
+    const failing = crawler.filter((r) => r.violations.length).map((r) => `${r.route}: ${r.violations.map((v) => `${v.rule} ${v.detail}`).join('; ')}`)
+    expect(failing, failing.join('\n')).toEqual([])
   })
 
   it('every grandfather entry still fires (a fixed route must be removed from the list)', () => {

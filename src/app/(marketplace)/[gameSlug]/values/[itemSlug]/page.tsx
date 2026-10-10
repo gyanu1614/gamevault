@@ -8,7 +8,7 @@ import { TrendUpIcon } from '@phosphor-icons/react/dist/ssr/TrendUp'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
 import { createValueItemReadClient, createValueListReadClient } from '@/lib/values/read-client'
-import { JsonLd, breadcrumbList, productAggregate, faqPage } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, productAggregate, faqPage, valuePage } from '@/lib/seo/jsonld'
 import { withArticle } from '@/lib/text/article'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
@@ -26,6 +26,9 @@ import AdoptMePetPage from './_AdoptMePetPage'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 import GenericValueItemPage from '../_generic/ValueItemPage'
 import { isValueItemIndexable } from '@/lib/games/indexability'
+import { getValuePageGate, readValuePageEvidence, robotsFor } from '@/lib/seo/gate/read'
+import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
+import { petHeadline } from './_petAnswer'
 import ValueListItemPage from '../_generic/ValueListItemPage'
 import { VALUES_PIPELINE_GAMES } from '@/lib/value-listings/catalogs'
 import { valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
@@ -469,7 +472,13 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     const priceLead = fr?.cashUsd != null ? ` A Fly Ride sells for about $${usd(fr.cashUsd)}.` : ''
     // ≤155 characters: question, price, then what the page has (seoMeta trims
     // the tail clause on long pet names, never the price).
-    const description = `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} Cash and trade values for every variant, updated ${monthYear}.`
+    const gate = await getValuePageGate('adopt-me', pet.slug, true)
+    const headline = petHeadline(pet)
+    // The answer sentence leads the snippet (it is not shown on the page).
+    const description = withAnswer(
+      headline ? answerSentence({ name: `${pet.name} (${headline.label})`, valueUsd: headline.cashUsd, offers: headline.listingsTracked, updatedAt: gate.evidence?.priceMovedAt ?? null }) : null,
+      `How much is ${withArticle(pet.name)} worth in Adopt Me?${priceLead} Cash and trade values for every variant, updated ${monthYear}.`,
+    )
     const canonical = `/adopt-me/values/${pet.slug}`
     // Page-specific keywords targeting the uncontested long-tail the brief
     // names — "worth in real money / USD / can you sell". Per-pet, not the dead
@@ -492,6 +501,8 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
       description,
       keywords,
       alternates: { canonical },
+      // The data gate (lib/games/indexability valuePageVerdict; the sitemap applies it too).
+      ...robotsFor(gate),
       openGraph: {
         title: socialTitle(title),
         description,
@@ -513,7 +524,12 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     const cheapest = price!.cheapestUsd!
     const title = `${item.name} Value in ${listHub.shortName} (${monthYear}) — Price in USD`
-    const description = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${price!.sampleSize} live ${price!.sampleSize === 1 ? 'listing' : 'listings'} from reputable sellers, updated daily.`
+    const gate = await getValuePageGate(gameSlug, item.slug, isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize }))
+    const lead = `How much is ${item.name} worth in ${theme.name}? It sells for about $${cheapest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across ${price!.sampleSize} live ${price!.sampleSize === 1 ? 'listing' : 'listings'} from reputable sellers, updated daily.`
+    const description = withAnswer(
+      answerSentence({ name: item.name, valueUsd: cheapest, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null }),
+      lead,
+    )
     const canonical = `/${gameSlug}/values/${item.slug}`
     return {
       title,
@@ -527,10 +543,8 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
         `${listHub.shortName.toLowerCase()} ${item.name} real money`,
       ],
       alternates: { canonical },
-      // The shared thin-content rule (the sitemap applies it too).
-      ...(isValueItemIndexable({ priced: true, sampleSize: price!.sampleSize })
-        ? {}
-        : { robots: { index: false, follow: true } }),
+      // The shared rule: the old thin-content floor, then the data gate (the sitemap applies both).
+      ...robotsFor(gate),
       openGraph: {
         title: socialTitle(title),
         description,
@@ -551,16 +565,20 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     // enough to index. Every unpriced catalogue page (all pets) is noindex too
     // — it is useful to a reader who lands on it, but it is not a ranking page.
     const thin = !priced || (price?.sampleSize ?? 0) < 3
+    const gate = await getValuePageGate(gameSlug, item.slug, !thin)
     const title = priced
       ? `${item.name} Value — ${theme.name}`
       : `${item.name} — ${theme.name} ${item.rarity ? `${item.rarity} ` : ''}Pet`
     return {
       title,
       description: priced
-        ? `${item.name} sells for about $${price!.cheapestUsd!.toFixed(2)} in ${theme.name}, priced from ${price!.sampleSize} live marketplace listings.`
+        ? withAnswer(
+            answerSentence({ name: item.name, valueUsd: price!.cheapestUsd, offers: price!.sampleSize, updatedAt: gate.evidence?.priceMovedAt ?? null }),
+            `${item.name} sells for about $${price!.cheapestUsd!.toFixed(2)} in ${theme.name}, priced from ${price!.sampleSize} live marketplace listings.`,
+          )
         : `${item.name} in ${theme.name}: rarity, area, income and the egg it hatches from. No market price — ${item.name} is not sold directly.`,
       alternates: { canonical: `/${gameSlug}/values/${item.slug}` },
-      ...(thin ? { robots: { index: false, follow: true } } : {}),
+      ...robotsFor(gate),
     }
   }
 
@@ -570,13 +588,18 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   if (!brainrot) return { title: 'Brainrot Not Found' }
 
   const title = `${brainrot.name} Value, Income & Mutations`
-  const description = `${brainrot.name} value guide for Steal a Brainrot. See rarity, base income, mutation income, obtainability, and current DropMarket pricing.`
+  const gate = await getValuePageGate(SAB_GAME, brainrot.slug, true)
+  const description = withAnswer(
+    answerSentence({ name: brainrot.name, valueUsd: gate.evidence?.valueUsd, offers: gate.evidence?.observations ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null }),
+    `${brainrot.name} value guide for Steal a Brainrot. See rarity, base income, mutation income, obtainability, and current DropMarket pricing.`,
+  )
   const canonical = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return {
     title,
     description,
     alternates: { canonical },
+    ...robotsFor(gate),
     openGraph: {
       title: socialTitle(title),
       description,
@@ -629,14 +652,19 @@ export default async function BrainrotValuePage({ params }: PageProps) {
   const brainrot = await getBrainrot(itemSlug)
   if (!brainrot) notFound()
 
-  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav] =
+  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav, evidence] =
     await Promise.all([
       getMutations(brainrot.slug, brainrot.id),
       getRelatedBrainrots(brainrot),
       getDefaultTradePrice(brainrot.slug, brainrot.id),
       getPriceHistory(brainrot.slug, brainrot.id),
       getHubNavData(gameSlug),
+      // The SEO evidence: its price_moved_at is the ONE date this page shows,
+      // puts in dateModified and lists in the sitemap (a real price move only;
+      // a re-crawl that finds the same price does not bump it).
+      readValuePageEvidence(SAB_GAME, brainrot.slug),
     ])
+  const priceMovedAt = evidence?.priceMovedAt ?? null
 
   const hasPublicMarketPrice =
     defaultTradePrice != null &&
@@ -678,11 +706,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
     : brainrot.confidence_label
   const quickSale = formatMoney(brainrot.quick_sale_usd)
   const patientSale = formatMoney(brainrot.patient_sale_usd)
-  const updatedLabel = formatDate(
-    hasPublicMarketPrice
-      ? defaultTradePrice?.price_updated_at
-      : brainrot.price_updated_at,
-  )
+  const updatedLabel = formatDate(priceMovedAt)
 
   // DropMarket's own live stock for this brainrot (Bundle 2): the hero button
   // and "Available Now" read it; cached per game, refreshed by listing changes.
@@ -724,6 +748,29 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         ])}
       />
 
+      <JsonLd
+        data={valuePage({
+          name: `${brainrot.name} Value in Steal a Brainrot`,
+          path: canonicalPath,
+          description: withAnswer(
+            answerSentence({ name: brainrot.name, valueUsd: evidence?.valueUsd, offers: evidence?.observations ?? 0, updatedAt: priceMovedAt }),
+            `${brainrot.name} value, income and mutations in Steal a Brainrot.`,
+          ),
+          dateModified: priceMovedAt,
+          // Default first, then the four most valuable priced mutations.
+          item: {
+            name: brainrot.name,
+            values: [
+              ...mutations.filter((m) => m.slug === 'default' && asNumber(m.marketValueUsd) != null),
+              ...mutations
+                .filter((m) => m.slug !== 'default' && asNumber(m.marketValueUsd) != null)
+                .sort((a, b) => (asNumber(b.marketValueUsd) ?? 0) - (asNumber(a.marketValueUsd) ?? 0))
+                .slice(0, 4),
+            ].map((m) => ({ label: `${m.name} value`, valueUsd: asNumber(m.marketValueUsd)! })),
+          },
+        })}
+      />
+
       {brainrot.active_listing_count > 0 && brainrot.cheapest_active_price_usd != null && (
         <JsonLd
           data={productAggregate({
@@ -754,6 +801,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           <span className="font-medium text-text-primary">{brainrot.name}</span>
         </nav>
 
+
         <ItemHero
           brainrotName={brainrot.name}
           rarity={brainrot.rarity}
@@ -765,11 +813,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           mutations={mutations}
           buy={{ itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
           priceHistory={priceHistory}
-          updatedAt={
-            hasPublicMarketPrice
-              ? (defaultTradePrice?.price_updated_at ?? null)
-              : brainrot.price_updated_at
-          }
+          updatedAt={priceMovedAt}
         />
       </section>
 

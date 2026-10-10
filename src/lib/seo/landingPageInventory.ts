@@ -15,7 +15,7 @@
 
 import 'server-only'
 import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon'
 import type { LandingPage } from './landingPages'
 import type { ListingWithRelations } from '@/types/database'
 
@@ -36,7 +36,8 @@ const LISTING_SELECT = `
 export const getLandingPageListings = cache(async function getLandingPageListings(
   page: LandingPage,
 ): Promise<ListingWithRelations[]> {
-  const supabase = await createClient()
+  // Public inventory, cookie-free: the sitemap reads this too and must stay static.
+  const supabase = createAnonClient()
 
   let query = supabase
     .from('listings')

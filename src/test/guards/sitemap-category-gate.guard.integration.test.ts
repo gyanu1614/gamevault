@@ -53,8 +53,9 @@ async function sitemapPaths(): Promise<Set<string>> {
   // Fresh import each time: sitemap() reads live data and Next's module cache
   // would otherwise hold the first result.
   vi.resetModules()
-  const mod = await import('@/app/sitemap')
-  const entries = await mod.default()
+  // Every section of the split sitemap (app/sitemaps/[file]/route.ts serves them).
+  const mod = await import('@/lib/seo/sitemap-sections')
+  const entries = [...(await mod.loadSitemapSections()).values()].flat()
   return new Set(entries.map((e) => e.url.replace(/^https?:\/\/[^/]+/, '')))
 }
 

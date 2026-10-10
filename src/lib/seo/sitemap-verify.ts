@@ -66,7 +66,18 @@ export async function verifySitemapAt(
   const root = base.replace(/\/$/, '')
   const res = await fetch(`${root}/sitemap.xml`)
   if (!res.ok) throw new Error(`${root}/sitemap.xml returned ${res.status}`)
-  const locs = parseSitemapLocs(await res.text())
+  const xml = await res.text()
+  // /sitemap.xml is an index of per-section sitemaps: read each child from `base`.
+  const locs: string[] = []
+  if (/<sitemapindex[\s>]/i.test(xml)) {
+    for (const child of parseSitemapLocs(xml)) {
+      const r = await fetch(`${root}${new URL(child).pathname}`)
+      if (!r.ok) throw new Error(`${child} returned ${r.status}`)
+      locs.push(...parseSitemapLocs(await r.text()))
+    }
+  } else {
+    locs.push(...parseSitemapLocs(xml))
+  }
 
   const failures: SitemapFailure[] = []
   let next = 0

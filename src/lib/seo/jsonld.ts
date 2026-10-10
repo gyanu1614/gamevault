@@ -221,6 +221,56 @@ export function webApplication({ name, path, description }: { name: string; path
   }
 }
 
+/**
+ * WebPage with an honest dateModified — for value pages: the last MATERIAL
+ * price move (seo_value_evidence.price_moved_at), the same value as the
+ * visible "Updated" date and the sitemap lastmod. No date: no dateModified.
+ */
+export function valuePage({
+  name,
+  path,
+  description,
+  dateModified,
+  item,
+}: {
+  name: string
+  path: string
+  description: string
+  dateModified: string | null
+  /**
+   * The value table for machines (owner 2026-10-10: read by Google and answer
+   * engines, not shown on the page): the item and its USD value per variant /
+   * mutation / price type, with the offers we track behind each when known.
+   */
+  item?: { name: string; values: { label: string; valueUsd: number; offers?: number }[] }
+}) {
+  const values = item?.values.filter((v) => Number.isFinite(v.valueUsd)) ?? []
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name,
+    url: absoluteUrl(path),
+    description,
+    ...(dateModified ? { dateModified } : {}),
+    ...(item && values.length > 0
+      ? {
+          mainEntity: {
+            '@type': 'Thing',
+            name: item.name,
+            additionalProperty: values.map((v) => ({
+              '@type': 'PropertyValue',
+              name: v.label,
+              value: Math.round(v.valueUsd * 100) / 100,
+              unitText: 'USD',
+              ...(v.offers != null ? { description: `from ${v.offers} ${v.offers === 1 ? 'offer' : 'offers'} we track` } : {}),
+            })),
+          },
+        }
+      : {}),
+    publisher: { '@id': ORGANIZATION_ID },
+  }
+}
+
 /** FAQPage — only pass Q&As that are visibly rendered on the page. */
 export function faqPage(qas: { q: string; a: string }[]) {
   return {

@@ -1,6 +1,8 @@
+import { readValuePageEvidence } from '@/lib/seo/gate/read'
+import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
-import { JsonLd, breadcrumbList, productAggregate } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, productAggregate, valuePage } from '@/lib/seo/jsonld'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -43,13 +45,16 @@ export default async function ValueItemPage({
   itemSlug: string
 }) {
   const theme = getGameContentTheme(gameSlug)
-  const [items, hubNav, buyData] = await Promise.all([
+  const [items, hubNav, buyData, evidence] = await Promise.all([
     // Read under THIS item's tags (never the game list tag — T1).
     getValueItems(gameSlug, { itemSlug }),
     getHubNavData(gameSlug),
     // DropMarket's own live stock (Bundle 2): buy button + "Available Now".
     getValueItemBuyData(gameSlug, itemSlug),
+    // The ONE page date: the last material price move (seo_value_evidence).
+    readValuePageEvidence(gameSlug, itemSlug),
   ])
+  const priceMovedAt = evidence?.priceMovedAt ?? null
   const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const item = items.find((i) => i.slug === itemSlug)
@@ -104,6 +109,27 @@ export default async function ValueItemPage({
           { name: item.name, path: `/${gameSlug}/values/${item.slug}` },
         ])}
       />
+      <JsonLd
+        data={valuePage({
+          name: `${item.name} Value in ${theme.name}`,
+          path: `/${gameSlug}/values/${item.slug}`,
+          description: withAnswer(
+            hasPrice ? answerSentence({ name: item.name, valueUsd: price!.cheapestUsd, offers: price!.sampleSize ?? 0, updatedAt: priceMovedAt }) : null,
+            `${item.name} in ${theme.name}: price, rarity and where it comes from.`,
+          ),
+          item: hasPrice
+            ? {
+                name: item.name,
+                values: [
+                  { label: 'Cheapest price', valueUsd: price!.cheapestUsd!, offers: price!.sampleSize ?? undefined },
+                  ...(price!.averageUsd != null ? [{ label: 'Typical price', valueUsd: price!.averageUsd }] : []),
+                  ...(price!.highUsd != null ? [{ label: 'Highest price', valueUsd: price!.highUsd }] : []),
+                ],
+              }
+            : undefined,
+          dateModified: priceMovedAt,
+        })}
+      />
       {/* Product schema only where a real price backs it. */}
       {hasPrice && !thin && (
         <JsonLd
@@ -156,11 +182,11 @@ export default async function ValueItemPage({
           }
           footer={
             // The badge renders nothing without a dated, listing-backed price.
-            price?.priceChangedAt && (price.sampleSize ?? 0) > 0 ? (
+            priceMovedAt && (price?.sampleSize ?? 0) > 0 ? (
               <ValuesFreshnessBadge
-                lastChangedAt={price.priceChangedAt}
-                listingCount={price.sampleSize}
-                sourceCount={price.sourceCount ?? 0}
+                lastChangedAt={priceMovedAt}
+                listingCount={price!.sampleSize}
+                sourceCount={price!.sourceCount ?? 0}
               />
             ) : null
           }

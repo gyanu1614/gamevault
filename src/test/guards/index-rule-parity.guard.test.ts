@@ -66,3 +66,37 @@ describe('value item page rule == shared rule', () => {
     expect(isValueItemIndexable({ priced: true, sampleSize: 3 })).toBe(true)
   })
 })
+
+describe('value-page data gate: one rule for robots meta AND sitemap (growth point 28)', () => {
+  const item = read(ITEM_PAGE)
+
+  it('every value page type decides its robots meta through getValuePageGate', () => {
+    // Adopt Me, the value-list hub (MM2), other pipeline games, Steal a Brainrot.
+    expect(item.match(/robotsFor\(/g)?.length ?? 0).toBeGreaterThanOrEqual(4)
+    expect(item).toMatch(/getValuePageGate\('adopt-me'/)
+    expect(item).toMatch(/getValuePageGate\(SAB_GAME/)
+    expect(read('src/lib/seo/gate/read.ts')).toMatch(/valuePageVerdict\(/)
+  })
+
+  it('the sitemap lists value pages through the same valuePageVerdict', () => {
+    const builder = read('src/lib/seo/sitemap-builder.ts')
+    expect(builder).toMatch(/valuePageVerdict\(/)
+    expect(builder).toMatch(/valueItemListed\(input, game, r\.slug, true\)/)
+    expect(builder).toMatch(/valueItemListed\(input, i\.gameSlug, i\.slug, isValueItemIndexable/)
+  })
+
+  it('the page date, dateModified and sitemap lastmod all come from price_moved_at', () => {
+    for (const f of [
+      ITEM_PAGE,
+      'src/app/(marketplace)/[gameSlug]/values/[itemSlug]/_AdoptMePetPage.tsx',
+      'src/app/(marketplace)/[gameSlug]/values/_generic/ValueItemPage.tsx',
+      'src/app/(marketplace)/[gameSlug]/values/_generic/ValueListItemPage.tsx',
+    ]) {
+      const src = read(f)
+      expect(src, f).toMatch(/readValuePageEvidence\(/)
+      expect(src, f).toMatch(/dateModified: priceMovedAt/)
+      expect(src, f).toMatch(/updatedAt: priceMovedAt/)
+    }
+    expect(read('src/lib/seo/sitemap-builder.ts')).toMatch(/priceMovedAt/)
+  })
+})

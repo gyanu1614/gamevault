@@ -286,6 +286,35 @@ export function checkPage(pageFile) {
   }
 }
 
+/**
+ * Crawler-facing metadata routes: the sitemap index, its per-section files and
+ * robots.txt. They are read by every crawl, so they follow R1 (no cookie client
+ * in the graph) and R3 (no opt-out), and the sitemaps must carry a numeric
+ * `revalidate` (static, hourly) — growth point 28 moved them off the cookie client.
+ */
+export const CRAWLER_ROUTE_FILES = ['sitemap.xml/route.ts', 'sitemaps/[file]/route.ts', 'robots.ts']
+
+export function checkCrawlerRoutes() {
+  return CRAWLER_ROUTE_FILES.map((rel) => {
+    const file = join(APP, rel)
+    if (!existsSync(file)) return { route: rel, violations: [{ rule: 'R0', detail: 'crawler route file is missing' }], grandfathered: [] }
+    const src = stripComments(read(file))
+    const violations = []
+    const edges = cookieEdges(file)
+    const mixed = newMixedActionModules(file)
+    if (edges.length || mixed.length) {
+      violations.push({ rule: 'R1', detail: [...edges.map((e) => `cookie client via ${e}`), ...mixed.map((m) => `mixed action module ${m}`)].join('; ') })
+    }
+    if (/export\s+const\s+dynamic\s*=\s*['"]force-dynamic['"]/.test(src) || /unstable_noStore|\bnoStore\(|\bconnection\(\)/.test(src)) {
+      violations.push({ rule: 'R3', detail: 'opts out of static rendering' })
+    }
+    if (rel.startsWith('sitemap') && !/export\s+const\s+revalidate\s*=\s*\d+/.test(src)) {
+      violations.push({ rule: 'R5', detail: 'sitemap without a numeric revalidate' })
+    }
+    return { route: rel, violations, grandfathered: [] }
+  })
+}
+
 export function checkAll() {
   return listPages(APP)
     .filter((p) => isPublicRoute(appRelative(p)))
@@ -311,7 +340,7 @@ export function staleGrandfathers(results) {
 
 function main() {
   const results = checkAll()
-  const failing = results.filter((r) => r.violations.length)
+  const failing = [...results, ...checkCrawlerRoutes()].filter((r) => r.violations.length)
   const stale = staleGrandfathers(results)
   const report = process.argv.includes('--report')
 

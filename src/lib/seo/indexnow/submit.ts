@@ -90,39 +90,62 @@ export async function submitIndexNow(input: string[], opts: SubmitOptions): Prom
   }
   if (urls.length === 0) return { ...result, skipped: 'empty' }
 
-  const doFetch = opts.fetchImpl ?? fetch
-  const host = new URL(siteUrl).hostname
   const total = Math.ceil(urls.length / CHUNK_SIZE)
 
   for (let i = 0; i < total; i++) {
     const chunk = urls.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
     const label = `[indexnow] reason=${opts.reason} chunk=${i + 1}/${total} urls=${chunk.length}`
     result.chunks += 1
-    try {
-      const res = await doFetch(INDEXNOW_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({
-          host,
-          key: INDEXNOW_KEY,
-          keyLocation: `${siteUrl}/${INDEXNOW_KEY}.txt`,
-          urlList: chunk,
-        }),
-        // Cap the wait so a slow endpoint cannot stall the caller.
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      })
-      // 200 = accepted, 202 = accepted, key validation pending.
-      if (res.status === 200 || res.status === 202) {
-        result.submitted += chunk.length
-        log(`${label} status=${res.status}`)
-      } else {
-        result.failures += 1
-        log(`${label} status=${res.status} FAILED`)
-      }
-    } catch (e) {
+    const r = await postIndexNowChunk(chunk, { fetchImpl: opts.fetchImpl, siteUrl })
+    if (r.ok) {
+      result.submitted += chunk.length
+      log(`${label} status=${r.status}`)
+    } else {
       result.failures += 1
-      log(`${label} status=error FAILED (${(e as Error).message})`)
+      log(`${label} status=${r.status ?? 'error'} FAILED${r.error ? ` (${r.error})` : ''}`)
     }
   }
   return result
+}
+
+export interface ChunkResult {
+  ok: boolean
+  /** HTTP status; null when the request itself failed (timeout, network). */
+  status: number | null
+  /** Seconds from a 429's Retry-After header. */
+  retryAfterSec: number | null
+  error: string | null
+}
+
+/**
+ * One POST of at most CHUNK_SIZE already-normalised URLs. The building block of
+ * submitIndexNow and of the change-log sender (lib/seo/events), which needs the
+ * per-chunk outcome to retry. Never throws.
+ */
+export async function postIndexNowChunk(
+  urls: string[],
+  opts: { fetchImpl?: typeof fetch; siteUrl?: string } = {},
+): Promise<ChunkResult> {
+  const siteUrl = opts.siteUrl ?? SITE_URL
+  const host = new URL(siteUrl).hostname
+  try {
+    const res = await (opts.fetchImpl ?? fetch)(INDEXNOW_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ host, key: INDEXNOW_KEY, keyLocation: `${siteUrl}/${INDEXNOW_KEY}.txt`, urlList: urls }),
+      // Cap the wait so a slow endpoint cannot stall the caller.
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+    // 200 = accepted, 202 = accepted, key validation pending.
+    const ok = res.status === 200 || res.status === 202
+    const retryAfter = Number(res.headers?.get?.('retry-after'))
+    return {
+      ok,
+      status: res.status,
+      retryAfterSec: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+      error: ok ? null : `HTTP ${res.status}`,
+    }
+  } catch (e) {
+    return { ok: false, status: null, retryAfterSec: null, error: (e as Error).message }
+  }
 }
