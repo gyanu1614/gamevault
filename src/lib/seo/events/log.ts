@@ -7,11 +7,11 @@ import { CHUNK_SIZE, normaliseUrls, postIndexNowChunk, type ChunkResult } from '
  * trend-radar approval, a deploy that changed a static page's date — writes a
  * row here instead of pinging IndexNow itself. recordAndFlush tries the
  * delivery at once (so a page usually reaches IndexNow within seconds) and the
- * daily cron /api/cron/seo-indexnow retries whatever failed, in batches, so a
+ * hourly /api/cron/seo-indexnow run (.github/workflows/seo-hourly.yml) retries whatever failed, in batches, so a
  * ping is never lost to a slow endpoint or a failed request (it used to be
  * fire-and-forget from inside each action).
  *
- * The daily Google check fills gsc_state / last_inspected on the same rows.
+ * The Google check (hourly batches) fills gsc_state / last_inspected on the same rows.
  */
 export interface UrlEventRow {
   id: number
@@ -184,7 +184,7 @@ export function supabaseUrlEventStore(db: Db): UrlEventStore {
 /**
  * Log, then try to deliver right away: the due rows (these and any earlier
  * ones still pending) go out now, in production. A failed delivery leaves them
- * pending for the daily /api/cron/seo-indexnow retry — the log row is the
+ * pending for the hourly /api/cron/seo-indexnow retry — the log row is the
  * guarantee, the immediate attempt is only for speed. Awaited, never throws.
  */
 export async function recordAndFlush(
@@ -206,7 +206,7 @@ export async function recordAndFlush(
     })
     return { ...logged, sent: r.sent }
   } catch (e) {
-    console.error(`[seo-events] immediate delivery failed (the daily cron retries): ${(e as Error).message}`)
+    console.error(`[seo-events] immediate delivery failed (the hourly retry picks it up): ${(e as Error).message}`)
     return { ...logged, sent: 0 }
   }
 }

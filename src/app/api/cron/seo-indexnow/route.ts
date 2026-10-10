@@ -8,7 +8,8 @@ import { runPostDeployStep } from '@/lib/seo/events/deploy'
 import { loadSitemapSections } from '@/lib/seo/sitemap-sections'
 
 /**
- * Every 10 minutes: deliver the SEO change log to IndexNow.
+ * Hourly (.github/workflows/seo-hourly.yml; vercel.json daily is the backstop):
+ * deliver the SEO change log to IndexNow.
  *
  *  1. Post-deploy step (first run of a new deployment): pages whose date lives
  *     in code and moved since the last diff are logged (lib/seo/events/deploy).

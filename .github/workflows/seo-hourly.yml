@@ -1,0 +1,36 @@
+# Hourly SEO pipeline (growth point 28). Lives here because vercel.json crons
+# are once-daily in this repo; the vercel.json entries for /api/cron/seo-indexnow
+# (05:40) and /api/cron/seo-gsc (06:20) are the backstop, this is the real cadence.
+#  - seo-indexnow: retries unsent/failed IndexNow rows within the hour, and runs
+#    the post-deploy step within an hour of a release.
+#  - seo-gsc: one ~4-minute URL Inspection batch per run. The route caps the day
+#    at 1,500 inspections (Google allows 2,000) and pulls Search Analytics once a
+#    day, so 24 runs cover the whole sitemap in about a day instead of a week.
+# Both handlers are idempotent; an overlapping run does nothing twice.
+name: SEO Hourly
+on:
+  schedule:
+    - cron: '25 * * * *'
+  workflow_dispatch: {}
+concurrency:
+  group: seo-hourly
+  cancel-in-progress: false
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Deliver the SEO change log to IndexNow
+        run: |
+          code=$(curl -s -o /tmp/out -w "%{http_code}" -m 90 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/seo-indexnow)
+          cat /tmp/out
+          [ "$code" = "200" ] || exit 1
+      - name: Google URL Inspection batch
+        run: |
+          code=$(curl -s -o /tmp/out -w "%{http_code}" -m 310 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://dropmarket.gg/api/cron/seo-gsc)
+          cat /tmp/out
+          [ "$code" = "200" ] || exit 1

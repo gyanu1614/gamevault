@@ -35,6 +35,13 @@ const SUB_DAILY: Record<string, { maxPerDay: number; why: string }> = {
     maxPerDay: 96,
     why: 'money path — provider cancel outbox + stuck webhook events',
   },
+  'seo-hourly.yml': {
+    // SEO pipeline (growth point 28): IndexNow retries + post-deploy step within
+    // the hour, and one bounded URL Inspection batch per run (the route caps the
+    // day at 1,500, Google's limit is 2,000). Revalidates nothing.
+    maxPerDay: 24,
+    why: 'SEO change log delivery + Google index check: a daily run covered ~1/7 of the sitemap',
+  },
   'expire-pending-payments.yml': {
     // Money path: an unpaid order holds inventory until it is expired, so a
     // 24 h window would strand stock for a day. Not a cache/CPU cost — the
