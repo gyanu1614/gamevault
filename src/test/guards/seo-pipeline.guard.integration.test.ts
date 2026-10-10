@@ -119,8 +119,13 @@ describe.skipIf(!hasEnv)('SEO pipeline tables (integration)', () => {
     const now = '2026-10-09T12:00:00.000Z'
     const first = await refreshValueEvidence(svc, GAME, { now, record, siteUrl: SITE })
     expect(first?.moved).not.toContain(itemSlug)
+    // Never stored before + priced: announced as a new page.
+    expect(record).toHaveBeenCalledWith(expect.arrayContaining([`/${GAME}/values/${itemSlug}`]), { reason: `value-new:${GAME}` })
+    record.mockClear()
     const { data: ev } = await svc.from('seo_value_evidence').select('*').eq('game_slug', GAME).eq('item_slug', itemSlug).single()
     expect(ev).toMatchObject({ observations: 9, history_days: 8, passes_gate: true, price_moved_at: `${days(8)[5]}T00:00:00+00:00` })
+    // First seen = the earliest history day (migration 20261010151051).
+    expect((ev as any).first_seen_at).toBe(`${days(8)[0]}T00:00:00+00:00`)
     expect(Number((ev as any).value_usd)).toBe(12)
 
     const again = await refreshValueEvidence(svc, GAME, { now: '2026-10-09T13:00:00.000Z', record, siteUrl: SITE })

@@ -65,3 +65,15 @@ The vercel.json entries below are the daily backstop (repo rule: vercel.json sta
 
 Switch the gate to report on `/admin/seo` (instant). Reverting the code is safe with the tables in
 place; the tables can stay.
+
+## Follow-up release (PR #184)
+
+Migration `20261010151051_seo_value_first_seen.sql` adds `seo_value_evidence.first_seen_at`
+(nullable, additive). **`db push` BEFORE the deploy** (the new code selects the column; without it
+pages and sitemap fail open to report mode). After the deploy, run `seo-evidence` once to backfill it.
+
+- A value page under 7 days old passes the gate on 5+ offers alone (owner: a new game's pages are
+  not hidden for being new); after its first week it needs 7 days of history too.
+- A page priced for the first time is logged as `value-new:<game>`, so new item pages reach
+  IndexNow on day one.
+- `seo-gsc` stops on Google's "Quota exceeded" 429 instead of retrying into it.

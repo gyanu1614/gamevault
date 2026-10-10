@@ -277,3 +277,15 @@ describe('sections', () => {
     expect(sections.get('hubs')!.map((e) => e.url)).toContain(`${BASE}/adopt-me/values`)
   })
 })
+
+describe('a brand-new value page with enough offers is listed even with the gate on (owner 2026-10-10)', () => {
+  it('lists a 1-day-old MM2 page with 63 offers, and drops it once it is old without the history', () => {
+    const evidence = new Map(fixture().valueGate.evidence)
+    const young = { ...evidence.get('murder-mystery-2/harvester')!, historyDays: 1, firstSeenAt: new Date(Date.now() - 86_400_000).toISOString() }
+    evidence.set('murder-mystery-2/harvester', young)
+    const gate = { valueGate: { ...fixture().valueGate, mode: 'enforce' as const, evidence } }
+    expect(urls(gate)).toContain(`${BASE}/murder-mystery-2/values/harvester`)
+    evidence.set('murder-mystery-2/harvester', { ...young, firstSeenAt: '2026-09-01T00:00:00Z' })
+    expect(urls(gate)).not.toContain(`${BASE}/murder-mystery-2/values/harvester`)
+  })
+})

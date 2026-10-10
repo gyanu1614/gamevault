@@ -93,6 +93,7 @@ export interface ValueEvidenceRow {
   valueUsd: number | null
   priceMovedAt: string | null
   isProtected: boolean
+  firstSeenAt?: string | null
 }
 
 /** One sitemap file per section, so Search Console shows the index rate per page type. */

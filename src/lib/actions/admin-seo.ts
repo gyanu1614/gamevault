@@ -91,8 +91,8 @@ export async function getSeoHealth(): Promise<{ ok: true; data: SeoHealth } | { 
     const since24h = new Date(Date.now() - 86_400_000).toISOString()
     const [settings, evidence, overrides, latestDay, alerts, pending, failed, sent, recentFailed, pipelinePages] = await Promise.all([
       db.from('seo_settings').select('gate_mode, planned_enforce_on, enforced_since').eq('id', 1).maybeSingle(),
-      fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | null; is_protected: boolean }>((f, t) =>
-        db.from('seo_value_evidence').select('game_slug, item_slug, observations, history_days, value_usd, is_protected').order('game_slug').order('item_slug').range(f, t),
+      fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | null; is_protected: boolean; first_seen_at: string | null }>((f, t) =>
+        db.from('seo_value_evidence').select('game_slug, item_slug, observations, history_days, value_usd, is_protected, first_seen_at').order('game_slug').order('item_slug').range(f, t),
       ),
       db.from('seo_index_overrides').select('path, verdict').limit(1000),
       db.from('seo_section_daily').select('day').order('day', { ascending: false }).limit(1).maybeSingle(),
@@ -113,7 +113,7 @@ export async function getSeoHealth(): Promise<{ ok: true; data: SeoHealth } | { 
       const g = games.get(e.game_slug) ?? { game: e.game_slug, pages: 0, passing: 0, wouldHide: 0, protectedFailing: 0 }
       g.pages += 1
       const path = `/${e.game_slug}/values/${e.item_slug}`
-      const passes = passesValueDataGate({ valueUsd: e.value_usd == null ? null : Number(e.value_usd), observations: e.observations, historyDays: e.history_days })
+      const passes = passesValueDataGate({ valueUsd: e.value_usd == null ? null : Number(e.value_usd), observations: e.observations, historyDays: e.history_days, firstSeenAt: e.first_seen_at })
       const override = overrideBy.get(path) ?? null
       if (passes) g.passing += 1
       else if (e.is_protected) {
@@ -174,8 +174,8 @@ export async function getSeoHealth(): Promise<{ ok: true; data: SeoHealth } | { 
 /** Value pages whose verdict changes when the gate mode flips (fail the gate, not protected, no owner decision). */
 async function flippingPaths(db: any): Promise<string[]> {
   const [evidence, overrides, pipelinePages] = await Promise.all([
-    fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | null; is_protected: boolean }>((f, t) =>
-      db.from('seo_value_evidence').select('game_slug, item_slug, observations, history_days, value_usd, is_protected').order('game_slug').order('item_slug').range(f, t),
+    fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | null; is_protected: boolean; first_seen_at: string | null }>((f, t) =>
+      db.from('seo_value_evidence').select('game_slug, item_slug, observations, history_days, value_usd, is_protected, first_seen_at').order('game_slug').order('item_slug').range(f, t),
     ),
     db.from('seo_index_overrides').select('path').limit(1000),
     pipelinePageKeys(db),
@@ -183,7 +183,7 @@ async function flippingPaths(db: any): Promise<string[]> {
   const decided = new Set(((overrides.data ?? []) as { path: string }[]).map((o) => o.path))
   return evidence
     .filter((e) => !isPipeline(e.game_slug) || pipelinePages.has(`${e.game_slug}/${e.item_slug}`))
-    .filter((e) => !e.is_protected && !passesValueDataGate({ valueUsd: e.value_usd == null ? null : Number(e.value_usd), observations: e.observations, historyDays: e.history_days }))
+    .filter((e) => !e.is_protected && !passesValueDataGate({ valueUsd: e.value_usd == null ? null : Number(e.value_usd), observations: e.observations, historyDays: e.history_days, firstSeenAt: e.first_seen_at }))
     .map((e) => `/${e.game_slug}/values/${e.item_slug}`)
     .filter((p) => !decided.has(p))
 }
