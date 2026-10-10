@@ -166,3 +166,55 @@ describe('DB-heavy schedules are hours apart', () => {
     expect(dow('db-backup.yml')).not.toBe(dow('adopt-me-weekly-catalog.yml'))
   })
 })
+
+describe('schedule conditions match the crons they gate', () => {
+  /**
+   * A job gated on `github.event.schedule == '<cron>'` silently never runs when
+   * the cron is re-timed and the condition is not: trend-radar collect was
+   * skipped from 2026-09-23 to 2026-10-09 because its `if:` still named the
+   * old every-6-hours cron.
+   */
+  it('every github.event.schedule comparison names a cron in the same file', () => {
+    const stale: string[] = []
+    for (const file of readdirSync(WF).filter((f) => /\.ya?ml$/.test(f))) {
+      const source = read(file)
+      const crons = cronsOf(source)
+      for (const m of source.matchAll(/github\.event\.schedule\s*==\s*'([^']+)'/g)) {
+        if (!crons.includes(m[1])) stale.push(`${file}: '${m[1]}' is not one of ${JSON.stringify(crons)}`)
+      }
+    }
+    expect(stale).toEqual([])
+  })
+})
+
+describe('Vercel crons that read the day’s prices run after pricing', () => {
+  /**
+   * Vercel crons fire on time; GitHub starts Values Pricing Daily 5–7 h late
+   * and it may run its full timeout chain. snapshot-sab-prices writes the day's
+   * (uncorrectable) history row and discord-daily-post posts the day's movers
+   * from it, so both must start after pricing's latest possible end, on the
+   * same UTC day, snapshot first.
+   */
+  const MAX_DELAY_MINUTES = 7 * 60
+  const PRICING_MINUTES = 60 + 150 + 90
+  const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+    crons: { path: string; schedule: string }[]
+  }
+  const at = (path: string) => {
+    const entry = vercel.crons.find((c) => c.path === path)
+    expect(entry, path).toBeDefined()
+    const [minute, hour, ...rest] = entry!.schedule.split(' ')
+    expect(rest, `${path} runs daily`).toEqual(['*', '*', '*'])
+    return Number(hour) * 60 + Number(minute)
+  }
+
+  it('snapshot then Discord post, both after the latest pricing end', () => {
+    const [pm, ph] = cronsOf(read('values-pricing-daily.yml'))[0].split(' ').map(Number)
+    const pricingEnd = ph * 60 + pm + MAX_DELAY_MINUTES + PRICING_MINUTES
+    const snapshot = at('/api/cron/snapshot-sab-prices')
+    const post = at('/api/cron/discord-daily-post')
+    expect(snapshot).toBeGreaterThan(pricingEnd)
+    expect(post).toBeGreaterThan(snapshot)
+    expect(post).toBeLessThan(24 * 60)
+  })
+})

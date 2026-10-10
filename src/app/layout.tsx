@@ -13,7 +13,7 @@ import { LayoutWrapper } from '@/components/layout-wrapper'
 import { FooterGameLinks } from '@/components/footer-game-links'
 import { Toaster } from 'sonner'
 import { DeferredSocialProof } from '@/components/marketplace/DeferredSocialProof'
-import { Analytics } from "@vercel/analytics/next"
+import { VercelAnalytics } from "@/components/analytics/VercelAnalytics"
 
 // Two text faces, split by surface:
 //   • MARKETPLACE (storefront, everything by default) → Inter, exposed as
@@ -193,7 +193,7 @@ export default function RootLayout({
           />
           {/* Social proof widgets: mounted once the page is idle, not in the first-load window. */}
           <DeferredSocialProof />
-          <Analytics />
+          <VercelAnalytics />
         </Providers>
       </body>
     </html>

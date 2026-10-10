@@ -1,37 +1,41 @@
 /**
- * Listing Detail Page
+ * Listing Detail Page — /fortnite/accounts/rare-og-account-abc123
  *
- * Individual listing page with full details and Schema.org markup
- * SEO-friendly URL: /fortnite/accounts/rare-og-account-abc123 (no /marketplace prefix)
+ * Static-first (ISR) since 2026-10-09 (Supabase usage cut). It used to read
+ * the session (cookie client + auth.getUser) on every hit, so each visit —
+ * people and crawlers alike — cost a full render and ~8–10 database reads.
+ * Now:
+ *   - public reads only, on the tagged listing read clients: a listing
+ *     mutation (revalidateListingSurfaces → `listings:category:<id>`) refreshes
+ *     the page and its data; 24 h is the safety net;
+ *   - ACTIVE listings only. The owner/admin preview of a pending, rejected or
+ *     paused listing lives at /listing-preview/[id] (session client, never
+ *     cached); /listings/[id] and the seller/admin links send them there;
+ *   - the viewer (own-listing controls, buy flow) is resolved in the client.
+ * Rendered on first request and cached (generateStaticParams → []), like the
+ * value item pages; listings are noindex, so none are prerendered at build.
  */
 
 import { listingMeta } from '@/lib/seo/listing-meta'
-import { sellerRatingPercent, sellerShopSlug } from '@/lib/seller/identity'
-import { SITE_URL } from '@/config/site'
-import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
-import React, { Suspense, cache } from 'react'
+import { Suspense, cache } from 'react'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import ListingDetailSkeleton from './_ListingDetailSkeleton'
-import { createClient } from '@/lib/supabase/server'
-import { getTemplateFields } from '@/lib/templates'
-import ViewTracker from '@/components/listings/ViewTracker'
-import ListingDetailClient, { type ListingForDetail } from './_ListingDetailClient'
-import { BlogRail } from '@/components/blog/BlogRail'
-import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
-import { partitionSameItem } from '../_offerMatching'
-import type { ItemOffer, ItemsTaxonomy } from '../_itemsTypes'
+import { LISTING_DETAIL_SELECT, ListingDetailBody } from './_ListingDetailBody'
 import { getActiveGame, getEnabledCategory } from '../_routeGate'
-import { createCategoryListingsReadClient } from '@/lib/listings/read-client'
+import {
+  createCategoryListingsReadClient,
+  createHomeListingsReadClient,
+} from '@/lib/listings/read-client'
 import { currencyListingRedirect, isCurrencyCategoryType } from '@/lib/listings/url'
 import { seoMeta } from '@/lib/seo/fit'
 
-// V15p — Empty taxonomy for ad-hoc ItemOffer shaping in the similar-
-// offers carousel. The detail page doesn't need the filter chain, so we
-// pass an empty one to the shaper. (The full taxonomy is only needed by
-// the /items page filter UI.)
-const EMPTY_ITEMS_TAXONOMY: ItemsTaxonomy = { filters: [], categories: [], mutations: [] }
+export const revalidate = 86400
+
+export async function generateStaticParams() {
+  return []
+}
 
 interface PageProps {
   params: Promise<{
@@ -48,7 +52,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * URL 308s to the game's currency page with that seller's offer pinned
  * (`?seller=&offer=`, read client-side by the currency page). Decided from the
  * URL's (game, category) pair — two cached anon reads shared with the category
- * route gate — BEFORE the cookie client or any heavy read, and in both
+ * route gate — BEFORE any heavy read, and in both
  * generateMetadata and the route so the redirect lands before the shell
  * streams (a real 308, not a client hop). Item/account listings fall through
  * unchanged. A dead currency listing still redirects, to the plain page.
@@ -63,9 +67,8 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   const category = await getEnabledCategory(game.id, categorySlug)
   if (!category || !isCurrencyCategoryType(category.type)) return null
 
-  // Runs before the cookie client, so Next caches this read — with no window
-  // on this route. Tagged with the category so a listing mutation (status,
-  // seller rename) refreshes it (lib/listings/read-client).
+  // Tagged with the category so a listing mutation (status, seller rename)
+  // refreshes it (lib/listings/read-client).
   const supabase = createCategoryListingsReadClient([category.id])
   const SELECT = 'id, seller:public_profiles!listings_seller_id_fkey(username, shop_slug)'
   const scoped = (column: 'slug' | 'id', value: string) =>
@@ -88,48 +91,86 @@ const resolveCurrencyRedirect = cache(async function resolveCurrencyRedirect(
   })
 })
 
-async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
+type PublicListing =
+  | { kind: 'listing'; listing: any }
+  | { kind: 'redirect'; href: string }
+  | null
+
+/**
+ * The ACTIVE listing at this URL, or where it really lives, or null (404).
+ *
+ *   1. The URL's own (game, category): one read, tagged with that category.
+ *   2. Otherwise the listing by slug (or id) anywhere — tagged with the tag
+ *      every listing mutation fires, so a cached 404 clears when it goes live.
+ *      A listing whose canonical URL differs (alias segment, id instead of
+ *      slug) 308s there; one whose game/category is not live renders here, as
+ *      it always has (a game the public cannot see at all is a 404).
+ *
+ * `cache()` shares it between generateMetadata, the route gate and the body.
+ */
+const getPublicListing = cache(async function getPublicListing(
+  gameSlug: string,
+  categorySlug: string,
+  listingSlug: string,
+): Promise<PublicListing> {
+  const byId = UUID_RE.test(listingSlug)
+
+  const game = await getActiveGame(gameSlug)
+  const category = game ? await getEnabledCategory(game.id, categorySlug) : null
+  if (category) {
+    const supabase = createCategoryListingsReadClient([category.id])
+    const inCategory = (column: 'slug' | 'id') =>
+      supabase
+        .from('listings')
+        .select(LISTING_DETAIL_SELECT)
+        .eq(column, listingSlug)
+        .eq('game_category_id', category.id)
+        .eq('status', 'active')
+        .maybeSingle()
+    let { data } = (await inCategory('slug')) as { data: any }
+    if (!data && byId) data = ((await inCategory('id')) as { data: any }).data
+    if (data) return { kind: 'listing', listing: data }
+  }
+
+  const anywhere = createHomeListingsReadClient()
+  const anyCategory = (column: 'slug' | 'id') =>
+    anywhere
+      .from('listings')
+      .select(LISTING_DETAIL_SELECT)
+      .eq(column, listingSlug)
+      .eq('status', 'active')
+      .maybeSingle()
+  let { data: listing } = (await anyCategory('slug')) as { data: any }
+  if (!listing && byId) listing = ((await anyCategory('id')) as { data: any }).data
+  // A game or category the public cannot read (RLS hides inactive games) has
+  // nothing to render the page with: 404, not a crash in the body.
+  if (!listing?.game?.slug || !listing.category?.slug) return null
+
+  const canonical = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
+  if (canonical !== `/${gameSlug}/${categorySlug}/${listingSlug}`) {
+    return { kind: 'redirect', href: canonical }
+  }
+  return { kind: 'listing', listing }
+})
+
+/**
+ * Redirects (currency → currency page, alias → canonical) and the 404 are
+ * decided here as well as in the route: metadata resolves before the shell
+ * flushes, so this is what makes them a real 308 / 404 (not a 200 with a
+ * "not found" body inside the Suspense boundary).
+ */
+async function resolveOrExit(params: PageProps['params']) {
   const { gameSlug, categorySlug, listingSlug } = await params
   const currencyTarget = await resolveCurrencyRedirect(gameSlug, categorySlug, listingSlug)
   if (currencyTarget) permanentRedirect(currencyTarget)
-  const supabase = await createClient()
+  const result = await getPublicListing(gameSlug, categorySlug, listingSlug)
+  if (!result) notFound()
+  if (result.kind === 'redirect') permanentRedirect(result.href)
+  return { gameSlug, categorySlug, listing: result.listing }
+}
 
-  let { data: listing } = await supabase
-    .from('listings')
-    .select(`
-      *,
-      seller:public_profiles!listings_seller_id_fkey(is_test),
-      game:games!listings_game_id_fkey(name),
-      category:game_categories!listings_game_category_id_fkey(name)
-    `)
-    .eq('slug', listingSlug)
-    .single() as any
-
-  if (!listing) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidRegex.test(listingSlug)) {
-      const result = await supabase
-        .from('listings')
-        .select(`
-          *,
-          game:games!listings_game_id_fkey(name),
-          category:game_categories!listings_game_category_id_fkey(name)
-        `)
-        .eq('id', listingSlug)
-        .single() as any
-      listing = result.data
-    }
-  }
-
-  if (!listing) {
-    // SEO/soft-404 — bail out of METADATA, not just the body. `loading.tsx`
-    // on the parent segment puts this page inside a Suspense boundary, so the
-    // `notFound()` in the page component fires after the shell has streamed
-    // with a 200 (the response answered `200 + "Listing Not Found" +
-    // index,follow`). Metadata resolves before the shell flushes, so throwing
-    // here is what actually produces a real 404 + noindex.
-    notFound()
-  }
+async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
+  const { listing } = await resolveOrExit(params)
 
   // Seller text cleaned for the results snippet (lib/seo/listing-meta).
   const meta = listingMeta({
@@ -144,12 +185,11 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     // Listings are never indexed (owner, 2026-10-06, after the competitor
     // audit: GameBoost and iGitems noindex seller listings). They are short-
     // lived and seller-written; the indexed category page shows them. `follow`
-    // keeps their links (seller shop, category, game) crawlable. A non-active
-    // or test-seller listing also drops follow.
-    robots:
-      listing.status !== 'active' || listing.seller?.is_test
-        ? { index: false, follow: false }
-        : { index: false, follow: true },
+    // keeps their links (seller shop, category, game) crawlable. A test-seller
+    // listing also drops follow. (Only active listings render here.)
+    robots: listing.seller?.is_test
+      ? { index: false, follow: false }
+      : { index: false, follow: true },
     // Root template appends " | DropMarket".
     title: meta.title,
     description: meta.description,
@@ -168,367 +208,25 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   }
 }
 
-// Wrapped in React `cache()` so the route gate (which must resolve the
-// listing BEFORE anything streams, to decide 200 vs 404) and the page body
-// share a single execution per request — one set of queries, and the view
-// counter below still increments exactly once.
-const getListing = cache(async function getListing(listingSlug: string) {
-  const supabase = await createClient()
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-  const SELECT = `
-    *,
-    seller:public_profiles!listings_seller_id_fkey(*),
-    game:games!listings_game_id_fkey(*),
-    category:game_categories!listings_game_category_id_fkey(*)
-  `
-
-  const fetchOne = async (activeOnly: boolean) => {
-    let query = supabase.from('listings').select(SELECT).eq('slug', listingSlug)
-    if (activeOnly) query = query.eq('status', 'active')
-    let { data: row } = await (query.single() as any)
-
-    if (!row && uuidRegex.test(listingSlug)) {
-      let byId = supabase.from('listings').select(SELECT).eq('id', listingSlug)
-      if (activeOnly) byId = byId.eq('status', 'active')
-      const result = await (byId.single() as any)
-      row = result.data
-    }
-    return row ?? null
-  }
-
-  // Public path: active listings only.
-  let listing = await fetchOne(true)
-  let isPreview = false
-
-  if (!listing) {
-    // Owner/admin preview: re-query WITHOUT the status filter using the
-    // same cookie client — RLS restricts non-active rows to the listing's
-    // owner (seller SELECT policy) and admins (is_admin FOR ALL policy),
-    // so anonymous/other users still miss and 404 below.
-    listing = await fetchOne(false)
-    if (!listing) return null
-    isPreview = listing.status !== 'active'
-  }
-
-  // Views are counted by <ViewTracker> once the page opens in a browser
-  // (lib/actions/listing-views) — not here, where crawlers, prefetches and
-  // previews would count too.
-
-  return { listing, isPreview }
-})
-
 /**
- * Seller stats for the rail. `total_sales` comes from public_profiles (the
- * counter every listing card shows) — this is a public page, so its client
- * cannot read `orders`, and a count there silently returned 0 for every
- * seller (2026-09-28: a seller with a completed sale showed "0 sold" here
- * and "1" on the card). Only the active-listings count is queried.
- */
-async function getSellerStats(sellerId: string) {
-  const supabase = await createClient()
-  const { count: activeListings } = await supabase
-    .from('listings')
-    .select('id', { count: 'exact' })
-    .eq('seller_id', sellerId)
-    .eq('status', 'active')
-    .limit(1)
-  return { activeListings: activeListings || 0 }
-}
-
-/**
- * V15k — Shape a raw listings row into the compact `MiniListing` the
- * detail-page carousels consume.
- */
-function shapeMini(row: any) {
-  const seller = row.seller ?? {}
-  return {
-    id: row.id as string,
-    slug: (row.slug && String(row.slug).trim()) || row.id,
-    title: row.title as string,
-    price: Number(row.price ?? 0),
-    image: Array.isArray(row.images) && row.images.length > 0 ? (row.images[0] as string) : null,
-    seller: {
-      username: seller.username ?? 'seller',
-      shopName: seller.shop_name ?? null,
-      shopSlug: sellerShopSlug(seller),
-      avatarUrl: seller.avatar_url ?? null,
-      verified: !!seller.is_verified,
-      ratingPercent: sellerRatingPercent(seller),
-      totalSales: Number(seller.total_sales ?? 0),
-      reviewCount: Number(seller.total_reviews ?? 0),
-      tier: seller.seller_tier ?? null,
-    },
-    categorySlug: row.category?.slug ?? 'items',
-  }
-}
-
-/**
- * V15k — Carousel listing card row. Selects N active listings for a
- * given filter (same seller, same category) in a single query.
- */
-async function getCarouselListings({
-  gameId,
-  categoryId,
-  sellerId,
-  excludeListingId,
-  limit = 8,
-}: {
-  gameId?: string
-  categoryId?: string
-  sellerId?: string
-  excludeListingId: string
-  limit?: number
-}) {
-  const supabase = await createClient()
-  let query: any = supabase
-    .from('listings')
-    .select(`
-      id, slug, title, price, original_price, delivery_time, quantity,
-      is_unlimited, description, images, template_data, status,
-      seller:public_profiles!listings_seller_id_fkey(
-        id, username, shop_name, shop_slug, avatar_url, seller_tier,
-        seller_rating, total_sales, total_reviews, is_verified
-      ),
-      category:game_categories!listings_game_category_id_fkey(slug, name)
-    `)
-    .eq('status', 'active')
-    .neq('id', excludeListingId)
-    .order('updated_at', { ascending: false })
-    .limit(limit)
-  if (gameId) query = query.eq('game_id', gameId)
-  if (categoryId) query = query.eq('game_category_id', categoryId)
-  if (sellerId) query = query.eq('seller_id', sellerId)
-  const { data } = await query
-  return (data ?? []) as any[]
-}
-
-/**
- * Route gate — decides 200 vs 404 BEFORE any HTML streams.
- *
- * The status code is fixed the moment the shell flushes, so the existence
- * check cannot live behind a Suspense boundary (that was the soft-404 bug:
- * a dead listing answered `200 + "Listing Not Found" + index,follow`).
- * This component awaits the listing first — no boundary above it — so
- * `notFound()` still reaches the response. The `cache()` on `getListing`
- * makes the body's identical call free.
- *
- * The skeleton is preserved by wrapping the (slow) body in Suspense here
- * instead of in a route-level `loading.tsx`.
+ * Route gate — decides 308 / 404 BEFORE any HTML streams (the status code is
+ * fixed when the shell flushes), then the body renders inside Suspense with
+ * the skeleton as its fallback.
  */
 export default async function ListingDetailRoute({ params }: PageProps) {
-  const { gameSlug, categorySlug, listingSlug } = await params
-  const currencyTarget = await resolveCurrencyRedirect(gameSlug, categorySlug, listingSlug)
-  if (currencyTarget) permanentRedirect(currencyTarget)
-  if (!(await getListing(listingSlug))) notFound()
+  const { gameSlug, categorySlug, listing } = await resolveOrExit(params)
 
   return (
     <GameHeroBackdrop gameSlug={gameSlug} size="market">
       <Suspense fallback={<ListingDetailSkeleton />}>
-        <ListingDetailPage params={params} />
+        <ListingDetailBody
+          listing={listing}
+          isPreview={false}
+          gameSlug={gameSlug}
+          categorySlug={categorySlug}
+        />
       </Suspense>
     </GameHeroBackdrop>
-  )
-}
-
-async function ListingDetailPage({ params }: PageProps) {
-  const { gameSlug, categorySlug, listingSlug } = await params
-  const listingResult = await getListing(listingSlug)
-
-  if (!listingResult) notFound()
-  const { listing, isPreview } = listingResult
-
-  const supabase = await createClient()
-  const { data: { user: viewer } } = await supabase.auth.getUser()
-
-  // V28 — Items-type categories get the same-item matching treatment
-  // (Other Sellers). Accounts are one-of-a-kind and currency has its own
-  // page type, so those keep the plain relevance carousel.
-  const isItemsCategory =
-    listing.category?.type === 'items' ||
-    listing.category?.slug === 'items'
-
-  const [sellerStats, candidates, itemsTaxonomy] = await Promise.all([
-    getSellerStats(listing.seller.id),
-    // One wide candidate pool (same game + category); partitioned below
-    // into same-item offers vs related listings.
-    getCarouselListings({
-      gameId: listing.game.id,
-      categoryId: listing.category.id,
-      excludeListingId: listing.id,
-      limit: 40,
-    }),
-    // Real taxonomy (admin attribute template) so ItemOffer breadcrumbs /
-    // mutation chips resolve to their proper labels in the carousels and
-    // the Other Sellers preview.
-    isItemsCategory
-      ? loadItemsTaxonomy(listing.game.id, 'items')
-      : Promise.resolve(EMPTY_ITEMS_TAXONOMY),
-  ])
-  const templateFields = getTemplateFields(gameSlug, categorySlug) ?? null
-
-  // V28 — Partition candidates: cross-seller offers of THIS item (tiered:
-  // exact variant first, then same item with a different rarity/mutation)
-  // vs merely-related listings for the Similar carousel.
-  const { sameItem, related } = isItemsCategory
-    ? partitionSameItem(
-        { id: listing.id, title: listing.title, template_data: listing.template_data },
-        candidates as Array<{ id: string; title: string; template_data: Record<string, unknown> | null }>,
-      )
-    : { sameItem: [], related: candidates }
-
-  // Within each tier, cheapest first — it's a price-comparison surface.
-  const otherSellerRows = [...sameItem]
-    .sort((a, b) => a.tier - b.tier || Number((a.listing as any).price ?? 0) - Number((b.listing as any).price ?? 0))
-    .slice(0, 8)
-  let similarOffers = related.slice(0, 12)
-
-  // V28 — Young-marketplace fallback: when the same-category pool is thin
-  // (few sellers yet), top the Similar carousel up with listings from the
-  // REST of the game so the section never runs empty. Only costs an extra
-  // query when actually needed.
-  if (similarOffers.length < 4) {
-    const gameWide = await getCarouselListings({
-      gameId: listing.game.id,
-      excludeListingId: listing.id,
-      limit: 12,
-    })
-    const seen = new Set([
-      ...similarOffers.map((r: any) => r.id),
-      ...otherSellerRows.map((r) => (r.listing as any).id),
-    ])
-    for (const row of gameWide) {
-      if (similarOffers.length >= 12) break
-      if (seen.has(row.id)) continue
-      seen.add(row.id)
-      similarOffers.push(row)
-    }
-  }
-
-  // Card offers for the two carousels (items-type categories only for the
-  // similar row).
-  const similarItems = isItemsCategory
-    ? similarOffers.map((row) => listingToItemOffer(row, itemsTaxonomy))
-    : null
-  const otherSellerItems = otherSellerRows.length > 0
-    ? otherSellerRows.map((r) => listingToItemOffer(r.listing as any, itemsTaxonomy))
-    : null
-
-  // Canonical path from the DB slugs (URL params may be aliases).
-  const canonicalPath = `/${listing.game.slug}/${listing.category.slug}/${listing.slug || listing.id}`
-
-  // Schema.org structured data — outcome language only, no fabricated
-  // ratings (removed the seller-rating-as-product-rating block; product
-  // reviews don't exist yet, so no aggregateRating is the honest markup).
-  const schemaData = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: listing.title,
-    description:
-      listing.description ||
-      `Buy ${listing.title} on DropMarket. Get what you ordered, or your money back with SafeDrop Protection.`,
-    image: listing.images || [],
-    offers: {
-      '@type': 'Offer',
-      url: `${SITE_URL}${canonicalPath}`,
-      priceCurrency: 'USD',
-      price: listing.price,
-      availability: 'https://schema.org/InStock',
-      seller: {
-        '@type': 'Person',
-        name: listing.seller.username
-      }
-    },
-    brand: {
-      '@type': 'Brand',
-      name: listing.game.name
-    },
-    category: listing.category.name
-  }
-
-  // BreadcrumbList — Home › Game › Category › Listing.
-  const breadcrumbData = breadcrumbList([
-    { name: 'Home', path: '/' },
-    { name: listing.game.name, path: `/${listing.game.slug}` },
-    { name: listing.category.name, path: `/${listing.game.slug}/${listing.category.slug}` },
-    { name: listing.title, path: canonicalPath },
-  ])
-
-
-  // V15i — Shape the raw row into the ListingForDetail contract.
-  const shaped: ListingForDetail = {
-    id: listing.id,
-    slug: listing.slug,
-    title: listing.title,
-    description: listing.description ?? null,
-    price: Number(listing.price ?? 0),
-    originalPrice: listing.original_price != null ? Number(listing.original_price) : null,
-    images: Array.isArray(listing.images) ? listing.images : [],
-    views: Number(listing.views ?? 0),
-    createdAt: listing.created_at,
-    quantity: listing.quantity ?? null,
-    isUnlimited: !!listing.is_unlimited,
-    deliveryMethod: listing.delivery_method ?? null,
-    deliveryTime: listing.delivery_time ?? null,
-    region: listing.region ?? null,
-    platform: listing.platform ?? null,
-    templateData: listing.template_data ?? null,
-    gameSlug: listing.game.slug,
-    gameName: listing.game.name,
-    gameImageUrl: (listing.game as any).image_url ?? null,
-    categorySlug: listing.category.slug,
-    categoryName: listing.category.name,
-    seller: {
-      id: listing.seller.id,
-      username: listing.seller.username,
-      shopName: listing.seller.shop_name ?? null,
-      shopSlug: sellerShopSlug(listing.seller),
-      avatarUrl: listing.seller.avatar_url ?? null,
-      tier: listing.seller.seller_tier ?? null,
-      verified: !!listing.seller.is_verified,
-      // Null when the seller has no reviews — the UI shows no rating
-      // rather than a fabricated 95%. Same rule checkout already used.
-      ratingPercent: sellerRatingPercent(listing.seller),
-      totalSales: Number(listing.seller.total_sales ?? 0),
-      activeListings: sellerStats.activeListings,
-      createdAt: listing.seller.created_at ?? null,
-      reviewCount: Number(listing.seller.total_reviews ?? 0),
-    },
-  }
-
-  return (
-    <>
-      {!isPreview && <ViewTracker listingId={listing.id} />}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schemaData) }}
-      />
-      <JsonLd data={breadcrumbData} />
-
-      {/* V29 — GameSubNav removed on the detail page: the in-page
-          context row (game logo · Game › Category) already covers the
-          back/up-level affordance, so the pill was pure vertical cost.
-          Category pages keep it. */}
-      <ListingDetailClient
-        listing={shaped}
-        viewerId={viewer?.id ?? null}
-        blogRail={<BlogRail gameSlug={shaped.gameSlug} gameName={shaped.gameName} />}
-        // Owner/admin preview of a non-active listing: amber banner +
-        // purchase disabled (buying would bypass moderation).
-        previewStatus={isPreview ? (listing.status as string) : null}
-        templateFields={templateFields}
-        similarOffers={similarOffers.map(shapeMini)}
-        // V15p — Re-use the full ItemCard from the items page for the
-        // Similar Offers carousel when the current listing belongs to an
-        // items-type category. Same visual + interaction language as the
-        // /items page, no drift between surfaces.
-        similarOffersAsItems={similarItems}
-        // V28 — Cross-seller offers of THIS item (replaces "From the same
-        // seller"). Tier-sorted server-side: exact-variant matches first
-        // (cheapest→dearest), then same-item-different-variant.
-        otherSellerOffers={otherSellerItems}
-      />
-    </>
   )
 }
 

@@ -13,6 +13,7 @@ import { AuthDialogProvider } from '@/components/auth/AuthDialog'
 import { IntentPrefetch } from '@/components/navigation/IntentPrefetch'
 import { AuthProvider } from '@/hooks/use-auth'
 import { PostHogBridge } from '@/components/analytics/PostHogBridge'
+import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -64,6 +65,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               </Suspense>
               {/* Growth point 1 — cookieless PostHog, loaded when idle. */}
               <PostHogBridge />
+              <ConsentBanner />
               {/* Required password after Google/Discord sign-in — client half
                   of the gate (the middleware covers protected routes). */}
               <PasswordGate />

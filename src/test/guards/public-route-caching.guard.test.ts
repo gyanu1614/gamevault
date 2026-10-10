@@ -52,7 +52,6 @@ describe('public-route caching guard', () => {
     // Pinned so a PR that adds a per-request public route or a new mixed
     // action module shows the change here, in the review, not in the CPU bill.
     expect(Object.keys(GRANDFATHERED).sort()).toEqual([
-      '(marketplace)/[gameSlug]/[categorySlug]/[listingSlug]',
       'buy/[seoSlug]',
       'listings/[id]',
     ])
