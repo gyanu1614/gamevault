@@ -5,8 +5,8 @@
     { "path": "/api/cron/mark-inactive-sellers", "schedule": "0 2 * * *" },
     { "path": "/api/cron/send-trustpilot-invitations", "schedule": "0 9 * * *" },
     { "path": "/api/cron/upgrade-seller-tiers", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/snapshot-sab-prices", "schedule": "15 10 * * *" },
-    { "path": "/api/cron/discord-daily-post", "schedule": "30 10 * * *" },
+    { "path": "/api/cron/snapshot-sab-prices", "schedule": "30 18 * * *" },
+    { "path": "/api/cron/discord-daily-post", "schedule": "45 18 * * *" },
     { "path": "/api/cron/check-sab-freshness", "schedule": "40 6 * * *" },
     { "path": "/api/cron/revalidate-listing-pages", "schedule": "35 4 * * *" },
     { "path": "/api/cron/value-listing-refs", "schedule": "50 4 * * *" }

@@ -6,8 +6,10 @@
  * reason to return, and the wedge against the big competitors who don't publish
  * good daily price data.
  *
- * Runs at 10:30 UTC (see vercel.json) — after correct-prices (10:00) so the
- * post reflects the freshly-corrected, fake-filtered values.
+ * Runs at 18:45 UTC (see vercel.json): after the day's pricing run (GitHub
+ * starts its 02:10 schedule 5–7 h late, so it can still be publishing at
+ * 10–14 UTC) and 15 min after snapshot-sab-prices writes today's history row,
+ * so the post shows today's published values and movers.
  *
  * No gateway, no bot presence: just an authenticated cron making one HTTP POST.
  * A missing webhook URL is a no-op (not an error), so the route is safe to ship

@@ -27,7 +27,7 @@ export const GAME_SLUG_PATTERN = /^[a-z0-9-]+$/
 export const RESERVED_GAME_SLUGS = new Set([
   // src/app top-level directories and files
   'account', 'api', 'auth', 'blog', 'browse', 'buy', 'cart', 'checkout',
-  'dev', 'early-seller', 'forgot-password', 'founding', 'kyc', 'listings',
+  'dev', 'early-seller', 'forgot-password', 'founding', 'kyc', 'listing-preview', 'listings',
   'login', 'notifications', 'orders', 'purchases', 'reviews', 'shop',
   'signup', 'signup-become-seller', 'support', 'wallet', 'wishlist',
   'sell', 'seller', 'admin', 'test', 'test-connection',

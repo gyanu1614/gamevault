@@ -24,12 +24,12 @@
  */
 
 import type { Metadata } from 'next'
-import { notFound, permanentRedirect } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { cache } from 'react'
 
 import { createClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/ids'
-import { listingUrl } from '@/lib/listings/url'
+import { listingPreviewUrl, listingUrl } from '@/lib/listings/url'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -41,10 +41,9 @@ interface PageProps {
  * `cache()` so generateMetadata and the page body share one execution per
  * request, mirroring the canonical route's own resolver.
  *
- * No status filter: an inactive or sold listing still has a canonical home,
- * and that page owns the "this listing is gone" story (including the
- * owner/admin preview path, which RLS governs there). Sending the visitor on
- * is strictly better than a dead end here.
+ * No status filter: RLS shows a non-active row only to its seller and admins,
+ * who are sent to the preview route (/listing-preview/[id]); everyone else
+ * misses and gets a real 404.
  */
 const resolveListing = cache(async function resolveListing(id: string) {
   // Shape-check before touching the DB: a malformed id is a guaranteed miss,
@@ -59,6 +58,7 @@ const resolveListing = cache(async function resolveListing(id: string) {
       `
       id,
       slug,
+      status,
       game:games!listings_game_id_fkey(slug),
       category:game_categories!listings_game_category_id_fkey(slug, type),
       seller:public_profiles!listings_seller_id_fkey(username, shop_slug)
@@ -78,7 +78,7 @@ const resolveListing = cache(async function resolveListing(id: string) {
 
   // The shared builder: the listing page, or — for a currency listing, which
   // has no listing page — the currency page with the seller's offer pinned.
-  return { gameSlug, categorySlug, listingSlug, href: listingUrl(data) }
+  return { gameSlug, categorySlug, listingSlug, href: listingUrl(data), live: data.status === 'active' }
 })
 
 /**
@@ -106,5 +106,9 @@ export default async function LegacyListingRedirect({ params }: PageProps) {
   // A real 404 with a real status code — not a 200 with an error card.
   if (!resolved) notFound()
 
+  // Not live: only its seller or an admin can read it here (RLS), and the
+  // public page serves active listings only — send them to the preview.
+  // Temporary: the listing may go live later.
+  if (!resolved.live) redirect(listingPreviewUrl(id))
   permanentRedirect(resolved.href)
 }

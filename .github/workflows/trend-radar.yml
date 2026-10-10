@@ -1,4 +1,4 @@
-# Trend radar (Phase 1 · Step 2) — every 6 hours.
+# Trend radar (Phase 1 · Step 2) — collect + prepare once a day, rollup nightly.
 #
 # Same pattern as expire-pending-payments.yml: Vercel Hobby only allows daily
 # cron, so the real cadence lives here and each step is a single signed POST
@@ -45,7 +45,7 @@ on:
 
 jobs:
   collect-and-prepare:
-    if: github.event_name == 'workflow_dispatch' && inputs.job == 'collect-and-prepare' || github.event.schedule == '17 */6 * * *'
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'collect-and-prepare' || github.event.schedule == '47 18 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

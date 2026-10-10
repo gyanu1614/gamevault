@@ -46,6 +46,25 @@ export function listingUrl(listing: {
   return `/listings/${listing.id}`
 }
 
+/**
+ * The seller's / an admin's view of a listing that is not live (pending,
+ * rejected, paused, sold). The public listing page is ISR and serves active
+ * listings only; this route reads through the session (RLS: owner + admins).
+ */
+export function listingPreviewUrl(listingId: string): string {
+  return `/listing-preview/${listingId}`
+}
+
+/** Where a listing's owner (or an admin) opens it: the live page, else the preview. */
+export function listingOwnerUrl(
+  listing: Parameters<typeof listingUrl>[0] & { status?: string | null },
+): string {
+  if (listing.status === 'active' || isCurrencyCategoryType(listing.category?.type)) {
+    return listingUrl(listing)
+  }
+  return listingPreviewUrl(listing.id)
+}
+
 /** URL params the currency pages read (client-side, via SearchParamsBridge). */
 export const CURRENCY_SELLER_PARAM = 'seller'
 export const CURRENCY_OFFER_PARAM = 'offer'
