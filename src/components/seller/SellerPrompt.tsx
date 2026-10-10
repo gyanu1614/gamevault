@@ -17,6 +17,7 @@
  */
 import Link from '@/components/navigation/AppLink'
 import { track } from '@vercel/analytics'
+import { track as phTrack } from '@/lib/analytics/client'
 import {
   IconArrowRight,
   IconBuildingStore,
@@ -45,6 +46,8 @@ function useCta(
     href: sellerPromptHref(variant, source),
     onClick: () => {
       track(SELLER_PROMPT_EVENT[variant], { source })
+      // PostHog seller funnel entry (visitors only; a seller is already in).
+      if (variant === 'visitor') phTrack('seller_banner_clicked', { source })
       // They are off to list: forget the cached 'no listing yet'.
       if (variant === 'seller') forgetCount()
     },

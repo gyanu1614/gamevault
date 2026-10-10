@@ -12,6 +12,7 @@
 
 'use server'
 
+import { captureServerEvent } from '@/lib/analytics/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
@@ -790,6 +791,22 @@ export async function publishListing(input: PublishListingInput): Promise<Result
           await snapshotListings(getAdminSupabase(), [(data as { id: string }).id]),
         )
       }
+    }
+
+    // PostHog seller funnel: the seller's very first listing (bounded read,
+    // never blocks the publish; captureServerEvent swallows its own errors).
+    try {
+      const { data: firstTwo } = await (getAdminSupabase().from('listings') as any).select('id').eq('seller_id', user.id).limit(2)
+      if (Array.isArray(firstTwo) && firstTwo.length === 1) {
+        const { data: g } = await supabase.from('games').select('slug').eq('id', input.game_id).maybeSingle() as any
+        await captureServerEvent({
+          event: 'seller_first_listing_published',
+          distinctId: user.id,
+          props: { game: g?.slug ?? null, category: gameCategory.slug ?? null },
+        })
+      }
+    } catch {
+      /* analytics only */
     }
 
     return { success: true, data: { id: (data as { id: string }).id, status: finalStatus, path: categoryPath } }

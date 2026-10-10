@@ -17,6 +17,7 @@ import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
 import { Search, Gamepad2, ShieldCheck, Store } from 'lucide-react'
 import { track } from '@vercel/analytics'
+import { track as phTrack } from '@/lib/analytics/client'
 import { SellerPromptCard } from '@/components/seller/SellerPrompt'
 import { useSellerPrompt } from '@/hooks/use-seller-prompt'
 import { SELLER_PROMPT_EVENT, listingsEmptyCopy, sellerPromptHref } from '@/lib/seller/seller-prompt'
@@ -617,6 +618,7 @@ function CategoryEmptyState({ gameName, categoryLabel }: { gameName: string; cat
         href={sellerPromptHref(variant, 'listings-empty')}
         onClick={() => {
           track(SELLER_PROMPT_EVENT[variant], { source: 'listings-empty' })
+          if (variant === 'visitor') phTrack('seller_banner_clicked', { source: 'listings-empty' })
           if (variant === 'seller') forgetCount()
         }}
         className="mt-5 inline-flex items-center justify-center gap-1.5 rounded-md bg-lime px-5 font-bold text-text-inverse transition-colors hover:bg-lime-hover active:bg-lime-pressed"

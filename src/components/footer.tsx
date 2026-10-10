@@ -17,6 +17,7 @@
 
 'use client'
 
+import { CookieSettingsButton } from '@/components/analytics/ConsentBanner'
 import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -317,6 +318,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
                 {l.name}
               </Link>
             ))}
+            <CookieSettingsButton className="text-xs text-text-secondary transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" />
           </nav>
         </div>
         {/* The not-affiliated line every marketplace carries (owner,

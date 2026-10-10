@@ -613,7 +613,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   // Growth point 1 — buyer funnel step 3. Once per listing; later quantity
   // changes are the same checkout.
   useEffect(() => {
-    track('checkout_started', { listing_id: listing.id, qty: quantity })
+    track('checkout_started', { listing_id: listing.id, qty: quantity, game: listing.game?.slug ?? null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing.id])
   // The service fee (marketplace + processing) is the database's quote for

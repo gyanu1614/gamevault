@@ -62,8 +62,8 @@ export const LEGAL_ENTITY = {
 /** The date every document changed in the 4 Oct 2026 round carries. */
 const UPDATED_2026_10_04 = { lastUpdated: '4 October 2026', version: 'v1.1' } as const
 
-/** Privacy + Cookie Policy: PostHog product analytics added (growth point 1). */
-const UPDATED_2026_10_08 = { lastUpdated: '8 October 2026', version: 'v1.2' } as const
+/** Privacy + Cookie Policy: optional analytics cookies and session replay, only on Accept. */
+const UPDATED_2026_10_10 = { lastUpdated: '10 October 2026', version: 'v1.3' } as const
 
 export type LegalBlock =
   | { t: 'p'; md: string }
@@ -1236,7 +1236,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Privacy Policy',
     description:
       'How DropMarket Ltd collects, uses, shares and protects personal data under UK GDPR and the DPA 2018, including KYC data, the providers we use, how long we keep data, transfers and your rights.',
-    ...UPDATED_2026_10_08,
+    ...UPDATED_2026_10_10,
     sections: [
       {
         h: 'Who we are',
@@ -1261,7 +1261,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             '**Performance of a contract** — operating your account and the marketplace, processing Orders.',
             '**Legal obligation** — AML/KYC checks, sanctions screening, tax and platform reporting to HMRC, statutory record-keeping.',
             '**Legitimate interests** — fraud prevention, Platform security, service improvement, dispute handling (balanced against your rights).',
-            '**Consent** — any non-essential cookies (we currently use none; see the Cookie Policy) and any direct marketing (withdrawable at any time).',
+            '**Consent** — optional analytics cookies and session replay (only if you click Accept on the cookie bar; see the Cookie Policy) and any direct marketing (both withdrawable at any time).',
           ]),
         ],
       },
@@ -1277,7 +1277,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
               ['Vercel', 'Hosts the website and provides cookieless, aggregated page analytics', 'Request data such as IP address, browser and pages visited'],
               ['Resend', 'Sends account and Order emails', 'Name, email address and the content of the email'],
               ['Sentry', 'Error monitoring', 'Technical details of errors (page, browser and device type)'],
-              ['PostHog (EU hosting)', 'Product analytics without cookies: which pages and buying or selling steps people complete', 'Request data such as IP address and browser, pages visited (without personal details in the address), steps taken, and your account ID if you are signed in'],
+              ['PostHog (EU hosting)', 'Product analytics: which pages, buttons and buying or selling steps people use; with your consent, also cookies and a masked replay of your visit', 'Request data such as IP address and browser, pages visited (without personal details in the address), clicks and steps taken, your account ID if you are signed in, and, if you accepted, a replay of the page with everything you type masked'],
               ['Didit', 'Identity verification and sanctions / PEP / adverse-media screening for Sellers', 'ID document, selfie and liveness check, name, date of birth, address'],
               ...PAYMENT_PROCESSORS.map((x) => [x.name, sentence(x.role), PROCESSOR_DATA[x.name] ?? 'Order reference and amount']),
               ['Hetzner Online (Germany)', 'Hosts the server that runs BTCPay Server', 'Order reference, amount, payment address and transaction ID'],
@@ -1376,12 +1376,12 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Cookie Policy',
     description:
       'The cookies and browser storage DropMarket uses, what each one is for and how long it lasts, and how to control them.',
-    ...UPDATED_2026_10_08,
+    ...UPDATED_2026_10_10,
     sections: [
       {
         blocks: [
           p(
-            'This policy explains the cookies and similar technologies (such as your browser’s local and session storage) that DropMarket uses. We use **strictly necessary** cookies, which keep you signed in and secure, and **functional** browser storage that remembers things you asked for, such as a draft listing. We do **not** use advertising cookies or analytics cookies.',
+            'This policy explains the cookies and similar technologies (such as your browser’s local and session storage) that DropMarket uses. We use **strictly necessary** cookies, which keep you signed in and secure, and **functional** browser storage that remembers things you asked for, such as a draft listing. **Analytics cookies are optional**: we set them only if you click Accept on our cookie bar. We do **not** use advertising cookies.',
           ),
         ],
       },
@@ -1394,6 +1394,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             rows: [
               ['sb-[project]-auth-token (may be split into .0, .1 parts)', 'Keeps you signed in and secures your session (Supabase authentication)', 'Up to 400 days, or until you sign out', 'Strictly necessary'],
               ['sb-[project]-auth-token-code-verifier', 'Completes a sign-in, email-confirmation or password-reset link securely', 'Until that step completes', 'Strictly necessary'],
+              ['ph_[project]_posthog', 'Recognises you across visits so we can see which steps of buying and selling people finish (PostHog). Set only if you click Accept', '1 year', 'Analytics (optional)'],
             ],
           },
         ],
@@ -1414,6 +1415,8 @@ export const LEGAL_DOCS: LegalDoc[] = [
               ['dm.signup-to-sell', 'Keeps your place in the sign-up-to-sell steps', 'Until you close the tab', 'Functional'],
               ['paid-return:[order]', 'Shows the right message when you come back from a payment page', 'Until you close the tab', 'Strictly necessary'],
               ['dm.stale-build-reload', 'Reloads the page once when a new version of the site is released', 'Until you close the tab', 'Strictly necessary'],
+              ['dm.analytics.consent', 'Remembers whether you accepted or rejected optional analytics cookies', 'Until you clear site data or change your choice', 'Strictly necessary'],
+              ['ph_[project]_posthog (local storage copy)', 'PostHog keeps a copy of its analytics ID here. Set only if you click Accept', 'Until you clear site data or reject', 'Analytics (optional)'],
             ],
           },
         ],
@@ -1425,7 +1428,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             'We count page views with Vercel Web Analytics, which sets no cookies and stores nothing on your device; it reports aggregated visit data. Our error monitoring (Sentry) also sets no cookies.',
           ),
           p(
-            'We use PostHog to see which steps of buying and selling people complete, so we can fix the ones where they get stuck. It runs without cookies and stores nothing on your device, and it never receives your email or name. Its data is hosted in the EU.',
+            'We use PostHog to see which steps of buying and selling people complete and which buttons they click, so we can fix the ones where they get stuck. By default it runs without cookies and stores nothing on your device. If you click Accept, it also sets the cookie listed above and records your visit as a replay of the page (what you clicked and scrolled), with everything you type masked so it is never recorded. It never receives your email or name. Its data is hosted in the EU.',
           ),
         ],
       },
@@ -1441,7 +1444,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: 'Your choices',
         blocks: [
           p(
-            'Because we only use strictly necessary cookies and storage that does what you asked for, we do not show a cookie banner. You can block or delete cookies and site data at any time in your browser settings; if you block the sign-in cookies, you will not be able to sign in. If we ever add a non-essential cookie, we will ask for your consent first, with equally prominent “Accept” and “Reject” options, and give you a way to change your choice.',
+            'The first time you visit, a small bar asks whether you accept optional analytics cookies, with equally prominent “Accept” and “Reject” buttons. Nothing optional is set until you click Accept; if you ignore the bar or click Reject, analytics stays cookieless. You can change your choice at any time with the “Cookie Settings” link at the bottom of every page, and we also honour Global Privacy Control signals from your browser as a Reject. You can block or delete cookies and site data in your browser settings; if you block the sign-in cookies, you will not be able to sign in.',
           ),
           p(
             'This reflects PECR as updated by the Data (Use and Access) Act 2025 (in force from 5 February 2026) and the ICO’s finalised storage-and-access-technologies guidance (April 2026).',
