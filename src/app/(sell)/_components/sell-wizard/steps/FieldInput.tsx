@@ -8,6 +8,13 @@ import { type Attribute } from '@/lib/actions/new-schema'
 import { inputCls } from '@/app/(sell)/_components/sell-wizard/styles'
 import { FieldError, TipBox } from '@/app/(sell)/_components/sell-wizard/ui/form-fields'
 
+/** Admin placeholders like "Choose.." / "Select…" say nothing; name the field instead ("Choose Item Type"). */
+const GENERIC_PLACEHOLDER = /^\s*(choose|select|pick)\s*(an?|one)?\s*[.…]*\s*$/i
+function selectPlaceholder(a: Attribute): string {
+  const own = a.placeholder?.trim()
+  return own && !GENERIC_PLACEHOLDER.test(own) ? own : `Choose ${a.name}`
+}
+
 export function PillRow<T extends { value: string; label: string }>({
   options, value, onChange,
 }: {
@@ -141,7 +148,7 @@ export function FieldInput({
           onChange={(val) => { onChange(val); markTouched() }}
           onBlur={markTouched}
           invalid={showError}
-          placeholder={attribute.placeholder || `Choose ${attribute.name}`}
+          placeholder={selectPlaceholder(attribute)}
           ariaLabel={attribute.name}
           options={(attribute.options ?? []).map((o) => ({
             value: o.value,
