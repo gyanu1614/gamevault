@@ -23,7 +23,7 @@ function Block({ className = '' }: { className?: string }) {
 
 function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
   return (
-    <header className="fixed inset-x-0 top-[calc(var(--safe-top)+12px)] z-50 mx-auto w-full max-w-3xl px-4 sm:px-6">
+    <header className="fixed inset-x-0 top-[calc(var(--safe-top)+12px)] z-50 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className={cn('relative', styles.bar)}>
       <div aria-hidden className={styles.aurora} />
       <div className="relative px-4 sm:px-5">
@@ -36,7 +36,7 @@ function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
           <Block className="h-3.5 w-28" />
         </div>
       </div>
-      <div className="relative px-4 pb-4 sm:px-5">
+      <div className="relative mx-auto w-full max-w-3xl px-4 pb-4 sm:px-6">
         <div className="mb-2.5 flex items-center justify-between gap-3">
           <Block className="h-[18px] w-40 sm:h-[21px]" />
           <Block className="h-3 w-16" />
