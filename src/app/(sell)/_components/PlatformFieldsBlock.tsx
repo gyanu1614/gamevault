@@ -39,9 +39,9 @@ type Props = {
 }
 
 const KIND_LABELS: Record<Kind, { label: string; placeholder: string; supportsIcons: boolean }> = {
-  region:   { label: 'Region',   placeholder: 'Select a region',   supportsIcons: false },
-  platform: { label: 'Platform', placeholder: 'Select a platform', supportsIcons: true },
-  device:   { label: 'Device',   placeholder: 'Select a device',   supportsIcons: false },
+  region:   { label: 'Region',   placeholder: 'Choose Region',     supportsIcons: false },
+  platform: { label: 'Platform', placeholder: 'Choose Platform',   supportsIcons: true },
+  device:   { label: 'Device',   placeholder: 'Choose Device',     supportsIcons: false },
 }
 
 const ORDER: Kind[] = ['region', 'platform', 'device']

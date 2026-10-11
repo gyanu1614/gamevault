@@ -68,8 +68,8 @@ function ActionRow() {
   return (
     <div className="mt-8 border-t border-border-subtle pt-5">
       <div className="flex w-full items-center justify-between gap-2">
-        <Block className="h-12 w-32 rounded-[11px] sm:h-11" />
-        <Block className="h-12 w-32 rounded-[11px] sm:h-11" />
+        <Block className="h-12 w-32 rounded-lg sm:h-11" />
+        <Block className="h-12 w-32 rounded-lg sm:h-11" />
       </div>
     </div>
   )
@@ -119,7 +119,7 @@ export function SellWizardSkeleton({ variant }: { variant: 'new' | 'edit' }) {
                   {Array.from({ length: rows }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Block className="h-3.5 w-28" />
-                      <Block className="h-12 w-full rounded-[11px] sm:h-11" />
+                      <Block className="h-11 w-full rounded-md sm:h-10" />
                     </div>
                   ))}
                 </div>

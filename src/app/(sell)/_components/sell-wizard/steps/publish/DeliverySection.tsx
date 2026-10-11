@@ -10,7 +10,6 @@ import { DeliveryMethodPicker } from '@/app/(sell)/_components/DeliveryMethodPic
 
 import { FIELD_SURFACE } from '../../styles'
 import { SubCard } from '../../ui/SubCard'
-import { TipBox } from '../../ui/form-fields'
 import type { Step4Props } from './types'
 
 /**
@@ -43,9 +42,9 @@ export function DeliverySection({
         <Select value={p.deliveryTime} onValueChange={(v) => p.setDeliveryTime(v)}>
           <SelectTrigger
             aria-label="Guaranteed delivery time"
-            className={cn(FIELD_SURFACE, 'h-12 text-base sm:h-11 sm:text-[15px] focus:border-focus-border focus:ring-0 data-[state=open]:border-focus-border data-[state=open]:ring-0')}
+            className={cn(FIELD_SURFACE, 'h-11 text-base sm:h-10 sm:text-[15px] focus:border-focus-border focus:ring-0 data-[state=open]:border-focus-border data-[state=open]:ring-0')}
           >
-            <SelectValue placeholder="Choose a delivery time" />
+            <SelectValue placeholder="Choose Delivery Time" />
           </SelectTrigger>
           {/* ~5.5 rows visible: the half row at the bottom is the
               cue that the list scrolls. Rows stay 36px on touch
@@ -63,7 +62,6 @@ export function DeliverySection({
             ))}
           </SelectContent>
         </Select>
-        <TipBox>The longest you will take. Faster windows rank higher.</TipBox>
       </div>
     )
   })()}

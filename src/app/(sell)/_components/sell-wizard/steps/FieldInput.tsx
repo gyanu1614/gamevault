@@ -122,7 +122,7 @@ export function FieldInput({
                 type="button"
                 onClick={() => onChange(opt)}
                 className={cn(
-                  'h-10 flex-1 rounded-xl border text-sm font-medium transition-colors',
+                  'h-10 flex-1 rounded-md border text-sm font-medium transition-colors',
                   on
                     ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
                     : 'border-border-default bg-bg-raised text-text-secondary hover:text-text-primary'
@@ -141,7 +141,7 @@ export function FieldInput({
           onChange={(val) => { onChange(val); markTouched() }}
           onBlur={markTouched}
           invalid={showError}
-          placeholder={attribute.placeholder || 'Choose…'}
+          placeholder={attribute.placeholder || `Choose ${attribute.name}`}
           ariaLabel={attribute.name}
           options={(attribute.options ?? []).map((o) => ({
             value: o.value,

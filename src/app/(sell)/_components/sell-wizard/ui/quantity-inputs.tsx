@@ -6,7 +6,6 @@ import { Minus, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 import { FIELD_SURFACE } from '../styles'
-import { TipBox } from '@/app/(sell)/_components/sell-wizard/ui/form-fields'
 
 // ─── FieldHint — small dim text under a control. No surface. ────────────────
 
@@ -67,7 +66,7 @@ export function QuantityInput({
         // input mouseup to swallow.
         swallowMouseUp.current = false
       }}
-      className={cn(FIELD_SURFACE, 'flex h-12 w-full cursor-text items-center justify-center gap-1.5 px-3 sm:h-11')}
+      className={cn(FIELD_SURFACE, 'flex h-11 w-full cursor-text items-center justify-center gap-1.5 px-3 sm:h-10')}
     >
       <input
         ref={inputRef}
@@ -128,16 +127,14 @@ export function StockStepper({
   value,
   onChange,
   suffix,
-  hint,
 }: {
   value: number
   onChange: (n: number) => void
   suffix?: string | null
-  hint?: string | null
 }) {
   const step = (d: number) => onChange(Math.min(STOCK_MAX, Math.max(1, value + d)))
   const btn =
-    'flex h-12 w-12 shrink-0 items-center justify-center rounded-[11px] border border-white/[0.07] bg-white/[0.05] text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35 sm:h-11 sm:w-11'
+    'flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/[0.07] bg-white/[0.05] text-text-secondary transition-colors hover:bg-white/[0.08] hover:text-text-primary active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35 sm:h-10 sm:w-10'
   return (
     <div className="flex flex-col items-center">
       <label className="mb-2 block text-[13px] font-medium text-text-secondary">
@@ -173,7 +170,6 @@ export function StockStepper({
           <Plus className="h-4 w-4" />
         </button>
       </div>
-      {hint && <TipBox className="w-full">{hint}</TipBox>}
     </div>
   )
 }

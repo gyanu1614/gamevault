@@ -42,7 +42,7 @@ export function WizardFooter({
         ) : (
           <Link href="/sell/bulk" className={BTN_SECONDARY}>
             <FileSpreadsheet className="h-4 w-4" />
-            Bulk upload
+            Bulk Upload
           </Link>
         )}
 

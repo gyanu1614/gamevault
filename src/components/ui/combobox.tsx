@@ -85,17 +85,17 @@ const SIZES = {
   },
   lg: {
     trigger:
-      'h-12 rounded-[11px] border border-white/[0.07] bg-white/[0.035] px-3.5 text-base font-medium hover:border-white/[0.13] sm:h-[52px] sm:text-[15px]',
+      'h-11 rounded-md border border-white/[0.07] bg-white/[0.035] px-3.5 text-base font-medium hover:border-white/[0.13] sm:text-[15px]',
     triggerGap: 'gap-3',
-    triggerIcon: 'h-8 w-8 rounded-lg',
+    triggerIcon: 'h-7 w-7 rounded-md',
     search: 'gap-2.5 px-4 py-3.5',
     searchIcon: 'h-4 w-4',
     input: 'h-6 text-base sm:text-[15px]',
     list: 'max-h-[22rem] p-1.5',
-    row: 'gap-3 rounded-[10px] px-2.5 py-2 text-[14.5px] font-medium min-h-[52px]',
-    rowIcon: 'h-9 w-9 rounded-[9px]',
+    row: 'gap-3 rounded-lg px-2.5 py-2 text-[14.5px] font-medium min-h-[52px]',
+    rowIcon: 'h-9 w-9 rounded-lg',
     check: 'h-4 w-4',
-    panel: 'rounded-2xl border border-white/[0.06] bg-[#1F2025] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]',
+    panel: 'rounded-xl border border-white/[0.06] bg-[#1F2025] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]',
   },
 } as const
 

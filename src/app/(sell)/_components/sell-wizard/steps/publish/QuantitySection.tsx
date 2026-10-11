@@ -81,7 +81,6 @@ export function QuantitySection({
       value={numOr(p.quantity, 1)}
       onChange={(n) => p.setQuantity(String(n))}
       suffix={suffix}
-      hint={isBundleMode ? 'Each unit is one bundle you can deliver.' : null}
     />
   )}
 </SubCard>

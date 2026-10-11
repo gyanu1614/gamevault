@@ -21,7 +21,7 @@ export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle'> 
       onBlur={() => setTouched(true)}
       // Generic on purpose: the old example was a Steal a Brainrot
       // item, which read as wrong on every other game.
-      placeholder="Type here…"
+      placeholder="Enter Offer Title"
       maxLength={100}
       aria-invalid={titleInvalid || undefined}
       aria-required

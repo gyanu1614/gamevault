@@ -19,7 +19,7 @@ export function DescriptionSection({ p, isCurrency }: { p: Pick<Step4Props, 'des
     <AutoGrowTextarea
       value={p.description}
       onChange={p.setDescription}
-      placeholder={isCurrency ? 'Type here…' : 'What’s included, condition, delivery notes, terms…'}
+      placeholder="Describe Your Offer"
       maxLength={isCurrency ? 1000 : 2000}
       ariaLabel="Description"
     />

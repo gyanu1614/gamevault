@@ -73,7 +73,7 @@ export function Step2Game({
           type-ahead, keyboard nav and the small per-game icon for free —
           and it is the same control the rest of the app already uses. */}
       {loading ? (
-        <div className={cn(FIELD_SURFACE, 'flex h-12 items-center gap-2 px-3.5 text-[15px] text-text-tertiary sm:h-[52px]')}>
+        <div className={cn(FIELD_SURFACE, 'flex h-11 items-center gap-2 px-3.5 text-[15px] text-text-tertiary')}>
           <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           Loading games…
         </div>
@@ -120,7 +120,7 @@ export function Step2Game({
               onClick={() => onSelect(g)}
               className={cn(
                 // Same radius family as the fields; 28px logos so games read at a glance.
-                'inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] border pl-1.5 pr-3 text-[13.5px] font-medium transition-colors active:scale-[0.98]',
+                'inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border pl-1.5 pr-3 text-[13.5px] font-medium transition-colors active:scale-[0.98]',
                 selected?.game_id === g.game_id
                   ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
                   : 'border-transparent bg-white/[0.05] text-text-secondary hover:bg-white/[0.08] hover:text-text-primary',

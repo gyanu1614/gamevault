@@ -64,7 +64,7 @@ export function PriceSection({
     <div
       className={cn(
         FIELD_SURFACE,
-        'flex h-12 w-full items-center sm:h-11',
+        'flex h-11 w-full items-center sm:h-10',
         priceInvalid && 'border-error hover:border-error focus-within:border-error',
       )}
     >

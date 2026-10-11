@@ -28,7 +28,7 @@ export function BundleSection({ p }: { p: Pick<Step4Props, 'bundles' | 'bundleId
         href={`/sell/edit/${p.existingBundleListingId}`}
         className="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg border border-lime-tint-border bg-lime-tint-bg px-3 py-1.5 text-[12.5px] font-semibold text-lime-text transition-colors hover:bg-[rgba(86,184,127,0.10)] sm:min-h-0"
       >
-        Update it
+        Update Listing
         <ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </div>
@@ -50,7 +50,7 @@ export function BundleSection({ p }: { p: Pick<Step4Props, 'bundles' | 'bundleId
         icon_url: b.icon_url ?? null,
       }))}
     unsorted
-    placeholder="Choose the bundle you are selling"
+    placeholder="Choose Bundle"
     emptyText="No bundles match that search."
     ariaLabel="Choose a bundle"
     tone="neutral"

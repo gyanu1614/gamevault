@@ -7,7 +7,7 @@ import type { Step4Props } from './types'
 /** Currency platform / region / device, one tile row per kind the admin enabled for the game. */
 export function ListingDetailsSection({ p }: { p: Pick<Step4Props, 'platformFields' | 'region' | 'onRegion' | 'platform' | 'onPlatform' | 'device' | 'onDevice'> }) {
   return (
-<SubCard title="Listing details">
+<SubCard title="Listing Details">
   <PlatformTileRows
     fields={p.platformFields}
     values={{ region: p.region, platform: p.platform, device: p.device }}
