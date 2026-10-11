@@ -28,6 +28,7 @@ import { APPLICANT_DRAFT_KEY } from '@/lib/listings/submit-applicant-drafts'
 import { checkListingImage, listingImagePathFor, LISTING_IMAGE_BUCKET } from '@/lib/listings/images'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { linkListingsToValueItems } from '@/lib/value-listings/link'
+import { insertListing, type ListingsWriter } from '@/lib/listings/create'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import { toStoredImage } from '@/lib/images/resize-server'
 import { activeDeliveryMethods, resolveDeliveryMethodId } from '@/lib/currency/delivery-methods'
@@ -714,57 +715,35 @@ export async function publishListing(input: PublishListingInput): Promise<Result
     const { title: resolvedTitle, images: resolvedImages } =
       await resolveCurrencyTitleAndImages(supabase, input.game_id, gameCategory.type, rules.currencyConfig, v)
 
-    const insertPayload: Record<string, unknown> = {
-      seller_id: user.id,
-      game_id: input.game_id,
-      game_category_id: gameCategory.id,
-      // Phase A: listings.category_id is still NOT NULL and points at the
-      // mirrored legacy row (trg_listings_category_sync would derive it too).
-      category_id: gameCategory.legacy_category_id,
-      title: resolvedTitle || 'Untitled',
-      // listings.description is NOT NULL in the legacy schema; default to ''
-      description: v.description,
-      price: v.price,
-      original_price: v.original_price,
-      quantity: v.quantity,
-      // ACC-05 — the validator resolved this from category_configs
-      // (min_quantity floor, bundle → 1, capped at stock).
-      min_quantity: v.min_quantity,
-      delivery_method: v.delivery_method,
-      delivery_time: v.delivery_time,
-      images: resolvedImages,
-      template_data: v.template_data,
-      region: v.region,
-      delivery_method_type: v.delivery_method_type,
-      platform: v.platform,
-      // V19/P24 — Bundle id for fixed-bundle currencies. NULL for
-      // flexible currency listings and every non-currency listing.
-      bundle_id: v.bundle_id,
-      status: finalStatus,
-      // GRO-08 — marks the drafts to submit automatically on approval.
-      ...(isApplicant ? { metadata: { [APPLICANT_DRAFT_KEY]: true } } : {}),
-    }
-
     // AUTH-031 — the DB coerces every non-guarded listings INSERT to
     // pending_approval with NULL moderation columns (so a raw PostgREST insert
     // can never go live). This path has already passed the seller gate and
-    // the publish-policy decision above, so it inserts as the backend;
-    // seller_id is pinned to the session user and the payload carries no
-    // moderation columns.
-    const { data, error } = await (getAdminSupabase()
-      .from('listings') as any)
-      .insert(insertPayload)
-      // slug is DB-generated (set_listing_slug trigger) — read it back
-      // so we can ping IndexNow with the live listing URL.
-      .select('id, slug, status')
-      .single()
-    if (error) return { success: false, error: error.message }
+    // the publish-policy decision above, so it inserts as the backend through
+    // the shared create seam; seller_id is pinned to the session user and the
+    // payload carries no moderation columns.
+    const created = await insertListing(getAdminSupabase() as unknown as ListingsWriter, {
+      sellerId: user.id,
+      target: {
+        gameId: input.game_id,
+        gameCategoryId: gameCategory.id,
+        legacyCategoryId: gameCategory.legacy_category_id,
+      },
+      write: v,
+      status: finalStatus,
+      // V13 / V19 — currency title + image are filled after validation.
+      title: resolvedTitle,
+      images: resolvedImages,
+      // GRO-08 — marks the drafts to submit automatically on approval.
+      metadata: isApplicant ? { [APPLICANT_DRAFT_KEY]: true } : null,
+    })
+    if (!created.ok) return { success: false, error: created.error }
+    const createdId = created.id ?? ''
     // The DB trigger may have held it for review: tell the moderators.
-    if ((data as { status?: string }).status === 'pending_approval') {
+    if (created.status === 'pending_approval') {
       await notifyModeratorsListingInReview(resolvedTitle || input.title || 'Untitled', 'new')
     }
     // Bundle 2 — value item link (never blocks the publish; see value-listings/link).
-    await linkListingsToValueItems(getAdminSupabase(), [(data as { id: string }).id])
+    await linkListingsToValueItems(getAdminSupabase(), [createdId])
 
     revalidatePath('/account/listings')
     // Step 7b — the category page is prerendered (24 h TTL); tell it.
@@ -788,7 +767,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       if (pingGame?.slug) {
         await submitListingChanges(
           new Map(), // a new row: nothing existed before
-          await snapshotListings(getAdminSupabase(), [(data as { id: string }).id]),
+          await snapshotListings(getAdminSupabase(), [createdId]),
         )
       }
     }
@@ -809,7 +788,7 @@ export async function publishListing(input: PublishListingInput): Promise<Result
       /* analytics only */
     }
 
-    return { success: true, data: { id: (data as { id: string }).id, status: finalStatus, path: categoryPath } }
+    return { success: true, data: { id: createdId, status: finalStatus, path: categoryPath } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
@@ -1213,31 +1192,22 @@ export async function bulkPublishListings(
           failed.push({ line: r.line, error: validated.error })
           continue
         }
-        const v = validated.value
-        const payload: Record<string, unknown> = {
-          seller_id: user.id,
-          game_id: gameId,
-          game_category_id: gameCategory.id,
-          category_id: gameCategory.legacy_category_id,
-          title: v.title,
-          description: v.description,
-          price: v.price,
-          original_price: v.original_price,
-          quantity: v.quantity,
-          min_quantity: v.min_quantity,
-          delivery_method: v.delivery_method,
-          delivery_time: v.delivery_time,
-          images: v.images,
-          template_data: v.template_data,
-          region: v.region,
-          platform: v.platform,
-          delivery_method_type: v.delivery_method_type,
-          status: rowStatus(v.price),
+        // Same create seam as the wizard: one payload shape, one insert.
+        // `metadata.source = 'bulk'` is what get_seller_publish_policy counts
+        // against bulk_daily_cap — keep it on this path.
+        const created = await insertListing(listingsWriter as unknown as ListingsWriter, {
+          sellerId: user.id,
+          target: {
+            gameId,
+            gameCategoryId: gameCategory.id,
+            legacyCategoryId: gameCategory.legacy_category_id,
+          },
+          write: validated.value,
+          status: rowStatus(validated.value.price),
           metadata: { source: 'bulk' },
-        }
-        const { error } = await (listingsWriter.from('listings') as any).insert(payload)
-        if (error) {
-          failed.push({ line: r.line, error: error.message })
+        })
+        if (!created.ok) {
+          failed.push({ line: r.line, error: created.error })
           continue
         }
         ok++

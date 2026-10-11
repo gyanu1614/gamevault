@@ -36,4 +36,12 @@ describe('listingMeta', () => {
     expect(description.startsWith('Buy OG Account for Fortnite for $120. Full access account')).toBe(true)
     expect(description.length).toBeLessThanOrEqual(155)
   })
+
+  it('never names the game twice when the title already carries it', () => {
+    const suffixed = listingMeta({ ...base, title: 'FR Frost Dragon | Adopt Me', gameName: 'Adopt Me', price: 85, description: null })
+    expect(suffixed.title).toBe('FR Frost Dragon | Adopt Me')
+    expect(suffixed.description.startsWith('Buy FR Frost Dragon for Adopt Me for $85.')).toBe(true)
+    const inline = listingMeta({ ...base, title: 'Adopt Me Neon Shadow Dragon', gameName: 'Adopt Me', price: 40, description: null })
+    expect(inline.description.startsWith('Buy Adopt Me Neon Shadow Dragon for $40.')).toBe(true)
+  })
 })

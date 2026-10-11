@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button'
 import { MARKET_CARD, MARKET_CARD_HOVER } from '@/lib/ui/surfaces'
 import { cn } from '@/lib/utils'
 import ItemCard from '../_ItemCard'
+import HeroImage from './_HeroImage'
 import type { ItemOffer } from '../_itemsTypes'
 import { NumberField } from '@/components/ui/number-field'
 import { track } from '@/lib/analytics/client'
@@ -442,16 +443,7 @@ export default function ListingDetailClient({
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {heroImg ? (
-                    <motion.img
-                      key={heroImg}
-                      src={heroImg}
-                      alt={listing.title}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="absolute inset-0 h-full w-full rounded-lg object-cover"
-                    />
+                    <HeroImage key={heroImg} src={heroImg} alt={listing.title} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-text-tertiary">
                       <Gamepad2 className="h-12 w-12" />

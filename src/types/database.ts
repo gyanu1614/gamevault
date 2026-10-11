@@ -3388,6 +3388,345 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_import_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          created_by: string | null
+          game_id: string
+          id: string
+          item_ref: string
+          variant_ref: string | null
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          created_by?: string | null
+          game_id: string
+          id?: string
+          item_ref: string
+          variant_ref?: string | null
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          created_by?: string | null
+          game_id?: string
+          id?: string
+          item_ref?: string
+          variant_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_aliases_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_import_batches: {
+        Row: {
+          allow_estimated: boolean
+          applied_at: string | null
+          created_at: string
+          created_by: string
+          game_category_id: string
+          game_id: string
+          id: string
+          label: string | null
+          pricing_mode: string
+          row_count: number
+          seller_id: string
+          source: string
+          status: string
+          template_version: number
+          undercut_pct: number
+          updated_at: string
+        }
+        Insert: {
+          allow_estimated?: boolean
+          applied_at?: string | null
+          created_at?: string
+          created_by: string
+          game_category_id: string
+          game_id: string
+          id?: string
+          label?: string | null
+          pricing_mode?: string
+          row_count?: number
+          seller_id: string
+          source?: string
+          status?: string
+          template_version?: number
+          undercut_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_estimated?: boolean
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string
+          game_category_id?: string
+          game_id?: string
+          id?: string
+          label?: string | null
+          pricing_mode?: string
+          row_count?: number
+          seller_id?: string
+          source?: string
+          status?: string
+          template_version?: number
+          undercut_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_game_category_id_fkey"
+            columns: ["game_category_id"]
+            isOneToOne: false
+            referencedRelation: "game_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_import_batches_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
+      listing_import_rows: {
+        Row: {
+          action: string | null
+          batch_id: string
+          candidates: Json
+          created_at: string
+          description: string | null
+          error: string | null
+          id: string
+          image_url: string | null
+          item_name: string | null
+          item_ref: string | null
+          listing_id: string | null
+          market_price: number | null
+          match_status: string
+          price_input: number | null
+          price_mode: string | null
+          quantity: number | null
+          raw: Json
+          resolved_price: number | null
+          row_no: number
+          template_data: Json
+          title: string | null
+          updated_at: string
+          variant_label: string | null
+          variant_ref: string | null
+        }
+        Insert: {
+          action?: string | null
+          batch_id: string
+          candidates?: Json
+          created_at?: string
+          description?: string | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          item_name?: string | null
+          item_ref?: string | null
+          listing_id?: string | null
+          market_price?: number | null
+          match_status?: string
+          price_input?: number | null
+          price_mode?: string | null
+          quantity?: number | null
+          raw?: Json
+          resolved_price?: number | null
+          row_no: number
+          template_data?: Json
+          title?: string | null
+          updated_at?: string
+          variant_label?: string | null
+          variant_ref?: string | null
+        }
+        Update: {
+          action?: string | null
+          batch_id?: string
+          candidates?: Json
+          created_at?: string
+          description?: string | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          item_name?: string | null
+          item_ref?: string | null
+          listing_id?: string | null
+          market_price?: number | null
+          match_status?: string
+          price_input?: number | null
+          price_mode?: string | null
+          quantity?: number | null
+          raw?: Json
+          resolved_price?: number | null
+          row_no?: number
+          template_data?: Json
+          title?: string | null
+          updated_at?: string
+          variant_label?: string | null
+          variant_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "listing_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_rows_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_import_rows_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "moderation_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_price_history: {
         Row: {
           changed_at: string
@@ -3478,6 +3817,141 @@ export type Database = {
           },
         ]
       }
+      listing_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          listing_id: string
+          reason: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          listing_id: string
+          reason: string
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          listing_id?: string
+          reason?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_reports_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "moderation_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "listing_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       listing_templates: {
         Row: {
           category_id: string | null
@@ -3544,6 +4018,9 @@ export type Database = {
           game_id: string
           id: string
           images: string[] | null
+          import_batch_id: string | null
+          import_item_ref: string | null
+          import_variant: string | null
           is_unlimited: boolean | null
           metadata: Json
           min_quantity: number | null
@@ -3588,6 +4065,9 @@ export type Database = {
           game_id: string
           id?: string
           images?: string[] | null
+          import_batch_id?: string | null
+          import_item_ref?: string | null
+          import_variant?: string | null
           is_unlimited?: boolean | null
           metadata?: Json
           min_quantity?: number | null
@@ -3632,6 +4112,9 @@ export type Database = {
           game_id?: string
           id?: string
           images?: string[] | null
+          import_batch_id?: string | null
+          import_item_ref?: string | null
+          import_variant?: string | null
           is_unlimited?: boolean | null
           metadata?: Json
           min_quantity?: number | null
@@ -3721,6 +4204,13 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "listing_import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -5250,6 +5740,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_locked_at: string | null
           avatar_url: string | null
           badges: string[] | null
           banner_focal_y: number
@@ -5314,6 +5805,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          avatar_locked_at?: string | null
           avatar_url?: string | null
           badges?: string[] | null
           banner_focal_y?: number
@@ -5378,6 +5870,7 @@ export type Database = {
           username: string
         }
         Update: {
+          avatar_locked_at?: string | null
           avatar_url?: string | null
           badges?: string[] | null
           banner_focal_y?: number
@@ -9159,11 +9652,15 @@ export type Database = {
       }
       seller_onboarding: {
         Row: {
+          address_line: string | null
+          city: string | null
           completed_at: string | null
           country: string | null
           created_at: string
           current_step: number
           discord: string | null
+          expected_volume: string | null
+          full_name: string | null
           is_adult_confirmed_at: string | null
           logo_uploaded_at: string | null
           sells: Json
@@ -9173,11 +9670,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address_line?: string | null
+          city?: string | null
           completed_at?: string | null
           country?: string | null
           created_at?: string
           current_step?: number
           discord?: string | null
+          expected_volume?: string | null
+          full_name?: string | null
           is_adult_confirmed_at?: string | null
           logo_uploaded_at?: string | null
           sells?: Json
@@ -9187,11 +9688,15 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address_line?: string | null
+          city?: string | null
           completed_at?: string | null
           country?: string | null
           created_at?: string
           current_step?: number
           discord?: string | null
+          expected_volume?: string | null
+          full_name?: string | null
           is_adult_confirmed_at?: string | null
           logo_uploaded_at?: string | null
           sells?: Json
@@ -9697,6 +10202,183 @@ export type Database = {
           },
         ]
       }
+      seller_strikes: {
+        Row: {
+          created_at: string
+          id: string
+          issued_by: string | null
+          kind: string
+          listing_id: string | null
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+          seller_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issued_by?: string | null
+          kind: string
+          listing_id?: string | null
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seller_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issued_by?: string | null
+          kind?: string
+          listing_id?: string | null
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "moderation_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "seller_strikes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       seller_tier_config: {
         Row: {
           auto_approve_bulk: boolean
@@ -9982,6 +10664,261 @@ export type Database = {
             referencedColumns: ["seller_id"]
           },
         ]
+      }
+      seo_alerts: {
+        Row: {
+          created_at: string
+          details: Json
+          id: number
+          kind: string
+          message: string
+          posted_at: string | null
+          section: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: never
+          kind: string
+          message: string
+          posted_at?: string | null
+          section?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: never
+          kind?: string
+          message?: string
+          posted_at?: string | null
+          section?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      seo_index_overrides: {
+        Row: {
+          decided_at: string
+          path: string
+          reason: string
+          verdict: string
+        }
+        Insert: {
+          decided_at?: string
+          path: string
+          reason: string
+          verdict: string
+        }
+        Update: {
+          decided_at?: string
+          path?: string
+          reason?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
+      seo_section_daily: {
+        Row: {
+          clicks: number
+          day: string
+          impressions: number
+          indexed: number
+          inspected: number
+          section: string
+          sitemap_urls: number
+        }
+        Insert: {
+          clicks?: number
+          day: string
+          impressions?: number
+          indexed?: number
+          inspected?: number
+          section: string
+          sitemap_urls?: number
+        }
+        Update: {
+          clicks?: number
+          day?: string
+          impressions?: number
+          indexed?: number
+          inspected?: number
+          section?: string
+          sitemap_urls?: number
+        }
+        Relationships: []
+      }
+      seo_settings: {
+        Row: {
+          enforced_since: string | null
+          gate_mode: string
+          id: number
+          last_deploy_id: string | null
+          lastmod_diff_at: string | null
+          planned_enforce_on: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enforced_since?: string | null
+          gate_mode?: string
+          id?: number
+          last_deploy_id?: string | null
+          lastmod_diff_at?: string | null
+          planned_enforce_on?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enforced_since?: string | null
+          gate_mode?: string
+          id?: number
+          last_deploy_id?: string | null
+          lastmod_diff_at?: string | null
+          planned_enforce_on?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      seo_url_events: {
+        Row: {
+          attempts: number
+          changed_at: string
+          gsc_state: string | null
+          id: number
+          indexnow_status: string
+          last_error: string | null
+          last_inspected: string | null
+          next_attempt_at: string
+          reason: string
+          sent_at: string | null
+          url: string
+        }
+        Insert: {
+          attempts?: number
+          changed_at?: string
+          gsc_state?: string | null
+          id?: never
+          indexnow_status?: string
+          last_error?: string | null
+          last_inspected?: string | null
+          next_attempt_at?: string
+          reason: string
+          sent_at?: string | null
+          url: string
+        }
+        Update: {
+          attempts?: number
+          changed_at?: string
+          gsc_state?: string | null
+          id?: never
+          indexnow_status?: string
+          last_error?: string | null
+          last_inspected?: string | null
+          next_attempt_at?: string
+          reason?: string
+          sent_at?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      seo_url_inspections: {
+        Row: {
+          clicks_90d: number
+          coverage_state: string | null
+          google_canonical: string | null
+          impressions_90d: number
+          indexing_state: string | null
+          inspected_at: string | null
+          last_crawl_at: string | null
+          page_fetch_state: string | null
+          previous_verdict: string | null
+          robots_state: string | null
+          search_synced_at: string | null
+          section: string
+          url: string
+          user_canonical: string | null
+          verdict: string | null
+        }
+        Insert: {
+          clicks_90d?: number
+          coverage_state?: string | null
+          google_canonical?: string | null
+          impressions_90d?: number
+          indexing_state?: string | null
+          inspected_at?: string | null
+          last_crawl_at?: string | null
+          page_fetch_state?: string | null
+          previous_verdict?: string | null
+          robots_state?: string | null
+          search_synced_at?: string | null
+          section: string
+          url: string
+          user_canonical?: string | null
+          verdict?: string | null
+        }
+        Update: {
+          clicks_90d?: number
+          coverage_state?: string | null
+          google_canonical?: string | null
+          impressions_90d?: number
+          indexing_state?: string | null
+          inspected_at?: string | null
+          last_crawl_at?: string | null
+          page_fetch_state?: string | null
+          previous_verdict?: string | null
+          robots_state?: string | null
+          search_synced_at?: string | null
+          section?: string
+          url?: string
+          user_canonical?: string | null
+          verdict?: string | null
+        }
+        Relationships: []
+      }
+      seo_value_evidence: {
+        Row: {
+          anchors: Json
+          game_slug: string
+          history_days: number
+          is_protected: boolean
+          item_slug: string
+          observations: number
+          passes_changed_at: string | null
+          passes_gate: boolean
+          price_moved_at: string | null
+          refreshed_at: string
+          value_usd: number | null
+        }
+        Insert: {
+          anchors?: Json
+          game_slug: string
+          history_days?: number
+          is_protected?: boolean
+          item_slug: string
+          observations?: number
+          passes_changed_at?: string | null
+          passes_gate?: boolean
+          price_moved_at?: string | null
+          refreshed_at?: string
+          value_usd?: number | null
+        }
+        Update: {
+          anchors?: Json
+          game_slug?: string
+          history_days?: number
+          is_protected?: boolean
+          item_slug?: string
+          observations?: number
+          passes_changed_at?: string | null
+          passes_gate?: boolean
+          price_moved_at?: string | null
+          refreshed_at?: string
+          value_usd?: number | null
+        }
+        Relationships: []
       }
       shop_visits: {
         Row: {
@@ -13076,6 +14013,18 @@ export type Database = {
         }
         Returns: Json
       }
+      footer_game_activity: {
+        Args: {
+          p_exclude_sellers?: string[]
+          p_since: string
+          p_statuses: string[]
+        }
+        Returns: {
+          active_listings: number
+          game_id: string
+          orders_30d: number
+        }[]
+      }
       founding_spot_cap: { Args: never; Returns: number }
       generate_listing_slug: {
         Args: { listing_id: string; title_text: string }
@@ -13239,7 +14188,12 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: number
       }
+      listing_report_file: {
+        Args: { p_details?: string; p_listing: string; p_reason: string }
+        Returns: Json
+      }
       mark_inactive_sellers_offline: { Args: never; Returns: undefined }
+      moderation_tools_version: { Args: never; Returns: number }
       money_atomicity_version: { Args: never; Returns: number }
       money_fault_hook: { Args: { p_point: string }; Returns: undefined }
       notify_once: {
@@ -13712,6 +14666,7 @@ export type Database = {
           rule_scope: string
         }[]
       }
+      restore_listing: { Args: { listing_id: string }; Returns: string }
       sab_capture_price_history: { Args: { p_date?: string }; Returns: number }
       sab_count_unrepriced: {
         Args: { p_grace_seconds?: number }
@@ -13892,11 +14847,36 @@ export type Database = {
         Returns: Json
       }
       seller_since: { Args: { p_seller_id: string }; Returns: string }
+      seller_strike_count: { Args: { p_seller: string }; Returns: number }
+      seller_strike_issue: {
+        Args: {
+          p_escalate: boolean
+          p_issued_by: string
+          p_kind: string
+          p_listing: string
+          p_reason: string
+          p_seller: string
+        }
+        Returns: Json
+      }
       seller_withdrawal_gate: { Args: { p_seller_id: string }; Returns: Json }
+      seo_value_series: {
+        Args: { p_game_slug: string; p_source: string }
+        Returns: {
+          days: string[]
+          item_slug: string
+          series_key: string
+          vals: number[]
+        }[]
+      }
       storage_bucket_posture: { Args: { p_bucket: string }; Returns: Json }
       storage_declared_buckets: { Args: never; Returns: string[] }
       storage_policies_version: { Args: never; Returns: number }
       table_posture_version: { Args: never; Returns: number }
+      takedown_listing: {
+        Args: { listing_id: string; reason: string }
+        Returns: undefined
+      }
       unverified_review_price_usd: { Args: never; Returns: number }
       upgrade_all_seller_tiers: { Args: never; Returns: number }
       user_wallet_balance: {
