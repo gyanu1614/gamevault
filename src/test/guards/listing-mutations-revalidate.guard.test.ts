@@ -122,9 +122,9 @@ describe('listing mutations revalidate the category surfaces', () => {
 
   it('pins the set of mutation paths', () => {
     expect(writers.map((w) => w.file).sort()).toEqual([
-      // Step 4 — the bulk importer. Writes through @/lib/listings/create and
-      // revalidates once per category per applied chunk.
-      'src/lib/actions/admin-imports.ts',
+      // Step 4 — the bulk importer's apply + Pause/Resume/Remove. Writes
+      // through @/lib/listings/create and revalidates once per applied chunk.
+      'src/lib/actions/admin-import-apply.ts',
       // Moderation tools (2026-10-09): takedown / restore / image removal /
       // strike escalation — every path calls the seam.
       'src/lib/actions/admin-moderation-tools.ts',

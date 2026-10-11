@@ -9,8 +9,8 @@
  * This guard finds violations statically rather than trusting review:
  *   1. the ONLY files that may insert into `listings` are the create seam and
  *      the two grandfathered writers
- *   2. the importer's action module must import the seam, the validator and the
- *      revalidation helper
+ *   2. the importer's apply module (the only one that writes listings) must
+ *      import the seam, the validator and the revalidation helper
  *   3. `approvedBy` (born-approved, which skips moderation) may only be passed
  *      by an admin path — a seller path passing it would be AUTH-031 again
  *   4. import copy is held to the same banned vocabulary as the hub copy
@@ -38,6 +38,16 @@ function walk(dir: string, out: string[] = []): string[] {
 const FILES = walk(SRC).map((f) => ({ path: relative(ROOT, f), source: readFileSync(f, 'utf8') }))
 const rel = (p: string) => p.split('\\').join('/')
 
+/** The importer's server actions: reads/preview/teach, and apply/lifecycle. */
+const READ_ACTIONS = 'src/lib/actions/admin-imports.ts'
+const APPLY_ACTIONS = 'src/lib/actions/admin-import-apply.ts'
+const IMPORTER_MODULES = [READ_ACTIONS, APPLY_ACTIONS, 'src/lib/imports/admin/data.ts']
+const file = (p: string) => {
+  const f = FILES.find((x) => rel(x.path) === p)
+  expect(f, `${p} is missing`).toBeDefined()
+  return f!
+}
+
 describe('one listing-creation path', () => {
   /** The seam itself, plus writers that predate it with a stated reason. */
   const ALLOWED_INSERTERS: Record<string, string> = {
@@ -59,30 +69,31 @@ describe('one listing-creation path', () => {
   })
 
   it('the importer goes through the seam, the validator and the revalidation helper', () => {
-    const action = FILES.find((f) => rel(f.path) === 'src/lib/actions/admin-imports.ts')
-    expect(action, 'src/lib/actions/admin-imports.ts is missing').toBeDefined()
+    const action = file(APPLY_ACTIONS)
     for (const dep of [
       '@/lib/listings/create',
       '@/lib/listings/validate',
       '@/lib/revalidation/listings',
       '@/lib/categories',
     ]) {
-      expect(action!.source, `admin-imports must import ${dep}`).toContain(dep)
+      expect(action.source, `${APPLY_ACTIONS} must import ${dep}`).toContain(dep)
     }
   })
 
   it('the importer never writes the catalogue tables it reads', () => {
-    const action = FILES.find((f) => rel(f.path) === 'src/lib/actions/admin-imports.ts')!
-    for (const table of ['adopt_me_pets', 'sab_brainrots', 'values_items', 'game_categories', 'global_categories']) {
-      const writes = new RegExp(`\\.from\\(\\s*['"]${table}['"]\\s*\\)[\\s\\S]{0,200}?\\.(insert|update|upsert|delete)\\s*\\(`)
-      expect(writes.test(action.source), `admin-imports must not write ${table}`).toBe(false)
+    for (const path of IMPORTER_MODULES) {
+      const { source } = file(path)
+      for (const table of ['adopt_me_pets', 'sab_brainrots', 'values_items', 'game_categories', 'global_categories']) {
+        const writes = new RegExp(`\\.from\\(\\s*['"]${table}['"]\\s*\\)[\\s\\S]{0,200}?\\.(insert|update|upsert|delete)\\s*\\(`)
+        expect(writes.test(source), `${path} must not write ${table}`).toBe(false)
+      }
     }
   })
 })
 
 describe('born-approved is an admin-only capability', () => {
   /** Files allowed to set approvedBy on a create. */
-  const ALLOWED_APPROVERS = new Set(['src/lib/actions/admin-imports.ts'])
+  const ALLOWED_APPROVERS = new Set([APPLY_ACTIONS])
 
   it('only an admin path passes approvedBy', () => {
     const offenders = FILES.filter(({ path, source }) => {
@@ -97,17 +108,28 @@ describe('born-approved is an admin-only capability', () => {
     ).toEqual([])
   })
 
-  it('the admin path that uses it calls requireAdmin', () => {
-    const action = FILES.find((f) => rel(f.path) === 'src/lib/actions/admin-imports.ts')!
-    expect(action.source).toContain('requireAdmin')
-    // every exported action, not just one of them
-    const exported = [...action.source.matchAll(/export async function (\w+)/g)].map((m) => m[1])
-    expect(exported.length).toBeGreaterThan(4)
-    const requireAdminCount = (action.source.match(/requireAdmin\(\)/g) ?? []).length
-    expect(
-      requireAdminCount,
-      `${exported.length} exported actions but only ${requireAdminCount} requireAdmin() calls`,
-    ).toBeGreaterThanOrEqual(exported.length - 1) // the lifecycle helpers share one
+  /** Each top-level function's body, up to the next top-level function. */
+  function functionBodies(source: string): Array<{ name: string; exported: boolean; body: string }> {
+    const starts = [...source.matchAll(/^(export )?async function (\w+)\(/gm)]
+    return starts.map((m, i) => ({
+      name: m[2],
+      exported: !!m[1],
+      body: source.slice(m.index!, i + 1 < starts.length ? starts[i + 1].index : undefined),
+    }))
+  }
+
+  it('every importer action checks the caller is an admin', () => {
+    for (const path of [READ_ACTIONS, APPLY_ACTIONS]) {
+      const fns = functionBodies(file(path).source)
+      // A local helper that runs requireAdmin() itself (setBatchListingStatus).
+      const guarded = new Set(fns.filter((f) => !f.exported && f.body.includes('requireAdmin()')).map((f) => f.name))
+      const exported = fns.filter((f) => f.exported)
+      expect(exported.length, `${path} exports no actions`).toBeGreaterThan(0)
+      for (const fn of exported) {
+        const ok = fn.body.includes('requireAdmin()') || [...guarded].some((g) => fn.body.includes(`${g}(`))
+        expect(ok, `${path} → ${fn.name} must call requireAdmin() before touching the service-role client`).toBe(true)
+      }
+    }
   })
 })
 
@@ -120,8 +142,7 @@ describe('the seller CSV path keeps its bulk tag', () => {
   })
 
   it("the importer tags its own rows separately, so it is not counted against that cap", () => {
-    const action = FILES.find((f) => rel(f.path) === 'src/lib/actions/admin-imports.ts')!
-    expect(action.source).toContain("source: 'import'")
+    expect(file(APPLY_ACTIONS).source).toContain("source: 'import'")
   })
 })
 

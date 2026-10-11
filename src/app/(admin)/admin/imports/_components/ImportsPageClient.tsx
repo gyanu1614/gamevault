@@ -17,12 +17,8 @@ import { toast } from 'sonner'
 import { Upload, FileSpreadsheet, ChevronRight, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader, AdminPanel, StatusBadge, TABLE, SectionLabel } from '../../components/kit'
-import {
-  createImportBatch,
-  type BatchSummaryRow,
-  type ImportableGame,
-  type StoreSellerOption,
-} from '@/lib/actions/admin-imports'
+import { createImportBatch } from '@/lib/actions/admin-imports'
+import type { BatchSummaryRow, ImportableGame, StoreSellerOption } from '@/lib/imports/admin/types'
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-border-subtle bg-[rgba(18,18,24,0.7)] px-3 py-2 text-[14px] text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-border-strong'

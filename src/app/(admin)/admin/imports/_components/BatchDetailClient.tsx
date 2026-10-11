@@ -17,15 +17,14 @@ import { toast } from 'sonner'
 import { ArrowLeft, Download, Pause, Play, Archive, Rocket, Wand2, ImageOff, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader, AdminPanel, StatCard, StatusBadge, TABLE, SectionLabel } from '../../components/kit'
+import { teachImportAlias } from '@/lib/actions/admin-imports'
 import {
   applyImportBatch,
   pauseImportBatch,
   resumeImportBatch,
   removeImportBatch,
-  teachImportAlias,
-  type BatchDetail,
-  type BatchRowView,
-} from '@/lib/actions/admin-imports'
+} from '@/lib/actions/admin-import-apply'
+import type { BatchDetail, BatchRowView } from '@/lib/imports/admin/types'
 
 const STATUS_TONE: Record<string, string> = {
   matched: 'text-lime-text',

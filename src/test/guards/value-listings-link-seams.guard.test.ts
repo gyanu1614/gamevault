@@ -27,7 +27,7 @@ const SEAMS: Array<[file: string, fn: string]> = [
   ['src/lib/actions/listings.ts', 'updateListing'],
   ['src/lib/actions/listings.ts', 'bulkUpdateListings'],
   // Step 4 — the admin bulk importer (links the listings each chunk created).
-  ['src/lib/actions/admin-imports.ts', 'applyImportBatch'],
+  ['src/lib/actions/admin-import-apply.ts', 'applyImportBatch'],
 ]
 
 describe('value item link seams', () => {
