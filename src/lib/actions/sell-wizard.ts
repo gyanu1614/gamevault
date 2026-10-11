@@ -12,6 +12,7 @@
 
 'use server'
 
+import { getRequestUser } from '@/lib/auth/request-user'
 import { captureServerEvent } from '@/lib/analytics/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
@@ -85,6 +86,10 @@ export interface DuplicatePrefill {
   category_slug: string
   game_id: string
   game_slug: string
+  /** The listing's (game, category) row: the attribute template is keyed by it. */
+  game_category_id: string
+  /** Fixed-bundle currency listings: the bundle sold (null otherwise). */
+  bundle_id: string | null
   title: string
   description: string
   price: number
@@ -114,15 +119,15 @@ export async function fetchListingForDuplicate(
 ): Promise<Result<DuplicatePrefill>> {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return { success: false, error: 'Not signed in' }
+    const user = await getRequestUser()
+    if (!user) return { success: false, error: 'Not signed in' }
 
     const { data, error } = await (supabase
       .from('listings') as any)
       .select(`
         id, seller_id, title, description, price, original_price,
         quantity, min_quantity, delivery_method, delivery_time,
-        images, template_data, region, platform, game_id,
+        images, template_data, region, platform, game_id, game_category_id, bundle_id,
         status, moderation_notes, delivery_method_type,
         game:games(slug),
         category:game_categories!listings_game_category_id_fkey(global_category:global_categories!game_categories_global_category_id_fkey(slug))
@@ -146,6 +151,8 @@ export async function fetchListingForDuplicate(
       region: string | null
       platform: string | null
       game_id: string
+      game_category_id: string
+      bundle_id: string | null
       status: string
       moderation_notes: string | null
       delivery_method_type: string | null
@@ -170,6 +177,8 @@ export async function fetchListingForDuplicate(
         category_slug: slug,
         game_id: row.game_id,
         game_slug: row.game?.slug ?? '',
+        game_category_id: row.game_category_id,
+        bundle_id: row.bundle_id ?? null,
         title: row.title,
         description: row.description ?? '',
         price: row.price,
@@ -360,8 +369,8 @@ export async function fetchExistingBundleListingId(
 export async function fetchPublishPolicy(): Promise<Result<SellerPublishPolicy>> {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return { success: false, error: 'Not signed in' }
+    const user = await getRequestUser()
+    if (!user) return { success: false, error: 'Not signed in' }
 
     const { data, error } = await (supabase.rpc as any)(
       'get_seller_publish_policy',

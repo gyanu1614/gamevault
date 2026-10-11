@@ -68,7 +68,7 @@ export default function SellWizardPreview() {
   return (
     <>
       <HeroBackdropPreload name="sell" />
-      <HeroBackdrop name="sell" className="hero-dim overflow-hidden text-text-primary">
+      <HeroBackdrop name="sell" className="hero-dim overflow-clip text-text-primary">
         <SellWizard initialCategories={CATEGORIES} />
       </HeroBackdrop>
     </>

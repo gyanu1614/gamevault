@@ -1947,6 +1947,16 @@
   pointer-events: none;
 }
 
+/* The dims fade out over the hero's lower part. The image already melts into
+   the page ground there; a flat dim on top left its bottom edge a shade darker
+   than the page below, a hard seam across the screen (owner, 2026-10-10). */
+.hero-dim > .hero-backdrop::after,
+.hero-dim-content > .hero-backdrop::after,
+.hero-dim-strong > .hero-backdrop::after {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+
 .section-fade-bottom { position: relative; }
 .section-fade-bottom::after {
   content: "";
