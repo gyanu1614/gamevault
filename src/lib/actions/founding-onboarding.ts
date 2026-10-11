@@ -28,6 +28,7 @@ import { rateLimitAction } from '@/lib/security/rate-limit'
 import { getLegalDoc, LEGAL_ENTITY } from '@/lib/legal/documents'
 import { getFoundingProgress } from '@/lib/actions/early-seller'
 import { uploadProfileAvatar } from '@/lib/actions/auth'
+import { trackFoundingStep } from '@/lib/analytics/founding'
 import { lookupDiscordHandle } from '@/lib/auth/discord-handle'
 import type { FoundingProgress } from '@/lib/config/founding-seller'
 import { slugify } from '@/lib/utils'
@@ -206,6 +207,7 @@ export async function saveFoundingDetails(input: DetailsInput): Promise<{ succes
       { onConflict: 'user_id' },
     )
     if (error) throw error
+    await trackFoundingStep(user.id, 2)
     return { success: true }
   } catch (err: any) {
     console.error('[founding] saveFoundingDetails:', err?.message)
@@ -273,6 +275,7 @@ export async function saveFoundingStore(input: { storeName: string; logoDataUrl?
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
     if (error) throw error
+    await trackFoundingStep(user.id, 3)
     return { success: true, logoUrl }
   } catch (err: any) {
     console.error('[founding] saveFoundingStore:', err?.message)
@@ -346,6 +349,7 @@ export async function signFoundingAgreement(input: {
     const { data, error } = await s.rpc('seller_onboarding_complete', { p_user: user.id, p_agreement_version: version })
     if (error) throw new Error(`seller_onboarding_complete: ${error.message}`)
     if (!data?.completed) return { success: false, error: completionRefusalMessage(data?.reason) }
+    await trackFoundingStep(user.id, 4)
 
     revalidatePath('/founding')
     revalidatePath('/admin/active-sellers')

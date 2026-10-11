@@ -90,21 +90,16 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
   const stage: FoundingStage = state.isSeller ? 5 : state.stage
   const next = () => setOpen(stage)
 
-  // PostHog seller funnel. "Viewed" when a step opens; "completed" only for
-  // steps finished during this visit (a returning seller at step 3 does not
-  // re-fire 1 and 2). Step 4 completed = store open.
+  // PostHog seller funnel: "viewed" fires here when a step opens. "Completed"
+  // fires on the SERVER where each step is saved (lib/analytics/founding.ts):
+  // from the browser, an email-confirmed sign-up came back on a fresh page at
+  // step 2, so step 1 never fired and the whole funnel read 0.
   const viewed = useRef<Set<number>>(new Set())
   useEffect(() => {
     if (stage >= 5 || open >= 5 || viewed.current.has(open)) return
     viewed.current.add(open)
     track('founding_step_viewed', { step: open })
   }, [open, stage])
-  const lastStage = useRef<FoundingStage>(stage)
-  useEffect(() => {
-    const from = lastStage.current
-    lastStage.current = stage
-    for (let step = from; step < stage && step <= 4; step += 1) track('founding_step_completed', { step })
-  }, [stage])
 
   const renderStep = (id: FoundingStepId) => {
     if (id === 1) return <StepAccount signedIn={state.signedIn} email={state.user?.email ?? null} onContinue={next} onSignedIn={reload} />
