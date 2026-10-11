@@ -10,9 +10,10 @@ import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 /**
  * Shared by /{game}/{category}/item/{item} and …/item/{item}/{variant}.
  *
- * SEO (owner, 2026-10-02): an item page with live stock is indexable with a
- * self-canonical and its own title; with no stock it is noindex,follow and
- * keeps its fallbacks. A variant page canonicals to its item page. None of
+ * SEO (owner, 2026-10-02; bar raised 2026-10-10): an item page is indexable
+ * with a self-canonical once the item has 5+ live listings (`model.indexable`,
+ * ITEM_PAGE_MIN_LISTINGS); below that it is noindex,follow — with stock it
+ * still gets its "Buy …" title, with none it keeps its fallbacks. A variant page canonicals to its item page. None of
  * these are in the sitemap yet (Bundle 1 owns the sitemap predicate).
  */
 export interface ItemRouteParams {
@@ -35,7 +36,7 @@ export async function itemRouteMetadata(p: ItemRouteParams): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: model.canonicalPath },
-    ...(inStock ? {} : { robots: { index: false, follow: true } }),
+    ...(model.indexable ? {} : { robots: { index: false, follow: true } }),
     openGraph: { title: socialTitle(title), description, url: model.canonicalPath, type: 'website', images: model.item.imageUrl ? [model.item.imageUrl] : [] },
   }
 }

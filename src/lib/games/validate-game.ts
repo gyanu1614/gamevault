@@ -30,7 +30,7 @@ export const RESERVED_GAME_SLUGS = new Set([
   'dev', 'early-seller', 'forgot-password', 'founding', 'kyc', 'listing-preview', 'listings',
   'login', 'notifications', 'orders', 'purchases', 'reviews', 'shop',
   'signup', 'signup-become-seller', 'support', 'wallet', 'wishlist',
-  'sell', 'seller', 'admin', 'test', 'test-connection',
+  'sell', 'seller', 'admin', 'test', 'test-connection', 'sitemaps',
   // (legal) group — all render at the top level
   'acceptable-use', 'aml', 'buyer-terms', 'chargebacks', 'company',
   'complaints', 'cookies', 'fees', 'ip', 'privacy', 'prohibited',
@@ -39,7 +39,7 @@ export const RESERVED_GAME_SLUGS = new Set([
   // (marketing) group
   'safedrop',
   // well-known / static assets
-  'robots.txt', 'sitemap.xml', 'favicon.ico', 'icon', 'apple-icon',
+  'robots.txt', 'sitemap.xml', 'sitemaps', 'favicon.ico', 'icon', 'apple-icon',
   'opengraph-image', '_next', 'static', 'public',
 ])
 

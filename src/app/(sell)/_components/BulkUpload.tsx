@@ -269,7 +269,7 @@ export default function BulkUpload({ initialCategories }: BulkUploadProps) {
       <section className="relative overflow-visible rounded-3xl border border-border-default bg-bg-raised p-4 shadow-elevated sm:p-5 lg:p-6">
         <header className="mb-6 flex items-center justify-between">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-text-primary sm:text-2xl">Bulk upload</h1>
+            <h1 className="text-xl font-bold text-text-primary sm:text-2xl">Bulk Upload</h1>
             <p className="text-sm text-text-secondary">
               Publish many listings at once from a CSV.
             </p>

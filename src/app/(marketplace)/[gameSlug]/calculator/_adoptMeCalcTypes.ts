@@ -5,19 +5,12 @@
  * _adoptMeCalcData.ts and imports FROM here.
  */
 
-export const VARIANTS = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR'] as const
-export type Variant = (typeof VARIANTS)[number]
-
-export const VARIANT_LABEL: Record<Variant, string> = {
-  N: 'Normal',
-  F: 'Fly',
-  R: 'Ride',
-  FR: 'Fly Ride',
-  NEON: 'Neon',
-  NFR: 'Neon Fly Ride',
-  MEGA: 'Mega Neon',
-  MFR: 'Mega Fly Ride',
-}
+// The variant axis moved to @/lib/adopt-me/variants (Step 4): the bulk importer
+// needs it too, and a route-private module is the wrong home for data the DB
+// stores. Re-exported so every existing importer of this file is unchanged.
+export { VARIANTS, VARIANT_LABEL, type Variant } from '@/lib/adopt-me/variants'
+// A re-export does not bind the name locally; the interfaces below need it.
+import type { Variant } from '@/lib/adopt-me/variants'
 
 export interface CalcVariantValue {
   tradeValue: number | null

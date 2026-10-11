@@ -38,6 +38,7 @@ import {
   Storefront,
   Target,
   Ticket,
+  UploadSimple,
   UserPlus,
   X,
   UsersThree,
@@ -107,6 +108,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
     title: 'Catalogue',
     links: [
       { label: 'Games', href: '/admin/games', icon: GameController, roles: ['admin', 'super_admin'] },
+      { label: 'Bulk Import', href: '/admin/imports', icon: UploadSimple, roles: ['admin', 'super_admin'] },
       { label: 'Blog & Content', href: '/admin/blog', icon: Article, roles: ['admin', 'super_admin'] },
       { label: 'SEO Health', href: '/admin/seo', icon: MagnifyingGlass, roles: ['admin', 'super_admin'] },
       { label: 'Promo Codes', href: '/admin/promos', icon: Ticket, roles: ['admin', 'super_admin'] },

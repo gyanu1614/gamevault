@@ -10,8 +10,8 @@ import type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
  * list so the page shows an "unavailable" state rather than throwing.
  */
 
-const VARIANTS = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR'] as const
-type Variant = (typeof VARIANTS)[number]
+// The variant axis lives in one place (also the calculator's and the importer's).
+import { VARIANTS, type Variant } from '@/lib/adopt-me/variants'
 
 type PetRow = {
   id: string

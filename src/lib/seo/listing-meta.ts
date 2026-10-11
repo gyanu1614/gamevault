@@ -53,8 +53,14 @@ export function listingMeta(input: {
     ? withGame
     : clip(name, TITLE_MAX)
 
+  // "FR Frost Dragon | Adopt Me" → "FR Frost Dragon" for the sentence, so it
+  // never reads "… | Adopt Me for Adopt Me"; a title naming the game anywhere
+  // else keeps its words and drops the " for {game}".
+  const escaped = game.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const bare = name.replace(new RegExp(`\\s*[|\\-–—:]\\s*${escaped}$`, 'i'), '').trim() || name
+  const forGame = bare.toLowerCase().includes(game.toLowerCase()) ? '' : ` for ${game}`
   const price = Number(input.price)
-  const lead = `Buy ${name} for ${game}${Number.isFinite(price) && price > 0 ? ` for ${usd(price)}` : ''}.`
+  const lead = `Buy ${bare}${forGame}${Number.isFinite(price) && price > 0 ? ` for ${usd(price)}` : ''}.`
   const own = cleanSellerText(input.description)
   const tail = 'Covered by SafeDrop Protection.'
   const body = own.length >= 40 ? `${lead} ${own}` : `${lead} ${input.categoryName.trim()} from an ID-verified seller. ${tail}`
