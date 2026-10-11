@@ -39,7 +39,7 @@ export const RESERVED_GAME_SLUGS = new Set([
   // (marketing) group
   'safedrop',
   // well-known / static assets
-  'robots.txt', 'sitemap.xml', 'favicon.ico', 'icon', 'apple-icon',
+  'robots.txt', 'sitemap.xml', 'sitemaps', 'favicon.ico', 'icon', 'apple-icon',
   'opengraph-image', '_next', 'static', 'public',
 ])
 
