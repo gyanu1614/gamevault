@@ -41,7 +41,6 @@ import { StepHeading } from './sell-wizard/StepHeading'
 import { ChangesRequestedBanner } from './sell-wizard/ChangesRequestedBanner'
 import { PolicyBanner } from './sell-wizard/PolicyBanner'
 import { TermsCard } from './sell-wizard/TermsCard'
-import { NUMBERED_SECTIONS } from './sell-wizard/ui/SubCard'
 import { WizardFooter } from './sell-wizard/WizardFooter'
 import { GoBackDialog } from './sell-wizard/GoBackDialog'
 import { Step1Category } from './sell-wizard/steps/Step1Category'
@@ -206,7 +205,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     <main
       className={cn(
         // pt clears the fixed wizard bar; `sell-form` scopes the focus-ring override in globals.css.
-        'sell-form mx-auto flex w-full max-w-3xl flex-col px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-[10.5rem] sm:px-6 sm:pt-[11rem]',
+        'sell-form mx-auto flex w-full max-w-3xl flex-col px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-32 sm:px-6 sm:pt-[8.5rem]',
         step < 3 && 'min-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))]',
       )}
     >
@@ -257,7 +256,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
             )}
 
             {step === 3 && category && game && (
-              <div className={cn('space-y-5', NUMBERED_SECTIONS)}>
+              <div className="space-y-5">
                 {isEditMode && prefill?.listing.status === 'changes_requested' && (
                   <ChangesRequestedBanner notes={prefill.listing.moderation_notes} />
                 )}

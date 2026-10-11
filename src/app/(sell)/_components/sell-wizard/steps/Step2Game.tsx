@@ -65,7 +65,7 @@ export function Step2Game({
     // The picker lives in a titled card (SubCard, the Step 3 panel), so all
     // three steps share one pattern: page title = context ("Sell Items"),
     // card title = the question ("Choose A Game").
-    <SubCard>
+    <SubCard title="Choose A Game">
     <div className="space-y-4">
       {/* A searchable dropdown rather than a wall of tiles. The catalogue
           runs to hundreds of games; a grid made the seller hunt visually

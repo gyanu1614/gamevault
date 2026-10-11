@@ -23,10 +23,10 @@ function Block({ className = '' }: { className?: string }) {
 
 function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
   return (
-    <header className="fixed inset-x-0 top-[calc(var(--safe-top)+12px)] z-50 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header className="fixed inset-x-0 top-[var(--safe-top)] z-50">
       <div className={cn('relative', styles.bar)}>
       <div aria-hidden className={styles.aurora} />
-      <div className="relative px-4 sm:px-5">
+      <div className="relative px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between gap-3">
           <div className="flex shrink-0 items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -36,11 +36,7 @@ function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
           <Block className="h-3.5 w-28" />
         </div>
       </div>
-      <div className="relative mx-auto w-full max-w-3xl px-4 pb-4 sm:px-6">
-        <div className="mb-2.5 flex items-center justify-between gap-3">
-          <Block className="h-[18px] w-40 sm:h-[21px]" />
-          <Block className="h-3 w-16" />
-        </div>
+      <div className="relative mx-auto w-full max-w-3xl px-4 pb-3.5 sm:px-6">
         <div className="grid grid-cols-3 gap-1.5">
           {[1, 2, 3].map((s) => (
             <div key={s} className="min-w-0">
@@ -60,7 +56,6 @@ function Panel({ titleWidth, children }: { titleWidth?: string; children: React.
     <section className={styles.card}>
       {titleWidth && (
         <div className="flex items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-          <Block className="h-8 w-8 shrink-0 rounded-[9px]" />
           <Block className={`h-[18px] ${titleWidth}`} />
         </div>
       )}
@@ -84,7 +79,7 @@ export function SellWizardSkeleton({ variant }: { variant: 'new' | 'edit' }) {
   return (
     <main
       aria-busy
-      className={`mx-auto flex w-full max-w-3xl flex-col px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-[10.5rem] sm:px-6 sm:pt-[11rem] ${
+      className={`mx-auto flex w-full max-w-3xl flex-col px-4 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-32 sm:px-6 sm:pt-[8.5rem] ${
         variant === 'new' ? 'min-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))]' : ''
       }`}
     >
@@ -96,7 +91,7 @@ export function SellWizardSkeleton({ variant }: { variant: 'new' | 'edit' }) {
           <div className="mb-4 flex justify-center sm:mb-5">
             <Block className="h-[30px] w-56 sm:h-[37.5px] sm:w-72" />
           </div>
-          <Panel>
+          <Panel titleWidth="w-40">
             <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-md border border-white/[0.08] bg-white/[0.03] p-3">

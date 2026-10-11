@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 export type WizardStep = 1 | 2 | 3
 
 /** Space kept above the wizard when a step change scrolls it into view (clears the fixed bar). */
-const WIZARD_TOP_OFFSET = 168
+const WIZARD_TOP_OFFSET = 136
 
 /**
  * The current step and everything tied to it:
@@ -32,8 +32,10 @@ export function useWizardSteps(input: { initialStep: WizardStep; historyEnabled:
       return
     }
     if (!cardRef.current) return
-    const top = cardRef.current.getBoundingClientRect().top + window.scrollY - WIZARD_TOP_OFFSET
-    window.scrollTo({ top, behavior: 'smooth' })
+    // Up only: when the seller is already at the top, a step change must not
+    // nudge the page down and slide the heading under the glass bar.
+    const top = Math.max(0, cardRef.current.getBoundingClientRect().top + window.scrollY - WIZARD_TOP_OFFSET)
+    if (top < window.scrollY) window.scrollTo({ top, behavior: 'smooth' })
   }, [step, cardRef])
 
   const popstateGuardRef = useRef(false)

@@ -29,13 +29,16 @@ export default async function SellLayout({ children }: { children: React.ReactNo
           navbar gone the artwork sits directly behind the inputs, and
           at full strength it competed with them for attention — the
           backdrop should frame the task, not fight it. */}
-      {/* `overflow-hidden` clips the decorative backdrop, which is taller
+      {/* `overflow-clip` clips the decorative backdrop, which is taller
           than the viewport by design (fixed --hero-height). On a page
           that is meant to fit exactly one screen it was the only thing
-          producing a scrollbar — the art can crop, the layout cannot. */}
+          producing a scrollbar — the art can crop, the layout cannot.
+          `clip`, not `hidden`: a hidden box is still a scroll container,
+          and scroll anchoring scrolled it ~64px on every step change,
+          sliding the heading under the glass bar. */}
       <HeroBackdrop
         name="sell"
-        className="hero-dim overflow-hidden text-text-primary"
+        className="hero-dim overflow-clip text-text-primary"
       >
         {children}
       </HeroBackdrop>
