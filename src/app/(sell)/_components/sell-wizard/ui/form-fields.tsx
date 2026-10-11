@@ -81,7 +81,9 @@ export function TipBox({ children, className }: { children: React.ReactNode; cla
         aria-hidden
         sx={{ width: 13, height: 13, color: 'var(--color-text-tertiary)', mt: '2.5px', flexShrink: 0 }}
       />
-      <p className="text-[12px] leading-[18px] text-text-tertiary">{children}</p>
+      {/* `capitalize`: tips read in Title Case (owner, 2026-10-10), including
+          the admin-written attribute help text, so no copy needs retyping. */}
+      <p className="text-[12px] capitalize leading-[18px] text-text-tertiary">{children}</p>
     </div>
   )
 }

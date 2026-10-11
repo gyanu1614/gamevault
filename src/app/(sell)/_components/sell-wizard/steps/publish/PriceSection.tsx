@@ -172,7 +172,7 @@ export function PriceSection({
       </div>
       {discount > 0 && (
         <FieldHint className="text-success">
-          {discount}% discount badge will show
+          {discount}% Discount Badge Will Show
         </FieldHint>
       )}
     </div>
