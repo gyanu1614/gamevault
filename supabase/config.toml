@@ -307,9 +307,14 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# Enabled locally so the admin panel is reachable at all: every /admin page
+# requires aal2 (src/app/(admin)/layout.tsx), and with TOTP disabled a local
+# admin can neither enrol nor verify, so the whole panel 404s behind
+# "MFA enroll is disabled for TOTP". Local-stack config only — production auth
+# is configured in the Supabase dashboard, not this file.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

@@ -34,6 +34,10 @@ const EXEMPT: Record<string, string> = {
   // (the create/edit paths, pinned by value-listings-link-seams.guard.test.ts,
   // and the nightly /api/cron/value-listing-refs).
   'src/lib/value-listings/link.ts': 'link columns only; its callers revalidate',
+  // Step 4 — the shared create seam. It deliberately does NOT revalidate: the
+  // caller does, so a 500-row import revalidates once per category instead of
+  // once per listing. Every caller of it is itself in the pinned set below.
+  'src/lib/listings/create.ts': 'the shared insert seam; its callers revalidate (and are pinned here)',
 }
 
 const SEAM = '@/lib/revalidation/listings'
@@ -118,6 +122,9 @@ describe('listing mutations revalidate the category surfaces', () => {
 
   it('pins the set of mutation paths', () => {
     expect(writers.map((w) => w.file).sort()).toEqual([
+      // Step 4 — the bulk importer. Writes through @/lib/listings/create and
+      // revalidates once per category per applied chunk.
+      'src/lib/actions/admin-imports.ts',
       // Moderation tools (2026-10-09): takedown / restore / image removal /
       // strike escalation — every path calls the seam.
       'src/lib/actions/admin-moderation-tools.ts',
@@ -131,6 +138,9 @@ describe('listing mutations revalidate the category surfaces', () => {
       'src/lib/actions/seller-presence.ts',
       'src/lib/api/seller-compatible.ts',
       'src/lib/escrow/transition.ts',
+      // Step 4: the shared insert seam (exempt from calling the seam itself —
+      // see EXEMPT above — but still a writer, so it is pinned here).
+      'src/lib/listings/create.ts',
       // GRO-08: drafts built during the application are submitted on
       // approval (service role) — calls the seam per touched listing.
       'src/lib/listings/submit-applicant-drafts.ts',
