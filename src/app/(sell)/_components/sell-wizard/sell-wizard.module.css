@@ -6,8 +6,10 @@
  */
 
 /* ── Top bar ─────────────────────────────────────────────── */
+/* No `position` here: the markup's `fixed` must win (a module rule loads after
+   Tailwind and would drop the bar into the page column). Fixed is already a
+   containing block for the absolute aurora. */
 .bar {
-  position: relative;
   overflow: hidden;
   background: rgba(14, 15, 18, 0.86);
   backdrop-filter: blur(16px) saturate(140%);
