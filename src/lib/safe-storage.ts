@@ -1,5 +1,5 @@
 /**
- * sessionStorage that never throws.
+ * sessionStorage (and localStorage) that never throws.
  *
  * Some browsers hand the page no storage at all: iOS in-app webviews can
  * expose `window.sessionStorage` as null, Safari private modes and blocked
@@ -11,35 +11,42 @@
  * third-party (see instrumentation-client.ts).
  */
 
-function session(): Storage | null {
+function store(kind: 'sessionStorage' | 'localStorage'): Storage | null {
   try {
     if (typeof window === 'undefined') return null
-    return window.sessionStorage ?? null
+    return window[kind] ?? null
   } catch {
     return null
   }
 }
 
-export const safeSession = {
-  get(key: string): string | null {
-    try {
-      return session()?.getItem(key) ?? null
-    } catch {
-      return null
-    }
-  },
-  set(key: string, value: string): void {
-    try {
-      session()?.setItem(key, value)
-    } catch {
-      /* no storage or full — keep going without it */
-    }
-  },
-  remove(key: string): void {
-    try {
-      session()?.removeItem(key)
-    } catch {
-      /* no storage — nothing to remove */
-    }
-  },
+function safeStore(kind: 'sessionStorage' | 'localStorage') {
+  return {
+    get(key: string): string | null {
+      try {
+        return store(kind)?.getItem(key) ?? null
+      } catch {
+        return null
+      }
+    },
+    set(key: string, value: string): void {
+      try {
+        store(kind)?.setItem(key, value)
+      } catch {
+        /* no storage or full — keep going without it */
+      }
+    },
+    remove(key: string): void {
+      try {
+        store(kind)?.removeItem(key)
+      } catch {
+        /* no storage — nothing to remove */
+      }
+    },
+  }
 }
+
+export const safeSession = safeStore('sessionStorage')
+
+/** localStorage with the same never-throw contract. */
+export const safeLocal = safeStore('localStorage')

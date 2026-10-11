@@ -59,3 +59,21 @@ describe('safeSession', () => {
     expect(safeSession.get('a')).toBeNull()
   })
 })
+
+describe('safeLocal', () => {
+  it('reads and writes localStorage, and never throws when it is missing', async () => {
+    const { safeLocal } = await import('./safe-storage')
+    const mem = new Map<string, string>()
+    const g = globalThis as unknown as { window?: unknown }
+    const prev = g.window
+    g.window = { localStorage: { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) } }
+    safeLocal.set('k', 'v')
+    expect(safeLocal.get('k')).toBe('v')
+    safeLocal.remove('k')
+    expect(safeLocal.get('k')).toBeNull()
+    g.window = { get localStorage(): Storage { throw new Error('blocked') } }
+    expect(safeLocal.get('k')).toBeNull()
+    expect(() => safeLocal.set('k', 'v')).not.toThrow()
+    g.window = prev
+  })
+})
