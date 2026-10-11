@@ -6,7 +6,7 @@
  * an 80%-alpha overlay fill, which compiles to nothing (a CSS-variable colour takes
  * no opacity modifier), so only their borders showed. This one mirrors the
  * wizard as it is now (SellWizard.tsx):
- *   · the fixed wizard bar (brand, back link, step title + count, three rails);
+ *   · the floating wizard bar card (brand, back link, step title + count, three rails);
  *   · `new`  → Step 1: centred title, "Choose A Category" panel with a 2×2
  *              tile grid, then the Bulk upload | Continue row;
  *   · `edit` → Step 3: game logo + title, field panels, then the action row.
@@ -23,9 +23,10 @@ function Block({ className = '' }: { className?: string }) {
 
 function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
   return (
-    <header className={cn('fixed inset-x-0 top-[var(--safe-top)] z-50', styles.bar)}>
+    <header className="fixed inset-x-0 top-[calc(var(--safe-top)+12px)] z-50 mx-auto w-full max-w-3xl px-4 sm:px-6">
+      <div className={cn('relative', styles.bar)}>
       <div aria-hidden className={styles.aurora} />
-      <div className="relative w-full px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-5">
         <div className="flex h-14 items-center justify-between gap-3">
           <div className="flex shrink-0 items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -35,7 +36,7 @@ function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
           <Block className="h-3.5 w-28" />
         </div>
       </div>
-      <div className="relative mx-auto w-full max-w-3xl px-4 pb-3.5 sm:px-6">
+      <div className="relative px-4 pb-4 sm:px-5">
         <div className="mb-2.5 flex items-center justify-between gap-3">
           <Block className="h-[18px] w-40 sm:h-[21px]" />
           <Block className="h-3 w-16" />
@@ -48,6 +49,7 @@ function WizardBar({ activeStep }: { activeStep: 1 | 3 }) {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </header>
   )

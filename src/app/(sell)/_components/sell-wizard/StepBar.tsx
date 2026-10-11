@@ -10,7 +10,7 @@ import styles from './sell-wizard.module.css'
 
 /**
  * The wizard's own top bar (the global navbar is stripped on /sell), design
- * "Aurora": a slow green/teal glow drifting behind the bar. One bar carries
+ * "Aurora" as a floating card the width of the form: a slow green/teal glow drifting behind the bar. One bar carries
  * identity (logo), escape (back) and position: the current step's title
  * ("Choose A Game") with "Step 2 of 3", the three rails, and their labels.
  * Completed steps are clickable, backwards only.
@@ -28,10 +28,11 @@ export function StepBar({
 }) {
   const current = STEPS.find((s) => s.id === step) ?? STEPS[0]
   return (
-    <header className={cn('fixed inset-x-0 top-[var(--safe-top)] z-50', styles.bar)}>
+    <header className="fixed inset-x-0 top-[calc(var(--safe-top)+12px)] z-50 mx-auto w-full max-w-3xl px-4 sm:px-6">
+      <div className={cn('relative', styles.bar)}>
       <div aria-hidden className={styles.aurora} />
 
-      <div className="relative w-full px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-5">
         <div className="flex h-14 items-center justify-between gap-3">
           <Link href="/" className="flex shrink-0 items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -49,8 +50,8 @@ export function StepBar({
         </div>
       </div>
 
-      {/* Same container as the form (max-w-3xl px-4 sm:px-6), so the rails line up with the fields. */}
-      <nav aria-label="Progress" className="relative mx-auto w-full max-w-3xl px-4 pb-3.5 sm:px-6">
+      {/* Same inner padding as the cards below, so the rails line up with the fields. */}
+      <nav aria-label="Progress" className="relative px-4 pb-4 sm:px-5">
         <div className="mb-2.5 flex items-baseline justify-between gap-3">
           <p className="truncate text-[15px] font-semibold tracking-tight text-text-primary sm:text-[17px]">{current.hint}</p>
           <span className="shrink-0 text-[12.5px] tabular-nums text-text-tertiary">
@@ -88,6 +89,7 @@ export function StepBar({
           })}
         </ol>
       </nav>
+      </div>
     </header>
   )
 }
