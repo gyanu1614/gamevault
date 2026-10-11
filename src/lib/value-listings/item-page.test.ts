@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildItemPage } from './item-page'
+import { buildItemPage, ITEM_PAGE_MIN_LISTINGS } from './item-page'
 import { buildValueCatalog } from './catalogs'
 
 const sab = buildValueCatalog('steal-a-brainrot', {
@@ -38,7 +38,8 @@ describe('buildItemPage', () => {
     const m = buildItemPage({ ...base, itemSlug: 'dragon-cannelloni', variant: null })!
     expect(m.results.map((r) => r.id)).toEqual(['b', 'c', 'a'])
     expect(m.fallback).toBeNull()
-    expect(m.indexable).toBe(true)
+    // 3 live listings: the page renders, but stays out of the index (owner, 2026-10-10)
+    expect(m.indexable).toBe(false)
     expect(m.canonicalPath).toBe('/steal-a-brainrot/buy-items/item/dragon-cannelloni')
     expect(m.fullName).toBe('Dragon Cannelloni')
   })
@@ -63,6 +64,19 @@ describe('buildItemPage', () => {
     // similar: same rarity first, then closest value; only items with stock
     expect(m.fallback!.similar.map((s) => s.slug)).toEqual(['garama', 'la-vacca', 'tralalero'])
     expect(m.fallback!.similar[0]).toMatchObject({ count: 1, minPriceUsd: 9, href: '/steal-a-brainrot/buy-items/item/garama' })
+  })
+
+  it('indexable only from ITEM_PAGE_MIN_LISTINGS live listings of the item (all variants)', () => {
+    expect(ITEM_PAGE_MIN_LISTINGS).toBe(5)
+    const five = [...rows, row('g', 'dragon-cannelloni', 'diamond', 6), row('h', 'dragon-cannelloni', 'default', 3)]
+    const item = buildItemPage({ ...base, rows: five, itemSlug: 'dragon-cannelloni', variant: null })!
+    expect(item.results).toHaveLength(5)
+    expect(item.indexable).toBe(true)
+    // a variant page with stock follows its item (it canonicals there anyway)
+    expect(buildItemPage({ ...base, rows: five, itemSlug: 'dragon-cannelloni', variant: 'gold' })!.indexable).toBe(true)
+    // one short of the bar → noindex
+    const four = buildItemPage({ ...base, rows: five.slice(0, -1), itemSlug: 'dragon-cannelloni', variant: null })!
+    expect(four.indexable).toBe(false)
   })
 
   it('no stock for the item at all → similar items only, noindex', () => {

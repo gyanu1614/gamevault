@@ -8,7 +8,9 @@
  *   · nothing to show → fallback, in this order: (1) other variants of the
  *     same item, (2) similar items with stock (same rarity, then closest
  *     market value), (3) the page's actions (sell / browse)
- *   · indexable only with results; a variant page canonicals to its item page
+ *   · indexable only when the item has ITEM_PAGE_MIN_LISTINGS live listings
+ *     (all variants) and the page itself has results; a variant page
+ *     canonicals to its item page
  */
 import { itemBuyHref, type ItemStock } from './buy-state'
 import { variantLabel, type CatalogItemRow, type LoadedCatalog } from './catalogs'
@@ -49,6 +51,14 @@ export interface ItemPageModel<T extends ItemPageRow> {
     similar: Array<CatalogItemRow & { count: number; minPriceUsd: number; href: string }>
   }
 }
+
+/**
+ * Owner, 2026-10-10: an item page earns its place in the index with 5+ live
+ * listings. Below that it still renders (buyers reach it from the category
+ * page and value pages) but is noindex,follow — a few hundred one-listing
+ * pet pages would be exactly the thin pages the category gate keeps out.
+ */
+export const ITEM_PAGE_MIN_LISTINGS = 5
 
 const SIMILAR_LIMIT = 4
 const OTHER_VARIANT_ROWS = 6
@@ -106,7 +116,7 @@ export function buildItemPage<T extends ItemPageRow>(input: ItemPageInput<T>): I
     results,
     stock,
     minPriceUsd: results.length ? Number(results[0].price) : null,
-    indexable: results.length > 0,
+    indexable: results.length > 0 && itemRows.length >= ITEM_PAGE_MIN_LISTINGS,
     canonicalPath: itemBuyHref({ ...ref, variant: null }),
     variantsInStock,
     fallback,
