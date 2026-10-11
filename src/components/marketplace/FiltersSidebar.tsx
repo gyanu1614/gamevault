@@ -90,6 +90,8 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
       params.delete('online')
     }
 
+    // New filters → page 1 (a kept ?page= could point past the new results).
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
     setShowMobile(false)
   }
@@ -108,6 +110,7 @@ export default function FiltersSidebar({ minPrice = 0, maxPrice = 1000, classNam
     params.delete('tiers')
     params.delete('delivery')
     params.delete('online')
+    params.delete('page')
 
     router.push(`${pathname}?${params.toString()}`)
     setShowMobile(false)

@@ -5,7 +5,7 @@
  *
  * Implements the design_handoff_items_page §3-7 spec: filter band with
  * three Radix-Select dropdowns + search, results bar with sort, Showcase
- * card grid, empty state, and Load More.
+ * card grid, empty state, and numbered pages (?page=N).
  *
  * The filter dropdowns pull their options from the per-(game, items)
  * attribute_templates so this page works for any game without code
@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { useAuth } from '@/hooks/use-auth'
+import { useUrlPage } from '@/hooks/use-url-page'
+import { Pagination } from '@/components/marketplace/Pagination'
 import { Search, Gamepad2, ShieldCheck, Store } from 'lucide-react'
 import { track } from '@vercel/analytics'
 import { track as phTrack } from '@/lib/analytics/client'
@@ -196,12 +198,6 @@ export default function ItemsPageClient({
   }, [offers])
 
   const [sort, setSort] = useState<ItemSort>('recommended')
-  const [page, setPage] = useState(1)
-
-  // Reset pagination whenever filters change.
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedQ, attrFilters, priceRange, delivery, sort])
 
   // V15b — Conditional-rule evaluator that runs against the CURRENT
   // filter state (not against a listing's data). Used to decide which
@@ -274,8 +270,12 @@ export default function ItemsPageClient({
   const bestDealId = useMemo(() => bestOfferId(filtered), [filtered])
   const sorted = useMemo(() => sortOffers(filtered, sort), [filtered, sort])
 
-  const visible = sorted.slice(0, page * PAGE_SIZE)
-  const hasMore = sorted.length > visible.length
+  // Numbered pages in the URL (?page=N). A filter, sort or search change
+  // starts again at page 1; the key is the filter VALUES, not the list
+  // (the list is rebuilt on unrelated renders and would reset every time).
+  const filterKey = JSON.stringify([debouncedQ, attrFilters, priceRange, delivery, sort])
+  const paged = useUrlPage(sorted, PAGE_SIZE, filterKey)
+  const visible = paged.visible
 
   const clearFilters = () => {
     setQ('')
@@ -288,6 +288,7 @@ export default function ItemsPageClient({
   return (
     <main className="min-h-screen">
       <SearchParamsBridge onParams={seedFromUrl} />
+      <SearchParamsBridge onParams={paged.onParams} />
       {/* Filter band */}
       {/* V19/P24/P7.mm — Hero section bg removed so the body's violet
           gradient bleeds through. The hero is now a transparent
@@ -295,7 +296,8 @@ export default function ItemsPageClient({
           pages. */}
       {/* No bottom divider — the band ends with the filter row and the
           results start below it; a full-width rule added nothing. */}
-      <section className="relative overflow-hidden">
+      {/* scroll-mt clears the fixed navbar when a page change scrolls here. */}
+      <section ref={paged.topRef} className="relative scroll-mt-24 overflow-hidden">
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-5 pt-2 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8">
           {/* V15s — Page header restored: big game logo on the left,
               single-line "{Game} Items" title beside it. Sits between
@@ -494,22 +496,13 @@ export default function ItemsPageClient({
               ))}
             </div>
 
-            {hasMore && (
-              <div className="mt-9 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded-md bg-bg-raised px-6 font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover"
-                  style={{ minHeight: 'var(--h-btn-primary)', fontSize: 'var(--fs-meta)' }}
-                >
-                  Load More Items
-                  <span aria-hidden className="text-text-tertiary">·</span>
-                  <span className="text-text-tertiary tabular-nums">
-                    {sorted.length - visible.length} left
-                  </span>
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={paged.page}
+              totalPages={paged.totalPages}
+              totalItems={sorted.length}
+              pageSize={PAGE_SIZE}
+              onChange={paged.goTo}
+            />
           </>
         )}
       </div>
