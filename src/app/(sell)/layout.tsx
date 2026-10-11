@@ -5,12 +5,13 @@
  */
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getRequestUser } from '@/lib/auth/request-user'
 import { HeroBackdrop, HeroBackdropPreload } from '@/components/hero-backdrop'
 
 export default async function SellLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Middleware already gates /sell; this is defence in depth, and the cached
+  // getRequestUser shares one auth round trip with the page's loaders.
+  const user = await getRequestUser()
 
   if (!user) {
     // Preserve return path so login can bounce back to the wizard
