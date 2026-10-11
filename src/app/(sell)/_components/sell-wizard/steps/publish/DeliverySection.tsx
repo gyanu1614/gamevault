@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SELLER_DELIVERY_WINDOWS, formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import { DeliveryMethodPicker } from '@/app/(sell)/_components/DeliveryMethodPicker'
 
+import { FIELD_SURFACE } from '../../styles'
 import { SubCard } from '../../ui/SubCard'
 import { TipBox } from '../../ui/form-fields'
 import type { Step4Props } from './types'
@@ -42,7 +43,7 @@ export function DeliverySection({
         <Select value={p.deliveryTime} onValueChange={(v) => p.setDeliveryTime(v)}>
           <SelectTrigger
             aria-label="Guaranteed delivery time"
-            className="h-11 text-base sm:h-10 sm:text-sm focus:border-text-secondary focus:ring-0 data-[state=open]:border-text-secondary data-[state=open]:ring-0"
+            className={cn(FIELD_SURFACE, 'h-12 text-base sm:h-11 sm:text-[15px] focus:border-focus-border focus:ring-0 data-[state=open]:border-focus-border data-[state=open]:ring-0')}
           >
             <SelectValue placeholder="Choose a delivery time" />
           </SelectTrigger>

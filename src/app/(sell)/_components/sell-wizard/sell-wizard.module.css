@@ -1,0 +1,122 @@
+/*
+ * Sell wizard surfaces (Navbar A "Aurora", cards, progress). Scoped to the
+ * wizard; colours are the house tokens (green accent #2A7A50 / #56B87F,
+ * card gradient #212228 → #1A1B1F). Motion is ambient and slow, and stops
+ * under prefers-reduced-motion.
+ */
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.bar {
+  position: relative;
+  overflow: hidden;
+  background: rgba(14, 15, 18, 0.86);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+.aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.aurora::before,
+.aurora::after {
+  content: '';
+  position: absolute;
+  width: 520px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  will-change: transform;
+}
+.aurora::before {
+  background: rgba(42, 122, 80, 0.6);
+  top: -130px;
+  left: 6%;
+  animation: drift 16s ease-in-out infinite alternate;
+}
+.aurora::after {
+  background: rgba(44, 140, 140, 0.42);
+  top: -150px;
+  right: 4%;
+  animation: drift 21s ease-in-out infinite alternate-reverse;
+}
+@keyframes drift {
+  from { transform: translateX(-40px); }
+  to { transform: translateX(80px); }
+}
+
+/* ── Progress rail ───────────────────────────────────────── */
+.rail {
+  position: relative;
+  display: block;
+  height: 4px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.railDone {
+  background: rgba(86, 184, 127, 0.55);
+}
+.railActive {
+  background: linear-gradient(90deg, #2a7a50, #56b87f);
+}
+.railActive::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: sweep 2.6s ease-in-out infinite;
+}
+@keyframes sweep {
+  to { left: 100%; }
+}
+
+/* ── Section cards (Details step) ────────────────────────── */
+.card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, #212228, #1a1b1f);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 14px 34px -16px rgba(0, 0, 0, 0.7);
+}
+/* Numbered tiles: a CSS counter over the cards actually shown, so the
+   numbers stay right whichever sections a category hides. */
+.numbered {
+  counter-reset: sell-section;
+}
+.num {
+  display: none;
+}
+.numbered .num {
+  counter-increment: sell-section;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 9px;
+  background: rgba(86, 184, 127, 0.14);
+  color: #56b87f;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.numbered .num::before {
+  content: counter(sell-section);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora::before,
+  .aurora::after,
+  .railActive::after {
+    animation: none;
+  }
+}

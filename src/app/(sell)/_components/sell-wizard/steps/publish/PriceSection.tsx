@@ -8,7 +8,7 @@ import { previewSellerFee, type SellerFeePreview } from '@/lib/actions/fee-previ
 import { formatUnitPrice } from '@/lib/currency/price-format'
 import { MarketPriceHint } from '@/app/(sell)/_components/MarketPriceHint'
 
-import { inputCls } from '../../styles'
+import { FIELD_SURFACE, inputCls } from '../../styles'
 import { SubCard } from '../../ui/SubCard'
 import { FieldError, FieldHint, TipBox } from '../../ui/form-fields'
 import type { Step4Props } from './types'
@@ -63,7 +63,8 @@ export function PriceSection({
     </label>
     <div
       className={cn(
-        'flex h-11 w-full items-center rounded-md border border-border-default bg-transparent transition-colors hover:border-border-strong focus-within:border-text-secondary sm:h-10',
+        FIELD_SURFACE,
+        'flex h-12 w-full items-center sm:h-11',
         priceInvalid && 'border-error hover:border-error focus-within:border-error',
       )}
     >

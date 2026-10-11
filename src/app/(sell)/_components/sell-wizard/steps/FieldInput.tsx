@@ -150,6 +150,8 @@ export function FieldInput({
           }))}
           tone="neutral"
           iconInTrigger
+          size="lg"
+          sheetOnTouch
         />
       )}
 

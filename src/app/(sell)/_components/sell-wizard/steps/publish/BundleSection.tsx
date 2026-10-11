@@ -54,7 +54,9 @@ export function BundleSection({ p }: { p: Pick<Step4Props, 'bundles' | 'bundleId
     emptyText="No bundles match that search."
     ariaLabel="Choose a bundle"
     tone="neutral"
-  iconInTrigger
+    iconInTrigger
+    size="lg"
+    sheetOnTouch
   />
   <TipBox>Buyers see your listing under this exact bundle.</TipBox>
 </SubCard>

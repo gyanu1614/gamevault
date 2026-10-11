@@ -87,21 +87,6 @@ export function buildChildIndex(attrs: Attribute[]) {
   return { topLevel, childrenOf }
 }
 
-export function walkAndClear(
-  attr: Attribute,
-  childrenOf: Map<string, Map<string, Attribute[]>>,
-  out: Record<string, unknown>,
-) {
-  const inner = childrenOf.get(attr.id)
-  if (!inner) return
-  inner.forEach((kids) => {
-    kids.forEach((k) => {
-      delete out[k.id]
-      walkAndClear(k, childrenOf, out)
-    })
-  })
-}
-
 export function labelFor(attr: Attribute, value: string): string {
   if (attr.type === 'boolean') return value === 'true' ? 'Yes' : 'No'
   const opt = attr.options?.find((o) => o.value === value)

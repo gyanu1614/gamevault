@@ -7,6 +7,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { type SellGameOption } from '@/lib/actions/sell-wizard'
 import { type GlobalCategory } from '@/lib/actions/new-schema'
 import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
+import { FIELD_SURFACE } from '../styles'
 
 // ─── Step 2: game picker ────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ export function Step2Game({
     // The picker lives in a titled card (SubCard, the Step 3 panel), so all
     // three steps share one pattern: page title = context ("Sell Items"),
     // card title = the question ("Choose A Game").
-    <SubCard title="Choose A Game">
+    <SubCard>
     <div className="space-y-4">
       {/* A searchable dropdown rather than a wall of tiles. The catalogue
           runs to hundreds of games; a grid made the seller hunt visually
@@ -72,7 +73,7 @@ export function Step2Game({
           type-ahead, keyboard nav and the small per-game icon for free —
           and it is the same control the rest of the app already uses. */}
       {loading ? (
-        <div className="flex h-11 items-center gap-2 rounded-md border border-border-default px-3 text-sm text-text-tertiary">
+        <div className={cn(FIELD_SURFACE, 'flex h-12 items-center gap-2 px-3.5 text-[15px] text-text-tertiary sm:h-[52px]')}>
           <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           Loading games…
         </div>
@@ -97,6 +98,8 @@ export function Step2Game({
           ariaLabel="Choose a game"
           tone="neutral"
           iconInTrigger
+          size="lg"
+          sheetOnTouch
         />
       )}
 
@@ -107,7 +110,7 @@ export function Step2Game({
         // One row, never a second: overflow scrolls sideways (scrollbar
         // hidden) and the right edge fades so a cut-off chip reads as
         // "more this way" rather than as clipped.
-        <div className="flex items-center gap-2 border-t border-border-subtle pt-4">
+        <div className="flex items-center gap-2 border-t border-white/[0.07] pt-4">
           <span className="mr-1 shrink-0 text-[13px] font-medium text-text-tertiary">Recent</span>
           <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {recentGames.map((g) => (
@@ -116,17 +119,16 @@ export function Step2Game({
               type="button"
               onClick={() => onSelect(g)}
               className={cn(
-                // Rectangular chips (rounded-md), matching the card and the
-                // inputs — pills were the only round shapes left on the page.
-                'inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border px-3 text-[13px] font-medium transition-colors',
+                // Same radius family as the fields; 28px logos so games read at a glance.
+                'inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] border pl-1.5 pr-3 text-[13.5px] font-medium transition-colors active:scale-[0.98]',
                 selected?.game_id === g.game_id
-                  ? 'border-lime bg-lime-tint-bg text-lime-text'
-                  : 'border-border-default bg-bg-overlay text-text-secondary hover:border-border-strong hover:text-text-primary',
+                  ? 'border-lime-tint-border bg-lime-tint-bg text-lime-text'
+                  : 'border-transparent bg-white/[0.05] text-text-secondary hover:bg-white/[0.08] hover:text-text-primary',
               )}
             >
               {g.game_logo_url && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={g.game_logo_url} alt="" className="h-5 w-5 rounded object-cover" />
+                <img src={g.game_logo_url} alt="" className="h-7 w-7 rounded-[7px] object-cover" />
               )}
               {g.game_name}
             </button>

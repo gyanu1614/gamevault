@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 export type WizardStep = 1 | 2 | 3
 
 /** Space kept above the wizard when a step change scrolls it into view (clears the fixed bar). */
-const WIZARD_TOP_OFFSET = 128
+const WIZARD_TOP_OFFSET = 168
 
 /**
  * The current step and everything tied to it:

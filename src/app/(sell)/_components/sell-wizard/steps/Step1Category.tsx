@@ -22,7 +22,7 @@ export function Step1Category({
     // 2x2 on desktop, single column on a phone. CSS Grid rather than
     // flex-wrap so the cells are equal width and the row count is
     // explicit (see 3.E: grid over flex-math).
-    <SubCard title="Choose A Category">
+    <SubCard>
     <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
       {categories.map((c, i) => {
         const active = selected?.id === c.id

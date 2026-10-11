@@ -1,40 +1,36 @@
-'use client'
+import { cn } from '@/lib/utils'
 
-
-// ─── SubCard — one labelled section of the Details step ────────────────────
+import styles from '../sell-wizard.module.css'
 
 /**
- * SubCard wraps a labelled section of the Details step.
- *
- * Despite the name it is not a card: the focused-canvas layout dropped
- * the wizard's outer panel, and a bordered section inside a borderless
- * page just reintroduces the nesting. It renders a heading, a hairline,
- * and the section's fields; spacing does the grouping.
+ * One section of the wizard: a soft card (house gradient, no outline) with a
+ * header row: a numbered tile (inside a `numbered` container the number is a
+ * CSS counter over the sections actually shown), the title, and an optional
+ * right slot (a character count). Without a title it is a plain card (the
+ * category and game pickers, whose title is the step bar's).
  */
 export function SubCard({
   title,
   right,
   children,
 }: {
-  title: string
+  title?: string
   right?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
-    // Each section is its own panel: a title bar, a hairline, then the
-    // fields. Rectangular (rounded-lg, not a pill) per the house card
-    // language. The divider is the only line inside the panel, so the
-    // title reads as a header rather than another field label.
-    <section className="scroll-mt-28 overflow-hidden rounded-lg border border-border-subtle bg-bg-overlay">
-      {/* Compact title bar: the divider sits just under the title so the
-          bar reads as a label for the panel, not a section of its own. */}
-      <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-border-subtle px-4 py-2 sm:px-5">
-        <h2 className="text-[14.5px] font-bold leading-tight tracking-tight text-text-primary">
-          {title}
-        </h2>
-        {right}
-      </div>
-      <div className="px-4 py-4 sm:px-5">{children}</div>
+    <section className={cn('scroll-mt-44', styles.card)}>
+      {title && (
+        <div className="flex items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+          <span aria-hidden className={styles.num} />
+          <h2 className="min-w-0 flex-1 truncate text-[16px] font-semibold leading-tight tracking-tight text-text-primary">{title}</h2>
+          {right}
+        </div>
+      )}
+      <div className={cn('px-4 pb-4 sm:px-5 sm:pb-5', title ? 'pt-4' : 'pt-4 sm:pt-5')}>{children}</div>
     </section>
   )
 }
+
+/** Wrap the Details sections so each SubCard header shows its running number. */
+export const NUMBERED_SECTIONS = styles.numbered
