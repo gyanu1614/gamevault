@@ -52,3 +52,9 @@ export const HOME_LISTINGS_TAG = 'listings:home'
 
 /** Every game's admin CTA banner (lib/content/game-cta-art.server). */
 export const GAME_CTA_BANNERS_TAG = 'games:cta-banners'
+
+/**
+ * trustpilot_settings.review_count — the public TrustBox shows at 10+ reviews
+ * (home + listing pages). The /admin Trustpilot card revalidates it on save.
+ */
+export const TRUSTPILOT_SETTINGS_TAG = 'trustpilot:settings'

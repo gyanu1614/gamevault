@@ -31,9 +31,12 @@ import { PreFooterCtaBand } from '../components/PreFooterCtaBand'
 export function HomePage({
   popularGames,
   latestListings,
+  trustpilot,
 }: {
   popularGames?: ReactNode
   latestListings?: ReactNode
+  /** Server-rendered TrustBox; renders nothing below 10 Trustpilot reviews. */
+  trustpilot?: ReactNode
 }) {
   return (
     <div className="page-stage">
@@ -48,6 +51,8 @@ export function HomePage({
         {latestListings}
 
         <HowItWorksBand title="How to Buy Game Items Safely" className="py-0 sm:py-0" />
+
+        {trustpilot}
 
         {/* The site's standard fee line (fee-engine copy rule: qualitative,
             never a rate; fee-copy.guard.test.ts requires it on the homepage). */}
