@@ -124,7 +124,7 @@ describe.skipIf(!hasEnv)('SEO pipeline tables (integration)', () => {
     record.mockClear()
     const { data: ev } = await svc.from('seo_value_evidence').select('*').eq('game_slug', GAME).eq('item_slug', itemSlug).single()
     expect(ev).toMatchObject({ observations: 9, history_days: 8, passes_gate: true, price_moved_at: `${days(8)[5]}T00:00:00+00:00` })
-    // First seen = the earliest history day (migration 20261010151051).
+    // First seen = the earliest history day (migration 20261010230818).
     expect((ev as any).first_seen_at).toBe(`${days(8)[0]}T00:00:00+00:00`)
     expect(Number((ev as any).value_usd)).toBe(12)
 

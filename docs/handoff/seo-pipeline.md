@@ -68,7 +68,7 @@ place; the tables can stay.
 
 ## Follow-up release (PR #184)
 
-Migration `20261010151051_seo_value_first_seen.sql` adds `seo_value_evidence.first_seen_at`
+Migration `20261010230818_seo_value_first_seen.sql` adds `seo_value_evidence.first_seen_at`
 (nullable, additive). **`db push` BEFORE the deploy** (the new code selects the column; without it
 pages and sitemap fail open to report mode). After the deploy, run `seo-evidence` once to backfill it.
 
