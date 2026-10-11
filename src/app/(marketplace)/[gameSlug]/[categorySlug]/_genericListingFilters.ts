@@ -1,5 +1,6 @@
 import { expandSearchWithSynonyms } from '@/lib/utils/gaming-synonyms'
 import { isSellerOnline } from '@/lib/presence/online'
+import { pageCount, pageSlice, parsePage } from '@/lib/pagination'
 
 /**
  * Filter / sort / paginate the generic category grid on the CLIENT.
@@ -21,7 +22,8 @@ import { isSellerOnline } from '@/lib/presence/online'
  *   online             sellers online NOW (live presence from the grid, else
  *                      the embedded row within the 5-minute window — the
  *                      old is_online-only check kept a seller "online" all day)
- *   page               cumulative slice(0, page*12) — the load-more model
+ *   page               ONLY page N (numbered pages, ?page=N); past the end
+ *                      shows the last page
  */
 export const LISTINGS_PER_PAGE = 12
 
@@ -42,10 +44,10 @@ export interface GenericListing {
 
 export interface GenericListingView<T extends GenericListing> {
   listings: T[]
-  hasMore: boolean
+  totalPages: number
   currentPage: number
   totalListings: number
-  /** Dearest price on the returned page (the slider ceiling), 1000 when empty. */
+  /** Dearest matching price on any page (the slider ceiling, stable while paging), 1000 when empty. */
   maxPrice: number
   activeType: string | null
 }
@@ -80,8 +82,6 @@ export function applyCategoryListingParams<T extends GenericListing>(
   const sort = get('sort')
   const tiers = get('tiers')
   const online = get('online')
-  const pageRaw = parseInt(get('page') || '1', 10)
-  const currentPage = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1
 
   let rows: T[] = [...all]
 
@@ -142,15 +142,15 @@ export function applyCategoryListingParams<T extends GenericListing>(
   }
 
   const totalListings = rows.length
-  const endIndex = currentPage * LISTINGS_PER_PAGE
-  const page = rows.slice(0, endIndex)
+  const totalPages = pageCount(totalListings, LISTINGS_PER_PAGE)
+  const currentPage = parsePage(get('page'), totalPages)
 
   return {
-    listings: page,
-    hasMore: endIndex < totalListings,
+    listings: pageSlice(rows, currentPage, LISTINGS_PER_PAGE),
+    totalPages,
     currentPage,
     totalListings,
-    maxPrice: page.length > 0 ? Math.max(...page.map((l) => l.price)) : 1000,
+    maxPrice: rows.reduce((m, l) => Math.max(m, l.price), rows.length > 0 ? -Infinity : 1000),
     activeType: type || null,
   }
 }

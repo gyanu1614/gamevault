@@ -26,20 +26,26 @@ const params = (entries: Record<string, string> = {}) => (key: string) => entrie
 const ids = (r: { listings: { id: string }[] }) => r.listings.map((l) => l.id)
 
 describe('applyCategoryListingParams', () => {
-  it('default: newest first, first page of 12, hasMore when more remain', () => {
+  it('default: newest first, first page of 12, with the page count', () => {
     const all = Array.from({ length: 15 }, () => listing())
     const r = applyCategoryListingParams(all, params())
     expect(r.listings).toHaveLength(LISTINGS_PER_PAGE)
     expect(r.listings[0].id).toBe(all[14].id)
-    expect(r).toMatchObject({ hasMore: true, currentPage: 1, totalListings: 15 })
+    expect(r).toMatchObject({ totalPages: 2, currentPage: 1, totalListings: 15 })
   })
 
-  it('page=N returns the first N pages cumulatively (load-more semantics)', () => {
+  it('page=N returns ONLY page N (numbered pages, not load-more)', () => {
     const all = Array.from({ length: 30 }, () => listing())
     const r = applyCategoryListingParams(all, params({ page: '2' }))
-    expect(r.listings).toHaveLength(24)
-    expect(r).toMatchObject({ hasMore: true, currentPage: 2, totalListings: 30 })
-    expect(applyCategoryListingParams(all, params({ page: '3' })).hasMore).toBe(false)
+    expect(r.listings).toHaveLength(12)
+    expect(r.listings[0].id).toBe(all[17].id)
+    expect(r).toMatchObject({ totalPages: 3, currentPage: 2, totalListings: 30 })
+    expect(applyCategoryListingParams(all, params({ page: '3' })).listings).toHaveLength(6)
+  })
+
+  it('a page past the end shows the last page', () => {
+    const all = Array.from({ length: 30 }, () => listing())
+    expect(applyCategoryListingParams(all, params({ page: '9' })).currentPage).toBe(3)
   })
 
   it('an unparseable page falls back to page 1', () => {
@@ -123,9 +129,11 @@ describe('applyCategoryListingParams', () => {
     expect(ids(applyCategoryListingParams([a, b], params({ online: 'true' }), live))).toEqual([a.id])
   })
 
-  it('maxPrice for the slider is the dearest listing ON THE PAGE, 1000 when empty', () => {
+  it('maxPrice for the slider is the dearest matching listing on ANY page (stable while paging), 1000 when empty', () => {
     const all = [listing({ price: 3 }), listing({ price: 42 })]
     expect(applyCategoryListingParams(all, params()).maxPrice).toBe(42)
     expect(applyCategoryListingParams([], params()).maxPrice).toBe(1000)
+    const many = Array.from({ length: 13 }, (_, i) => listing({ price: i === 0 ? 500 : 5 }))
+    expect(applyCategoryListingParams(many, params({ page: '2' })).maxPrice).toBe(500)
   })
 })
