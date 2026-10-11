@@ -26,6 +26,8 @@ import { findEnabledGameCategory } from '@/lib/categories'
 import { revalidateListingSurfaces } from '@/lib/revalidation/listings'
 import { insertListing, type ListingsWriter } from '@/lib/listings/create'
 import { validateListingWrite, validateListingPatch } from '@/lib/listings/validate'
+import { linkListingsToValueItems } from '@/lib/value-listings/link'
+import { listingOwnerUrl } from '@/lib/listings/url'
 import { loadListingRuleContext } from '@/lib/listings/rule-context'
 import { importConfigFor, importableGameSlugs } from '@/lib/imports/config'
 import { parseImportInput } from '@/lib/imports/csv'
@@ -33,7 +35,8 @@ import { buildMatchIndex } from '@/lib/imports/match'
 import { resolveRows, type ResolvedRow, type ResolveSummary } from '@/lib/imports/resolve'
 import { createImageMaterialiser } from '@/lib/imports/images'
 import { getAttributeTemplateFull } from '@/lib/actions/new-schema'
-import type { TemplateAttributeLike } from '@/lib/imports/attributes'
+import { fillMissingAttributes, type TemplateAttributeLike } from '@/lib/imports/attributes'
+import { BATCH_STATUS_FROM, reimportDecision } from '@/lib/imports/lifecycle'
 import type { GameImportConfig, ImportCatalogue, MarketPriceMap } from '@/lib/imports/types'
 
 type Result<T> = { success: true; data: T } | { success: false; error: string }
@@ -86,6 +89,9 @@ export interface BatchSummaryRow {
   rowCount: number
   matched: number
   applied: number
+  /** Listings this batch owns right now that are on sale (a later batch that
+   *  re-imports a row takes it over; Pause / Remove take it off sale). */
+  live: number
   failed: number
   needsReview: number
   createdAt: string
@@ -115,7 +121,19 @@ export interface BatchRowView {
   error: string | null
   action: string | null
   listingId: string | null
+  /** The listing this row created or updated, as it is NOW (not as previewed). */
+  listing: AppliedListingView | null
   raw: Record<string, string>
+}
+
+export interface AppliedListingView {
+  title: string
+  status: string
+  price: number
+  quantity: number
+  imageUrl: string | null
+  /** The live page when active, else the owner/admin preview. */
+  href: string
 }
 
 // ── shared helpers ──────────────────────────────────────────────────────────
@@ -285,6 +303,13 @@ async function countsFor(svc: ReturnType<typeof createServiceRoleClient>, b: any
     svc.from('listing_import_rows').select('match_status, action').eq('batch_id', b.id).order('id').range(from, to),
   )
   const rows = (data ?? []) as Array<{ match_status: string; action: string | null }>
+  // A GET count (head:false) — HEAD counts break keep-alive on this client.
+  const { count: live } = await svc
+    .from('listings')
+    .select('id', { count: 'exact', head: false })
+    .eq('import_batch_id', b.id)
+    .eq('status', 'active')
+    .limit(1)
   const game = Array.isArray(b.games) ? b.games[0] : b.games
   const seller = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles
   return {
@@ -299,6 +324,7 @@ async function countsFor(svc: ReturnType<typeof createServiceRoleClient>, b: any
     rowCount: b.row_count ?? rows.length,
     matched: rows.filter((r) => r.match_status === 'matched').length,
     applied: rows.filter((r) => r.action === 'created' || r.action === 'updated').length,
+    live: live ?? 0,
     failed: rows.filter((r) => r.action === 'failed').length,
     needsReview: rows.filter((r) => r.match_status === 'ambiguous' || r.match_status === 'unmatched').length,
     createdAt: b.created_at,
@@ -324,6 +350,10 @@ export async function fetchImportBatch(batchId: string): Promise<Result<BatchDet
       svc.from('listing_import_rows').select('*').eq('batch_id', batchId).order('row_no').range(from, to),
     )
 
+    const live = await loadAppliedListings(
+      svc,
+      ((rowData ?? []) as any[]).map((r) => r.listing_id).filter(Boolean),
+    )
     const rows: BatchRowView[] = ((rowData ?? []) as any[]).map((r) => ({
       id: r.id,
       rowNo: r.row_no,
@@ -342,6 +372,7 @@ export async function fetchImportBatch(batchId: string): Promise<Result<BatchDet
       error: r.error,
       action: r.action,
       listingId: r.listing_id,
+      listing: (r.listing_id && live.get(r.listing_id)) || null,
       raw: r.raw ?? {},
     }))
 
@@ -349,6 +380,43 @@ export async function fetchImportBatch(batchId: string): Promise<Result<BatchDet
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
   }
+}
+
+/**
+ * The listings a batch's rows point at, read live — so an updated row shows
+ * the listing's real title and image (it keeps its original copy on
+ * re-import), and a paused or removed batch shows that state. In slices: a
+ * batch can point at up to 2,000 listings, too many ids for one request URL.
+ */
+const LIVE_SLICE = 100
+
+async function loadAppliedListings(
+  svc: ReturnType<typeof createServiceRoleClient>,
+  listingIds: string[],
+): Promise<Map<string, AppliedListingView>> {
+  const out = new Map<string, AppliedListingView>()
+  const ids = [...new Set(listingIds)]
+  for (let i = 0; i < ids.length; i += LIVE_SLICE) {
+    const { data } = await svc
+      .from('listings')
+      .select(
+        'id, slug, status, title, images, price, quantity, game:games!listings_game_id_fkey(slug), category:game_categories!listings_game_category_id_fkey(slug, type)',
+      )
+      .in('id', ids.slice(i, i + LIVE_SLICE))
+    for (const l of (data ?? []) as any[]) {
+      const game = Array.isArray(l.game) ? l.game[0] : l.game
+      const category = Array.isArray(l.category) ? l.category[0] : l.category
+      out.set(l.id, {
+        title: l.title ?? '',
+        status: l.status,
+        price: Number(l.price),
+        quantity: Number(l.quantity ?? 0),
+        imageUrl: Array.isArray(l.images) && typeof l.images[0] === 'string' ? l.images[0] : null,
+        href: listingOwnerUrl({ id: l.id, slug: l.slug, status: l.status, game, category }),
+      })
+    }
+  }
+  return out
 }
 
 // ── create + preview ────────────────────────────────────────────────────────
@@ -471,8 +539,16 @@ export interface ApplyProgress {
  * retried chunk cannot double-create. Across batches the unique index on
  * (seller, game, item_ref, variant) is the backstop — a re-import finds the
  * existing listing and updates its price and stock instead.
+ *
+ * Each run tries a row once: a row that fails is marked `failed` and leaves
+ * the queue, so 60 failing rows cannot keep the loop busy forever. The first
+ * call of a run passes `restart`, which puts the previous run's failures back
+ * in the queue — clicking Apply again is the retry.
  */
-export async function applyImportBatch(batchId: string): Promise<Result<ApplyProgress>> {
+export async function applyImportBatch(
+  batchId: string,
+  opts: { restart?: boolean } = {},
+): Promise<Result<ApplyProgress>> {
   try {
     const admin = await requireAdmin()
     const svc = createServiceRoleClient()
@@ -492,12 +568,22 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
     const pair = await findEnabledGameCategory(svc as never, b.game_id, config.categorySlug)
     if (!pair) return { success: false, error: 'The category for this game is no longer enabled.' }
 
+    if (opts.restart) {
+      await (svc.from('listing_import_rows') as any)
+        .update({ action: null, error: null })
+        .eq('batch_id', batchId)
+        .eq('match_status', 'matched')
+        .is('listing_id', null)
+        .eq('action', 'failed')
+    }
+
     const { data: pending } = await svc
       .from('listing_import_rows')
       .select('*')
       .eq('batch_id', batchId)
       .eq('match_status', 'matched')
       .is('listing_id', null)
+      .is('action', null)
       .order('row_no')
       .limit(CHUNK_SIZE)
 
@@ -508,6 +594,7 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
       .eq('batch_id', batchId)
       .eq('match_status', 'matched')
       .is('listing_id', null)
+      .is('action', null)
       .limit(1)
 
     if (chunk.length === 0) {
@@ -528,6 +615,10 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
     let created = 0
     let updated = 0
     let failed = 0
+    const createdIds: string[] = []
+    const updatedIds: string[] = []
+    /** Existing listings whose template_data this chunk filled in. */
+    const touchedIds: string[] = []
 
     for (const row of chunk) {
       try {
@@ -538,21 +629,28 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
           continue
         }
 
-        // Does this store already list this (item, variant)? Then it is an update.
+        // Does this store already have this (item, variant)? Then it is an
+        // update — whatever its status: the identity is permanent (see
+        // lib/imports/lifecycle), so a removed or sold-out row comes back
+        // rather than gaining a twin.
         let existingQuery = svc
           .from('listings')
-          .select('id, quantity, min_quantity, is_unlimited, delivery_method, bundle_id')
+          .select('id, status, quantity, min_quantity, is_unlimited, delivery_method, bundle_id, template_data')
           .eq('seller_id', b.seller_id)
           .eq('game_id', b.game_id)
           .eq('import_item_ref', row.item_ref)
-          .neq('status', 'archived')
         existingQuery = row.variant_ref
           ? existingQuery.eq('import_variant', row.variant_ref)
           : existingQuery.is('import_variant', null)
-        const { data: existing } = await existingQuery.maybeSingle()
+        const { data: existing, error: existingError } = await existingQuery.maybeSingle()
+        if (existingError) {
+          await markRow(svc, row.id, { action: 'failed', error: existingError.message })
+          failed += 1
+          continue
+        }
 
         if (existing) {
-          // Re-import: price and stock only. Same validator as a seller edit.
+          // Re-import: price and stock. Same validator as a seller edit.
           const patch = validateListingPatch(
             { price: Number(row.resolved_price), quantity: row.quantity },
             rules,
@@ -563,15 +661,39 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
             failed += 1
             continue
           }
+          const current = existing as any
+          const decision = reimportDecision({
+            status: current.status,
+            quantity: Number((patch.value as any).quantity ?? current.quantity ?? 0),
+            isUnlimited: current.is_unlimited === true,
+          })
+          if (decision.kind === 'refuse') {
+            await markRow(svc, row.id, { action: 'failed', error: decision.reason })
+            failed += 1
+            continue
+          }
+          // Plus any filter value the listing is still missing (e.g. Pet Name
+          // once its option exists) — values it already has are never touched.
+          const filled = fillMissingAttributes(current.template_data, row.template_data)
           const { error } = await (svc.from('listings') as any)
-            .update({ ...patch.value, import_batch_id: batchId })
-            .eq('id', (existing as any).id)
+            .update({
+              ...patch.value,
+              ...(filled ? { template_data: filled } : {}),
+              ...(decision.status ? { status: decision.status } : {}),
+              // A paused listing stays with the batch that paused it, so that
+              // batch's Resume still brings it back.
+              ...(current.status === 'paused' ? {} : { import_batch_id: batchId }),
+            })
+            .eq('id', current.id)
           if (error) {
             await markRow(svc, row.id, { action: 'failed', error: error.message })
             failed += 1
             continue
           }
-          await markRow(svc, row.id, { action: 'updated', listing_id: (existing as any).id, error: null })
+          await markRow(svc, row.id, { action: 'updated', listing_id: current.id, error: null })
+          // A template change clears the value link (trg_listings_value_ref): re-link.
+          if (filled) touchedIds.push(current.id)
+          updatedIds.push(current.id)
           updated += 1
           continue
         }
@@ -626,6 +748,7 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
           continue
         }
         await markRow(svc, row.id, { action: 'created', listing_id: result.id, error: null, image_url: image.url })
+        if (result.id) createdIds.push(result.id)
         created += 1
       } catch (e: any) {
         await markRow(svc, row.id, { action: 'failed', error: e?.message ?? 'Unknown error' })
@@ -633,9 +756,20 @@ export async function applyImportBatch(batchId: string): Promise<Result<ApplyPro
       }
     }
 
-    // One revalidation for the whole chunk, not one per listing.
+    // Bundle 2 — link the new listings to their value item pages (never
+    // throws; the nightly reconcile retries a miss). Before revalidating, so
+    // the re-render reads the link.
+    const toLink = [...createdIds, ...touchedIds]
+    if (toLink.length > 0) await linkListingsToValueItems(svc, toLink)
+
+    // One revalidation for the whole chunk, not one per listing. The listing
+    // ids also name their value items, so each pet's value page ("Available
+    // Now", buy button) follows its new stock and price straight away.
     if (created > 0 || updated > 0) {
-      await revalidateListingSurfaces(svc as never, { gameCategoryIds: [pair.id] })
+      await revalidateListingSurfaces(svc as never, {
+        gameCategoryIds: [pair.id],
+        listingIds: [...createdIds, ...updatedIds],
+      })
     }
 
     const remaining = Math.max(0, (remainingAfter ?? chunk.length) - chunk.length)
@@ -699,13 +833,13 @@ async function setBatchListingStatus(
       .maybeSingle()
     if (!batch) return { success: false, error: 'That import batch no longer exists.' }
 
-    // Resume only brings back what this batch paused, never a listing an admin
-    // or the seller paused for another reason — those are already 'paused' too,
-    // so the filter is on the batch id alone and 'active' is the target state.
+    // Only this batch's listings, and only from the statuses each action owns
+    // (lib/imports/lifecycle): a sold-out listing is never switched back on
+    // with no stock, and moderation's decisions are never undone.
     const { data: affected, error } = await (svc.from('listings') as any)
       .update({ status: listingStatus })
       .eq('import_batch_id', batchId)
-      .neq('status', 'archived')
+      .in('status', [...BATCH_STATUS_FROM[listingStatus]])
       .select('id')
     if (error) return { success: false, error: error.message }
 

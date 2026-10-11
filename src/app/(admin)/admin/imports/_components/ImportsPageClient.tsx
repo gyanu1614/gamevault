@@ -11,7 +11,7 @@
  * Nothing here writes a listing — Preview only stores the batch and its rows.
  */
 import { useMemo, useRef, useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Upload, FileSpreadsheet, ChevronRight, AlertTriangle } from 'lucide-react'
@@ -314,7 +314,7 @@ export default function ImportsPageClient({
                       <StatusBadge status={b.status} />
                     </td>
                     <td className={TABLE.td}>{b.rowCount}</td>
-                    <td className={TABLE.td}>{b.applied}</td>
+                    <td className={TABLE.td}>{b.live}</td>
                     <td className={TABLE.td}>
                       {b.needsReview > 0 ? (
                         <span className="font-semibold text-amber-300">{b.needsReview}</span>
@@ -322,7 +322,7 @@ export default function ImportsPageClient({
                         '—'
                       )}
                     </td>
-                    <td className={TABLE.td}>{new Date(b.createdAt).toLocaleDateString()}</td>
+                    <td className={TABLE.td}>{new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</td>
                     <td className={TABLE.td}>
                       <Link
                         href={`/admin/imports/${b.id}`}

@@ -179,16 +179,22 @@ alter table public.listings
 create index if not exists listings_import_batch_idx
   on public.listings (import_batch_id) where import_batch_id is not null;
 
--- Idempotency: ONE live listing per (seller, game, item, variant) among rows
--- the importer owns. Re-importing the same stock list therefore updates price
--- and quantity instead of creating duplicates.
---   · partial on import_item_ref — hand-made listings are untouched
---   · archived rows are excluded, so a REMOVED batch frees its identities for
---     a fresh import
+-- Idempotency: ONE listing per (seller, game, item, variant) among rows the
+-- importer owns, for good. Re-importing the same stock list updates price and
+-- quantity instead of creating duplicates; re-importing a removed (archived)
+-- or sold-out row brings the SAME listing back, URL and all.
+--   · partial on import_item_ref only — hand-made listings are untouched
+--   · NO status in the predicate, on purpose. Order and refund triggers move
+--     a listing between statuses (update_listing_quantity: archived/active →
+--     sold, sold → active on a stock return) but never touch these four
+--     columns. A status-filtered index would let such a trigger move a row
+--     INTO the index next to its re-imported twin, and the unique violation
+--     would fail the order completion or refund itself (reproduced locally
+--     2026-10-10: release_with_reserve on an archived imported listing).
 --   · coalesce(variant,'') so "no variant" is one slot rather than many NULLs
 create unique index if not exists listings_import_identity_key
   on public.listings (seller_id, game_id, import_item_ref, coalesce(import_variant, ''))
-  where import_item_ref is not null and status <> 'archived';
+  where import_item_ref is not null;
 
 -- ── 5. updated_at ───────────────────────────────────────────────────────────
 create or replace function public.listing_import_touch_updated_at()

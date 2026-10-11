@@ -11,10 +11,10 @@
  * candidates and it is remembered for every future batch.
  */
 import { useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
+import Link from '@/components/navigation/AppLink'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowLeft, Download, Pause, Play, Archive, Rocket, Wand2, ImageOff } from 'lucide-react'
+import { ArrowLeft, Download, Pause, Play, Archive, Rocket, Wand2, ImageOff, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader, AdminPanel, StatCard, StatusBadge, TABLE, SectionLabel } from '../../components/kit'
 import {
@@ -108,7 +108,8 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
       let updated = 0
       let failed = 0
       for (let guard = 0; guard < 200; guard += 1) {
-        const res = await applyImportBatch(batch.id)
+        // The first call re-queues the last run's failures (Apply again = retry).
+        const res = await applyImportBatch(batch.id, { restart: guard === 0 })
         if (!res.success) {
           toast.error(res.error)
           break
@@ -231,7 +232,7 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (!confirm(`Archive all ${batch.applied} listings from this batch? They stop showing on the site; order history is kept.`)) return
+                  if (!confirm('Archive every listing from this batch? They stop showing on the site; order history is kept. Importing the same rows later brings them back.')) return
                   lifecycle(removeImportBatch, 'Archived')
                 }}
                 disabled={pending}
@@ -249,7 +250,7 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
                 className="inline-flex items-center gap-2 rounded-lg bg-lime-400 px-3.5 py-1.5 text-[13px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 <Rocket className="h-4 w-4" />
-                {pending ? progress ?? 'Applying…' : `Apply ${unappliedMatched} Rows`}
+                {pending ? progress ?? 'Applying…' : `Apply ${unappliedMatched} ${unappliedMatched === 1 ? 'Row' : 'Rows'}`}
               </button>
             )}
           </div>
@@ -259,7 +260,7 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Rows" value={String(batch.rowCount)} />
         <StatCard label="Ready" value={String(batch.matched)} />
-        <StatCard label="Live" value={String(batch.applied)} />
+        <StatCard label="Live" value={String(batch.live)} />
         <StatCard label="Needs Review" value={String(batch.needsReview)} />
         <StatCard label="Failed" value={String(batch.failed)} />
       </div>
@@ -310,7 +311,7 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
                   <td className={TABLE.tdPrimary}>
                     {r.itemName ? (
                       <span className="flex items-center gap-2">
-                        <RowThumb url={r.imageUrl} />
+                        <RowThumb url={r.listing?.imageUrl ?? r.imageUrl} />
                         <span>
                           {r.itemName}
                           {r.variantLabel && (
@@ -340,7 +341,27 @@ export default function BatchDetailClient({ batch }: { batch: BatchDetail }) {
                     )}
                   </td>
                   <td className={TABLE.td}>
-                    <span className="text-[12.5px]">{r.title ?? '—'}</span>
+                    {r.listing ? (
+                      // Applied: the listing as it is now (a re-import keeps its copy).
+                      <span className="flex min-w-[190px] flex-col gap-0.5">
+                        <a
+                          href={r.listing.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[12.5px] text-text-primary underline-offset-2 hover:text-lime-text hover:underline"
+                        >
+                          {r.listing.title}
+                          <ExternalLink aria-hidden className="h-3 w-3 shrink-0 text-text-tertiary" />
+                        </a>
+                        {r.listing.status !== 'active' && (
+                          <span className="text-[11.5px] capitalize text-text-tertiary">
+                            Listing {r.listing.status.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="block min-w-[190px] text-[12.5px]">{r.title ?? '—'}</span>
+                    )}
                   </td>
                   <td className={TABLE.td}>{r.quantity ?? '—'}</td>
                   <td className={TABLE.td}>{money(r.marketPrice)}</td>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveTemplateData, type TemplateAttributeLike } from './attributes'
+import { fillMissingAttributes, resolveTemplateData, type TemplateAttributeLike } from './attributes'
 
 const opt = (label: string, value = label) => ({
   slug: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
@@ -245,5 +245,26 @@ describe('against the real production template', () => {
     })
     expect(data['pet-name']).toBeUndefined()
     expect(data['egg-name']).toBe('jungle-egg')
+  })
+})
+
+describe('re-import fills only what a listing is missing', () => {
+  it('adds a filter the first import could not fill, keeps every value already set', () => {
+    // First import: Panda had no Pet Name option yet, so pet-name stayed empty.
+    const current = { 'item-type': 'pets', trait: 'r' }
+    // The owner then added Panda to Pet Name; this preview resolved all three.
+    const resolved = { 'item-type': 'pets', trait: 'fr', 'pet-name': 'panda' }
+    expect(fillMissingAttributes(current, resolved)).toEqual({ 'item-type': 'pets', trait: 'r', 'pet-name': 'panda' })
+  })
+
+  it('returns null when nothing would change (no write, no re-link)', () => {
+    expect(fillMissingAttributes({ trait: 'r' }, { trait: 'fr' })).toBeNull()
+    expect(fillMissingAttributes({ trait: 'r' }, {})).toBeNull()
+    expect(fillMissingAttributes({ trait: 'r' }, null)).toBeNull()
+  })
+
+  it('treats an empty stored value as missing and copes with a listing that has none', () => {
+    expect(fillMissingAttributes({ trait: '' }, { trait: 'r' })).toEqual({ trait: 'r' })
+    expect(fillMissingAttributes(null, { trait: 'r' })).toEqual({ trait: 'r' })
   })
 })

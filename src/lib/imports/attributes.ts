@@ -202,3 +202,30 @@ export function resolveTemplateData(
 
   return { data, unfilled }
 }
+
+/**
+ * Re-import: the template values a listing is MISSING, filled from this
+ * preview. A value the listing already has is never changed — the seller may
+ * have edited it, and price/stock are all a re-import owns. Typical case: the
+ * first import left Pet Name empty because the template had no "Panda" option
+ * yet; once an admin adds it, the next import of the same rows tags them.
+ *
+ * Null when nothing would change, so the caller skips the write (and the
+ * value-link re-check the trigger forces on any template change).
+ */
+export function fillMissingAttributes(
+  current: Record<string, unknown> | null | undefined,
+  resolved: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  const next: Record<string, unknown> = { ...(current ?? {}) }
+  let changed = false
+  for (const [slug, value] of Object.entries(resolved ?? {})) {
+    if (typeof value !== 'string' || value === '') continue
+    const have = next[slug]
+    if (have == null || have === '') {
+      next[slug] = value
+      changed = true
+    }
+  }
+  return changed ? next : null
+}
