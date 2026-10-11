@@ -94,4 +94,57 @@ ROLLBACK;`)
       FROM pg_proc WHERE oid = 'public.schedule_trustpilot_invitation()'::regprocedure;`)
     expect(rows[0]).toBe('true|search_path=public')
   })
+
+  itLocal('a completion schedules a row as `scheduled`, due one hour later for the cron safety net', () => {
+    const ids = freshIds()
+    const rows = psqlRows(`BEGIN;
+${fixtureSql(ids, ns.email('buyer'))}
+UPDATE orders SET status = 'completed' WHERE id = '${ids.order}';
+SELECT 'status=' || status || '|attempts=' || attempts
+       || '|due_in_window=' || (scheduled_for BETWEEN now() + interval '55 minutes' AND now() + interval '65 minutes')
+  FROM trustpilot_invitations WHERE order_id = '${ids.order}';
+ROLLBACK;`)
+    expect(rows).toContain('status=scheduled|attempts=0|due_in_window=true')
+  })
+})
+
+describe('trustpilot settings + stats posture', () => {
+  beforeAll(() => {
+    assertGuardTargetAllowed(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env)
+  })
+
+  const asRole = (role: string, sql: string) => {
+    try {
+      return { rows: psqlRows(`BEGIN; SET LOCAL ROLE ${role}; ${sql}; ROLLBACK;`), error: '' }
+    } catch (e: any) {
+      return { rows: [] as string[], error: String(e?.stderr ?? e) }
+    }
+  }
+
+  itLocal('anon reads the review count (static pages need it) and nothing else', () => {
+    expect(asRole('anon', 'SELECT review_count FROM trustpilot_settings WHERE id = 1').rows).toEqual(['0'])
+    expect(asRole('anon', 'SELECT updated_by FROM trustpilot_settings').error).toMatch(/permission denied/)
+  })
+
+  itLocal('anon and authenticated cannot change the review count', () => {
+    expect(asRole('anon', 'UPDATE trustpilot_settings SET review_count = 999').error).toMatch(/permission denied/)
+    expect(asRole('authenticated', 'UPDATE trustpilot_settings SET review_count = 999').error).toMatch(/permission denied/)
+  })
+
+  itLocal('the review count can never go negative', () => {
+    expect(asRole('service_role', 'UPDATE trustpilot_settings SET review_count = -1').error).toMatch(/review_count_check/)
+  })
+
+  itLocal('invite stats are service-role only', () => {
+    expect(asRole('anon', `SELECT * FROM trustpilot_invite_stats(now() - interval '7 days')`).error).toMatch(/permission denied/)
+    expect(asRole('authenticated', `SELECT * FROM trustpilot_invite_stats(now() - interval '7 days')`).error).toMatch(/permission denied/)
+    expect(asRole('service_role', `SELECT scheduled + sent + failed + skipped >= 0 FROM trustpilot_invite_stats(now() - interval '7 days')`).rows).toEqual(['t'])
+  })
+
+  itLocal('the invite status column only takes the four honest states', () => {
+    const def = psqlRows(`SELECT pg_get_constraintdef(oid) FROM pg_constraint
+      WHERE conname = 'trustpilot_invitations_status_check'`)[0] ?? ''
+    for (const st of ['scheduled', 'sent', 'failed', 'skipped']) expect(def).toContain(`'${st}'`)
+    expect(def.match(/'[a-z]+'::text/g)).toHaveLength(4)
+  })
 })

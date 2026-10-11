@@ -34,6 +34,7 @@ describe('email preference defaults', () => {
       new_message: true,
       new_review: true,
       payout_processed: true,
+      review_invites: true,
       marketing: false,
     })
   })

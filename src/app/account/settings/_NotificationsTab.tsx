@@ -21,6 +21,7 @@ const ROWS: { key: EmailPrefKey; label: string; desc: string; sellerOnly: boolea
   { key: 'new_message', label: 'New Messages', desc: 'When someone messages you about an order.', sellerOnly: false },
   { key: 'new_review', label: 'New Reviews', desc: 'When a buyer leaves you a review.', sellerOnly: true },
   { key: 'payout_processed', label: 'Payout Processed', desc: 'When a withdrawal has been paid out.', sellerOnly: true },
+  { key: 'review_invites', label: 'Review Invitations', desc: 'One email from Trustpilot after a completed order, asking how it went.', sellerOnly: false },
   { key: 'marketing', label: 'Marketing & Tips', desc: 'Promotions, tips and platform updates.', sellerOnly: false },
 ]
 

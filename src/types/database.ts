@@ -2070,6 +2070,7 @@ export type Database = {
           new_order: boolean
           new_review: boolean
           payout_processed: boolean
+          review_invites: boolean
           updated_at: string
           user_id: string
         }
@@ -2079,6 +2080,7 @@ export type Database = {
           new_order?: boolean
           new_review?: boolean
           payout_processed?: boolean
+          review_invites?: boolean
           updated_at?: string
           user_id: string
         }
@@ -2088,6 +2090,7 @@ export type Database = {
           new_order?: boolean
           new_review?: boolean
           payout_processed?: boolean
+          review_invites?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -11108,11 +11111,15 @@ export type Database = {
       }
       trustpilot_invitations: {
         Row: {
+          attempts: number
           buyer_id: string
           created_at: string
-          email: string
+          email: string | null
+          first_failed_at: string | null
           id: string
           invitation_token: string | null
+          last_attempt_at: string | null
+          last_error: string | null
           order_id: string
           review_rating: number | null
           review_submitted: boolean
@@ -11120,14 +11127,20 @@ export type Database = {
           review_url: string | null
           scheduled_for: string | null
           sent_at: string | null
+          skip_reason: string | null
+          status: string
           updated_at: string
         }
         Insert: {
+          attempts?: number
           buyer_id: string
           created_at?: string
-          email: string
+          email?: string | null
+          first_failed_at?: string | null
           id?: string
           invitation_token?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
           order_id: string
           review_rating?: number | null
           review_submitted?: boolean
@@ -11135,14 +11148,20 @@ export type Database = {
           review_url?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
+          attempts?: number
           buyer_id?: string
           created_at?: string
-          email?: string
+          email?: string | null
+          first_failed_at?: string | null
           id?: string
           invitation_token?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
           order_id?: string
           review_rating?: number | null
           review_submitted?: boolean
@@ -11150,6 +11169,8 @@ export type Database = {
           review_url?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -11210,6 +11231,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trustpilot_settings: {
+        Row: {
+          id: number
+          review_count: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          review_count?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          review_count?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       value_funnel_events: {
         Row: {
@@ -14876,6 +14918,15 @@ export type Database = {
       takedown_listing: {
         Args: { listing_id: string; reason: string }
         Returns: undefined
+      }
+      trustpilot_invite_stats: {
+        Args: { p_since: string }
+        Returns: {
+          failed: number
+          scheduled: number
+          sent: number
+          skipped: number
+        }[]
       }
       unverified_review_price_usd: { Args: never; Returns: number }
       upgrade_all_seller_tiers: { Args: never; Returns: number }

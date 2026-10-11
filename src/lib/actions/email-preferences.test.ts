@@ -86,7 +86,7 @@ describe('getMyEmailPreferences', () => {
     const result = await getMyEmailPreferences()
     expect(result).toEqual({
       success: true,
-      prefs: { new_order: true, new_message: true, new_review: true, payout_processed: true, marketing: false },
+      prefs: { new_order: true, new_message: true, new_review: true, payout_processed: true, review_invites: true, marketing: false },
     })
     expect(h.readUserId).toBe('user-1')
   })

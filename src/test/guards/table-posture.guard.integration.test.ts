@@ -51,6 +51,9 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   seo_settings: 'gate mode + planned date; COLUMN-scoped grant (updated_by, deploy id stay private)',
   seo_value_evidence: 'offers tracked / history days / last price move per value page — the same numbers the page prints',
   seo_index_overrides: "the owner's index/noindex decision per public value page path",
+  // Trustpilot (growth point 19): the public TrustBox shows at 10+ reviews;
+  // static pages read the count cookie-free. COLUMN-scoped grant (review_count).
+  trustpilot_settings: 'review count switch for the public TrustBox; COLUMN-scoped grant, updated_by stays private',
 
   // Values / pricing pages — public content by design.
   values_items: 'public value pages; RLS restricts to is_enabled',

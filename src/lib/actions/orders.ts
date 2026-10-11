@@ -19,6 +19,7 @@ import { withOwnOrderFields } from '@/lib/orders/own-fields'
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { sendCompletionReceipt } from '@/lib/trustpilot/invite'
 import { sellerCancelFault, sellerCancelReasonLabel, validateSellerCancel } from '@/lib/orders/seller-cancel-reasons'
 
 // Joined rows the order page renders (no emails — see getOrder).
@@ -797,38 +798,10 @@ async function afterBuyerRelease(
   // step, exactly as transition() does for the auto-complete path.
   await revalidateListingSurfaces(createServiceRoleClient() as any, { listingIds: [order.listing_id] }).catch(() => undefined)
 
-  // Buyer completion receipt (fire-and-forget, non-blocking). When
-  // TRUSTPILOT_BCC_EMAIL is set the email BCCs Trustpilot's Automatic
-  // Feedback Service, which then sends the buyer a verified-review
-  // invitation ~7 days later — this replaces the cron's fallback review
-  // email (sendTrustpilotInvitation skips itself in BCC mode).
-  await (async () => {
-    // Service client: RLS hides sold/paused listings from non-owners.
-    const service = createServiceRoleClient()
-    const [{ data: buyer }, { data: completedListing }] = await Promise.all([
-      service
-        .from('profiles')
-        .select('email, username, full_name')
-        .eq('id', buyerId)
-        .single() as any,
-      service
-        .from('listings')
-        .select('title')
-        .eq('id', order.listing_id)
-        .single() as any,
-    ])
-    if (buyer?.email) {
-      const { sendOrderCompletionEmail } = await import('@/lib/email')
-      await sendOrderCompletionEmail({
-        to: buyer.email,
-        name: buyer.full_name || buyer.username || 'Gamer',
-        orderId,
-        orderNumber: order.order_number || orderId.slice(0, 8).toUpperCase(),
-        listingTitle: await orderItemTitleFor(orderId, completedListing?.title || 'your item'),
-        totalPaid: order.total_amount ?? 0,
-      })
-    }
-  })().catch((err) => console.error('[Orders] Completion email failed:', err))
+  // Buyer completion receipt, with the Trustpilot review-invite BCC when the
+  // order qualifies; the outcome is recorded on trustpilot_invitations.
+  // Never throws (src/lib/trustpilot/invite.ts).
+  await sendCompletionReceipt(orderId)
 
   // Tell the seller their sale is final (email + in-app, fire-and-forget).
   await (async () => {
