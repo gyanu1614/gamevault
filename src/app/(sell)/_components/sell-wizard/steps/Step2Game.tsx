@@ -93,7 +93,7 @@ export function Step2Game({
             label: g.game_name,
             icon_url: g.game_logo_url ?? null,
           }))}
-          placeholder={`Search games that sell ${category.name.toLowerCase()}…`}
+          placeholder="Search Games…"
           emptyText="No games match that search."
           ariaLabel="Choose a game"
           tone="neutral"
