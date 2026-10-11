@@ -134,17 +134,33 @@ export const VALUE_GATE_MIN_HISTORY_DAYS = 7
 /** report: computed and shown on /admin/seo, changes no robots meta. enforce: failing pages are noindex. */
 export type SeoGateMode = 'report' | 'enforce'
 
+/**
+ * A page first seen less than this many days ago passes on offers alone
+ * (owner 2026-10-10: a new game's pages must not be hidden just for being new).
+ */
+export const VALUE_GATE_NEW_PAGE_DAYS = 7
+
 export interface ValueEvidenceInput {
   valueUsd: number | null
   observations: number
   historyDays: number
+  /** When we first saw a price for the page; null = unknown age (plain rule). */
+  firstSeenAt?: string | null
+  /** The time to judge "new" against (defaults to now). */
+  now?: string
+}
+
+export function isNewValuePage(firstSeenAt: string | null | undefined, now: string = new Date().toISOString()): boolean {
+  if (!firstSeenAt) return false
+  const age = Date.parse(now) - Date.parse(firstSeenAt)
+  return Number.isFinite(age) && age < VALUE_GATE_NEW_PAGE_DAYS * 86_400_000
 }
 
 export function passesValueDataGate(e: ValueEvidenceInput): boolean {
   return (
     e.valueUsd != null &&
     e.observations >= VALUE_GATE_MIN_OBSERVATIONS &&
-    e.historyDays >= VALUE_GATE_MIN_HISTORY_DAYS
+    (e.historyDays >= VALUE_GATE_MIN_HISTORY_DAYS || isNewValuePage(e.firstSeenAt, e.now))
   )
 }
 
@@ -152,10 +168,12 @@ export interface ValuePageIndexInput {
   /** The page's rule before the gate (pipeline: isValueItemIndexable; SAB / Adopt Me: true). */
   legacyIndexable: boolean
   /** The page's seo_value_evidence row; null when it has none yet. */
-  evidence: (ValueEvidenceInput & { isProtected: boolean }) | null
+  evidence: (Omit<ValueEvidenceInput, 'now'> & { isProtected: boolean }) | null
   mode: SeoGateMode
   /** The owner's explicit decision for this URL (seo_index_overrides). */
   override: 'index' | 'noindex' | null
+  /** The time to judge a page's age against (defaults to now). */
+  now?: string
 }
 
 export type ValuePageVerdictReason =
@@ -178,7 +196,7 @@ export function valuePageVerdict(input: ValuePageIndexInput): { index: boolean; 
   if (!input.legacyIndexable) return { index: false, reason: 'legacy' }
   if (input.mode === 'report') return { index: true, reason: 'report-only' }
   if (!input.evidence) return { index: false, reason: 'no-evidence' }
-  if (passesValueDataGate(input.evidence)) return { index: true, reason: 'passes' }
+  if (passesValueDataGate({ ...input.evidence, now: input.now })) return { index: true, reason: 'passes' }
   if (input.evidence.isProtected) return { index: true, reason: 'protected' }
   return { index: false, reason: 'fails-gate' }
 }

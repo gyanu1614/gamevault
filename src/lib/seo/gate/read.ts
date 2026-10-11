@@ -17,6 +17,8 @@ export interface ValuePageEvidence {
   /** The last material price move: visible "Updated", dateModified, sitemap lastmod. */
   priceMovedAt: string | null
   isProtected: boolean
+  /** When we first saw a price (a page under 7 days old passes on offers alone). */
+  firstSeenAt: string | null
 }
 
 export interface ValuePageGate {
@@ -29,7 +31,7 @@ export async function readValuePageEvidence(gameSlug: string, itemSlug: string):
   try {
     const { data, error } = await (createValueItemReadClient(gameSlug, itemSlug) as any)
       .from('seo_value_evidence')
-      .select('observations, history_days, value_usd, price_moved_at, is_protected')
+      .select('observations, history_days, value_usd, price_moved_at, is_protected, first_seen_at')
       .eq('game_slug', gameSlug)
       .eq('item_slug', itemSlug)
       .maybeSingle()
@@ -41,6 +43,7 @@ export async function readValuePageEvidence(gameSlug: string, itemSlug: string):
       valueUsd: data.value_usd == null ? null : Number(data.value_usd),
       priceMovedAt: data.price_moved_at,
       isProtected: data.is_protected,
+      firstSeenAt: data.first_seen_at ?? null,
     }
   } catch {
     return undefined

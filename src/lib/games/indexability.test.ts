@@ -210,3 +210,17 @@ describe('currency pages are always indexable (owner 2026-10-10)', () => {
     expect(categoryPageVerdict({ gameActive: true, categoryEnabled: false, categoryBelongsToGame: true, buyableListingCount: 0, hasCuratedContent: false, isCurrency: true })).toBe('not-found')
   })
 })
+
+describe('a new value page shows on offers alone in its first week (owner 2026-10-10)', () => {
+  const now = '2026-10-10T12:00:00.000Z'
+  it('passes with 5+ offers and little history while under 7 days old, then needs the history', async () => {
+    const { passesValueDataGate, VALUE_GATE_NEW_PAGE_DAYS } = await import('./indexability')
+    expect(VALUE_GATE_NEW_PAGE_DAYS).toBe(7)
+    const young = { valueUsd: 7.5, observations: 29, historyDays: 2, firstSeenAt: '2026-10-08T00:00:00.000Z', now }
+    expect(passesValueDataGate(young)).toBe(true)
+    expect(passesValueDataGate({ ...young, observations: 4 })).toBe(false)
+    expect(passesValueDataGate({ ...young, firstSeenAt: '2026-09-20T00:00:00.000Z' })).toBe(false)
+    // Unknown age (row written before the column existed): the plain rule.
+    expect(passesValueDataGate({ ...young, firstSeenAt: null })).toBe(false)
+  })
+})

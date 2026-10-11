@@ -54,9 +54,12 @@ export interface StoredEvidence {
   priceMovedAt: string | null
   passesGate: boolean
   passesChangedAt: string | null
+  /** When we first saw a price for this page (null on rows written before it existed). */
+  firstSeenAt?: string | null
 }
 
 export interface EvidenceRow extends StoredEvidence {
+  firstSeenAt: string | null
   observations: number
   historyDays: number
   valueUsd: number | null
@@ -72,7 +75,7 @@ export function nextEvidence(input: {
   stored: StoredEvidence | null
   now: string
   isProtected: boolean
-}): { row: EvidenceRow; priceMoved: boolean; gateFlipped: boolean } {
+}): { row: EvidenceRow; priceMoved: boolean; gateFlipped: boolean; isNewPage: boolean } {
   const { current, series, stored, now } = input
   const anchors: Record<string, number | null> = {}
   let movedAt: string | null
@@ -108,7 +111,14 @@ export function nextEvidence(input: {
   if (priceMoved) movedAt = now
 
   const historyDays = historyDayCount(series)
-  const passesGate = passesValueDataGate({ valueUsd: current.valueUsd, observations: current.observations, historyDays })
+  // First seen: kept once known; else the earliest priced history day; else now
+  // for a page priced for the first time. An unpriced page has not been seen.
+  const firstPriced = Object.values(series)
+    .flat()
+    .filter((p) => p.value != null)
+    .reduce<string | null>((m, p) => (!m || p.day < m ? p.day : m), null)
+  const firstSeenAt = stored?.firstSeenAt ?? (firstPriced ? dayStart(firstPriced) : current.valueUsd != null ? now : null)
+  const passesGate = passesValueDataGate({ valueUsd: current.valueUsd, observations: current.observations, historyDays, firstSeenAt, now })
   const gateFlipped = !!stored && stored.passesGate !== passesGate
 
   return {
@@ -121,8 +131,11 @@ export function nextEvidence(input: {
       passesGate,
       passesChangedAt: stored && !gateFlipped ? stored.passesChangedAt : now,
       isProtected: input.isProtected,
+      firstSeenAt,
     },
     priceMoved,
     gateFlipped,
+    // A page we have never stored before that now has a price: a new page to announce.
+    isNewPage: !stored && current.valueUsd != null,
   }
 }

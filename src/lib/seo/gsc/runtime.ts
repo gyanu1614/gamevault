@@ -1,7 +1,7 @@
 import { createTokenProvider, loadServiceAccountKey } from '../../../../scripts/lib/gsc/auth'
 import { createGscClient } from '../../../../scripts/lib/gsc/client'
 import { GSC_SITE, REQUESTS_PER_SECOND } from '../../../../scripts/lib/gsc/config'
-import { createThrottle, QuotaExhaustedError } from '../../../../scripts/lib/gsc/throttle'
+import { createThrottle, GscHttpError, QuotaExhaustedError } from '../../../../scripts/lib/gsc/throttle'
 
 import type { GscApi } from './daily'
 
@@ -25,4 +25,11 @@ export function gscApiFromEnv(env: Record<string, string | undefined> = process.
   return createGscClient({ fetch, getToken: tokens.getToken, throttle, sleep, siteUrl: GSC_SITE, backoff: { maxRetries: 2, maxMs: 5_000 } }) as unknown as GscApi
 }
 
-export const isQuotaError = (e: unknown) => e instanceof QuotaExhaustedError
+/**
+ * Stop the run on ANY quota answer. Google's URL Inspection 429 says only
+ * "Quota exceeded for sc-domain:…" (no "per day"), so the old check missed it
+ * and a run burned ~300 more calls into the wall (2026-10-10). The next hourly
+ * run tries again; the day's allowance resets at midnight Pacific.
+ */
+export const isQuotaError = (e: unknown) =>
+  e instanceof QuotaExhaustedError || (e instanceof GscHttpError && e.status === 429 && /quota/i.test(e.message))

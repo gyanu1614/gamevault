@@ -18,11 +18,11 @@ async function loadValueGate(db: Db): Promise<SitemapInput['valueGate']> {
   try {
     const [config, rows] = await Promise.all([
       readGateConfig(db),
-      fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | string | null; price_moved_at: string | null; is_protected: boolean }>(
+      fetchAllRows<{ game_slug: string; item_slug: string; observations: number; history_days: number; value_usd: number | string | null; price_moved_at: string | null; is_protected: boolean; first_seen_at: string | null }>(
         (from, to) =>
           db
             .from('seo_value_evidence')
-            .select('game_slug, item_slug, observations, history_days, value_usd, price_moved_at, is_protected')
+            .select('game_slug, item_slug, observations, history_days, value_usd, price_moved_at, is_protected, first_seen_at')
             .order('game_slug')
             .order('item_slug')
             .range(from, to),
@@ -37,6 +37,7 @@ async function loadValueGate(db: Db): Promise<SitemapInput['valueGate']> {
           valueUsd: r.value_usd == null ? null : Number(r.value_usd),
           priceMovedAt: r.price_moved_at,
           isProtected: r.is_protected,
+          firstSeenAt: r.first_seen_at ?? null,
         },
       ]),
     )
