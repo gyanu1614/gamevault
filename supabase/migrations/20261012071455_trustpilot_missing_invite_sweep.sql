@@ -1,11 +1,13 @@
 -- Trustpilot invites: a safety sweep for completed orders with no invite row.
 --
--- Prod audit 2026-10-12: 10 orders completed since 1 July, 2 of them with no
--- trustpilot_invitations row. The trigger is the only writer at completion,
--- so the daily cron now also asks for recently completed orders that have no
--- row and runs them through the same seam (lib/trustpilot/invite.ts), which
--- decides, sends or skips, and records the outcome. Window is chosen by the
--- caller (3 days), so an old order never gets a late receipt.
+-- Since 20261011081050 the trigger can no longer fail loudly: an error
+-- inside it is a WARNING and the completion commits WITHOUT an invite row.
+-- The buyer-confirm and auto-release paths write the row themselves through
+-- lib/trustpilot/invite.ts, but dispute/admin completions rely on the trigger
+-- alone. So the daily cron also asks for recently completed orders that have
+-- no row and runs them through the same seam, which records the outcome
+-- (a dispute completion is recorded as skipped, nothing is emailed). Window is
+-- chosen by the caller (3 days), so an old order never gets a late receipt.
 --
 -- trustpilot_settings.invites_tracked_since = when this migration ran: the
 -- sweep never reaches back past it, so an order the OLD code already BCC'd
@@ -14,7 +16,7 @@
 
 ALTER TABLE public.trustpilot_settings
   ADD COLUMN IF NOT EXISTS invites_tracked_since timestamptz NOT NULL DEFAULT now();
---
+
 -- Service-role only (default posture from 20260913100000, restated).
 
 CREATE OR REPLACE FUNCTION public.trustpilot_orders_missing_invite(p_since timestamptz, p_limit integer)

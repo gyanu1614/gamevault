@@ -6,8 +6,8 @@
  * ran, e.g. a dispute or admin completion, which are recorded as skipped) and
  * `failed` rows with attempts left — and re-runs the same seam. It also
  * sweeps orders completed in the last 3 days that have NO invite row at all
- * (prod audit 2026-10-12: 2 of 10 completed orders had none); the seam
- * creates the row with its outcome. The window stops an old order from ever
+ * (the trigger now swallows its own errors, so a failure there is silent);
+ * the seam creates the row with its outcome. The window stops an old order from ever
  * getting a late receipt.
  *
  * Ops alert: an invite that failed on an earlier day and fails again in this
