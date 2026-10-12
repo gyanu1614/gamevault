@@ -7,12 +7,13 @@ import type { InviteResult } from './invite'
 
 const NOW = new Date('2026-10-11T09:00:00Z')
 
-function harness(due: DueInvite[], results: Record<string, InviteResult>) {
+function harness(due: DueInvite[], results: Record<string, InviteResult>, missing: string[] = []) {
   const alerts: string[] = []
   const ran: string[] = []
   const deps: CronDeps = {
     now: () => NOW,
     listDue: async () => due,
+    listMissing: async () => missing,
     run: async (orderId) => { ran.push(orderId); return results[orderId] },
     alert: async (msg) => { alerts.push(msg); return true },
   }
@@ -67,5 +68,18 @@ describe('runInviteCron', () => {
     h.deps.run = async (id) => { if (id === 'x') throw new Error('boom'); return { status: 'sent' } }
     const summary = await runInviteCron(h.deps)
     expect(summary).toMatchObject({ processed: 2, sent: 1, failed: 1 })
+  })
+
+  it('also runs recently completed orders that have no invite row at all', async () => {
+    const h = harness([{ orderId: 'a', firstFailedAt: null }], { a: { status: 'sent' }, m: { status: 'sent' } }, ['m'])
+    const summary = await runInviteCron(h.deps)
+    expect(h.ran).toEqual(['a', 'm'])
+    expect(summary).toMatchObject({ processed: 2, sent: 2, missingRows: 1 })
+  })
+
+  it('an order in both lists runs once', async () => {
+    const h = harness([{ orderId: 'a', firstFailedAt: null }], { a: { status: 'sent' } }, ['a'])
+    await runInviteCron(h.deps)
+    expect(h.ran).toEqual(['a'])
   })
 })

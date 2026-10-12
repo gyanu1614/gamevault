@@ -4,7 +4,11 @@
  * The completion path sends almost every invite itself. This picks up what
  * it missed — rows still `scheduled` an hour after completion (the path never
  * ran, e.g. a dispute or admin completion, which are recorded as skipped) and
- * `failed` rows with attempts left — and re-runs the same seam.
+ * `failed` rows with attempts left — and re-runs the same seam. It also
+ * sweeps orders completed in the last 3 days that have NO invite row at all
+ * (prod audit 2026-10-12: 2 of 10 completed orders had none); the seam
+ * creates the row with its outcome. The window stops an old order from ever
+ * getting a late receipt.
  *
  * Ops alert: an invite that failed on an earlier day and fails again in this
  * run has been failing two days in a row → one Discord message per run.
@@ -17,6 +21,7 @@ import { postOpsAlert } from '@/lib/ops/discord-alert'
 import { MAX_ATTEMPTS, runCompletionInvite, type InviteResult } from './invite'
 
 const BATCH_SIZE = 50
+const SWEEP_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
 export interface DueInvite {
   orderId: string
@@ -26,6 +31,8 @@ export interface DueInvite {
 export interface CronDeps {
   now(): Date
   listDue(now: Date, limit: number): Promise<DueInvite[]>
+  /** Orders completed since `since` with no trustpilot_invitations row. */
+  listMissing(since: Date, limit: number): Promise<string[]>
   run(orderId: string): Promise<InviteResult>
   alert(message: string): Promise<boolean>
 }
@@ -36,6 +43,8 @@ export interface CronSummary {
   skipped: number
   failed: number
   failingTwoDays: number
+  /** Completed orders that had no invite row and were swept in this run. */
+  missingRows: number
   alerted: boolean
 }
 
@@ -44,10 +53,12 @@ const utcDay = (d: Date) => d.toISOString().slice(0, 10)
 export async function runInviteCron(deps: CronDeps = defaultDeps): Promise<CronSummary> {
   const now = deps.now()
   const due = await deps.listDue(now, BATCH_SIZE)
-  const summary: CronSummary = { processed: 0, sent: 0, skipped: 0, failed: 0, failingTwoDays: 0, alerted: false }
+  const seen = new Set(due.map((d) => d.orderId))
+  const missing = (await deps.listMissing(new Date(now.getTime() - SWEEP_WINDOW_MS), BATCH_SIZE)).filter((id) => !seen.has(id))
+  const summary: CronSummary = { processed: 0, sent: 0, skipped: 0, failed: 0, failingTwoDays: 0, missingRows: missing.length, alerted: false }
   const stuck: Array<{ orderId: string; error: string }> = []
 
-  for (const row of due) {
+  for (const row of [...due, ...missing.map((orderId) => ({ orderId, firstFailedAt: null }))]) {
     let result: InviteResult
     try {
       result = await deps.run(row.orderId)
@@ -93,6 +104,14 @@ const defaultDeps: CronDeps = {
       orderId: r.order_id,
       firstFailedAt: r.first_failed_at,
     }))
+  },
+  async listMissing(since, limit) {
+    const { data, error } = await (createServiceRoleClient() as any).rpc('trustpilot_orders_missing_invite', {
+      p_since: since.toISOString(),
+      p_limit: limit,
+    })
+    if (error) throw new Error(`trustpilot_orders_missing_invite failed: ${error.message}`)
+    return ((data ?? []) as Array<{ order_id: string }>).map((r) => r.order_id)
   },
   run: (orderId) => runCompletionInvite(orderId, 'retry'),
   alert: (message) => postOpsAlert(message),

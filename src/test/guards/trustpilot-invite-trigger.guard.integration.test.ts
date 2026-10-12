@@ -30,21 +30,22 @@ function psqlRows(script: string): string[] {
 }
 
 /** Buyer (email optional) + seller + game + enabled pair + listing + delivered order. */
-function fixtureSql(ids: Record<string, string>, buyerEmail: string | null): string {
+function fixtureSql(ids: Record<string, string>, buyerEmail: string | null, suffix = ''): string {
   const q = (s: string | null) => (s === null ? 'NULL' : `'${s}'`)
+  const slug = `guard-test-${ns.tag}${suffix}`
   return `
 INSERT INTO auth.users (id, email, instance_id, aud, role) VALUES
   ('${ids.buyer}', ${q(buyerEmail)}, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
-  ('${ids.seller}', '${ns.email('seller')}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated');
+  ('${ids.seller}', '${ns.email('seller' + suffix)}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated');
 INSERT INTO profiles (id, username, email) VALUES
-  ('${ids.buyer}', '${ns.username('buyer')}', ${q(buyerEmail)}),
-  ('${ids.seller}', '${ns.username('seller')}', '${ns.email('seller')}')
+  ('${ids.buyer}', '${ns.username('buyer' + suffix)}', ${q(buyerEmail)}),
+  ('${ids.seller}', '${ns.username('seller' + suffix)}', '${ns.email('seller' + suffix)}')
   ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
-INSERT INTO games (id, name, slug) VALUES ('${ids.game}', '${ns.listingTitle()}', 'guard-test-${ns.tag}');
+INSERT INTO games (id, name, slug) VALUES ('${ids.game}', '${ns.listingTitle()}${suffix}', '${slug}');
 INSERT INTO global_categories (id, name, slug, default_type, default_slug)
-  VALUES ('${ids.global}', 'Guard Items', 'guard-test-${ns.tag}', 'items', 'guard-test-${ns.tag}');
+  VALUES ('${ids.global}', 'Guard Items', '${slug}', 'items', '${slug}');
 INSERT INTO game_categories (id, game_id, global_category_id, slug, name, type)
-  VALUES ('${ids.pair}', '${ids.game}', '${ids.global}', 'guard-test-${ns.tag}', 'Guard Items', 'items');
+  VALUES ('${ids.pair}', '${ids.game}', '${ids.global}', '${slug}', 'Guard Items', 'items');
 INSERT INTO listings (id, seller_id, game_id, game_category_id, category_id, title, description, price)
   VALUES ('${ids.listing}', '${ids.seller}', '${ids.game}', '${ids.pair}',
           (SELECT legacy_category_id FROM game_categories WHERE id = '${ids.pair}'),
@@ -105,6 +106,64 @@ SELECT 'status=' || status || '|attempts=' || attempts
   FROM trustpilot_invitations WHERE order_id = '${ids.order}';
 ROLLBACK;`)
     expect(rows).toContain('status=scheduled|attempts=0|due_in_window=true')
+  })
+})
+
+describe('trustpilot missing-invite sweep', () => {
+  beforeAll(() => {
+    assertGuardTargetAllowed(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env)
+    ns = fixtureNamespace()
+  })
+
+  itLocal('finds a recently completed order whose invite row is missing, and only that one', () => {
+    const a = freshIds()
+    const b = freshIds()
+    const rows = psqlRows(`BEGIN;
+${fixtureSql(a, ns.email('buyer'))}
+UPDATE orders SET status = 'completed' WHERE id = '${a.order}';
+DELETE FROM trustpilot_invitations WHERE order_id = '${a.order}';
+${fixtureSql(b, ns.email('buyerb'), 'b')}
+UPDATE orders SET status = 'completed' WHERE id = '${b.order}';
+UPDATE trustpilot_settings SET invites_tracked_since = now() - interval '1 day' WHERE id = 1;
+SET LOCAL ROLE service_role;
+SELECT 'missing=' || order_id FROM trustpilot_orders_missing_invite(now() - interval '3 days', 50);
+ROLLBACK;`)
+    expect(rows).toContain(`missing=${a.order}`)
+    expect(rows).not.toContain(`missing=${b.order}`)
+  })
+
+  itLocal('never reaches back before the moment tracking started (no double invite after deploy)', () => {
+    const a = freshIds()
+    const rows = psqlRows(`BEGIN;
+${fixtureSql(a, ns.email('buyer'))}
+UPDATE orders SET status = 'completed' WHERE id = '${a.order}';
+DELETE FROM trustpilot_invitations WHERE order_id = '${a.order}';
+UPDATE trustpilot_settings SET invites_tracked_since = now() + interval '1 minute' WHERE id = 1;
+SET LOCAL ROLE service_role;
+SELECT 'missing=' || order_id FROM trustpilot_orders_missing_invite(now() - interval '3 days', 50);
+SELECT 'done';
+ROLLBACK;`)
+    expect(rows).toEqual(['done'])
+  })
+
+  itLocal('the tracking start time stays private', () => {
+    let error = ''
+    try {
+      psqlRows(`BEGIN; SET LOCAL ROLE anon; SELECT invites_tracked_since FROM trustpilot_settings; ROLLBACK;`)
+    } catch (e: any) {
+      error = String(e?.stderr ?? e)
+    }
+    expect(error).toMatch(/permission denied/)
+  })
+
+  itLocal('is service-role only', () => {
+    let error = ''
+    try {
+      psqlRows(`BEGIN; SET LOCAL ROLE authenticated; SELECT * FROM trustpilot_orders_missing_invite(now(), 1); ROLLBACK;`)
+    } catch (e: any) {
+      error = String(e?.stderr ?? e)
+    }
+    expect(error).toMatch(/permission denied/)
   })
 })
 

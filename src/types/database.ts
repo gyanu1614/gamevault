@@ -11235,18 +11235,21 @@ export type Database = {
       trustpilot_settings: {
         Row: {
           id: number
+          invites_tracked_since: string
           review_count: number
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           id?: number
+          invites_tracked_since?: string
           review_count?: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           id?: number
+          invites_tracked_since?: string
           review_count?: number
           updated_at?: string
           updated_by?: string | null
@@ -14926,6 +14929,12 @@ export type Database = {
           scheduled: number
           sent: number
           skipped: number
+        }[]
+      }
+      trustpilot_orders_missing_invite: {
+        Args: { p_limit: number; p_since: string }
+        Returns: {
+          order_id: string
         }[]
       }
       unverified_review_price_usd: { Args: never; Returns: number }
