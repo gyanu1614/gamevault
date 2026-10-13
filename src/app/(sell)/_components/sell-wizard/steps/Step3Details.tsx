@@ -1,15 +1,20 @@
 'use client'
 
+import { memo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
 import { type Attribute, type AttributeTemplateFull } from '@/lib/actions/new-schema'
-import { isVisible, labelFor } from '@/app/(sell)/_components/sell-wizard/attribute-tree'
+import { isVisible } from '@/app/(sell)/_components/sell-wizard/attribute-tree'
 import { FieldInput } from '@/app/(sell)/_components/sell-wizard/steps/FieldInput'
 import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
 
 // ─── Step 3: dynamic details (with nested sub-fields) ────────────────────────
 
-export function Step3Details({
+/**
+ * memo: the wizard keeps every field in one form object, so typing a title or
+ * price re-rendered (and re-sorted) every dropdown here. `values` is the
+ * fieldValues object, which only changes when an item field does.
+ */
+export const Step3Details = memo(function Step3Details({
   templateLoading, template, topLevel, childrenOf, values, onChange,
 }: {
   templateLoading: boolean
@@ -23,11 +28,17 @@ export function Step3Details({
   // skip the Offer Details sub-card entirely. The seller starts straight at the
   // Title card. Loading state still renders so the UI doesn't flash.
   if (templateLoading) {
+    // Sized like the real fields (label + box), so nothing jumps when
+    // they arrive.
     return (
       <SubCard title="Offer Details">
-        <div className="flex items-center justify-center gap-2 py-6 text-sm text-text-tertiary">
-          <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
-          Loading details…
+        <div className="space-y-5" aria-busy="true" aria-label="Loading item fields">
+          {[0, 1].map((i) => (
+            <div key={i}>
+              <div className="mb-2 h-3.5 w-24 animate-pulse rounded bg-white/[0.06] motion-reduce:animate-none" />
+              <div className="h-11 animate-pulse rounded-md bg-white/[0.04] motion-reduce:animate-none sm:h-10" />
+            </div>
+          ))}
         </div>
       </SubCard>
     )
@@ -36,7 +47,7 @@ export function Step3Details({
 
   return (
     <SubCard title="Offer Details">
-      <div className="space-y-4">
+      <div className="space-y-5">
         {topLevel.map((a) => (
           <FieldCard
             key={a.id}
@@ -49,7 +60,7 @@ export function Step3Details({
       </div>
     </SubCard>
   )
-}
+})
 
 /**
  * FieldCard — renders a single attribute and, if it has children that are
@@ -73,8 +84,8 @@ export function FieldCard({
     : []
 
   return (
+    // No `layout`: it measured the whole card on every keystroke.
     <motion.div
-      layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
@@ -99,13 +110,11 @@ export function FieldCard({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            {/* Follow-up questions for the picked choice: a plain row under a
-                hairline, not a box inside the card. */}
-            <div className="mt-4 border-t border-white/[0.07] pt-4">
-              <div className="mb-3 text-[12.5px] text-text-tertiary">
-                {attribute.name}: <span className="font-semibold text-lime-text">{labelFor(attribute, currentValue as string)}</span>
-              </div>
-              <div className="space-y-3">
+            {/* Follow-up fields for the pick: the same label-over-field rows,
+                same spacing, no echo line or divider (owner, 2026-10-12:
+                Eldorado's calm stack). */}
+            <div className="pt-5">
+              <div className="space-y-5">
                 {revealedKids.map((kid) => (
                   <FieldCard
                     key={kid.id}

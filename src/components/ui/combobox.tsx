@@ -12,6 +12,15 @@
  * box; type to filter. When closed, the trigger shows the selected option's
  * label (or the placeholder). Options are sorted A→Z unless `unsorted`.
  *
+ * `searchInTrigger` (the sell form, 2026-10-12): no separate search bar —
+ * the field itself becomes the search box (caret in place, the field name as
+ * placeholder) and the list opens attached under it. Touch screens keep the
+ * bottom sheet with its own search, so the keyboard never covers the list.
+ *
+ * Search runs outside cmdk (combobox-filter): one lower-cased index per
+ * options list and at most RENDER_CAP rendered rows, so 800+ names open and
+ * filter instantly.
+ *
  *   <Combobox value={value} onChange={setValue} options={[{ value: 'a', label: 'Apple' }]} />
  *
  * `size="lg"` is the roomy form variant (the sell wizard): a 52px trigger,
@@ -21,11 +30,14 @@
 
 import * as React from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk'
+import { Command, CommandInput } from 'cmdk'
 import { Drawer } from 'vaul'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCoarsePointer } from '@/hooks/use-coarse-pointer'
+import { SIZES } from './combobox-sizes'
+import { OptionList } from './combobox-list'
+import { InlineCombobox } from './combobox-inline'
 
 export interface ComboboxOption {
   value: string
@@ -67,37 +79,11 @@ export interface ComboboxProps {
   sheetOnTouch?: boolean
   /** Sheet heading (touch) — defaults to the aria label. */
   sheetTitle?: string
+  /** Type straight into the field; the list opens attached under it (desktop). */
+  searchInTrigger?: boolean
 }
 
-const SIZES = {
-  md: {
-    trigger: 'h-10 rounded-md border bg-transparent px-3 text-sm',
-    triggerGap: 'gap-2',
-    triggerIcon: 'h-5 w-5 rounded',
-    search: 'gap-2 px-3 py-2',
-    searchIcon: 'h-3.5 w-3.5',
-    input: 'h-6 text-sm',
-    list: 'max-h-72 p-1',
-    row: 'gap-2 rounded-md px-2 py-2 text-sm',
-    rowIcon: 'h-5 w-5 rounded',
-    check: 'h-3.5 w-3.5',
-    panel: 'rounded-lg border shadow-elevated',
-  },
-  lg: {
-    trigger:
-      'h-11 rounded-md border border-white/[0.07] bg-white/[0.035] px-3.5 text-base font-medium hover:border-white/[0.13] sm:text-[15px]',
-    triggerGap: 'gap-3',
-    triggerIcon: 'h-7 w-7 rounded-md',
-    search: 'gap-2.5 px-4 py-3.5',
-    searchIcon: 'h-4 w-4',
-    input: 'h-6 text-base sm:text-[15px]',
-    list: 'max-h-[22rem] p-1.5',
-    row: 'gap-3 rounded-lg px-2.5 py-2 text-[14.5px] font-medium min-h-[52px]',
-    rowIcon: 'h-9 w-9 rounded-lg',
-    check: 'h-4 w-4',
-    panel: 'rounded-xl border border-white/[0.06] bg-[#1F2025] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]',
-  },
-} as const
+
 
 export function Combobox({
   value,
@@ -117,6 +103,7 @@ export function Combobox({
   size = 'md',
   sheetOnTouch = false,
   sheetTitle,
+  searchInTrigger = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   // Phones: open on the list, not the keyboard (see useCoarsePointer).
@@ -138,6 +125,31 @@ export function Combobox({
   const choose = (v: string) => {
     onChange(v)
     setOpen(false)
+  }
+
+  if (searchInTrigger && !asSheet) {
+    return (
+      <InlineCombobox
+        open={open}
+        setOpen={setOpen}
+        options={sortedOptions}
+        selected={selected}
+        value={value}
+        onChoose={choose}
+        placeholder={placeholder}
+        emptyText={emptyText}
+        ariaLabel={ariaLabel}
+        listboxId={listboxId}
+        invalid={invalid}
+        disabled={disabled}
+        onBlur={onBlur}
+        iconInTrigger={iconInTrigger}
+        triggerIcon={triggerIcon}
+        rowIcon={rowIcon}
+        size={size}
+        className={className}
+      />
+    )
   }
 
   const trigger = (
@@ -276,17 +288,7 @@ function ComboboxPanel({
   // Mounted per open, so each open starts with an empty search.
   const [query, setQuery] = React.useState('')
   return (
-    <Command
-      shouldFilter
-      // Substring match over the label plus keywords (the value and any extras).
-      filter={(itemValue, search, keywords) => {
-        const q = search.trim().toLowerCase()
-        if (!q) return 1
-        const hay = (itemValue + ' ' + (keywords?.join(' ') ?? '')).toLowerCase()
-        return hay.includes(q) ? 1 : 0
-      }}
-      className="flex min-h-0 w-full flex-1 flex-col"
-    >
+    <Command shouldFilter={false} className="flex min-h-0 w-full flex-1 flex-col">
       <div className={cn('flex items-center border-b border-border-subtle', s.search)}>
         <Search className={cn('shrink-0 text-text-tertiary', s.searchIcon)} />
         <CommandInput
@@ -300,35 +302,16 @@ function ComboboxPanel({
           )}
         />
       </div>
-      <CommandList id={listboxId} role="listbox" className={cn('overflow-y-auto overscroll-contain', s.list)}>
-        <CommandEmpty className="px-3 py-2 text-xs text-text-tertiary">{emptyText}</CommandEmpty>
-        <CommandGroup>
-          {options.map((o) => {
-            const isChecked = o.value === value
-            return (
-              <CommandItem
-                key={o.value}
-                value={o.label}
-                keywords={[o.value, ...(o.keywords ?? [])]}
-                onSelect={() => onChoose(o.value)}
-                className={cn(
-                  'flex w-full cursor-pointer items-center outline-none text-text-secondary',
-                  'data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-text-primary',
-                  s.row,
-                  isChecked && 'text-text-primary',
-                )}
-              >
-                {o.icon_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={o.icon_url} alt={o.label} aria-hidden loading="lazy" className={cn('shrink-0 object-cover', rowIconClassName)} />
-                )}
-                <span className="flex-1 truncate">{o.label}</span>
-                {isChecked && <Check className={cn('text-lime-text', s.check)} />}
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-      </CommandList>
+      <OptionList
+        listboxId={listboxId}
+        options={options}
+        query={query}
+        value={value}
+        emptyText={emptyText}
+        size={size}
+        rowIconClassName={rowIconClassName}
+        onChoose={onChoose}
+      />
     </Command>
   )
 }

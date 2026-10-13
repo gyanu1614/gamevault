@@ -1,4 +1,5 @@
 import 'server-only'
+import { getSellTemplate } from './template-read'
 
 import {
   fetchListingForDuplicate,
@@ -8,7 +9,7 @@ import {
   type SellGameOption,
   type SellerPublishPolicy,
 } from '@/lib/actions/sell-wizard'
-import { getAttributeTemplateFull, type AttributeTemplateFull } from '@/lib/actions/new-schema'
+import type { AttributeTemplateFull } from '@/lib/actions/new-schema'
 import { fetchCategoryConfig } from '@/lib/actions/admin-category-configs'
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 
@@ -42,7 +43,11 @@ export async function loadWizardPrefill(listingId: string): Promise<Result<Wizar
 
   const [gamesRes, templateRes, currencyConfig] = await Promise.all([
     fetchSellGamesForCategory(listing.category_slug),
-    getAttributeTemplateFull(listing.game_category_id),
+    // The same cached read the form's GET route serves.
+    getSellTemplate(listing.game_category_id).then(
+      (data) => ({ success: true as const, data }),
+      () => ({ success: false as const, data: null }),
+    ),
     listing.category_slug === 'currency' ? fetchCategoryConfig(listing.game_id, 'currency') : Promise.resolve(null),
   ])
   if (!gamesRes.success) return { success: false, error: gamesRes.error }

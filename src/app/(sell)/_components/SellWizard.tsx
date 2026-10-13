@@ -23,6 +23,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { fetchExistingCurrencyListingId, type SellGameOption } from '@/lib/actions/sell-wizard'
 import type { GlobalCategory } from '@/lib/actions/new-schema'
 import type { WizardPrefill } from '@/lib/sell/wizard-prefill'
+import type { WizardStart } from '@/lib/sell/wizard-start'
 import { resolveCurrencyPriceRules } from '@/lib/currency/price-rules'
 import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
 import { applyOptionSets } from '@/lib/sell/option-sets'
@@ -56,20 +57,23 @@ export interface SellWizardProps {
   prefill?: WizardPrefill | null
   /** Why a duplicate could not be loaded (the wizard then starts empty). */
   prefillError?: string | null
+  /** `?game=&category=`: open on this game's offer details (lib/sell/wizard-start). */
+  start?: WizardStart | null
 }
 
-export default function SellWizard({ initialCategories, editListingId = null, prefill = null, prefillError = null }: SellWizardProps) {
+export default function SellWizard({ initialCategories, editListingId = null, prefill = null, prefillError = null, start = null }: SellWizardProps) {
   const router = useRouter()
   const cardRef = useRef<HTMLElement | null>(null)
   const isEditMode = !!editListingId
   const categories = initialCategories
 
   const prefillCategory = prefill ? categories.find((c) => c.slug === prefill.listing.category_slug) ?? null : null
-  const [category, setCategory] = useState<GlobalCategory | null>(prefillCategory)
-  const [game, setGame] = useState<SellGameOption | null>(prefillCategory ? prefill?.game ?? null : null)
+  const startCategory = !prefill && !isEditMode && start ? categories.find((c) => c.slug === start.categorySlug) ?? null : null
+  const [category, setCategory] = useState<GlobalCategory | null>(prefillCategory ?? startCategory)
+  const [game, setGame] = useState<SellGameOption | null>(prefillCategory ? prefill?.game ?? null : startCategory ? start?.game ?? null : null)
   const { form, setForm, update, setters } = useOfferForm(prefill && prefillCategory ? offerFormFromListing(prefill.listing) : EMPTY_OFFER_FORM)
   const { step, setStep, direction } = useWizardSteps({
-    initialStep: prefillCategory ? 3 : 1,
+    initialStep: prefillCategory || startCategory ? 3 : 1,
     historyEnabled: !isEditMode,
     cardRef,
   })
@@ -92,7 +96,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
 
   useWizardSnapshot({
     persist: !isEditMode,
-    restore: !isEditMode && !prefill,
+    restore: !isEditMode && !prefill && !startCategory,
     categories,
     games: catalog.games,
     step,
@@ -140,7 +144,7 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     () => (category?.slug === 'currency' ? activeDeliveryMethods(currencyConfig) : []),
     [category, currencyConfig],
   )
-  const canPublish = canPublishOffer({ form, attributesFilled, categorySlug: category?.slug, currencyConfig, deliveryMethods, policy })
+  const canPublish = canPublishOffer({ form, attributesFilled, categorySlug: category?.slug, currencyConfig, deliveryMethods, policy, templateLoading: catalog.templateLoading })
   const priceHintInput = useMemo(
     () => priceHintInputFor({ game, category, template, values: form.fieldValues, bundleId: form.bundleId }),
     [game, category, template, form.fieldValues, form.bundleId],

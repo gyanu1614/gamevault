@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Combobox } from '@/components/ui/combobox'
@@ -8,6 +9,7 @@ import { type SellGameOption } from '@/lib/actions/sell-wizard'
 import { type GlobalCategory } from '@/lib/actions/new-schema'
 import { SubCard } from '@/app/(sell)/_components/sell-wizard/ui/SubCard'
 import { FIELD_SURFACE } from '../styles'
+import { sellTemplateQuery } from '@/lib/sell/template-client'
 
 // ─── Step 2: game picker ────────────────────────────────────────────────────
 
@@ -61,6 +63,17 @@ export function Step2Game({
     [recentGameIds, games],
   )
 
+  // Warm the item fields before step 3 (2026-10-12): the seller's recent
+  // games now, any other game the moment its chip is pointed at. A cached
+  // pair costs nothing; the request hides behind the step transition.
+  const queryClient = useQueryClient()
+  const prefetch = (g: SellGameOption) => {
+    void queryClient.prefetchQuery(sellTemplateQuery(g.game_category_id))
+  }
+  useEffect(() => {
+    recentGames.forEach((g) => void queryClient.prefetchQuery(sellTemplateQuery(g.game_category_id)))
+  }, [recentGames, queryClient])
+
   return (
     // The picker lives in a titled card (SubCard, the Step 3 panel), so all
     // three steps share one pattern: page title = context ("Sell Items"),
@@ -73,7 +86,7 @@ export function Step2Game({
           type-ahead, keyboard nav and the small per-game icon for free —
           and it is the same control the rest of the app already uses. */}
       {loading ? (
-        <div className={cn(FIELD_SURFACE, 'flex h-11 items-center gap-2 px-3.5 text-[15px] text-text-tertiary')}>
+        <div className={cn(FIELD_SURFACE, 'flex h-11 items-center gap-2 px-3.5 text-[15px] text-text-tertiary sm:h-10 sm:px-3 sm:text-[14px]')}>
           <Loader2 className="h-4 w-4 animate-spin text-lime-text" />
           Loading games…
         </div>
@@ -93,6 +106,9 @@ export function Step2Game({
             label: g.game_name,
             icon_url: g.game_logo_url ?? null,
           }))}
+          // The action already orders games by the admin's sort_order.
+          unsorted
+          searchInTrigger
           placeholder="Search Games…"
           emptyText="No games match that search."
           ariaLabel="Choose a game"
@@ -118,6 +134,8 @@ export function Step2Game({
               key={g.game_id}
               type="button"
               onClick={() => onSelect(g)}
+              onPointerEnter={() => prefetch(g)}
+              onFocus={() => prefetch(g)}
               className={cn(
                 // Same radius family as the fields; 28px logos so games read at a glance.
                 'inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-md border pl-1.5 pr-3 text-[13.5px] font-medium transition-colors active:scale-[0.98]',

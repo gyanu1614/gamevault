@@ -257,6 +257,9 @@ export async function getAttributeTemplate(gameCategoryId: string): Promise<Resu
  * Full template with all attributes, options, and conditional rules attached.
  * One query per relation — keep it predictable; no N+1.
  */
+/** The option columns the seller form, buyer filters and importer read. */
+const OPTION_COLUMNS = 'id, attribute_id, slug, value, label, icon_url, metadata, sort_order'
+
 export async function getAttributeTemplateFull(gameCategoryId: string): Promise<Result<AttributeTemplateFull | null>> {
   try {
     const supabase = createAnonClient()
@@ -289,19 +292,23 @@ export async function getAttributeTemplateFull(gameCategoryId: string): Promise<
       // Options are paged: PostgREST caps a read at 1000 rows, and a
       // catalogue-backed form (MM2 item names, ~1,070 options) passes that.
       // `id` breaks sort_order ties so pages never overlap or skip.
+      // Only the columns the forms read (2026-10-12: `*` shipped SEO and
+      // timestamp columns, ~4x the payload), ordered by the
+      // (attribute_id, sort_order) index so Postgres needn't sort them all.
       const readOptions = async (): Promise<AttributeOption[]> => {
         const PAGE = 1000
         const out: AttributeOption[] = []
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from('attribute_options')
-            .select('*')
+            .select(OPTION_COLUMNS)
             .in('attribute_id', attrIds)
+            .order('attribute_id', { ascending: true })
             .order('sort_order', { ascending: true })
             .order('id', { ascending: true })
             .range(from, from + PAGE - 1)
           if (error) throw error
-          out.push(...((data ?? []) as AttributeOption[]))
+          out.push(...((data ?? []) as unknown as AttributeOption[]))
           if (!data || data.length < PAGE) return out
         }
       }

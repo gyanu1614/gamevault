@@ -17,7 +17,14 @@ import { slugify } from '@/lib/utils'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { ensureGameCategory } from '@/lib/categories'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { SELL_TEMPLATE_TAG } from '@/lib/sell/template-tags'
+
+/** Admin pages + the seller form's cached template (getSellTemplate). */
+function refreshTemplates() {
+  revalidatePath('/admin/games', 'layout')
+  revalidateTag(SELL_TEMPLATE_TAG)
+}
 
 function getAdminSupabase() {
   return createServiceClient(
@@ -91,6 +98,30 @@ type Result<T> = { success: true; data: T } | { success: false; error: string }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Next free sort_order among a template's fields (new fields go last, no ties). */
+async function nextAttributeOrder(supabase: ReturnType<typeof getAdminSupabase>, templateId: string): Promise<number> {
+  const { data } = await supabase
+    .from('attributes')
+    .select('sort_order')
+    .eq('template_id', templateId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+  const top = (data?.[0] as { sort_order: number } | undefined)?.sort_order
+  return top == null ? 0 : top + 1
+}
+
+/** Next free sort_order in a field's choices (2026-10-12: length-based numbers collided after a delete). */
+async function nextOptionOrder(supabase: ReturnType<typeof getAdminSupabase>, attributeId: string): Promise<number> {
+  const { data } = await supabase
+    .from('attribute_options')
+    .select('sort_order')
+    .eq('attribute_id', attributeId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+  const top = (data?.[0] as { sort_order: number } | undefined)?.sort_order
+  return top == null ? 0 : top + 1
+}
+
 // ─── READS ────────────────────────────────────────────────────────────────────
 
 /**
@@ -161,26 +192,49 @@ export async function loadBuilderState(
     }
 
     // 4. attributes + options + rules
+    // Only THIS template's options and rules (2026-10-12: the options read had
+    // no filter at all — every game's choices, capped at 1,000 rows, so MM2's
+    // ~1,070 names were silently cut and the page loaded slowly). Paged past
+    // PostgREST's 1,000-row cap; `id` breaks sort_order ties.
     const tplId = template.id as string
-    const [{ data: attrs }, { data: opts }, { data: rules }] = await Promise.all([
-      supabase
-        .from('attributes')
-        .select('*')
-        .eq('template_id', tplId)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('attribute_options')
-        .select('*')
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('attribute_conditional_rules')
-        .select('*'),
-    ])
-
+    const { data: attrs, error: aErr } = await supabase
+      .from('attributes')
+      .select('*')
+      .eq('template_id', tplId)
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+    if (aErr) return { success: false, error: aErr.message }
     const attrRows = (attrs ?? []) as any[]
-    const attrIdSet = new Set(attrRows.map((a) => a.id))
+    const attrIds = attrRows.map((a) => a.id as string)
+    const readOptions = async (): Promise<any[]> => {
+      if (attrIds.length === 0) return []
+      const PAGE = 1000
+      const out: any[] = []
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from('attribute_options')
+          .select('id, attribute_id, slug, value, label, description, icon_url, metadata, sort_order')
+          .in('attribute_id', attrIds)
+          .order('attribute_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (error) throw error
+        out.push(...(data ?? []))
+        if (!data || data.length < PAGE) return out
+      }
+    }
+    const [opts, rulesRes] = await Promise.all([
+      readOptions(),
+      attrIds.length
+        ? supabase.from('attribute_conditional_rules').select('*').in('attribute_id', attrIds)
+        : Promise.resolve({ data: [], error: null }),
+    ])
+    if (rulesRes.error) return { success: false, error: rulesRes.error.message }
+    const rules = rulesRes.data
+    const attrIdSet = new Set(attrIds)
     const optsByAttr = new Map<string, BuilderOption[]>()
-    for (const o of (opts ?? []) as any[]) {
+    for (const o of opts) {
       if (!attrIdSet.has(o.attribute_id)) continue
       const arr = optsByAttr.get(o.attribute_id) ?? []
       arr.push(o)
@@ -285,12 +339,12 @@ export async function createAttribute(input: CreateAttributeInput): Promise<Resu
         slug,
         type: input.type,
         is_required: input.is_required ?? false,
-        sort_order: input.sort_order ?? 0,
+        sort_order: input.sort_order ?? (await nextAttributeOrder(supabase, input.template_id)),
       })
       .select('id, slug')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: (data as any).id, slug: (data as any).slug } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -347,7 +401,8 @@ export async function createSubAttribute(
         slug,
         type: input.type,
         is_required: false,
-        sort_order: input.sort_order ?? 0,
+        // Sub-fields all got 0, so siblings' order fell back to row order.
+        sort_order: input.sort_order ?? (await nextAttributeOrder(supabase, input.template_id)),
       })
       .select('id, slug')
       .single()
@@ -371,7 +426,7 @@ export async function createSubAttribute(
       return { success: false, error: ruleErr.message }
     }
 
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: attrId, slug: (attr as any).slug, rule_id: (rule as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -420,7 +475,7 @@ export async function updateAttribute(input: UpdateAttributeInput): Promise<Resu
       }
       return { success: false, error: error.message }
     }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: input.id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -433,7 +488,7 @@ export async function deleteAttribute(id: string): Promise<Result<{ id: string }
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attributes').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -449,7 +504,7 @@ export async function reorderOptions(orderedIds: string[]): Promise<Result<{ cou
         supabase.from('attribute_options').update({ sort_order: idx }).eq('id', id)
       )
     )
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { count: orderedIds.length } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -466,7 +521,7 @@ export async function reorderAttributes(orderedIds: string[]): Promise<Result<{ 
         supabase.from('attributes').update({ sort_order: idx }).eq('id', id)
       )
     )
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { count: orderedIds.length } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -509,12 +564,12 @@ export async function createOption(input: CreateOptionInput): Promise<Result<{ i
         slug,
         value: input.value?.trim() || slug,
         label: input.label.trim(),
-        sort_order: input.sort_order ?? 0,
+        sort_order: input.sort_order ?? (await nextOptionOrder(supabase, input.attribute_id)),
       })
       .select('id')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: (data as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -610,7 +665,7 @@ export async function bulkCreateOptions(
     })
 
     if (rows.length === 0) {
-      revalidatePath('/admin/games', 'layout')
+      refreshTemplates()
       return { success: true, data: { created: 0, skipped } }
     }
 
@@ -619,7 +674,7 @@ export async function bulkCreateOptions(
       .insert(rows)
     if (insertErr) return { success: false, error: insertErr.message }
 
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { created: rows.length, skipped } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -656,7 +711,7 @@ export async function bulkDeleteOptions(input: {
     const { data, error } = await q.select('id')
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { deleted: Array.isArray(data) ? data.length : 0 } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -685,7 +740,7 @@ export async function updateOption(input: UpdateOptionInput): Promise<Result<{ i
     if (Object.keys(patch).length === 0) return { success: true, data: { id: input.id } }
     const { error } = await supabase.from('attribute_options').update(patch).eq('id', input.id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: input.id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -749,7 +804,7 @@ export async function uploadOptionIcon(
       .eq('id', optionId)
     if (updErr) return { success: false, error: updErr.message }
 
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { url: publicUrl } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Upload failed' }
@@ -762,7 +817,7 @@ export async function deleteOption(id: string): Promise<Result<{ id: string }>> 
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attribute_options').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -795,7 +850,7 @@ export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: strin
     if (input.id) {
       const { error } = await supabase.from('attribute_conditional_rules').update(payload).eq('id', input.id)
       if (error) return { success: false, error: error.message }
-      revalidatePath('/admin/games', 'layout')
+      refreshTemplates()
       return { success: true, data: { id: input.id } }
     }
     const { data, error } = await supabase
@@ -804,7 +859,7 @@ export async function saveRule(input: SaveRuleInput): Promise<Result<{ id: strin
       .select('id')
       .single()
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id: (data as any).id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }
@@ -817,7 +872,7 @@ export async function deleteRule(id: string): Promise<Result<{ id: string }>> {
     const supabase = getAdminSupabase()
     const { error } = await supabase.from('attribute_conditional_rules').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/admin/games', 'layout')
+    refreshTemplates()
     return { success: true, data: { id } }
   } catch (e: any) {
     return { success: false, error: e?.message ?? 'Unknown error' }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Combobox } from '@/components/ui/combobox'
@@ -67,10 +67,16 @@ export function FieldInput({
     (Array.isArray(v) && v.length === 0)
   const showError = attribute.is_required && touched && isEmpty
   const markTouched = () => setTouched(true)
+  // Built once per template, not per render (a new array defeated the
+  // combobox's memo and re-sorted 800 names on every keystroke).
+  const selectOptions = useMemo(
+    () => (attribute.options ?? []).map((o) => ({ value: o.value, label: o.label, icon_url: o.icon_url })),
+    [attribute.options],
+  )
 
   return (
     <div>
-      <label className="mb-1.5 block">
+      <label className="mb-2 block">
         <span className="text-[13px] font-medium text-text-secondary">
           {attribute.name}
           {attribute.is_required && <span className="ml-1 text-error">*</span>}
@@ -150,11 +156,10 @@ export function FieldInput({
           invalid={showError}
           placeholder={selectPlaceholder(attribute)}
           ariaLabel={attribute.name}
-          options={(attribute.options ?? []).map((o) => ({
-            value: o.value,
-            label: o.label,
-            icon_url: o.icon_url,
-          }))}
+          options={selectOptions}
+          // The admin's order (Knives, Guns, Pets…), never A→Z.
+          unsorted
+          searchInTrigger
           tone="neutral"
           iconInTrigger
           size="lg"

@@ -86,9 +86,3 @@ export function buildChildIndex(attrs: Attribute[]) {
   const topLevel = attrs.filter((a) => !childIds.has(a.id)).sort((a, b) => a.sort_order - b.sort_order)
   return { topLevel, childrenOf }
 }
-
-export function labelFor(attr: Attribute, value: string): string {
-  if (attr.type === 'boolean') return value === 'true' ? 'Yes' : 'No'
-  const opt = attr.options?.find((o) => o.value === value)
-  return opt?.label ?? value
-}
