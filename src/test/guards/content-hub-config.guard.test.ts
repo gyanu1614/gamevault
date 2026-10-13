@@ -83,7 +83,7 @@ describe('content hub config', () => {
         calculator: false,
         priceIndex: false,
         methodology: true,
-        blog: false,
+        blog: true, // shared blog home for every game (2026-10-12)
         events: false,
         freeItems: false,
         codes: false,
@@ -98,7 +98,7 @@ describe('content hub config', () => {
         calculator: false,
         priceIndex: false,
         methodology: true,
-        blog: false,
+        blog: true, // shared blog home for every game (2026-10-12)
         // The events archive (values_events, 2026-10-05) — MM2 only.
         events: true,
         // The honest free-items guide + codes page (seed JSON, 2026-10-05) — MM2 only.

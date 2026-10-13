@@ -1,113 +1,83 @@
 /**
- * /[game]/blog/[slug] — a single content article.
+ * /[game]/blog/[slug] — one article (2026-10-12 revamp).
  *
- * Uses the content-design article layout (sticky TOC sidebar + prose column,
- * key-takeaways box, section headings, FAQ accordion, related grid, buy CTA)
- * rendered entirely in the Values forest palette. Only what a post actually
- * contains is shown — no synthesised tables, FAQs or takeaways.
+ * Every post, old or new, is a block doc (readBody: legacy markdown is
+ * converted) drawn by ONE server renderer (BlogDocView). Order: header
+ * (breadcrumb, type, H1, answer line, byline) → 16:9 cover → body in a 700px
+ * reading column (wide images up to 960px, never under the side columns) →
+ * tools, seller band, more guides. Contents list: a sticky left column on
+ * desktop, a slim bar under the nav on phones. Buy rails (growth point 2)
+ * sit beside it from 1280px. Per-game accent from the content theme.
  */
 
 import type { Metadata } from 'next'
-import Link from '@/components/navigation/AppLink'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts } from '@/lib/blog/db'
-import { SabSellerCta } from '../../_SabSellerCta'
-import { formatDate } from '@/lib/sab/format'
-import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
-import { stripBrand } from '@/lib/seo/title'
+import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts, getPublishedPostBySlugAnyGame } from '@/lib/blog/db'
+import { movedPostTarget } from '@/lib/blog/post-url'
+import { readBody } from '@/lib/blog/doc/body'
+import { BlogDocView } from '@/lib/blog/render/BlogDocView'
+import { TOC_MIN_SECTIONS, collectHeadings, collectItemRefs, docReadMinutes, docWordCount } from '@/lib/blog/render/outline'
+import { loadItemCards } from '@/lib/blog/render/items-server'
+import { JsonLd, breadcrumbList, blogPosting, faqPage } from '@/lib/seo/jsonld'
+import { faqItems } from '@/lib/blog/doc/faq'
+import { stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
-import { IconListDetails, IconCalculator, IconTag, IconArrowUpRight } from '@tabler/icons-react'
-import { SpotlightCard } from '@/components/ui/spotlight-card'
-import { ContentDisclaimer } from '@/components/content/ContentDisclaimer'
+import { seoMeta } from '@/lib/seo/fit'
+import { HUB_GROUND } from '@/components/values/styles'
 import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
-import { ArticleBody, extractToc } from './_articleBody'
-import { ArticleToc } from './_ArticleToc'
-import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
-import { seoMeta } from '@/lib/seo/fit'
+import { contentThemeVars, getGameContentTheme } from '@/lib/content/theme'
 import { getGameRails, getRailSettings } from '@/lib/buy-rails/server'
 import { barCard } from '@/lib/buy-rails/model'
 import { BuyRail } from '@/components/buy-rails/BuyRail'
 import { BuyBar } from '@/components/buy-rails/BuyBar'
 import { RailCardView } from '@/components/buy-rails/RailCardView'
 import { RAIL_GRID } from '@/components/buy-rails/geometry'
+import { ArticleToc } from './_ArticleToc'
+import { ArticleHeader } from '@/components/blog/ArticleHeader'
+import { ArticleCover } from '@/components/blog/ArticleCover'
+import { ArticleEnd, type RelatedTool } from './_ArticleEnd'
 
 export const revalidate = 3600
 
-/**
- * Prerender every published game-tagged post, mirroring the flat /blog/[slug]
- * sibling. Post bodies are near-immutable; new posts still render on demand
- * and are picked up by the revalidate window above.
- */
+/** Prerender every published game post; new ones render on demand into the same cache. */
 export async function generateStaticParams() {
   const posts = await getAllPublishedPosts()
-  return posts
-    .filter((p) => p.primaryGameSlug)
-    .map((p) => ({ gameSlug: p.primaryGameSlug as string, slug: p.slug }))
+  return posts.filter((p) => p.primaryGameSlug).map((p) => ({ gameSlug: p.primaryGameSlug as string, slug: p.slug }))
 }
 
-const POST_TYPE_LABEL: Record<string, string> = {
-  value: 'Value list',
-  seller: 'Seller guide',
-  guide: 'Guide',
-}
+const POST_TYPE_LABEL: Record<string, string> = { value: 'Value Guide', seller: 'Selling Guide', guide: 'Guide' }
 
-const RELATED_DATE = new Intl.DateTimeFormat('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-async function getGame(gameSlug: string) {
-  const supabase = createAnonClient()
-
-  const base = 'name, slug, image_url, is_active, cover_url'
-
-  // blog_cta_image_url ships in a migration that has to be applied by hand, so
-  // the page must work either side of it. Selecting a column that doesn't
-  // exist yet fails the whole query — which 404'd every article until the
-  // migration ran. Ask for it, and quietly fall back if the schema is behind.
-  const withBanner = await (supabase as any)
+async function getGame(gameSlug: string): Promise<{ name: string; slug: string } | null> {
+  const { data } = await (createAnonClient() as any)
     .from('games')
-    .select(`${base}, blog_cta_image_url`)
+    .select('name, slug')
     .eq('slug', gameSlug)
     .eq('is_active', true)
     .maybeSingle()
-
-  if (!withBanner.error) {
-    return (withBanner.data as GameRow | null) ?? null
-  }
-
-  const { data } = await (supabase as any)
-    .from('games')
-    .select(base)
-    .eq('slug', gameSlug)
-    .eq('is_active', true)
-    .maybeSingle()
-  return (data as GameRow | null) ?? null
+  return (data as { name: string; slug: string } | null) ?? null
 }
 
-type GameRow = {
-  name: string
-  slug: string
-  image_url: string | null
-  cover_url?: string | null
-  blog_cta_image_url?: string | null
+/**
+ * A post moved to another game in admin (e.g. MM2 Halloween from Adopt Me to
+ * MM2): its old URL answers with a permanent redirect to the new one, so
+ * links and search rankings follow. No per-move config.
+ */
+async function redirectIfMoved(gameSlug: string, slug: string): Promise<void> {
+  const target = movedPostTarget(await getPublishedPostBySlugAnyGame(slug), gameSlug, slug)
+  if (target) permanentRedirect(target)
 }
 
-async function generateMetadataRaw({
-  params,
-}: {
-  params: Promise<{ gameSlug: string; slug: string }>
-}): Promise<Metadata> {
+async function generateMetadataRaw({ params }: { params: Promise<{ gameSlug: string; slug: string }> }): Promise<Metadata> {
   const { gameSlug, slug } = await params
   const post = await getGamePost(gameSlug, slug)
-  if (!post) return { title: 'Not Found' }
-  const url = `${SITE_URL}/${gameSlug}/blog/${slug}`
+  if (!post) {
+    await redirectIfMoved(gameSlug, slug)
+    notFound()
+  }
   // The admin-written SEO title is reused for the social title; an editor may
   // have typed the brand into it, so the templated <title> gets it bare.
   const socialTitle = post.seoTitle || post.title
@@ -115,111 +85,74 @@ async function generateMetadataRaw({
     title: stripBrand(socialTitle),
     description: post.seoDescription || post.excerpt,
     alternates: { canonical: `/${gameSlug}/blog/${slug}` },
+    // Discover: allow the large image preview.
+    robots: { 'max-image-preview': 'large' },
     openGraph: {
       title: socialTitle,
       description: post.seoDescription || post.excerpt,
-      url,
+      url: `${SITE_URL}/${gameSlug}/blog/${slug}`,
       type: 'article',
-      // Next replaces the parent openGraph, so a coverless post needs the default image.
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt,
+      images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
+    },
+    // The root layout's card carries the home page title; a shared post shows its own.
+    twitter: {
+      card: 'summary_large_image',
+      title: socialTitle,
+      description: post.seoDescription || post.excerpt,
       images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
     },
   }
 }
 
-export default async function GameBlogArticle({
-  params,
-}: {
-  params: Promise<{ gameSlug: string; slug: string }>
-}) {
+export default async function GameBlogArticle({ params }: { params: Promise<{ gameSlug: string; slug: string }> }) {
   const { gameSlug, slug } = await params
-  const [game, post] = await Promise.all([
-    getGame(gameSlug),
-    getGamePost(gameSlug, slug),
-  ])
+  const [game, post] = await Promise.all([getGame(gameSlug), getGamePost(gameSlug, slug)])
+  if (!post) await redirectIfMoved(gameSlug, slug)
   if (!game || !post) notFound()
 
+  const { doc, cover } = readBody(post.rawBody)
+  const toc = collectHeadings(doc).filter((h) => h.level === 2)
+  const hasToc = toc.length >= TOC_MIN_SECTIONS
   const kindLabel = POST_TYPE_LABEL[post.postType] ?? 'Guide'
-  const toc = extractToc(post.body)
-  // A TOC sidebar only earns its column when there are ≥2 sections. With
-  // fewer, collapse to a single column so the prose aligns with the hero
-  // instead of being pushed right by an empty 220px rail.
-  const hasToc = toc.length >= 2
+  const faqs = faqItems(doc)
+  const theme = getGameContentTheme(gameSlug)
 
-  // Honest date byline: show "Updated {date}" only when the post was actually
-  // edited after publishing (updatedAt > publishedAt); otherwise "Published".
-  // Previously this always said "Updated" using the publish date — a soft
-  // freshness misrepresentation. `updatedAt` is trigger-maintained in the DB.
-  const wasEdited = !!post.updatedAt && post.updatedAt > post.publishedAt
-  const bylineDate = wasEdited ? post.updatedAt : post.publishedAt
-  const formattedDate = bylineDate ? formatDate(bylineDate) : null
-  const dateVerb = wasEdited ? 'Updated' : 'Published'
-  const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
-
-  // Related = other posts for this game, excluding the current one.
-  const [tagged, hubNav, railSettings, rails] = await Promise.all([
+  const [tagged, hubNav, railSettings, rails, items] = await Promise.all([
     getPostsTaggedForGame(gameSlug, 4),
     getHubNavData(gameSlug),
     getRailSettings(),
     getGameRails(gameSlug),
+    loadItemCards(collectItemRefs(doc)),
   ])
-  // Buy rails (growth point 2): live currency card left, items card right
-  // from 1280px; one bottom bar below that. Admin switch: /admin/buy-rails.
+
+  // Buy rails: live currency card left (under the contents list), items card
+  // right, from 1280px; one bottom bar below that. Admin switch: /admin/buy-rails.
   const showRails = railSettings.blog && !!(rails.currency || rails.items)
   const bar = railSettings.blog ? barCard(rails) : null
   const currencyRail = showRails && rails.currency ? (
     <RailCardView card={rails.currency} surface="blog" position="left" size={hasToc ? 'short' : 'tall'} />
   ) : null
-  const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
-  // "Related tools" links — routes a reader to the money page matching their
-  // intent, keyed by post type. Gated on the game actually having that route
-  // (hubNav.tools / sellHref) so no link is ever dead; distinct keyword anchors.
-  // The game's real items page, else its hub (2026-10-07 Bing scan: Valorant
-  // has no buy-items category, the hard-coded link 404'd).
-  const buyHref = hubNav.itemsHref ?? `/${gameSlug}`
-  const hasValues = hubNav.tools.includes('values')
-  const hasCalculator = hubNav.tools.includes('calculator')
-  const TOOL = {
-    values: hasValues
-      ? {
-          eyebrow: 'Value list',
-          label: `See the full ${game.name} value list`,
-          desc: `Live cash values for every ${game.name} item, updated daily.`,
-          href: `/${gameSlug}/values`,
-          icon: IconListDetails,
-        }
-      : null,
-    calculator: hasCalculator
-      ? {
-          eyebrow: 'WFL calculator',
-          label: `Check a trade — Win, Fair or Loss?`,
-          desc: `Price both sides of a trade in real money before you accept.`,
-          href: `/${gameSlug}/calculator`,
-          icon: IconCalculator,
-        }
-      : null,
-    sell: hubNav.sellHref
-      ? {
-          eyebrow: 'Sell',
-          label: `List your ${game.name} items to sell`,
-          desc: `Turn your items into cash — SafeDrop protects every payout.`,
-          href: hubNav.sellHref,
-          icon: IconTag,
-        }
-      : null,
-  }
-  const toolOrder: Array<keyof typeof TOOL> =
-    post.postType === 'seller'
-      ? ['sell', 'values']
-      : post.postType === 'value'
-        ? ['values', 'calculator']
-        : ['values', 'calculator']
-  const relatedTools = toolOrder.map((k) => TOOL[k]).filter(Boolean) as NonNullable<
-    (typeof TOOL)[keyof typeof TOOL]
-  >[]
+  // Money pages that match the post's intent, only where the game has them.
+  const values: RelatedTool | null = hubNav.tools.includes('values')
+    ? { label: `${game.name} Value List`, desc: `What every ${game.name} item sells for, from live listings.`, href: `/${gameSlug}/values` }
+    : null
+  const calculator: RelatedTool | null = hubNav.tools.includes('calculator')
+    ? { label: 'Trade Calculator', desc: 'Price both sides of a trade before you accept.', href: `/${gameSlug}/calculator` }
+    : null
+  const sell: RelatedTool | null = hubNav.sellHref
+    ? { label: `Sell ${game.name} Items`, desc: 'List your items and get paid when the buyer confirms.', href: hubNav.sellHref }
+    : null
+  const tools = (post.postType === 'seller' ? [sell, values] : [values, calculator]).filter((t): t is RelatedTool => !!t)
+  const related = tagged
+    .filter((p) => p.slug !== slug)
+    .slice(0, 3)
+    .map((p) => ({ slug: p.slug, title: p.title, kind: POST_TYPE_LABEL[p.postType] ?? 'Guide', primaryGameSlug: p.primaryGameSlug, publishedAt: p.publishedAt, updatedAt: p.updatedAt }))
 
   return (
-    <main className="relative min-h-screen bg-[#0C0F0E]">
+    <main className={`relative min-h-screen ${HUB_GROUND}`} style={contentThemeVars(theme)}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -237,211 +170,71 @@ export default async function GameBlogArticle({
           dateModified: post.updatedAt,
           authorName: post.author,
           image: post.cover,
+          wordCount: docWordCount(doc),
+          section: kindLabel,
         })}
       />
+      {faqs.length > 0 && <JsonLd data={faqPage(faqs)} />}
 
-      {/* Shared hub nav inside the backdrop so the scrim keeps it legible. */}
+      {/* The whole top of the page sits on the game's art: nav, then ONE grid
+          whose middle column holds the header, cover and body — so the title,
+          the text and the cover share one left edge (the old header was
+          centred on the page, the text on the column: three left edges). */}
       <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
+        <div className={`relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR} ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
+          <div
+            // minmax(0,1fr): nothing inside (a table, the contents bar) may widen the column past the phone.
+            className={`grid grid-cols-[minmax(0,1fr)] items-start gap-x-10 ${hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-x-12' : ''} ${showRails ? RAIL_GRID : ''}`}
+          >
+            {hasToc ? (
+              <ArticleToc entries={toc} rail={currencyRail} variant="column" />
+            ) : showRails ? (
+              <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
+            ) : null}
 
-        {/* HERO — category, title, lead, byline. No visible breadcrumb (the
-            BreadcrumbList JSON-LD keeps the SERP trail) and no identity block
-            (the game now lives in the HubNav switcher). pt clears the nav. */}
-        <div className={`mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
-          {/* Centred like the hub pages, but a step down in size: the hub H1 is
-              a 3-4 word product name, an article H1 is a full sentence. At
-              hub scale ("Steal a Brainrot - Value" is 54px) a long title would
-              run to four lines and swamp the fold, so this tops out at 38px. */}
-          <div className="max-w-3xl">
-            {/* Eyebrow + read-time — the category as a pill so it reads as a
-                real label, then the read-time in a legible (non-mono) grey. */}
-            <div className="mb-4 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center rounded-full border border-[#2F6B46]/40 bg-[#2F6B46]/12 px-3 py-1 text-[12px] font-bold uppercase tracking-[0.12em] text-[#7ED39A]">
-                {kindLabel}
-              </span>
-              <span className="text-[14px] text-[#8A968C]">
-                {post.readMinutes} min read
-              </span>
-            </div>
-            {/* Title — heavier weight + tight tracking for a strong, crawlable
-                H1; the article H1 is the primary on-page SEO signal. */}
-            <h1 className="text-balance text-[27px] font-bold leading-[1.1] tracking-[-0.03em] text-[#F1F3F1] sm:text-[34px] lg:text-[38px]">
-              {post.title}
-            </h1>
-            <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-7 text-[#B7C0B8] sm:text-[17px]">
-              {post.excerpt}
-            </p>
-
-            {/* Byline — the DropMarket mark + author, in the normal type scale
-                and a legible colour (the old mono #5E685E line was nearly
-                invisible on the hero photo). */}
-            <div className="mt-6 flex items-center gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/brand/logo-mark-white.avif"
-                alt="DropMarket logo"
-                aria-hidden
-                width={26}
-                height={26}
-                className="h-[26px] w-[26px] object-contain"
+            <article className="min-w-0">
+              <ArticleHeader
+                gameSlug={gameSlug}
+                gameName={game.name}
+                kindLabel={kindLabel}
+                title={post.title}
+                excerpt={post.excerpt}
+                author={post.author}
+                publishedAt={post.publishedAt}
+                updatedAt={post.updatedAt}
+                readMinutes={docReadMinutes(doc)}
               />
-              <span className="text-[14px] font-semibold text-[#E4EAE2]">
-                {post.author}
-              </span>
-              {updatedLabel && (
-                <>
-                  <span aria-hidden className="text-[#4A554B]">·</span>
-                  <span className="text-[14px] text-[#98A398]">
-                    {dateVerb} {updatedLabel}
-                  </span>
-                </>
-              )}
-            </div>
+              <ArticleCover image={cover} url={post.cover} alt={post.title} />
+              {/* No cover: the same gap the cover would leave under the byline. */}
+              <div className={cover || post.cover ? undefined : 'mt-8'}>
+                {hasToc && <ArticleToc entries={toc} variant="bar" />}
+                <BlogDocView doc={doc} items={items} gameSlug={gameSlug} />
+              </div>
+              <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
+            </article>
+
+            {showRails && (
+              <BuyRail label={rails.items?.title ?? 'Shop'}>
+                {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
+              </BuyRail>
+            )}
           </div>
         </div>
       </GameHeroBackdrop>
-
-      {/* BODY — sticky TOC sidebar + prose column. */}
-      <div className={`relative mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8 ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
-        <div
-          // minmax(0,1fr) on phones: the TOC chip row (overflow-x-auto) must
-          // not widen the one-column grid to its full chip width (the live
-          // post rendered 814px wide on a 390px phone, 2026-10-11).
-          className={`grid grid-cols-[minmax(0,1fr)] items-start gap-10 ${
-            hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-14' : ''
-          } ${showRails ? RAIL_GRID : ''}`}
-        >
-          {hasToc ? (
-            <ArticleToc
-              entries={toc}
-              buyHref={buyHref}
-              buyLabel={`Buy ${game.name} items`}
-              rail={currencyRail}
-            />
-          ) : showRails ? (
-            <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
-          ) : null}
-
-          <div className="mx-auto w-full max-w-[760px]">
-            {post.cover && (
-              <div className="mb-10 overflow-hidden border border-[#1E2723]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={post.cover} alt={post.title} className="w-full object-cover" />
-              </div>
-            )}
-
-            <ArticleBody body={post.body} imageAlt={post.title} />
-
-            {/* Related tools — sends the reader to the money page matching this
-                post's intent, each with a distinct keyword-rich anchor. Uses the
-                SpotlightCard cursor-glow (from the sell choice modal). */}
-            {relatedTools.length > 0 && (
-              <section className="mt-10">
-                <h2 className="mb-4 text-[15px] font-semibold text-[#E4EAE2]">
-                  Related tools
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {relatedTools.map((t) => (
-                    <SpotlightCard
-                      key={t.href}
-                      glow="green"
-                      className="group flex flex-col gap-3 border border-[#1E2723] bg-[#0B0F0C] p-5 transition-colors hover:border-[#2F6B46]"
-                    >
-                      <Link href={t.href} aria-label={t.label} className="absolute inset-0 z-10" />
-                      <div className="relative z-[1] flex items-start justify-between gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#26332C] bg-[#0E1512] text-[#8FBF9C]">
-                          <t.icon className="h-[19px] w-[19px]" stroke={1.9} />
-                        </span>
-                        <IconArrowUpRight
-                          className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#4FB477] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                          stroke={2.2}
-                        />
-                      </div>
-                      <div className="relative z-[1] flex flex-col gap-1.5">
-                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
-                          {t.eyebrow}
-                        </span>
-                        <span className="text-[14.5px] font-semibold leading-snug text-[#F1F5EF]">
-                          {t.label}
-                        </span>
-                        <span className="text-[12.5px] leading-relaxed text-[#98A398]">
-                          {t.desc}
-                        </span>
-                      </div>
-                    </SpotlightCard>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Sell CTA — now UNCONDITIONAL (every article, not just
-                post_type='seller'). The buy CTA above is always-on; the sell
-                door should be too, so a reader of any guide can go either way.
-                One generalized component (per-game founding rate). */}
-            <SabSellerCta gameSlug={gameSlug} gameName={game.name} src={`${gameSlug}-blog-${slug}`} />
-
-            {/* Related guides */}
-            {related.length > 0 && (
-              <section className="mt-14">
-                <h2 className="mb-4 border-t border-[#1A211A] pt-8 text-[22px] font-bold tracking-tight text-[#F2F6F0]">
-                  Related guides
-                </h2>
-                <div className="grid gap-px overflow-hidden border border-[#1A211A] bg-[#1A211A] sm:grid-cols-3">
-                  {related.map((r) => (
-                    <Link
-                      key={r.slug}
-                      href={`/${gameSlug}/blog/${r.slug}`}
-                      className="flex flex-col gap-2.5 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
-                    >
-                      <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
-                        {POST_TYPE_LABEL[r.postType] ?? 'Guide'}
-                      </span>
-                      <span className="text-[15px] font-semibold leading-snug text-[#E4EAE2]">
-                        {r.title}
-                      </span>
-                      {r.publishedAt && (
-                        <span className="font-mono text-[10px] text-[#5E685E]">
-                          UPDATED{' '}
-                          {RELATED_DATE.format(
-                            new Date(r.publishedAt),
-                          ).toUpperCase()}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <ContentDisclaimer
-              gameName={game.name}
-              gameSlug={gameSlug}
-              includeValueNote={post.postType !== 'guide'}
-            />
-          </div>
-
-          {showRails && (
-            <BuyRail label={rails.items?.title ?? 'Shop'}>
-              {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
-            </BuyRail>
-          )}
-        </div>
-      </div>
       {bar && <BuyBar card={bar} surface="blog" mode="scroll" closable />}
-          <HubFooter
+      <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
         tools={hubNav.tools}
         itemsHref={hubNav.itemsHref}
         accountsHref={hubNav.accountsHref}
       />
-</main>
+    </main>
   )
 }
 
 /** Search-length rules (title ≤ 60, description ≤ 155) — see src/lib/seo/fit.ts. */
-export async function generateMetadata(
-  ...args: Parameters<typeof generateMetadataRaw>
-): Promise<Metadata> {
+export async function generateMetadata(...args: Parameters<typeof generateMetadataRaw>): Promise<Metadata> {
   return seoMeta(await generateMetadataRaw(...args))
 }

@@ -56,6 +56,8 @@ export function FrameCropDialog({
   title,
   hint,
   minWidth = 0,
+  idealWidth = 0,
+  fit = 'cover',
   outputWidth,
   busy = false,
   saveLabel = 'Save Image',
@@ -72,6 +74,14 @@ export function FrameCropDialog({
   hint?: string
   /** Narrowest acceptable area, in image pixels (warns below it). */
   minWidth?: number
+  /** Width that looks sharpest; below it (and above minWidth) Save still works, with a note. */
+  idealWidth?: number
+  /**
+   * cover (banners): the picture fills the box, the frame sits inside it.
+   * contain (blog covers): the whole picture shows, so zoomed out the frame
+   * takes its full width — no pixels lost to the box's shape.
+   */
+  fit?: 'cover' | 'contain'
   /** Also cut the area in the browser at this width (WebP data URL). */
   outputWidth?: number
   busy?: boolean
@@ -129,6 +139,7 @@ export function FrameCropDialog({
   )
 
   const tooSmall = !!rect && minWidth > 0 && rect.width < minWidth
+  const belowIdeal = !!rect && !tooSmall && idealWidth > 0 && rect.width < idealWidth
 
   const save = async () => {
     if (!rect) return
@@ -164,7 +175,7 @@ export function FrameCropDialog({
               aspect={aspect}
               minZoom={1}
               maxZoom={4}
-              objectFit="cover"
+              objectFit={fit}
               showGrid
               onCropChange={setCrop}
               onZoomChange={setZoom}
@@ -200,7 +211,9 @@ export function FrameCropDialog({
             {rect
               ? tooSmall
                 ? `${rect.width} × ${rect.height} px chosen. Zoom out or use a bigger image (at least ${minWidth} px wide).`
-                : `${rect.width} × ${rect.height} px chosen`
+                : belowIdeal
+                  ? `${rect.width} × ${rect.height} px chosen. Fine to use; ${idealWidth} px or wider looks sharpest.`
+                  : `${rect.width} × ${rect.height} px chosen`
               : 'Loading image…'}
           </p>
           <div className="flex gap-2">

@@ -67,6 +67,8 @@ describe.skipIf(!hasEnv)('image uploads are stored small (integration)', () => {
 
     const blog = await fx!.svc.storage.getBucket('blog-images')
     expect(blog.data?.file_size_limit).toBe(5242880)
+    // The blog pipeline stores AVIF + WebP (20261012230155_blog_images_avif).
+    expect(blog.data?.allowed_mime_types).toEqual(expect.arrayContaining(['image/avif', 'image/webp']))
 
     const evidence = await fx!.svc.storage.getBucket('delivery-evidence')
     expect(evidence.data?.allowed_mime_types).toEqual(

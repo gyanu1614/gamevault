@@ -19,6 +19,7 @@
 import Link from '@/components/navigation/AppLink'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
 import { VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
+import { postHref } from '@/lib/blog/post-url'
 
 const POST_TYPE_LABEL: Record<string, string> = {
   value: 'Value List',
@@ -49,7 +50,7 @@ export async function HubGuidesStrip({
         {posts.map((p) => (
           <Link
             key={p.slug}
-            href={`/${gameSlug}/blog/${p.slug}`}
+            href={postHref(p)}
             className={`group relative flex min-h-[180px] flex-col justify-end overflow-hidden p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
           >
             {/* Cover image background + dark scrim (only when a cover exists).

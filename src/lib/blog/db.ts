@@ -36,6 +36,8 @@ export interface DbBlogPost extends BlogPost {
    * "Updated" byline. Equals publishedAt for a post that has never been edited.
    */
   updatedAt: string
+  /** The stored body as is (legacy string[] or `{ v: 2, doc, cover }`) — read it with readBody(). */
+  rawBody: unknown
 }
 
 interface BlogPostRow {
@@ -80,18 +82,25 @@ function rowToPost(row: BlogPostRow): DbBlogPost {
     primaryGameSlug: row.primary_game_slug,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,
+    rawBody: row.body ?? null,
   }
 }
 
 const SELECT =
   'id,slug,title,excerpt,author,read_minutes,post_type,status,primary_game_slug,game_slugs,cover_url,body,seo_title,seo_description,published_at,updated_at'
+/**
+ * Lists (hubs, /blog, rails, static params) never read `body`: it is the
+ * whole post, and every hub render downloaded every post's full text.
+ */
+const LIST_SELECT =
+  'id,slug,title,excerpt,author,read_minutes,post_type,status,primary_game_slug,game_slugs,cover_url,seo_title,seo_description,published_at,updated_at'
 
 /** All published posts scoped to a game (its nested /[game]/blog collection). */
 export async function getGamePosts(gameSlug: string): Promise<DbBlogPost[]> {
   const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(SELECT)
+    .select(LIST_SELECT)
     .eq('primary_game_slug', gameSlug)
     .eq('status', 'published')
     .order('published_at', { ascending: false })
@@ -130,7 +139,7 @@ export async function getPostsTaggedForGame(
   const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(SELECT)
+    .select(LIST_SELECT)
     .eq('status', 'published')
     .contains('game_slugs', [gameSlug])
     .order('published_at', { ascending: false })
@@ -144,9 +153,43 @@ export async function getAllPublishedPosts(): Promise<DbBlogPost[]> {
   const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(SELECT)
+    .select(LIST_SELECT)
     .eq('status', 'published')
     .order('published_at', { ascending: false })
   if (error || !data) return []
   return (data as unknown as BlogPostRow[]).map(rowToPost)
 }
+
+/**
+ * The published post with this slug under ANY game — or that had this slug
+ * before a rename — for the moved-post redirect: /{oldGame}/blog/{slug}
+ * after an admin moved it to another game, /{game}/blog/{oldSlug} after a
+ * rename.
+ */
+export const getPublishedPostBySlugAnyGame = cache(async function getPublishedPostBySlugAnyGame(
+  slug: string,
+): Promise<{ slug: string; primaryGameSlug: string | null } | null> {
+  const supabase = createAnonClient()
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('slug,primary_game_slug')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(1)
+  let row = (data as Array<{ slug: string; primary_game_slug: string | null }> | null)?.[0]
+  if (error) return null
+  if (!row) {
+    // Renamed: a live post remembers the URLs it had (body.oldSlugs).
+    const { data: renamed } = await supabase
+      .from('blog_posts')
+      .select('slug,primary_game_slug')
+      .contains('body', { oldSlugs: [slug] })
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(1)
+    row = (renamed as Array<{ slug: string; primary_game_slug: string | null }> | null)?.[0]
+  }
+  if (!row) return null
+  return { slug: row.slug, primaryGameSlug: row.primary_game_slug }
+})

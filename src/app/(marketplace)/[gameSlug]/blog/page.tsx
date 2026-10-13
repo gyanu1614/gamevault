@@ -6,7 +6,8 @@
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { HUB_GROUND, VALUE_SURFACE } from '@/components/values/styles'
+import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_SURFACE } from '@/components/values/styles'
+import Link from '@/components/navigation/AppLink'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { getGamePosts } from '@/lib/blog/db'
@@ -16,7 +17,7 @@ import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
-import { getGameContentTheme } from '@/lib/content/theme'
+import { blogHubCopy, getGameContentTheme, hasHubPage } from '@/lib/content/theme'
 import { BlogHubHero } from './_BlogHubHero'
 import { FeaturedGuide } from './_FeaturedGuide'
 import { ArticleGrid } from './_ArticleGrid'
@@ -121,9 +122,13 @@ async function generateMetadataRaw({
   // Same rule as the body (Step 7a): a real 404, not a "Not Found" title on a
   // 200 — see ROUTE-008.
   if (!game || !isBlogHubGame(gameSlug, posts)) notFound()
+  const copy = blogHubCopy(gameSlug, game.name)
   return {
-    title: `${game.name} Guides, Values & Trading Tips`,
-    description: `Value lists, trading guides, and selling tips for ${game.name} — updated regularly with real DropMarket marketplace data.`,
+    title: `${copy.title}: Values, Trading & Selling Tips`,
+    description: `${copy.lead} Updated with real DropMarket marketplace data.`,
+    // An empty blog home is a thin page: kept out of the index (links still
+    // followed) until its first post goes live. The sitemap already skips it.
+    robots: { index: posts.length > 0, follow: true },
     alternates: {
       canonical: `/${gameSlug}/blog`,
       // RSS autodiscovery — lets readers/crawlers find the feed from the index.
@@ -169,6 +174,7 @@ export default async function GameBlogIndex({
   if (!game) notFound()
 
   const theme = getGameContentTheme(gameSlug)
+  const copy = blogHubCopy(gameSlug, game.name)
 
   // Newest post carries the featured slot; the carousel below shows the rest.
   const [featured, ...rest] = posts
@@ -222,8 +228,8 @@ export default async function GameBlogIndex({
         <BlogHubHero
           gameName={game.name}
           gameSlug={gameSlug}
-          title={theme.heroTitle}
-          lead={theme.heroLead}
+          title={copy.title}
+          lead={copy.lead}
           stats={statStrip}
           pets={heroPets}
           hasCalculator={hubNav.tools.includes('calculator')}
@@ -250,11 +256,24 @@ export default async function GameBlogIndex({
         )}
 
         {posts.length === 0 ? (
-          <div className={`${VALUE_SURFACE} mt-12 px-6 py-14 text-center sm:mt-16`}>
-            <p className="text-[15px] font-semibold text-text-primary">No guides yet</p>
+          // Every game has a blog home (2026-10-12); until its first post the
+          // page points readers at what the game already has.
+          <div className={`${VALUE_SURFACE} mt-12 px-6 py-12 text-center sm:mt-16`}>
+            <p className="text-[15px] font-semibold text-text-primary">{game.name} Guides Are On the Way</p>
             <p className="mt-2 text-[13px] text-text-secondary">
-              Check back soon — {game.name} guides are on the way.
+              Meanwhile, check what items are worth or shop live listings.
             </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {hasHubPage(gameSlug, 'values') && (
+                <Link href={`/${gameSlug}/values`} className={VALUE_BTN_SECONDARY}>Value List</Link>
+              )}
+              {hubNav.tools.includes('calculator') && (
+                <Link href={`/${gameSlug}/calculator`} className={VALUE_BTN_SECONDARY}>Calculator</Link>
+              )}
+              {hubNav.itemsHref && (
+                <Link href={hubNav.itemsHref} className={VALUE_BTN_SECONDARY}>Shop {game.name} Items</Link>
+              )}
+            </div>
           </div>
         ) : (
           <ArticleGrid
