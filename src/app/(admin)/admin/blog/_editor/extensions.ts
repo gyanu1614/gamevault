@@ -66,8 +66,12 @@ const PasteMarkdown = Extension.create({
             const markers = hasPostMarkers(text)
             if (!markers && RICH_HTML.test(data.getData('text/html'))) return false
             if (markers) return editor.commands.insertContent(legacyToDoc(fitHeadings(text).split('\n')).content)
-            if (!looksLikeMarkdown(text)) return false
-            return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
+            if (looksLikeMarkdown(text)) return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
+            // Plain lines (a chat often sends them as one <div> with <br>s): one paragraph each,
+            // never one giant paragraph that a Heading click would swallow whole.
+            const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+            if (lines.length < 2) return false
+            return editor.commands.insertContent(lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })))
           },
         },
       }),

@@ -19,6 +19,7 @@ import AddRounded from '@mui/icons-material/AddRounded'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { SLASH_ITEMS } from './slash'
+import { splitLines } from './lines'
 
 const btn = (on = false) =>
   cn(
@@ -107,11 +108,13 @@ function Icon({ label, on, onClick, disabled, children }: { label: string; on?: 
 function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }) {
   const s = useMarks(editor)
   const c = () => editor.chain().focus()
+  // Block styles change the line(s) the cursor or selection is on — never more.
+  const line = () => c().command(splitLines)
   return (
     <>
-      <button type="button" className={btn(!s.h2 && !s.h3)} onClick={() => c().setParagraph().run()}>Text</button>
-      <button type="button" className={btn(s.h2)} onClick={() => c().toggleHeading({ level: 2 }).run()}>Heading</button>
-      <button type="button" className={btn(s.h3)} onClick={() => c().toggleHeading({ level: 3 }).run()}>Subheading</button>
+      <button type="button" className={btn(!s.h2 && !s.h3)} onClick={() => line().setParagraph().run()}>Text</button>
+      <button type="button" className={btn(s.h2)} onClick={() => line().toggleHeading({ level: 2 }).run()}>Heading</button>
+      <button type="button" className={btn(s.h3)} onClick={() => line().toggleHeading({ level: 3 }).run()}>Subheading</button>
       <span aria-hidden className="mx-1 h-5 w-px bg-white/[0.08]" />
       <Icon label="Bold" on={s.bold} onClick={() => c().toggleBold().run()}><FormatBoldRounded sx={{ fontSize: 18 }} /></Icon>
       <Icon label="Italic" on={s.italic} onClick={() => c().toggleItalic().run()}><FormatItalicRounded sx={{ fontSize: 18 }} /></Icon>
