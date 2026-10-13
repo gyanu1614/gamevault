@@ -10,6 +10,7 @@ import { applyReferralAtSignup } from '@/lib/referral/commission'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
 import { getEntryTier } from '@/lib/seller/entry-tier'
 import { rateLimitAction } from '@/lib/security/rate-limit'
+import { trackFoundingStep } from '@/lib/analytics/founding'
 
 // Signup with username
 export async function signup(formData: {
@@ -101,6 +102,12 @@ export async function signup(formData: {
 
     console.log('✅ User created successfully:', data.user?.id)
 
+    // Seller funnel step 1, on the server: the browser can't send it, because
+    // an email-confirmed sign-up returns on a fresh page already at step 2.
+    if (data.user?.id && safeNext?.startsWith('/founding')) {
+      await trackFoundingStep(data.user.id, 1, { method: 'email' })
+    }
+
     // Supabase "Confirm email" mode: signUp succeeds but returns no session
     // until the user clicks the confirmation link. Skip every post-signup
     // step that needs an authenticated session (RLS would silently null the
@@ -166,7 +173,9 @@ export async function signup(formData: {
     if (requiresEmailConfirmation) {
       // No session yet — nothing to revalidate. The client shows the
       // "Check Your Inbox" view and the /auth/callback route finishes login.
-      return { error: null, success: true, requiresEmailConfirmation: true }
+      // userId: the browser links its anonymous visitor to the new account
+      // (PostHog identify) before the seller leaves for the inbox.
+      return { error: null, success: true, requiresEmailConfirmation: true, userId: data.user?.id ?? null }
     }
 
     // The profile will be automatically created by the database trigger

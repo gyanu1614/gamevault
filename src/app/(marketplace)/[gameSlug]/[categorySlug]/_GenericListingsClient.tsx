@@ -14,7 +14,7 @@
  * in the markup instead of falling into the useSearchParams() bailout.
  */
 
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -24,10 +24,12 @@ import PresenceIndicator from '@/components/presence/PresenceIndicator'
 import CategoryPills from '@/components/marketplace/CategoryPills'
 import CategoryPageLayout from '@/components/marketplace/CategoryPageLayout'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
+import { Pagination } from '@/components/marketplace/Pagination'
+import { scrollIntoViewSmooth, writePage } from '@/hooks/use-url-page'
 import { tierByKey } from '@/lib/seller/tiers'
 import { isSellerOnline } from '@/lib/presence/online'
 import { useSellersPresence, type PresenceSnapshot } from '@/hooks/use-seller-presence'
-import { applyCategoryListingParams, type GenericListing } from './_genericListingFilters'
+import { applyCategoryListingParams, LISTINGS_PER_PAGE, type GenericListing } from './_genericListingFilters'
 
 export interface GenericGridListing extends GenericListing {
   slug: string | null
@@ -80,6 +82,14 @@ export default function GenericListingsClient({
     [listings, params, livePresence],
   )
 
+  // The page lives in the URL like the filters: write ?page=N, the bridge
+  // reads it back, then bring the grid's top into view.
+  const topRef = useRef<HTMLDivElement | null>(null)
+  const goToPage = useCallback((n: number) => {
+    writePage(n, 'push')
+    scrollIntoViewSmooth(topRef.current)
+  }, [])
+
   return (
     <>
       <SearchParamsBridge onParams={onParams} />
@@ -94,13 +104,8 @@ export default function GenericListingsClient({
       )}
 
       {/* ── Main content with collapsible filter ─────────────────────── */}
-      <div className="pb-20">
-        <CategoryPageLayout
-          maxPrice={view.maxPrice}
-          totalListings={view.totalListings}
-          hasMore={view.hasMore}
-          currentPage={view.currentPage}
-        >
+      <div ref={topRef} className="scroll-mt-24 pb-20">
+        <CategoryPageLayout maxPrice={view.maxPrice} totalListings={view.totalListings}>
           {view.listings.length === 0 ? (
             <EmptyState gameSlug={gameSlug} gameName={gameName} categoryName={categoryName} />
           ) : (
@@ -120,6 +125,13 @@ export default function GenericListingsClient({
               ))}
             </div>
           )}
+          <Pagination
+            page={view.currentPage}
+            totalPages={view.totalPages}
+            totalItems={view.totalListings}
+            pageSize={LISTINGS_PER_PAGE}
+            onChange={goToPage}
+          />
         </CategoryPageLayout>
       </div>
     </>

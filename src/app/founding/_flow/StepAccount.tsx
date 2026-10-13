@@ -19,6 +19,7 @@ import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard, Ghos
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { safeSession } from '@/lib/safe-storage'
 import { createClient } from '@/lib/supabase/client'
+import { identify } from '@/lib/analytics/client'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STORAGE_KEY = 'dm.founding.confirm'
@@ -156,6 +157,9 @@ export function StepAccount({
       const res = await signup({ email, password, username, redirectTo: '/founding' })
       if (res?.error) return setError(res.error)
       if (res?.requiresEmailConfirmation) {
+        // Join this (cookieless) visitor's "viewed" events to the new account
+        // now: the confirm link opens a fresh page as a new anonymous visitor.
+        if ('userId' in res && res.userId) identify(res.userId)
         setConfirming(true)
         setCooldown(30)
       } else {

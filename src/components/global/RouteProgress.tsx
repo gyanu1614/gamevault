@@ -193,20 +193,29 @@ export default function RouteProgress() {
   // wait one rAF to let the new route paint and then finish. This is more
   // reliable than comparing URL strings (Next can update searchParams in
   // odd orders during streaming render).
-  // V15r — Also force-scroll to top when the URL changes. Catches the
+  // V15r — Also force-scroll to top when the path changes. Catches the
   // programmatic `router.push()` path (Buy now button, ItemCard nav,
   // etc) which doesn't go through the click interceptor above.
   // V15s — Wait TWO rAFs before dropping the cover overlay: first frame
   // commits the scroll, second frame paints the new content at the
   // correct position. This is the only reliable way to hide App Router
   // streaming's commit-then-snap glitch on long pages.
+  // 2026-10-11 — only when the PATH changes. A query-only change on the
+  // same page (listing ?page=N, filters, category pills with scroll:false)
+  // keeps its place: the grid scrolls itself smoothly to its own top, and
+  // this instant jump to 0 was overriding it.
+  const lastPathRef = useRef<string | null>(null)
   useEffect(() => {
-    try {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
-    } catch {
-      /* noop */
+    const pathChanged = lastPathRef.current !== pathname
+    lastPathRef.current = pathname
+    if (pathChanged) {
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+      } catch {
+        /* noop */
+      }
     }
     if (!navigatingRef.current) return
     const finishRaf = requestAnimationFrame(() => {
