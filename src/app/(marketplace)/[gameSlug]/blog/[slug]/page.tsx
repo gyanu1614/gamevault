@@ -28,6 +28,12 @@ import { ArticleBody, extractToc } from './_articleBody'
 import { ArticleToc } from './_ArticleToc'
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { seoMeta } from '@/lib/seo/fit'
+import { getGameRails, getRailSettings } from '@/lib/buy-rails/server'
+import { barCard } from '@/lib/buy-rails/model'
+import { BuyRail } from '@/components/buy-rails/BuyRail'
+import { BuyBar } from '@/components/buy-rails/BuyBar'
+import { RailCardView } from '@/components/buy-rails/RailCardView'
+import { RAIL_GRID } from '@/components/buy-rails/geometry'
 
 export const revalidate = 3600
 
@@ -150,10 +156,19 @@ export default async function GameBlogArticle({
   const updatedLabel = formattedDate ? formattedDate.toUpperCase() : null
 
   // Related = other posts for this game, excluding the current one.
-  const [tagged, hubNav] = await Promise.all([
+  const [tagged, hubNav, railSettings, rails] = await Promise.all([
     getPostsTaggedForGame(gameSlug, 4),
     getHubNavData(gameSlug),
+    getRailSettings(),
+    getGameRails(gameSlug),
   ])
+  // Buy rails (growth point 2): live currency card left, items card right
+  // from 1280px; one bottom bar below that. Admin switch: /admin/buy-rails.
+  const showRails = railSettings.blog && !!(rails.currency || rails.items)
+  const bar = railSettings.blog ? barCard(rails) : null
+  const currencyRail = showRails && rails.currency ? (
+    <RailCardView card={rails.currency} surface="blog" position="left" size={hasToc ? 'short' : 'tall'} />
+  ) : null
   const related = tagged.filter((p) => p.slug !== slug).slice(0, 3)
 
   // "Related tools" links — routes a reader to the money page matching their
@@ -287,19 +302,25 @@ export default async function GameBlogArticle({
       </GameHeroBackdrop>
 
       {/* BODY — sticky TOC sidebar + prose column. */}
-      <div className="relative mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+      <div className={`relative mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8 ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
         <div
-          className={`grid items-start gap-10 ${
+          // minmax(0,1fr) on phones: the TOC chip row (overflow-x-auto) must
+          // not widen the one-column grid to its full chip width (the live
+          // post rendered 814px wide on a 390px phone, 2026-10-11).
+          className={`grid grid-cols-[minmax(0,1fr)] items-start gap-10 ${
             hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-14' : ''
-          }`}
+          } ${showRails ? RAIL_GRID : ''}`}
         >
-          {hasToc && (
+          {hasToc ? (
             <ArticleToc
               entries={toc}
               buyHref={buyHref}
               buyLabel={`Buy ${game.name} items`}
+              rail={currencyRail}
             />
-          )}
+          ) : showRails ? (
+            <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
+          ) : null}
 
           <div className="mx-auto w-full max-w-[760px]">
             {post.cover && (
@@ -398,8 +419,15 @@ export default async function GameBlogArticle({
               includeValueNote={post.postType !== 'guide'}
             />
           </div>
+
+          {showRails && (
+            <BuyRail label={rails.items?.title ?? 'Shop'}>
+              {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
+            </BuyRail>
+          )}
         </div>
       </div>
+      {bar && <BuyBar card={bar} surface="blog" mode="scroll" closable />}
           <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

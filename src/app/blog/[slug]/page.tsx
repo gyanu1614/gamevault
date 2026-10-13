@@ -19,6 +19,12 @@ import { SITE_NAME, SITE_URL } from '@/config/site'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 import { DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { seoMeta } from '@/lib/seo/fit'
+import { getRailSettings, getSiteRails } from '@/lib/buy-rails/server'
+import { barCard } from '@/lib/buy-rails/model'
+import { BuyRail } from '@/components/buy-rails/BuyRail'
+import { BuyBar } from '@/components/buy-rails/BuyBar'
+import { RailCardView } from '@/components/buy-rails/RailCardView'
+import { RAIL_GRID } from '@/components/buy-rails/geometry'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -162,6 +168,12 @@ export default async function BlogPostPage({ params }: PageProps) {
     ],
   }
 
+  // Buy rails (growth point 2): these posts have no game, so the rails carry
+  // the site-wide picks — Robux left, the busiest items category right.
+  const [railSettings, rails] = await Promise.all([getRailSettings(), getSiteRails()])
+  const showRails = railSettings.blog && !!(rails.currency || rails.items)
+  const bar = railSettings.blog ? barCard(rails) : null
+
   return (
     <main className="min-h-screen pb-24">
       <script
@@ -172,7 +184,13 @@ export default async function BlogPostPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
-      <article className="mx-auto w-full max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14">
+      <div className={showRails ? `w-full ${RAIL_GRID}` : ''}>
+      {showRails && (
+        <BuyRail label={rails.currency?.title ?? 'Shop'} top="site">
+          {rails.currency && <RailCardView card={rails.currency} surface="blog" position="left" />}
+        </BuyRail>
+      )}
+      <article className="mx-auto w-full max-w-3xl px-4 pt-10 sm:px-6 sm:pt-14 xl:px-0">
         <Link
           href="/blog"
           className="-my-3 inline-flex min-h-[44px] items-center gap-1.5 py-3 pr-3 text-[13.5px] font-medium text-text-tertiary transition-colors hover:text-text-primary"
@@ -206,6 +224,13 @@ export default async function BlogPostPage({ params }: PageProps) {
           {post.body.map((block, i) => renderBlock(block, i))}
         </div>
       </article>
+      {showRails && (
+        <BuyRail label={rails.items?.title ?? 'Shop'} top="site">
+          {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
+        </BuyRail>
+      )}
+      </div>
+      {bar && <BuyBar card={bar} surface="blog" mode="scroll" closable />}
     </main>
   )
 }

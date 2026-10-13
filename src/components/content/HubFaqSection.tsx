@@ -30,8 +30,10 @@ export function HubFaqSection({
       <h2 className="text-center text-heading font-bold tracking-tight text-text-primary">
         {title}
       </h2>
+      {/* Phones skip the subtitle (owner, 2026-10-12: a two-line wrap ending on
+          one word reads badly); desktop balances the lines. */}
       {subtitle && (
-        <p className="mx-auto mt-3 max-w-2xl text-center text-body-sm text-text-secondary">
+        <p className="mx-auto mt-3 hidden max-w-2xl text-balance text-center text-body-sm text-text-secondary sm:block">
           {subtitle}
         </p>
       )}

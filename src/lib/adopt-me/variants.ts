@@ -26,6 +26,14 @@ export const VARIANT_LABEL: Record<Variant, string> = {
 }
 
 /**
+ * The names a BUYER reads on value pages (owner, 2026-10-12): three tiers,
+ * Normal → Neon → Mega, so the picker chips, the hero title and the Variants
+ * table all say the same thing ("Mega", "Mega Fly Ride" = MFR). VARIANT_LABEL
+ * stays as is: the importer and listing matcher key on it.
+ */
+export const VARIANT_DISPLAY: Record<Variant, string> = { ...VARIANT_LABEL, MEGA: 'Mega' }
+
+/**
  * What each variant IS, in one line — the game's own mechanics. Fly and Ride
  * come from potions; a Neon is four fully grown copies of one pet combined; a
  * Mega Neon is four fully grown Neons combined. Normal needs no explanation.

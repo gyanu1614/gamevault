@@ -43,6 +43,8 @@ describe('canPublishOffer', () => {
   it('passes a complete items offer and fails each missing piece', () => {
     expect(canPublishOffer(base)).toBe(true)
     expect(canPublishOffer({ ...base, attributesFilled: false })).toBe(false)
+    // The item fields are still loading: their required picks are unknown.
+    expect(canPublishOffer({ ...base, templateLoading: true })).toBe(false)
     expect(canPublishOffer({ ...base, form: { ...filled, title: ' ' } })).toBe(false)
     expect(canPublishOffer({ ...base, form: { ...filled, images: [] } })).toBe(false)
     expect(canPublishOffer({ ...base, form: { ...filled, price: '0' } })).toBe(false)

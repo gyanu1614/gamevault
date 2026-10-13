@@ -1,10 +1,11 @@
 import Link from '@/components/navigation/AppLink'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight'
-import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
+import { VARIANTS } from './_adoptMeCalcTypes'
 import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { AdoptMeTopValue } from './_adoptMeCalcData'
 import { rarityMeta } from '@/lib/values/rarity'
 import { VALUE_SURFACE, VALUE_TILE } from '@/components/values/styles'
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -104,7 +105,7 @@ export function AdoptMeCalcSeo({
                 className="text-sm font-medium"
                 style={{ color: variantColor(v) }}
               >
-                {VARIANT_LABEL[v as keyof typeof VARIANT_LABEL]}{' '}
+                {VARIANT_DISPLAY[v as keyof typeof VARIANT_DISPLAY]}{' '}
                 <span className="text-text-tertiary">({v})</span>
               </span>
             </div>

@@ -148,7 +148,10 @@ export function HubNav({
   return (
     // Always solid — no transparent state at the top of the page. Same
     // translucent near-black + blur + hairline as the marketplace navbar.
-    <header className="fixed inset-x-0 top-[var(--safe-top)] z-50 border-b border-white/[0.08] bg-[rgba(29,30,35,0.86)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150">
+    // Solid, no filter on phones (owner, 2026-10-12): iOS 26 Safari takes the
+    // status-bar colour from this bar's plain background-color, so the strip
+    // above matches exactly; glass reads as "no single colour". Desktop: glass.
+    <header className="fixed inset-x-0 top-[var(--safe-top)] z-50 border-b border-white/[0.08] bg-[rgba(29,30,35,0.86)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150 max-lg:bg-[#1C1D22] max-lg:[-webkit-backdrop-filter:none] max-lg:[backdrop-filter:none]">
       {calcModeOverride === undefined && <SearchParamsBridge onParams={onParams} />}
       {/* Full-bleed row: no max-width cap, so the brand sits at the true left
           edge of the page and the storefront buttons at the true right edge.
@@ -186,39 +189,35 @@ export function HubNav({
               picking a game closes it. -ml-1.5 cancels the trigger's own
               padding so the game icon keeps its alignment with the brand mark. */}
           <Popover open={open} onOpenChange={setOpen}>
-            {/* Icon + name link to the game hub (/{slug}) like the marketplace
-                GameSubNav; the caret beside them opens the switcher. The
-                anchor keeps the panel aligned to the whole lockup, and spans the
-                full bar height so the panel hangs straight off the bar's bottom
-                edge (attached, no gap). */}
+            {/* ONE button (owner, 2026-10-12): icon + name + caret all open the
+                switcher — it no longer jumps to the game hub — on a soft pill so
+                it reads as "switchable". The anchor keeps the panel aligned to
+                the whole lockup and spans the bar height, so the panel hangs
+                straight off the bar's bottom edge. */}
             <PopoverAnchor asChild>
               <div className="-ml-1.5 flex min-w-0 items-center self-stretch">
-                <Link
-                  href={`/${current.slug}`}
-                  aria-label={`${current.name} marketplace`}
-                  className="flex h-10 min-w-0 items-center gap-2.5 rounded-md px-1.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12"
+                <PopoverTrigger
+                  aria-label={`Switch game (current: ${current.name})`}
+                  className={`group flex h-10 min-w-0 touch-manipulation items-center gap-2 rounded-[10px] border py-1 pl-1.5 pr-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-11 sm:gap-2.5 ${
+                    open ? 'border-white/[0.14] bg-white/[0.08]' : 'border-white/[0.08] bg-white/[0.04] hover:border-white/[0.12] hover:bg-white/[0.07]'
+                  }`}
                 >
                   <GameMark name={current.name} imageUrl={current.imageUrl} size="trigger" />
-                  {/* Game name shows on mobile too — the top/sub split frees the
-                      room the single row didn't have. Slightly smaller on phones,
-                      and it truncates before it can push Shop / Sell off a
+                  {/* The name truncates before it can push Shop / Sell off a
                       narrow screen ("Murder Mystery 2" did at 390 px). */}
                   <span className="min-w-0 truncate text-[15px] font-semibold text-text-primary sm:text-[16px]">
                     {current.name}
                   </span>
-                </Link>
-                <PopoverTrigger
-                  aria-label={`Switch game (current: ${current.name})`}
-                  className={`flex h-10 w-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-12 ${
-                    open ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <CaretDownIcon
-                    size={16}
-                    weight="bold"
+                  <span
                     aria-hidden
-                    className={`text-text-secondary transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
-                  />
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary"
+                  >
+                    <CaretDownIcon
+                      size={14}
+                      weight="bold"
+                      className={`transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+                    />
+                  </span>
                 </PopoverTrigger>
               </div>
             </PopoverAnchor>

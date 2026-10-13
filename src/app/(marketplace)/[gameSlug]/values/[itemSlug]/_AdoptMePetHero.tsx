@@ -20,6 +20,7 @@ import { amVariantKey } from '@/lib/value-listings/catalogs'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { TradeValue } from '@/components/values/TradeValue'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
@@ -99,28 +100,23 @@ export default function AdoptMePetHero({
       anchorRef={heroRef}
       accent={accent}
       art={{ src: imageUrl, alt: `${displayName} — Adopt Me` }}
-      eyebrow={
-        <>
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: accent }} />
-          {selected.variant === 'N' ? 'Normal (no potion)' : `${selected.label} variant`}
-        </>
-      }
       title={displayName}
+      // The pet's facts (owner, 2026-10-12). Listings tracked stays out of the
+      // card: the page's structured data (valuePage offers) still carries it.
       stats={[
+        { label: 'Type', value: 'Pet' },
         { label: 'Rarity', value: <span style={{ color: rarityColor }}>{rarityLabel}</span> },
         { label: 'Availability', value: obtainabilityLabel },
-        { label: 'Trade Value', value: selected.tradeValue != null ? TRADE.format(selected.tradeValue) : '—' },
-        { label: 'Listings Tracked', value: selected.listingsTracked > 0 ? String(selected.listingsTracked) : 'None yet' },
+        { label: 'Trade Value', value: selected.tradeValue != null ? <TradeValue>{TRADE.format(selected.tradeValue)}</TradeValue> : '—' },
       ]}
       price={{
         // Market data, not DropMarket stock: the buy button carries ours.
         label: hasCash ? (hasReputable ? 'Market Price' : 'Cash Value') : pointsValue ? 'Trade Value' : 'Value',
-        labelColor: accent,
         value: hasCash ? (
           USD.format(headlineUsd as number)
         ) : pointsValue ? (
           <>
-            {TRADE.format(pointsValue)}
+            <TradeValue>{TRADE.format(pointsValue)}</TradeValue>
             <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts</span>
           </>
         ) : (
@@ -133,9 +129,9 @@ export default function AdoptMePetHero({
             {secondaryUsd != null && (
               <p className="mt-1.5 text-[13px] tabular-nums text-text-tertiary">typically ~{USD.format(secondaryUsd)}</p>
             )}
-            <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
+            <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2">
               {hasReputable ? (
-                <HeroBadge color="var(--color-success)">From verified sellers</HeroBadge>
+                <HeroBadge color="var(--color-success)">From Verified Sellers</HeroBadge>
               ) : hasCash ? (
                 <ConfidenceBadge confidence={selected.confidence} />
               ) : pointsValue ? (
@@ -151,8 +147,8 @@ export default function AdoptMePetHero({
         <ValueBuyActions
           cta={cta}
           itemName={displayName}
-          sell={{ href: '/adopt-me/sell?src=am-item-page', label: `Sell ${name} For Cash` }}
           align="end"
+          sell={{ href: '/adopt-me/sell?src=am-item-page', label: `Sell ${name} For Cash` }}
         />
       }
       footer={
@@ -173,7 +169,11 @@ export default function AdoptMePetHero({
       }
       // Tier (Default / Neon / Mega) over Potion (Fly / Ride) — picking a form
       // reprices the hero and every section below.
-      picker={<CompactVariantPicker variant={selected.variant} onChange={pick} accent={accent} />}
+      // Under the art (owner, 2026-10-12): two even trays, no prices on the
+      // options — the hero price updates on select.
+      picker={
+        <CompactVariantPicker variant={selected.variant} onChange={pick} accent={accent} showSelected={false} labels={false} fill />
+      }
     />
   )
 }

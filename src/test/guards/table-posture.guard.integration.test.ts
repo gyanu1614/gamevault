@@ -51,6 +51,10 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   seo_settings: 'gate mode + planned date; COLUMN-scoped grant (updated_by, deploy id stay private)',
   seo_value_evidence: 'offers tracked / history days / last price move per value page — the same numbers the page prints',
   seo_index_overrides: "the owner's index/noindex decision per public value page path",
+  // Buy rails (growth point 2): every public page reads its surface's on/off
+  // switch cookie-free. COLUMN-scoped grant (updated_by stays private); no
+  // write grant — the /admin/buy-rails action writes with the service role.
+  buy_rail_settings: 'four on/off switches for the buy rails; COLUMN-scoped read grant, no write grant',
   // Trustpilot (growth point 19): the public TrustBox shows at 10+ reviews;
   // static pages read the count cookie-free. COLUMN-scoped grant (review_count).
   trustpilot_settings: 'review count switch for the public TrustBox; COLUMN-scoped grant, updated_by stays private',

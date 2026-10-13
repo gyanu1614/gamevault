@@ -6,6 +6,8 @@
  * same toolbar, rarity tiles, card, picker overlay, pagination and empty state.
  */
 
+import { VariantSelector } from '@/components/values/VariantSelector'
+import { mutationGroup } from '@/lib/values/variant-selector'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
@@ -438,6 +440,7 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
   return (
     <ValueCard
       href={href}
+      buySlug={brainrot.slug}
       headerRight={<RarityLabel label={rarity.label} color={rarity.color} />}
       imageSrc={brainrot.image_url}
       imageAlt={`${brainrot.name} Steal a Brainrot`}
@@ -475,37 +478,18 @@ function BrainrotCard({ brainrot }: { brainrot: BrainrotDirectoryItem }) {
             title="Choose Mutation"
             onClose={() => setPickerOpen(false)}
           >
-            <div className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:thin]">
-              {mutations.map((m) => {
-                const mv = mutationVisual(m.slug)
-                const active = m.slug === selected?.slug
-                return (
-                  <button
-                    key={m.slug}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setSelectedSlug(m.slug)
-                      setPickerOpen(false)
-                    }}
-                    className={`flex shrink-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
-                      active ? '' : 'bg-white/[0.03] hover:bg-white/[0.07]'
-                    }`}
-                    style={active ? { backgroundColor: mv.soft } : undefined}
-                  >
-                    <MutationDot visual={mv} size={9} />
-                    <span
-                      className={`truncate text-[12px] font-medium ${active ? '' : 'text-text-secondary'}`}
-                      style={active ? { color: mv.color } : undefined}
-                    >
-                      {m.name}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            {/* The universal selector, as a vertical list in the card's popover. */}
+            <VariantSelector
+              direction="column"
+              size="sm"
+              labels={false}
+              className="min-h-0 flex-1 flex-col flex-nowrap"
+              groups={[mutationGroup(mutations.map((m) => ({ slug: m.slug, name: m.name, color: mutationVisual(m.slug).color })), selected?.slug, () => '')]}
+              onSelect={(_, slug) => {
+                setSelectedSlug(slug)
+                setPickerOpen(false)
+              }}
+            />
           </CardPickerOverlay>
         ) : undefined
       }

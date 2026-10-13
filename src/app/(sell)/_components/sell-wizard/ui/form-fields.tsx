@@ -74,16 +74,17 @@ export function AutoGrowTextarea({
  */
 export function TipBox({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    // !mt-1.5 (6px): FieldRow spaces children with space-y-2, a sibling
-    // selector that outranks a plain mt-*, so without `!` the gap stayed 8px.
-    <div className={cn('!mt-1.5 flex items-start gap-1.5 text-left', className)}>
+    // !mt-2.5 (10px): room under the field (owner, 2026-10-12: cramped).
+    // FieldRow spaces children with space-y-2, a sibling selector that
+    // outranks a plain mt-*, hence the `!`.
+    <div className={cn('!mt-2.5 flex items-start gap-1.5 text-left', className)}>
       <InfoOutlinedIcon
         aria-hidden
-        sx={{ width: 13, height: 13, color: 'var(--color-text-tertiary)', mt: '2.5px', flexShrink: 0 }}
+        sx={{ width: 12, height: 12, color: 'var(--color-text-tertiary)', mt: '2px', flexShrink: 0 }}
       />
-      {/* `capitalize`: tips read in Title Case (owner, 2026-10-10), including
-          the admin-written attribute help text, so no copy needs retyping. */}
-      <p className="text-[12px] capitalize leading-[18px] text-text-tertiary">{children}</p>
+      {/* Sentence case, smaller (owner, 2026-10-12): Title Case is for
+          labels and search, never for a tip sentence. */}
+      <p className="text-[11.5px] leading-[17px] text-text-tertiary">{children}</p>
     </div>
   )
 }

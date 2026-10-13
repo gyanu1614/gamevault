@@ -993,6 +993,10 @@ export function Navbar({
                     // sub-nav read as one block with a single bottom edge.
                     hasSubNav ? 'border-b-transparent' : 'border-b-[rgba(255,255,255,0.08)] [[data-subnav]_&]:border-b-transparent',
                     'bg-[var(--navbar-bg,rgba(29,30,35,0.78))]',
+                    // Solid on phones (owner, 2026-10-12): the iOS 26 Safari
+                    // status-bar strip then matches the bar. Its blur stays: it
+                    // is the containing block of the phone sheets (see above).
+                    'max-lg:bg-[#1C1D22]',
                     'shadow-[0_1px_0_0_rgba(255,255,255,0.04),0_8px_24px_-12px_rgba(0,0,0,0.7)]',
                   ),
             )}

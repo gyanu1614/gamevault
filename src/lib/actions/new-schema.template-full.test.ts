@@ -10,6 +10,7 @@ const OPTION_COUNT = 1067
 
 const db = vi.hoisted(() => ({
   tables: {} as Record<string, any[]>,
+  calls: [] as Array<{ table: string; select?: string; order: string[] }>,
 }))
 
 vi.mock('@/lib/supabase/anon', () => ({
@@ -19,11 +20,13 @@ vi.mock('@/lib/supabase/anon', () => ({
       let from = 0
       let to = Number.POSITIVE_INFINITY
       let single = false
+      const call: { table: string; select?: string; order: string[] } = { table, order: [] }
+      db.calls.push(call)
       const b: any = {
-        select: () => b,
+        select: (cols: string) => { call.select = cols; return b },
         eq: (k: string, v: unknown) => { rows = rows.filter((r) => r[k] === v); return b },
         in: (k: string, vs: unknown[]) => { rows = rows.filter((r) => vs.includes(r[k])); return b },
-        order: () => b,
+        order: (k: string) => { call.order.push(k); return b },
         range: (f: number, t: number) => { from = f; to = t; return b },
         maybeSingle: () => { single = true; return b },
         then: (resolve: (v: unknown) => void) => {
@@ -59,5 +62,28 @@ describe('getAttributeTemplateFull', () => {
     const attrs = (res as any).data.attributes
     expect(attrs.find((a: any) => a.slug === 'select-knife').options).toHaveLength(700)
     expect(attrs.find((a: any) => a.slug === 'select-gun').options).toHaveLength(OPTION_COUNT - 700)
+  })
+})
+
+describe('getAttributeTemplateFull — option read shape', () => {
+  it('reads only the option columns the forms use, ordered per field', async () => {
+    db.calls = []
+    db.tables = {
+      attribute_templates: [{ id: 't1', game_category_id: 'gc1', is_active: true }],
+      attributes: [{ id: 'a1', template_id: 't1', slug: 'item-type', sort_order: 0 }],
+      attribute_options: [
+        { id: 'o2', attribute_id: 'a1', value: 'gun', label: 'Guns', sort_order: 1 },
+        { id: 'o1', attribute_id: 'a1', value: 'knife', label: 'Knives', sort_order: 0 },
+      ],
+      attribute_conditional_rules: [],
+    }
+    const { getAttributeTemplateFull } = await import('./new-schema')
+    await getAttributeTemplateFull('gc1')
+    const opt = db.calls.find((c) => c.table === 'attribute_options')!
+    expect(opt.select?.split(',').map((c) => c.trim()).sort()).toEqual(
+      ['attribute_id', 'icon_url', 'id', 'label', 'metadata', 'slug', 'sort_order', 'value'],
+    )
+    // (attribute_id, sort_order) is the index: field first, then admin order.
+    expect(opt.order).toEqual(['attribute_id', 'sort_order', 'id'])
   })
 })

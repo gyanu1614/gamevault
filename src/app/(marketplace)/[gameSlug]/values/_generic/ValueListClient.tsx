@@ -337,6 +337,7 @@ function ItemCard({
   return (
     <ValueCard
       href={row.href}
+      buySlug={row.slug}
       headerLeft={
         <>
           <CardRank rank={rank} />

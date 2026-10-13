@@ -1,4 +1,6 @@
 import { readValuePageEvidence } from '@/lib/seo/gate/read'
+import { ItemPageTitle } from '@/components/values/ItemPageTitle'
+import { ValueCrossLinks } from '@/components/values/ValueCrossLinks'
 import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import { Suspense } from 'react'
 import Link from '@/components/navigation/AppLink'
@@ -34,6 +36,7 @@ import {
 } from './ValueListItemClient'
 import { ValueItemHowToGet } from './ValueItemHowToGet'
 import { ValueListItemSkeleton } from './ValueListItemSkeleton'
+import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type ItemCopyInput } from './valueListItemCopy'
 import { howToGetFaqs } from './valueHowToGetCopy'
 
@@ -188,9 +191,7 @@ export default async function ValueListItemPage({
             <span className="truncate text-text-primary">{item.name}</span>
           </nav>
 
-          <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-display">
-            {item.name} Value in {hub.shortName}
-          </h1>
+          <ItemPageTitle name={item.name} game={hub.shortName} />
           {/* The answer, right under the H1: what it is, the chroma link, and
               what it's worth — plain server text, the first thing a crawler
               and an answer engine read. */}
@@ -364,7 +365,6 @@ async function ItemBody({
       <div className="mx-auto w-full max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
         <ValueListItemHero
           name={item.name}
-          eyebrow={`${item.rarity ? `${rarity.label} ` : ''}${typeLabel}`}
           accent={rarity.color}
           imageUrl={item.imageUrl}
           imageAlt={`${item.name} — ${theme.name} ${typeLabel.toLowerCase()}`}
@@ -381,6 +381,7 @@ async function ItemBody({
         />
       </div>
 
+      <ValueItemRails gameSlug={gameSlug} itemSlug={item.slug} itemName={item.name} imageUrl={item.imageUrl ?? null}>
       <AvailableNow
         gameSlug={gameSlug}
         gameName={theme.name}
@@ -441,32 +442,14 @@ async function ItemBody({
 
         <HubFaqSection
           title="Frequently Asked Questions"
-          subtitle={`Everything about the ${item.name}'s value and how to buy or sell it.`}
           items={faq}
         />
 
-        <nav aria-label={`More ${theme.name} values`} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Link
-            href={`/${gameSlug}/values`}
-            className={`${VALUE_SURFACE_LINK} group flex items-center gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
-          >
-            <CaretLeftIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:-translate-x-0.5 group-hover:text-text-primary" />
-            <span>
-              <span className={`block ${VALUE_LABEL}`}>Back to</span>
-              <span className="block text-body-sm font-semibold text-text-primary">All {hub.shortName} Values</span>
-            </span>
-          </Link>
-          <Link
-            href={`/${gameSlug}/values/methodology`}
-            className={`${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
-          >
-            <span>
-              <span className={`block ${VALUE_LABEL}`}>Our Method</span>
-              <span className="block text-body-sm font-semibold text-text-primary">How We Value Items</span>
-            </span>
-            <CaretRightIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
-          </Link>
-        </nav>
+        <ValueCrossLinks
+          ariaLabel={`More ${theme.name} values`}
+          back={{ href: `/${gameSlug}/values`, label: `All ${hub.shortName} Values`, short: 'All Values' }}
+          method={{ href: `/${gameSlug}/values/methodology`, label: 'How We Value Items', short: 'Our Method' }}
+        />
 
         <HubBuyCta
           gameName={theme.name}
@@ -474,6 +457,7 @@ async function ItemBody({
           buyHref={itemBuyHref({ gameSlug, categorySlug: buy.categorySlug, itemSlug: item.slug })}
         />
       </div>
+      </ValueItemRails>
     </>
   )
 }

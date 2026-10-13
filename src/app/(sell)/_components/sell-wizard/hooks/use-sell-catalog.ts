@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import {
   fetchExistingBundleListingId,
   fetchPublishPolicy,
   fetchSellGamesForCategory,
-  fetchSellTemplate,
   type SellGameOption,
   type SellerPublishPolicy,
 } from '@/lib/actions/sell-wizard'
@@ -16,6 +16,7 @@ import type { AttributeTemplateFull, GlobalCategory } from '@/lib/actions/new-sc
 import type { CurrencyConfig } from '@/lib/types/category-configs'
 import type { WizardPrefill } from '@/lib/sell/wizard-prefill'
 import { safeLocal } from '@/lib/safe-storage'
+import { sellTemplateQuery } from '@/lib/sell/template-client'
 
 import { RECENT_GAMES_KEY } from '../constants'
 
@@ -42,8 +43,6 @@ export function useSellCatalog(input: {
 
   const [games, setGames] = useState<SellGameOption[]>(prefill?.games ?? [])
   const [gamesLoading, setGamesLoading] = useState(false)
-  const [template, setTemplate] = useState<AttributeTemplateFull | null>(prefill?.template ?? null)
-  const [templateLoading, setTemplateLoading] = useState(false)
   const [currencyConfig, setCurrencyConfig] = useState<CurrencyConfig | null>(prefill?.currencyConfig ?? null)
   const [currencyConfigLoading, setCurrencyConfigLoading] = useState(false)
   const [policy, setPolicy] = useState<SellerPublishPolicy | null>(prefill?.policy ?? null)
@@ -52,7 +51,6 @@ export function useSellCatalog(input: {
   // What the prefill already loaded, so the first effect run skips its fetch.
   const loaded = useRef({
     gamesFor: prefill ? prefill.listing.category_slug : null,
-    templateFor: prefill ? `${prefill.game.game_id}:${prefill.listing.category_slug}` : null,
     configFor: prefill ? prefill.game.game_id : null,
   })
 
@@ -90,28 +88,21 @@ export function useSellCatalog(input: {
     }
   }, [category])
 
+  // The (game, category) template: cached per pair (server, CDN and client),
+  // prefetched on step 2, seeded from the edit/duplicate prefill. The game
+  // option already carries its game_category_id, so nothing is re-resolved.
+  const templateId = category && game ? game.game_category_id : null
+  const prefillTemplateId = prefill?.game.game_category_id ?? null
+  const templateQuery = useQuery({
+    ...sellTemplateQuery(templateId ?? ''),
+    enabled: !!templateId,
+    initialData: templateId && templateId === prefillTemplateId ? prefill?.template ?? null : undefined,
+  })
+  const template: AttributeTemplateFull | null = templateId ? templateQuery.data ?? null : null
+  const templateLoading = !!templateId && templateQuery.isPending
   useEffect(() => {
-    if (!category || !game) return
-    const key = `${game.game_id}:${category.slug}`
-    const cache = loaded.current
-    if (cache.templateFor === key) return
-    cache.templateFor = key
-    let cancelled = false
-    setTemplateLoading(true)
-    fetchSellTemplate(game.game_id, category.slug)
-      .then((res) => {
-        if (cancelled) return
-        if (res.success) setTemplate(res.data)
-        else toast.error(res.error)
-      })
-      .finally(() => {
-        if (!cancelled) setTemplateLoading(false)
-      })
-    return () => {
-      cancelled = true
-      if (cache.templateFor === key) cache.templateFor = null
-    }
-  }, [category, game])
+    if (templateQuery.error) toast.error(templateQuery.error.message)
+  }, [templateQuery.error])
 
   useEffect(() => {
     const cache = loaded.current
@@ -152,8 +143,11 @@ export function useSellCatalog(input: {
     }
   }, [game, bundleId, region, platform, isEditMode])
 
-  /** Forget the template when the category or game changes (its answers no longer apply). */
-  const clearTemplate = useCallback(() => setTemplate(null), [])
+  /**
+   * Kept for the wizard's category/game reset: the template now follows the
+   * selected pair by itself (no game → no template), so nothing to clear.
+   */
+  const clearTemplate = useCallback(() => {}, [])
 
   return {
     games,

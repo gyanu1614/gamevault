@@ -32,7 +32,9 @@ import { accountInputCls } from '@/components/account/AccountSurface'
 import { Switch } from '@/components/ui/switch'
 import { PanelHead, adminBtn, adminBtnSm } from '../../components/kit'
 import { useFilePicker } from '../../components/useFilePicker'
-import { ImageCropDialog, type PixelRect } from '../../components/ImageCropDialog'
+import type { PixelRect } from '../../components/ImageCropDialog'
+import { FrameCropDialog } from '@/components/ui/frame-crop-dialog'
+import { CtaBandPreview } from './CtaBandPreview'
 import { HeroBackgroundField } from './HeroBackgroundField'
 import { MAX_IMAGE_UPLOAD_BYTES, imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import {
@@ -794,15 +796,19 @@ export default function GameWizard({ mode, game, globalCategories, initialGameCa
                 </button>
                 {blogCtaPicker.input}
               </div>
-              <ImageCropDialog
+              {/* How the banner looks on the site: the real CTA band. */}
+              {blogCtaUrl && <CtaBandPreview gameSlug={slug} gameName={name} src={blogCtaUrl} />}
+              <FrameCropDialog
                 file={pendingBlogCta}
                 aspect={4}
-                title="Choose the Banner Area"
-                hint="A 4:1 band behind every Buy / Sell banner for this game. Keep the subject right of centre: the copy covers the left third."
+                title="Place the Banner"
+                hint="Drag the picture inside the frame and zoom to fit. Keep the subject right of centre: the copy covers the left third."
                 minWidth={1200}
                 busy={isUploadingBlogCta}
+                saveLabel="Save Banner"
                 onCancel={() => setPendingBlogCta(null)}
-                onConfirm={handleBlogCtaCropped}
+                onConfirm={({ rect }) => void handleBlogCtaCropped(rect)}
+                renderPreview={(src) => <CtaBandPreview gameSlug={slug} gameName={name} src={src} />}
               />
 
               <div className="h-px bg-white/[0.06]" />

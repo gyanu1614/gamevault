@@ -17,7 +17,7 @@
  * real-money gap in words.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { PlusIcon } from '@phosphor-icons/react/dist/csr/Plus'
@@ -25,13 +25,14 @@ import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRi
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/csr/PencilSimple'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import type { CalcPet, Variant } from './_adoptMeCalcTypes'
-import { VARIANTS, VARIANT_LABEL } from './_adoptMeCalcTypes'
+import { VARIANTS } from './_adoptMeCalcTypes'
 import { CompactVariantPicker } from '../values/_CompactVariantPicker'
 import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import { centsToUsd, sumSide } from '@/lib/calculator/trade-sum'
 import { ItemPickerDialog } from '@/components/values/ItemPickerDialog'
 import { ValueArt } from '@/components/values/ValueArt'
 import { ValuesEmptyState } from '@/components/values/ValuesEmptyState'
+import { CalcBuyBox, type CalcBuyData } from '@/components/buy-rails/CalcBuyBox'
 import {
   VALUE_BTN_PRIMARY,
   VALUE_BTN_SECONDARY,
@@ -39,13 +40,14 @@ import {
   VALUE_TILE,
 } from '@/components/values/styles'
 import { ADOPT_ME_RARITIES, rarityMeta } from '@/lib/values/rarity'
+import { TradeValue } from '@/components/values/TradeValue'
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
 /** Adopt Me stat colours (same as the value list): cheapest cash + trade. */
 const CASH_COLOR = '#54DDBE'
-const TRADE_COLOR = '#E8BD6A'
 const EASE = [0.16, 1, 0.3, 1] as const
 
 interface Entry {
@@ -57,7 +59,7 @@ interface Entry {
 let idc = 0
 const nextId = () => `e${++idc}`
 
-export default function AdoptMeWflClient({ pets }: { pets: CalcPet[] }) {
+export default function AdoptMeWflClient({ pets, buyData = null }: { pets: CalcPet[]; buyData?: CalcBuyData | null }) {
   const petBySlug = useMemo(() => new Map(pets.map((p) => [p.slug, p])), [pets])
   const [give, setGive] = useState<Entry[]>([])
   const [receive, setReceive] = useState<Entry[]>([])
@@ -185,6 +187,14 @@ export default function AdoptMeWflClient({ pets }: { pets: CalcPet[] }) {
         )
       })()}
 
+      {/* Buy box (growth point 2): what's in stock from this trade, right under the verdict. */}
+      {buyData && (
+        <CalcBuyBox
+          data={buyData}
+          items={[...receive, ...give].map((e) => ({ slug: e.slug, name: petBySlug.get(e.slug)?.name ?? e.slug }))}
+        />
+      )}
+
       <PetPicker
         key={pickerSession}
         open={picker != null}
@@ -248,7 +258,7 @@ function Side({
                       {v?.cashUsd != null ? USD.format(v.cashUsd) : '—'}
                     </p>
                     <p className="mt-0.5 text-[12px] tabular-nums text-text-secondary">
-                      {v?.tradeValue != null ? `${TRADE.format(v.tradeValue)} trade` : 'no cash'}
+                      {v?.tradeValue != null ? <><TradeValue>{TRADE.format(v.tradeValue)}</TradeValue> trade</> : 'no cash'}
                     </p>
                   </div>
                   <button
@@ -271,7 +281,7 @@ function Side({
                   showSelected={false}
                 />
                 <p className="mt-1.5 text-[11px] text-text-tertiary">
-                  {VARIANT_LABEL[e.variant]}
+                  {VARIANT_DISPLAY[e.variant]}
                 </p>
               </motion.div>
             )
@@ -286,7 +296,7 @@ function Side({
         {entries.length > 0 ? (
           <div className="text-right">
             <p className="text-[16px] font-bold leading-none tabular-nums" style={{ color: CASH_COLOR }}>{USD.format(total.cash)}</p>
-            <p className="mt-0.5 text-[12px] text-text-secondary"><span className="tabular-nums" style={{ color: TRADE_COLOR }}>{TRADE.format(total.trade)}</span> trade</p>
+            <p className="mt-0.5 text-[12px] text-text-secondary"><TradeValue>{TRADE.format(total.trade)}</TradeValue> trade</p>
           </div>
         ) : (
           <span className="text-[12px] text-text-tertiary">Total shows here</span>
@@ -319,7 +329,7 @@ function PetLines({
             <ValueArt src={pet.imageUrl} alt={pet.name} aria-hidden size={36} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-body-sm font-semibold text-text-primary">{pet.name}</p>
-              <p className="truncate text-caption text-text-tertiary">{VARIANT_LABEL[e.variant]}</p>
+              <p className="truncate text-caption text-text-tertiary">{VARIANT_DISPLAY[e.variant]}</p>
             </div>
             <p className="shrink-0 text-body-sm font-bold tabular-nums" style={{ color: CASH_COLOR }}>
               {v?.cashUsd != null ? USD.format(v.cashUsd) : '—'}
@@ -437,9 +447,9 @@ function Verdict({
       {/* ── Tug-of-war: each side shows its pets + total; the meter leans to the
           heavier side; the verdict word pops in. ─────────────────────────── */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
-        <BalanceSide label="You give" accent="#5AC8FA" cash={USD.format(cashGive)} pts={`${TRADE.format(tradeGive)} trade`} lines={giveLines} />
+        <BalanceSide label="You give" accent="#5AC8FA" cash={USD.format(cashGive)} pts={<><TradeValue>{TRADE.format(tradeGive)}</TradeValue> trade</>} lines={giveLines} />
         <div className="flex items-center justify-center text-caption font-extrabold text-text-tertiary">VS</div>
-        <BalanceSide label="They offer" accent="#B07BC9" cash={USD.format(cashRec)} pts={`${TRADE.format(tradeRec)} trade`} align="right" lines={recLines} />
+        <BalanceSide label="They offer" accent="#B07BC9" cash={USD.format(cashRec)} pts={<><TradeValue>{TRADE.format(tradeRec)}</TradeValue> trade</>} align="right" lines={recLines} />
       </div>
 
       {/* Weighted balance bar */}
@@ -483,7 +493,7 @@ function Verdict({
       {/* Detail axes — real money + trade value, quieter, below the fold. */}
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
         <Axis label="Real money" hint="DropMarket cash value" verdict={cash} give={USD.format(cashGive)} rec={USD.format(cashRec)} />
-        <Axis label="Trade value" hint="Community consensus" verdict={trade} give={TRADE.format(tradeGive)} rec={TRADE.format(tradeRec)} />
+        <Axis label="Trade value" hint="Community consensus" verdict={trade} give={<TradeValue>{TRADE.format(tradeGive)}</TradeValue>} rec={<TradeValue>{TRADE.format(tradeRec)}</TradeValue>} />
       </div>
 
       {cashMissing && (
@@ -507,7 +517,7 @@ function BalanceSide({
   label: string
   accent: string
   cash: string
-  pts: string
+  pts: ReactNode
   align?: 'right'
   /** Collapsed view: the per-pet rows shown inside this side card. */
   lines?: React.ReactNode
@@ -544,8 +554,8 @@ function Axis({
   label: string
   hint: string
   verdict: V
-  give: string
-  rec: string
+  give: ReactNode
+  rec: ReactNode
 }) {
   return (
     <div className={`${VALUE_TILE} px-5 py-4`}>
@@ -639,7 +649,7 @@ function PetPicker({
               {priced ? USD.format(v!.cashUsd!) : <span className="text-body-sm text-text-tertiary">No price</span>}
             </p>
             <p className="text-caption tabular-nums text-text-secondary">
-              {v?.tradeValue != null ? `${TRADE.format(v.tradeValue)} trade` : VARIANT_LABEL[draft]}
+              {v?.tradeValue != null ? <><TradeValue>{TRADE.format(v.tradeValue)}</TradeValue> trade</> : VARIANT_DISPLAY[draft]}
             </p>
           </div>
         </div>

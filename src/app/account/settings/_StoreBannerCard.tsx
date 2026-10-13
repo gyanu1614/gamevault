@@ -8,11 +8,11 @@
  * gate is the server action: it re-reads the seller's CURRENT rank, validates
  * the bytes, crops to 1500 × 400 WebP and uploads with the service role.
  *
- * Position: the shop shows a short strip of the banner, so after picking a
- * file (or for the saved banner) the seller drags it up / down in a frame of
- * the shop's exact shape (BannerPositionEditor). "Save Banner" stores the
- * position with the new file; for the saved banner, "Save Position" stores
- * just the focal point (same server-side owner + Silver+ gate).
+ * Placing it (owner, 2026-10-12): after picking a file the seller drags and
+ * zooms it inside a fixed 15 : 4 frame (FrameCropDialog, the same editor the
+ * admin uses for game banners) with a live preview of the shop header. The
+ * browser cuts that exact area to 1500 × 400; "Save Banner" uploads it.
+ * A saved banner keeps its stored focal point; "Replace" places a new one.
  */
 
 import { useRef, useState } from 'react'
@@ -26,8 +26,8 @@ import Link from '@/components/navigation/AppLink'
 import { SettingsCard, accountBtn } from '@/components/account/AccountSurface'
 import { StoreBannerArt } from '@/components/shop/StoreBannerArt'
 import { useAuth } from '@/hooks/use-auth'
-import { getMyStoreBanner, removeStoreBanner, saveStoreBannerPosition, uploadStoreBanner } from '@/lib/actions/store-banner'
-import type { MyStoreBanner } from '@/lib/shop/store-banner-service'
+import { getMyStoreBanner, removeStoreBanner, uploadStoreBanner } from '@/lib/actions/store-banner'
+import { FrameCropDialog } from '@/components/ui/frame-crop-dialog'
 import {
   STORE_BANNER_FOCAL_DEFAULT,
   STORE_BANNER_FRAME_ASPECT,
@@ -37,21 +37,11 @@ import {
   STORE_BANNER_MIN_WIDTH,
   STORE_BANNER_WIDTH,
 } from '@/lib/shop/store-banner'
-import { imageTooLargeMessage, readFileAsDataUrl, uploadErrorMessage } from '@/lib/uploads/image-upload'
+import { imageTooLargeMessage, uploadErrorMessage } from '@/lib/uploads/image-upload'
 import { tierLabel } from '@/lib/seller/tiers'
 import { cn } from '@/lib/utils'
-import { BannerPositionEditor } from './_BannerPositionEditor'
 
 const QUERY_KEY = ['store-banner'] as const
-
-function imageWidth(src: string): Promise<number> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => resolve(img.naturalWidth)
-    img.onerror = () => resolve(0)
-    img.src = src
-  })
-}
 
 export function StoreBannerCard() {
   const { user } = useAuth()
@@ -67,19 +57,19 @@ export function StoreBannerCard() {
   })
 
   const inputRef = useRef<HTMLInputElement>(null)
+  /** The picked file, open in the banner editor. */
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  /** The placed banner (already cut to 1500 × 400), not saved yet. */
   const [pending, setPending] = useState<{ dataUrl: string; name: string } | null>(null)
-  const [busy, setBusy] = useState<'save' | 'remove' | 'position' | null>(null)
-  /** Unsaved focal point; null = the saved one. */
-  const [focal, setFocal] = useState<number | null>(null)
+  const [busy, setBusy] = useState<'save' | 'remove' | null>(null)
 
   const canUpload = data?.canUpload === true
   const previewUrl = pending?.dataUrl ?? data?.bannerUrl ?? null
   const seed = user?.id ?? 'preview'
-  const savedFocal = data?.focalY ?? STORE_BANNER_FOCAL_DEFAULT
-  const currentFocal = focal ?? (pending ? STORE_BANNER_FOCAL_DEFAULT : savedFocal)
-  const positionDirty = !pending && !!data?.bannerUrl && focal != null && focal !== savedFocal
+  // A placed banner is already the exact area, so it shows centred.
+  const focalY = pending ? STORE_BANNER_FOCAL_DEFAULT : (data?.focalY ?? STORE_BANNER_FOCAL_DEFAULT)
 
-  const onPick = async (file: File | undefined) => {
+  const onPick = (file: File | undefined) => {
     if (!file) return
     if (!(STORE_BANNER_MIME as readonly string[]).includes(file.type)) {
       toast.error('Use a JPG, PNG or WebP image.')
@@ -90,25 +80,14 @@ export function StoreBannerCard() {
       toast.error(tooBig)
       return
     }
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-      const width = await imageWidth(dataUrl)
-      if (width > 0 && width < STORE_BANNER_MIN_WIDTH) {
-        toast.error(`Use an image at least ${STORE_BANNER_MIN_WIDTH} px wide.`)
-        return
-      }
-      setPending({ dataUrl, name: file.name })
-      setFocal(STORE_BANNER_FOCAL_DEFAULT)
-    } catch (err) {
-      toast.error(uploadErrorMessage(err))
-    }
+    setCropFile(file)
   }
 
   const save = async () => {
     if (!pending) return
     setBusy('save')
     try {
-      const res = await uploadStoreBanner(pending.dataUrl, currentFocal)
+      const res = await uploadStoreBanner(pending.dataUrl, STORE_BANNER_FOCAL_DEFAULT)
       if (!res.ok) {
         toast.error(res.error)
         return
@@ -116,27 +95,7 @@ export function StoreBannerCard() {
       // Refetch first, so the preview swaps straight to the stored banner.
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       setPending(null)
-      setFocal(null)
       toast.success('Banner saved. It shows on your shop within a minute.')
-    } catch (err) {
-      toast.error(uploadErrorMessage(err))
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const savePosition = async () => {
-    if (!positionDirty) return
-    setBusy('position')
-    try {
-      const res = await saveStoreBannerPosition(currentFocal)
-      if (!res.ok) {
-        toast.error(res.error)
-        return
-      }
-      queryClient.setQueryData<MyStoreBanner>(QUERY_KEY, (old) => (old ? { ...old, focalY: res.focalY } : old))
-      setFocal(null)
-      toast.success('Banner position saved. It shows on your shop within a minute.')
     } catch (err) {
       toast.error(uploadErrorMessage(err))
     } finally {
@@ -153,7 +112,6 @@ export function StoreBannerCard() {
         return
       }
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY })
-      setFocal(null)
       toast.success('Banner removed.')
     } catch (err) {
       toast.error(uploadErrorMessage(err))
@@ -179,7 +137,7 @@ export function StoreBannerCard() {
       }
       footerHint={
         canUpload
-          ? `JPG, PNG or WebP up to 2.5 MB. Best at ${STORE_BANNER_WIDTH} × ${STORE_BANNER_HEIGHT} px; we crop to that shape from the centre.`
+          ? `JPG, PNG or WebP up to 2.5 MB, at least ${STORE_BANNER_MIN_WIDTH} px wide. You place it in a ${STORE_BANNER_WIDTH} × ${STORE_BANNER_HEIGHT} frame.`
           : data
             ? `Your rank: ${data.tierLabel}. Sellers rank up with completed sales and good reviews.`
             : null
@@ -187,16 +145,8 @@ export function StoreBannerCard() {
       footerAction={
         canUpload ? (
           <>
-            {pending || positionDirty ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPending(null)
-                  setFocal(null)
-                }}
-                disabled={!!busy}
-                className={accountBtn.secondary}
-              >
+            {pending ? (
+              <button type="button" onClick={() => setPending(null)} disabled={!!busy} className={accountBtn.secondary}>
                 Cancel
               </button>
             ) : data?.bannerUrl ? (
@@ -208,10 +158,6 @@ export function StoreBannerCard() {
             {pending ? (
               <button type="button" onClick={() => void save()} disabled={!!busy} className={accountBtn.primary}>
                 {busy === 'save' ? 'Saving…' : 'Save Banner'}
-              </button>
-            ) : positionDirty ? (
-              <button type="button" onClick={() => void savePosition()} disabled={!!busy} className={accountBtn.primary}>
-                {busy === 'position' ? 'Saving…' : 'Save Position'}
               </button>
             ) : (
               <button type="button" onClick={() => inputRef.current?.click()} disabled={!!busy} className={accountBtn.secondary}>
@@ -232,11 +178,12 @@ export function StoreBannerCard() {
       ) : (
         <div className="space-y-3">
           {canUpload && previewUrl ? (
-            <BannerPositionEditor
-              src={previewUrl}
-              value={currentFocal}
-              onChange={setFocal}
-              disabled={!!busy}
+            // How it shows on the shop: the real banner art, melt and all.
+            <StoreBannerArt
+              banner={{ kind: 'custom', url: previewUrl, focalY }}
+              seed={seed}
+              className="w-full rounded-md"
+              style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }}
             >
               {pending && (
                 <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-[12px] font-semibold text-white backdrop-blur-sm">
@@ -244,7 +191,7 @@ export function StoreBannerCard() {
                   Preview — Not Saved
                 </span>
               )}
-            </BannerPositionEditor>
+            </StoreBannerArt>
           ) : (
             <StoreBannerArt
               banner={{ kind: 'default' }}
@@ -281,9 +228,35 @@ export function StoreBannerCard() {
             tabIndex={-1}
             aria-hidden
             onChange={(e) => {
-              void onPick(e.target.files?.[0])
+              onPick(e.target.files?.[0])
               e.target.value = ''
             }}
+          />
+          <FrameCropDialog
+            file={cropFile}
+            aspect={STORE_BANNER_WIDTH / STORE_BANNER_HEIGHT}
+            title="Place Your Banner"
+            hint="Drag the picture inside the frame and zoom to fit."
+            minWidth={STORE_BANNER_MIN_WIDTH}
+            outputWidth={STORE_BANNER_WIDTH}
+            saveLabel="Use This Banner"
+            onCancel={() => setCropFile(null)}
+            onConfirm={({ dataUrl }) => {
+              if (dataUrl) setPending({ dataUrl, name: cropFile?.name ?? 'banner' })
+              setCropFile(null)
+            }}
+            renderPreview={(src) =>
+              src ? (
+                <StoreBannerArt
+                  banner={{ kind: 'custom', url: src, focalY: STORE_BANNER_FOCAL_DEFAULT }}
+                  seed={seed}
+                  className="w-full rounded-md"
+                  style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }}
+                />
+              ) : (
+                <div className="skeleton w-full rounded-md" style={{ aspectRatio: String(STORE_BANNER_FRAME_ASPECT) }} aria-hidden />
+              )
+            }
           />
         </div>
       )}

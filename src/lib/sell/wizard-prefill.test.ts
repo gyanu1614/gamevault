@@ -13,8 +13,9 @@ vi.mock('@/lib/actions/sell-wizard', () => ({
   fetchPublishPolicy: () => (calls.push('policy'), policy()),
   fetchSellGamesForCategory: (...a: unknown[]) => (calls.push('games'), games(...a)),
 }))
-vi.mock('@/lib/actions/new-schema', () => ({
-  getAttributeTemplateFull: (...a: unknown[]) => (calls.push('template'), template(...a)),
+// The prefill reads the same cached template the form's GET route serves.
+vi.mock('./template-read', () => ({
+  getSellTemplate: (...a: unknown[]) => (calls.push('template'), template(...a)),
 }))
 vi.mock('@/lib/actions/admin-category-configs', () => ({
   fetchCategoryConfig: (...a: unknown[]) => (calls.push('config'), config(...a)),
@@ -37,7 +38,7 @@ describe('loadWizardPrefill', () => {
     listing.mockResolvedValue({ success: true, data: row() })
     policy.mockResolvedValue({ success: true, data: { at_listing_limit: false } })
     games.mockResolvedValue({ success: true, data: [option, { game_id: 'g2', game_category_id: 'gc2' }] })
-    template.mockResolvedValue({ success: true, data: { attributes: [] } })
+    template.mockResolvedValue({ attributes: [] })
     config.mockResolvedValue({ unit_label: 'Robux' })
   })
 

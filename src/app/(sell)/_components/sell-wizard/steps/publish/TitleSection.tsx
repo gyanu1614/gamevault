@@ -6,9 +6,10 @@ import { inputCls } from '../../styles'
 import { SubCard } from '../../ui/SubCard'
 import { FieldError, FieldRow, TipBox } from '../../ui/form-fields'
 import type { Step4Props } from './types'
+import { titleExample } from './title-example'
 
 /** Offer title (not asked for currency: the server names it). */
-export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle'> }) {
+export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle' | 'gameSlug' | 'gameName'> }) {
   // The error shows once the field has been left empty, not on first render.
   const [touched, setTouched] = useState(false)
   const titleInvalid = touched && !p.title.trim()
@@ -28,7 +29,9 @@ export function TitleSection({ p }: { p: Pick<Step4Props, 'title' | 'setTitle'> 
       className={inputCls}
     />
     {titleInvalid && <FieldError>Offer title is required.</FieldError>}
-    <TipBox>Lead with the words buyers search for. Max 100 characters.</TipBox>
+    <TipBox>
+      Give your item a descriptive title. What would buyers search for to find it? Example: {titleExample(p.gameSlug, p.gameName)}
+    </TipBox>
   </FieldRow>
 </SubCard>
   )

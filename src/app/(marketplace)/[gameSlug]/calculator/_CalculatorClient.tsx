@@ -1,5 +1,6 @@
 'use client'
 
+import { CalcBuyBox } from '@/components/buy-rails/CalcBuyBox'
 import {
   useEffect,
   useMemo,
@@ -97,10 +98,12 @@ interface CalculatorClientProps {
   /** DropMarket's own live stock by brainrot slug (Bundle 2: buy buttons). */
   buyStock: Record<string, ItemStock>
   buyCategorySlug: string
+  /** Buy box under the trade verdict (admin switch, /admin/buy-rails). */
+  buyBox?: boolean
 }
 
-/** Shared by the cash result's buy button and the trade list's links. */
-type BuyContext = { stock: Record<string, ItemStock>; categorySlug: string }
+/** Shared by the cash result's buy button, the trade list's links and the buy box. */
+type BuyContext = { stock: Record<string, ItemStock>; categorySlug: string; buyBox: boolean }
 
 type Tab = CalculatorTab
 
@@ -126,8 +129,9 @@ export default function CalculatorClient({
   tradePrices,
   buyStock,
   buyCategorySlug,
+  buyBox = false,
 }: CalculatorClientProps) {
-  const buy: BuyContext = useMemo(() => ({ stock: buyStock, categorySlug: buyCategorySlug }), [buyStock, buyCategorySlug])
+  const buy: BuyContext = useMemo(() => ({ stock: buyStock, categorySlug: buyCategorySlug, buyBox }), [buyStock, buyCategorySlug, buyBox])
   // Mode comes from the URL (?tab=cash), chosen in the navbar's Calculator
   // menu — there is no in-page switcher to hold local state for. The URL is
   // read on the client (Step 7a): the page is ISR, so the default view is in
@@ -939,6 +943,18 @@ function TradeTab({
     return [...build(give, 'give'), ...build(receive, 'receive')]
   }, [give, receive, brainrotMap, mutationMap, priceMap, buy.categorySlug])
 
+  // The buy box counts every copy on the table (×2 = two to buy), their side first.
+  const tradeBuyItems = useMemo(
+    () =>
+      [...receive, ...give].flatMap((entry) => {
+        const brainrot = brainrotMap.get(entry.brainrotId)
+        if (!brainrot) return []
+        const variant = mutationMap.get(entry.mutationId)?.slug ?? null
+        return Array.from({ length: Math.max(1, entry.quantity) }, () => ({ slug: brainrot.slug, name: brainrot.name, variant }))
+      }),
+    [give, receive, brainrotMap, mutationMap],
+  )
+
   const pointDifference = tradeResult
     ? centsToUsd(tradeResult.diffCents)
     : centsToUsd(receiveSummary.totals.pointCents - giveSummary.totals.pointCents)
@@ -1261,6 +1277,14 @@ function TradeTab({
           </Link>
         </div>
       </div>
+
+      {/* Buy box (growth point 2): what's in stock from this trade. */}
+      {buy.buyBox && (
+        <CalcBuyBox
+          data={{ gameSlug: 'steal-a-brainrot', gameName: 'Steal a Brainrot', itemsHref: `/steal-a-brainrot/${buy.categorySlug}`, categorySlug: buy.categorySlug, stock: buy.stock }}
+          items={tradeBuyItems}
+        />
+      )}
 
       {/* ── Items in this trade ──
           Every Brainrot on either side, with a direct route to buy that exact

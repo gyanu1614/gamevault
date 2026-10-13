@@ -138,6 +138,7 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
     // deeper tone than the page with rounded top corners, so it sits apart
     // without a rule. Pages can still set --footer-bg.
     <footer
+      data-site-footer
       className="relative mt-6 overflow-hidden rounded-t-[22px] sm:rounded-t-[28px]"
       style={{ backgroundColor: 'var(--footer-bg, #0F1013)' }}
     >

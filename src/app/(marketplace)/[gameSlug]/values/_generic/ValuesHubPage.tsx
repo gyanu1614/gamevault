@@ -1,4 +1,5 @@
 import { JsonLd, breadcrumbList, itemList } from '@/lib/seo/jsonld'
+import { ValueListBuy } from '@/components/buy-rails/ValueListBuy'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { HubHero } from '@/components/content/HubHero'
@@ -56,6 +57,7 @@ function ItemCard({ item, gameSlug }: { item: ValueItem; gameSlug: string }) {
   return (
     <ValueCard
       href={`/${gameSlug}/values/${item.slug}`}
+      buySlug={item.slug}
       headerLeft={
         item.area ? (
           <span className="truncate text-[11px] font-medium text-text-tertiary">{item.area}</span>
@@ -143,6 +145,7 @@ export default async function ValuesHubPage({ gameSlug }: { gameSlug: string }) 
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
+      <ValueListBuy gameSlug={gameSlug}>
       <HubNav data={hubNav} />
       <JsonLd
         data={breadcrumbList([
@@ -211,6 +214,7 @@ export default async function ValuesHubPage({ gameSlug }: { gameSlug: string }) 
         buyHref={hubNav.itemsHref ?? `/${gameSlug}`}
       />
 
+      </ValueListBuy>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

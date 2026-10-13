@@ -7,6 +7,8 @@ import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { ValueArt } from './ValueArt'
 import { VALUE_LABEL, VALUE_SURFACE_LINK } from './styles'
+import { ListBuyRow } from '@/components/buy-rails/ListBuy'
+import { TradeValue } from '@/components/values/TradeValue'
 
 /**
  * One value-list card for every hub (SAB brainrots, Adopt Me pets, generic).
@@ -28,6 +30,7 @@ export function ValueCard({
   control,
   footer,
   overlay,
+  buySlug,
 }: {
   href: string | null
   headerLeft?: ReactNode
@@ -40,6 +43,8 @@ export function ValueCard({
   control?: ReactNode
   footer: ReactNode
   overlay?: ReactNode
+  /** The item's slug: adds the list's Buy line (only inside a ValueListBuy provider). */
+  buySlug?: string
 }) {
   return (
     <div className={`group relative isolate flex flex-col overflow-hidden ${VALUE_SURFACE_LINK}`}>
@@ -67,6 +72,8 @@ export function ValueCard({
       {control && <div className="px-3 pb-2.5">{control}</div>}
 
       <Body href={href} className="mt-auto block">{footer}</Body>
+
+      {buySlug && <ListBuyRow slug={buySlug} />}
 
       {overlay}
     </div>
@@ -116,7 +123,7 @@ export function PriceStatPair({
   stats,
   empty,
 }: {
-  stats: Array<{ label: string; value: string | null; color?: string; sub?: ReactNode }>
+  stats: Array<{ label: string; value: string | null; color?: string; shine?: boolean; sub?: ReactNode }>
   empty?: string | null
 }) {
   if (empty) {
@@ -137,7 +144,7 @@ export function PriceStatPair({
               className="truncate text-[16px] font-semibold leading-6 tabular-nums tracking-[-0.01em]"
               style={{ color: s.color ?? 'var(--color-text-primary)' }}
             >
-              {s.value ?? '-'}
+              {s.shine && s.value ? <TradeValue>{s.value}</TradeValue> : s.value ?? '-'}
             </div>
             {s.sub && <div className="text-[10px] tabular-nums text-text-tertiary">{s.sub}</div>}
           </div>

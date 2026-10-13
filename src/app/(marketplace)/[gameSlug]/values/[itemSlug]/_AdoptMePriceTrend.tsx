@@ -9,11 +9,12 @@
 
 import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { VARIANTS, VARIANT_LABEL } from '../../calculator/_adoptMeCalcTypes'
+import { VARIANTS } from '../../calculator/_adoptMeCalcTypes'
 import type { PetPricePoint } from './_adoptMePetTypes'
 import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
 import { TrendChartPlaceholder } from '@/components/values/ValueItemHero'
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 
 // recharts is ~100KB and sits below the fold: load it after the page.
 const PriceTrendChart = dynamic(
@@ -36,7 +37,7 @@ export function AdoptMePriceTrend({
     () =>
       VARIANTS.map((v) => ({
         key: v,
-        name: VARIANT_LABEL[v],
+        name: VARIANT_DISPLAY[v],
         color: variantColor(v),
         points: (history[v] ?? []).map((p) => ({ date: p.date, value: p.price })),
       })),

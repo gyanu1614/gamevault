@@ -19,9 +19,10 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { CaretUpIcon } from '@phosphor-icons/react/dist/csr/CaretUp'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { VALUE_BTN_SECONDARY, VALUE_LABEL, VALUE_SURFACE, VALUE_SURFACE_LINK } from '@/components/values/styles'
-import { VARIANT_LABEL, type Variant } from '../calculator/_adoptMeCalcTypes'
+import { type Variant } from '../calculator/_adoptMeCalcTypes'
 import { variantColor } from '../values/[itemSlug]/_adoptMeVariantColor'
 import type { HubStat, HubTeaserItem } from './_hubData'
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 
 /** Mosaic footprint per collage position — a deliberate, hand-tuned rhythm so
  *  the grid feels like a collage (one big hero, a couple of wides, the rest
@@ -198,7 +199,7 @@ function VariantBadge({ code, big }: { code: string; big?: boolean }) {
   const upper = code.toUpperCase()
   return (
     <span
-      title={VARIANT_LABEL[upper as Variant] ?? code}
+      title={VARIANT_DISPLAY[upper as Variant] ?? code}
       className={`inline-flex shrink-0 select-none items-center gap-1 rounded bg-black/55 font-semibold leading-none text-text-primary backdrop-blur-sm ${
         big ? 'h-6 px-1.5 text-[12px]' : 'h-5 px-1 text-[10px]'
       }`}

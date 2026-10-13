@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ValueCrossLinks } from '@/components/values/ValueCrossLinks'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight'
@@ -37,6 +38,7 @@ import { bindValueItemPriceTag, bindValuesTag } from '@/lib/values/revalidation'
 import { getGameContentTheme } from '@/lib/content/theme'
 import { socialTitle } from '@/lib/seo/title'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
+import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import { seoMeta } from '@/lib/seo/fit'
 
@@ -817,6 +819,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         />
       </section>
 
+      <ValueItemRails gameSlug="steal-a-brainrot" itemSlug={brainrot.slug} itemName={brainrot.name} imageUrl={brainrot.image_url ?? null}>
       <AvailableNow
         gameSlug="steal-a-brainrot"
         gameName="Steal a Brainrot"
@@ -828,7 +831,10 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         sellHref="/steal-a-brainrot/sell?src=sab-item-page"
       />
 
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+      {/* From 1280px the buy rails take both sides, so the market stats move
+          under the main sections (two cards side by side) instead of a third
+          column. */}
+      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-7 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8 xl:grid-cols-1">
         <div className="space-y-6">
 
           <section className={`${VALUE_SURFACE} p-5 sm:p-6`}>
@@ -888,7 +894,7 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           </section>
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-6 xl:grid xl:grid-cols-2 xl:gap-6 xl:space-y-0">
           <section className={`${VALUE_SURFACE} p-5`}>
             <div className="flex items-center gap-2">
               <TrendUpIcon aria-hidden size={18} weight="bold" className="text-text-tertiary" />
@@ -938,17 +944,13 @@ export default async function BrainrotValuePage({ params }: PageProps) {
       {/* Cross-links — back to the list + how values are calculated (E-E-A-T:
           every cited value links to its methodology, parity with Adopt Me). */}
       <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-10 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap gap-3">
-          <Link href="/steal-a-brainrot/values" className={VALUE_BTN_SECONDARY}>
-            <ArrowLeftIcon aria-hidden size={15} weight="bold" />
-            All Steal a Brainrot Values
-          </Link>
-          <Link href="/steal-a-brainrot/values/methodology" className={VALUE_BTN_SECONDARY}>
-            How We Value Items
-            <ArrowRightIcon aria-hidden size={15} weight="bold" />
-          </Link>
-        </div>
+        <ValueCrossLinks
+          ariaLabel="More Steal a Brainrot values"
+          back={{ href: '/steal-a-brainrot/values', label: 'All Steal a Brainrot Values', short: 'All Values' }}
+          method={{ href: '/steal-a-brainrot/values/methodology', label: 'How We Value Items', short: 'Our Method' }}
+        />
       </div>
+      </ValueItemRails>
       </GameHeroBackdrop>
           <HubFooter
         gameName={hubNav.current.name}

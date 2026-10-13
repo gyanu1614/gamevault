@@ -64,8 +64,11 @@ export function canPublishOffer(input: {
   currencyConfig: CurrencyConfig | null
   deliveryMethods: CurrencyDeliveryMethod[]
   policy: SellerPublishPolicy | null
+  /** The item fields are still loading: their required picks are not known yet. */
+  templateLoading?: boolean
 }): boolean {
   const { form, categorySlug, currencyConfig, deliveryMethods } = input
+  if (input.templateLoading) return false
   if (!input.attributesFilled) return false
   // Currency listings skip Title + Photos: the server fills them from the currency record.
   const isCurrency = categorySlug === 'currency'

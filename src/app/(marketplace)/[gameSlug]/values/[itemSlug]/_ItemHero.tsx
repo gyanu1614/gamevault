@@ -11,7 +11,8 @@ import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
-import { VALUE_LABEL } from '@/components/values/styles'
+import { VariantSelector } from '@/components/values/VariantSelector'
+import { mutationGroup } from '@/lib/values/variant-selector'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 
 // recharts is ~100KB and the chart sits below the fold (often just a
@@ -158,25 +159,13 @@ export default function ItemHero({
       anchorRef={heroRef}
       accent={visual.color}
       art={{ src: imageUrl, alt: imageAlt || `${displayName} Steal a Brainrot`, pixelated: true }}
-      eyebrow={
-        <>
-          <MutationDot visual={visual} size={8} />
-          {isDefault ? 'Default (no mutation)' : `${selected.name} mutation`}
-        </>
-      }
       title={displayName}
-      meta={
-        <>
-          <span style={{ color: rarityMeta('steal-a-brainrot', rarity).color }}>{rarity}</span>
-          <span aria-hidden className="text-text-disabled">
-            ·
-          </span>
-          <span className="text-text-tertiary">{obtainability}</span>
-        </>
-      }
       // Fixed row set so the hero height never shifts between mutations.
       // (Cheapest lives in the price column, so it's not repeated here.)
       stats={[
+        { label: 'Type', value: 'Brainrot' },
+        { label: 'Rarity', value: <span style={{ color: rarityMeta('steal-a-brainrot', rarity).color }}>{rarity}</span> },
+        { label: 'Availability', value: obtainability },
         { label: 'Base Income', value: formatIncome(selected.calculatedIncomePerSecond ?? baseIncomePerSecond) },
         { label: 'Mutation', value: `${selected.name} · ${formatMultiplier(selected.multiplier)}` },
         { label: 'In-Game Cost', value: ingameCost ?? 'Unknown' },
@@ -187,12 +176,12 @@ export default function ItemHero({
         value: cash ?? 'No data yet',
         children: (
           <>
-            <div className="mt-2 lg:flex lg:justify-end">
+            <div className="mt-2 lg:flex">
               <FreshnessBadge updatedAt={selected.marketUpdatedAt ?? updatedAt} />
             </div>
             {/* Only surface a note when the price is estimated or missing. */}
             {(selected.isEstimated || !cash) && (
-              <div className="mt-1.5 flex min-h-[20px] flex-wrap items-center gap-2 lg:justify-end">
+              <div className="mt-1.5 flex min-h-[20px] flex-wrap items-center gap-2">
                 {selected.isEstimated ? (
                   <HeroBadge color="var(--color-warning)">Estimated from multiplier</HeroBadge>
                 ) : (
@@ -207,41 +196,29 @@ export default function ItemHero({
         <ValueBuyActions
           cta={cta}
           itemName={displayName}
-          sell={{ href: '/steal-a-brainrot/sell?src=sab-item-page', label: 'Sell Yours For Cash' }}
           align="end"
+          sell={{ href: '/steal-a-brainrot/sell?src=sab-item-page', label: 'Sell Yours For Cash' }}
         />
       }
-      // Mutation grid — pick a mutation, everything above updates. An EVEN grid
-      // (not flex-wrap) so rows fill cleanly: 2 → 3 → 4 → 7 columns.
+      // The universal selector: every mutation of this brainrot, its colour and
+      // a swipeable strip (14 mutations), the pill slides to the pick; the
+      // price shows in the hero on select, not on every option.
       picker={
-        <>
-          <p className={`${VALUE_LABEL} text-[12px]`}>Pick a Mutation — Everything Updates</p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-            {ordered.map((mutation) => {
-              const mv = mutationVisual(mutation.slug)
-              const active = mutation.slug === selected.slug
-              return (
-                <button
-                  key={mutation.slug}
-                  type="button"
-                  onClick={() => selectMutation(mutation.slug)}
-                  aria-pressed={active}
-                  className={`flex min-w-0 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-[13px] font-semibold transition-[background-color,color,transform] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
-                    active ? '' : 'bg-bg-overlay text-text-secondary hover:bg-bg-overlay-2 hover:text-text-primary'
-                  }`}
-                  style={
-                    active
-                      ? { backgroundColor: `color-mix(in srgb, ${mv.color} 20%, var(--color-bg-overlay))`, color: mv.color }
-                      : undefined
-                  }
-                >
-                  <MutationDot visual={mv} size={10} />
-                  <span className="truncate">{mutation.name}</span>
-                </button>
-              )
-            })}
-          </div>
-        </>
+        <VariantSelector
+          groups={[
+            mutationGroup(
+              ordered.map((m) => ({
+                slug: m.slug,
+                name: m.name,
+                color: mutationVisual(m.slug).color,
+              })),
+              selected.slug,
+              (n) => formatCash(n) ?? '',
+            ),
+          ]}
+          onSelect={(_, slug) => selectMutation(slug)}
+          labels={false}
+        />
       }
       // Price trend of the hero-selected mutation (Compare adds others).
       below={

@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest'
+import { aboutAnswer, aboutBasis, aboutFacts, formRows } from './_adoptMeAboutModel'
+
+const v = (variant: string, cheapestUsd: number | null, tradeValue: number | null, listingsTracked = 0) =>
+  ({ variant, label: variant, cheapestUsd, cashUsd: cheapestUsd, averageUsd: cheapestUsd, tradeValue, isEstimated: false, confidence: 'high', listingsTracked, lastPricedAt: null }) as any
+
+const variants = [v('MFR', 2100, 9000, 3), v('FR', 289.99, 1450, 24), v('N', 120, 600, 8), v('NFR', 650, 3105, 15), v('MEGA', null, 7000)]
+
+describe('formRows', () => {
+  it('every form in ladder order, with our own stock per form', () => {
+    const rows = formRows(variants, { total: 5, minPriceUsd: 290, byVariant: { 'neon-fly-ride': { count: 2, minPriceUsd: 590 } } }, (c) => (c === 'NFR' ? 'neon-fly-ride' : c.toLowerCase()), 'NFR')
+    expect(rows.map((r) => r.code)).toEqual(['N', 'FR', 'NFR', 'MEGA', 'MFR'])
+    const nfr = rows.find((r) => r.code === 'NFR')!
+    expect(nfr).toMatchObject({ label: 'Neon Fly Ride', cheapestUsd: 650, tradeValue: 3105, listings: 15, ourFromUsd: 590, ourCount: 2, selected: true })
+    expect(rows.find((r) => r.code === 'FR')).toMatchObject({ ourFromUsd: null, selected: false })
+  })
+})
+
+describe('aboutAnswer', () => {
+  it('one plain sentence for the picked form: price first, then trade value', () => {
+    expect(aboutAnswer('Bat Dragon', v('NFR', 650, 3105, 15))).toBe('A Neon Fly Ride Bat Dragon sells for $650, with a trade value of 3,105.')
+    expect(aboutAnswer('Bat Dragon', v('FR', 282, null, 2))).toBe('A Fly Ride Bat Dragon sells for $282.')
+  })
+  it('no price → the trade value alone; nothing → null', () => {
+    expect(aboutAnswer('Owl', v('MEGA', null, 7000))).toBe('A Mega Owl has a trade value of 7,000.')
+    expect(aboutAnswer('Owl', v('MEGA', null, null))).toBeNull()
+  })
+  it('three tiers, Normal / Neon / Mega: MFR reads "Mega Fly Ride"', () => {
+    expect(aboutAnswer('Owl', v('MFR', 2100, 9000, 3))).toBe('A Mega Fly Ride Owl sells for $2,100, with a trade value of 9,000.')
+  })
+})
+
+describe('aboutBasis', () => {
+  it('where the price comes from, as a short line', () => {
+    expect(aboutBasis(v('NFR', 650, 3105, 15))).toBe('Cheapest of 15 listings from sellers with 100+ reviews.')
+    expect(aboutBasis(v('NFR', 650, 3105, 1))).toBe('Cheapest of 1 listing from sellers with 100+ reviews.')
+    expect(aboutBasis(v('MEGA', null, 7000))).toBe('No cash listings tracked yet.')
+    expect(aboutBasis(v('MEGA', null, null))).toBeNull()
+  })
+})
+
+describe('aboutFacts', () => {
+  it('rarity, origin, availability, price range across forms, forms priced', () => {
+    const facts = aboutFacts({ rarity: 'Legendary', originDetail: '2019 Halloween Event', originType: 'event', obtainabilityLabel: 'Unobtainable' }, variants)
+    expect(facts.map((f) => [f.label, f.value])).toEqual([
+      ['Rarity', 'Legendary'],
+      ['Origin', '2019 Halloween Event'],
+      ['Availability', 'Unobtainable'],
+      ['Price Range', '$120 – $2,100'],
+      ['Forms Priced', '4 of 5'],
+    ])
+  })
+})

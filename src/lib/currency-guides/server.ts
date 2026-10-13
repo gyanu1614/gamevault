@@ -173,3 +173,6 @@ export async function getRelatedPages(
   }
   return [...own, ...others].slice(0, max)
 }
+
+/** Every enabled category page with live offers, busiest first (the buy rails' site-wide pick). */
+export const getLivePages = readLivePages
