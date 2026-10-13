@@ -123,12 +123,7 @@ export function FigureNV({ node, updateAttributes, deleteNode, selected }: NodeV
       </div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <Field value={a.caption ?? ''} onValue={(v) => updateAttributes({ caption: v })} placeholder="Caption (optional)" />
-        <Field
-          className={cn(!String(a.alt ?? '').trim() && a.src && 'border-[#E0B155]/60')}
-          value={a.alt ?? ''}
-          onValue={(v) => updateAttributes({ alt: v })}
-          placeholder="Alt text: what the image shows (required)"
-        />
+        <Field value={a.alt ?? ''} onValue={(v) => updateAttributes({ alt: v })} placeholder="Describe it for Google (optional)" />
       </div>
     </Block>
   )
@@ -161,7 +156,7 @@ function PairSide({ v, set }: { v: { image?: StoredImage; alt?: string; caption?
         </button>
       )}
       {up.el}
-      <Field value={v.alt ?? ''} onValue={(t) => set({ alt: t })} placeholder="Alt text (required)" />
+      <Field value={v.alt ?? ''} onValue={(t) => set({ alt: t })} placeholder="Describe it for Google (optional)" />
       <Field value={v.caption ?? ''} onValue={(t) => set({ caption: t })} placeholder="Caption (optional)" />
     </div>
   )

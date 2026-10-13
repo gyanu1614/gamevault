@@ -121,3 +121,10 @@ describe('BlogDocView: empty table rows', () => {
     expect(html.match(/<tr /g)?.length).toBe(2)
   })
 })
+
+describe('BlogDocView: image description falls back to the caption', () => {
+  it('an empty description uses the caption as the alt text', () => {
+    const d: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, alt: '', caption: 'The lobby at night', layout: 'column' } }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc: d }))).toContain('alt="The lobby at night"')
+  })
+})

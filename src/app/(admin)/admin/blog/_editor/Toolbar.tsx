@@ -21,6 +21,9 @@ import { cn } from '@/lib/utils'
 import { SLASH_ITEMS } from './slash'
 import { splitLines } from './lines'
 
+/** Buttons hand the cursor back where it was without moving the page (iPhone jumped). */
+const NO_SCROLL = { scrollIntoView: false }
+
 const btn = (on = false) =>
   cn(
     'inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-2 text-[12.5px] font-medium transition-colors disabled:opacity-40',
@@ -58,7 +61,7 @@ function LinkField({ editor, href, onDone }: { editor: Editor; href: string; onD
   const [value, setValue] = useState(href)
   const apply = () => {
     const v = normalizeHref(value)
-    const chain = editor.chain().focus().extendMarkRange('link')
+    const chain = editor.chain().focus(undefined, NO_SCROLL).extendMarkRange('link')
     if (v) chain.setLink({ href: v }).run()
     else chain.unsetLink().run()
     onDone()
@@ -86,7 +89,7 @@ function LinkField({ editor, href, onDone }: { editor: Editor; href: string; onD
           type="button"
           className={btn()}
           onClick={() => {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+            editor.chain().focus(undefined, NO_SCROLL).extendMarkRange('link').unsetLink().run()
             onDone()
           }}
         >
@@ -108,7 +111,7 @@ function Icon({ label, on, onClick, disabled, children }: { label: string; on?: 
 /** Bold, italic, link + the heading levels — shared by the toolbar and the selection menu. */
 function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }) {
   const s = useMarks(editor)
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
   // Block styles change the line(s) the cursor or selection is on — never more.
   const line = () => c().command(splitLines)
   return (
@@ -126,7 +129,7 @@ function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }
 
 /** Shown while the cursor is in a table: rows and columns go where the cursor is. */
 function TableControls({ editor }: { editor: Editor }) {
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
   return (
     <span className="flex basis-full flex-wrap items-center gap-0.5 border-t border-white/[0.06] pt-1.5 sm:basis-auto sm:border-l sm:border-t-0 sm:pl-1.5 sm:pt-0" role="group" aria-label="Table">
       <span className="px-1.5 text-[12px] font-medium text-text-tertiary">Table</span>
@@ -142,7 +145,7 @@ function TableControls({ editor }: { editor: Editor }) {
 export function Toolbar({ editor }: { editor: Editor }) {
   const s = useMarks(editor)
   const [linking, setLinking] = useState(false)
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
   return (
     <div className="sticky top-16 z-20 -mx-4 flex min-h-12 flex-wrap items-center gap-0.5 border-b border-white/[0.06] bg-[#1D1E23] px-3 py-2 sm:-mx-6 sm:px-5">
       {linking ? (
@@ -165,11 +168,11 @@ export function Toolbar({ editor }: { editor: Editor }) {
               className="max-h-[60vh] w-64 overflow-y-auto"
               onCloseAutoFocus={(e) => {
                 e.preventDefault()
-                editor.commands.focus()
+                editor.commands.focus(undefined, NO_SCROLL)
               }}
             >
               {SLASH_ITEMS.map((it) => (
-                <DropdownMenuItem key={it.title} onSelect={() => it.run(editor.chain().focus())} className="flex-col items-start gap-0">
+                <DropdownMenuItem key={it.title} onSelect={() => it.run(editor.chain().focus(undefined, NO_SCROLL))} className="flex-col items-start gap-0">
                   <span className="text-[13px] font-medium text-text-primary">{it.title}</span>
                   <span className="text-[11.5px] text-text-tertiary">{it.hint}</span>
                 </DropdownMenuItem>

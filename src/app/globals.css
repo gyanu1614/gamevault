@@ -241,6 +241,13 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* The blog editor scrolls the page itself (to the cursor, after a tap).
+     Smooth page scrolling fights that on iPhone Safari: a tap animated the
+     page back to the top and the cursor landed off the tapped line. */
+  html:has(.blog-editor) {
+    scroll-behavior: auto;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;

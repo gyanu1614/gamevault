@@ -53,7 +53,8 @@ export function postChecklist(p: CheckInput): { items: CheckItem[]; blocking: Ch
     { id: 'title', label: 'A title', ok: title.length > 0, blocking: true },
     { id: 'slug', label: 'A URL slug', ok: /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug), blocking: true },
     { id: 'game', label: 'A game', ok: !!p.gameSlug, blocking: true },
-    { id: 'alt', label: missingAlt ? `Alt text on ${missingAlt} image${missingAlt === 1 ? '' : 's'}` : 'Alt text on every image', ok: missingAlt === 0, blocking: true },
+    // Optional (owner, 2026-10-13): a short description helps Google, but never blocks publishing.
+    { id: 'alt', label: missingAlt ? `Describe ${missingAlt} image${missingAlt === 1 ? '' : 's'} for Google (optional)` : 'Every image described for Google', ok: missingAlt === 0, blocking: false },
     {
       id: 'slots',
       label: emptySlots ? `Add pictures to ${emptySlots} empty image slot${emptySlots === 1 ? '' : 's'}` : 'No empty image slots',

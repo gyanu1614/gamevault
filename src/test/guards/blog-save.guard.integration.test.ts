@@ -7,7 +7,7 @@
  *     read time computed from the words;
  *   · the first publish of a draft stamps published_at = now; an edit of a
  *     live post keeps it;
- *   · publishing with an image that has no alt text is refused, nothing changes;
+ *   · an image with no description still publishes (captions and descriptions are optional);
  *   · a second post on the same game + URL gets a plain-words error.
  *
  * Rows are minted through this file's namespace and every one is deleted in
@@ -117,16 +117,15 @@ describe.skipIf(!hasEnv)('blog save (integration)', () => {
     expect(new Date((await rows(slug))[0].published_at).getTime()).toBe(stamped)
   })
 
-  it('refuses to publish an image with no alt text and leaves the draft as it was', async () => {
+  it('publishes a post whose image has no caption or description', async () => {
     const { saveBlogPost } = await import('@/lib/actions/admin-blog-save')
     const slug = slugOf('alt')
     const created = await saveBlogPost(null, input(slug))
     if (!created.success) throw new Error(created.error)
-    const figure = { type: 'figure', attrs: { src: 'https://example.com/a.webp', alt: '', layout: 'column' } }
+    const figure = { type: 'figure', attrs: { src: 'https://example.com/a.webp', alt: '', caption: '', layout: 'column' } }
     const res = await saveBlogPost(created.id, input(slug, { status: 'published', doc: doc(10, [figure]) }))
-    expect(res.success).toBe(false)
-    if (!res.success) expect(res.error).toMatch(/alt text/i)
-    expect((await rows(slug))[0].status).toBe('draft')
+    expect(res.success).toBe(true)
+    expect((await rows(slug))[0].status).toBe('published')
   })
 
   it('a second post on the same game and URL gets a plain-words error', async () => {

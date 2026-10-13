@@ -69,7 +69,7 @@ export function FigureView({ attrs }: { attrs: Record<string, unknown> }) {
     <figure className={`mt-8 ${layout === 'wide' ? 'blog-wide' : ''}`}>
       <Picture
         image={{ src, width: attrs.width as number, height: attrs.height as number, blur: attrs.blur as string | null, sources: attrs.sources as StoredImage['sources'] }}
-        alt={String(attrs.alt ?? caption)}
+        alt={String(attrs.alt || caption || '')}
         sizes={SIZES[layout]}
         className="rounded-[10px]"
       />
@@ -86,7 +86,7 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
     <div className="mt-8 grid gap-3 sm:grid-cols-2">
       {sides.map((s, i) => (
         <figure key={i}>
-          <Picture image={s.image} alt={s.alt ?? s.caption ?? ''} sizes={SIZES.half} className="rounded-[10px]" />
+          <Picture image={s.image} alt={s.alt || s.caption || ''} sizes={SIZES.half} className="rounded-[10px]" />
           {s.caption && <figcaption className="mt-2 text-center text-[13px] leading-5 text-text-tertiary">{s.caption}</figcaption>}
         </figure>
       ))}
