@@ -21,7 +21,6 @@ import { CookieSettingsButton } from '@/components/analytics/ConsentBanner'
 import Link from '@/components/navigation/AppLink'
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { DISCORD_INVITE_URL } from '@/lib/config/social'
 import { foundingHref } from '@/lib/seo/founding-href'
 
@@ -189,9 +188,6 @@ export function Footer({ gameDirectory }: { gameDirectory?: React.ReactNode } = 
               <dd>{COMPANY.number}</dd>
             </dl>
 
-            {/* Trustpilot — our own link, NOT a TrustBox (display widgets need
-                a Plus plan; see TrustpilotLink). Self-hides until reviews land. */}
-            <TrustpilotLink className="mt-6" />
           </motion.div>
 
           {/* Link columns + a support block. Every column shows at every

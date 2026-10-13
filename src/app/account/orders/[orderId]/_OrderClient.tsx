@@ -19,6 +19,7 @@ import { DeliveryProgressBar } from './_DeliveryProgressBar'
 import { OrderCard } from './_OrderCard'
 import { OrderDetailsCard, type RefundToSourceState } from './_OrderDetailsCard'
 import { StatusStrip } from './_StatusStrip'
+import { TrustpilotReviewLine } from '@/components/trust/TrustpilotReviewLine'
 import { AwaitingPaymentPanel } from './_AwaitingPaymentPanel'
 import { MarkDeliveredModal } from './_MarkDeliveredModal'
 import { MarkReceivedModal } from './_MarkReceivedModal'
@@ -459,6 +460,7 @@ export function OrderClient(props: OrderClientProps) {
               hidePassiveOnMobile
             />
             )}
+            {userRole === 'buyer' && order.status === 'completed' && <TrustpilotReviewLine />}
             {/* Mobile stacking: delivery instructions (small, actionable)
                 jump ABOVE the tall chat card on max-lg via CSS order so
                 neither party scrolls past ~700px of chat to reach them.

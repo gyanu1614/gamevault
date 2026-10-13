@@ -16,6 +16,7 @@ import { transition } from '@/lib/escrow/transition'
 import { awardCashback } from '@/lib/loyalty/award'
 import { recordReferralCommission } from '@/lib/referral/commission'
 import { orderItemTitleFor } from '@/lib/orders/item-title-server'
+import { sendCompletionReceipt } from '@/lib/trustpilot/invite'
 
 export interface AutoReleaseResult {
   orderId: string
@@ -78,8 +79,9 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
 
     console.log(`✅ Successfully released escrow for order ${orderId}`)
 
-    // Completion comms: buyer receipt (autoReleased copy + Trustpilot
-    // AFS BCC) + seller email + seller in-app. Callers have no usable
+    // Completion comms: buyer receipt (autoReleased copy; Trustpilot invite
+    // BCC when the order qualifies — lib/trustpilot/invite.ts) + seller
+    // email + seller in-app. Callers have no usable
     // user session (cron) or a different one (admin), so use the
     // service-role client. Best-effort: a comms failure must not mark
     // the release as failed.
@@ -91,23 +93,11 @@ export async function releaseDueOrder(orderId: string): Promise<AutoReleaseResul
         .select('id, email, username, full_name')
         .in('id', [full.buyer_id, full.seller_id]) as any
       const party = (id: string) => parties?.find((p: any) => p.id === id)
-      const buyer = party(full.buyer_id)
       const seller = party(full.seller_id)
-      const { sendOrderCompletionEmail, sendOrderCompletedSellerEmail } =
-        await import('@/lib/email')
+      const { sendOrderCompletedSellerEmail } = await import('@/lib/email')
 
       await Promise.allSettled([
-        buyer?.email
-          ? sendOrderCompletionEmail({
-              to: buyer.email,
-              name: buyer.full_name || buyer.username || 'Gamer',
-              orderId: full.id,
-              orderNumber: orderRef,
-              listingTitle,
-              totalPaid: full.total_amount ?? 0,
-              autoReleased: true,
-            })
-          : Promise.resolve(),
+        sendCompletionReceipt(full.id),
         seller?.email
           ? sendOrderCompletedSellerEmail({
               to: seller.email,

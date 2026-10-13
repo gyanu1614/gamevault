@@ -24,7 +24,7 @@ import {
   Wallet
 } from 'lucide-react'
 import Link from '@/components/navigation/AppLink'
-import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
+import { TrustpilotGate, TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
 import { SafeDropExplainer } from './_SafeDropExplainer'
 import { serializeJsonLd } from '@/lib/seo/jsonld'
 import {
@@ -453,24 +453,25 @@ export default function SafeDropPage() {
         </div>
       </section>
 
-      {/* Trustpilot Reviews Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Trusted by Gamers Worldwide
-            </h2>
-            <p className="text-gray-400 text-lg">
-              See what buyers and sellers say about shopping with SafeDrop
-            </p>
+      {/* Trustpilot reviews — the whole section waits for 10+ real reviews
+          (set on /admin): no "Trusted by…" claim before there is proof. */}
+      <TrustpilotGate>
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                Trusted by Gamers Worldwide
+              </h2>
+              <p className="text-gray-400 text-lg">
+                See what buyers and sellers say about shopping with SafeDrop
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <TrustpilotShowcase />
+            </div>
           </div>
-          <div className="flex justify-center">
-            {/* Our own link, not a TrustBox — display widgets need Plus and
-                only ever rendered Trustpilot's white fallback logo. */}
-            <TrustpilotLink />
-          </div>
-        </div>
-      </section>
+        </section>
+      </TrustpilotGate>
 
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">

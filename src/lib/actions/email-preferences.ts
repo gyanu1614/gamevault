@@ -24,7 +24,7 @@ export async function getMyEmailPreferences(): Promise<Result<{ prefs: EmailPref
   if (!userId) return { success: false, error: 'Please sign in again.' }
   const { data, error } = await (createServiceRoleClient() as any)
     .from('email_preferences')
-    .select('new_order, new_message, new_review, payout_processed, marketing')
+    .select('new_order, new_message, new_review, payout_processed, review_invites, marketing')
     .eq('user_id', userId)
     .maybeSingle()
   if (error) return { success: false, error: 'Couldn’t load your email settings.' }

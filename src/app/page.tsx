@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { PopularGames } from '@/features/home/components/PopularGames'
 import { LatestListings } from '@/features/home/components/LatestListings'
+import { TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
 import { organization, ORGANIZATION_ID, serializeJsonLd } from '@/lib/seo/jsonld'
 import { seoMeta } from '@/lib/seo/fit'
 
@@ -73,6 +74,7 @@ export default function Page() {
       <HomePage
         popularGames={<PopularGames />}
         latestListings={<LatestListings />}
+        trustpilot={<TrustpilotShowcase className="mx-auto w-full max-w-[420px]" />}
       />
     </>
   )

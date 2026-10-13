@@ -47,7 +47,6 @@ import { formatDeliveryLabel } from '@/lib/utils/delivery-time'
 import HowItWorksBand from '@/components/marketplace/HowItWorksBand'
 import { SectionHeading } from '@/components/marketplace/SectionHeading'
 import { TrustBand } from '@/components/marketplace/TrustBand'
-import { TrustpilotLink } from '@/components/trust/TrustpilotLink'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 import { gameTrademarkLine } from '@/lib/seo/trademark'
 import { FaqCards } from '@/components/marketplace/FaqCards'
@@ -147,6 +146,8 @@ interface Props {
   /** Server-rendered blog rail (DB-backed <BlogRail>), passed as a slot so
    *  this client component doesn't import the blog data layer. */
   blogRail?: React.ReactNode
+  /** Server-rendered Trustpilot proof (TrustpilotShowcase); renders nothing below 10 reviews. */
+  trustpilot?: React.ReactNode
 }
 
 const PREVIEW_STATUS_LABELS: Record<string, string> = {
@@ -161,7 +162,7 @@ const PREVIEW_STATUS_LABELS: Record<string, string> = {
 }
 
 export default function ListingDetailClient({
-  listing, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail,
+  listing, previewStatus, templateFields, similarOffers, similarOffersAsItems, otherSellerOffers, blogRail, trustpilot,
 }: Props) {
   const router = useRouter()
   const { open: openAuth } = useAuthDialog()
@@ -722,13 +723,8 @@ verified={listing.seller.verified}
                 <TrustBand />
               </Card>
 
-              {/* Trustpilot rating — compact micro line, reassurance at the
-                  buy decision point. Lazy-loaded; renders nothing until the
-                  env var is set. */}
-              {/* Our own link, not a TrustBox — display widgets need Plus and
-                  only ever rendered Trustpilot's white fallback logo whose
-                  href pointed at trustpilot.com, not our profile. */}
-              <TrustpilotLink className="mt-3 flex justify-center" />
+              {/* Trustpilot — server-rendered slot; nothing below 10 reviews. */}
+              {trustpilot}
           </div>
         </div>
 

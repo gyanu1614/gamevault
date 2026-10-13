@@ -15,6 +15,7 @@ import { SITE_URL } from '@/config/site'
 import { JsonLd, breadcrumbList, serializeJsonLd } from '@/lib/seo/jsonld'
 import { getTemplateFields } from '@/lib/templates'
 import ViewTracker from '@/components/listings/ViewTracker'
+import { TrustpilotShowcase } from '@/components/trust/TrustpilotShowcase'
 import ListingDetailClient, { type ListingForDetail } from './_ListingDetailClient'
 import { BlogRail } from '@/components/blog/BlogRail'
 import { listingToOffer as listingToItemOffer, loadItemsTaxonomy } from '../_itemsData'
@@ -315,6 +316,7 @@ export async function ListingDetailBody({
       <ListingDetailClient
         listing={shaped}
         blogRail={<BlogRail gameSlug={shaped.gameSlug} gameName={shaped.gameName} />}
+        trustpilot={<TrustpilotShowcase className="mt-3 flex justify-center" />}
         // Owner/admin preview of a non-active listing: amber banner +
         // purchase disabled (buying would bypass moderation).
         previewStatus={isPreview ? (listing.status as string) : null}
