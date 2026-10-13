@@ -206,9 +206,21 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  // Title and summary grow with their text — and again when the column's
+  // width changes (window resize, side panel stacking), or a wrapped title
+  // would show only its first line.
   useEffect(() => {
-    grow(titleRef.current)
-    grow(excerptRef.current)
+    const els = [titleRef.current, excerptRef.current].filter((el): el is HTMLTextAreaElement => !!el)
+    els.forEach(grow)
+    let width = els[0]?.clientWidth ?? 0
+    const ro = new ResizeObserver(() => {
+      const w = els[0]?.clientWidth ?? 0
+      if (w === width) return
+      width = w
+      els.forEach(grow)
+    })
+    els.forEach((el) => ro.observe(el))
+    return () => ro.disconnect()
   }, [started])
 
   if (!started) {
