@@ -107,3 +107,16 @@ describe('BlogDocView: game tool links', () => {
     expect(html).toContain('href="/sell"')
   })
 })
+
+describe('BlogDocView: empty table rows', () => {
+  const cell = (type: string, text?: string) => ({ type, content: [text ? { type: 'paragraph', content: [t(text)] } : { type: 'paragraph' }] })
+  const tableDoc: any = { type: 'doc', content: [{ type: 'table', content: [
+    { type: 'tableRow', content: [cell('tableHeader', 'Item'), cell('tableHeader', 'Why')] },
+    { type: 'tableRow', content: [cell('tableCell', 'Pet'), cell('tableCell', 'Sells')] },
+    { type: 'tableRow', content: [cell('tableCell'), cell('tableCell')] },
+  ] }] }
+  it('a row whose cells are all empty is left out', () => {
+    const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: tableDoc }))
+    expect(html.match(/<tr /g)?.length).toBe(2)
+  })
+})

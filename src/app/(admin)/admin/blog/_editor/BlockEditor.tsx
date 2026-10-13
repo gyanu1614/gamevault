@@ -19,7 +19,9 @@ import { SelectionMenu, Toolbar } from './Toolbar'
 
 /** Mirrors the public renderer's type (BlogDocView): same sizes, top margins only. */
 const PROSE =
-  'blog-editor min-h-[420px] pb-16 text-[16.5px] leading-[1.7] text-text-secondary outline-none sm:text-[17px] ' +
+  // No focus ring on the writing area itself: the caret is the cue, and the
+  // site-wide ring drew a box around the whole post while typing.
+  'blog-editor min-h-[420px] pb-16 text-[16.5px] leading-[1.7] text-text-secondary outline-none focus-visible:shadow-none sm:text-[17px] ' +
   '[&>*:first-child]:mt-0 [&>p]:mt-5 ' +
   '[&>h2]:mt-11 [&>h2]:text-[22px] [&>h2]:font-bold [&>h2]:leading-tight [&>h2]:tracking-[-0.01em] [&>h2]:text-text-primary sm:[&>h2]:text-[26px] ' +
   '[&>h3]:mt-8 [&>h3]:text-[19px] [&>h3]:font-semibold [&>h3]:leading-snug [&>h3]:text-text-primary sm:[&>h3]:text-[20px] ' +
@@ -62,7 +64,11 @@ export function BlockEditor({ initial, onChange }: { initial: BlogDoc; onChange:
         // Above the pinned toolbar when the selection is the first line under it.
         className="z-40"
         // Text selections only: images and other blocks have their own controls.
-        shouldShow={({ editor: e, from, to }) => from !== to && !e.isActive('figure') && !e.isActive('imagePair') && e.view.hasFocus()}
+        // Typing a link address moves focus into the menu itself; it must stay open then.
+        shouldShow={({ editor: e, element, from, to }) => {
+          const inMenu = element.contains(document.activeElement)
+          return from !== to && !e.isActive('figure') && !e.isActive('imagePair') && (e.view.hasFocus() || inMenu)
+        }}
       >
         <SelectionMenu editor={editor} />
       </BubbleMenu>

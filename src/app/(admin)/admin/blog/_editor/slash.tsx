@@ -25,7 +25,8 @@ export const SLASH_ITEMS: SlashItem[] = [
   { title: 'Image', hint: 'Upload a picture', keywords: 'photo picture screenshot', run: (c) => c.insertContent({ type: 'figure', attrs: { layout: 'column' } }).run() },
   { title: 'Two Images', hint: 'Side by side', keywords: 'pair gallery', run: (c) => c.insertContent({ type: 'imagePair' }).run() },
   { title: 'Table', hint: '3 × 3, first row is the header', keywords: 'grid', run: (c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-  { title: 'Tip Box', hint: 'Tip, warning, note or key takeaways', keywords: 'callout warning note takeaways', run: (c) => c.insertContent({ type: 'callout', attrs: { tone: 'tip' }, content: [{ type: 'paragraph' }] }).run() },
+  // Wraps the line you are on, so the cursor lands inside the box (an empty line → an empty box).
+  { title: 'Tip Box', hint: 'Tip, warning, note or key takeaways', keywords: 'callout warning note takeaways', run: (c) => c.wrapIn('callout', { tone: 'tip' }).run() },
   { title: 'Item Card', hint: 'Live value and offers for an item', keywords: 'pet knife value price', run: (c) => c.insertContent({ type: 'itemCard' }).run() },
   { title: 'Codes Table', hint: 'Codes with copy buttons', keywords: 'redeem promo', run: (c) => c.insertContent({ type: 'codes', attrs: { rows: [{ code: '', reward: '', isNew: true }] } }).run() },
   { title: 'FAQ', hint: 'Questions and answers', keywords: 'questions', run: (c) => c.insertContent({ type: 'faq', attrs: { items: [{ q: '', a: '' }] } }).run() },

@@ -5,7 +5,7 @@
  * attrs are the same the public renderer reads (src/lib/blog/doc/schema.ts),
  * so what you fill in here is what readers get.
  */
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,46 @@ export const EditorGameContext = createContext<string | null>(null)
 
 export const fieldCls =
   'h-9 w-full rounded-md border border-white/[0.08] bg-[#141518] px-2.5 text-base text-text-primary outline-none placeholder:text-text-tertiary focus:border-white/25 sm:text-[13px]'
+/**
+ * A text box inside a block. It keeps its own copy of the text while you
+ * type: writing straight to the block re-draws the box after each key and
+ * the cursor jumped to the end of the line.
+ */
+function Field({
+  value,
+  onValue,
+  multiline,
+  className,
+  ...rest
+}: { value: string; onValue: (v: string) => void; multiline?: boolean } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  const [text, setText] = useState(value)
+  const editing = useRef(false)
+  // Outside changes (undo, another field) show up when you are not typing here.
+  useEffect(() => {
+    if (!editing.current) setText(value)
+  }, [value])
+  const common = {
+    value: text,
+    onFocus: () => void (editing.current = true),
+    onBlur: () => void (editing.current = false),
+  }
+  const change = (v: string) => {
+    setText(v)
+    onValue(v)
+  }
+  if (multiline) {
+    return (
+      <textarea
+        {...common}
+        placeholder={rest.placeholder}
+        className={cn(fieldCls, 'h-20 py-2', className)}
+        onChange={(e) => change(e.target.value)}
+      />
+    )
+  }
+  return <input {...rest} {...common} className={cn(fieldCls, className)} onChange={(e) => change(e.target.value)} />
+}
+
 const chip = (on: boolean) =>
   cn('h-7 rounded-md px-2.5 text-[12px] font-medium transition-colors', on ? 'bg-white/[0.14] text-text-primary' : 'bg-white/[0.05] text-text-secondary hover:text-text-primary')
 
@@ -82,11 +122,11 @@ export function FigureNV({ node, updateAttributes, deleteNode, selected }: NodeV
         {a.width && <span className="ml-auto text-[11.5px] text-text-tertiary">{a.width}×{a.height}</span>}
       </div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <input className={fieldCls} value={a.caption ?? ''} onChange={(e) => updateAttributes({ caption: e.target.value })} placeholder="Caption (optional)" />
-        <input
-          className={cn(fieldCls, !String(a.alt ?? '').trim() && a.src && 'border-[#E0B155]/60')}
+        <Field value={a.caption ?? ''} onValue={(v) => updateAttributes({ caption: v })} placeholder="Caption (optional)" />
+        <Field
+          className={cn(!String(a.alt ?? '').trim() && a.src && 'border-[#E0B155]/60')}
           value={a.alt ?? ''}
-          onChange={(e) => updateAttributes({ alt: e.target.value })}
+          onValue={(v) => updateAttributes({ alt: v })}
           placeholder="Alt text: what the image shows (required)"
         />
       </div>
@@ -121,8 +161,8 @@ function PairSide({ v, set }: { v: { image?: StoredImage; alt?: string; caption?
         </button>
       )}
       {up.el}
-      <input className={fieldCls} value={v.alt ?? ''} onChange={(e) => set({ alt: e.target.value })} placeholder="Alt text (required)" />
-      <input className={fieldCls} value={v.caption ?? ''} onChange={(e) => set({ caption: e.target.value })} placeholder="Caption (optional)" />
+      <Field value={v.alt ?? ''} onValue={(t) => set({ alt: t })} placeholder="Alt text (required)" />
+      <Field value={v.caption ?? ''} onValue={(t) => set({ caption: t })} placeholder="Caption (optional)" />
     </div>
   )
 }
@@ -134,13 +174,23 @@ const TONES = [
   ['takeaways', 'Key Takeaways'],
 ] as const
 
-export function CalloutNV({ node, updateAttributes }: NodeViewProps) {
+export function CalloutNV({ node, updateAttributes, editor, getPos }: NodeViewProps) {
+  // Remove the box, keep what is written in it.
+  const unwrap = () => {
+    const pos = getPos()
+    if (typeof pos !== 'number') return
+    editor.chain().focus().command(({ tr }) => {
+      tr.replaceWith(pos, pos + node.nodeSize, node.content)
+      return true
+    }).run()
+  }
   return (
     <NodeViewWrapper className="my-4 rounded-[10px] border border-white/[0.1] bg-white/[0.03] px-4 py-3">
-      <div contentEditable={false} className="mb-1.5 flex gap-1.5">
+      <div contentEditable={false} className="mb-1.5 flex flex-wrap items-center gap-1.5">
         {TONES.map(([v, l]) => (
           <button key={v} type="button" className={chip(node.attrs.tone === v)} onClick={() => updateAttributes({ tone: v })}>{l}</button>
         ))}
+        <button type="button" onClick={unwrap} className="ml-auto text-[12px] text-text-tertiary hover:text-error">Remove Box</button>
       </div>
       <NodeViewContent className="[&_p]:my-1" />
     </NodeViewWrapper>
@@ -155,8 +205,8 @@ export function FaqNV({ node, updateAttributes, deleteNode, selected }: NodeView
       <div className="space-y-3">
         {items.map((it, i) => (
           <div key={i} className="space-y-1.5">
-            <input className={fieldCls} value={it.q} placeholder="Question" onChange={(e) => set(items.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} />
-            <textarea className={cn(fieldCls, 'h-20 py-2')} value={it.a} placeholder="Answer" onChange={(e) => set(items.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} />
+            <Field value={it.q} placeholder="Question" onValue={(t) => set(items.map((x, j) => (j === i ? { ...x, q: t } : x)))} />
+            <Field multiline value={it.a} placeholder="Answer" onValue={(t) => set(items.map((x, j) => (j === i ? { ...x, a: t } : x)))} />
             {items.length > 1 && <button type="button" className="text-[12px] text-text-tertiary hover:text-error" onClick={() => set(items.filter((_, j) => j !== i))}>Remove question</button>}
           </div>
         ))}
@@ -176,8 +226,8 @@ export function CodesNV({ node, updateAttributes, deleteNode, selected }: NodeVi
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[1fr_1.4fr_auto] items-center gap-2">
-            <input className={cn(fieldCls, 'font-mono')} value={r.code} placeholder="CODE" onChange={(e) => patch(i, { code: e.target.value })} />
-            <input className={fieldCls} value={r.reward} placeholder="Reward" onChange={(e) => patch(i, { reward: e.target.value })} />
+            <Field className="font-mono" value={r.code} placeholder="CODE" onValue={(t) => patch(i, { code: t })} />
+            <Field value={r.reward} placeholder="Reward" onValue={(t) => patch(i, { reward: t })} />
             <div className="flex gap-1">
               <button type="button" className={chip(!!r.isNew)} onClick={() => patch(i, { isNew: !r.isNew })}>New</button>
               <button type="button" className={chip(!!r.expired)} onClick={() => patch(i, { expired: !r.expired })}>Expired</button>
@@ -248,8 +298,8 @@ export function CtaNV({ node, updateAttributes, deleteNode, selected }: NodeView
   return (
     <Block label="Button" selected={selected} onRemove={deleteNode}>
       <div className="grid gap-2 sm:grid-cols-2">
-        <input className={fieldCls} value={node.attrs.label} onChange={(e) => updateAttributes({ label: e.target.value })} placeholder="Button text, e.g. Shop MM2 Knives" />
-        <input className={fieldCls} value={node.attrs.href} onChange={(e) => updateAttributes({ href: e.target.value })} placeholder="/murder-mystery-2/buy-items" />
+        <Field value={String(node.attrs.label ?? '')} onValue={(t) => updateAttributes({ label: t })} placeholder="Button text, e.g. Shop MM2 Knives" />
+        <Field value={String(node.attrs.href ?? '')} onValue={(t) => updateAttributes({ href: t })} placeholder="/murder-mystery-2/buy-items" />
       </div>
     </Block>
   )
@@ -265,7 +315,7 @@ export function YouTubeNV({ node, updateAttributes, deleteNode, selected }: Node
         // eslint-disable-next-line @next/next/no-img-element
         <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" className="mt-2 aspect-video w-full rounded-md object-cover" />
       )}
-      <input className={cn(fieldCls, 'mt-2')} value={node.attrs.title ?? ''} onChange={(e) => updateAttributes({ title: e.target.value })} placeholder="Video title (for screen readers)" />
+      <Field className="mt-2" value={String(node.attrs.title ?? '')} onValue={(t) => updateAttributes({ title: t })} placeholder="Video title (for screen readers)" />
     </Block>
   )
 }

@@ -39,6 +39,7 @@ function useMarks(editor: Editor) {
       h3: e.isActive('heading', { level: 3 }),
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
+      table: e.isActive('table'),
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
       words: (e.storage as { characterCount?: { words: () => number } }).characterCount?.words() ?? 0,
@@ -123,6 +124,21 @@ function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }
   )
 }
 
+/** Shown while the cursor is in a table: rows and columns go where the cursor is. */
+function TableControls({ editor }: { editor: Editor }) {
+  const c = () => editor.chain().focus()
+  return (
+    <span className="flex basis-full flex-wrap items-center gap-0.5 border-t border-white/[0.06] pt-1.5 sm:basis-auto sm:border-l sm:border-t-0 sm:pl-1.5 sm:pt-0" role="group" aria-label="Table">
+      <span className="px-1.5 text-[12px] font-medium text-text-tertiary">Table</span>
+      <button type="button" className={btn()} onClick={() => c().addRowAfter().run()}>+ Row</button>
+      <button type="button" className={btn()} onClick={() => c().deleteRow().run()}>Remove Row</button>
+      <button type="button" className={btn()} onClick={() => c().addColumnAfter().run()}>+ Column</button>
+      <button type="button" className={btn()} onClick={() => c().deleteColumn().run()}>Remove Column</button>
+      <button type="button" className={cn(btn(), 'hover:text-error')} onClick={() => c().deleteTable().run()}>Remove Table</button>
+    </span>
+  )
+}
+
 export function Toolbar({ editor }: { editor: Editor }) {
   const s = useMarks(editor)
   const [linking, setLinking] = useState(false)
@@ -137,12 +153,21 @@ export function Toolbar({ editor }: { editor: Editor }) {
           <Icon label="Bullet list" on={s.bullet} onClick={() => c().toggleBulletList().run()}><FormatListBulletedRounded sx={{ fontSize: 18 }} /></Icon>
           <Icon label="Numbered list" on={s.ordered} onClick={() => c().toggleOrderedList().run()}><FormatListNumberedRounded sx={{ fontSize: 18 }} /></Icon>
           <span aria-hidden className="mx-1 h-5 w-px bg-white/[0.08]" />
-          <DropdownMenu>
+          {/* Not modal: closing hands the cursor straight back to the text (a modal
+              menu returned focus to its button, so typing after Insert went nowhere). */}
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger className={cn(btn(), 'bg-white/[0.06] text-text-primary')}>
               <AddRounded sx={{ fontSize: 17 }} />
               Insert
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[60vh] w-64 overflow-y-auto">
+            <DropdownMenuContent
+              align="start"
+              className="max-h-[60vh] w-64 overflow-y-auto"
+              onCloseAutoFocus={(e) => {
+                e.preventDefault()
+                editor.commands.focus()
+              }}
+            >
               {SLASH_ITEMS.map((it) => (
                 <DropdownMenuItem key={it.title} onSelect={() => it.run(editor.chain().focus())} className="flex-col items-start gap-0">
                   <span className="text-[13px] font-medium text-text-primary">{it.title}</span>
@@ -151,6 +176,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {s.table && <TableControls editor={editor} />}
           <span className="ml-auto flex items-center gap-0.5">
             <Icon label="Undo" disabled={!s.canUndo} onClick={() => c().undo().run()}><UndoRounded sx={{ fontSize: 18 }} /></Icon>
             <Icon label="Redo" disabled={!s.canRedo} onClick={() => c().redo().run()}><RedoRounded sx={{ fontSize: 18 }} /></Icon>
