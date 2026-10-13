@@ -84,3 +84,9 @@ describe('legacyToDoc: image slots written by a chat', () => {
     expect(legacyToDoc(['![wide The lobby](https://cdn.example.com/a.webp)']).content[0].attrs).toMatchObject({ src: 'https://cdn.example.com/a.webp', layout: 'wide', alt: 'The lobby' })
   })
 })
+
+describe('legacyToDoc: two-colon boxes', () => {
+  it('::tip … :: is a tip box too', () => {
+    expect(legacyToDoc(['::tip\nCheck prices first.\n::']).content[0]).toMatchObject({ type: 'callout', attrs: { tone: 'tip' } })
+  })
+})

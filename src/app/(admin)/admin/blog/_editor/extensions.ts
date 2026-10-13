@@ -7,6 +7,7 @@
  */
 import { Extension, type Editor, type Extensions } from '@tiptap/core'
 import { Plugin } from '@tiptap/pm/state'
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 import { Markdown } from '@tiptap/markdown'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -17,11 +18,12 @@ import { blogBaseExtensions, Callout, Codes, Cta, Faq, Figure, ImagePair, ItemCa
 import { CalloutNV, CodesNV, CtaNV, FaqNV, FigureNV, ImagePairNV, ItemCardNV, YouTubeNV } from './node-views'
 import { SlashCommand } from './slash'
 import { uploadImage } from './upload'
-import { fitHeadings, hasPostMarkers, looksLikeMarkdown } from '@/lib/blog/editor/paste'
+import { fitHeadings, fitHtmlHeadings, hasPostMarkers, htmlHasPostMarkers, imgToFigureHtml, looksLikeMarkdown, wrapDirectives } from '@/lib/blog/editor/paste'
 import { legacyToDoc } from '@/lib/blog/doc/legacy'
+import type { DocNode } from '@/lib/blog/doc/types'
 
 /** Copied rich text that already carries structure. */
-const RICH_HTML = /<(h[1-6]|ul|ol|table|strong|b|em|a)\b/i
+const RICH_HTML = /<(h[1-6]|ul|ol|table|strong|b|em|a|img)\b/i
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif']
 
@@ -47,9 +49,11 @@ async function insertImages(editor: Editor, files: File[], pos?: number) {
  *  - our post format (:::tip / :::steps boxes, ![IMAGE: …](replace-me) image
  *    slots) → the same converter that opens old posts;
  *  - other Markdown → headings, lists, bold, links, tables;
- *  - copied rich text with real headings/lists, and images, keep their own
- *    handlers. (A chat often wraps plain text in bare HTML, so HTML alone
- *    does not decide.)
+ *  - a formatted copy (selected on screen) keeps its headings, lists and
+ *    tables, and its ::tip / ::steps markers and picture placeholders still
+ *    become boxes, numbered steps and image slots;
+ *  - files keep their own handler. (A chat often wraps plain text in bare
+ *    HTML, so HTML alone does not decide.)
  */
 const PasteMarkdown = Extension.create({
   name: 'pasteMarkdown',
@@ -58,13 +62,21 @@ const PasteMarkdown = Extension.create({
     return [
       new Plugin({
         props: {
-          handlePaste: (_view, event) => {
+          handlePaste: (view, event) => {
             const data = event.clipboardData
             if (!data || data.files.length > 0) return false
             const text = data.getData('text/plain')
+            const html = data.getData('text/html')
+            // Formatted copy (selected on screen): keep its headings, lists and
+            // tables, and turn our ::tip boxes / image placeholders into blocks.
+            if (RICH_HTML.test(html)) {
+              if (!htmlHasPostMarkers(html)) return false
+              const dom = new window.DOMParser().parseFromString(fitHtmlHeadings(imgToFigureHtml(html)), 'text/html')
+              const parsed = PMDOMParser.fromSchema(view.state.schema).parse(dom.body).toJSON() as { content?: DocNode[] }
+              return editor.commands.insertContent(wrapDirectives(parsed.content ?? []))
+            }
             if (!text) return false
             const markers = hasPostMarkers(text)
-            if (!markers && RICH_HTML.test(data.getData('text/html'))) return false
             if (markers) return editor.commands.insertContent(legacyToDoc(fitHeadings(text).split('\n')).content)
             if (looksLikeMarkdown(text)) return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
             // Plain lines (a chat often sends them as one <div> with <br>s): one paragraph each,

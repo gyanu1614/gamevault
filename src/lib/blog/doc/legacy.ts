@@ -12,7 +12,7 @@
  *                   is the caption and the alt text
  *   ![IMAGE: words](replace-me)   an empty image slot (no real address): the
  *                   words become its alt text, the writer uploads the picture
- *   :::tip|warning|note|takeaways … :::   callout
+ *   :::tip|warning|note|takeaways … :::   callout (two colons work too)
  *   :::steps … :::  numbered list
  *   | a | b |       table (first row = header, |---| separator skipped)
  *   inline          [text](url), **bold**, *italic*
@@ -53,7 +53,8 @@ const ORDERED_RE = /^\s*(\d+)\.\s+/
 const BULLET_RE = /^\s*[-*]\s+/
 const TABLE_RE = /^\s*\|.*\|\s*$/
 const IMAGE_RE = /^!\[([^\]]*)\]\((\S+?)(?:\s+"[^"]*")?\)$/
-const FENCE_RE = /^:::\s*(tip|warning|note|takeaways|steps)\b(.*)$/i
+const FENCE_RE = /^:{2,3}\s*(tip|warning|note|takeaways|steps)\b(.*)$/i
+const FENCE_END_RE = /^:{2,3}$/
 
 const listItem = (text: string): DocNode => ({ type: 'listItem', content: [para(text)] })
 
@@ -69,6 +70,12 @@ function tableNode(rows: string[]): DocNode {
 
 /** A real picture address: https, or a site path. Anything else is a placeholder. */
 const isImageUrl = (src: string) => /^https?:\/\//i.test(src) || src.startsWith('/')
+
+/** A whole line `![words](address)` → a figure (or an empty image slot), else null. */
+export function figureFromLine(line: string): DocNode | null {
+  const m = line.trim().match(IMAGE_RE)
+  return m ? figureNode(m[1], m[2]) : null
+}
 
 function figureNode(words: string, src: string): DocNode {
   if (!isImageUrl(src)) {
@@ -98,10 +105,10 @@ function linesToBlocks(lines: string[]): DocNode[] {
     if (fence) {
       const kind = fence[1].toLowerCase()
       const inner: string[] = []
-      const same = fence[2].replace(/:::\s*$/, '').trim()
+      const same = fence[2].replace(/:{2,3}\s*$/, '').trim()
       if (same) inner.push(same)
       i += 1
-      while (i < lines.length && lines[i].trim() !== ':::') inner.push(lines[i]), (i += 1)
+      while (i < lines.length && !FENCE_END_RE.test(lines[i].trim())) inner.push(lines[i]), (i += 1)
       i += 1
       if (kind === 'steps') {
         const items = inner.map((l) => l.trim()).filter(Boolean).map((l) => l.replace(ORDERED_RE, '').replace(BULLET_RE, ''))
