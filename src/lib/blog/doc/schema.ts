@@ -85,8 +85,8 @@ export const YouTube = atom('youtube', { id: text(), title: text() })
 
 export const CUSTOM_NODES = [Figure, ImagePair, Callout, Faq, Codes, ItemCard, Cta, YouTube]
 
-/** The full block set. `link` opens nothing in the editor; the renderer decides rel/target. */
-export function blogExtensions(): Extensions {
+/** StarterKit + tables: the built-in half of the block set (the editor adds node views to CUSTOM_NODES). */
+export function blogBaseExtensions(): Extensions {
   return [
     StarterKit.configure({
       heading: { levels: [2, 3] },
@@ -94,8 +94,14 @@ export function blogExtensions(): Extensions {
       underline: false,
       code: false,
       codeBlock: false,
+      // The renderer has no strikethrough; keep the editor to what readers get.
+      strike: false,
     }),
     TableKit.configure({ table: { resizable: false } }),
-    ...CUSTOM_NODES,
   ]
+}
+
+/** The full block set. `link` opens nothing in the editor; the renderer decides rel/target. */
+export function blogExtensions(): Extensions {
+  return [...blogBaseExtensions(), ...CUSTOM_NODES]
 }

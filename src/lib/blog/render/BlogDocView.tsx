@@ -15,6 +15,7 @@ import { blogExtensions } from '@/lib/blog/doc/schema'
 import type { BlogDoc } from '@/lib/blog/doc/types'
 import { collectHeadings } from './outline'
 import { classifyHref } from './links'
+import { pruneEmpty } from './prune'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
 
 type PmNode = { attrs: Record<string, unknown>; type: { name: string } }
@@ -29,13 +30,14 @@ export const BLOG_PROSE_GRID =
   'blog-prose grid [&>*:first-child]:mt-0 [&>h2+*]:mt-4 [&>h3+*]:mt-3 grid-cols-[minmax(0,1fr)_minmax(0,700px)_minmax(0,1fr)] [&>*]:col-start-2 [&>.blog-wide]:col-[1/-1] [&>.blog-wide]:w-full [&>.blog-wide]:max-w-[960px] [&>.blog-wide]:justify-self-center'
 
 export function BlogDocView({ doc, items }: { doc: BlogDoc; items?: Map<string, RailCard> }) {
-  // Heading ids in render order, from the same walk the contents list uses.
+  // Heading ids in render order, from the same walk the contents list uses
+  // (pruning never drops a heading, so the ids match the page's contents list).
   const ids = collectHeadings(doc).map((h) => h.id)
   let headingAt = 0
 
   return renderToReactElement({
     extensions: blogExtensions(),
-    content: doc,
+    content: pruneEmpty(doc),
     options: {
       nodeMapping: {
         doc: ({ children }: Props) => <div className={BLOG_PROSE_GRID}>{children}</div>,

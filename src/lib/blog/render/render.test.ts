@@ -65,3 +65,29 @@ describe('BlogDocView', () => {
     expect(legacy).toContain('blog-wide')
   })
 })
+
+describe('BlogDocView: unfilled outline blocks stay out of the article', () => {
+  const draft: any = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 2 }, content: [t('Step by Step')] },
+      { type: 'paragraph' },
+      { type: 'paragraph', content: [t('   ')] },
+      { type: 'orderedList', attrs: { start: 1 }, content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] },
+      { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [t('Kept')] }] }, { type: 'listItem', content: [{ type: 'paragraph' }] }] },
+      { type: 'callout', attrs: { tone: 'tip' }, content: [{ type: 'paragraph' }] },
+      { type: 'codes', attrs: { rows: [{ code: '', reward: '', isNew: true }], checkedAt: '2026-10-12' } },
+      { type: 'paragraph', content: [t('Real text')] },
+    ],
+  }
+  const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: draft }))
+
+  it('drops empty paragraphs, empty list items and lists, empty tip boxes and empty codes tables', () => {
+    expect(html.match(/<p /g)?.length).toBe(2) // "Kept" (inside its list item) + "Real text"
+    expect(html).not.toContain('<ol')
+    expect(html.match(/<li /g)?.length).toBe(1)
+    expect(html).not.toContain('Tip')
+    expect(html).not.toContain('Last checked')
+    expect(html).toContain('Real text')
+  })
+})

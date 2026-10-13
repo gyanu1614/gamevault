@@ -36,8 +36,8 @@ import { BuyBar } from '@/components/buy-rails/BuyBar'
 import { RailCardView } from '@/components/buy-rails/RailCardView'
 import { RAIL_GRID } from '@/components/buy-rails/geometry'
 import { ArticleToc } from './_ArticleToc'
-import { ArticleHeader } from './_ArticleHeader'
-import { ArticleCover } from './_ArticleCover'
+import { ArticleHeader } from '@/components/blog/ArticleHeader'
+import { ArticleCover } from '@/components/blog/ArticleCover'
 import { ArticleEnd, type RelatedTool } from './_ArticleEnd'
 
 export const revalidate = 3600
@@ -196,8 +196,11 @@ export default async function GameBlogArticle({ params }: { params: Promise<{ ga
                 readMinutes={docReadMinutes(doc)}
               />
               <ArticleCover image={cover} url={post.cover} alt={post.title} />
-              {hasToc && <ArticleToc entries={toc} variant="bar" />}
-              <BlogDocView doc={doc} items={items} />
+              {/* No cover: the same gap the cover would leave under the byline. */}
+              <div className={cover || post.cover ? undefined : 'mt-8'}>
+                {hasToc && <ArticleToc entries={toc} variant="bar" />}
+                <BlogDocView doc={doc} items={items} />
+              </div>
               <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
             </article>
 
