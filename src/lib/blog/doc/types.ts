@@ -48,6 +48,8 @@ export interface BodyV2 {
   doc: BlogDoc
   /** The cover's full source set; `cover_url` keeps the card/OG URL. */
   cover?: StoredImage | null
+  /** URLs this post was live at before a rename; they redirect to the current one. */
+  oldSlugs?: string[]
 }
 
 export const EMPTY_DOC: BlogDoc = { type: 'doc', content: [{ type: 'paragraph' }] }

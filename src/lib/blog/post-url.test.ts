@@ -21,4 +21,17 @@ describe('movedPostTarget', () => {
   it('a site-wide post asked for under a game goes to /blog', () => {
     expect(movedPostTarget({ slug: 's', primaryGameSlug: null }, 'adopt-me')).toBe('/blog/s')
   })
+  it('a renamed post (found by its old URL) goes to its new URL, even in the same game', () => {
+    expect(movedPostTarget({ slug: 'sell-pets-guide', primaryGameSlug: 'adopt-me' }, 'adopt-me', 'old-sell-guide')).toBe('/adopt-me/blog/sell-pets-guide')
+  })
+})
+
+describe('nextOldSlugs', () => {
+  it('a live post that changes URL keeps its old one; the new URL never counts as old', async () => {
+    const { nextOldSlugs } = await import('./post-url')
+    expect(nextOldSlugs({ wasLive: true, previousSlug: 'a', newSlug: 'b', known: [] })).toEqual(['a'])
+    expect(nextOldSlugs({ wasLive: true, previousSlug: 'b', newSlug: 'a', known: ['a'] })).toEqual(['b'])
+    expect(nextOldSlugs({ wasLive: false, previousSlug: 'draft-url', newSlug: 'b', known: [] })).toEqual([])
+    expect(nextOldSlugs({ wasLive: true, previousSlug: 'b', newSlug: 'b', known: ['a', 'a'] })).toEqual(['a'])
+  })
 })

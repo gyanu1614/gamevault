@@ -161,8 +161,10 @@ export async function getAllPublishedPosts(): Promise<DbBlogPost[]> {
 }
 
 /**
- * The published post with this slug under ANY game, for the moved-post
- * redirect: /{oldGame}/blog/{slug} after an admin moved it to another game.
+ * The published post with this slug under ANY game — or that had this slug
+ * before a rename — for the moved-post redirect: /{oldGame}/blog/{slug}
+ * after an admin moved it to another game, /{game}/blog/{oldSlug} after a
+ * rename.
  */
 export const getPublishedPostBySlugAnyGame = cache(async function getPublishedPostBySlugAnyGame(
   slug: string,
@@ -175,7 +177,19 @@ export const getPublishedPostBySlugAnyGame = cache(async function getPublishedPo
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(1)
-  const row = (data as Array<{ slug: string; primary_game_slug: string | null }> | null)?.[0]
-  if (error || !row) return null
+  let row = (data as Array<{ slug: string; primary_game_slug: string | null }> | null)?.[0]
+  if (error) return null
+  if (!row) {
+    // Renamed: a live post remembers the URLs it had (body.oldSlugs).
+    const { data: renamed } = await supabase
+      .from('blog_posts')
+      .select('slug,primary_game_slug')
+      .contains('body', { oldSlugs: [slug] })
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(1)
+    row = (renamed as Array<{ slug: string; primary_game_slug: string | null }> | null)?.[0]
+  }
+  if (!row) return null
   return { slug: row.slug, primaryGameSlug: row.primary_game_slug }
 })

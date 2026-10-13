@@ -20,6 +20,7 @@ import { SlashCommand } from './slash'
 import { uploadImage } from './upload'
 import { fitHeadings, fitHtmlHeadings, hasPostMarkers, htmlHasPostMarkers, imgToFigureHtml, looksLikeMarkdown, wrapDirectives } from '@/lib/blog/editor/paste'
 import { legacyToDoc } from '@/lib/blog/doc/legacy'
+import { foldFaqSections } from '@/lib/blog/doc/faq'
 import type { DocNode } from '@/lib/blog/doc/types'
 
 /** Copied rich text that already carries structure. */
@@ -73,12 +74,16 @@ const PasteMarkdown = Extension.create({
               if (!htmlHasPostMarkers(html)) return false
               const dom = new window.DOMParser().parseFromString(fitHtmlHeadings(imgToFigureHtml(html)), 'text/html')
               const parsed = PMDOMParser.fromSchema(view.state.schema).parse(dom.body).toJSON() as { content?: DocNode[] }
-              return editor.commands.insertContent(wrapDirectives(parsed.content ?? []))
+              return editor.commands.insertContent(foldFaqSections(wrapDirectives(parsed.content ?? [])))
             }
             if (!text) return false
             const markers = hasPostMarkers(text)
             if (markers) return editor.commands.insertContent(legacyToDoc(fitHeadings(text).split('\n')).content)
-            if (looksLikeMarkdown(text)) return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
+            if (looksLikeMarkdown(text)) {
+              const parsed = editor.markdown?.parse(fitHeadings(text)) as { content?: DocNode[] } | undefined
+              if (!parsed) return false
+              return editor.commands.insertContent(foldFaqSections(parsed.content ?? []))
+            }
             // Plain lines (a chat often sends them as one <div> with <br>s): one paragraph each,
             // never one giant paragraph that a Heading click would swallow whole.
             const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)

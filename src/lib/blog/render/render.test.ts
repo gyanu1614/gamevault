@@ -51,7 +51,8 @@ describe('BlogDocView', () => {
   it('callout, table scroll box, FAQ details, codes with copy + expired list, item card with live buy label', () => {
     expect(html).toContain('Warning')
     expect(html).toContain('class="relative mt-7 overflow-x-auto')
-    expect(html).toContain('<details')
+    expect(html).toContain('Is it safe?') // FAQ: the value pages' accordion, answer in the HTML
+    expect(html).toContain('>Yes.<')
     expect(html).toContain('FREEKNIFE')
     expect(html).toContain('Expired Codes (1)')
     expect(html).toContain('Last checked Oct 12, 2026')

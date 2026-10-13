@@ -18,6 +18,7 @@
  *   inline          [text](url), **bold**, *italic*
  */
 import type { BlogDoc, CalloutTone, DocNode } from './types'
+import { foldFaqSections } from './faq'
 
 type Mark = { type: string; attrs?: Record<string, unknown> }
 
@@ -162,6 +163,7 @@ function linesToBlocks(lines: string[]): DocNode[] {
 }
 
 export function legacyToDoc(body: readonly string[]): BlogDoc {
-  const content = linesToBlocks(body.flatMap((b) => String(b).split('\n')))
+  // "## FAQ" + "### question" lines → one FAQ block (the value pages' accordion).
+  const content = foldFaqSections(linesToBlocks(body.flatMap((b) => String(b).split('\n'))))
   return { type: 'doc', content: content.length ? content : [{ type: 'paragraph' }] }
 }

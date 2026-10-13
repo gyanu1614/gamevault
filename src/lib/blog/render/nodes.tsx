@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import type { RailCard } from '@/lib/buy-rails/model'
 import type { CalloutTone, SrcItem, StoredImage } from '@/lib/blog/doc/types'
 import { CopyCode, YouTubeLite } from './client-nodes'
+import { FaqCards } from '@/components/marketplace/FaqCards'
 import { classifyHref, gamePath } from './links'
 
 export const BTN_WHITE =
@@ -116,17 +117,10 @@ export function CalloutView({ tone, children }: { tone: unknown; children: React
 export function FaqView({ attrs }: { attrs: Record<string, unknown> }) {
   const items = ((attrs.items as Array<{ q: string; a: string }> | null) ?? []).filter((i) => i.q?.trim())
   if (items.length === 0) return null
+  // The same accordion as the value pages' FAQ (answers stay in the HTML for search).
   return (
-    <div className="mt-7 divide-y divide-white/[0.06] rounded-[10px] bg-[#1D1E23]">
-      {items.map((it, i) => (
-        <details key={i} className="group px-5 [&_summary::-webkit-details-marker]:hidden">
-          <summary className="flex min-h-[52px] cursor-pointer items-center justify-between gap-4 py-3 text-[15.5px] font-semibold text-text-primary">
-            {it.q}
-            <span aria-hidden className="text-text-tertiary transition-transform group-open:rotate-45">+</span>
-          </summary>
-          <p className="whitespace-pre-line pb-4 text-[15.5px] leading-7 text-text-secondary">{it.a}</p>
-        </details>
-      ))}
+    <div className="mt-6">
+      <FaqCards items={items} defaultOpen={0} square className="mt-0 max-w-none" />
     </div>
   )
 }

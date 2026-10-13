@@ -19,7 +19,8 @@ import { readBody } from '@/lib/blog/doc/body'
 import { BlogDocView } from '@/lib/blog/render/BlogDocView'
 import { TOC_MIN_SECTIONS, collectHeadings, collectItemRefs, docReadMinutes, docWordCount } from '@/lib/blog/render/outline'
 import { loadItemCards } from '@/lib/blog/render/items-server'
-import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
+import { JsonLd, breadcrumbList, blogPosting, faqPage } from '@/lib/seo/jsonld'
+import { faqItems } from '@/lib/blog/doc/faq'
 import { stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import { seoMeta } from '@/lib/seo/fit'
@@ -66,7 +67,7 @@ async function getGame(gameSlug: string): Promise<{ name: string; slug: string }
  * links and search rankings follow. No per-move config.
  */
 async function redirectIfMoved(gameSlug: string, slug: string): Promise<void> {
-  const target = movedPostTarget(await getPublishedPostBySlugAnyGame(slug), gameSlug)
+  const target = movedPostTarget(await getPublishedPostBySlugAnyGame(slug), gameSlug, slug)
   if (target) permanentRedirect(target)
 }
 
@@ -95,6 +96,13 @@ async function generateMetadataRaw({ params }: { params: Promise<{ gameSlug: str
       modifiedTime: post.updatedAt,
       images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
     },
+    // The root layout's card carries the home page title; a shared post shows its own.
+    twitter: {
+      card: 'summary_large_image',
+      title: socialTitle,
+      description: post.seoDescription || post.excerpt,
+      images: post.cover ? [post.cover] : DEFAULT_OG_IMAGES,
+    },
   }
 }
 
@@ -108,6 +116,7 @@ export default async function GameBlogArticle({ params }: { params: Promise<{ ga
   const toc = collectHeadings(doc).filter((h) => h.level === 2)
   const hasToc = toc.length >= TOC_MIN_SECTIONS
   const kindLabel = POST_TYPE_LABEL[post.postType] ?? 'Guide'
+  const faqs = faqItems(doc)
   const theme = getGameContentTheme(gameSlug)
 
   const [tagged, hubNav, railSettings, rails, items] = await Promise.all([
@@ -165,6 +174,7 @@ export default async function GameBlogArticle({ params }: { params: Promise<{ ga
           section: kindLabel,
         })}
       />
+      {faqs.length > 0 && <JsonLd data={faqPage(faqs)} />}
 
       {/* The whole top of the page sits on the game's art: nav, then ONE grid
           whose middle column holds the header, cover and body — so the title,

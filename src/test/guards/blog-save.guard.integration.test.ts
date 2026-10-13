@@ -25,6 +25,8 @@ vi.mock('@/lib/actions/admin-permissions', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined, revalidateTag: () => undefined, unstable_cache: (fn: any) => fn }))
 vi.mock('@/lib/seo/indexnow', () => ({ submitPostEvent: async () => undefined }))
 vi.mock('server-only', () => ({}))
+// React's request cache exists only in the server build; outside it, call through.
+vi.mock('react', async (load) => ({ ...(await load<typeof import('react')>()), cache: <T,>(fn: T) => fn }))
 
 const ns = fixtureNamespace()
 const slugOf = (label: string) => `guardtest-blog-${ns.tag}-${label}`
@@ -135,5 +137,18 @@ describe.skipIf(!hasEnv)('blog save (integration)', () => {
     const second = await saveBlogPost(null, input(slug))
     expect(second).toEqual({ success: false, error: 'Another post in this game already uses that URL slug.' })
     expect(await rows(slug)).toHaveLength(1)
+  })
+
+  it('renaming a live post keeps its old URL, which finds the post for the redirect', async () => {
+    const { saveBlogPost } = await import('@/lib/actions/admin-blog-save')
+    const { getPublishedPostBySlugAnyGame } = await import('@/lib/blog/db')
+    const oldSlug = slugOf('ren-a')
+    const newSlug = slugOf('ren-b')
+    const created = await saveBlogPost(null, input(oldSlug, { status: 'published' }))
+    if (!created.success) throw new Error(created.error)
+    const renamed = await saveBlogPost(created.id, input(newSlug, { status: 'published' }))
+    expect(renamed.success).toBe(true)
+    expect((await rows(newSlug))[0].body.oldSlugs).toEqual([oldSlug])
+    expect(await getPublishedPostBySlugAnyGame(oldSlug)).toEqual({ slug: newSlug, primaryGameSlug: game })
   })
 })

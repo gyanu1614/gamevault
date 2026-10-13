@@ -120,7 +120,7 @@ export function PostSettings({
           <p className="mt-1.5 truncate font-mono text-[11.5px] text-text-tertiary">
             /{meta.gameSlug || 'game'}/blog/{meta.slug || '…'}
           </p>
-          {slugLocked && <p className="mt-1 text-[11.5px] text-text-tertiary">Changing a live URL redirects the old one.</p>}
+          {slugLocked && <p className="mt-1 text-[11.5px] text-text-tertiary">Changing a live URL is fine: the old one sends visitors to the new one.</p>}
         </div>
         <div>
           <label htmlFor="post-author" className={lbl}>Author</label>

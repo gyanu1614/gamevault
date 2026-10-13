@@ -23,6 +23,7 @@ import { submitPostEvent } from '@/lib/seo/indexnow'
 import { postChecklist } from '@/lib/blog/editor/checklist'
 import { docReadMinutes } from '@/lib/blog/render/outline'
 import type { BlogDoc } from '@/lib/blog/doc/types'
+import { nextOldSlugs } from '@/lib/blog/post-url'
 
 const StoredImageSchema = z.object({
   src: z.string().url(),
@@ -85,8 +86,8 @@ export async function saveBlogPost(id: string | null, raw: SaveBlogPostInput): P
 
   const supabase = admin()
   const previous = id
-    ? ((await supabase.from('blog_posts').select('slug, primary_game_slug, status').eq('id', id).maybeSingle()).data as
-        | { slug: string; primary_game_slug: string | null; status: string }
+    ? ((await supabase.from('blog_posts').select('slug, primary_game_slug, status, body').eq('id', id).maybeSingle()).data as
+        | { slug: string; primary_game_slug: string | null; status: string; body: unknown }
         | null)
     : null
   if (id && !previous) return { success: false, error: 'This post no longer exists.' }
@@ -101,7 +102,18 @@ export async function saveBlogPost(id: string | null, raw: SaveBlogPostInput): P
     primary_game_slug: p.gameSlug,
     game_slugs: p.gameSlug ? [p.gameSlug] : [],
     cover_url: p.cover?.sources.webp.find((s) => s.w >= 1200)?.url ?? p.cover?.src ?? p.coverUrl,
-    body: { v: 2, doc, cover: p.cover },
+    body: {
+      v: 2,
+      doc,
+      cover: p.cover,
+      // A live post that changes URL keeps the old one; the article route redirects it.
+      oldSlugs: nextOldSlugs({
+        wasLive: previous?.status === 'published',
+        previousSlug: previous?.slug ?? null,
+        newSlug: p.slug,
+        known: ((previous?.body as { oldSlugs?: unknown } | null)?.oldSlugs as string[] | undefined) ?? [],
+      }),
+    },
     read_minutes: docReadMinutes(doc),
     seo_title: p.seoTitle || null,
     seo_description: p.seoDescription || null,

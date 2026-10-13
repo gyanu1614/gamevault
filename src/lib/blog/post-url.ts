@@ -14,10 +14,22 @@ export function postHref(post: PostUrlFields): string {
 }
 
 /**
- * Where /{requestedGame}/blog/{slug} should permanently redirect when the post
- * now lives elsewhere (moved to another game in admin), else null.
+ * Where /{requestedGame}/blog/{requestedSlug} should permanently redirect when
+ * the post now lives elsewhere — moved to another game, or renamed (found by
+ * one of its old URLs) — else null.
  */
-export function movedPostTarget(found: PostUrlFields | null, requestedGame: string): string | null {
-  if (!found || found.primaryGameSlug === requestedGame) return null
+export function movedPostTarget(found: PostUrlFields | null, requestedGame: string, requestedSlug?: string): string | null {
+  if (!found) return null
+  if (found.primaryGameSlug === requestedGame && (requestedSlug === undefined || found.slug === requestedSlug)) return null
   return postHref(found)
+}
+
+/**
+ * A post's old URLs, after a save. Only a URL that was public (the post was
+ * live) is kept, so links and search results that point at it keep working;
+ * the post's current URL is never in the list.
+ */
+export function nextOldSlugs(p: { wasLive: boolean; previousSlug: string | null; newSlug: string; known: string[] }): string[] {
+  const all = [...p.known, ...(p.wasLive && p.previousSlug ? [p.previousSlug] : [])]
+  return [...new Set(all)].filter((s) => s && s !== p.newSlug)
 }
