@@ -44,6 +44,7 @@ import {
   UsersThree,
   Flag,
   MagnifyingGlass,
+  ShoppingCartSimple,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { createClient } from '@/lib/supabase/client'
@@ -111,6 +112,7 @@ const GROUPS: { title: string | null; links: NavLink[] }[] = [
       { label: 'Bulk Import', href: '/admin/imports', icon: UploadSimple, roles: ['admin', 'super_admin'] },
       { label: 'Blog & Content', href: '/admin/blog', icon: Article, roles: ['admin', 'super_admin'] },
       { label: 'SEO Health', href: '/admin/seo', icon: MagnifyingGlass, roles: ['admin', 'super_admin'] },
+      { label: 'Buy Rails', href: '/admin/buy-rails', icon: ShoppingCartSimple, roles: ['admin', 'super_admin'] },
       { label: 'Promo Codes', href: '/admin/promos', icon: Ticket, roles: ['admin', 'super_admin'] },
     ],
   },

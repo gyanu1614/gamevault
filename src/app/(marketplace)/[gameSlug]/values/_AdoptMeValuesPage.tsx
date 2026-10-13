@@ -1,4 +1,5 @@
 import Link from '@/components/navigation/AppLink'
+import { ValueListBuy } from '@/components/buy-rails/ValueListBuy'
 import { JsonLd, breadcrumbList, faqPage } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
 import { ValuesSeo, valuesFaq, VALUES_SEO_LINK as linkCls } from './_ValuesSeo'
@@ -99,6 +100,7 @@ export default async function AdoptMeValuesPage() {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
+      <ValueListBuy gameSlug="adopt-me">
       <GameHeroBackdrop gameSlug="adopt-me" size="hub">
         <HubNav data={hubNav} />
         <JsonLd
@@ -214,6 +216,7 @@ export default async function AdoptMeValuesPage() {
         </div>
       </GameHeroBackdrop>
 
+      </ValueListBuy>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

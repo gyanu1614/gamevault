@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ValueListBuy } from '@/components/buy-rails/ValueListBuy'
 import Link from '@/components/navigation/AppLink'
 import { notFound } from 'next/navigation'
 import { createValueListReadClient } from '@/lib/values/read-client'
@@ -293,6 +294,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
+      <ValueListBuy gameSlug={gameSlug}>
       <GameHeroBackdrop gameSlug={gameSlug} size="hub">
       <HubNav data={hubNav} />
       <JsonLd
@@ -465,6 +467,7 @@ export default async function BrainrotValuesPage({ params }: PageProps) {
         <HubBuyCta gameName="Steal a Brainrot" gameSlug="steal-a-brainrot" buyHref="/steal-a-brainrot/buy-items" />
       )}
       </GameHeroBackdrop>
+      </ValueListBuy>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}

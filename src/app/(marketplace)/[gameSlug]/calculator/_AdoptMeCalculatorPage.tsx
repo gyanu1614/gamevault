@@ -7,6 +7,7 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { HubHero } from '@/components/content/HubHero'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import AdoptMeWflClient from './_AdoptMeWflClient'
+import { getCalcBuyData } from '@/lib/buy-rails/server'
 import { getAdoptMeCalcPets, getAdoptMeTopValues } from './_adoptMeCalcData'
 import { AdoptMeCalcSeo } from './_AdoptMeCalcSeo'
 import { TrackOnMount } from '@/components/value-listings/TrackOnMount'
@@ -33,10 +34,12 @@ export const ADOPT_ME_CALC_FAQ = [
 ]
 
 export default async function AdoptMeCalculatorPage() {
-  const [pets, hubNav, topValues] = await Promise.all([
+  const [pets, hubNav, topValues, buyData] = await Promise.all([
     getAdoptMeCalcPets(),
     getHubNavData('adopt-me'),
     getAdoptMeTopValues(20),
+    // Buy box under the verdict (growth point 2): live stock per pet.
+    getCalcBuyData('adopt-me'),
   ])
   const monthYear = new Date().toLocaleDateString('en-US', {
     month: 'long',
@@ -88,7 +91,7 @@ export default async function AdoptMeCalculatorPage() {
               body="The pet database could not be loaded. Please check again shortly."
             />
           ) : (
-            <AdoptMeWflClient pets={pets} />
+            <AdoptMeWflClient pets={pets} buyData={buyData} />
           )}
 
           <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref="/adopt-me/buy-items" />

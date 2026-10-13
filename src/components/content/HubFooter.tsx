@@ -103,7 +103,7 @@ export function HubFooter({
     // gradient that fades up from the page (transparent → near-black) with a
     // faint neutral bloom, and a giant ghosted wordmark behind it for depth.
     // mt-16 carries the page's bottom breathing room.
-    <footer className="relative z-10 mt-16 overflow-hidden">
+    <footer data-site-footer className="relative z-10 mt-16 overflow-hidden">
       {/* Ground: gradient fade from the page into the footer + a soft neutral
           glow bleeding up from the top-centre. */}
       <div

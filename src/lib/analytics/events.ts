@@ -16,6 +16,13 @@
  *   founding_step_completed   { step: 1 | 2 | 3 | 4 }
  *   seller_first_listing_published { game, category }
  *   seller_first_sale         { order_id, total_usd, game } (server)
+ *
+ * Buy rails     (growth point 2: blog / value pages → the shop)
+ *   rail_viewed               { surface, position, game, item, variant }
+ *   rail_clicked              { surface, position, game, item, variant }
+ *     surface  blog | value_item | value_list | calculator
+ *     position left | right | bar | column | box
+ *     variant  buy | sell (no offers → the seller ask)
  */
 
 export const ANALYTICS_EVENTS = [
@@ -29,6 +36,8 @@ export const ANALYTICS_EVENTS = [
   'founding_step_completed',
   'seller_first_listing_published',
   'seller_first_sale',
+  'rail_viewed',
+  'rail_clicked',
 ] as const
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number]

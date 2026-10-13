@@ -15,6 +15,8 @@ describe('event catalogue', () => {
       'founding_step_completed',
       'seller_first_listing_published',
       'seller_first_sale',
+      'rail_viewed',
+      'rail_clicked',
     ]) {
       expect(ANALYTICS_EVENTS).toContain(e)
     }

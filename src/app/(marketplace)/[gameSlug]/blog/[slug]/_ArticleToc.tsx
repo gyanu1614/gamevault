@@ -8,17 +8,23 @@
  * Self-hides with fewer than two headings — a one-entry TOC is noise.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { TocEntry } from './_articleBody'
 
 export function ArticleToc({
   entries,
   buyHref,
   buyLabel,
+  rail,
 }: {
   entries: TocEntry[]
   buyHref: string
   buyLabel: string
+  /**
+   * The buy rail's currency card (≥1280px): stacked under the list in the
+   * same sticky box, which then sits at the top instead of centring.
+   */
+  rail?: ReactNode
 }) {
   const [active, setActive] = useState<string>(entries[0]?.id ?? '')
 
@@ -74,11 +80,17 @@ export function ArticleToc({
         exactly at the end of the content instead of overscrolling past it.
         Pure CSS — no scroll listeners, no layout thrash.
       */}
-      <aside className="hidden self-stretch lg:block">
-        <div className="sticky top-[76px] flex min-h-[calc(100vh-76px)] flex-col justify-center py-10">
+      <aside aria-label="On this page" className="hidden self-stretch lg:block">
+        <div
+          className={`sticky top-[76px] flex min-h-[calc(100vh-76px)] flex-col justify-center py-10 ${
+            rail ? 'xl:top-[calc(var(--safe-top)+68px)] xl:h-[calc(100vh-var(--safe-top)-68px)] xl:min-h-0 xl:py-6' : ''
+          }`}
+        >
           <div className="mb-4 text-[13px] font-semibold uppercase tracking-[0.1em] text-[#F1F3F1]">
             On this page
           </div>
+          {/* With the rail card under it, a long list scrolls inside its box so the stack fits the screen. */}
+          <div className={rail ? 'flex flex-col xl:max-h-[calc(100vh-560px)] xl:min-h-[120px] xl:overflow-y-auto xl:pr-1' : 'contents'}>
           {entries.map((e) => {
             const isActive = active === e.id
             return (
@@ -95,17 +107,19 @@ export function ArticleToc({
               </a>
             )
           })}
+          </div>
           {/* Same treatment as the navbar's Accounts button: outlined rather
               than filled, with the flowing gradient text. A solid green block
               here competed with the article's own CTA. */}
           <a
             href={buyHref}
-            className="mt-6 flex items-center justify-center whitespace-nowrap border border-[#2F6B46] px-4 py-3.5 text-center text-[13.5px] font-semibold transition hover:border-[#3FA35C]"
+            className={`mt-6 ${rail ? 'xl:hidden' : ''} flex items-center justify-center whitespace-nowrap border border-[#2F6B46] px-4 py-3.5 text-center text-[13.5px] font-semibold transition hover:border-[#3FA35C]`}
           >
             <span className="animate-text-flow bg-[linear-gradient(110deg,#7Cd39a_0%,#F1F3F1_35%,#4FB477_60%,#7Cd39a_100%)] bg-[length:200%_100%] bg-clip-text text-transparent motion-reduce:animate-none motion-reduce:text-[#8FBF9C]">
               {buyLabel}
             </span>
           </a>
+          {rail && <div className="mt-6 hidden xl:block">{rail}</div>}
         </div>
       </aside>
     </>

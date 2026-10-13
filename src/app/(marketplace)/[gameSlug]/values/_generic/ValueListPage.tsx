@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { ValueListBuy } from '@/components/buy-rails/ValueListBuy'
 import { ValueItemIndex } from '@/components/values/ValueItemIndex'
 import Link from '@/components/navigation/AppLink'
 import { JsonLd, breadcrumbList, faqPage, itemList } from '@/lib/seo/jsonld'
@@ -51,6 +52,7 @@ export default async function ValueListPage({ gameSlug }: { gameSlug: string }) 
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
+      <ValueListBuy gameSlug={gameSlug}>
       <GameHeroBackdrop gameSlug={gameSlug} size="hub">
         <HubNav data={hubNav} />
         <JsonLd
@@ -78,6 +80,7 @@ export default async function ValueListPage({ gameSlug }: { gameSlug: string }) 
         </div>
       </GameHeroBackdrop>
 
+      </ValueListBuy>
       <HubFooter
         gameName={hubNav.current.name}
         gameSlug={hubNav.current.slug}
