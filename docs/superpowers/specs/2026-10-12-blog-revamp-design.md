@@ -13,7 +13,7 @@ Research behind this: audit of our code, a live screenshot audit (`docs/handoff/
 
 ## Not changing
 
-- **No database migration.** `blog_posts.body` is `jsonb`; the new format lives there next to the legacy one (see Part 2).
+- **No table migration.** `blog_posts.body` is `jsonb`; the new format lives there next to the legacy one (see Part 2). The only migration is one storage UPDATE that lets the `blog-images` bucket accept `image/avif` (`20261012230155_blog_images_avif`); it is pushed before the deploy.
 - URLs stay `/{game}/blog` and `/{game}/blog/{slug}`; `/blog` stays the site-wide index.
 - **Scheduling waits.** The status CHECK only allows draft / published / archived, so scheduling needs a migration and a cron. It is a later PR.
 

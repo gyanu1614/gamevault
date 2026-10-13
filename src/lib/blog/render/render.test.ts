@@ -1,0 +1,67 @@
+import { describe, expect, it, vi } from 'vitest'
+import * as React from 'react'
+;(globalThis as any).React = React
+vi.mock('@/components/navigation/AppLink', () => ({
+  default: ({ href, children, ...rest }: any) => React.createElement('a', { href, ...rest }, children),
+}))
+import { renderToStaticMarkup } from 'react-dom/server'
+import { BlogDocView } from './BlogDocView'
+import { legacyToDoc } from '@/lib/blog/doc/legacy'
+
+const t = (text: string, marks?: any[]) => (marks ? { type: 'text', text, marks } : { type: 'text', text })
+const img = { src: 'https://cdn/x/1920.webp', width: 1920, height: 1080, blur: 'data:image/webp;base64,AA', sources: { avif: [{ w: 480, url: 'https://cdn/x/480.avif' }, { w: 1920, url: 'https://cdn/x/1920.avif' }], webp: [{ w: 480, url: 'https://cdn/x/480.webp' }, { w: 1920, url: 'https://cdn/x/1920.webp' }] } }
+
+const doc: any = {
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [t('How To Sell')] },
+    { type: 'paragraph', content: [t('Go to '), t('values', [{ type: 'link', attrs: { href: 'https://dropmarket.gg/murder-mystery-2/values' } }]), t(' or '), t('Roblox', [{ type: 'link', attrs: { href: 'https://www.roblox.com' } }])] },
+    { type: 'figure', attrs: { ...img, alt: 'The sell page', caption: 'The sell page', layout: 'wide' } },
+    { type: 'orderedList', attrs: { start: 3 }, content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [t('Publish')] }] }] },
+    { type: 'callout', attrs: { tone: 'warning' }, content: [{ type: 'paragraph', content: [t('Never trade first.')] }] },
+    { type: 'table', content: [
+      { type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [t('Item')] }] }] },
+      { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [t('Harvester')] }] }] },
+    ] },
+    { type: 'faq', attrs: { items: [{ q: 'Is it safe?', a: 'Yes.' }] } },
+    { type: 'codes', attrs: { rows: [{ code: 'FREEKNIFE', reward: 'A knife', isNew: true }, { code: 'OLD', reward: '', expired: true }], checkedAt: '2026-10-12' } },
+    { type: 'itemCard', attrs: { gameSlug: 'murder-mystery-2', itemSlug: 'harvester', name: 'Harvester', imageUrl: '/h.png' } },
+    { type: 'heading', attrs: { level: 2 }, content: [t('How To Sell')] },
+  ],
+}
+
+describe('BlogDocView', () => {
+  const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc, items: new Map([['murder-mystery-2/harvester', { name: 'Harvester', lines: ['4 offers'], buyLabel: 'Buy From $40', href: '/murder-mystery-2/buy-items/item/harvester', image: null } as any]]) }))
+
+  it('images: AVIF + WebP sources, real size, wide layout, caption', () => {
+    expect(html).toContain('<source type="image/avif" srcSet="https://cdn/x/480.avif 480w, https://cdn/x/1920.avif 1920w"')
+    expect(html).toMatch(/<img[^>]+width="1920"[^>]+height="1080"/)
+    expect(html).toContain('class="mt-8 blog-wide"')
+    expect(html).toContain('<figcaption')
+  })
+  it('own-domain links are internal; other sites open in a new tab', () => {
+    expect(html).toContain('href="/murder-mystery-2/values"')
+    expect(html).toMatch(/href="https:\/\/www\.roblox\.com\/"[^>]*target="_blank"[^>]*rel="noopener noreferrer nofollow"/)
+  })
+  it('numbered lists keep their start; headings get unique ids in order', () => {
+    expect(html).toContain('<ol start="3"')
+    expect(html).toContain('id="how-to-sell"')
+    expect(html).toContain('id="how-to-sell-2"')
+  })
+  it('callout, table scroll box, FAQ details, codes with copy + expired list, item card with live buy label', () => {
+    expect(html).toContain('Warning')
+    expect(html).toContain('class="relative mt-7 overflow-x-auto')
+    expect(html).toContain('<details')
+    expect(html).toContain('FREEKNIFE')
+    expect(html).toContain('Expired Codes (1)')
+    expect(html).toContain('Last checked Oct 12, 2026')
+    expect(html).toContain('Buy From $40')
+    expect(html).toContain('href="/murder-mystery-2/values/harvester"')
+  })
+  it('a legacy post renders through the same renderer', () => {
+    const legacy = renderToStaticMarkup(React.createElement(BlogDocView, { doc: legacyToDoc(['## Intro', 'Hello **world**', '![wide](https://x/a.png)']) }))
+    expect(legacy).toContain('id="intro"')
+    expect(legacy).toContain('<strong')
+    expect(legacy).toContain('blog-wide')
+  })
+})

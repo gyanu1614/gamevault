@@ -85,6 +85,10 @@ export function blogPosting(post: {
   dateModified?: string
   authorName: string
   image?: string | null
+  /** Words in the body (block posts count them). */
+  wordCount?: number
+  /** The post's section, e.g. "Guide". */
+  section?: string
 }) {
   return {
     '@context': 'https://schema.org',
@@ -101,6 +105,8 @@ export function blogPosting(post: {
     ...(post.image
       ? { image: { '@type': 'ImageObject', url: absoluteUrl(post.image) } }
       : {}),
+    ...(post.wordCount ? { wordCount: post.wordCount } : {}),
+    ...(post.section ? { articleSection: post.section } : {}),
   }
 }
 

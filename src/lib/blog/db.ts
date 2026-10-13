@@ -36,6 +36,8 @@ export interface DbBlogPost extends BlogPost {
    * "Updated" byline. Equals publishedAt for a post that has never been edited.
    */
   updatedAt: string
+  /** The stored body as is (legacy string[] or `{ v: 2, doc, cover }`) — read it with readBody(). */
+  rawBody: unknown
 }
 
 interface BlogPostRow {
@@ -80,6 +82,7 @@ function rowToPost(row: BlogPostRow): DbBlogPost {
     primaryGameSlug: row.primary_game_slug,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,
+    rawBody: row.body ?? null,
   }
 }
 
