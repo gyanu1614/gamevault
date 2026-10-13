@@ -1,6 +1,9 @@
 import { readValuePageEvidence } from '@/lib/seo/gate/read'
+import { ItemPageTitle } from '@/components/values/ItemPageTitle'
+import { ValueCrossLinks } from '@/components/values/ValueCrossLinks'
 import { answerSentence, withAnswer } from '@/components/values/value-answer-format'
 import { petHeadline } from './_petAnswer'
+import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import Link from '@/components/navigation/AppLink'
 import { withArticle } from '@/lib/text/article'
 import { CaretLeftIcon } from '@phosphor-icons/react/dist/ssr/CaretLeft'
@@ -21,7 +24,7 @@ import AdoptMePetHero from './_AdoptMePetHero'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
-import { AdoptMeAboutStats } from './_AdoptMeAboutStats'
+import { AdoptMeAbout, AdoptMeFormTable } from './_AdoptMeAbout'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
@@ -194,12 +197,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             <span className="text-text-primary">{pet.name}</span>
           </nav>
 
-          <h1 className="text-[30px] font-bold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-display">
-            {pet.name} Value in Adopt Me
-          </h1>
-          <p className="mt-3 max-w-2xl text-body leading-7 text-text-secondary">
-            What {withArticle(pet.name)} is worth in trade — and in real money.
-          </p>
+          <ItemPageTitle name={pet.name} game="Adopt Me" />
 
 
           {/* Interactive hero + variant grid — SAB's ItemHero layout, Adopt Me
@@ -218,6 +216,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         </div>
       </GameHeroBackdrop>
 
+      <ValueItemRails gameSlug="adopt-me" itemSlug={pet.slug} itemName={pet.name} imageUrl={pet.imageUrl ?? null}>
       <AvailableNow
         gameSlug="adopt-me"
         gameName="Adopt Me"
@@ -235,26 +234,31 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             (what a featured-snippet / AI answer lifts), then the About copy and
             a compact stats row. Only renders the price sentence when FR is
             actually priced. ──────────────────────────────────────────────── */}
-        <section>
-          <h2 className="mb-5 text-heading font-bold tracking-tight text-text-primary">About The {pet.name}</h2>
-
-          {/* Quick-answer callout + market-activity stats — both reprice to the
-              variant selected in the hero (via SelectedVariantContext). */}
-          <AdoptMeAboutStats
-            name={pet.name}
-            variants={pet.variants}
-            buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
-          />
-
-          <p className="mt-6 text-body leading-7 text-text-secondary">
+        <AdoptMeAbout
+          name={pet.name}
+          rarity={meta.label}
+          rarityColor={meta.color}
+          originType={pet.originType}
+          originDetail={pet.originDetail}
+          obtainabilityLabel={OBTAINABILITY_LABEL[pet.obtainability] ?? pet.obtainability}
+          variants={pet.variants}
+        >
+          <p>
             <HighlightedDescription text={pet.description} />
           </p>
-        </section>
+        </AdoptMeAbout>
 
         {/* ── Price trend — daily history for the SELECTED variant (shared with
             the hero). One focused line + range tabs; its own dropdown writes the
             selection back so the hero + stats follow too. ─────────────────── */}
         <AdoptMePriceTrend history={pet.priceHistory} />
+
+        {/* Every form side by side, after the trend (owner, 2026-10-12). */}
+        <AdoptMeFormTable
+          name={pet.name}
+          variants={pet.variants}
+          buy={{ itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
+        />
 
         {/* ── Similar pets — the shared values rail ───────────────────────── */}
         <SimilarItemsRail
@@ -275,39 +279,22 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         {/* ── FAQ — the shared content-hub FAQ block. ─────────────────────── */}
         <HubFaqSection
           title="Frequently Asked Questions"
-          subtitle={`Everything about the ${pet.name}'s value, variants and how to buy it.`}
           items={faq}
         />
 
         {/* Cross-links — back to the whole list on the left, the methodology
             page on the right (E-E-A-T: every cited value links to how we
             calculate it). Each side is a labelled two-line link. */}
-        <nav aria-label="More Adopt Me values" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Link
-            href="/adopt-me/values"
-            className={`${VALUE_SURFACE_LINK} group flex items-center gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
-          >
-            <CaretLeftIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:-translate-x-0.5 group-hover:text-text-primary" />
-            <span>
-              <span className={`block ${VALUE_LABEL}`}>Back to</span>
-              <span className="block text-body-sm font-semibold text-text-primary">All Adopt Me Values</span>
-            </span>
-          </Link>
-          <Link
-            href="/adopt-me/values/methodology"
-            className={`${VALUE_SURFACE_LINK} group flex items-center justify-between gap-3 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring`}
-          >
-            <span>
-              <span className={`block ${VALUE_LABEL}`}>Our Method</span>
-              <span className="block text-body-sm font-semibold text-text-primary">How We Value Pets</span>
-            </span>
-            <CaretRightIcon aria-hidden size={20} weight="bold" className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
-          </Link>
-        </nav>
+        <ValueCrossLinks
+          ariaLabel="More Adopt Me values"
+          back={{ href: '/adopt-me/values', label: 'All Adopt Me Values', short: 'All Values' }}
+          method={{ href: '/adopt-me/values/methodology', label: 'How We Value Pets', short: 'Our Method' }}
+        />
 
         {/* Shared end-of-page CTA with the per-game background hero. */}
         <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })} />
       </div>
+      </ValueItemRails>
       </SelectedVariantProvider>
 
       <HubFooter
