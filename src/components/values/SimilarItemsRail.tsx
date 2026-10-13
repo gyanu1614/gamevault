@@ -102,19 +102,20 @@ export function SimilarItemsRail({
       </div>
 
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex gap-3">
+        {/* Owner, 2026-10-11: wider cards, fewer per view — 2 / 3 / 4 at most, never cramped. */}
+        <div className="flex gap-3 sm:gap-4">
           {items.map((item) => (
             <Link
               key={item.key}
               href={item.href}
-              className={`${VALUE_SURFACE_LINK} flex min-w-0 shrink-0 basis-[46%] flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:basis-[31%] lg:basis-[23%] xl:basis-[15.5%]`}
+              className={`${VALUE_SURFACE_LINK} flex min-w-0 shrink-0 basis-[46%] flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:basis-[31%] xl:basis-[23.5%]`}
             >
-              <div className="flex aspect-square items-center justify-center p-3">
-                <ValueArt src={item.imageSrc} alt={item.imageAlt} size={120} pixelated={pixelated} />
+              <div className="flex aspect-[5/4] items-center justify-center p-4">
+                <ValueArt src={item.imageSrc} alt={item.imageAlt} size={136} pixelated={pixelated} />
               </div>
-              <div className="border-t border-white/[0.07] px-3 py-2.5">
-                <p className="truncate text-[14px] font-semibold text-text-primary">{item.name}</p>
-                <p className="mt-0.5 truncate text-[13px] tabular-nums text-text-secondary">{item.price}</p>
+              <div className="border-t border-white/[0.07] px-4 py-3">
+                <p className="truncate text-body font-semibold text-text-primary">{item.name}</p>
+                <p className="mt-0.5 truncate text-body-sm tabular-nums text-text-secondary">{item.price}</p>
               </div>
             </Link>
           ))}
