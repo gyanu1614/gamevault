@@ -12,3 +12,10 @@ describe('FreshnessBadge text', () => {
     expect(text(1, 2)).toBe('Market price · updated 08:43 UTC · from 1 listing across 2 marketplaces')
   })
 })
+
+describe('badgeText updatedAt (item heroes)', () => {
+  it('"Updated Oct 10, 10:18 UTC", built by hand so server and iOS Safari agree (Safari printed "Oct 10 at 10:18")', () => {
+    expect(badgeText({ updatedAt: '2026-10-10T10:18:00Z' } as any)).toBe('Updated Oct 10, 10:18 UTC')
+    expect(badgeText({ updatedAt: '2026-01-02T03:04:00Z' } as any)).toBe('Updated Jan 2, 03:04 UTC')
+  })
+})

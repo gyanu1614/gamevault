@@ -122,10 +122,8 @@
 
   body {
     background-color: var(--color-bg-base);
-    /* V20 — Just the page scrim on body. Ambient corner glows
-       live on body::after (see below). Single-hue centre bloom
-       retired: dual-hue corners look premium, single bloom looks
-       dated. */
+    /* V20 — Just the page scrim on body. (The ambient corner glow
+       layer, body::after, is gone — see below.) */
     background-image: var(--gradient-page-scrim);
     background-repeat: no-repeat;
     background-position: top center;
@@ -150,31 +148,17 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   }
 
-  /* V20 — Ambient corner glows: lime top-left, violet bottom-right.
-     position: fixed keeps them GPU-composited and pinned to the
-     viewport on scroll. Low alpha (0.10) reads as light, not paint. */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(var(--glow-size) var(--glow-size) at 0% 0%,
-        var(--glow-tl) 0%, transparent 85%),
-      radial-gradient(var(--glow-size) var(--glow-size) at 100% 100%,
-        var(--glow-br) 0%, transparent 85%);
-  }
+  /* (body::after ambient corner glows removed 2026-10-12: both glow colours
+     were already `transparent` (tokens.css / theme-v2.css), so it drew
+     nothing — but as a full-screen fixed layer painted above the page it was
+     what iOS 26 Safari hit-tested at the top edge, so the status bar never
+     took the navbar's colour and the page showed through.) */
 
   @media (max-width: 640px) {
     :root {
       --hero-height: 460px;
       --glow-size:   95vmax;
     }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    body::after { opacity: 0.6; }
   }
 
   ::selection { background: var(--color-accent-default); color: var(--color-text-inverse); }
@@ -247,6 +231,11 @@
   html {
     /* Force dark mode as default — gaming audiences expect it */
     color-scheme: dark;
+    /* Explicit, opaque root colour = the phone navbar's (#1C1D22): iOS 26
+       Safari blends its status-bar / toolbar tint with it, so the clock strip
+       matches the bar instead of reading a shade darker (owner, 2026-10-12).
+       The page itself paints #16171B on <body>. */
+    background-color: #1C1D22;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -2928,14 +2917,26 @@
 
 /* The iPhone status-bar strip (see --safe-top): body clears it, this paints it. */
 body { padding-top: var(--safe-top); }
+/* Paints the iPhone status-bar strip above the fixed top bars, solid. */
 .safe-top-fill {
   position: fixed;
   inset: 0 0 auto 0;
   height: var(--safe-top);
   z-index: 90;
   pointer-events: none;
-  background: var(--color-bg-base);
+  background-color: #1C1D22;
 }
+
+/* iOS 26 Safari (owner, 2026-10-12, tested on a real iPhone): it colours
+   its status bar / floating toolbar from the fixed element it hit-tests ~8px
+   inside that edge — that element's own plain background-color. Anything
+   full-screen painted above the page there (a pseudo-element counts as
+   <body>) hides the bar from it, and so does nesting the bar under such a
+   layer; a backdrop-filter reads as "no single colour", and Safari then uses
+   the root (html) colour, which is set to the navbars' tone. Hence: no
+   full-screen overlay above the page, html background = #1C1D22, and the buy
+   bar portalled to <body> (BuyBar.tsx). */
+
 
 /* Seller prompt (hero eyebrow): a slow lime light sweeping through the
    offer text — Aceternity-style text shimmer, no glow, no blur. The lead
@@ -2961,6 +2962,34 @@ body { padding-top: var(--safe-top); }
 }
 @media (prefers-reduced-motion: reduce) {
   .seller-shimmer { animation: none; color: #c8f06b; background: none; }
+}
+
+/* Trade value shine (owner, 2026-10-12): every community trade-value number
+   is gold with a slow warm light passing through it, the same sweep as the
+   seller prompt. One class, used through <TradeValue>; static gold under
+   reduced motion. inline-block so the sweep spans the number, not the line. */
+.trade-shine {
+  display: inline-block;
+  background: linear-gradient(
+    100deg,
+    #e8bd6a 0%,
+    #e8bd6a 38%,
+    #fff3cf 50%,
+    #e8bd6a 62%,
+    #e8bd6a 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: trade-shine 5s ease-in-out infinite;
+}
+@keyframes trade-shine {
+  0% { background-position: 115% 0; }
+  60%, 100% { background-position: -45% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trade-shine { animation: none; color: #e8bd6a; background: none; }
 }
 
 /* Title accent (founding headings, 2026-10-09): the key word in brushed

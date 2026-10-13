@@ -28,6 +28,8 @@ type PipelineProps = {
 
 export type FreshnessBadgeProps = SnapshotProps | PipelineProps
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 function utcHhMm(d: Date): string {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
@@ -50,14 +52,9 @@ export function badgeText(props: FreshnessBadgeProps): string | null {
   if (!props.updatedAt) return null
   const date = new Date(props.updatedAt)
   if (Number.isNaN(date.getTime())) return null
-  const label = date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  })
+  // Built by hand, not toLocaleString: iOS Safari renders the same options as
+  // "Oct 10 at 10:18" while Node prints "Oct 10, 10:18" — a hydration mismatch.
+  const label = `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${utcHhMm(date)}`
   return `Updated ${label} UTC`
 }
 

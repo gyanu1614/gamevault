@@ -229,7 +229,11 @@ export default function RouteProgress() {
     <div
       aria-hidden
       className="pointer-events-none fixed left-0 right-0 top-[var(--safe-top)] z-[100]"
-      style={{ opacity: visible ? 1 : 0, transition: 'opacity 220ms ease' }}
+      // display:none while idle, not just opacity 0: iOS 26 Safari colours its
+      // status bar from the full-width fixed element on the top edge, and this
+      // transparent wrapper (still there at opacity 0) made it show the page
+      // through (owner, 2026-10-12).
+      style={{ opacity: visible ? 1 : 0, transition: 'opacity 220ms ease', display: visible || progress > 0 ? 'block' : 'none' }}
     >
       <div
         className="relative h-[3px]"
