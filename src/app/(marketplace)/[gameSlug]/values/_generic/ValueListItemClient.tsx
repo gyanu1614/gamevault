@@ -9,6 +9,8 @@
  * the picker is a two-way Standard ↔ Chroma switch between pages).
  */
 
+import { VariantSelector } from '@/components/values/VariantSelector'
+import { formGroup } from '@/lib/values/variant-selector'
 import dynamic from 'next/dynamic'
 import Link from '@/components/navigation/AppLink'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
@@ -74,7 +76,6 @@ function useItemCta(buy: ItemBuy, name: string) {
 
 export function ValueListItemHero({
   name,
-  eyebrow,
   accent,
   imageUrl,
   imageAlt,
@@ -88,8 +89,7 @@ export function ValueListItemHero({
   forms,
 }: {
   name: string
-  eyebrow: string
-  /** Rarity colour: glow, eyebrow, price label. */
+  /** Rarity colour: price label. */
   accent: string
   imageUrl: string | null
   imageAlt: string
@@ -127,12 +127,6 @@ export function ValueListItemHero({
           )
         ) : undefined,
       }}
-      eyebrow={
-        <>
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: accent }} />
-          {eyebrow}
-        </>
-      }
       title={name}
       stats={stats.map((s) => ({
         label: s.label,
@@ -140,7 +134,6 @@ export function ValueListItemHero({
       }))}
       price={{
         label: cheapestUsd != null ? 'Cheapest Price' : 'Value',
-        labelColor: accent,
         value: cheapestUsd != null ? usd(cheapestUsd) : 'No price yet',
         children: (
           <>
@@ -148,7 +141,7 @@ export function ValueListItemHero({
               <p className="mt-1.5 text-[13px] tabular-nums text-text-tertiary">typically ~{usd(secondary)}</p>
             )}
             {cheapestUsd != null && (
-              <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
+              <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2">
                 <HeroBadge color="var(--color-success)">From reputable sellers</HeroBadge>
               </div>
             )}
@@ -169,53 +162,18 @@ export function ValueListItemHero({
 }
 
 /**
- * Standard ↔ Chroma: two tiles, each a link to that form's own page (a
- * Chroma is a separate item with its own price). Active = filled with the
- * form's rarity colour, like the Adopt Me tier tiles.
+ * Standard ↔ Chroma on the universal selector: each form is a link to its own
+ * page (a Chroma is a separate item with its own price), the current one is
+ * the active pill in its rarity colour, each with its price.
  */
 function FormSwitch({ forms }: { forms: ItemForm[] }) {
-  const current = forms.find((f) => f.current)
   return (
-    <div>
-      <p className={`mb-2 ${VALUE_LABEL}`}>Form</p>
-      <div className="grid grid-cols-2 gap-2">
-        {forms.map((f) => {
-          const body = (
-            <>
-              <span className="truncate">{f.label}</span>
-              <span className={`tabular-nums ${f.current ? 'opacity-70' : 'text-text-tertiary'}`}>
-                {f.priceUsd != null ? usd(f.priceUsd) : '—'}
-              </span>
-            </>
-          )
-          const cls =
-            'flex h-11 items-center justify-center gap-2 rounded-md px-3 text-body-sm font-semibold transition-[filter,background-color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
-          return f.current ? (
-            <span
-              key={f.key}
-              aria-current="page"
-              className={cls}
-              style={{ backgroundColor: f.color, color: '#0B0810' }}
-            >
-              {body}
-            </span>
-          ) : (
-            <Link
-              key={f.key}
-              href={f.href}
-              className={`${cls} bg-bg-overlay text-text-secondary hover:bg-bg-overlay-2 hover:text-text-primary active:scale-[0.98]`}
-            >
-              {body}
-            </Link>
-          )
-        })}
-      </div>
-      {current && (
-        <p className="mt-2 text-center text-caption text-text-tertiary">
-          Showing <span className="font-semibold" style={{ color: current.color }}>{current.name}</span>
-        </p>
-      )}
-    </div>
+    <VariantSelector
+      groups={[formGroup(forms.map((f) => ({ key: f.key, label: f.label, href: f.href, priceUsd: null, color: f.color, current: f.current })), usd)]}
+      onSelect={() => {}}
+      labels={false}
+      fill
+    />
   )
 }
 

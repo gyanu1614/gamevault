@@ -11,6 +11,7 @@ import { ValuesFreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { ValuesBuyModule } from '@/components/content/ValuesBuyModule'
 import { getValueItems, type ValueItem } from '@/lib/values/data'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
+import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft'
 import { ValueItemHero } from '@/components/values/ValueItemHero'
@@ -94,6 +95,8 @@ export default async function ValueItemPage({
         : item.kind === 'pet'
           ? 'Pet'
           : 'Egg'
+  // The item's type leads its fact rows (owner, 2026-10-12: Type, Rarity, …).
+  facts.unshift({ label: 'Type', value: kindLabel })
 
   return (
     <main
@@ -148,7 +151,6 @@ export default async function ValueItemPage({
       <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-28 sm:px-6 lg:px-8">
         <ValueItemHero
           art={item.imageUrl ? { src: item.imageUrl, alt: item.name } : null}
-          eyebrow={kindLabel}
           title={item.name}
           stats={facts}
           price={
@@ -193,6 +195,7 @@ export default async function ValueItemPage({
         />
       </section>
 
+      <ValueItemRails gameSlug={gameSlug} itemSlug={item.slug} itemName={item.name} imageUrl={item.imageUrl ?? null}>
       <AvailableNow
         gameSlug={gameSlug}
         gameName={theme.name}
@@ -229,6 +232,7 @@ export default async function ValueItemPage({
           All {theme.name} Values
         </Link>
       </div>
+      </ValueItemRails>
 
       <HubFooter
         gameName={hubNav.current.name}

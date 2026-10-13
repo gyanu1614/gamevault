@@ -11,6 +11,8 @@ import { fetchAllRows } from '@/lib/db/fetch-all'
 import { VARIANTS as VARIANT_ORDER, VARIANT_LABEL, type Variant } from '../../calculator/_adoptMeCalcTypes'
 
 export { VARIANT_ORDER, VARIANT_LABEL }
+// Buyer-facing names: the top tier spelled in full (Mega Neon Fly Ride).
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 export type { Variant }
 
 export interface AdoptMePetVariant {
@@ -108,7 +110,7 @@ export async function getAdoptMePet(slug: string): Promise<AdoptMePetDetail | nu
     const averageUsd = r ? num(r.average_usd) : null
     return {
       variant,
-      label: VARIANT_LABEL[variant],
+      label: VARIANT_DISPLAY[variant],
       tradeValue: r ? num(r.trade_value) : null,
       // cashUsd carries ONLY a REAL reputable market price (average). We no
       // longer fall back to the legacy estimated cash_value_usd — when there is

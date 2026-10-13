@@ -13,7 +13,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/csr/SortAscending'
-import { VARIANT_LABEL, type Variant } from '../calculator/_adoptMeCalcTypes'
+import { type Variant } from '../calculator/_adoptMeCalcTypes'
 import { variantColor } from './[itemSlug]/_adoptMeVariantColor'
 import { CompactVariantPicker } from './_CompactVariantPicker'
 import {
@@ -48,6 +48,7 @@ import {
   type AdoptMeSort,
   type AdoptMeView,
 } from './_adoptMeListModel'
+import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
 
 export type { AdoptMePetItem, AdoptMeVariantValue } from './_adoptMeListModel'
 
@@ -206,7 +207,7 @@ function AdoptMeValuesClientInner({ initial }: { initial: InitialValueList }) {
             trigger={
               <>
                 <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-semibold text-text-primary">{variant}</span>
-                <span className="truncate">{VARIANT_LABEL[variant]}</span>
+                <span className="truncate">{VARIANT_DISPLAY[variant]}</span>
               </>
             }
           >
@@ -341,6 +342,7 @@ function PetCard({
   return (
     <ValueCard
       href={href}
+      buySlug={pet.slug}
       headerLeft={
         <>
           <CardRank rank={rank} />
@@ -353,17 +355,17 @@ function PetCard({
       name={pet.name}
       control={
         <VariantPill
-          label={VARIANT_LABEL[code]}
+          label={VARIANT_DISPLAY[code]}
           color={c}
           expanded={pickerOpen}
           onToggle={() => setPickerOpen((o) => !o)}
-          ariaLabel={`Variant: ${VARIANT_LABEL[code]}. Change variant`}
+          ariaLabel={`Variant: ${VARIANT_DISPLAY[code]}. Change variant`}
         />
       }
       footer={
         <PriceStatPair
           stats={[
-            { label: 'Trade', value: tradeVal != null ? TRADE.format(tradeVal) : null, color: '#E8BD6A' },
+            { label: 'Trade', value: tradeVal != null ? TRADE.format(tradeVal) : null, shine: true },
             {
               label: 'Cheapest',
               value: cheapest != null ? USD.format(cheapest) : null,
