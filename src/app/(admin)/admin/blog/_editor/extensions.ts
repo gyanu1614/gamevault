@@ -2,9 +2,12 @@
  * The editor's block set: the SAME schema the public renderer reads
  * (blogBaseExtensions + CUSTOM_NODES), with a React node view on each custom
  * block, plus writing helpers that never reach a post: the "/" menu, the
- * empty-line hint, word count, and paste / drop an image straight in.
+ * empty-line hint, word count, paste / drop an image straight in, and paste
+ * a post written in a chat (its Copy button gives Markdown) as real blocks.
  */
-import type { Editor, Extensions } from '@tiptap/core'
+import { Extension, type Editor, type Extensions } from '@tiptap/core'
+import { Plugin } from '@tiptap/pm/state'
+import { Markdown } from '@tiptap/markdown'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
@@ -14,6 +17,7 @@ import { blogBaseExtensions, Callout, Codes, Cta, Faq, Figure, ImagePair, ItemCa
 import { CalloutNV, CodesNV, CtaNV, FaqNV, FigureNV, ImagePairNV, ItemCardNV, YouTubeNV } from './node-views'
 import { SlashCommand } from './slash'
 import { uploadImage } from './upload'
+import { fitHeadings, looksLikeMarkdown } from '@/lib/blog/editor/paste'
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif']
 
@@ -34,6 +38,30 @@ async function insertImages(editor: Editor, files: File[], pos?: number) {
   }
 }
 
+/**
+ * Plain-text Markdown on paste → headings, lists, bold, links, tables.
+ * Copied rich text (HTML) and images keep their own handlers.
+ */
+const PasteMarkdown = Extension.create({
+  name: 'pasteMarkdown',
+  addProseMirrorPlugins() {
+    const editor = this.editor
+    return [
+      new Plugin({
+        props: {
+          handlePaste: (_view, event) => {
+            const data = event.clipboardData
+            if (!data || data.files.length > 0 || data.getData('text/html')) return false
+            const text = data.getData('text/plain')
+            if (!text || !looksLikeMarkdown(text)) return false
+            return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
+          },
+        },
+      }),
+    ]
+  },
+})
+
 export function editorExtensions(): Extensions {
   return [
     ...blogBaseExtensions(),
@@ -49,6 +77,8 @@ export function editorExtensions(): Extensions {
       placeholder: ({ node }) => (node.type.name === 'heading' ? 'Heading' : 'Write, or type / for images, tables, tips and more'),
     }),
     CharacterCount,
+    Markdown,
+    PasteMarkdown,
     SlashCommand,
     FileHandler.configure({
       allowedMimeTypes: IMAGE_TYPES,

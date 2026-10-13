@@ -13,6 +13,7 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded'
 import type { BlogDoc } from '@/lib/blog/doc/types'
+import { fitHtmlHeadings } from '@/lib/blog/editor/paste'
 import { editorExtensions } from './extensions'
 import { SelectionMenu, Toolbar } from './Toolbar'
 
@@ -42,7 +43,11 @@ export function BlockEditor({ initial, onChange }: { initial: BlogDoc; onChange:
     immediatelyRender: false,
     // Typing re-renders only the controls that read editor state.
     shouldRerenderOnTransaction: false,
-    editorProps: { attributes: { class: PROSE, 'aria-label': 'Post body' } },
+    editorProps: {
+      attributes: { class: PROSE, 'aria-label': 'Post body' },
+      // Copied rich text: a page title (h1) becomes a section heading, h4–h6 small headings.
+      transformPastedHTML: fitHtmlHeadings,
+    },
     onUpdate: ({ editor: e }) => onChange(e.getJSON() as BlogDoc),
   })
 
