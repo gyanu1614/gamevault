@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import type { RailCard } from '@/lib/buy-rails/model'
 import type { CalloutTone, SrcItem, StoredImage } from '@/lib/blog/doc/types'
 import { CopyCode, YouTubeLite } from './client-nodes'
-import { classifyHref } from './links'
+import { classifyHref, gamePath } from './links'
 
 export const BTN_WHITE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] bg-[#F2F3F5] px-5 text-[14px] font-semibold text-[#111214] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -199,10 +199,10 @@ export function ItemCardView({ attrs, card }: { attrs: Record<string, unknown>; 
   )
 }
 
-export function CtaView({ attrs }: { attrs: Record<string, unknown> }) {
+export function CtaView({ attrs, gameSlug }: { attrs: Record<string, unknown>; gameSlug?: string | null }) {
   const kind = classifyHref(String(attrs.href ?? ''))
   if (!('internal' in kind)) return null
-  const href = kind.internal
+  const href = gamePath(kind.internal, gameSlug)
   return (
     <div className="mt-8 flex justify-center">
       <Link href={href} className={BTN_WHITE}>{String(attrs.label || 'Shop Now')}</Link>

@@ -17,7 +17,11 @@ import { blogBaseExtensions, Callout, Codes, Cta, Faq, Figure, ImagePair, ItemCa
 import { CalloutNV, CodesNV, CtaNV, FaqNV, FigureNV, ImagePairNV, ItemCardNV, YouTubeNV } from './node-views'
 import { SlashCommand } from './slash'
 import { uploadImage } from './upload'
-import { fitHeadings, looksLikeMarkdown } from '@/lib/blog/editor/paste'
+import { fitHeadings, hasPostMarkers, looksLikeMarkdown } from '@/lib/blog/editor/paste'
+import { legacyToDoc } from '@/lib/blog/doc/legacy'
+
+/** Copied rich text that already carries structure. */
+const RICH_HTML = /<(h[1-6]|ul|ol|table|strong|b|em|a)\b/i
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif']
 
@@ -39,8 +43,13 @@ async function insertImages(editor: Editor, files: File[], pos?: number) {
 }
 
 /**
- * Plain-text Markdown on paste → headings, lists, bold, links, tables.
- * Copied rich text (HTML) and images keep their own handlers.
+ * Paste a post written in a chat:
+ *  - our post format (:::tip / :::steps boxes, ![IMAGE: …](replace-me) image
+ *    slots) → the same converter that opens old posts;
+ *  - other Markdown → headings, lists, bold, links, tables;
+ *  - copied rich text with real headings/lists, and images, keep their own
+ *    handlers. (A chat often wraps plain text in bare HTML, so HTML alone
+ *    does not decide.)
  */
 const PasteMarkdown = Extension.create({
   name: 'pasteMarkdown',
@@ -51,9 +60,13 @@ const PasteMarkdown = Extension.create({
         props: {
           handlePaste: (_view, event) => {
             const data = event.clipboardData
-            if (!data || data.files.length > 0 || data.getData('text/html')) return false
+            if (!data || data.files.length > 0) return false
             const text = data.getData('text/plain')
-            if (!text || !looksLikeMarkdown(text)) return false
+            if (!text) return false
+            const markers = hasPostMarkers(text)
+            if (!markers && RICH_HTML.test(data.getData('text/html'))) return false
+            if (markers) return editor.commands.insertContent(legacyToDoc(fitHeadings(text).split('\n')).content)
+            if (!looksLikeMarkdown(text)) return false
             return editor.commands.insertContent(fitHeadings(text), { contentType: 'markdown' })
           },
         },

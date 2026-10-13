@@ -10,6 +10,8 @@
  *   > / ---         quote / divider
  *   ![words](url)   figure; "wide" → wide layout, "center" dropped, the rest
  *                   is the caption and the alt text
+ *   ![IMAGE: words](replace-me)   an empty image slot (no real address): the
+ *                   words become its alt text, the writer uploads the picture
  *   :::tip|warning|note|takeaways … :::   callout
  *   :::steps … :::  numbered list
  *   | a | b |       table (first row = header, |---| separator skipped)
@@ -65,7 +67,14 @@ function tableNode(rows: string[]): DocNode {
   return { type: 'table', content: [row(rows[0], 'tableHeader'), ...rows.slice(bodyStart).map((r) => row(r, 'tableCell'))] }
 }
 
+/** A real picture address: https, or a site path. Anything else is a placeholder. */
+const isImageUrl = (src: string) => /^https?:\/\//i.test(src) || src.startsWith('/')
+
 function figureNode(words: string, src: string): DocNode {
+  if (!isImageUrl(src)) {
+    const alt = words.replace(/^\s*(image|photo|screenshot)\s*:\s*/i, '').trim()
+    return { type: 'figure', attrs: { src: '', sources: null, width: null, height: null, blur: null, alt, caption: '', layout: 'column' } }
+  }
   const tokens = words.trim().split(/\s+/).filter(Boolean)
   const wide = tokens.some((w) => w.toLowerCase() === 'wide')
   const caption = tokens.filter((w) => !/^(center|wide)$/i.test(w)).join(' ')

@@ -46,8 +46,9 @@ export async function uploadBlogImageV2(form: FormData): Promise<Result> {
 
   const processed = await processBlogImage(new Uint8Array(await file.arrayBuffer()), file.type, {
     crop: parseCrop(form.get('crop')),
-    // Google Discover wants a cover at least 1200px wide.
-    minWidth: kind === 'cover' ? 1200 : undefined,
+    // 1200px+ is best (Google Discover's large preview); 800px is the floor
+    // so an ordinary screenshot or thumbnail still works as a cover.
+    minWidth: kind === 'cover' ? 800 : undefined,
   })
   if (!processed.ok) return { success: false, error: processed.error }
 

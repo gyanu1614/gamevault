@@ -150,7 +150,7 @@ export function CoverPicker({ cover, coverUrl, onChange }: { cover: StoredImage 
           Add a Cover
         </button>
       )}
-      <p className="mt-2 text-[12px] text-text-tertiary">16:9, at least 1200px wide. Shown on the post, the guide cards and when shared.</p>
+      <p className="mt-2 text-[12px] text-text-tertiary">16:9. 1200px wide or more looks sharpest (800px is the least). Shown on the post, the guide cards and when shared.</p>
       {src && (
         <div className="mt-2.5 flex gap-1.5">
           <button type="button" onClick={() => input.current?.click()} className="h-8 rounded-md bg-white/[0.06] px-3 text-[12.5px] font-medium text-text-primary hover:bg-white/[0.1]">
@@ -177,7 +177,9 @@ export function CoverPicker({ cover, coverUrl, onChange }: { cover: StoredImage 
         aspect={16 / 9}
         title="Cover Image"
         hint="Drag and zoom to frame it. The whole frame shows on the post."
-        minWidth={1200}
+        fit="contain"
+        minWidth={800}
+        idealWidth={1200}
         busy={busy}
         saveLabel="Use This Cover"
         onCancel={() => setFile(null)}

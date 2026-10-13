@@ -14,7 +14,7 @@ import type { RailCard } from '@/lib/buy-rails/model'
 import { blogExtensions } from '@/lib/blog/doc/schema'
 import type { BlogDoc } from '@/lib/blog/doc/types'
 import { collectHeadings } from './outline'
-import { classifyHref } from './links'
+import { classifyHref, gamePath } from './links'
 import { pruneEmpty } from './prune'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
 
@@ -29,7 +29,7 @@ export const BLOG_PROSE_GRID =
   // Top margins only: grid items' margins never collapse, so my-* doubled every gap.
   'blog-prose grid [&>*:first-child]:mt-0 [&>h2+*]:mt-4 [&>h3+*]:mt-3 grid-cols-[minmax(0,1fr)_minmax(0,700px)_minmax(0,1fr)] [&>*]:col-start-2 [&>.blog-wide]:col-[1/-1] [&>.blog-wide]:w-full [&>.blog-wide]:max-w-[960px] [&>.blog-wide]:justify-self-center'
 
-export function BlogDocView({ doc, items }: { doc: BlogDoc; items?: Map<string, RailCard> }) {
+export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Map<string, RailCard>; gameSlug?: string | null }) {
   // Heading ids in render order, from the same walk the contents list uses
   // (pruning never drops a heading, so the ids match the page's contents list).
   const ids = collectHeadings(doc).map((h) => h.id)
@@ -81,7 +81,7 @@ export function BlogDocView({ doc, items }: { doc: BlogDoc; items?: Map<string, 
         itemCard: ({ node }: Props) => (
           <ItemCardView attrs={node.attrs} card={items?.get(`${node.attrs.gameSlug}/${node.attrs.itemSlug}`)} />
         ),
-        cta: ({ node }: Props) => <CtaView attrs={node.attrs} />,
+        cta: ({ node }: Props) => <CtaView attrs={node.attrs} gameSlug={gameSlug} />,
         youtube: ({ node }: Props) => <YouTubeView attrs={node.attrs} />,
       },
       markMapping: {
@@ -89,7 +89,7 @@ export function BlogDocView({ doc, items }: { doc: BlogDoc; items?: Map<string, 
         italic: ({ children }: { children?: ReactNode }) => <em>{children}</em>,
         link: ({ mark, children }: { mark: { attrs: Record<string, unknown> }; children?: ReactNode }) => {
           const kind = classifyHref(String(mark.attrs.href ?? ''))
-          if ('internal' in kind) return <Link href={kind.internal} className={LINK}>{children}</Link>
+          if ('internal' in kind) return <Link href={gamePath(kind.internal, gameSlug)} className={LINK}>{children}</Link>
           if ('external' in kind)
             return createElement('a', { href: kind.external, className: LINK, target: '_blank', rel: 'noopener noreferrer nofollow' }, children)
           return <>{children}</>

@@ -20,3 +20,14 @@ export function classifyHref(href: string): LinkKind {
     return { unsafe: true }
   }
 }
+
+/**
+ * Game pages written without the game ("/values", "/calculator/…") point at
+ * the post's own game; they only exist under /<game>/. Site pages ("/sell",
+ * "/fees") are left as they are.
+ */
+const GAME_TOOLS = /^\/(values|calculator|neon-calculator|price-index|inventory|chromas|boxes|codes|events|free-items)(?=[/?#]|$)/
+
+export function gamePath(path: string, gameSlug?: string | null): string {
+  return gameSlug && GAME_TOOLS.test(path) ? `/${gameSlug}${path}` : path
+}

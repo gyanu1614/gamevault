@@ -28,6 +28,12 @@ describe('postChecklist', () => {
     const r = postChecklist({ ...good, doc: { ...good.doc, content: [...good.doc.content, fig('')] } })
     expect(r.blocking.map((b) => b.id)).toEqual(['alt'])
   })
+  it('empty image slots are a warning, not a block', () => {
+    const slot = { type: 'figure', attrs: { src: '', alt: 'lobby', caption: '' } }
+    const r = postChecklist({ ...good, doc: { ...good.doc, content: [...good.doc.content, slot, slot] } })
+    expect(r.blocking).toEqual([])
+    expect(r.items.find((i) => i.id === 'slots')).toMatchObject({ ok: false, label: 'Add pictures to 2 empty image slots' })
+  })
   it('soft checks warn but never block', () => {
     const r = postChecklist({ ...good, title: 'x'.repeat(70), hasCover: false, doc: { type: 'doc', content: [{ type: 'paragraph' }] } })
     expect(r.blocking).toEqual([])

@@ -91,3 +91,19 @@ describe('BlogDocView: unfilled outline blocks stay out of the article', () => {
     expect(html).toContain('Real text')
   })
 })
+
+describe('BlogDocView: game tool links', () => {
+  const linkDoc: any = { type: 'doc', content: [{ type: 'paragraph', content: [
+    t('values', [{ type: 'link', attrs: { href: '/values' } }]), t(' '),
+    t('item', [{ type: 'link', attrs: { href: '/values/bat-dragon' } }]), t(' '),
+    t('calc', [{ type: 'link', attrs: { href: '/calculator' } }]), t(' '),
+    t('sell', [{ type: 'link', attrs: { href: '/sell' } }]),
+  ] }] }
+  it('/values and /calculator point at the post’s own game; site pages stay as they are', () => {
+    const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: linkDoc, gameSlug: 'adopt-me' }))
+    expect(html).toContain('href="/adopt-me/values"')
+    expect(html).toContain('href="/adopt-me/values/bat-dragon"')
+    expect(html).toContain('href="/adopt-me/calculator"')
+    expect(html).toContain('href="/sell"')
+  })
+})

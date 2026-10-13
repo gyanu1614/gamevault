@@ -199,7 +199,7 @@ export default async function GameBlogArticle({ params }: { params: Promise<{ ga
               {/* No cover: the same gap the cover would leave under the byline. */}
               <div className={cover || post.cover ? undefined : 'mt-8'}>
                 {hasToc && <ArticleToc entries={toc} variant="bar" />}
-                <BlogDocView doc={doc} items={items} />
+                <BlogDocView doc={doc} items={items} gameSlug={gameSlug} />
               </div>
               <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
             </article>

@@ -71,3 +71,16 @@ describe('legacyToDoc', () => {
     expect(legacyToDoc([]).content).toEqual([{ type: 'paragraph' }])
   })
 })
+
+describe('legacyToDoc: image slots written by a chat', () => {
+  it('![IMAGE: words](replace-me) becomes an empty image slot with the words as alt text', () => {
+    const doc = legacyToDoc(['![IMAGE: Adopt Me trade window](replace-me)'])
+    expect(doc.content[0]).toEqual({
+      type: 'figure',
+      attrs: { src: '', sources: null, width: null, height: null, blur: null, alt: 'Adopt Me trade window', caption: '', layout: 'column' },
+    })
+  })
+  it('a real image address still becomes a picture', () => {
+    expect(legacyToDoc(['![wide The lobby](https://cdn.example.com/a.webp)']).content[0].attrs).toMatchObject({ src: 'https://cdn.example.com/a.webp', layout: 'wide', alt: 'The lobby' })
+  })
+})

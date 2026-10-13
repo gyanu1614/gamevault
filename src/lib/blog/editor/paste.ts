@@ -19,6 +19,11 @@ export function looksLikeMarkdown(text: string): boolean {
   return MD_SIGNS.some((re) => re.test(text))
 }
 
+/** The post format the old editor read: :::tip / :::steps boxes and image slots. */
+export function hasPostMarkers(text: string): boolean {
+  return /^\s*:::\s*(tip|warning|note|takeaways|steps)\b/im.test(text) || /!\[[^\]]*\]\([^)\s]+\)/.test(text)
+}
+
 export function fitHeadings(markdown: string): string {
   return markdown.replace(/^#{1,6}(?=\s)/gm, (h) => (h.length <= 2 ? '##' : '###'))
 }

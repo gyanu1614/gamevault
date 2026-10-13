@@ -21,3 +21,12 @@ describe('paste from Claude (or any chat)', () => {
     expect(fitHtmlHeadings('<h1 class="x">A</h1><h4>B</h4><h6>C</h6>')).toBe('<h2 class="x">A</h2><h3>B</h3><h3>C</h3>')
   })
 })
+
+describe('the DropMarket post format (tip boxes, steps, image slots)', () => {
+  it('spots its markers', async () => {
+    const { hasPostMarkers } = await import('./paste')
+    expect(hasPostMarkers(':::tip\nCheck prices.\n:::')).toBe(true)
+    expect(hasPostMarkers('Intro\n\n![IMAGE: lobby](replace-me)')).toBe(true)
+    expect(hasPostMarkers('## Just a heading\n\n- a list')).toBe(false)
+  })
+})

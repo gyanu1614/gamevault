@@ -81,7 +81,7 @@ export function Preview({
             />
             <ArticleCover image={cover} url={coverUrl} alt={title} />
             <div className={cover || coverUrl ? undefined : 'mt-8'}>
-              <BlogDocView doc={doc} />
+              <BlogDocView doc={doc} gameSlug={gameSlug || null} />
             </div>
           </div>
         </div>
