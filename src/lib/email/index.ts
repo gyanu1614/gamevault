@@ -16,6 +16,7 @@ import {
   gameLogoUrl,
   EMAIL_TOKENS,
 } from './shell'
+import { buildOrderCompletionEmail, type OrderCompletionEmailArgs } from './order-completion'
 
 // Lazily LOAD and construct the Resend client on first send, not at module
 // load. `new Resend(undefined)` throws immediately, which would crash any page
@@ -509,55 +510,15 @@ export async function sendNewOrderNotificationEmail({
 // ORDER EMAILS
 // ============================================
 
-export async function sendOrderCompletionEmail({
-  to,
-  name,
-  orderId,
-  orderNumber,
-  listingTitle,
-  gameSlug,
-  totalPaid,
-  autoReleased = false,
-}: {
-  to: string
-  name: string
-  orderId: string
-  orderNumber: string
-  listingTitle: string
-  gameSlug?: string | null
-  totalPaid: number
-  /** True when the protection window expired without buyer confirmation. */
-  autoReleased?: boolean
-}) {
+export async function sendOrderCompletionEmail({ to, ...args }: { to: string } & OrderCompletionEmailArgs) {
+  const { subject, html, bcc } = buildOrderCompletionEmail(args)
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
     to,
-    // Trustpilot Automatic Feedback Service: BCC'ing the unique AFS address
-    // makes Trustpilot send this buyer a verified-review invitation ~7 days
-    // later (free-plan feature, no API needed). Inactive when env is unset.
-    ...(process.env.TRUSTPILOT_BCC_EMAIL ? { bcc: process.env.TRUSTPILOT_BCC_EMAIL } : {}),
-    subject: `Order complete — ${listingTitle}`,
-    html: emailShell({
-      preview: `Your order #${orderNumber} is complete.`,
-      icon: 'ordered',
-      heading: 'Order Complete',
-      body:
-        emailText(
-          autoReleased
-            ? `Hi ${escapeHtml(name)} — your protection window ended with no issues reported, so this order completed automatically.`
-            : `Thanks, ${escapeHtml(name)} — you've confirmed delivery, and your order is all wrapped up.`,
-        ) +
-        emailDetail('Total paid', `$${totalPaid.toFixed(2)}`) +
-        emailItemRow({ gameLogoUrl: gameLogoUrl(gameSlug), itemName: escapeHtml(listingTitle), subline: `Order #${orderNumber}` }) +
-        emailText(
-          autoReleased
-            ? `This order was covered by SafeDrop for its full protection window — the window has closed and the order is complete.`
-            : `This order was covered by SafeDrop from checkout until you confirmed delivery — the order is now complete.`,
-        ) +
-        emailButton('View Your Order →', `${APP_URL}/account/orders/${orderId}`) +
-        emailFooterNote(`Questions about this order? Just reply — a real person reads it.`),
-    }),
+    ...(bcc ? { bcc } : {}),
+    subject,
+    html,
   })
 
   return error ? { success: false, error } : { success: true, data }
@@ -1072,43 +1033,6 @@ export async function sendNewReviewEmail({
       icon: 'star',
       heading: 'You Have A New Review',
       body,
-    }),
-  })
-
-  return error ? { success: false, error } : { success: true, data }
-}
-
-// ============================================
-// TRUSTPILOT EMAILS
-// ============================================
-
-export async function sendTrustpilotInvitationEmail({
-  to,
-  name,
-  orderId,
-  reviewUrl,
-}: {
-  to: string
-  name: string
-  orderId: string
-  reviewUrl: string
-}) {
-  const shortOrderId = orderId.slice(0, 8).toUpperCase()
-
-  const { data, error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    replyTo: REPLY_TO,
-    to,
-    subject: `How was your DropMarket order, ${name}?`,
-    html: emailShell({
-      preview: `Your review helps other gamers shop safely — 60 seconds.`,
-      icon: 'star',
-      heading: `How was it, ${escapeHtml(name)}?`,
-      body:
-        emailText(`We hope your order went great. A quick, honest review helps other gamers shop safely — and it recognises the sellers doing good work.`) +
-        emailOrderSummary([['Order reference', `#${shortOrderId}`]]) +
-        emailButton('Write a Review on Trustpilot', reviewUrl) +
-        emailFooterNote(`It takes less than 60 seconds and means the world to us.`),
     }),
   })
 

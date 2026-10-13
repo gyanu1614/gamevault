@@ -55,6 +55,9 @@ const PUBLIC_READ_ALLOWLIST: Record<string, string> = {
   // switch cookie-free. COLUMN-scoped grant (updated_by stays private); no
   // write grant — the /admin/buy-rails action writes with the service role.
   buy_rail_settings: 'four on/off switches for the buy rails; COLUMN-scoped read grant, no write grant',
+  // Trustpilot (growth point 19): the public TrustBox shows at 10+ reviews;
+  // static pages read the count cookie-free. COLUMN-scoped grant (review_count).
+  trustpilot_settings: 'review count switch for the public TrustBox; COLUMN-scoped grant, updated_by stays private',
 
   // Values / pricing pages — public content by design.
   values_items: 'public value pages; RLS restricts to is_enabled',

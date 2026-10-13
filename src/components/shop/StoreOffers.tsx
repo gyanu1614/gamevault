@@ -3,7 +3,7 @@
 /**
  * Storefront offers: game + category + sort dropdowns and a search box over
  * the shared marketplace ItemCard (the same card as the category pages —
- * never a shop-local copy), paged with Load More.
+ * never a shop-local copy), in numbered pages (?page=N).
  *
  * Controls are the items page's own (`SingleSelectFilter` + the phone filter
  * bar in a ScrollRow), so the shop reads as part of the marketplace and the
@@ -19,6 +19,9 @@ import { currencyOfferUrl, isCurrencyCategoryType } from '@/lib/listings/url'
 import { SingleSelectFilter, iconForFilter } from '@/app/(marketplace)/[gameSlug]/[categorySlug]/_ItemFilters'
 import { ScrollRow } from '@/components/ui/scroll-row'
 import { useAuth } from '@/hooks/use-auth'
+import { useUrlPage } from '@/hooks/use-url-page'
+import { Pagination } from '@/components/marketplace/Pagination'
+import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import {
   ALL,
   DEFAULT_STORE_FILTERS,
@@ -45,7 +48,6 @@ export function StoreOffers({
   shopSlug: string | null
 }) {
   const [rawFilters, setFilters] = useState<StoreFilters>(DEFAULT_STORE_FILTERS)
-  const [pages, setPages] = useState(1)
   const { user } = useAuth()
   const viewerId = user?.id ?? null
 
@@ -54,12 +56,11 @@ export function StoreOffers({
   const categories = useMemo(() => categoryFacets(offers, filters.game), [offers, filters.game])
   const sortOptions = useMemo(() => storeSortOptions(offers), [offers])
   const results = useMemo(() => filterStoreOffers(offers, filters), [offers, filters])
-  const visible = results.slice(0, pages * PAGE_SIZE)
+  // A filter or search change goes back to page 1 (keyed on the values).
+  const paged = useUrlPage(results, PAGE_SIZE, JSON.stringify(filters))
+  const visible = paged.visible
 
-  const update = (patch: Partial<StoreFilters>) => {
-    setFilters((f) => ({ ...f, ...patch }))
-    setPages(1)
-  }
+  const update = (patch: Partial<StoreFilters>) => setFilters((f) => ({ ...f, ...patch }))
   const isFiltered = filters.game !== ALL || filters.category !== ALL || filters.q.trim() !== ''
 
   if (offers.length === 0) {
@@ -81,7 +82,8 @@ export function StoreOffers({
   ]
 
   return (
-    <div>
+    <div ref={paged.topRef} className="scroll-mt-24">
+      <SearchParamsBridge onParams={paged.onParams} />
       {/* Filter band — same sizing tokens as the items page. */}
       <div className="[--h-btn-secondary:40px] [--h-input:40px] sm:[--h-btn-secondary:42px] sm:[--h-input:42px]">
         <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
@@ -192,20 +194,14 @@ export function StoreOffers({
               />
             ))}
           </div>
-          {visible.length < results.length && (
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setPages((p) => p + 1)}
-                className="inline-flex items-center gap-2 rounded-md bg-bg-raised px-6 text-[13px] font-semibold text-text-primary transition-colors hover:bg-bg-raised-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                style={{ minHeight: 'var(--h-btn-primary)' }}
-              >
-                Load More Offers
-                <span aria-hidden className="text-text-tertiary">·</span>
-                <span className="tabular-nums text-text-tertiary">{results.length - visible.length} left</span>
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={paged.page}
+            totalPages={paged.totalPages}
+            totalItems={results.length}
+            pageSize={PAGE_SIZE}
+            onChange={paged.goTo}
+            className="mt-8"
+          />
         </>
       )}
     </div>

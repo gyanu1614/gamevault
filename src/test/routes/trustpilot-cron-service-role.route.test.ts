@@ -5,7 +5,9 @@
  * build ran as anon: RLS hid every due invitation and the job reported
  * "No invitations ready" forever. This drives the handler against the local
  * stack with the session client mocked to exactly that anon client: a due
- * invitation must be sent (email mocked) and stamped sent_at.
+ * invitation must be processed and its outcome recorded. The fixture order is
+ * not completed, so the honest outcome is `skipped / not_completed` and no
+ * email at all (since 2026-10-11 the cron never mails a non-qualifying order).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -19,28 +21,22 @@ vi.mock('@/lib/supabase/server', () => ({
     return sessionClient
   },
 }))
-const mail = vi.hoisted(() => ({ invite: vi.fn(async (_: unknown) => ({ success: true })) }))
+const mail = vi.hoisted(() => ({ receipt: vi.fn(async (_: unknown) => ({ success: true })) }))
 vi.mock('@/lib/email', async (importOriginal) => {
   const real = await importOriginal<Record<string, unknown>>()
   const stubs = Object.fromEntries(Object.keys(real).map((k) => [k, async () => undefined]))
-  return { ...stubs, sendTrustpilotInvitationEmail: mail.invite }
+  return { ...stubs, sendOrderCompletionEmail: mail.receipt }
 })
 
 let fx: Fixture | null = null
 const SECRET = 'guard-cron-secret'
 const cronRequest = (path: string) => new NextRequest(`http://localhost${path}`, { headers: { authorization: `Bearer ${SECRET}` } })
-const saved = {
-  bu: process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID,
-  bcc: process.env.TRUSTPILOT_BCC_EMAIL,
-  key: process.env.TRUSTPILOT_API_KEY,
-}
+const saved = { bcc: process.env.TRUSTPILOT_BCC_EMAIL }
 
 describe.skipIf(!hasEnv)('trustpilot invitations cron (integration)', () => {
   beforeAll(async () => {
     process.env.CRON_SECRET = SECRET
-    process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID = 'guard-business-unit'
-    delete process.env.TRUSTPILOT_BCC_EMAIL
-    delete process.env.TRUSTPILOT_API_KEY
+    process.env.TRUSTPILOT_BCC_EMAIL = 'guard@invite.example.com'
     fx = await makeFixture()
     sessionClient = createClient(URL!, ANON!, { auth: { persistSession: false } })
     const { data: buyer } = await fx.svc.from('profiles').select('email').eq('id', fx.buyer.id).single()
@@ -52,9 +48,8 @@ describe.skipIf(!hasEnv)('trustpilot invitations cron (integration)', () => {
   }, 60_000)
 
   afterAll(async () => {
-    process.env.NEXT_PUBLIC_TRUSTPILOT_BUSINESS_UNIT_ID = saved.bu
     if (saved.bcc !== undefined) process.env.TRUSTPILOT_BCC_EMAIL = saved.bcc
-    if (saved.key !== undefined) process.env.TRUSTPILOT_API_KEY = saved.key
+    else delete process.env.TRUSTPILOT_BCC_EMAIL
     if (!fx) return
     await fx.svc.from('trustpilot_invitations').delete().eq('order_id', fx.pendingOrderId)
     await fx.cleanup()
@@ -65,16 +60,19 @@ describe.skipIf(!hasEnv)('trustpilot invitations cron (integration)', () => {
     expect(data ?? []).toHaveLength(0)
   })
 
-  it('GET sends the due invitation and stamps sent_at', async () => {
+  it('GET processes the due invitation as the service role and records the honest outcome', async () => {
     const { GET } = await import('@/app/api/cron/send-trustpilot-invitations/route')
     const res = await GET(cronRequest('/api/cron/send-trustpilot-invitations'))
     const body = await res.json()
     expect(res.status, JSON.stringify(body)).toBe(200)
-    const mine = (body.results ?? []).find((r: any) => r.orderId === fx!.pendingOrderId)
-    expect(mine, JSON.stringify(body)).toMatchObject({ success: true })
-    expect(mail.invite).toHaveBeenCalledWith(expect.objectContaining({ orderId: fx!.pendingOrderId }))
-    const { data } = await fx!.svc.from('trustpilot_invitations').select('sent_at').eq('order_id', fx!.pendingOrderId).single()
-    expect((data as any).sent_at).not.toBeNull()
+    expect(body.processed, JSON.stringify(body)).toBeGreaterThanOrEqual(1)
+    const { data } = await fx!.svc
+      .from('trustpilot_invitations')
+      .select('status, skip_reason, sent_at')
+      .eq('order_id', fx!.pendingOrderId)
+      .single()
+    expect(data).toMatchObject({ status: 'skipped', skip_reason: 'not_completed', sent_at: null })
+    expect(mail.receipt).not.toHaveBeenCalledWith(expect.objectContaining({ orderId: fx!.pendingOrderId }))
   })
 
   it('rejects a request without the cron secret', async () => {

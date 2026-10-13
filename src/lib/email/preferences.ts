@@ -12,12 +12,13 @@
  *   new_message       → sendNewMessageEmail             (actions/message-notify.ts)
  *   new_review        → sendNewReviewEmail              (actions/review-notify.ts)
  *   payout_processed  → sendWithdrawalProcessedEmail, status 'completed' only
+ *   review_invites    → the Trustpilot BCC on the order-complete receipt (lib/trustpilot/invite.ts)
  *   marketing         → nothing sent yet; opt-in consent for future campaigns
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service'
 
-export const EMAIL_PREF_KEYS = ['new_order', 'new_message', 'new_review', 'payout_processed', 'marketing'] as const
+export const EMAIL_PREF_KEYS = ['new_order', 'new_message', 'new_review', 'payout_processed', 'review_invites', 'marketing'] as const
 export type EmailPrefKey = (typeof EMAIL_PREF_KEYS)[number]
 export type EmailPrefs = Record<EmailPrefKey, boolean>
 
@@ -27,6 +28,7 @@ export const EMAIL_PREF_DEFAULTS: EmailPrefs = {
   new_message: true,
   new_review: true,
   payout_processed: true,
+  review_invites: true,
   marketing: false,
 }
 

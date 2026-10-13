@@ -19,6 +19,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { generateUniqueGamerTag, syncProfileEmail } from '@/lib/actions/auth'
 import { generateDiceBearAvatar } from '@/lib/utils/avatar'
 import { OAUTH_NEXT_COOKIE, sanitizeNext, type OAuthUserLike } from '@/lib/auth/oauth'
+import { trackFoundingStep } from '@/lib/analytics/founding'
 
 /** Value of one cookie from the request's Cookie header, decoded. */
 function readCookie(request: Request, name: string): string | null {
@@ -192,6 +193,11 @@ export async function GET(request: Request) {
     }
     if (isEmailChange) await syncProfileEmail().catch(() => {})
     if (user) await ensureOAuthProfile(user)
+    // Seller funnel step 1 for a Google/Discord sign-up on /founding. A login
+    // with an older account is not a sign-up: only accounts made just now.
+    if (user && next.startsWith('/founding') && Date.now() - Date.parse(user.created_at ?? '') < 10 * 60_000) {
+      await trackFoundingStep(user.id, 1, { method: 'oauth' })
+    }
     return redirect(successUrl())
   }
 

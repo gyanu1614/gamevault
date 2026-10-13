@@ -14,21 +14,16 @@ import { SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import FiltersSidebar from './FiltersSidebar'
 import SearchAndSort from './SearchAndSort'
-import LoadMoreListings from './LoadMoreListings'
 
 interface CategoryPageLayoutProps {
   maxPrice: number
   totalListings: number
-  hasMore: boolean
-  currentPage: number
   children: React.ReactNode
 }
 
 export default function CategoryPageLayout({
   maxPrice,
   totalListings,
-  hasMore,
-  currentPage,
   children,
 }: CategoryPageLayoutProps) {
   const [filterOpen, setFilterOpen] = useState(false)
@@ -135,17 +130,6 @@ export default function CategoryPageLayout({
         {/* ── Content area (animates width when sidebar opens) ─────────── */}
         <motion.div layout="size" className="flex-1 min-w-0">
           {children}
-          {/* FiltersSidebar / LoadMoreListings read useSearchParams(). On the
-              ISR category page that would client-render everything up to the
-              nearest boundary — so each gets its own, keeping the grid in the
-              static HTML (Step 7a). */}
-          <Suspense fallback={null}>
-            <LoadMoreListings
-              currentPage={currentPage}
-              hasMore={hasMore}
-              listingsPerPage={12}
-            />
-          </Suspense>
         </motion.div>
       </div>
     </div>

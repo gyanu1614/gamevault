@@ -18,31 +18,26 @@
  * marks or a score outside their own widgets is restricted by their brand
  * terms, and we have nothing to show yet regardless.
  *
- * Hidden until NEXT_PUBLIC_TRUSTPILOT_HAS_REVIEWS is set: the profile
- * currently has 0 reviews, and sending buyers to an empty review page costs
- * more trust than showing nothing. Flip that env var once reviews land — no
- * code change needed. When/if Plus is bought, swap these call sites back to
- * <TrustBox> for the real widget.
+ * Rendered only by <TrustpilotShowcase>, which shows it once an admin has
+ * recorded 10+ reviews on /admin and no TrustBox template id is configured.
  */
 
-import { ExternalLink } from 'lucide-react'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { cn } from '@/lib/utils'
+import { TRUSTPILOT_PROFILE_URL } from '@/lib/trustpilot/links'
 
 /** Trustpilot brand green — used only for their star glyph. */
 const TRUSTPILOT_GREEN = '#00B67A'
 
-const PROFILE_URL = 'https://www.trustpilot.com/review/dropmarket.gg'
 
 export function TrustpilotLink({ className }: { className?: string }) {
-  if (!process.env.NEXT_PUBLIC_TRUSTPILOT_HAS_REVIEWS) return null
-
   return (
     <a
-      href={PROFILE_URL}
+      href={TRUSTPILOT_PROFILE_URL}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'group inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-[#1D1E23] px-3.5 py-2 backdrop-blur-md transition-colors duration-200 hover:border-border-strong hover:bg-[rgba(26,26,35,0.70)]',
+        'group inline-flex items-center gap-2 rounded-lg bg-[#16171B] px-3.5 py-2 transition-colors duration-200 hover:bg-[#24252B] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring',
         className,
       )}
     >
@@ -59,7 +54,7 @@ export function TrustpilotLink({ className }: { className?: string }) {
       <span className="text-[13px] font-semibold text-text-primary">
         Reviews On Trustpilot
       </span>
-      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-tertiary transition-colors group-hover:text-text-secondary" />
+      <OpenInNewIcon aria-hidden sx={{ fontSize: 14 }} className="shrink-0 text-text-tertiary transition-colors group-hover:text-text-secondary" />
     </a>
   )
 }
