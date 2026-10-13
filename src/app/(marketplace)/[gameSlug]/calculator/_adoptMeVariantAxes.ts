@@ -27,9 +27,9 @@ export interface VariantAxes {
 }
 
 export const TIERS: { value: Tier; label: string; short: string }[] = [
-  { value: 'default', label: 'Default', short: 'Default' },
+  { value: 'default', label: 'Normal', short: 'Normal' },
   { value: 'neon', label: 'Neon', short: 'Neon' },
-  { value: 'mega', label: 'Mega Neon', short: 'Mega' },
+  { value: 'mega', label: 'Mega', short: 'Mega' },
 ]
 
 /** Neon and Mega only exist as plain or Fly-Ride — no fly-only / ride-only. */
