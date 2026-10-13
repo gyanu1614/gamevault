@@ -6,15 +6,14 @@
 
 import 'server-only'
 import { getPostsTaggedForGame } from '@/lib/blog/db'
+import { postHref } from '@/lib/blog/post-url'
 import type { BlogRailPost } from '@/components/blog/BlogSection'
 
 export async function getBlogRail(gameSlug: string, limit = 4): Promise<BlogRailPost[]> {
   const posts = await getPostsTaggedForGame(gameSlug, limit)
   return posts.map((p) => ({
     ...p,
-    href: p.primaryGameSlug
-      ? `/${p.primaryGameSlug}/blog/${p.slug}`
-      : `/blog/${p.slug}`,
+    href: postHref(p),
   }))
 }
 

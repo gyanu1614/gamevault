@@ -127,13 +127,13 @@
 }
 
 /* Mobile full-width bar: override !bg-[#0b0f0c] for both navbar and subnav */
-[data-theme="v2"] .bg-\[#0b0f0c\] {
+[data-theme="v2"] .bg-\[\#0b0f0c\] {
   background-color: var(--color-bg-base) !important; /* #16171B — L0 */
 }
 
 /* Navbar dropdown panels: override bg-[#17171F] arbitrary class
    (notifications, messages, cart drawer panels) */
-[data-theme="v2"] .bg-\[#17171F\] {
+[data-theme="v2"] .bg-\[\#17171F\] {
   background-color: var(--color-bg-raised) !important; /* #1D1E23 — L1 */
 }
 
@@ -143,12 +143,12 @@
 }
 
 /* Navbar lime accent blobs in megamenu game tiles */
-[data-theme="v2"] .hover\:bg-\[#1B5E3A\]\/\[0\.12\]:hover,
-[data-theme="v2"] .bg-\[#1B5E3A\]\/\[0\.16\] {
+[data-theme="v2"] .hover\:bg-\[\#1B5E3A\]\/\[0\.12\]:hover,
+[data-theme="v2"] .bg-\[\#1B5E3A\]\/\[0\.16\] {
   background-color: var(--color-accent-tint-bg) !important;
 }
-[data-theme="v2"] .border-\[#A3E635\]\/\[0\.14\],
-[data-theme="v2"] .hover\:border-\[#A3E635\]\/\[0\.2\]:hover {
+[data-theme="v2"] .border-\[\#A3E635\]\/\[0\.14\],
+[data-theme="v2"] .hover\:border-\[\#A3E635\]\/\[0\.2\]:hover {
   border-color: var(--color-accent-tint-border) !important;
 }
 [data-theme="v2"] .border-b-\[rgba\(163\,230\,53\,0\.10\)\] {
@@ -208,7 +208,7 @@
 }
 
 /* Active tab underline — override the Tailwind arbitrary colour class */
-.theme-v2 .bg-\[#3f9d5a\] {
+.theme-v2 .bg-\[\#3f9d5a\] {
   background-color: var(--color-accent-text) !important; /* #56B87F — green/text */
   box-shadow: 0 0 10px var(--color-accent-tint-border) !important; /* active tab glow, not focus */
 }

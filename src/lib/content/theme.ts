@@ -42,6 +42,12 @@ export interface GameContentTheme {
   /** One-line positioning under the H1. */
   heroLead: string
   /**
+   * The blog home's own H1 and lead (2026-10-12: MM2's blog reused "MM2 Value
+   * List", the value page's H1). Default: "<Game> Guides" + a generic lead.
+   */
+  blogTitle?: string
+  blogLead?: string
+  /**
    * The "what is this game and why do prices move" paragraph. Lives here
    * rather than in the DB so a new game hub reads complete on day one;
    * `games.seo_intro` overrides it once someone writes something better.
@@ -255,6 +261,8 @@ const THEMES: Record<string, GameContentTheme> = {
     heroTitle: 'Steal a Brainrot values, trading and cash-out guides',
     heroLead:
       'Everything worth knowing about what Brainrots are actually worth — priced from live marketplace listings, reputable sellers only, not trading-server rumours.',
+    blogTitle: 'Steal a Brainrot Guides',
+    blogLead: 'How to price, trade and sell brainrots, with real prices from DropMarket listings.',
     heroAbout:
       'Steal a Brainrot is a Roblox base-building game where players steal and defend Brainrots that generate income per second. Almost all trading happens around Secrets and mutated variants, and prices move whenever an event adds or retires supply. These guides track what people really pay, and what that means if you are buying, selling or holding.',
     // SAB items + SAB mutation vocabulary (Default / Lava …).
@@ -302,6 +310,8 @@ const THEMES: Record<string, GameContentTheme> = {
     // implying a pet value list we cannot back with listings.
     heroLead:
       'What eggs and accounts actually sell for in real money — priced from live marketplace listings, with every pet and the egg it hatches from.',
+    blogTitle: 'Steal an Egg Guides',
+    blogLead: 'What eggs, pets and accounts sell for, and how to trade them safely.',
     heroAbout:
       'Steal an Egg is a Roblox game where players race to steal eggs from themed areas and hatch pets that generate income per second. Almost all real-money trading is in sealed eggs — sold by area rather than by pet, because what hatches is random — and in accounts priced by their income. These pages track what buyers actually pay for both, and show every pet with the egg it comes from.',
     // Steal An Egg has no variant/mutation axis, so the promo uses the two
@@ -320,7 +330,7 @@ const THEMES: Record<string, GameContentTheme> = {
       calculator: false,
       priceIndex: false,
       methodology: true,
-      blog: false,
+      blog: true,
       events: false,
       freeItems: false,
       codes: false,
@@ -352,6 +362,8 @@ const THEMES: Record<string, GameContentTheme> = {
     // replace the estimates. Update this once sales data exists.
     heroLead:
       'What pets are worth in trade — and an estimated cash value in real money, with the demand shifts that move them.',
+    blogTitle: 'Adopt Me Guides',
+    blogLead: 'Pet values, trading tips and how to sell Adopt Me pets for real money.',
     heroAbout:
       'Adopt Me is a Roblox pet-collecting and trading game where value is driven almost entirely by event exclusivity and age rather than in-game cost. Legendary event pets, neons and megas carry most of the trading volume, and prices swing hard whenever an old pet is rereleased. These guides track what buyers pay and what that means before you accept an offer.',
     // Adopt Me pets + the Adopt Me variant vocabulary (Fly Ride / Neon Fly
@@ -403,6 +415,8 @@ const THEMES: Record<string, GameContentTheme> = {
     // "value points" (no licence, and not what an item sells for).
     heroLead:
       'What every Murder Mystery 2 knife, gun and pet is worth in real money — priced daily from live listings by reputable sellers, not community value points.',
+    blogTitle: 'MM2 Guides',
+    blogLead: 'Knife and gun values, event guides and how to sell MM2 items for real money.',
     heroAbout:
       'Murder Mystery 2 is a Roblox social-deduction game where knives, guns and pets come from boxes, events and battle passes. Value sits almost entirely in Godlies, Ancients, Vintages and Chromas: event items never come back, so supply only shrinks, and a Chroma can sell for many times its base weapon. These pages track what those items actually sell for in US dollars.',
     // Real MM2 items; no calculator at launch (Step 3), so the promo only
@@ -421,7 +435,7 @@ const THEMES: Record<string, GameContentTheme> = {
       calculator: false,
       priceIndex: false,
       methodology: true,
-      blog: false,
+      blog: true,
       // The events archive (values_events, 2026-10-05): every MM2 event since
       // Halloween 2015 with its items and their live set value.
       events: true,
@@ -515,5 +529,17 @@ export function contentThemeVars(
     '--ct-accent-deep': theme.accentDeep,
     '--ct-on-accent': theme.onAccent,
     '--ct-ambient': theme.ambient,
+  }
+}
+
+/**
+ * The blog home's H1 and lead for any game (shared blog home, 2026-10-12):
+ * the theme's own blog copy, else "<Game> Guides" and a plain lead.
+ */
+export function blogHubCopy(gameSlug: string, gameName: string): { title: string; lead: string } {
+  const theme = THEMES[gameSlug]
+  return {
+    title: theme?.blogTitle ?? `${gameName} Guides`,
+    lead: theme?.blogLead ?? `Guides, values and selling tips for ${gameName}, from real DropMarket listings.`,
   }
 }

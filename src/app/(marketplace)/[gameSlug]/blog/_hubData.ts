@@ -1,12 +1,15 @@
 import 'server-only'
 import { createValueListReadClient } from '@/lib/values/read-client'
 import { fetchAllRows } from '@/lib/db/fetch-all'
+import { getValueItems } from '@/lib/values/data'
+import { topValuesFromItems } from './_genericTopValues'
 
 /**
  * Data for the blog-hub teaser strips. Kept small and defensive: every query
  * falls back to an empty result so a data hiccup hides a section rather than
- * breaking the page. Only SAB has a live catalog today; other games return
- * empty and their teasers self-hide.
+ * breaking the page. SAB and Adopt Me read their own catalogs; every other
+ * value game reads the shared values_* pipeline; a game with none returns
+ * empty and its teasers self-hide.
  */
 
 export interface HubTeaserItem {
@@ -299,7 +302,16 @@ export async function getHubTopValues(
   limit = 4,
 ): Promise<HubTeaserItem[]> {
   if (gameSlug === 'adopt-me') return getAdoptMeTopValues(limit)
-  if (gameSlug !== 'steal-a-brainrot') return []
+  // Every other value game (MM2, Steal an Egg, …) is on the shared values_*
+  // pipeline: same read the value list uses, so the numbers match it.
+  if (gameSlug !== 'steal-a-brainrot') {
+    try {
+      return topValuesFromItems(await getValueItems(gameSlug), limit)
+    } catch (e) {
+      console.error('Hub top-values (values pipeline) error:', e)
+      return []
+    }
+  }
 
   const supabase = createValueListReadClient(gameSlug)
 

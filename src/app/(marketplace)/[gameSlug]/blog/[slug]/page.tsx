@@ -9,9 +9,10 @@
 
 import type { Metadata } from 'next'
 import Link from '@/components/navigation/AppLink'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { createAnonClient } from '@/lib/supabase/anon'
-import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts } from '@/lib/blog/db'
+import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts, getPublishedPostBySlugAnyGame } from '@/lib/blog/db'
+import { movedPostTarget, postHref } from '@/lib/blog/post-url'
 import { SabSellerCta } from '../../_SabSellerCta'
 import { formatDate } from '@/lib/sab/format'
 import { JsonLd, breadcrumbList, blogPosting } from '@/lib/seo/jsonld'
@@ -99,6 +100,16 @@ type GameRow = {
   blog_cta_image_url?: string | null
 }
 
+/**
+ * A post moved to another game in admin (e.g. MM2 Halloween from Adopt Me to
+ * MM2): its old URL answers with a permanent redirect to the new one, so
+ * links and search rankings follow. No per-move config.
+ */
+async function redirectIfMoved(gameSlug: string, slug: string): Promise<void> {
+  const target = movedPostTarget(await getPublishedPostBySlugAnyGame(slug), gameSlug)
+  if (target) permanentRedirect(target)
+}
+
 async function generateMetadataRaw({
   params,
 }: {
@@ -106,7 +117,10 @@ async function generateMetadataRaw({
 }): Promise<Metadata> {
   const { gameSlug, slug } = await params
   const post = await getGamePost(gameSlug, slug)
-  if (!post) return { title: 'Not Found' }
+  if (!post) {
+    await redirectIfMoved(gameSlug, slug)
+    notFound()
+  }
   const url = `${SITE_URL}/${gameSlug}/blog/${slug}`
   // The admin-written SEO title is reused for the social title; an editor may
   // have typed the brand into it, so the templated <title> gets it bare.
@@ -136,6 +150,7 @@ export default async function GameBlogArticle({
     getGame(gameSlug),
     getGamePost(gameSlug, slug),
   ])
+  if (!post) await redirectIfMoved(gameSlug, slug)
   if (!game || !post) notFound()
 
   const kindLabel = POST_TYPE_LABEL[post.postType] ?? 'Guide'
@@ -390,7 +405,7 @@ export default async function GameBlogArticle({
                   {related.map((r) => (
                     <Link
                       key={r.slug}
-                      href={`/${gameSlug}/blog/${r.slug}`}
+                      href={postHref(r)}
                       className="flex flex-col gap-2.5 bg-[#0B0F0C] p-5 transition-colors hover:bg-[#101710]"
                     >
                       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8FBF9C]">
