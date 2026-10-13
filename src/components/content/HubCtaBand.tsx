@@ -21,7 +21,8 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 
 /** 6px button, brand fill by default; hover lifts brightness (fill is inline). */
 const CTA_BTN =
-  'inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-6 text-sm font-semibold ' +
+  // Phones: full-width, a step shorter; sm+: the original inline button.
+  'inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md px-6 text-sm font-semibold sm:h-12 sm:w-auto ' +
   'shadow-[0_6px_16px_-8px_rgba(0,0,0,0.6)] transition-[filter,transform] hover:brightness-110 active:scale-[0.98] ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
@@ -127,12 +128,15 @@ export function HubCtaBand({
           />
         )}
 
-        <div className="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-10">
+        {/* Phones (owner, 2026-10-12): a slimmer band — tighter padding and gap,
+            a smaller title and body, the button full width under them. sm+
+            classes are the original desktop band, unchanged. */}
+        <div className="relative flex flex-wrap items-center justify-between gap-4 p-5 sm:gap-6 sm:p-10">
           <div className="min-w-0">
-            <h2 className="mb-3 text-[22px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[26px]">
+            <h2 className="mb-1.5 text-[18px] font-semibold leading-snug tracking-tight text-text-primary sm:mb-3 sm:text-[26px] sm:leading-tight">
               {title}
             </h2>
-            <p className="max-w-xl text-sm leading-relaxed text-text-secondary">{body}</p>
+            <p className="max-w-xl text-[13px] leading-relaxed text-text-secondary sm:text-sm">{body}</p>
           </div>
           {ctaWrap ? (
             ctaWrap(

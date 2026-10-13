@@ -176,7 +176,6 @@ export function ValuesSeo({
           Rendered visibly; the page emits matching FAQPage schema. */}
       <HubFaqSection
         title={`${gameName} Values — Frequently Asked Questions`}
-        subtitle={`Everything about how ${gameName} values work, update, and translate to real money.`}
         items={faqItems}
         footer={
           calculatorHref ? (
