@@ -10,6 +10,10 @@
  * hub pages, with the homepage hero's recipe. A new page under
  * /[gameSlug] that forgets the backdrop — or brings back a private one —
  * fails here.
+ *
+ * One exception (owner, 2026-10-13, Blog v2): the blog home and articles share
+ * ONE dimmed wallpaper for every game (BlogBackdrop, pinned by
+ * src/components/blog/BlogBackdrop.test.ts) instead of the game hero.
  */
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
@@ -46,7 +50,11 @@ function localImports(file: string): string[] {
 }
 
 const RENDERS = /<GameHeroBackdrop\b/
-const pages = walk(GAME_ROUTES).filter((f) => /\/page\.tsx$/.test(f))
+/** Blog pages draw the shared blog wallpaper instead (see the header). */
+const BLOG_PAGES = ['blog/page.tsx', 'blog/[slug]/page.tsx']
+const BLOG_RENDERS = /<BlogBackdrop\b/
+const isBlogPage = (p: string) => BLOG_PAGES.includes(relative(GAME_ROUTES, p))
+const pages = walk(GAME_ROUTES).filter((f) => /\/page\.tsx$/.test(f) && !isBlogPage(f))
 
 /**
  * The modules that render each surface (pages, or the module a page hands
@@ -70,8 +78,6 @@ const RENDER_MODULES = [
   'calculator/_AdoptMeCalculatorPage.tsx',
   'neon-calculator/page.tsx',
   'price-index/page.tsx',
-  'blog/page.tsx',
-  'blog/[slug]/page.tsx',
   'sell/page.tsx',
   'events/_EventsHubPage.tsx', // events archive hub (MM2)
   'events/_EventPage.tsx', // one event
@@ -98,6 +104,12 @@ describe('game pages render GameHeroBackdrop', () => {
     const candidates = [page, ...localImports(page)]
     const hit = candidates.some((f) => RENDERS.test(read(f)))
     expect(hit, `${rel(page)} renders no <GameHeroBackdrop>: wrap the page body in it`).toBe(true)
+  })
+
+  it.each(BLOG_PAGES)('%s draws the shared blog wallpaper (itself or through its render module)', (m) => {
+    const page = join(GAME_ROUTES, m)
+    expect(existsSync(page), `${m} moved: update BLOG_PAGES`).toBe(true)
+    expect([page, ...localImports(page)].some((f) => BLOG_RENDERS.test(read(f)))).toBe(true)
   })
 
   it('the backdrop always names its game (no hard-coded other game)', () => {

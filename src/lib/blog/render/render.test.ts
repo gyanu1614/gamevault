@@ -36,7 +36,8 @@ describe('BlogDocView', () => {
   it('images: AVIF + WebP sources, real size, wide layout, caption', () => {
     expect(html).toContain('<source type="image/avif" srcSet="https://cdn/x/480.avif 480w, https://cdn/x/1920.avif 1920w"')
     expect(html).toMatch(/<img[^>]+width="1920"[^>]+height="1080"/)
-    expect(html).toContain('class="mt-8 blog-wide"')
+    expect(html).toContain('class="mt-7 blog-wide"')
+    expect(html).toContain('max-height:640px') // a Wide photo's height cap (picture-size.ts)
     expect(html).toContain('<figcaption')
   })
   it('own-domain links are internal; other sites open in a new tab', () => {
@@ -50,7 +51,7 @@ describe('BlogDocView', () => {
   })
   it('callout, table scroll box, FAQ details, codes with copy + expired list, item card with live buy label', () => {
     expect(html).toContain('Warning')
-    expect(html).toContain('class="relative mt-7 overflow-x-auto')
+    expect(html).toContain('class="blog-table relative"') // framed, scrollable table (blog-prose.css)
     expect(html).toContain('Is it safe?') // FAQ: the value pages' accordion, answer in the HTML
     expect(html).toContain('>Yes.<')
     expect(html).toContain('FREEKNIFE')
@@ -84,9 +85,9 @@ describe('BlogDocView: unfilled outline blocks stay out of the article', () => {
   const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: draft }))
 
   it('drops empty paragraphs, empty list items and lists, empty tip boxes and empty codes tables', () => {
-    expect(html.match(/<p /g)?.length).toBe(2) // "Kept" (inside its list item) + "Real text"
+    expect(html.match(/<p[ >]/g)?.length).toBe(2) // "Kept" (inside its list item) + "Real text"
     expect(html).not.toContain('<ol')
-    expect(html.match(/<li /g)?.length).toBe(1)
+    expect(html.match(/<li[ >]/g)?.length).toBe(1)
     expect(html).not.toContain('Tip')
     expect(html).not.toContain('Last checked')
     expect(html).toContain('Real text')
@@ -118,6 +119,54 @@ describe('BlogDocView: empty table rows', () => {
   ] }] }
   it('a row whose cells are all empty is left out', () => {
     const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: tableDoc }))
-    expect(html.match(/<tr /g)?.length).toBe(2)
+    expect(html.match(/<tr[ >]/g)?.length).toBe(2)
   })
 })
+
+describe('BlogDocView: image description falls back to the caption', () => {
+  it('an empty description uses the caption as the alt text', () => {
+    const d: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, alt: '', caption: 'The lobby at night', layout: 'column' } }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc: d }))).toContain('alt="The lobby at night"')
+  })
+})
+
+describe('BlogDocView: picture size system', () => {
+  it('a transparent cut-out has no rounded box or placeholder; a small picture gets the standard height', () => {
+    const cut: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, width: 1365, height: 768, alpha: true, alt: 'Lures', caption: '', layout: 'column' } }] }
+    const h1 = renderToStaticMarkup(React.createElement(BlogDocView, { doc: cut }))
+    expect(h1).not.toContain('rounded-[20px]')
+    expect(h1).not.toContain('background-image')
+    const small: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, width: 232, height: 307, alt: 'Potion', caption: '', layout: 'column' } }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc: small }))).toContain('height:240px')
+  })
+})
+
+
+describe('BlogDocView: pictures in tables', () => {
+  const row = (cells: any[]) => ({ type: 'tableRow', content: cells })
+  const cell = (type: string, content: any[]) => ({ type, content: [{ type: 'paragraph', content }] })
+  const doc: any = { type: 'doc', content: [{ type: 'table', content: [
+    row([cell('tableHeader', [t('Pet')]), cell('tableHeader', [t('Price')])]),
+    row([cell('tableCell', [t('Bat Dragon')]), cell('tableCell', [t('$500')])]),
+    row([cell('tableCell', [{ type: 'cellImage', attrs: { src: 'https://cdn/x/up.webp', alt: 'Custom pet' } }, t('Custom Pet')]), cell('tableCell', [t('$5')])]),
+  ] }] }
+  const tableItems = new Map([['bat dragon', { slug: 'bat-dragon', name: 'Bat Dragon', imageUrl: '/bat.png', href: '/adopt-me/values/bat-dragon' }]])
+  const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc, tableItems, gameSlug: 'adopt-me' }))
+  it('a first-column item from the value list gets its picture, linked to its value page', () => {
+    expect(html).toMatch(/<a[^>]+href="\/adopt-me\/values\/bat-dragon"[^>]*><img data-cell-image=""[^>]+src="\/bat.png"/)
+  })
+  it('an uploaded table picture renders as the fixed table square', () => {
+    expect(html).toMatch(/<img data-cell-image=""[^>]+src="https:\/\/cdn\/x\/up.webp"[^>]+alt="Custom pet"/)
+  })
+})
+
+describe('BlogDocView: a table row holding only a picture is kept', () => {
+  it('is not pruned as empty', () => {
+    const doc: any = { type: 'doc', content: [{ type: 'table', content: [
+      { type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [t('Pet')] }] }] },
+      { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'cellImage', attrs: { src: 'https://cdn/p.webp', alt: 'p' } }] }] }] },
+    ] }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc })).match(/<tr[ >]/g)?.length).toBe(2)
+  })
+})
+

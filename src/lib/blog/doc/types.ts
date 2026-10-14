@@ -38,6 +38,8 @@ export interface StoredImage {
   /** data:image/webp;base64,… (a few hundred bytes), or null for legacy images. */
   blur: string | null
   sources: { avif: SrcItem[]; webp: SrcItem[] }
+  /** See-through pixels (a cut-out): shown with no box (render/picture-size.ts). Unset on older uploads. */
+  alpha?: boolean
 }
 
 export type ImageLayout = 'column' | 'wide'
@@ -50,6 +52,8 @@ export interface BodyV2 {
   cover?: StoredImage | null
   /** URLs this post was live at before a rename; they redirect to the current one. */
   oldSlugs?: string[]
+  /** Codes posts: the freshness note shown with the date ("2 new codes"). */
+  note?: string
 }
 
 export const EMPTY_DOC: BlogDoc = { type: 'doc', content: [{ type: 'paragraph' }] }

@@ -24,9 +24,10 @@ describe('postChecklist', () => {
     const r = postChecklist({ ...good, title: ' ', slug: '', gameSlug: null })
     expect(r.blocking.map((b) => b.id).sort()).toEqual(['game', 'slug', 'title'])
   })
-  it('an image without alt text blocks publishing', () => {
+  it('an image without a description is a tip, never a block (owner: captions are optional)', () => {
     const r = postChecklist({ ...good, doc: { ...good.doc, content: [...good.doc.content, fig('')] } })
-    expect(r.blocking.map((b) => b.id)).toEqual(['alt'])
+    expect(r.blocking).toEqual([])
+    expect(r.items.find((i) => i.id === 'alt')).toMatchObject({ ok: false, blocking: false })
   })
   it('empty image slots are a warning, not a block', () => {
     const slot = { type: 'figure', attrs: { src: '', alt: 'lobby', caption: '' } }

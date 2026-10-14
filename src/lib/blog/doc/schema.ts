@@ -5,12 +5,14 @@
  * pulls editor UI into a public bundle.
  *
  * Built-in (StarterKit): paragraph, heading 2/3, bold, italic, link, bullet
- * and numbered lists, quote, divider, hard break. Tables via TableKit.
+ * and numbered lists, quote, divider, hard break. Tables via TableKit. Text
+ * colour via TextStyle + Color (hex only on the page — doc/color.ts).
  * Ours: figure, imagePair, callout, faq, codes, itemCard, cta, youtube.
  */
 import { Node, mergeAttributes, type Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
+import { Color, TextStyle } from '@tiptap/extension-text-style'
 
 /** A JSON-valued attribute (stored as is in the doc). */
 const json = <T>(fallback: T) => ({
@@ -43,9 +45,11 @@ export const Figure = atom(
     width: json(null),
     height: json(null),
     blur: json(null),
+    /** A cut-out (see-through pixels): no rounded box (render/picture-size.ts). */
+    alpha: json(null),
     alt: text(),
     caption: text(),
-    /** column = the reading column; wide = up to 960px on desktop. Phones: always the column. */
+    /** column = the reading column; wide = the column with a taller height cap (picture-size.ts). */
     layout: text('column'),
   },
   'figure',
@@ -83,7 +87,19 @@ export const Cta = atom('cta', { label: text('Shop Now'), href: text('/') })
 /** YouTube: a thumbnail until clicked (no iframe on page load). */
 export const YouTube = atom('youtube', { id: text(), title: text() })
 
-export const CUSTOM_NODES = [Figure, ImagePair, Callout, Faq, Codes, ItemCard, Cta, YouTube]
+/** A small uploaded picture inside a table cell (Blog v2): one fixed square (render/picture-size.ts). */
+export const CellImage = Node.create({
+  name: 'cellImage',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes: () => ({ src: text(), alt: text() }),
+  parseHTML: () => [{ tag: 'img[data-cell-image]' }],
+  renderHTML: ({ HTMLAttributes }) => ['img', mergeAttributes(HTMLAttributes, { 'data-cell-image': '', width: 40, height: 40 })],
+})
+
+export const CUSTOM_NODES = [Figure, ImagePair, Callout, Faq, Codes, ItemCard, Cta, YouTube, CellImage]
 
 /** StarterKit + tables: the built-in half of the block set (the editor adds node views to CUSTOM_NODES). */
 export function blogBaseExtensions(): Extensions {
@@ -98,6 +114,8 @@ export function blogBaseExtensions(): Extensions {
       strike: false,
     }),
     TableKit.configure({ table: { resizable: false } }),
+    TextStyle,
+    Color.configure({ types: ['textStyle'] }),
   ]
 }
 

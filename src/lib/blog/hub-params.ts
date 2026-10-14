@@ -1,44 +1,41 @@
 import { CONTENT_HUB_GAME_SLUGS } from '@/lib/content/theme'
-import { getAllPublishedPosts } from '@/lib/blog/db'
+import { contentHubSlugs } from '@/lib/content/hub-games'
+import { getAllGames } from '@/lib/utils/games'
 
-type PostWithGame = { primaryGameSlug: string | null }
-
-/**
- * Every game that has a blog hub today: the content-hub games plus any game a
- * published post is filed under (`/valorant/blog` exists because of one post,
- * not a theme). This is the prerender set for `/[gameSlug]/blog`, which is a
- * closed set (`dynamicParams = false`) — a slug missing here is a static 404,
- * so the post loader failing must not shrink the list below the hub games.
- */
-export async function getBlogHubGameSlugs(
-  hubSlugs: readonly string[] = CONTENT_HUB_GAME_SLUGS,
-  loadPosts: () => Promise<PostWithGame[]> = getAllPublishedPosts,
-): Promise<string[]> {
-  const slugs = new Set(hubSlugs)
-  try {
-    for (const post of await loadPosts()) {
-      if (post.primaryGameSlug) slugs.add(post.primaryGameSlug)
-    }
-  } catch {
-    // Build-time DB hiccup: keep the compile-time hub set rather than 404 a
-    // live hub until the next deploy.
-  }
-  return [...slugs].sort()
+/** The games an admin has switched on (games.content_hub_enabled). Cached with the game directory. */
+export async function getContentHubGameSlugs(): Promise<string[]> {
+  return contentHubSlugs(await getAllGames())
 }
 
 /**
- * Runtime twin of getBlogHubGameSlugs, for the page body: a hub exists for a
- * content-hub game, or for any game with at least one published post.
+ * Every game with a blog hub: the games switched on in admin (Blog v2,
+ * 2026-10-13 — a post alone no longer opens a hub). This is the prerender set
+ * for `/[gameSlug]/blog`, a closed set (`dynamicParams = false`), so a read
+ * failure at build time falls back to the compile-time hub games rather than
+ * 404 a live hub until the next deploy. (getAllGames returns [] on an error.)
+ */
+export async function getBlogHubGameSlugs(
+  loadEnabled: () => Promise<string[]> = getContentHubGameSlugs,
+  fallback: readonly string[] = CONTENT_HUB_GAME_SLUGS,
+): Promise<string[]> {
+  let slugs: string[] = []
+  try {
+    slugs = await loadEnabled()
+  } catch {
+    slugs = []
+  }
+  return [...new Set(slugs.length ? slugs : fallback)].sort()
+}
+
+/**
+ * Runtime twin of getBlogHubGameSlugs, for the page body: a hub exists only
+ * for a switched-on game.
  *
  * Needed because `dynamicParams = false` is not enforced on Vercel — Next only
  * throws its fallback-false 404 outside minimal mode (base-server.js), and the
  * Step 7a preview served /rust/blog as a 200 empty hub despite the closed set.
  * The page 404s here by the same rule; on ISR that 404 is then cached.
  */
-export function isBlogHubGame(
-  gameSlug: string,
-  posts: readonly unknown[],
-  hubSlugs: readonly string[] = CONTENT_HUB_GAME_SLUGS,
-): boolean {
-  return hubSlugs.includes(gameSlug) || posts.length > 0
+export function isBlogHubGame(gameSlug: string, enabled: readonly string[]): boolean {
+  return enabled.includes(gameSlug)
 }

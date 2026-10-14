@@ -92,7 +92,7 @@ export async function loadSitemapInput(db: Db, baseUrl: string): Promise<Sitemap
       fetchAllRows<SitemapInput['gamePosts'][number]>((from, to) =>
         db
           .from('blog_posts')
-          .select('slug, primary_game_slug, updated_at')
+          .select('slug, primary_game_slug, updated_at, post_type')
           .eq('status', 'published')
           .not('primary_game_slug', 'is', null)
           .order('slug')

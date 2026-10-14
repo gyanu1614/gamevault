@@ -50,6 +50,7 @@ import {
 const REGISTRY_FILE = 'local-stacks.json'
 const FEE_SEED = 'supabase/seeds/fee_rules.local.sql'
 const AUTH_TRIGGER_SEED = 'supabase/seeds/auth_profiles_trigger.local.sql'
+const CONTENT_HUB_SEED = 'supabase/seeds/content_hubs.local.sql'
 
 // ── identity ────────────────────────────────────────────────────────────────
 
@@ -407,6 +408,8 @@ async function cmdReset() {
   // Prod's auth.users → profiles trigger is dashboard-made (not in the public
   // schema dump); recreate it locally so a signup gets its profiles row.
   psql(dbUrl, ['-q', '--single-transaction', '-f', path.join(id.top, AUTH_TRIGGER_SEED)])
+  // Games are seeded after the migrations ran, so the content-hub switch is set here.
+  psql(dbUrl, ['-q', '--single-transaction', '-f', path.join(id.top, CONTENT_HUB_SEED)])
   psql(dbUrl, ['-q', '-c', "NOTIFY pgrst, 'reload schema'"])
 
   step(4, 'sanity check')

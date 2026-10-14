@@ -13,6 +13,8 @@ async function getGames() {
     .from('games')
     .select('slug, name')
     .eq('is_active', true)
+    // Blog v2: posts are written for games with a content hub (Admin → Games → Guides & content).
+    .eq('content_hub_enabled', true)
     .order('name', { ascending: true })
   return (data ?? []) as { slug: string; name: string }[]
 }

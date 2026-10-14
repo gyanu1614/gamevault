@@ -74,6 +74,7 @@ export async function uploadBlogImageV2(form: FormData): Promise<Result> {
       width: processed.width,
       height: processed.height,
       blur: processed.blur,
+      alpha: processed.alpha,
       sources: { avif: list('avif'), webp },
     },
   }

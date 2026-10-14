@@ -3,7 +3,7 @@
  * post: images with real sizes and AVIF/WebP sources, one callout style, FAQ
  * as <details>, codes with copy buttons, live item cards, one white button.
  */
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { RailCard } from '@/lib/buy-rails/model'
@@ -11,6 +11,13 @@ import type { CalloutTone, SrcItem, StoredImage } from '@/lib/blog/doc/types'
 import { CopyCode, YouTubeLite } from './client-nodes'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { classifyHref, gamePath } from './links'
+import { PAIR_BOX, pictureFit } from './picture-size'
+import { BLOG_CARD } from './surface'
+import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
+import { Lightbulb } from '@phosphor-icons/react/dist/ssr/Lightbulb'
+import { Info } from '@phosphor-icons/react/dist/ssr/Info'
+import { WarningCircle } from '@phosphor-icons/react/dist/ssr/WarningCircle'
+import type { Icon } from '@phosphor-icons/react'
 
 export const BTN_WHITE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] bg-[#F2F3F5] px-5 text-[14px] font-semibold text-[#111214] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -18,10 +25,11 @@ const BTN_QUIET =
   'inline-flex h-11 items-center justify-center rounded-[8px] bg-white/[0.06] px-4 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.1]'
 
 const srcSet = (list: SrcItem[]) => list.map((s) => `${s.url} ${s.w}w`).join(', ')
+// The reading column is up to 820px (components/blog/layout.ts); a Wide picture fills it too, just taller.
 const SIZES = {
-  column: '(min-width: 768px) 700px, calc(100vw - 32px)',
-  wide: '(min-width: 1024px) 960px, calc(100vw - 32px)',
-  half: '(min-width: 768px) 350px, calc(100vw - 32px)',
+  column: '(min-width: 1024px) 820px, calc(100vw - 32px)',
+  wide: '(min-width: 1024px) 820px, calc(100vw - 32px)',
+  half: '(min-width: 1024px) 410px, calc(100vw - 32px)',
 } as const
 
 /** <picture> with AVIF + WebP widths; width/height always set when known (no layout jump). */
@@ -31,17 +39,25 @@ export function Picture({
   sizes,
   eager = false,
   className = '',
+  style,
+  placeholder = true,
 }: {
   image: Partial<StoredImage> & { src: string }
   alt: string
   sizes: string
   eager?: boolean
   className?: string
+  /** Size from the picture size system (picture-size.ts); the cover fills its frame instead. */
+  style?: CSSProperties
+  /** Blur behind the picture while it loads — never behind a see-through cut-out. */
+  placeholder?: boolean
 }) {
   const avif = image.sources?.avif ?? []
   const webp = image.sources?.webp ?? []
   return (
-    <picture>
+    // `contents`: the <img> lays out as the parent's own child, so size rules
+    // (centring, a pair's box height, the cover's frame) apply to it directly.
+    <picture className="contents">
       {avif.length > 0 && <source type="image/avif" srcSet={srcSet(avif)} sizes={sizes} />}
       {webp.length > 0 && <source type="image/webp" srcSet={srcSet(webp)} sizes={sizes} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- pre-sized at upload, served from storage */}
@@ -53,8 +69,8 @@ export function Picture({
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         decoding="async"
-        className={cn('block h-auto w-full bg-white/[0.03] bg-cover', className)}
-        style={image.blur ? { backgroundImage: `url(${image.blur})` } : undefined}
+        className={cn('block h-auto w-full bg-cover', placeholder && 'bg-white/[0.03]', className)}
+        style={{ ...(placeholder && image.blur ? { backgroundImage: `url(${image.blur})` } : {}), ...style }}
       />
     </picture>
   )
@@ -65,15 +81,20 @@ export function FigureView({ attrs }: { attrs: Record<string, unknown> }) {
   const src = String(attrs.src ?? '')
   if (!src) return null
   const caption = String(attrs.caption ?? '').trim()
+  const image = { src, width: attrs.width as number, height: attrs.height as number, blur: attrs.blur as string | null, sources: attrs.sources as StoredImage['sources'], alpha: attrs.alpha === true }
+  // One size system: photos fill the column (height capped), small pictures and cut-outs share one height.
+  const fit = pictureFit(image, layout)
   return (
-    <figure className={`mt-8 ${layout === 'wide' ? 'blog-wide' : ''}`}>
+    <figure className={`mt-7 ${layout === 'wide' ? 'blog-wide' : ''}`}>
       <Picture
-        image={{ src, width: attrs.width as number, height: attrs.height as number, blur: attrs.blur as string | null, sources: attrs.sources as StoredImage['sources'] }}
-        alt={String(attrs.alt ?? caption)}
+        image={image}
+        alt={String(attrs.alt || caption || '')}
         sizes={SIZES[layout]}
-        className="rounded-[10px]"
+        className={cn('mx-auto w-auto max-w-full', fit.rounded && 'rounded-[20px]')}
+        style={fit.style}
+        placeholder={fit.placeholder}
       />
-      {caption && <figcaption className="mt-2.5 text-center text-[13px] leading-5 text-text-tertiary">{caption}</figcaption>}
+      {caption && <figcaption>{caption}</figcaption>}
     </figure>
   )
 }
@@ -83,34 +104,78 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
   const sides = [attrs.a as PairSide, attrs.b as PairSide].filter((s): s is NonNullable<PairSide> => !!s?.image?.src)
   if (sides.length === 0) return null
   return (
-    <div className="mt-8 grid gap-3 sm:grid-cols-2">
+    <div className="mt-7 grid gap-4 sm:grid-cols-2">
       {sides.map((s, i) => (
         <figure key={i}>
-          <Picture image={s.image} alt={s.alt ?? s.caption ?? ''} sizes={SIZES.half} className="rounded-[10px]" />
-          {s.caption && <figcaption className="mt-2 text-center text-[13px] leading-5 text-text-tertiary">{s.caption}</figcaption>}
+          {/* Both sides share one box height, so a big and a small picture still line up. */}
+          <div className={PAIR_BOX}>
+            <Picture
+              image={s.image}
+              alt={s.alt || s.caption || ''}
+              sizes={SIZES.half}
+              className={cn('h-auto max-h-full w-auto max-w-full object-contain', s.image.alpha !== true && 'rounded-[16px]')}
+              placeholder={s.image.alpha !== true}
+            />
+          </div>
+          {s.caption && <figcaption>{s.caption}</figcaption>}
         </figure>
       ))}
     </div>
   )
 }
 
-const TONES: Record<CalloutTone, { label: string; color: string }> = {
-  tip: { label: 'Tip', color: '#4FB477' },
-  warning: { label: 'Warning', color: '#E0B155' },
-  note: { label: 'Note', color: '#8FA7B8' },
-  takeaways: { label: 'Key Takeaways', color: 'var(--ct-accent-text, #C9CCD2)' },
+/**
+ * The boxes (owner, 2026-10-13): the value pages' callout look (ValueCallout)
+ * — a rectangle tinted in the box's hue with a hairline in the same hue —
+ * compact, with the icon + label on the LEFT and the text beside it, never a
+ * title row of its own. One clearly different hue per box (blue for a fact,
+ * yellow for a tip, as on the value pages); the summary keeps the blog
+ * highlight colour. Phones show the icon alone so the text keeps its width.
+ */
+export const CALLOUT_TONES: Record<CalloutTone, { label: string; color: string; bg: string; border: string; body: string; Icon: Icon }> = {
+  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)', bg: 'rgba(86,184,127,0.07)', border: 'rgba(86,184,127,0.26)', body: '#D6E8DC', Icon: ListChecks },
+  tip: { label: 'Tip', color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.26)', body: '#EDE3B8', Icon: Lightbulb },
+  note: { label: 'Note', color: '#8BBDFB', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.26)', body: '#D3E3F8', Icon: Info },
+  warning: { label: 'Warning', color: '#F28B82', bg: 'rgba(221,91,79,0.08)', border: 'rgba(221,91,79,0.3)', body: '#F3D9D5', Icon: WarningCircle },
 }
 
+const toneOf = (tone: unknown) => CALLOUT_TONES[(tone as CalloutTone) in CALLOUT_TONES ? (tone as CalloutTone) : 'note']
+
 export function CalloutView({ tone, children }: { tone: unknown; children: ReactNode }) {
-  const t = TONES[(tone as CalloutTone) in TONES ? (tone as CalloutTone) : 'note']
+  const t = toneOf(tone)
+  // Key Takeaways is a list under a long label: its title gets its own row (owner).
+  const stacked = t === CALLOUT_TONES.takeaways
   return (
     <aside
-      className="mt-7 rounded-[10px] border px-5 py-4 [&>*:first-child]:mt-0 [&>p:nth-child(2)]:mt-0"
-      style={{ borderColor: `color-mix(in srgb, ${t.color} 28%, transparent)`, background: `color-mix(in srgb, ${t.color} 7%, transparent)` }}
+      className={`bp-callout mt-6 rounded-md border px-4 py-3 sm:px-5 sm:py-3.5 ${stacked ? '' : 'grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 sm:gap-x-4'}`}
+      // The tint over a solid base, so the page's wallpaper never shows through.
+      style={{ background: `linear-gradient(${t.bg}, ${t.bg}), #1C1D22`, borderColor: t.border }}
     >
-      <p className="mb-1.5 text-[13px] font-semibold" style={{ color: t.color }}>{t.label}</p>
-      {children}
+      <CalloutHead tone={t} labelOnPhones={stacked} className={stacked ? 'mb-1.5' : ''} />
+      <div className="bp-callout-body min-w-0" style={{ color: t.body }}>{children}</div>
     </aside>
+  )
+}
+
+/**
+ * Icon + label in the tone's colour, sized to sit on the text's first line
+ * (shared with the editor's box). Beside the text, phones show the icon alone.
+ */
+export function CalloutHead({
+  tone,
+  className = '',
+  labelOnPhones = false,
+}: {
+  tone: (typeof CALLOUT_TONES)[CalloutTone]
+  className?: string
+  labelOnPhones?: boolean
+}) {
+  const { Icon, color, label } = tone
+  return (
+    <div data-tone-color={color} className={`flex h-[1.6em] items-center gap-2 self-start whitespace-nowrap font-bold ${className}`} style={{ color }}>
+      <Icon aria-hidden size={18} weight="duotone" className="shrink-0" />
+      <span className={labelOnPhones ? 'text-[14px]' : 'text-[14px] max-sm:sr-only'}>{label}</span>
+    </div>
   )
 }
 
@@ -119,7 +184,7 @@ export function FaqView({ attrs }: { attrs: Record<string, unknown> }) {
   if (items.length === 0) return null
   // The same accordion as the value pages' FAQ (answers stay in the HTML for search).
   return (
-    <div className="mt-6">
+    <div className="bp-ui mt-6">
       <FaqCards items={items} defaultOpen={0} square className="mt-0 max-w-none" />
     </div>
   )
@@ -133,16 +198,17 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
   const expired = rows.filter((r) => r.code?.trim() && r.expired)
   const checked = attrs.checkedAt ? new Date(String(attrs.checkedAt)) : null
   return (
-    <div className="mt-7">
+    <div className="bp-ui mt-7">
       {active.length === 0 ? (
-        <p className="rounded-[10px] bg-[#1D1E23] px-5 py-4 text-[15px] text-text-secondary">No working codes right now.</p>
+        <p className={`${BLOG_CARD} px-5 py-4 text-[15px] text-text-secondary`}>No working codes right now.</p>
       ) : (
-        <ul className="divide-y divide-white/[0.06] rounded-[10px] bg-[#1D1E23]">
+        <ul className={`${BLOG_CARD} divide-y divide-white/[0.06]`}>
           {active.map((r, i) => (
             <li key={i} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-mono text-[15px] font-semibold text-text-primary">
-                  {r.code}
+                  {/* A code must reach the game exactly: never auto-translated. */}
+                  <span translate="no">{r.code}</span>
                   {r.isNew && <span className="rounded-[5px] bg-[#4FB477]/15 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-[#7DD39B]">New</span>}
                 </p>
                 {r.reward && <p className="mt-0.5 text-[14px] text-text-secondary">{r.reward}</p>}
@@ -154,11 +220,11 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
       )}
       {checked && Number.isFinite(checked.getTime()) && <p className="mt-2 text-[13px] text-text-tertiary">Last checked {CHECKED.format(checked)}</p>}
       {expired.length > 0 && (
-        <details className="mt-3 rounded-[10px] bg-white/[0.025] px-4 [&_summary::-webkit-details-marker]:hidden">
+        <details className={`${BLOG_CARD} mt-3 px-4 [&_summary::-webkit-details-marker]:hidden`}>
           <summary className="flex min-h-[44px] cursor-pointer items-center text-[14px] font-medium text-text-secondary">Expired Codes ({expired.length})</summary>
           <ul className="pb-3 text-[14px] text-text-tertiary">
             {expired.map((r, i) => (
-              <li key={i} className="py-1"><span className="font-mono">{r.code}</span>{r.reward ? ` · ${r.reward}` : ''}</li>
+              <li key={i} className="py-1"><span translate="no" className="font-mono">{r.code}</span>{r.reward ? ` · ${r.reward}` : ''}</li>
             ))}
           </ul>
         </details>
@@ -174,7 +240,7 @@ export function ItemCardView({ attrs, card }: { attrs: Record<string, unknown>; 
   const name = String(attrs.name || card?.name || itemSlug)
   const image = String(attrs.imageUrl || card?.image?.src || '')
   return (
-    <div className="mt-7 flex flex-col gap-4 rounded-[10px] bg-[#1D1E23] p-4 sm:flex-row sm:items-center">
+    <div className={`bp-ui ${BLOG_CARD} mt-7 flex flex-col gap-4 p-4 sm:flex-row sm:items-center`}>
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -198,7 +264,7 @@ export function CtaView({ attrs, gameSlug }: { attrs: Record<string, unknown>; g
   if (!('internal' in kind)) return null
   const href = gamePath(kind.internal, gameSlug)
   return (
-    <div className="mt-8 flex justify-center">
+    <div className="bp-ui mt-8 flex justify-center">
       <Link href={href} className={BTN_WHITE}>{String(attrs.label || 'Shop Now')}</Link>
     </div>
   )
@@ -208,7 +274,7 @@ export function YouTubeView({ attrs }: { attrs: Record<string, unknown> }) {
   const id = String(attrs.id ?? '')
   if (!/^[\w-]{6,20}$/.test(id)) return null
   return (
-    <div className="mt-8">
+    <div className="bp-ui mt-8">
       <YouTubeLite id={id} title={String(attrs.title ?? '')} />
     </div>
   )

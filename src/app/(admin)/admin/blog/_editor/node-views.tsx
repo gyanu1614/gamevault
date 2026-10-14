@@ -10,8 +10,12 @@ import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/re
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { searchBlogItems, type BlogItemHit } from '@/lib/actions/admin-blog-items'
-import type { StoredImage } from '@/lib/blog/doc/types'
+import type { CalloutTone, StoredImage } from '@/lib/blog/doc/types'
 import { uploadImage } from './upload'
+import { pictureFit } from '@/lib/blog/render/picture-size'
+import { CALLOUT_TONES, CalloutHead } from '@/lib/blog/render/nodes'
+
+const fitOf = (a: Record<string, any>) => pictureFit({ width: a.width, height: a.height, alpha: a.alpha }, a.layout === 'wide' ? 'wide' : 'column')
 
 /** The post's game, for the item card search. */
 export const EditorGameContext = createContext<string | null>(null)
@@ -65,7 +69,8 @@ function Block({ label, selected, children, onRemove }: { label: string; selecte
   return (
     <NodeViewWrapper
       contentEditable={false}
-      className={cn('my-4 rounded-[10px] border bg-[#1D1E23] p-3', selected ? 'border-white/30' : 'border-white/[0.07]')}
+      // bp-ui: the writing area's article styles (links, lists, bold) stay out of the block's own controls.
+      className={cn('bp-ui my-4 rounded-[10px] border bg-[#1D1E23] p-3', selected ? 'border-white/30' : 'border-white/[0.07]')}
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[11.5px] font-semibold text-text-tertiary">{label}</span>
@@ -107,8 +112,14 @@ export function FigureNV({ node, updateAttributes, deleteNode, selected }: NodeV
   return (
     <Block label="Image" selected={selected} onRemove={deleteNode}>
       {a.src ? (
+        // Same size rules as the article (render/picture-size.ts), so the preview is honest.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={a.src} alt={a.alt} className={cn('mx-auto block h-auto rounded-md', a.layout === 'wide' ? 'w-full' : 'w-full max-w-[560px]')} />
+        <img
+          src={a.src}
+          alt={a.alt}
+          className={cn('mx-auto block h-auto w-auto max-w-full', fitOf(a).rounded && 'rounded-[16px]')}
+          style={fitOf(a).style}
+        />
       ) : (
         <button type="button" onClick={up.pick} className="grid h-32 w-full place-items-center rounded-md border border-dashed border-white/15 text-[13px] text-text-secondary">
           {up.busy ? 'Uploading…' : 'Choose an image'}
@@ -123,12 +134,7 @@ export function FigureNV({ node, updateAttributes, deleteNode, selected }: NodeV
       </div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <Field value={a.caption ?? ''} onValue={(v) => updateAttributes({ caption: v })} placeholder="Caption (optional)" />
-        <Field
-          className={cn(!String(a.alt ?? '').trim() && a.src && 'border-[#E0B155]/60')}
-          value={a.alt ?? ''}
-          onValue={(v) => updateAttributes({ alt: v })}
-          placeholder="Alt text: what the image shows (required)"
-        />
+        <Field value={a.alt ?? ''} onValue={(v) => updateAttributes({ alt: v })} placeholder="Describe it for Google (optional)" />
       </div>
     </Block>
   )
@@ -161,7 +167,7 @@ function PairSide({ v, set }: { v: { image?: StoredImage; alt?: string; caption?
         </button>
       )}
       {up.el}
-      <Field value={v.alt ?? ''} onValue={(t) => set({ alt: t })} placeholder="Alt text (required)" />
+      <Field value={v.alt ?? ''} onValue={(t) => set({ alt: t })} placeholder="Describe it for Google (optional)" />
       <Field value={v.caption ?? ''} onValue={(t) => set({ caption: t })} placeholder="Caption (optional)" />
     </div>
   )
@@ -184,9 +190,12 @@ export function CalloutNV({ node, updateAttributes, editor, getPos }: NodeViewPr
       return true
     }).run()
   }
+  const tone = CALLOUT_TONES[node.attrs.tone as CalloutTone] ?? CALLOUT_TONES.note
   return (
-    <NodeViewWrapper className="my-4 rounded-[10px] border border-white/[0.1] bg-white/[0.03] px-4 py-3">
-      <div contentEditable={false} className="mb-1.5 flex flex-wrap items-center gap-1.5">
+    // The article's own box look (tinted rectangle + tone label), with the switches beside the label.
+    <NodeViewWrapper className="my-4 rounded-md border px-4 py-3" style={{ background: `linear-gradient(${tone.bg}, ${tone.bg}), #1C1D22`, borderColor: tone.border }}>
+      <div contentEditable={false} className="mb-2 flex flex-wrap items-center gap-1.5 text-[14px]">
+        <CalloutHead tone={tone} labelOnPhones className="mr-2" />
         {TONES.map(([v, l]) => (
           <button key={v} type="button" className={chip(node.attrs.tone === v)} onClick={() => updateAttributes({ tone: v })}>{l}</button>
         ))}

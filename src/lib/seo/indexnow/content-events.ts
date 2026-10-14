@@ -8,7 +8,9 @@ import { logUrlEvents } from './log-events'
 export type PostEvent = 'published' | 'edited' | 'removed'
 
 /** A post and the blog index that lists it. */
-export function postEventUrls(post: { gameSlug: string | null; slug: string }): string[] {
+export function postEventUrls(post: { gameSlug: string | null; slug: string; postType?: string | null }): string[] {
+  // A codes post's page is /{game}/codes (Blog v2).
+  if (post.postType === 'codes' && post.gameSlug) return [`/${post.gameSlug}/codes`, `/${post.gameSlug}/blog`]
   return post.gameSlug
     ? [`/${post.gameSlug}/blog/${post.slug}`, `/${post.gameSlug}/blog`]
     : [`/blog/${post.slug}`, '/blog']
@@ -16,7 +18,7 @@ export function postEventUrls(post: { gameSlug: string | null; slug: string }): 
 
 export async function submitPostEvent(
   event: PostEvent,
-  post: { gameSlug: string | null; slug: string },
+  post: { gameSlug: string | null; slug: string; postType?: string | null },
   deps: { submit?: SubmitFn } = {},
 ): Promise<void> {
   try {

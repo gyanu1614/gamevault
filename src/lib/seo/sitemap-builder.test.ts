@@ -289,3 +289,15 @@ describe('a brand-new value page with enough offers is listed even with the gate
     expect(urls(gate)).not.toContain(`${BASE}/murder-mystery-2/values/harvester`)
   })
 })
+
+describe('sitemap: codes posts (Blog v2)', () => {
+  it('a codes post is listed at /{game}/codes, never under /blog', async () => {
+    const { buildSitemap } = await import('./sitemap-builder')
+    const { sitemapFixture } = await import('@/test/fixtures/sitemap-input')
+    const base = sitemapFixture()
+    const input = sitemapFixture({ gamePosts: [...base.gamePosts, { slug: 'adopt-me-codes', primary_game_slug: 'adopt-me', updated_at: '2026-10-13T00:00:00Z', post_type: 'codes' }] })
+    const urls = buildSitemap(input).map((e) => e.url)
+    expect(urls).toContain(`${BASE}/adopt-me/codes`)
+    expect(urls.some((u) => u.endsWith('/adopt-me/blog/adopt-me-codes'))).toBe(false)
+  })
+})

@@ -43,8 +43,19 @@ export interface BlogImageFile {
 }
 
 export type ProcessedBlogImage =
-  | { ok: true; hash: string; width: number; height: number; blur: string | null; files: BlogImageFile[] }
+  | { ok: true; hash: string; width: number; height: number; blur: string | null; alpha: boolean; files: BlogImageFile[] }
   | { ok: false; error: string }
+
+/**
+ * True when some pixel is see-through (a cut-out: an item with its background
+ * removed). The renderer then shows it with no rounded box or placeholder
+ * (render/picture-size.ts). An alpha channel that is fully opaque is a photo.
+ */
+function hasTransparency(data: Buffer, channels: number): boolean {
+  if (channels !== 4 && channels !== 2) return false
+  for (let i = channels - 1; i < data.length; i += channels) if (data[i] < 250) return true
+  return false
+}
 
 /** Widths to encode for a source this wide. */
 export function planWidths(sourceWidth: number): number[] {
@@ -88,7 +99,7 @@ export async function processBlogImage(
       const hash = contentHash(bytes)
       const width = meta.width ?? 0
       const height = meta.pageHeight ?? meta.height ?? 0
-      return { ok: true, hash, width, height, blur: null, files: [{ format: 'gif', width, height, bytes, path: blogImagePath(hash, width, 'gif') }] }
+      return { ok: true, hash, width, height, blur: null, alpha: false, files: [{ format: 'gif', width, height, bytes, path: blogImagePath(hash, width, 'gif') }] }
     }
     raw = await pipe.raw().toBuffer({ resolveWithObject: true })
   } catch {
@@ -109,5 +120,5 @@ export async function processBlogImage(
     files.push({ format: 'webp', width: w, height: h, bytes: new Uint8Array(webp), path: blogImagePath(hash, w, 'webp') })
   }
   const blurBuf = await base.clone().resize({ width: BLUR_WIDTH }).webp({ quality: 40 }).toBuffer()
-  return { ok: true, hash, width, height, blur: `data:image/webp;base64,${blurBuf.toString('base64')}`, files }
+  return { ok: true, hash, width, height, blur: `data:image/webp;base64,${blurBuf.toString('base64')}`, alpha: hasTransparency(raw.data, channels), files }
 }

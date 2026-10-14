@@ -1108,6 +1108,36 @@ export type Database = {
         }
         Relationships: []
       }
+      buy_rail_settings: {
+        Row: {
+          blog: boolean
+          calculator: boolean
+          id: number
+          updated_at: string
+          updated_by: string | null
+          value_item: boolean
+          value_list: boolean
+        }
+        Insert: {
+          blog?: boolean
+          calculator?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          value_item?: boolean
+          value_list?: boolean
+        }
+        Update: {
+          blog?: boolean
+          calculator?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          value_item?: boolean
+          value_list?: boolean
+        }
+        Relationships: []
+      }
       buyer_waitlist: {
         Row: {
           created_at: string
@@ -2667,6 +2697,7 @@ export type Database = {
       games: {
         Row: {
           blog_cta_image_url: string | null
+          content_hub_enabled: boolean
           content_tier: string
           cover_url: string | null
           created_at: string
@@ -2705,6 +2736,7 @@ export type Database = {
         }
         Insert: {
           blog_cta_image_url?: string | null
+          content_hub_enabled?: boolean
           content_tier?: string
           cover_url?: string | null
           created_at?: string
@@ -2743,6 +2775,7 @@ export type Database = {
         }
         Update: {
           blog_cta_image_url?: string | null
+          content_hub_enabled?: boolean
           content_tier?: string
           cover_url?: string | null
           created_at?: string
@@ -10884,6 +10917,7 @@ export type Database = {
       seo_value_evidence: {
         Row: {
           anchors: Json
+          first_seen_at: string | null
           game_slug: string
           history_days: number
           is_protected: boolean
@@ -10897,6 +10931,7 @@ export type Database = {
         }
         Insert: {
           anchors?: Json
+          first_seen_at?: string | null
           game_slug: string
           history_days?: number
           is_protected?: boolean
@@ -10910,6 +10945,7 @@ export type Database = {
         }
         Update: {
           anchors?: Json
+          first_seen_at?: string | null
           game_slug?: string
           history_days?: number
           is_protected?: boolean

@@ -9,6 +9,8 @@ export interface Game {
   slug: string
   emoji: string | null
   image_url: string | null
+  /** Admin switch: the game has a content hub (blog home + guides) and shows in the hub nav picker. */
+  content_hub_enabled: boolean
 }
 
 /**
@@ -31,7 +33,7 @@ export const getAllGames = unstable_cache(
       const supabase = createAnonClient()
       const { data, error } = await supabase
         .from('games')
-        .select('id, name, slug, emoji, image_url')
+        .select('id, name, slug, emoji, image_url, content_hub_enabled')
         .eq('is_active', true)
         .order('name')
 

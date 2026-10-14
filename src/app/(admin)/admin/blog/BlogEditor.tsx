@@ -15,9 +15,6 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { CircleNotch } from '@phosphor-icons/react'
-import { cn } from '@/lib/utils'
-import { adminBtn, StatusBadge, type ChipTone } from '../components/kit'
 import type { AdminBlogPost, BlogStatus } from '@/lib/actions/admin-blog'
 import { saveBlogPost, type SaveBlogPostInput } from '@/lib/actions/admin-blog-save'
 import { postChecklist, slugify } from '@/lib/blog/editor/checklist'
@@ -27,13 +24,13 @@ import { BlockEditor } from './_editor/BlockEditor'
 import { EditorGameContext } from './_editor/node-views'
 import { Checklist, CoverPicker, PostSettings, SearchPreview, type Meta, type PostType } from './_editor/SidePanel'
 import { Preview } from './_editor/Preview'
+import { ActionBar } from './_editor/ActionBar'
+import { blogFont } from '@/lib/fonts/blog'
 import { TEMPLATES } from './_editor/templates'
 
 type GameOption = { slug: string; name: string }
 type TemplateKey = keyof typeof TEMPLATES
 
-const STATUS_TONE: Record<BlogStatus, ChipTone> = { draft: 'warning', published: 'success', archived: 'neutral' }
-const STATUS_LABEL: Record<BlogStatus, string> = { draft: 'Draft', published: 'Live', archived: 'Archived' }
 const AUTOSAVE_MS = 3000
 
 function grow(el: HTMLTextAreaElement | null) {
@@ -91,6 +88,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
     author: post?.author ?? 'DropMarket Team',
     seoTitle: post?.seo_title ?? '',
     seoDescription: post?.seo_description ?? '',
+    note: initial?.note ?? '',
   })
   const [slugTouched, setSlugTouched] = useState(!!post)
   const [dirty, setDirty] = useState(false)
@@ -147,6 +145,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
     cover,
     seoTitle: meta.seoTitle || null,
     seoDescription: meta.seoDescription || null,
+    note: meta.postType === 'codes' ? meta.note.trim() || null : null,
     doc: doc as SaveBlogPostInput['doc'],
   }
 
@@ -243,7 +242,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
 
   return (
     <EditorGameContext.Provider value={meta.gameSlug || null}>
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className={`grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] ${blogFont.variable}`}>
         <div className="min-w-0 rounded-[10px] bg-[#1D1E23] px-4 pb-2 pt-6 sm:px-6">
           {initial?.legacy && (
             <p className="mb-5 rounded-md bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-text-secondary">
@@ -260,7 +259,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="Post title"
             aria-label="Title"
-            className="block w-full resize-none overflow-hidden bg-transparent text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[34px]"
+            className="block w-full resize-none overflow-hidden bg-transparent [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[26px] font-bold leading-[1.2] tracking-[-0.015em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[30px] lg:text-[34px]"
           />
           <textarea
             ref={excerptRef}
@@ -273,7 +272,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="The answer in one or two lines. Shown under the title, on guide cards and on Google."
             aria-label="Summary"
-            className="mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.6] text-text-secondary outline-none placeholder:text-text-tertiary sm:text-[18px]"
+            className="blog-type mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-[#c2c0cc] outline-none placeholder:text-text-tertiary sm:text-[19px]"
           />
           <div className="mt-6">
             <BlockEditor initial={docSeed} onChange={onDoc} />
@@ -296,46 +295,19 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
         </aside>
       </div>
 
-      {/* Actions, always in reach. */}
-      <div className="pointer-events-none sticky bottom-4 z-30 mt-4 flex justify-end">
-        <div className="pointer-events-auto flex w-full flex-wrap items-center gap-2 rounded-lg bg-bg-overlay-2 p-2 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] sm:w-auto">
-          <StatusBadge status={STATUS_LABEL[status]} tone={STATUS_TONE[status]} className="mr-auto px-2.5 py-1 text-[12px] sm:mr-0" />
-          {/* Phones: one row of buttons; an error takes its own line above them. */}
-          <span
-            role="status"
-            aria-live="polite"
-            className={cn('px-1 text-[12.5px] sm:mr-2 sm:inline', error ? 'order-first basis-full text-error sm:order-none sm:basis-auto' : 'hidden text-text-tertiary')}
-          >
-            {error ?? stateText}
-          </span>
-          <button type="button" onClick={() => setPreviewOpen(true)} className={adminBtn.secondary}>Preview</button>
-          {live ? (
-            <>
-              <button type="button" disabled={saving} onClick={() => void save('draft')} className={adminBtn.secondary}>Unpublish</button>
-              <button type="button" disabled={saving || blocked || !dirty} onClick={() => void save('published')} className={adminBtn.primary}>
-                {saving && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
-                Update
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" disabled={saving || !title.trim() || !meta.slug} onClick={() => void save('draft')} className={adminBtn.secondary}>
-                Save Draft
-              </button>
-              <button
-                type="button"
-                disabled={saving || blocked}
-                title={blocked ? `Still needed: ${checks.blocking.map((b) => b.label.toLowerCase()).join(', ')}` : undefined}
-                onClick={() => void save('published')}
-                className={adminBtn.primary}
-              >
-                {saving && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
-                Publish
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      {/* Actions, always in reach: a full-width bottom bar on phones, a floating box on desktop. */}
+      <ActionBar
+        status={status}
+        stateText={stateText}
+        error={error}
+        saving={saving}
+        dirty={dirty}
+        blocked={blocked}
+        blockedText={blocked ? `Still needed: ${checks.blocking.map((x) => x.label.toLowerCase()).join(', ')}` : undefined}
+        canSaveDraft={!!title.trim() && !!meta.slug}
+        onPreview={() => setPreviewOpen(true)}
+        onSave={(next) => void save(next)}
+      />
 
       <Preview
         open={previewOpen}

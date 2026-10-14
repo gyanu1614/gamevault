@@ -11,6 +11,8 @@ import { VALUE_SURFACE_LINK } from '@/components/values/styles'
 
 export interface ArticleCardData {
   slug: string
+  /** The post's canonical address (postHref). */
+  href: string
   title: string
   excerpt: string
   category: string
@@ -67,7 +69,7 @@ export function GuideCard({
 }) {
   return (
     <Link
-      href={`/${gameSlug}/blog/${post.slug}`}
+      href={post.href}
       className={`group flex h-full flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${VALUE_SURFACE_LINK}`}
     >
       {/* Cover — fixed 16:9 so every card is the same height. */}

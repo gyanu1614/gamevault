@@ -45,3 +45,21 @@ describe('processBlogImage', () => {
     expect(await processBlogImage(new Uint8Array([1, 2, 3]), 'image/png')).toEqual({ ok: false, error: 'That file is not a readable image.' })
   })
 })
+
+describe('processBlogImage: transparent cut-outs (Blog v2)', () => {
+  it('marks a picture with see-through pixels as a cut-out, and an opaque one not', async () => {
+    const cutout = await sharp({ create: { width: 800, height: 600, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: await sharp({ create: { width: 200, height: 200, channels: 4, background: { r: 200, g: 50, b: 50, alpha: 1 } } }).png().toBuffer(), left: 300, top: 200 }])
+      .png()
+      .toBuffer()
+    const r1 = await processBlogImage(new Uint8Array(cutout), 'image/png')
+    expect(r1.ok && r1.alpha).toBe(true)
+    const photo = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 30, g: 120, b: 200 } } }).jpeg().toBuffer()
+    const r2 = await processBlogImage(new Uint8Array(photo), 'image/jpeg')
+    expect(r2.ok && r2.alpha).toBe(false)
+    // A PNG with an alpha channel that is fully opaque is still a photo.
+    const opaquePng = await sharp({ create: { width: 800, height: 600, channels: 4, background: { r: 30, g: 120, b: 200, alpha: 1 } } }).png().toBuffer()
+    const r3 = await processBlogImage(new Uint8Array(opaquePng), 'image/png')
+    expect(r3.ok && r3.alpha).toBe(false)
+  })
+})

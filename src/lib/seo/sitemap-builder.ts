@@ -72,7 +72,8 @@ export interface SitemapInput {
   }[]
   /** Published events archive rows (values_events), any game. */
   valueEvents: { gameSlug: string; slug: string; status: string; itemCount: number; updatedAt: string | null }[]
-  gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null }[]
+  /** post_type 'codes' → listed at /{game}/codes (Blog v2). */
+  gamePosts: { slug: string; primary_game_slug: string; updated_at: string | null; post_type?: string | null }[]
   /** Every blog post (for the index page's date). */
   posts: { publishedAt: string }[]
   /** Posts that still live at the flat /blog/{slug} URL. */
@@ -182,7 +183,7 @@ export function buildSitemapSections(input: SitemapInput): Map<SitemapSection, M
     const next = newest(gameBlogLastmod.get(p.primary_game_slug), p.updated_at)
     if (next) gameBlogLastmod.set(p.primary_game_slug, next)
     return {
-      url: at(`/${p.primary_game_slug}/blog/${p.slug}`),
+      url: at(p.post_type === 'codes' ? `/${p.primary_game_slug}/codes` : `/${p.primary_game_slug}/blog/${p.slug}`),
       ...dated(p.updated_at),
       changeFrequency: 'weekly' as const,
       priority: 0.55,

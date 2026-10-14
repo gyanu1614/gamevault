@@ -11,7 +11,7 @@ import { requireAdmin } from '@/lib/actions/admin-permissions'
 import { revalidatePath } from 'next/cache'
 import { submitPostEvent } from '@/lib/seo/indexnow'
 
-export type BlogPostType = 'guide' | 'value' | 'seller'
+export type BlogPostType = 'guide' | 'value' | 'seller' | 'codes'
 export type BlogStatus = 'draft' | 'published' | 'archived'
 
 export interface AdminBlogPost {

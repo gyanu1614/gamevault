@@ -1,0 +1,191 @@
+/*
+ * Blog type + spacing (Blog v2, 2026-10-13) — ONE stylesheet for the public
+ * article (BlogDocView, `.blog-prose` on the block grid) and the editor's
+ * writing area (`.blog-prose` on the ProseMirror root), so what the writer
+ * sees is what readers get. Measured against Eldorado's articles and tuned:
+ * airy lines, tight paragraph gaps, big bold headings with room above, one
+ * highlight colour (the brand green, --color-accent-text).
+ *
+ * Top margins only: the article's blocks are grid items, whose margins never
+ * collapse (my-* doubled every gap); in the editor's normal flow the same top
+ * margins produce the same gaps.
+ *
+ * Also the blog's shared background (`.blog-backdrop`, at the end).
+ *
+ * Scope: headings style only as top-level blocks; every other rule skips the
+ * inside of a built-in block (`.bp-ui`: FAQ, codes, item card, button,
+ * video), which keep their own look — `X:not(.bp-ui *)`.
+ */
+
+.blog-type {
+  font-family: var(--font-blog), var(--font-inter), system-ui, sans-serif;
+}
+
+/* The article's page box (components/blog/layout.ts): 820 column + 48 gap +
+   300 sidebar + 2×32 gutter. */
+:root { --blog-page-w: 1232px; }
+
+.blog-prose {
+  --bp-text: #c2c0cc;
+  --bp-strong: #ffffff;
+  --bp-accent: var(--color-accent-text);
+  --bp-rule: rgba(255, 255, 255, 0.08);
+  color: var(--bp-text);
+  font-size: 17px;
+  line-height: 1.85;
+}
+@media (min-width: 640px) {
+  .blog-prose { font-size: 18px; }
+}
+
+/* ── Rhythm ─────────────────────────────────────────────────────────── */
+.blog-prose > * { margin-top: 0; }
+.blog-prose > p,
+.blog-prose > ul,
+.blog-prose > ol { margin-top: 14px; }
+.blog-prose > :first-child { margin-top: 0; }
+.blog-prose > h2 + *,
+.blog-prose > h3 + * { margin-top: 14px; }
+
+/* ── Headings ───────────────────────────────────────────────────────── */
+.blog-prose > h2 {
+  margin-top: 52px;
+  color: var(--bp-strong);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.blog-prose > h3 {
+  margin-top: 40px;
+  color: var(--bp-strong);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+@media (min-width: 640px) {
+  .blog-prose > h2 { font-size: 30px; }
+  .blog-prose > h3 { font-size: 23px; }
+}
+.blog-prose > h2:first-child,
+.blog-prose > h3:first-child { margin-top: 0; }
+
+/* ── Inline ─────────────────────────────────────────────────────────── */
+.blog-prose strong:not(.bp-ui *) { color: var(--bp-strong); font-weight: 700; }
+.blog-prose a:not(.bp-ui *) {
+  color: var(--bp-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--bp-accent) 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.blog-prose a:not(.bp-ui *):hover { text-decoration-color: currentColor; }
+
+/* ── Lists: bold lead-ins ("**Fast:** …") carry the highlight colour ── */
+.blog-prose ul:not(.bp-ui *),
+.blog-prose ol:not(.bp-ui *) { padding-left: 1.35em; }
+.blog-prose ul:not(.bp-ui *) { list-style: disc; }
+.blog-prose ol:not(.bp-ui *) { list-style: decimal; }
+.blog-prose li:not(.bp-ui *) { margin-top: 8px; padding-left: 0.25em; }
+.blog-prose li:not(.bp-ui *) > p { margin-top: 0; }
+.blog-prose li:not(.bp-ui *)::marker { color: rgba(255, 255, 255, 0.4); }
+.blog-prose ol:not(.bp-ui *) > li::marker { color: var(--bp-strong); font-weight: 700; }
+.blog-prose li:not(.bp-ui *) > p > strong:first-child { color: var(--bp-accent); }
+
+/* ── Boxes (Tip / Note / Warning / Key Takeaways — nodes.tsx CalloutView):
+      compact, tightly spaced text beside the label ───────────────────── */
+.blog-prose .bp-callout { font-size: 16px; line-height: 1.6; }
+@media (min-width: 640px) {
+  .blog-prose .bp-callout { font-size: 17px; }
+}
+.blog-prose .bp-callout-body > * { margin-top: 0; }
+.blog-prose .bp-callout-body > * + * { margin-top: 8px; }
+.blog-prose .bp-callout-body li { margin-top: 4px; }
+.blog-prose .bp-callout-body li:first-child { margin-top: 0; }
+
+/* ── Quote + rule ───────────────────────────────────────────────────── */
+.blog-prose blockquote:not(.bp-ui *) {
+  margin-top: 24px;
+  border-left: 3px solid var(--bp-accent);
+  padding-left: 18px;
+  color: var(--bp-strong);
+}
+.blog-prose blockquote:not(.bp-ui *) > p { margin-top: 0; }
+.blog-prose hr:not(.bp-ui *) { margin: 44px 0 8px; border: 0; border-top: 1px solid var(--bp-rule); }
+
+/* ── Tables: a solid card (render/surface.ts BLOG_CARD values), darker
+      header band, striped rows, bold first column ──────────────────── */
+.blog-prose .blog-table,
+.blog-prose .tableWrapper /* the editor's table box (Tiptap) */ {
+  margin-top: 24px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #212228 0%, #1A1B1F 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+.blog-prose table:not(.bp-ui *) { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.5; }
+@media (min-width: 640px) {
+  .blog-prose table:not(.bp-ui *) { font-size: 16px; }
+}
+.blog-prose th:not(.bp-ui *) {
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--bp-strong);
+  font-weight: 700;
+  padding: 14px 18px;
+  text-align: left;
+  white-space: nowrap;
+}
+.blog-prose td:not(.bp-ui *) {
+  font-variant-numeric: tabular-nums; /* prices and counts line up down a column */
+  padding: 12px 18px;
+  vertical-align: middle;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.blog-prose td:not(.bp-ui *):first-child { color: var(--bp-strong); font-weight: 700; }
+/* One row dark, the next light; a hairline between columns (owner). Row 1 is the header. */
+.blog-prose tr:nth-child(even) > td:not(.bp-ui *) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.blog-prose :is(th, td):not(.bp-ui *) + :is(th, td) {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+.blog-prose th:not(.bp-ui *) > p,
+.blog-prose td:not(.bp-ui *) > p { margin-top: 0; }
+
+/* ── Pictures: rounded, captions quiet (sizes: render/picture-size.ts) ─ */
+.blog-prose figcaption:not(.bp-ui *) {
+  margin-top: 10px;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── Pictures in tables: one fixed square (render/picture-size.ts TABLE_PICTURE) ── */
+.blog-prose img[data-cell-image] {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.blog-prose .bp-cell-item { display: flex; align-items: center; gap: 12px; }
+.blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
+
+
+/* ── Shared background (BlogBackdrop): the whole wallpaper, really dimmed ──
+   Owner: the full picture behind the page, barely there. The hero vignette
+   (tokens.css) over a very heavy even scrim over the picture; tune how faint
+   it is with the scrim's two alphas (keep both ≥ 0.9, the text sits on it). */
+.blog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background: var(--hero-vignette),
+    linear-gradient(rgba(var(--color-bg-base-rgb), 0.94), rgba(var(--color-bg-base-rgb), 0.96)),
+    var(--blog-backdrop) center / cover no-repeat;
+}

@@ -5,7 +5,7 @@
  * where a "/" is awkward) and a small menu over selected text. Both edit the
  * same marks; links are typed in place (no browser prompt).
  */
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Editor } from '@tiptap/core'
 import { useEditorState } from '@tiptap/react'
 import FormatBoldRounded from '@mui/icons-material/FormatBoldRounded'
@@ -18,8 +18,14 @@ import RedoRounded from '@mui/icons-material/RedoRounded'
 import AddRounded from '@mui/icons-material/AddRounded'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { SLASH_ITEMS } from './slash'
+import { uploadImage } from './upload'
 import { splitLines } from './lines'
+import { ColorPicker } from './ColorPicker'
+
+/** Buttons hand the cursor back where it was without moving the page (iPhone jumped). */
+const NO_SCROLL = { scrollIntoView: false }
 
 const btn = (on = false) =>
   cn(
@@ -35,6 +41,7 @@ function useMarks(editor: Editor) {
       italic: e.isActive('italic'),
       link: e.isActive('link'),
       href: String(e.getAttributes('link').href ?? ''),
+      color: String(e.getAttributes('textStyle').color ?? ''),
       h2: e.isActive('heading', { level: 2 }),
       h3: e.isActive('heading', { level: 3 }),
       bullet: e.isActive('bulletList'),
@@ -58,7 +65,7 @@ function LinkField({ editor, href, onDone }: { editor: Editor; href: string; onD
   const [value, setValue] = useState(href)
   const apply = () => {
     const v = normalizeHref(value)
-    const chain = editor.chain().focus().extendMarkRange('link')
+    const chain = editor.chain().focus(undefined, NO_SCROLL).extendMarkRange('link')
     if (v) chain.setLink({ href: v }).run()
     else chain.unsetLink().run()
     onDone()
@@ -86,7 +93,7 @@ function LinkField({ editor, href, onDone }: { editor: Editor; href: string; onD
           type="button"
           className={btn()}
           onClick={() => {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+            editor.chain().focus(undefined, NO_SCROLL).extendMarkRange('link').unsetLink().run()
             onDone()
           }}
         >
@@ -105,10 +112,10 @@ function Icon({ label, on, onClick, disabled, children }: { label: string; on?: 
   )
 }
 
-/** Bold, italic, link + the heading levels — shared by the toolbar and the selection menu. */
-function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }) {
+/** Bold, italic, link + the heading levels — shared by the toolbar and the selection menu (colour: toolbar only, see ColorPicker). */
+function TextControls({ editor, onLink, withColor = false }: { editor: Editor; onLink: () => void; withColor?: boolean }) {
   const s = useMarks(editor)
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
   // Block styles change the line(s) the cursor or selection is on — never more.
   const line = () => c().command(splitLines)
   return (
@@ -120,16 +127,46 @@ function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }
       <Icon label="Bold" on={s.bold} onClick={() => c().toggleBold().run()}><FormatBoldRounded sx={{ fontSize: 18 }} /></Icon>
       <Icon label="Italic" on={s.italic} onClick={() => c().toggleItalic().run()}><FormatItalicRounded sx={{ fontSize: 18 }} /></Icon>
       <Icon label="Link" on={s.link} onClick={onLink}><LinkRounded sx={{ fontSize: 18 }} /></Icon>
+      {withColor && <ColorPicker editor={editor} current={s.color} className={btn(!!s.color)} />}
     </>
   )
 }
 
-/** Shown while the cursor is in a table: rows and columns go where the cursor is. */
+/**
+ * Shown while the cursor is in a table: rows and columns go where the cursor
+ * is; + Picture puts an uploaded picture (one fixed 40px square) at the cursor
+ * — for items the value list doesn't have (listed ones get theirs automatically).
+ */
 function TableControls({ editor }: { editor: Editor }) {
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
+  const file = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const addPicture = async (f: File) => {
+    setUploading(true)
+    const r = await uploadImage(f)
+    setUploading(false)
+    if (!r.ok) return void toast.error(r.error)
+    // The smallest stored width is plenty for a 40px square.
+    const src = r.image.sources.webp[0]?.url ?? r.image.src
+    c().insertContent({ type: 'cellImage', attrs: { src, alt: f.name.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ') } }).run()
+  }
   return (
     <span className="flex basis-full flex-wrap items-center gap-0.5 border-t border-white/[0.06] pt-1.5 sm:basis-auto sm:border-l sm:border-t-0 sm:pl-1.5 sm:pt-0" role="group" aria-label="Table">
       <span className="px-1.5 text-[12px] font-medium text-text-tertiary">Table</span>
+      <button type="button" className={btn()} disabled={uploading} onClick={() => file.current?.click()}>
+        {uploading ? 'Uploading…' : '+ Picture'}
+      </button>
+      <input
+        ref={file}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ''
+          if (f) void addPicture(f)
+        }}
+      />
       <button type="button" className={btn()} onClick={() => c().addRowAfter().run()}>+ Row</button>
       <button type="button" className={btn()} onClick={() => c().deleteRow().run()}>Remove Row</button>
       <button type="button" className={btn()} onClick={() => c().addColumnAfter().run()}>+ Column</button>
@@ -142,14 +179,14 @@ function TableControls({ editor }: { editor: Editor }) {
 export function Toolbar({ editor }: { editor: Editor }) {
   const s = useMarks(editor)
   const [linking, setLinking] = useState(false)
-  const c = () => editor.chain().focus()
+  const c = () => editor.chain().focus(undefined, NO_SCROLL)
   return (
     <div className="sticky top-16 z-20 -mx-4 flex min-h-12 flex-wrap items-center gap-0.5 border-b border-white/[0.06] bg-[#1D1E23] px-3 py-2 sm:-mx-6 sm:px-5">
       {linking ? (
         <LinkField editor={editor} href={s.href} onDone={() => setLinking(false)} />
       ) : (
         <>
-          <TextControls editor={editor} onLink={() => setLinking(true)} />
+          <TextControls editor={editor} onLink={() => setLinking(true)} withColor />
           <Icon label="Bullet list" on={s.bullet} onClick={() => c().toggleBulletList().run()}><FormatListBulletedRounded sx={{ fontSize: 18 }} /></Icon>
           <Icon label="Numbered list" on={s.ordered} onClick={() => c().toggleOrderedList().run()}><FormatListNumberedRounded sx={{ fontSize: 18 }} /></Icon>
           <span aria-hidden className="mx-1 h-5 w-px bg-white/[0.08]" />
@@ -165,11 +202,11 @@ export function Toolbar({ editor }: { editor: Editor }) {
               className="max-h-[60vh] w-64 overflow-y-auto"
               onCloseAutoFocus={(e) => {
                 e.preventDefault()
-                editor.commands.focus()
+                editor.commands.focus(undefined, NO_SCROLL)
               }}
             >
               {SLASH_ITEMS.map((it) => (
-                <DropdownMenuItem key={it.title} onSelect={() => it.run(editor.chain().focus())} className="flex-col items-start gap-0">
+                <DropdownMenuItem key={it.title} onSelect={() => it.run(editor.chain().focus(undefined, NO_SCROLL))} className="flex-col items-start gap-0">
                   <span className="text-[13px] font-medium text-text-primary">{it.title}</span>
                   <span className="text-[11.5px] text-text-tertiary">{it.hint}</span>
                 </DropdownMenuItem>

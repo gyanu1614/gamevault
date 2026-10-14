@@ -3,9 +3,9 @@
  * no editor code in the page). One renderer for every post: legacy bodies are
  * converted to the same doc first (readBody → legacyToDoc).
  *
- * Layout is a breakout grid: every block sits in a 700px reading column; a
- * "wide" figure spans the whole cell up to 960px — never past the cell, so it
- * can't slide under the contents list or the buy rails beside it.
+ * Layout: every block fills the reading column (up to 820px, beside the
+ * right sidebar — components/blog/layout.ts); a "wide" picture just gets a
+ * taller height cap (picture-size.ts).
  */
 import { createElement, type ReactNode } from 'react'
 import { renderToReactElement } from '@tiptap/static-renderer/pm/react'
@@ -16,20 +16,50 @@ import type { BlogDoc } from '@/lib/blog/doc/types'
 import { collectHeadings } from './outline'
 import { classifyHref, gamePath } from './links'
 import { pruneEmpty } from './prune'
+import { safeColor } from '@/lib/blog/doc/color'
+import { itemKey } from './outline'
+import type { LinkedItem } from '@/lib/blog/item-catalog'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
 
-type PmNode = { attrs: Record<string, unknown>; type: { name: string } }
-type Props = { node: PmNode; children?: ReactNode }
+type PmNode = {
+  attrs: Record<string, unknown>
+  type: { name: string }
+  textContent: string
+  firstChild: PmNode | null
+  descendants: (f: (n: PmNode) => void) => void
+}
+type Props = { node: PmNode; children?: ReactNode; parent?: PmNode }
 
-const P = 'mt-5 text-[16.5px] leading-[1.7] text-text-secondary sm:text-[17px]'
-const LIST = 'mt-5 space-y-2 pl-6 text-[16.5px] leading-[1.7] text-text-secondary marker:text-text-tertiary sm:text-[17px]'
-const LINK = 'font-medium text-[color:var(--ct-accent-text,#E6E8EB)] underline decoration-white/25 underline-offset-[3px] hover:decoration-current'
+const hasCellImage = (n: PmNode) => {
+  let found = false
+  n.descendants((c) => {
+    if (c.type.name === 'cellImage') found = true
+  })
+  return found
+}
 
-export const BLOG_PROSE_GRID =
-  // Top margins only: grid items' margins never collapse, so my-* doubled every gap.
-  'blog-prose grid [&>*:first-child]:mt-0 [&>h2+*]:mt-4 [&>h3+*]:mt-3 grid-cols-[minmax(0,1fr)_minmax(0,700px)_minmax(0,1fr)] [&>*]:col-start-2 [&>.blog-wide]:col-[1/-1] [&>.blog-wide]:w-full [&>.blog-wide]:max-w-[960px] [&>.blog-wide]:justify-self-center'
+/** Headings stop below the fixed hub nav + the phone contents bar when jumped to. */
+const HEADING_ANCHOR = 'scroll-mt-[calc(var(--hub-nav-h,112px)+56px)]'
 
-export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Map<string, RailCard>; gameSlug?: string | null }) {
+/**
+ * The block grid: one column (grid items' top margins never collapse — see
+ * blog-prose.css). Type, colour and spacing come from ONE stylesheet shared
+ * with the editor (src/styles/blog-prose.css, `.blog-prose`).
+ */
+export const BLOG_PROSE_GRID = 'blog-prose blog-type grid grid-cols-[minmax(0,1fr)]'
+
+export function BlogDocView({
+  doc,
+  items,
+  tableItems,
+  gameSlug,
+}: {
+  doc: BlogDoc
+  items?: Map<string, RailCard>
+  /** Value items named in table first columns (loadTableItems), by itemKey(name). */
+  tableItems?: Map<string, LinkedItem>
+  gameSlug?: string | null
+}) {
   // Heading ids in render order, from the same walk the contents list uses
   // (pruning never drops a heading, so the ids match the page's contents list).
   const ids = collectHeadings(doc).map((h) => h.id)
@@ -41,37 +71,44 @@ export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Ma
     options: {
       nodeMapping: {
         doc: ({ children }: Props) => <div className={BLOG_PROSE_GRID}>{children}</div>,
-        paragraph: ({ children }: Props) => <p className={P}>{children}</p>,
+        paragraph: ({ children }: Props) => <p>{children}</p>,
         heading: ({ node, children }: Props) => {
           const id = ids[headingAt++]
-          return node.attrs.level === 3 ? (
-            <h3 id={id} className="mt-9 scroll-mt-[calc(var(--hub-nav-h,112px)+56px)] text-[19px] font-semibold leading-snug text-text-primary sm:text-[20px]">{children}</h3>
-          ) : (
-            <h2 id={id} className="mt-12 scroll-mt-[calc(var(--hub-nav-h,112px)+56px)] text-[22px] font-bold leading-tight tracking-[-0.01em] text-text-primary sm:text-[26px]">{children}</h2>
-          )
+          return node.attrs.level === 3 ? <h3 id={id} className={HEADING_ANCHOR}>{children}</h3> : <h2 id={id} className={HEADING_ANCHOR}>{children}</h2>
         },
-        bulletList: ({ children }: Props) => <ul className={`${LIST} list-disc`}>{children}</ul>,
-        orderedList: ({ node, children }: Props) => (
-          <ol start={Number(node.attrs.start ?? 1)} className={`${LIST} list-decimal`}>{children}</ol>
-        ),
-        listItem: ({ children }: Props) => <li className="pl-1 [&>p]:my-0">{children}</li>,
-        blockquote: ({ children }: Props) => (
-          <blockquote className="mt-7 border-l-2 border-white/15 pl-5 [&>p]:text-text-primary">{children}</blockquote>
-        ),
-        horizontalRule: () => <hr className="mt-10 mb-5 border-white/[0.08]" />,
+        bulletList: ({ children }: Props) => <ul>{children}</ul>,
+        orderedList: ({ node, children }: Props) => <ol start={Number(node.attrs.start ?? 1)}>{children}</ol>,
+        listItem: ({ children }: Props) => <li>{children}</li>,
+        blockquote: ({ children }: Props) => <blockquote>{children}</blockquote>,
+        horizontalRule: () => <hr />,
         hardBreak: () => <br />,
         table: ({ children }: Props) => (
           // `relative`: a scroller's absolutely-positioned children must not widen the page.
-          <div className="relative mt-7 overflow-x-auto rounded-[10px] border border-white/[0.07]">
-            <table className="w-full border-collapse text-left text-[15px]"><tbody>{children}</tbody></table>
+          <div className="blog-table relative">
+            <table><tbody>{children}</tbody></table>
           </div>
         ),
-        tableRow: ({ children }: Props) => <tr className="border-b border-white/[0.06] last:border-0">{children}</tr>,
-        tableHeader: ({ children }: Props) => (
-          <th className="whitespace-nowrap bg-white/[0.03] px-4 py-2.5 text-[13px] font-semibold text-text-primary [&>p]:my-0 [&>p]:text-[13px]">{children}</th>
-        ),
-        tableCell: ({ children }: Props) => (
-          <td className="px-4 py-2.5 align-top text-text-secondary [&>p]:my-0 [&>p]:text-[15px] [&>p]:leading-6">{children}</td>
+        tableRow: ({ children }: Props) => <tr>{children}</tr>,
+        tableHeader: ({ children }: Props) => <th>{children}</th>,
+        tableCell: ({ node, parent, children }: Props) => {
+          // A first-column item from the game's value list: its picture, linked to its value page.
+          const item = parent?.firstChild === node && !hasCellImage(node) ? tableItems?.get(itemKey(node.textContent)) : undefined
+          if (!item?.imageUrl) return <td>{children}</td>
+          return (
+            <td>
+              <span className="bp-cell-item">
+                <Link href={item.href} aria-hidden tabIndex={-1}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, fixed 40px square */}
+                  <img data-cell-image="" src={item.imageUrl} alt="" width={40} height={40} loading="lazy" decoding="async" />
+                </Link>
+                <span>{children}</span>
+              </span>
+            </td>
+          )
+        },
+        cellImage: ({ node }: Props) => (
+          // eslint-disable-next-line @next/next/no-img-element -- an uploaded table picture, fixed 40px square
+          <img data-cell-image="" src={String(node.attrs.src ?? '')} alt={String(node.attrs.alt ?? '')} width={40} height={40} loading="lazy" decoding="async" />
         ),
         figure: ({ node }: Props) => <FigureView attrs={node.attrs} />,
         imagePair: ({ node }: Props) => <ImagePairView attrs={node.attrs} />,
@@ -85,14 +122,19 @@ export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Ma
         youtube: ({ node }: Props) => <YouTubeView attrs={node.attrs} />,
       },
       markMapping: {
-        bold: ({ children }: { children?: ReactNode }) => <strong className="font-semibold text-text-primary">{children}</strong>,
+        bold: ({ children }: { children?: ReactNode }) => <strong>{children}</strong>,
         italic: ({ children }: { children?: ReactNode }) => <em>{children}</em>,
         link: ({ mark, children }: { mark: { attrs: Record<string, unknown> }; children?: ReactNode }) => {
           const kind = classifyHref(String(mark.attrs.href ?? ''))
-          if ('internal' in kind) return <Link href={gamePath(kind.internal, gameSlug)} className={LINK}>{children}</Link>
+          if ('internal' in kind) return <Link href={gamePath(kind.internal, gameSlug)}>{children}</Link>
           if ('external' in kind)
-            return createElement('a', { href: kind.external, className: LINK, target: '_blank', rel: 'noopener noreferrer nofollow' }, children)
+            return createElement('a', { href: kind.external, target: '_blank', rel: 'noopener noreferrer nofollow' }, children)
           return <>{children}</>
+        },
+        // A picked text colour: hex only (doc/color.ts), else the text without it.
+        textStyle: ({ mark, children }: { mark: { attrs: Record<string, unknown> }; children?: ReactNode }) => {
+          const color = safeColor(mark.attrs.color)
+          return color ? <span style={{ color }}>{children}</span> : <>{children}</>
         },
       },
     },

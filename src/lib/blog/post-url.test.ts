@@ -35,3 +35,10 @@ describe('nextOldSlugs', () => {
     expect(nextOldSlugs({ wasLive: true, previousSlug: 'b', newSlug: 'b', known: ['a', 'a'] })).toEqual(['a'])
   })
 })
+
+describe('codes posts (Blog v2)', () => {
+  it('a codes post lives at its game’s /codes page, not under /blog', () => {
+    expect(postHref({ slug: 'adopt-me-codes', primaryGameSlug: 'adopt-me', postType: 'codes' })).toBe('/adopt-me/codes')
+    expect(postHref({ slug: 'guide', primaryGameSlug: 'adopt-me', postType: 'guide' })).toBe('/adopt-me/blog/guide')
+  })
+})

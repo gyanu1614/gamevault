@@ -22,6 +22,7 @@ export function ArticleHeader({
   publishedAt,
   updatedAt,
   readMinutes,
+  note,
 }: {
   gameSlug: string
   gameName: string
@@ -32,20 +33,24 @@ export function ArticleHeader({
   publishedAt: string
   updatedAt: string
   readMinutes: number
+  /** Codes posts: the freshness note ("2 new codes"), shown with the update date. */
+  note?: string | null
 }) {
   const edited = !!updatedAt && updatedAt > publishedAt
   const date = fmt(edited ? updatedAt : publishedAt)
   return (
-    <header className="mx-auto w-full max-w-[700px]">
+    <header className="w-full">
       <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-[13px] text-text-tertiary">
         <Link href={`/${gameSlug}/blog`} className="hover:text-text-primary">{gameName} Guides</Link>
         <span aria-hidden>›</span>
         <span className="text-[color:var(--ct-accent-text,#C9CCD2)]">{kindLabel}</span>
       </nav>
-      <h1 className="text-balance text-[28px] font-bold leading-[1.12] tracking-[-0.025em] text-text-primary sm:text-[36px] lg:text-[40px]">
+      {/* Titles in the headline face (Archivo); the text below in the reading face (Lato).
+          Eldorado-sized (they use 32px): fills the line, wraps only when long; bold, not extra-bold (owner). */}
+      <h1 className="text-pretty [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[26px] font-bold leading-[1.2] tracking-[-0.015em] text-text-primary sm:text-[30px] lg:text-[34px]">
         {title}
       </h1>
-      {excerpt && <p className="mt-4 text-pretty text-[16.5px] leading-[1.6] text-text-secondary sm:text-[18px]">{excerpt}</p>}
+      {excerpt && <p className="blog-type mt-4 text-pretty text-[17px] leading-[1.65] text-[#c2c0cc] sm:text-[19px]">{excerpt}</p>}
       <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-text-tertiary">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-mark-white.avif" alt="" aria-hidden width={22} height={22} className="h-[22px] w-[22px] object-contain" />
@@ -59,6 +64,11 @@ export function ArticleHeader({
         <span aria-hidden>·</span>
         <span>{readMinutes} min read</span>
       </div>
+      {note && (
+        <p className="mt-3 text-[14px] font-semibold text-lime-text">
+          Updated {fmt(updatedAt || publishedAt)} · {note}
+        </p>
+      )}
     </header>
   )
 }

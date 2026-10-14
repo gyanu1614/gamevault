@@ -7,9 +7,12 @@
 export interface PostUrlFields {
   slug: string
   primaryGameSlug: string | null
+  /** 'codes' posts (Blog v2) live at the game's one codes page, /{game}/codes. */
+  postType?: string | null
 }
 
 export function postHref(post: PostUrlFields): string {
+  if (post.postType === 'codes' && post.primaryGameSlug) return `/${post.primaryGameSlug}/codes`
   return post.primaryGameSlug ? `/${post.primaryGameSlug}/blog/${post.slug}` : `/blog/${post.slug}`
 }
 

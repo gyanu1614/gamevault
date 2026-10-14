@@ -188,6 +188,31 @@ export async function toggleGameSpotlight(id: string, isSpotlight: boolean) {
   return { success: true }
 }
 
+/**
+ * Blog v2 (2026-10-13) — flip games.content_hub_enabled: the game's content
+ * hub (blog home + guides) and its place in the hub nav's game picker. Same
+ * current-flag-in, action-flips pattern as toggleGamePopular.
+ */
+export async function toggleGameContentHub(id: string, isEnabled: boolean) {
+  await requireAdmin()
+  const supabase = getAdminSupabase()
+
+  const { error } = await (supabase
+    .from('games') as any)
+    .update({ content_hub_enabled: !isEnabled })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/games')
+  // The picker reads getAllGames (GAME_DIRECTORY_TAG) on every hub page.
+  revalidateTag(GAME_DIRECTORY_TAG)
+  // The blog home / articles / feed 404 a switched-off game: refresh them.
+  // Route patterns carry the route group (Next 14 tags renders by file path).
+  revalidatePath('/(marketplace)/[gameSlug]/blog', 'page')
+  revalidatePath('/(marketplace)/[gameSlug]/blog/[slug]', 'page')
+  return { success: true }
+}
+
 // ─── SEO overrides ────────────────────────────────────────────────────────────
 
 export interface GameSeoData {
