@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils'
 import { searchBlogItems, type BlogItemHit } from '@/lib/actions/admin-blog-items'
 import type { StoredImage } from '@/lib/blog/doc/types'
 import { uploadImage } from './upload'
+import { pictureFit } from '@/lib/blog/render/picture-size'
+
+const fitOf = (a: Record<string, any>) => pictureFit({ width: a.width, height: a.height, alpha: a.alpha }, a.layout === 'wide' ? 'wide' : 'column')
 
 /** The post's game, for the item card search. */
 export const EditorGameContext = createContext<string | null>(null)
@@ -108,8 +111,14 @@ export function FigureNV({ node, updateAttributes, deleteNode, selected }: NodeV
   return (
     <Block label="Image" selected={selected} onRemove={deleteNode}>
       {a.src ? (
+        // Same size rules as the article (render/picture-size.ts), so the preview is honest.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={a.src} alt={a.alt} className={cn('mx-auto block h-auto rounded-md', a.layout === 'wide' ? 'w-full' : 'w-full max-w-[560px]')} />
+        <img
+          src={a.src}
+          alt={a.alt}
+          className={cn('mx-auto block h-auto w-auto max-w-full', fitOf(a).rounded && 'rounded-[16px]')}
+          style={fitOf(a).style}
+        />
       ) : (
         <button type="button" onClick={up.pick} className="grid h-32 w-full place-items-center rounded-md border border-dashed border-white/15 text-[13px] text-text-secondary">
           {up.busy ? 'Uploading…' : 'Choose an image'}

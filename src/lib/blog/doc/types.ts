@@ -38,6 +38,8 @@ export interface StoredImage {
   /** data:image/webp;base64,… (a few hundred bytes), or null for legacy images. */
   blur: string | null
   sources: { avif: SrcItem[]; webp: SrcItem[] }
+  /** See-through pixels (a cut-out): shown with no box (render/picture-size.ts). Unset on older uploads. */
+  alpha?: boolean
 }
 
 export type ImageLayout = 'column' | 'wide'

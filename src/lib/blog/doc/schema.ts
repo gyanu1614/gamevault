@@ -43,6 +43,8 @@ export const Figure = atom(
     width: json(null),
     height: json(null),
     blur: json(null),
+    /** A cut-out (see-through pixels): no rounded box (render/picture-size.ts). */
+    alpha: json(null),
     alt: text(),
     caption: text(),
     /** column = the reading column; wide = up to 960px on desktop. Phones: always the column. */

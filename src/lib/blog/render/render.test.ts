@@ -36,7 +36,8 @@ describe('BlogDocView', () => {
   it('images: AVIF + WebP sources, real size, wide layout, caption', () => {
     expect(html).toContain('<source type="image/avif" srcSet="https://cdn/x/480.avif 480w, https://cdn/x/1920.avif 1920w"')
     expect(html).toMatch(/<img[^>]+width="1920"[^>]+height="1080"/)
-    expect(html).toContain('class="mt-8 blog-wide"')
+    expect(html).toContain('class="mt-7 blog-wide"')
+    expect(html).toContain('max-height:640px') // a Wide photo's height cap (picture-size.ts)
     expect(html).toContain('<figcaption')
   })
   it('own-domain links are internal; other sites open in a new tab', () => {
@@ -128,3 +129,15 @@ describe('BlogDocView: image description falls back to the caption', () => {
     expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc: d }))).toContain('alt="The lobby at night"')
   })
 })
+
+describe('BlogDocView: picture size system', () => {
+  it('a transparent cut-out has no rounded box or placeholder; a small picture gets the standard height', () => {
+    const cut: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, width: 1365, height: 768, alpha: true, alt: 'Lures', caption: '', layout: 'column' } }] }
+    const h1 = renderToStaticMarkup(React.createElement(BlogDocView, { doc: cut }))
+    expect(h1).not.toContain('rounded-[20px]')
+    expect(h1).not.toContain('background-image')
+    const small: any = { type: 'doc', content: [{ type: 'figure', attrs: { ...img, width: 232, height: 307, alt: 'Potion', caption: '', layout: 'column' } }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc: small }))).toContain('height:240px')
+  })
+})
+

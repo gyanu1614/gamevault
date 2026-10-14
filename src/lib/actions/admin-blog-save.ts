@@ -32,6 +32,8 @@ const StoredImageSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   blur: z.string().nullable(),
+  // A cut-out (see-through pixels) — kept so the renderer drops the rounded box.
+  alpha: z.boolean().optional(),
   sources: z.object({
     avif: z.array(z.object({ w: z.number(), url: z.string().url() })),
     webp: z.array(z.object({ w: z.number(), url: z.string().url() })),

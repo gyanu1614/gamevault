@@ -3,7 +3,7 @@
  * post: images with real sizes and AVIF/WebP sources, one callout style, FAQ
  * as <details>, codes with copy buttons, live item cards, one white button.
  */
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import Link from '@/components/navigation/AppLink'
 import { cn } from '@/lib/utils'
 import type { RailCard } from '@/lib/buy-rails/model'
@@ -11,6 +11,7 @@ import type { CalloutTone, SrcItem, StoredImage } from '@/lib/blog/doc/types'
 import { CopyCode, YouTubeLite } from './client-nodes'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { classifyHref, gamePath } from './links'
+import { PAIR_BOX, pictureFit } from './picture-size'
 
 export const BTN_WHITE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] bg-[#F2F3F5] px-5 text-[14px] font-semibold text-[#111214] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -31,17 +32,25 @@ export function Picture({
   sizes,
   eager = false,
   className = '',
+  style,
+  placeholder = true,
 }: {
   image: Partial<StoredImage> & { src: string }
   alt: string
   sizes: string
   eager?: boolean
   className?: string
+  /** Size from the picture size system (picture-size.ts); the cover fills its frame instead. */
+  style?: CSSProperties
+  /** Blur behind the picture while it loads — never behind a see-through cut-out. */
+  placeholder?: boolean
 }) {
   const avif = image.sources?.avif ?? []
   const webp = image.sources?.webp ?? []
   return (
-    <picture>
+    // `contents`: the <img> lays out as the parent's own child, so size rules
+    // (centring, a pair's box height, the cover's frame) apply to it directly.
+    <picture className="contents">
       {avif.length > 0 && <source type="image/avif" srcSet={srcSet(avif)} sizes={sizes} />}
       {webp.length > 0 && <source type="image/webp" srcSet={srcSet(webp)} sizes={sizes} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- pre-sized at upload, served from storage */}
@@ -53,8 +62,8 @@ export function Picture({
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         decoding="async"
-        className={cn('block h-auto w-full bg-white/[0.03] bg-cover', className)}
-        style={image.blur ? { backgroundImage: `url(${image.blur})` } : undefined}
+        className={cn('block h-auto w-full bg-cover', placeholder && 'bg-white/[0.03]', className)}
+        style={{ ...(placeholder && image.blur ? { backgroundImage: `url(${image.blur})` } : {}), ...style }}
       />
     </picture>
   )
@@ -65,15 +74,20 @@ export function FigureView({ attrs }: { attrs: Record<string, unknown> }) {
   const src = String(attrs.src ?? '')
   if (!src) return null
   const caption = String(attrs.caption ?? '').trim()
+  const image = { src, width: attrs.width as number, height: attrs.height as number, blur: attrs.blur as string | null, sources: attrs.sources as StoredImage['sources'], alpha: attrs.alpha === true }
+  // One size system: photos fill the column (height capped), small pictures and cut-outs share one height.
+  const fit = pictureFit(image, layout)
   return (
-    <figure className={`mt-8 ${layout === 'wide' ? 'blog-wide' : ''}`}>
+    <figure className={`mt-7 ${layout === 'wide' ? 'blog-wide' : ''}`}>
       <Picture
-        image={{ src, width: attrs.width as number, height: attrs.height as number, blur: attrs.blur as string | null, sources: attrs.sources as StoredImage['sources'] }}
+        image={image}
         alt={String(attrs.alt || caption || '')}
         sizes={SIZES[layout]}
-        className="rounded-[10px]"
+        className={cn('mx-auto w-auto max-w-full', fit.rounded && 'rounded-[20px]')}
+        style={fit.style}
+        placeholder={fit.placeholder}
       />
-      {caption && <figcaption className="mt-2.5 text-center text-[13px] leading-5 text-text-tertiary">{caption}</figcaption>}
+      {caption && <figcaption>{caption}</figcaption>}
     </figure>
   )
 }
@@ -83,11 +97,20 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
   const sides = [attrs.a as PairSide, attrs.b as PairSide].filter((s): s is NonNullable<PairSide> => !!s?.image?.src)
   if (sides.length === 0) return null
   return (
-    <div className="mt-8 grid gap-3 sm:grid-cols-2">
+    <div className="mt-7 grid gap-4 sm:grid-cols-2">
       {sides.map((s, i) => (
         <figure key={i}>
-          <Picture image={s.image} alt={s.alt || s.caption || ''} sizes={SIZES.half} className="rounded-[10px]" />
-          {s.caption && <figcaption className="mt-2 text-center text-[13px] leading-5 text-text-tertiary">{s.caption}</figcaption>}
+          {/* Both sides share one box height, so a big and a small picture still line up. */}
+          <div className={PAIR_BOX}>
+            <Picture
+              image={s.image}
+              alt={s.alt || s.caption || ''}
+              sizes={SIZES.half}
+              className={cn('h-auto max-h-full w-auto max-w-full object-contain', s.image.alpha !== true && 'rounded-[16px]')}
+              placeholder={s.image.alpha !== true}
+            />
+          </div>
+          {s.caption && <figcaption>{s.caption}</figcaption>}
         </figure>
       ))}
     </div>
