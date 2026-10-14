@@ -38,6 +38,7 @@ import { ArticleToc } from './_ArticleToc'
 import { ArticleHeader } from '@/components/blog/ArticleHeader'
 import { ArticleCover } from '@/components/blog/ArticleCover'
 import { ArticleEnd, type RelatedTool } from './_ArticleEnd'
+import { blogFont } from '@/lib/fonts/blog'
 
 export const POST_TYPE_LABEL: Record<string, string> = { value: 'Value Guide', seller: 'Selling Guide', guide: 'Guide', codes: 'Codes' }
 
@@ -135,7 +136,7 @@ export async function ArticleView({
     .map((p) => ({ slug: p.slug, title: p.title, kind: POST_TYPE_LABEL[p.postType] ?? 'Guide', primaryGameSlug: p.primaryGameSlug, postType: p.postType, publishedAt: p.publishedAt, updatedAt: p.updatedAt }))
 
   return (
-    <main className={`relative min-h-screen ${HUB_GROUND}`} style={contentThemeVars(theme)}>
+    <main className={`relative min-h-screen ${HUB_GROUND} ${blogFont.variable}`} style={contentThemeVars(theme)}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },

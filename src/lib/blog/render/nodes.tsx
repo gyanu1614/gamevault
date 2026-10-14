@@ -95,20 +95,22 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
 }
 
 const TONES: Record<CalloutTone, { label: string; color: string }> = {
-  tip: { label: 'Tip', color: '#4FB477' },
+  tip: { label: 'Tip', color: 'var(--color-accent-text)' },
   warning: { label: 'Warning', color: '#E0B155' },
   note: { label: 'Note', color: '#8FA7B8' },
-  takeaways: { label: 'Key Takeaways', color: 'var(--ct-accent-text, #C9CCD2)' },
+  // The article's summary box: the blog highlight colour (Blog v2).
+  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)' },
 }
 
 export function CalloutView({ tone, children }: { tone: unknown; children: ReactNode }) {
   const t = TONES[(tone as CalloutTone) in TONES ? (tone as CalloutTone) : 'note']
   return (
+    // A flat dark card with the tone on its edge and label only (no tinted fill).
     <aside
-      className="mt-7 rounded-[10px] border px-5 py-4 [&>*:first-child]:mt-0 [&>p:nth-child(2)]:mt-0"
-      style={{ borderColor: `color-mix(in srgb, ${t.color} 28%, transparent)`, background: `color-mix(in srgb, ${t.color} 7%, transparent)` }}
+      className="mt-7 rounded-[16px] border border-l-[3px] border-white/[0.07] bg-[#1A1B20] px-5 py-4 sm:px-6 sm:py-5 [&>p+p]:mt-3 [&>p]:mt-0 [&>ul]:mt-1 [&>ol]:mt-1"
+      style={{ borderLeftColor: t.color }}
     >
-      <p className="mb-1.5 text-[13px] font-semibold" style={{ color: t.color }}>{t.label}</p>
+      <p className="mb-1.5 text-[13px] font-bold tracking-[0.01em]" style={{ color: t.color }}>{t.label}</p>
       {children}
     </aside>
   )
@@ -119,7 +121,7 @@ export function FaqView({ attrs }: { attrs: Record<string, unknown> }) {
   if (items.length === 0) return null
   // The same accordion as the value pages' FAQ (answers stay in the HTML for search).
   return (
-    <div className="mt-6">
+    <div className="bp-ui mt-6">
       <FaqCards items={items} defaultOpen={0} square className="mt-0 max-w-none" />
     </div>
   )
@@ -133,7 +135,7 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
   const expired = rows.filter((r) => r.code?.trim() && r.expired)
   const checked = attrs.checkedAt ? new Date(String(attrs.checkedAt)) : null
   return (
-    <div className="mt-7">
+    <div className="bp-ui mt-7">
       {active.length === 0 ? (
         <p className="rounded-[10px] bg-[#1D1E23] px-5 py-4 text-[15px] text-text-secondary">No working codes right now.</p>
       ) : (
@@ -174,7 +176,7 @@ export function ItemCardView({ attrs, card }: { attrs: Record<string, unknown>; 
   const name = String(attrs.name || card?.name || itemSlug)
   const image = String(attrs.imageUrl || card?.image?.src || '')
   return (
-    <div className="mt-7 flex flex-col gap-4 rounded-[10px] bg-[#1D1E23] p-4 sm:flex-row sm:items-center">
+    <div className="bp-ui mt-7 flex flex-col gap-4 rounded-[16px] bg-[#1D1E23] p-4 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -198,7 +200,7 @@ export function CtaView({ attrs, gameSlug }: { attrs: Record<string, unknown>; g
   if (!('internal' in kind)) return null
   const href = gamePath(kind.internal, gameSlug)
   return (
-    <div className="mt-8 flex justify-center">
+    <div className="bp-ui mt-8 flex justify-center">
       <Link href={href} className={BTN_WHITE}>{String(attrs.label || 'Shop Now')}</Link>
     </div>
   )
@@ -208,7 +210,7 @@ export function YouTubeView({ attrs }: { attrs: Record<string, unknown> }) {
   const id = String(attrs.id ?? '')
   if (!/^[\w-]{6,20}$/.test(id)) return null
   return (
-    <div className="mt-8">
+    <div className="bp-ui mt-8">
       <YouTubeLite id={id} title={String(attrs.title ?? '')} />
     </div>
   )

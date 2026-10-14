@@ -26,6 +26,7 @@ import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
 import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
 import { postHref } from '@/lib/blog/post-url'
+import { blogFont } from '@/lib/fonts/blog'
 import { cache } from 'react'
 import { seoMeta } from '@/lib/seo/fit'
 
@@ -200,7 +201,7 @@ export default async function GameBlogIndex({
     // Same shell as the Values page: opaque hub ground, shared backdrop with
     // the header + sub-nav inside it. The hero content floats on top exactly as
     // Values does, so the navbar reads over the faded (dark) part of the image.
-    <main className={`relative min-h-screen ${HUB_GROUND}`}>
+    <main className={`relative min-h-screen ${HUB_GROUND} ${blogFont.variable}`}>
       {/* Single-row shared hub nav (game switcher + tools + storefront),
           inside the backdrop so the scrim keeps it legible at top of page. */}
       <GameHeroBackdrop gameSlug={gameSlug} size="hub">

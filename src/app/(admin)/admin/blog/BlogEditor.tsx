@@ -25,6 +25,7 @@ import { EditorGameContext } from './_editor/node-views'
 import { Checklist, CoverPicker, PostSettings, SearchPreview, type Meta, type PostType } from './_editor/SidePanel'
 import { Preview } from './_editor/Preview'
 import { ActionBar } from './_editor/ActionBar'
+import { blogFont } from '@/lib/fonts/blog'
 import { TEMPLATES } from './_editor/templates'
 
 type GameOption = { slug: string; name: string }
@@ -241,7 +242,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
 
   return (
     <EditorGameContext.Provider value={meta.gameSlug || null}>
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className={`grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] ${blogFont.variable}`}>
         <div className="min-w-0 rounded-[10px] bg-[#1D1E23] px-4 pb-2 pt-6 sm:px-6">
           {initial?.legacy && (
             <p className="mb-5 rounded-md bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-text-secondary">
@@ -258,7 +259,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="Post title"
             aria-label="Title"
-            className="block w-full resize-none overflow-hidden bg-transparent text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[34px]"
+            className="block w-full resize-none overflow-hidden bg-transparent [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[38px]"
           />
           <textarea
             ref={excerptRef}
@@ -271,7 +272,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="The answer in one or two lines. Shown under the title, on guide cards and on Google."
             aria-label="Summary"
-            className="mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.6] text-text-secondary outline-none placeholder:text-text-tertiary sm:text-[18px]"
+            className="blog-type mt-3 block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-[#c2c0cc] outline-none placeholder:text-text-tertiary sm:text-[19px]"
           />
           <div className="mt-6">
             <BlockEditor initial={docSeed} onChange={onDoc} />

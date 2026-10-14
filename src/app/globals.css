@@ -4,6 +4,7 @@
 @import "../styles/shadcn-compat.css";
 /* ── Theme V2 — "Quiet Trust" scoped override ── */
 @import "../styles/theme-v2.css";
+@import "../styles/blog-prose.css";
 
 @tailwind base;
 @tailwind components;

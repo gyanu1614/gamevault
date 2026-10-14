@@ -14,6 +14,7 @@ import { BlogDocView } from '@/lib/blog/render/BlogDocView'
 import { docReadMinutes } from '@/lib/blog/render/outline'
 import type { BlogDoc, StoredImage } from '@/lib/blog/doc/types'
 import { cn } from '@/lib/utils'
+import { blogFont } from '@/lib/fonts/blog'
 
 const KIND: Record<string, string> = { value: 'Value Guide', seller: 'Selling Guide', guide: 'Guide', codes: 'Codes' }
 
@@ -46,7 +47,7 @@ export function Preview({
   const now = new Date().toISOString()
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[min(1180px,96vw)] max-w-none flex-col gap-0 overflow-hidden bg-[#111214] p-0">
+      <DialogContent className={`flex h-[92vh] max-h-[92vh] w-[min(1180px,96vw)] max-w-none flex-col gap-0 overflow-hidden bg-[#111214] p-0 ${blogFont.variable}`}>
         <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3 pr-14">
           <div>
             <DialogTitle className="text-[15px] font-semibold text-text-primary">Preview</DialogTitle>

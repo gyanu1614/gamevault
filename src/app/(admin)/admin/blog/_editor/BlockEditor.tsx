@@ -17,23 +17,16 @@ import { fitHtmlHeadings } from '@/lib/blog/editor/paste'
 import { editorExtensions } from './extensions'
 import { SelectionMenu, Toolbar } from './Toolbar'
 
-/** Mirrors the public renderer's type (BlogDocView): same sizes, top margins only. */
+/**
+ * The writing area uses the public article's own stylesheet (`.blog-prose`,
+ * src/styles/blog-prose.css) — same font, sizes, spacing and colours — plus a
+ * few editor-only bits: the empty-line hint and table cell selection.
+ */
 const PROSE =
   // No focus ring on the writing area itself: the caret is the cue, and the
   // site-wide ring drew a box around the whole post while typing.
-  'blog-editor min-h-[420px] pb-16 text-[16.5px] leading-[1.7] text-text-secondary outline-none focus-visible:shadow-none sm:text-[17px] ' +
-  '[&>*:first-child]:mt-0 [&>p]:mt-5 ' +
-  '[&>h2]:mt-11 [&>h2]:text-[22px] [&>h2]:font-bold [&>h2]:leading-tight [&>h2]:tracking-[-0.01em] [&>h2]:text-text-primary sm:[&>h2]:text-[26px] ' +
-  '[&>h3]:mt-8 [&>h3]:text-[19px] [&>h3]:font-semibold [&>h3]:leading-snug [&>h3]:text-text-primary sm:[&>h3]:text-[20px] ' +
-  '[&>h2+*]:mt-4 [&>h3+*]:mt-3 ' +
-  '[&_ul]:mt-5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-5 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mt-2 [&_li]:pl-1 [&_li>p]:mt-0 [&_li]:marker:text-text-tertiary ' +
-  '[&_blockquote]:mt-7 [&_blockquote]:border-l-2 [&_blockquote]:border-white/15 [&_blockquote]:pl-5 [&_blockquote]:text-text-primary [&_blockquote>p]:mt-0 ' +
-  '[&>hr]:mb-5 [&>hr]:mt-10 [&>hr]:border-white/[0.08] [&_hr.ProseMirror-selectednode]:border-white/40 ' +
-  '[&_strong]:font-semibold [&_strong]:text-text-primary ' +
-  '[&_a]:font-medium [&_a]:text-text-primary [&_a]:underline [&_a]:decoration-white/30 [&_a]:underline-offset-[3px] ' +
-  '[&_.tableWrapper]:mt-7 [&_.tableWrapper]:overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:text-[15px] ' +
-  '[&_th]:border [&_th]:border-white/[0.08] [&_th]:bg-white/[0.04] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:text-text-primary ' +
-  '[&_td]:border [&_td]:border-white/[0.08] [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td>p]:mt-0 [&_th>p]:mt-0 [&_.selectedCell]:bg-white/[0.06] ' +
+  'blog-prose blog-type blog-editor min-h-[420px] pb-16 outline-none focus-visible:shadow-none ' +
+  '[&_.selectedCell]:bg-white/[0.06] ' +
   // The hint on the empty line the cursor is on.
   '[&_.is-empty]:before:pointer-events-none [&_.is-empty]:before:float-left [&_.is-empty]:before:h-0 [&_.is-empty]:before:text-text-tertiary [&_.is-empty]:before:content-[attr(data-placeholder)]'
 

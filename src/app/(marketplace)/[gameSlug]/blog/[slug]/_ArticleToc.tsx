@@ -59,9 +59,9 @@ export function ArticleToc({
           href={`#${e.id}`}
           onClick={onPick}
           aria-current={isActive ? 'location' : undefined}
-          className={`block border-l-2 py-2 pl-3.5 text-[14px] leading-snug transition-colors ${
+          className={`block border-l-2 py-2 pl-3.5 text-[14.5px] leading-snug transition-colors ${
             isActive
-              ? 'border-[color:var(--ct-accent-text,#E6E8EB)] font-semibold text-text-primary'
+              ? 'border-[color:var(--color-accent-text)] font-semibold text-[color:var(--color-accent-text)]'
               : 'border-white/[0.08] text-text-secondary hover:text-text-primary'
           }`}
         >
@@ -81,7 +81,7 @@ export function ArticleToc({
         >
           <span className="shrink-0 text-[13px] font-semibold text-text-primary">On This Page</span>
           <span aria-hidden className="text-text-tertiary">·</span>
-          <span className="min-w-0 flex-1 truncate text-[13px] text-text-secondary">{current?.text}</span>
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[color:var(--color-accent-text)]">{current?.text}</span>
           <ExpandMoreRounded aria-hidden sx={{ fontSize: 20 }} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && <nav aria-label="On this page" className="max-h-[50vh] overflow-y-auto pb-3">{list(() => setOpen(false))}</nav>}
@@ -92,8 +92,11 @@ export function ArticleToc({
   return (
       <aside aria-label="On this page" className="hidden self-stretch lg:block">
         <div className="sticky top-[136px] flex max-h-[calc(100vh-152px)] flex-col xl:top-[96px] xl:max-h-[calc(100vh-112px)]">
-          <p className="mb-3 text-[13px] font-semibold text-text-primary">On This Page</p>
-          <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
+          {/* Boxed (Blog v2, like Eldorado's): the current section in the blog highlight colour. */}
+          <div className="blog-type flex min-h-0 flex-col rounded-[16px] border border-white/[0.08] bg-[#16171B]/90 p-4">
+            <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
+            <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
+          </div>
           {rail && <div className="mt-6 hidden shrink-0 xl:block">{rail}</div>}
         </div>
       </aside>

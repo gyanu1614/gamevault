@@ -45,10 +45,11 @@ export function ArticleHeader({
         <span aria-hidden>›</span>
         <span className="text-[color:var(--ct-accent-text,#C9CCD2)]">{kindLabel}</span>
       </nav>
-      <h1 className="text-balance text-[28px] font-bold leading-[1.12] tracking-[-0.025em] text-text-primary sm:text-[36px] lg:text-[40px]">
+      {/* Titles in the headline face (Archivo); the text below in the reading face (Lato). */}
+      <h1 className="text-balance [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] text-text-primary sm:text-[40px] lg:text-[44px]">
         {title}
       </h1>
-      {excerpt && <p className="mt-4 text-pretty text-[16.5px] leading-[1.6] text-text-secondary sm:text-[18px]">{excerpt}</p>}
+      {excerpt && <p className="blog-type mt-4 text-pretty text-[17px] leading-[1.65] text-[#c2c0cc] sm:text-[19px]">{excerpt}</p>}
       <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-text-tertiary">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-mark-white.avif" alt="" aria-hidden width={22} height={22} className="h-[22px] w-[22px] object-contain" />

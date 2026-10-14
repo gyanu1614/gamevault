@@ -50,7 +50,7 @@ describe('BlogDocView', () => {
   })
   it('callout, table scroll box, FAQ details, codes with copy + expired list, item card with live buy label', () => {
     expect(html).toContain('Warning')
-    expect(html).toContain('class="relative mt-7 overflow-x-auto')
+    expect(html).toContain('class="blog-table relative"') // framed, scrollable table (blog-prose.css)
     expect(html).toContain('Is it safe?') // FAQ: the value pages' accordion, answer in the HTML
     expect(html).toContain('>Yes.<')
     expect(html).toContain('FREEKNIFE')
@@ -84,9 +84,9 @@ describe('BlogDocView: unfilled outline blocks stay out of the article', () => {
   const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: draft }))
 
   it('drops empty paragraphs, empty list items and lists, empty tip boxes and empty codes tables', () => {
-    expect(html.match(/<p /g)?.length).toBe(2) // "Kept" (inside its list item) + "Real text"
+    expect(html.match(/<p[ >]/g)?.length).toBe(2) // "Kept" (inside its list item) + "Real text"
     expect(html).not.toContain('<ol')
-    expect(html.match(/<li /g)?.length).toBe(1)
+    expect(html.match(/<li[ >]/g)?.length).toBe(1)
     expect(html).not.toContain('Tip')
     expect(html).not.toContain('Last checked')
     expect(html).toContain('Real text')
@@ -118,7 +118,7 @@ describe('BlogDocView: empty table rows', () => {
   ] }] }
   it('a row whose cells are all empty is left out', () => {
     const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc: tableDoc }))
-    expect(html.match(/<tr /g)?.length).toBe(2)
+    expect(html.match(/<tr[ >]/g)?.length).toBe(2)
   })
 })
 

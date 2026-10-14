@@ -65,7 +65,8 @@ function Block({ label, selected, children, onRemove }: { label: string; selecte
   return (
     <NodeViewWrapper
       contentEditable={false}
-      className={cn('my-4 rounded-[10px] border bg-[#1D1E23] p-3', selected ? 'border-white/30' : 'border-white/[0.07]')}
+      // bp-ui: the writing area's article styles (links, lists, bold) stay out of the block's own controls.
+      className={cn('bp-ui my-4 rounded-[10px] border bg-[#1D1E23] p-3', selected ? 'border-white/30' : 'border-white/[0.07]')}
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[11.5px] font-semibold text-text-tertiary">{label}</span>
