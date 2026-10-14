@@ -15,10 +15,10 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  CaretDown, GameController, MagnifyingGlass, Pause, PencilSimple, Play, Sparkle, Star, Trash, X,
+  BookOpenText, CaretDown, GameController, MagnifyingGlass, Pause, PencilSimple, Play, Sparkle, Star, Trash, X,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
-import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular, toggleGameSpotlight } from '@/lib/actions/admin-games'
+import { fetchAdminGames, toggleGameActive, deleteGame, toggleGamePopular, toggleGameSpotlight, toggleGameContentHub } from '@/lib/actions/admin-games'
 import {
   fetchAdminGameCategoryBadges,
   type AdminGameCategoryBadge,
@@ -41,6 +41,8 @@ interface Game {
   is_active: boolean
   is_popular?: boolean | null
   is_spotlight?: boolean | null
+  /** Blog v2: the game has a content hub (blog home + guides) and shows in the hub nav picker. */
+  content_hub_enabled?: boolean | null
   seo_indexable?: boolean | null
   listing_count?: number
   // Step 2 — trend radar review state (games.review_status).
@@ -195,6 +197,22 @@ export default function GamesPageClient({
       }
     },
     onError: (err: any) => toast.error(err?.message ?? 'Failed to update popular flag'),
+  })
+
+  // Blog v2 — switch the game's content hub (blog home, guides, hub nav
+  // picker) on or off. Same optimistic-flip pattern.
+  const contentHubMutation = useMutation({
+    mutationFn: ({ id, isEnabled }: { id: string; isEnabled: boolean }) =>
+      toggleGameContentHub(id, isEnabled),
+    onSuccess: (res, vars) => {
+      if (res.success) {
+        toast.success(vars.isEnabled ? 'Guides & content switched off' : 'Guides & content switched on')
+        qc.invalidateQueries({ queryKey: ['admin-games'] })
+      } else {
+        toast.error(res.error ?? 'Failed to update guides & content')
+      }
+    },
+    onError: (err: any) => toast.error(err?.message ?? 'Failed to update guides & content'),
   })
 
   // Toggle the "spotlight" flag — features the game in the mobile
@@ -437,6 +455,14 @@ export default function GamesPageClient({
                               onClick={() => spotlightMutation.mutate({ id: game.id, isSpotlight: !!game.is_spotlight })}
                             >
                               <Sparkle aria-hidden weight={game.is_spotlight ? 'fill' : 'bold'} className="h-4 w-4" />
+                            </IconAction>
+                            <IconAction
+                              label={game.content_hub_enabled ? 'Switch off Guides & content (blog, hub nav)' : 'Switch on Guides & content (blog, hub nav)'}
+                              on={!!game.content_hub_enabled}
+                              disabled={contentHubMutation.isPending}
+                              onClick={() => contentHubMutation.mutate({ id: game.id, isEnabled: !!game.content_hub_enabled })}
+                            >
+                              <BookOpenText aria-hidden weight={game.content_hub_enabled ? 'fill' : 'bold'} className="h-4 w-4" />
                             </IconAction>
                             <IconAction
                               label={game.is_active ? 'Pause' : 'Activate'}

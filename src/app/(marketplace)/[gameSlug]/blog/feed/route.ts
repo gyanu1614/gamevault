@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getGamePosts } from '@/lib/blog/db'
+import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
 import { SITE_URL, SITE_NAME } from '@/config/site'
 
 export const revalidate = 3600
@@ -38,7 +39,8 @@ export async function GET(
     .eq('is_active', true)
     .maybeSingle()
 
-  if (!game) {
+  // Games switched off in admin have no blog (Blog v2), so no feed either.
+  if (!game || !isBlogHubGame(gameSlug, await getBlogHubGameSlugs())) {
     return new Response('Not found', { status: 404 })
   }
 

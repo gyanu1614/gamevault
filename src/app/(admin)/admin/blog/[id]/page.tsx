@@ -9,14 +9,17 @@ import { BlogEditor } from '../BlogEditor'
 
 export const dynamic = 'force-dynamic'
 
-async function getGames() {
+/** Games with a content hub (Blog v2), plus the post's own game so an older post keeps it in the list. */
+async function getGames(currentSlug: string | null) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('games')
-    .select('slug, name')
+    .select('slug, name, content_hub_enabled')
     .eq('is_active', true)
     .order('name', { ascending: true })
-  return (data ?? []) as { slug: string; name: string }[]
+  return ((data ?? []) as { slug: string; name: string; content_hub_enabled: boolean }[])
+    .filter((g) => g.content_hub_enabled || g.slug === currentSlug)
+    .map(({ slug, name }) => ({ slug, name }))
 }
 
 export default async function EditBlogPostPage({
@@ -26,8 +29,9 @@ export default async function EditBlogPostPage({
 }) {
   await requireAdmin()
   const { id } = await params
-  const [post, games] = await Promise.all([fetchAdminBlogPost(id), getGames()])
+  const post = await fetchAdminBlogPost(id)
   if (!post) notFound()
+  const games = await getGames(post.primary_game_slug)
 
   return (
     <div className="pb-10">

@@ -37,9 +37,9 @@ export const revalidate = 3600
 export const dynamicParams = false
 
 /**
- * Prerender every game with a hub: the content-hub games plus any game a
- * published post is filed under (see getBlogHubGameSlugs). With
- * dynamicParams=false this list IS the set of blog hubs that exist.
+ * Prerender every game with a hub: the games switched on in admin (see
+ * getBlogHubGameSlugs). With dynamicParams=false this list IS the set of blog
+ * hubs that exist.
  */
 export async function generateStaticParams() {
   return (await getBlogHubGameSlugs()).map((gameSlug) => ({ gameSlug }))
@@ -118,10 +118,10 @@ async function generateMetadataRaw({
   params: Promise<{ gameSlug: string }>
 }): Promise<Metadata> {
   const { gameSlug } = await params
-  const [game, posts] = await Promise.all([getGame(gameSlug), getPosts(gameSlug)])
+  const [game, posts, hubs] = await Promise.all([getGame(gameSlug), getPosts(gameSlug), getBlogHubGameSlugs()])
   // Same rule as the body (Step 7a): a real 404, not a "Not Found" title on a
   // 200 — see ROUTE-008.
-  if (!game || !isBlogHubGame(gameSlug, posts)) notFound()
+  if (!game || !isBlogHubGame(gameSlug, hubs)) notFound()
   const copy = blogHubCopy(gameSlug, game.name)
   return {
     title: `${copy.title}: Values, Trading & Selling Tips`,
@@ -152,8 +152,9 @@ export default async function GameBlogIndex({
   // with an empty hub — eight queries per crawl hit. A content-hub game passes
   // on the compile-time set; anything else needs a published post (one
   // query, request-cached and reused below). The 404 is then cached by ISR.
+  // Blog v2: only games switched on in admin (games.content_hub_enabled) have a hub.
+  if (!isBlogHubGame(gameSlug, await getBlogHubGameSlugs())) notFound()
   const posts = await getPosts(gameSlug)
-  if (!isBlogHubGame(gameSlug, posts)) notFound()
 
   // STATE-007 — every member below takes gameSlug (not game), so getGame does
   // not gate them; it joins the fan-out instead of running ahead of it. The

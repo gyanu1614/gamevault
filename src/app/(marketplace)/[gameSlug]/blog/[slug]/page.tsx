@@ -15,6 +15,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { getGamePost, getPostsTaggedForGame, getAllPublishedPosts, getPublishedPostBySlugAnyGame } from '@/lib/blog/db'
 import { movedPostTarget } from '@/lib/blog/post-url'
+import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
 import { readBody } from '@/lib/blog/doc/body'
 import { BlogDocView } from '@/lib/blog/render/BlogDocView'
 import { TOC_MIN_SECTIONS, collectHeadings, collectItemRefs, docReadMinutes, docWordCount } from '@/lib/blog/render/outline'
@@ -73,6 +74,7 @@ async function redirectIfMoved(gameSlug: string, slug: string): Promise<void> {
 
 async function generateMetadataRaw({ params }: { params: Promise<{ gameSlug: string; slug: string }> }): Promise<Metadata> {
   const { gameSlug, slug } = await params
+  if (!isBlogHubGame(gameSlug, await getBlogHubGameSlugs())) notFound()
   const post = await getGamePost(gameSlug, slug)
   if (!post) {
     await redirectIfMoved(gameSlug, slug)
@@ -108,6 +110,8 @@ async function generateMetadataRaw({ params }: { params: Promise<{ gameSlug: str
 
 export default async function GameBlogArticle({ params }: { params: Promise<{ gameSlug: string; slug: string }> }) {
   const { gameSlug, slug } = await params
+  // A game switched off in admin has no guides (Blog v2) — decided before the fan-out.
+  if (!isBlogHubGame(gameSlug, await getBlogHubGameSlugs())) notFound()
   const [game, post] = await Promise.all([getGame(gameSlug), getGamePost(gameSlug, slug)])
   if (!post) await redirectIfMoved(gameSlug, slug)
   if (!game || !post) notFound()

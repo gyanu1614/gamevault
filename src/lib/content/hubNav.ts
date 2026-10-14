@@ -5,6 +5,7 @@ import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
 import { getGameContentTheme, hasHubPage, hasGameContentTheme, type HubTool } from '@/lib/content/theme'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
+import { pickerGames } from '@/lib/content/hub-games'
 
 /**
  * Data for the shared content-hub navbar: the game switcher list and the
@@ -93,7 +94,8 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
   }
 
   return {
-    games: games.map((g) => ({
+    // Only games switched on in admin (games.content_hub_enabled) — plus this one.
+    games: pickerGames(games, gameSlug).map((g) => ({
       name: g.name,
       slug: g.slug,
       imageUrl: hubGameIcon(g.slug, g.image_url),
