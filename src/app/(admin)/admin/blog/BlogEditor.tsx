@@ -15,9 +15,6 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { CircleNotch } from '@phosphor-icons/react'
-import { cn } from '@/lib/utils'
-import { adminBtn, StatusBadge, type ChipTone } from '../components/kit'
 import type { AdminBlogPost, BlogStatus } from '@/lib/actions/admin-blog'
 import { saveBlogPost, type SaveBlogPostInput } from '@/lib/actions/admin-blog-save'
 import { postChecklist, slugify } from '@/lib/blog/editor/checklist'
@@ -27,13 +24,12 @@ import { BlockEditor } from './_editor/BlockEditor'
 import { EditorGameContext } from './_editor/node-views'
 import { Checklist, CoverPicker, PostSettings, SearchPreview, type Meta, type PostType } from './_editor/SidePanel'
 import { Preview } from './_editor/Preview'
+import { ActionBar } from './_editor/ActionBar'
 import { TEMPLATES } from './_editor/templates'
 
 type GameOption = { slug: string; name: string }
 type TemplateKey = keyof typeof TEMPLATES
 
-const STATUS_TONE: Record<BlogStatus, ChipTone> = { draft: 'warning', published: 'success', archived: 'neutral' }
-const STATUS_LABEL: Record<BlogStatus, string> = { draft: 'Draft', published: 'Live', archived: 'Archived' }
 const AUTOSAVE_MS = 3000
 
 function grow(el: HTMLTextAreaElement | null) {
@@ -296,46 +292,19 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
         </aside>
       </div>
 
-      {/* Actions, always in reach. */}
-      <div className="pointer-events-none sticky bottom-4 z-30 mt-4 flex justify-end">
-        <div className="pointer-events-auto flex w-full flex-wrap items-center gap-2 rounded-lg bg-bg-overlay-2 p-2 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] sm:w-auto">
-          <StatusBadge status={STATUS_LABEL[status]} tone={STATUS_TONE[status]} className="mr-auto px-2.5 py-1 text-[12px] sm:mr-0" />
-          {/* Phones: one row of buttons; an error takes its own line above them. */}
-          <span
-            role="status"
-            aria-live="polite"
-            className={cn('px-1 text-[12.5px] sm:mr-2 sm:inline', error ? 'order-first basis-full text-error sm:order-none sm:basis-auto' : 'hidden text-text-tertiary')}
-          >
-            {error ?? stateText}
-          </span>
-          <button type="button" onClick={() => setPreviewOpen(true)} className={adminBtn.secondary}>Preview</button>
-          {live ? (
-            <>
-              <button type="button" disabled={saving} onClick={() => void save('draft')} className={adminBtn.secondary}>Unpublish</button>
-              <button type="button" disabled={saving || blocked || !dirty} onClick={() => void save('published')} className={adminBtn.primary}>
-                {saving && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
-                Update
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" disabled={saving || !title.trim() || !meta.slug} onClick={() => void save('draft')} className={adminBtn.secondary}>
-                Save Draft
-              </button>
-              <button
-                type="button"
-                disabled={saving || blocked}
-                title={blocked ? `Still needed: ${checks.blocking.map((b) => b.label.toLowerCase()).join(', ')}` : undefined}
-                onClick={() => void save('published')}
-                className={adminBtn.primary}
-              >
-                {saving && <CircleNotch aria-hidden weight="bold" className="h-4 w-4 animate-spin" />}
-                Publish
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      {/* Actions, always in reach: a full-width bottom bar on phones, a floating box on desktop. */}
+      <ActionBar
+        status={status}
+        stateText={stateText}
+        error={error}
+        saving={saving}
+        dirty={dirty}
+        blocked={blocked}
+        blockedText={blocked ? `Still needed: ${checks.blocking.map((x) => x.label.toLowerCase()).join(', ')}` : undefined}
+        canSaveDraft={!!title.trim() && !!meta.slug}
+        onPreview={() => setPreviewOpen(true)}
+        onSave={(next) => void save(next)}
+      />
 
       <Preview
         open={previewOpen}

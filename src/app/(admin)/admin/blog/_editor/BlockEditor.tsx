@@ -49,6 +49,10 @@ export function BlockEditor({ initial, onChange }: { initial: BlogDoc; onChange:
       attributes: { class: PROSE, 'aria-label': 'Post body' },
       // Copied rich text: a page title (h1) becomes a section heading, h4–h6 small headings.
       transformPastedHTML: fitHtmlHeadings,
+      // Keep the cursor clear of the pinned toolbar (admin header + two toolbar rows on
+      // phones) and of the action bar at the bottom while typing.
+      scrollThreshold: { top: 180, bottom: 110, left: 0, right: 0 },
+      scrollMargin: { top: 180, bottom: 110, left: 0, right: 0 },
     },
     onUpdate: ({ editor: e }) => onChange(e.getJSON() as BlogDoc),
   })
