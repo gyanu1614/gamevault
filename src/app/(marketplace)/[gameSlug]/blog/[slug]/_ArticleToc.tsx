@@ -98,7 +98,8 @@ export function ArticleToc({
           href={`#${e.id}`}
           onClick={onPick}
           aria-current={isActive ? 'location' : undefined}
-          className={`block border-l-2 py-2 pl-3.5 text-[14.5px] leading-snug transition-colors ${
+          // Sidebar: compact rows so a long post's list fits (owner); the phone list keeps finger-sized rows.
+          className={`block border-l-2 pl-3.5 transition-colors ${variant === 'column' ? 'py-1.5 text-[13px] leading-[1.4]' : 'py-2 text-[14.5px] leading-snug'} ${
             isActive
               ? 'border-[color:var(--color-accent-text)] font-semibold text-[color:var(--color-accent-text)]'
               : 'border-white/[0.08] text-text-secondary hover:text-text-primary'
@@ -134,8 +135,8 @@ export function ArticleToc({
           {/* Boxed (Blog v2, like Eldorado's): the current section in the blog highlight colour. */}
           {hasList && (
             // min-h: on a short window the list keeps ~3 rows (it scrolls) rather than vanishing under the buy card.
-            <div className={`blog-type ${BLOG_CARD} flex min-h-[200px] flex-col p-4`}>
-              <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
+            <div className={`blog-type ${BLOG_CARD} flex min-h-[180px] flex-col px-4 py-3.5`}>
+              <p className="mb-1.5 text-[13px] font-bold text-text-primary">On This Page</p>
               <nav
                 ref={listRef}
                 className={`min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin] ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
