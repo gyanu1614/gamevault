@@ -143,25 +143,38 @@ const toneOf = (tone: unknown) => CALLOUT_TONES[(tone as CalloutTone) in CALLOUT
 
 export function CalloutView({ tone, children }: { tone: unknown; children: ReactNode }) {
   const t = toneOf(tone)
+  // Key Takeaways is a list under a long label: its title gets its own row (owner).
+  const stacked = t === CALLOUT_TONES.takeaways
   return (
     <aside
-      className="bp-callout mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 rounded-md border px-4 py-3 sm:gap-x-4 sm:px-5 sm:py-3.5"
+      className={`bp-callout mt-6 rounded-md border px-4 py-3 sm:px-5 sm:py-3.5 ${stacked ? '' : 'grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 sm:gap-x-4'}`}
       // The tint over a solid base, so the page's wallpaper never shows through.
       style={{ background: `linear-gradient(${t.bg}, ${t.bg}), #1C1D22`, borderColor: t.border }}
     >
-      <CalloutHead tone={t} />
+      <CalloutHead tone={t} labelOnPhones={stacked} className={stacked ? 'mb-1.5' : ''} />
       <div className="bp-callout-body min-w-0" style={{ color: t.body }}>{children}</div>
     </aside>
   )
 }
 
-/** Icon + label in the tone's colour, sized to sit on the text's first line (shared with the editor's box). */
-export function CalloutHead({ tone, className = '' }: { tone: (typeof CALLOUT_TONES)[CalloutTone]; className?: string }) {
+/**
+ * Icon + label in the tone's colour, sized to sit on the text's first line
+ * (shared with the editor's box). Beside the text, phones show the icon alone.
+ */
+export function CalloutHead({
+  tone,
+  className = '',
+  labelOnPhones = false,
+}: {
+  tone: (typeof CALLOUT_TONES)[CalloutTone]
+  className?: string
+  labelOnPhones?: boolean
+}) {
   const { Icon, color, label } = tone
   return (
     <div data-tone-color={color} className={`flex h-[1.6em] items-center gap-2 self-start whitespace-nowrap font-bold ${className}`} style={{ color }}>
       <Icon aria-hidden size={18} weight="duotone" className="shrink-0" />
-      <span className="text-[14px] max-sm:sr-only">{label}</span>
+      <span className={labelOnPhones ? 'text-[14px]' : 'text-[14px] max-sm:sr-only'}>{label}</span>
     </div>
   )
 }

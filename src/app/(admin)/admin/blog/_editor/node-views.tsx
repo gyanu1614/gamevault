@@ -195,7 +195,7 @@ export function CalloutNV({ node, updateAttributes, editor, getPos }: NodeViewPr
     // The article's own box look (tinted rectangle + tone label), with the switches beside the label.
     <NodeViewWrapper className="my-4 rounded-md border px-4 py-3" style={{ background: `linear-gradient(${tone.bg}, ${tone.bg}), #1C1D22`, borderColor: tone.border }}>
       <div contentEditable={false} className="mb-2 flex flex-wrap items-center gap-1.5 text-[14px]">
-        <CalloutHead tone={tone} className="mr-2" />
+        <CalloutHead tone={tone} labelOnPhones className="mr-2" />
         {TONES.map(([v, l]) => (
           <button key={v} type="button" className={chip(node.attrs.tone === v)} onClick={() => updateAttributes({ tone: v })}>{l}</button>
         ))}

@@ -26,7 +26,7 @@ describe('blog card surface', () => {
 
   // Owner, 2026-10-13: boxes rectangular and compact, the label on the LEFT
   // and the text beside it (no separate title row) — the value pages' callout look.
-  it.each(['tip', 'note', 'warning', 'takeaways'])('a %s box: a tinted rectangle, label left, text beside it', (tone) => {
+  it.each(['tip', 'note', 'warning'])('a %s box: a tinted rectangle, label left, text beside it', (tone) => {
     const html = render(callout(tone))
     const aside = html.match(/<aside class="([^"]*)" style="([^"]*)"/)
     expect(aside, html).not.toBeNull()
@@ -38,6 +38,17 @@ describe('blog card surface', () => {
     // The label and the text are the two cells of ONE row.
     expect(html).toMatch(/<aside[^>]*><div[^>]*data-tone-color[^>]*>.*?<\/div><div class="bp-callout-body[^"]*"[^>]*><p>Hello<\/p><\/div><\/aside>/)
     expect(html).toMatch(/<svg[^>]*>/)
+  })
+
+  // Owner: "Key Takeaways can be in a separate row, it's longer" — its list gets the full width.
+  it('the Key Takeaways box puts its title on its own row above the list', () => {
+    const html = render(callout('takeaways'))
+    const aside = html.match(/<aside class="([^"]*)"/)![1]
+    expect(aside).not.toContain('grid-cols-[auto_minmax(0,1fr)]')
+    expect(aside).toContain('rounded-md')
+    expect(html).toMatch(/<aside[^>]*><div[^>]*data-tone-color[^>]*>.*?Key Takeaways.*?<\/div><div class="bp-callout-body[^"]*"[^>]*><p>Hello<\/p><\/div><\/aside>/)
+    // The label stays visible on phones too (it has its own row).
+    expect(html).not.toMatch(/max-sm:sr-only">Key Takeaways/)
   })
 
   it('cards are rectangular (8px), never the round 16px', () => {
