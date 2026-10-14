@@ -21,14 +21,9 @@
   font-family: var(--font-blog), var(--font-inter), system-ui, sans-serif;
 }
 
-/* Page geometry (components/blog/layout.ts): the reading column's width and
-   the page box's cap. The background art fills the space left of the
-   content, so a page whose content is wider says so (.blog-home). */
-:root {
-  --blog-col-w: 820px;
-  --blog-page-max: 1920px;
-}
-.blog-home { --blog-col-w: 1216px; } /* the blog home's max-w-7xl content */
+/* The article's page box (components/blog/layout.ts): 820 column + 48 gap +
+   300 sidebar + 2×32 gutter. The background art lives outside it. */
+:root { --blog-page-w: 1232px; }
 
 .blog-prose {
   --bp-text: #c2c0cc;
@@ -170,9 +165,8 @@
 
 
 /* ── Shared background (BlogBackdrop): side art, never behind the text ──
-   Eldorado's one background: a faint character cut-out in the empty space
-   left of the content (the centred column, --blog-col-w, minus a 48px gap),
-   inside the page box (--blog-page-max). Only where that space is wide enough
+   Eldorado's one background: a faint character cut-out in the empty strip
+   left of the page box (--blog-page-w). Only where that strip is wide enough
    (1600px+); smaller screens keep the plain ground and never fetch the art. */
 .blog-backdrop {
   position: fixed;
@@ -186,8 +180,8 @@
     position: absolute;
     top: 68px; /* under the nav */
     bottom: 0;
-    left: max(0px, calc((100% - var(--blog-page-max)) / 2));
-    width: calc((min(100%, var(--blog-page-max)) - var(--blog-col-w)) / 2 - 48px);
+    left: 0;
+    width: calc((100% - var(--blog-page-w)) / 2);
     background: var(--blog-backdrop) center 45% / contain no-repeat;
     opacity: 0.4;
   }

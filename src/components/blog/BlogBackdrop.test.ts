@@ -32,10 +32,10 @@ describe('BlogBackdrop', () => {
     expect(rule).not.toContain('--blog-backdrop')
   })
 
-  it('stylesheet: the art fills only the space left of the content, from 1600px', () => {
+  it('stylesheet: the art sits only in the strip outside the page box, from 1600px', () => {
     const art = css.match(/@media \(min-width: 1600px\)\s*{\s*\.blog-backdrop::before\s*{[^}]*}/)?.[0] ?? ''
     expect(art).toContain('var(--blog-backdrop)')
-    expect(art).toContain('width: calc((min(100%, var(--blog-page-max)) - var(--blog-col-w)) / 2 - 48px)')
+    expect(art).toMatch(/width:\s*calc\(\(100% - var\(--blog-page-w\)\) \/ 2\)/)
   })
 
   // Blog home + every article (codes posts render through the article view) share it;

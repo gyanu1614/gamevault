@@ -32,7 +32,7 @@ import { getGameRails, getRailSettings } from '@/lib/buy-rails/server'
 import { barCard } from '@/lib/buy-rails/model'
 import { BuyBar } from '@/components/buy-rails/BuyBar'
 import { RailCardView } from '@/components/buy-rails/RailCardView'
-import { BLOG_MAIN_CELL, BLOG_PAGE_BOX, BLOG_PAGE_GRID } from '@/components/blog/layout'
+import { BLOG_PAGE_BOX, BLOG_PAGE_GRID } from '@/components/blog/layout'
 import { ArticleToc } from './_ArticleToc'
 import { ArticleHeader } from '@/components/blog/ArticleHeader'
 import { ArticleCover } from '@/components/blog/ArticleCover'
@@ -158,14 +158,14 @@ export async function ArticleView({
       />
       {faqs.length > 0 && <JsonLd data={faqPage(faqs)} />}
 
-      {/* The shared background (art in the empty left space), the nav, then
-          the page box: ONE wide column centred on the page (header, cover and
-          body share one left edge) and the sidebar at the right edge — layout.ts. */}
+      {/* The shared background (art outside the page box), the nav, then the
+          page box: ONE wide column (header, cover, body share one left edge)
+          and the right sidebar (contents list + buy card) — layout.ts. */}
       <BlogBackdrop />
       <HubNav data={hubNav} />
       <div className={`relative mx-auto w-full ${BLOG_PAGE_BOX} px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
         <div className={BLOG_PAGE_GRID}>
-          <article className={BLOG_MAIN_CELL}>
+          <article className="min-w-0">
             <ArticleHeader
               gameSlug={gameSlug}
               gameName={game.name}
