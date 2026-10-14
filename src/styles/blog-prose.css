@@ -22,7 +22,7 @@
 }
 
 /* The article's page box (components/blog/layout.ts): 820 column + 48 gap +
-   300 sidebar + 2×32 gutter. The background art lives outside it. */
+   300 sidebar + 2×32 gutter. */
 :root { --blog-page-w: 1232px; }
 
 .blog-prose {
@@ -164,25 +164,16 @@
 .blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
 
 
-/* ── Shared background (BlogBackdrop): side art, never behind the text ──
-   Eldorado's one background: a faint character cut-out in the empty strip
-   left of the page box (--blog-page-w). Only where that strip is wide enough
-   (1600px+); smaller screens keep the plain ground and never fetch the art. */
+/* ── Shared background (BlogBackdrop): the whole wallpaper, really dimmed ──
+   Owner: the full picture behind the page, barely there. The hero vignette
+   (tokens.css) over a very heavy even scrim over the picture; tune how faint
+   it is with the scrim's two alphas (keep both ≥ 0.9, the text sits on it). */
 .blog-backdrop {
   position: fixed;
   inset: 0;
   z-index: -10;
   pointer-events: none;
-}
-@media (min-width: 1600px) {
-  .blog-backdrop::before {
-    content: '';
-    position: absolute;
-    top: 68px; /* under the nav */
-    bottom: 0;
-    left: 0;
-    width: calc((100% - var(--blog-page-w)) / 2);
-    background: var(--blog-backdrop) center 45% / contain no-repeat;
-    opacity: 0.4;
-  }
+  background: var(--hero-vignette),
+    linear-gradient(rgba(var(--color-bg-base-rgb), 0.92), rgba(var(--color-bg-base-rgb), 0.95)),
+    var(--blog-backdrop) center / cover no-repeat;
 }

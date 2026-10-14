@@ -23,19 +23,16 @@ describe('BlogBackdrop', () => {
     expect(existsSync(join(root, 'public', BLOG_BACKDROP_IMAGE))).toBe(true)
   })
 
-  // Owner, 2026-10-13 (Eldorado's one background): nothing behind the text —
-  // a faint character in the empty strip beside the page box, wide screens only.
-  it('stylesheet: a fixed layer with no picture of its own', () => {
+  // Owner, 2026-10-13: "just have the whole wallpaper, really dimmed" — the full
+  // picture behind the page under the hero vignette and a very heavy scrim.
+  it('stylesheet: the whole wallpaper, fixed under the content, really dimmed', () => {
     const rule = css.match(/^\.blog-backdrop\s*{[^}]*}/m)?.[0] ?? ''
     expect(rule).toMatch(/position:\s*fixed/)
     expect(rule).toMatch(/z-index:\s*-10/)
-    expect(rule).not.toContain('--blog-backdrop')
-  })
-
-  it('stylesheet: the art sits only in the strip outside the page box, from 1600px', () => {
-    const art = css.match(/@media \(min-width: 1600px\)\s*{\s*\.blog-backdrop::before\s*{[^}]*}/)?.[0] ?? ''
-    expect(art).toContain('var(--blog-backdrop)')
-    expect(art).toMatch(/width:\s*calc\(\(100% - var\(--blog-page-w\)\) \/ 2\)/)
+    expect(rule).toMatch(/background:\s*var\(--hero-vignette\),\s*linear-gradient\([^;]*\),\s*var\(--blog-backdrop\) center \/ cover no-repeat/)
+    const alphas = [...(rule.match(/rgba\(var\(--color-bg-base-rgb\), (0\.\d+)\)/g) ?? [])].map((a) => Number(a.match(/0\.\d+/)![0]))
+    expect(alphas.length).toBeGreaterThan(0)
+    expect(Math.min(...alphas)).toBeGreaterThanOrEqual(0.9)
   })
 
   // Blog home + every article (codes posts render through the article view) share it;

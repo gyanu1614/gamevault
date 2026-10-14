@@ -84,7 +84,7 @@ Pending owner decision: the blog font (research in chat: Eldorado Lato, GameBoos
 - [x] P1 Game picker + admin switch — 0987ffd7 (migration 20261013173019)
 - [x] P2 Codes post type + Codes menu — (migration 20261013173721)
 - [x] P3 Article design v2 — 62438567 type/spacing/colour (blog-prose.css), b5c4edcc picture sizes, 07dbfc2b table pictures
-- [x] P4 Shared background — Eldorado's one background: a faint character cut-out in the empty strip left of the page box, 1600px+ only (.blog-backdrop::before). Interim art = hooded figure from marketplace.avif (public/assets/blog/backdrop-art.webp); owner to upload a character PNG. Rejected: blue night tint; full-photo side band ("grey blur"); full-page faint photo ("bg behind text looks bad")
+- [x] P4 Shared background — FINAL (owner): the whole wallpaper (marketplace.avif), really dimmed: hero vignette over a 0.92→0.95 scrim (.blog-backdrop). Rejected on the way: blue night tint; side-only photo band; faint full page at 0.88; side-strip cut-out
 - [x] Solid cards (BLOG_CARD) for boxes/tables/contents; boxes get icon tiles + distinct hues (green summary, yellow tip, blue note, red warning)
 - [x] Layout v3 (owner: "text too narrow"): one 820px column + right sidebar (contents + one buy card); page box --blog-page-w 1232px; editor + preview widths match
 - [x] Tables: striped rows + column hairlines
