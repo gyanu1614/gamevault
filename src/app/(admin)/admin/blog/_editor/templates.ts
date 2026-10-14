@@ -7,7 +7,7 @@ import type { BlogDoc, DocNode } from '@/lib/blog/doc/types'
 const h2 = (text: string): DocNode => ({ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text }] })
 const p = (): DocNode => ({ type: 'paragraph' })
 
-export const TEMPLATES: Record<'blank' | 'guide' | 'codes' | 'tier' | 'news', { label: string; postType: 'guide' | 'value' | 'seller'; doc: BlogDoc }> = {
+export const TEMPLATES: Record<'blank' | 'guide' | 'codes' | 'tier' | 'news', { label: string; postType: 'guide' | 'value' | 'seller' | 'codes'; doc: BlogDoc }> = {
   blank: { label: 'Blank', postType: 'guide', doc: { type: 'doc', content: [p()] } },
   guide: {
     label: 'Guide',
@@ -16,7 +16,7 @@ export const TEMPLATES: Record<'blank' | 'guide' | 'codes' | 'tier' | 'news', { 
   },
   codes: {
     label: 'Codes',
-    postType: 'guide',
+    postType: 'codes',
     doc: { type: 'doc', content: [p(), h2('Working Codes'), { type: 'codes', attrs: { rows: [{ code: '', reward: '', isNew: true }], checkedAt: new Date().toISOString().slice(0, 10) } }, h2('How to Redeem Codes'), { type: 'orderedList', attrs: { start: 1 }, content: [{ type: 'listItem', content: [p()] }] }, h2('FAQ'), { type: 'faq', attrs: { items: [{ q: '', a: '' }] } }] },
   },
   tier: {

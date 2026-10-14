@@ -3,9 +3,10 @@ import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { GAME_DIRECTORY_TAG } from '@/lib/marketplace/gameDirectoryCache'
 import { getAllGames } from '@/lib/utils/games'
-import { getGameContentTheme, hasHubPage, hasGameContentTheme, type HubTool } from '@/lib/content/theme'
+import { contentHubSlugsFor, getGameContentTheme, hasHubPage, hasGameContentTheme, type HubTool } from '@/lib/content/theme'
 import { GAME_ICONS } from '@/features/home/lib/game-icons'
-import { pickerGames } from '@/lib/content/hub-games'
+import { codesMenuGames, pickerGames, type CodesMenuGame } from '@/lib/content/hub-games'
+import { getCodesPostGameSlugs } from '@/lib/blog/db'
 
 /**
  * Data for the shared content-hub navbar: the game switcher list and the
@@ -44,6 +45,8 @@ export interface HubNavData {
   accountsHref: string | null
   /** Seller landing (/[game]/sell) — null for games without a content hub. */
   sellHref: string | null
+  /** The Codes menu: switched-on games with a codes page (Blog v2). Empty → no menu. */
+  codes: CodesMenuGame[]
 }
 
 /**
@@ -75,7 +78,8 @@ export function hubGameIcon(slug: string, imageUrl: string | null | undefined): 
 }
 
 export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
-  const games = await getAllGames()
+  // Both reads are cached (game directory / codes-post tags), so every hub page shares them.
+  const [games, codesPostSlugs] = await Promise.all([getAllGames(), getCodesPostGameSlugs()])
   const current = games.find((g) => g.slug === gameSlug)
 
   // Which storefront categories does this game actually have?
@@ -113,6 +117,10 @@ export async function getHubNavData(gameSlug: string): Promise<HubNavData> {
     // Sell landing exists for any game with a content hub (mirrors the /sell
     // page's own gate), so the nav always offers a seller door alongside Buy.
     sellHref: hasGameContentTheme(gameSlug) ? `/${gameSlug}/sell?src=${gameSlug}-hubnav` : null,
+    codes: codesMenuGames(games, contentHubSlugsFor('codes'), codesPostSlugs).map((g) => ({
+      ...g,
+      imageUrl: hubGameIcon(g.slug, g.imageUrl),
+    })),
   }
 }
 

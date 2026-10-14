@@ -58,3 +58,6 @@ export const GAME_CTA_BANNERS_TAG = 'games:cta-banners'
  * (home + listing pages). The /admin Trustpilot card revalidates it on save.
  */
 export const TRUSTPILOT_SETTINGS_TAG = 'trustpilot:settings'
+
+/** Which games have a published codes post — the hub nav's Codes menu (Blog v2). Refreshed by saveBlogPost. */
+export const BLOG_CODES_GAMES_TAG = 'blog:codes-games'

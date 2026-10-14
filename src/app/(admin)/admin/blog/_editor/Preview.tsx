@@ -15,7 +15,7 @@ import { docReadMinutes } from '@/lib/blog/render/outline'
 import type { BlogDoc, StoredImage } from '@/lib/blog/doc/types'
 import { cn } from '@/lib/utils'
 
-const KIND: Record<string, string> = { value: 'Value Guide', seller: 'Selling Guide', guide: 'Guide' }
+const KIND: Record<string, string> = { value: 'Value Guide', seller: 'Selling Guide', guide: 'Guide', codes: 'Codes' }
 
 export function Preview({
   open,

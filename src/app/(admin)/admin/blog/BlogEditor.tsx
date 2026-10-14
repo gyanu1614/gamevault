@@ -87,6 +87,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
     author: post?.author ?? 'DropMarket Team',
     seoTitle: post?.seo_title ?? '',
     seoDescription: post?.seo_description ?? '',
+    note: initial?.note ?? '',
   })
   const [slugTouched, setSlugTouched] = useState(!!post)
   const [dirty, setDirty] = useState(false)
@@ -143,6 +144,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
     cover,
     seoTitle: meta.seoTitle || null,
     seoDescription: meta.seoDescription || null,
+    note: meta.postType === 'codes' ? meta.note.trim() || null : null,
     doc: doc as SaveBlogPostInput['doc'],
   }
 

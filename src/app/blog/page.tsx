@@ -24,6 +24,7 @@ import { getAllPublishedPosts } from '@/lib/blog/db'
 import { createAnonClient } from '@/lib/supabase/anon'
 import { BlogCard } from '@/components/blog/BlogCard'
 import { seoMeta } from '@/lib/seo/fit'
+import { postHref } from '@/lib/blog/post-url'
 
 export const revalidate = 3600
 
@@ -34,10 +35,6 @@ export const metadata: Metadata = seoMeta({
   alternates: { canonical: '/blog' },
 })
 
-/** A post's canonical URL: nested under its game when it has one, else flat. */
-function postHref(post: { slug: string; primaryGameSlug: string | null }): string {
-  return post.primaryGameSlug ? `/${post.primaryGameSlug}/blog/${post.slug}` : `/blog/${post.slug}`
-}
 
 interface GameRow {
   name: string

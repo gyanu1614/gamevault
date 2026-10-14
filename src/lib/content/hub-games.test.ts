@@ -15,3 +15,12 @@ describe('hub nav game picker (owner, 2026-10-13: only games with content)', () 
     expect(contentHubSlugs(games)).toEqual(['adopt-me', 'murder-mystery-2'])
   })
 })
+
+describe('Codes menu (Blog v2)', () => {
+  it('lists switched-on games with a codes page: their own (MM2) or a published codes post', async () => {
+    const { codesMenuGames } = await import('./hub-games')
+    const games = [g('adopt-me', true), g('murder-mystery-2', true), g('steal-an-egg', true), g('rust', false)]
+    const out = codesMenuGames(games, ['murder-mystery-2'], ['adopt-me', 'rust'])
+    expect(out.map((x) => [x.slug, x.href])).toEqual([['adopt-me', '/adopt-me/codes'], ['murder-mystery-2', '/murder-mystery-2/codes']])
+  })
+})

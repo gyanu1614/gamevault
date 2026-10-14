@@ -20,8 +20,10 @@ import 'server-only'
 import { createAnonClient } from '@/lib/supabase/anon'
 import type { BlogPost } from './posts'
 import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
+import { BLOG_CODES_GAMES_TAG } from '@/lib/revalidation/tags'
 
-export type BlogPostType = 'guide' | 'value' | 'seller'
+export type BlogPostType = 'guide' | 'value' | 'seller' | 'codes'
 
 /** Full DB post — the file BlogPost shape plus the CMS/nesting fields. */
 export interface DbBlogPost extends BlogPost {
@@ -126,6 +128,40 @@ export const getGamePost = cache(async function getGamePost(
   if (error || !data) return null
   return rowToPost(data as unknown as BlogPostRow)
 })
+
+/** A game's one published codes post (Blog v2) — shown at /{game}/codes. */
+export const getGameCodesPost = cache(async function getGameCodesPost(gameSlug: string): Promise<DbBlogPost | null> {
+  const supabase = createAnonClient()
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select(SELECT)
+    .eq('primary_game_slug', gameSlug)
+    .eq('post_type', 'codes')
+    .eq('status', 'published')
+    .maybeSingle()
+  if (error || !data) return null
+  return rowToPost(data as unknown as BlogPostRow)
+})
+
+/**
+ * The games with a published codes post — the hub nav's Codes menu reads it on
+ * every hub page, so it is cached under BLOG_CODES_GAMES_TAG (saveBlogPost
+ * refreshes it). [] on error: the menu then simply lists fewer games.
+ */
+export const getCodesPostGameSlugs = unstable_cache(
+  async (): Promise<string[]> => {
+    const { data, error } = await createAnonClient()
+      .from('blog_posts')
+      .select('primary_game_slug')
+      .eq('post_type', 'codes')
+      .eq('status', 'published')
+      .not('primary_game_slug', 'is', null)
+    if (error || !data) return []
+    return [...new Set((data as Array<{ primary_game_slug: string }>).map((r) => r.primary_game_slug))]
+  },
+  ['blog-codes-post-games'],
+  { tags: [BLOG_CODES_GAMES_TAG], revalidate: 86400 },
+)
 
 /**
  * Game-relevant rail: published posts tagged for the game (via game_slugs),

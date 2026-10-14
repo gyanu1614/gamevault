@@ -25,6 +25,7 @@ import { ValuesTeaser, CalculatorTeaser } from './_HubTeasers'
 import { SabSellerCta } from '../_SabSellerCta'
 import { getHubTopValues, getHubStatStrip, getHubCalcExample } from './_hubData'
 import { getBlogHubGameSlugs, isBlogHubGame } from '@/lib/blog/hub-params'
+import { postHref } from '@/lib/blog/post-url'
 import { cache } from 'react'
 import { seoMeta } from '@/lib/seo/fit'
 
@@ -98,6 +99,7 @@ const POST_TYPE_LABEL: Record<string, string> = {
   value: 'Values',
   seller: 'Selling',
   guide: 'Guide',
+  codes: 'Codes',
 }
 
 const CARD_DATE = new Intl.DateTimeFormat('en-GB', {
@@ -184,6 +186,8 @@ export default async function GameBlogIndex({
 
   const articleCards = rest.map((post) => ({
     slug: post.slug,
+    // A codes post's page is /{game}/codes (postHref).
+    href: postHref(post),
     title: post.title,
     excerpt: post.excerpt,
     category: POST_TYPE_LABEL[post.postType] ?? 'Guide',
@@ -218,7 +222,7 @@ export default async function GameBlogIndex({
               url: `${SITE_URL}/${gameSlug}/blog`,
               posts: posts.map((p) => ({
                 title: p.title,
-                path: `/${gameSlug}/blog/${p.slug}`,
+                path: postHref(p),
                 datePublished: p.publishedAt,
                 description: p.excerpt,
               })),
@@ -245,7 +249,7 @@ export default async function GameBlogIndex({
         {/* The stat strip now lives inside the hero's Market Snapshot card. */}
         {featured && (
           <FeaturedGuide
-            href={`/${gameSlug}/blog/${featured.slug}`}
+            href={postHref(featured)}
             category={POST_TYPE_LABEL[featured.postType] ?? 'Guide'}
             readMinutes={featured.readMinutes}
             title={featured.title}

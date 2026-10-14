@@ -22,6 +22,7 @@ export function ArticleHeader({
   publishedAt,
   updatedAt,
   readMinutes,
+  note,
 }: {
   gameSlug: string
   gameName: string
@@ -32,6 +33,8 @@ export function ArticleHeader({
   publishedAt: string
   updatedAt: string
   readMinutes: number
+  /** Codes posts: the freshness note ("2 new codes"), shown with the update date. */
+  note?: string | null
 }) {
   const edited = !!updatedAt && updatedAt > publishedAt
   const date = fmt(edited ? updatedAt : publishedAt)
@@ -59,6 +62,11 @@ export function ArticleHeader({
         <span aria-hidden>·</span>
         <span>{readMinutes} min read</span>
       </div>
+      {note && (
+        <p className="mt-3 text-[14px] font-semibold text-lime-text">
+          Updated {fmt(updatedAt || publishedAt)} · {note}
+        </p>
+      )}
     </header>
   )
 }

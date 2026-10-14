@@ -17,6 +17,7 @@ export interface RelatedGuide {
   title: string
   kind: string
   primaryGameSlug: string | null
+  postType?: string | null
   publishedAt: string
   updatedAt: string
 }

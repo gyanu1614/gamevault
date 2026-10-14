@@ -150,4 +150,24 @@ describe.skipIf(!hasEnv)('blog save (integration)', () => {
     expect((await rows(newSlug))[0].body.oldSlugs).toEqual([oldSlug])
     expect(await getPublishedPostBySlugAnyGame(oldSlug)).toEqual({ slug: newSlug, primaryGameSlug: game })
   })
+
+  it('codes posts (Blog v2): one live codes page per game, its update note kept, none for MM2', async () => {
+    const { saveBlogPost } = await import('@/lib/actions/admin-blog-save')
+    // A seeded game no real codes page uses, so a live codes post elsewhere on the stack can't collide.
+    const codesGame = 'rust'
+    const first = await saveBlogPost(null, input(slugOf('codes-a'), { gameSlug: codesGame, postType: 'codes', status: 'published', note: '2 new codes' }))
+    expect(first.success).toBe(true)
+    const stored = (await svc.from('blog_posts').select('body, post_type').eq('slug', slugOf('codes-a')).single()).data as any
+    expect(stored.post_type).toBe('codes')
+    expect(stored.body.note).toBe('2 new codes')
+
+    const second = await saveBlogPost(null, input(slugOf('codes-b'), { gameSlug: codesGame, postType: 'codes', status: 'published' }))
+    expect(second).toEqual({ success: false, error: 'This game already has a live codes page. Edit that one, or unpublish it first.' })
+    // A second one may wait as a draft.
+    expect((await saveBlogPost(null, input(slugOf('codes-b'), { gameSlug: codesGame, postType: 'codes', status: 'draft' }))).success).toBe(true)
+
+    const mm2 = await saveBlogPost(null, input(slugOf('codes-mm2'), { gameSlug: 'murder-mystery-2', postType: 'codes', status: 'draft' }))
+    expect(mm2).toEqual({ success: false, error: 'Murder Mystery 2 has its own codes page, so it can’t have a codes post.' })
+  })
 })
+

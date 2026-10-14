@@ -17,3 +17,26 @@ export function contentHubSlugs(games: readonly HubGameFlag[]): string[] {
 export function pickerGames<T extends HubGameFlag>(games: readonly T[], currentSlug: string): T[] {
   return games.filter((g) => g.content_hub_enabled || g.slug === currentSlug)
 }
+
+export interface CodesMenuGame {
+  slug: string
+  name: string
+  imageUrl: string | null
+  href: string
+}
+
+/**
+ * The hub nav's Codes menu (Blog v2): switched-on games that have a codes page
+ * — their own custom one (MM2, theme `codes`) or a published codes post —
+ * each linking to /{game}/codes. Order follows `games` (the picker's order).
+ */
+export function codesMenuGames<T extends HubGameFlag & { name: string; image_url?: string | null }>(
+  games: readonly T[],
+  customCodesSlugs: readonly string[],
+  codesPostSlugs: readonly string[],
+): CodesMenuGame[] {
+  const has = new Set([...customCodesSlugs, ...codesPostSlugs])
+  return games
+    .filter((g) => g.content_hub_enabled && has.has(g.slug))
+    .map((g) => ({ slug: g.slug, name: g.name, imageUrl: g.image_url ?? null, href: `/${g.slug}/codes` }))
+}

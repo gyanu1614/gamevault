@@ -53,3 +53,9 @@ describe('the submit wrappers never throw', () => {
     expect(submit).not.toHaveBeenCalled()
   })
 })
+
+describe('postEventUrls: codes posts', () => {
+  it('a codes post: its /codes page and the game\'s blog index', () => {
+    expect(postEventUrls({ gameSlug: 'adopt-me', slug: 'adopt-me-codes', postType: 'codes' })).toEqual(['/adopt-me/codes', '/adopt-me/blog'])
+  })
+})

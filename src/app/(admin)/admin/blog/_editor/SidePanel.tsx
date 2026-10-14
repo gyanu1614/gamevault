@@ -18,7 +18,7 @@ import { SITE_URL } from '@/config/site'
 import { fieldCls } from './node-views'
 import { uploadImage } from './upload'
 
-export type PostType = 'guide' | 'value' | 'seller'
+export type PostType = 'guide' | 'value' | 'seller' | 'codes'
 export interface Meta {
   gameSlug: string
   postType: PostType
@@ -26,12 +26,15 @@ export interface Meta {
   author: string
   seoTitle: string
   seoDescription: string
+  /** Codes posts: the update note shown with the date ("2 new codes"). */
+  note: string
 }
 
 const TYPES: Array<[PostType, string]> = [
   ['guide', 'Guide'],
   ['value', 'Value Guide'],
   ['seller', 'Selling Guide'],
+  ['codes', 'Codes (one per game)'],
 ]
 
 const card = 'rounded-[10px] bg-[#1D1E23] p-4'
@@ -126,6 +129,25 @@ export function PostSettings({
           <label htmlFor="post-author" className={lbl}>Author</label>
           <input id="post-author" className={fieldCls} value={meta.author} onChange={(e) => set({ author: e.target.value })} />
         </div>
+        {meta.postType === 'codes' && (
+          <div>
+            <label htmlFor="post-note" className={cn(lbl, 'flex justify-between')}>
+              <span>Update Note</span>
+              <Count n={meta.note.length} max={80} />
+            </label>
+            <input
+              id="post-note"
+              className={fieldCls}
+              value={meta.note}
+              onChange={(e) => set({ note: e.target.value })}
+              placeholder="2 new codes"
+            />
+            <p className="mt-1.5 text-[11.5px] text-text-tertiary">Shown with the date under the title: Updated Oct 13 · 2 new codes.</p>
+          </div>
+        )}
+        {meta.postType === 'codes' && (
+          <p className="text-[11.5px] text-text-tertiary">This post becomes the game&rsquo;s codes page at /{meta.gameSlug || 'game'}/codes.</p>
+        )}
       </div>
     </Section>
   )

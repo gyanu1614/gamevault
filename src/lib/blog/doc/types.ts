@@ -50,6 +50,8 @@ export interface BodyV2 {
   cover?: StoredImage | null
   /** URLs this post was live at before a rename; they redirect to the current one. */
   oldSlugs?: string[]
+  /** Codes posts: the freshness note shown with the date ("2 new codes"). */
+  note?: string
 }
 
 export const EMPTY_DOC: BlogDoc = { type: 'doc', content: [{ type: 'paragraph' }] }
