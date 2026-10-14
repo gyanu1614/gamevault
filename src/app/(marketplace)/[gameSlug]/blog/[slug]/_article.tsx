@@ -119,13 +119,13 @@ export async function ArticleView({
 
   // Money pages that match the post's intent, only where the game has them.
   const values: RelatedTool | null = hubNav.tools.includes('values')
-    ? { label: `${game.name} Value List`, desc: `What every ${game.name} item sells for, from live listings.`, href: `/${gameSlug}/values` }
+    ? { kind: 'values', label: `${game.name} Value List`, desc: `What every ${game.name} item sells for, from live listings.`, href: `/${gameSlug}/values` }
     : null
   const calculator: RelatedTool | null = hubNav.tools.includes('calculator')
-    ? { label: 'Trade Calculator', desc: 'Price both sides of a trade before you accept.', href: `/${gameSlug}/calculator` }
+    ? { kind: 'calculator', label: 'Trade Calculator', desc: 'Price both sides of a trade before you accept.', href: `/${gameSlug}/calculator` }
     : null
   const sell: RelatedTool | null = hubNav.sellHref
-    ? { label: `Sell ${game.name} Items`, desc: 'List your items and get paid when the buyer confirms.', href: hubNav.sellHref }
+    ? { kind: 'sell', label: `Sell ${game.name} Items`, desc: 'List your items and get paid when the buyer confirms.', href: hubNav.sellHref }
     : null
   const tools = (post.postType === 'seller' ? [sell, values] : [values, calculator]).filter((t): t is RelatedTool => !!t)
   const related = tagged

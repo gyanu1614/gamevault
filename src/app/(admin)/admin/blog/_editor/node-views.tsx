@@ -13,7 +13,6 @@ import { searchBlogItems, type BlogItemHit } from '@/lib/actions/admin-blog-item
 import type { CalloutTone, StoredImage } from '@/lib/blog/doc/types'
 import { uploadImage } from './upload'
 import { pictureFit } from '@/lib/blog/render/picture-size'
-import { BLOG_CARD } from '@/lib/blog/render/surface'
 import { CALLOUT_TONES, CalloutHead } from '@/lib/blog/render/nodes'
 
 const fitOf = (a: Record<string, any>) => pictureFit({ width: a.width, height: a.height, alpha: a.alpha }, a.layout === 'wide' ? 'wide' : 'column')
@@ -193,9 +192,9 @@ export function CalloutNV({ node, updateAttributes, editor, getPos }: NodeViewPr
   }
   const tone = CALLOUT_TONES[node.attrs.tone as CalloutTone] ?? CALLOUT_TONES.note
   return (
-    // The article's own box look (BLOG_CARD + tone head), with the switches beside it.
-    <NodeViewWrapper className={`${BLOG_CARD} my-4 px-5 py-4`}>
-      <div contentEditable={false} className="mb-2.5 flex flex-wrap items-center gap-1.5">
+    // The article's own box look (tinted rectangle + tone label), with the switches beside the label.
+    <NodeViewWrapper className="my-4 rounded-md border px-4 py-3" style={{ background: `linear-gradient(${tone.bg}, ${tone.bg}), #1C1D22`, borderColor: tone.border }}>
+      <div contentEditable={false} className="mb-2 flex flex-wrap items-center gap-1.5 text-[14px]">
         <CalloutHead tone={tone} className="mr-2" />
         {TONES.map(([v, l]) => (
           <button key={v} type="button" className={chip(node.attrs.tone === v)} onClick={() => updateAttributes({ tone: v })}>{l}</button>

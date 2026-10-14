@@ -93,6 +93,17 @@
 .blog-prose ol:not(.bp-ui *) > li::marker { color: var(--bp-strong); font-weight: 700; }
 .blog-prose li:not(.bp-ui *) > p > strong:first-child { color: var(--bp-accent); }
 
+/* ── Boxes (Tip / Note / Warning / Key Takeaways — nodes.tsx CalloutView):
+      compact, tightly spaced text beside the label ───────────────────── */
+.blog-prose .bp-callout { font-size: 16px; line-height: 1.6; }
+@media (min-width: 640px) {
+  .blog-prose .bp-callout { font-size: 17px; }
+}
+.blog-prose .bp-callout-body > * { margin-top: 0; }
+.blog-prose .bp-callout-body > * + * { margin-top: 8px; }
+.blog-prose .bp-callout-body li { margin-top: 4px; }
+.blog-prose .bp-callout-body li:first-child { margin-top: 0; }
+
 /* ── Quote + rule ───────────────────────────────────────────────────── */
 .blog-prose blockquote:not(.bp-ui *) {
   margin-top: 24px;
@@ -110,7 +121,7 @@
   margin-top: 24px;
   overflow-x: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #212228 0%, #1A1B1F 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
 }
@@ -175,6 +186,6 @@
   z-index: -10;
   pointer-events: none;
   background: var(--hero-vignette),
-    linear-gradient(rgba(var(--color-bg-base-rgb), 0.92), rgba(var(--color-bg-base-rgb), 0.95)),
+    linear-gradient(rgba(var(--color-bg-base-rgb), 0.94), rgba(var(--color-bg-base-rgb), 0.96)),
     var(--blog-backdrop) center / cover no-repeat;
 }

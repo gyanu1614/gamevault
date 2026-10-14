@@ -24,11 +24,26 @@ describe('blog card surface', () => {
     expect(BLOG_CARD).not.toMatch(/bg-white\/|\/(?:[1-9]\d?)\b(?!\])|backdrop-blur/)
   })
 
-  it.each(['tip', 'note', 'warning', 'takeaways'])('a %s box sits on the card with its own icon tile', (tone) => {
+  // Owner, 2026-10-13: boxes rectangular and compact, the label on the LEFT
+  // and the text beside it (no separate title row) — the value pages' callout look.
+  it.each(['tip', 'note', 'warning', 'takeaways'])('a %s box: a tinted rectangle, label left, text beside it', (tone) => {
     const html = render(callout(tone))
-    expect(html).toContain(`class="${BLOG_CARD}`)
+    const aside = html.match(/<aside class="([^"]*)" style="([^"]*)"/)
+    expect(aside, html).not.toBeNull()
+    expect(aside![1]).toContain('grid-cols-[auto_minmax(0,1fr)]')
+    expect(aside![1]).toContain('rounded-md')
+    // Tinted, but on a solid base: the wallpaper never shows through.
+    expect(aside![2]).toMatch(/background:linear-gradient\(rgba\([^)]*\),\s*rgba\([^)]*\)\),\s*#1c1d22/i)
+    expect(aside![2]).toMatch(/border-color:rgba\(/)
+    // The label and the text are the two cells of ONE row.
+    expect(html).toMatch(/<aside[^>]*><div[^>]*data-tone-color[^>]*>.*?<\/div><div class="bp-callout-body[^"]*"[^>]*><p>Hello<\/p><\/div><\/aside>/)
     expect(html).toMatch(/<svg[^>]*>/)
-    expect(html).not.toContain('border-l-[3px]')
+  })
+
+  it('cards are rectangular (8px), never the round 16px', () => {
+    expect(BLOG_CARD).toContain('rounded-[8px]')
+    const css = readFileSync(join(root, 'src/styles/blog-prose.css'), 'utf8')
+    expect(css).not.toMatch(/border-radius:\s*16px/)
   })
 
   it('gives each box type a clearly different colour', () => {

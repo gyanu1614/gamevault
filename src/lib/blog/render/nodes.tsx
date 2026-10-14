@@ -125,37 +125,43 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
 }
 
 /**
- * One clearly different hue per box (the value pages' callout hues: blue for
- * a fact, yellow for a tip), so a reader tells them apart at a glance; the
- * summary keeps the blog highlight colour (Blog v2).
+ * The boxes (owner, 2026-10-13): the value pages' callout look (ValueCallout)
+ * — a rectangle tinted in the box's hue with a hairline in the same hue —
+ * compact, with the icon + label on the LEFT and the text beside it, never a
+ * title row of its own. One clearly different hue per box (blue for a fact,
+ * yellow for a tip, as on the value pages); the summary keeps the blog
+ * highlight colour. Phones show the icon alone so the text keeps its width.
  */
-export const CALLOUT_TONES: Record<CalloutTone, { label: string; color: string; Icon: Icon }> = {
-  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)', Icon: ListChecks },
-  tip: { label: 'Tip', color: '#FACC15', Icon: Lightbulb },
-  note: { label: 'Note', color: '#8BBDFB', Icon: Info },
-  warning: { label: 'Warning', color: 'var(--color-error)', Icon: WarningCircle },
+export const CALLOUT_TONES: Record<CalloutTone, { label: string; color: string; bg: string; border: string; body: string; Icon: Icon }> = {
+  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)', bg: 'rgba(86,184,127,0.07)', border: 'rgba(86,184,127,0.26)', body: '#D6E8DC', Icon: ListChecks },
+  tip: { label: 'Tip', color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.26)', body: '#EDE3B8', Icon: Lightbulb },
+  note: { label: 'Note', color: '#8BBDFB', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.26)', body: '#D3E3F8', Icon: Info },
+  warning: { label: 'Warning', color: '#F28B82', bg: 'rgba(221,91,79,0.08)', border: 'rgba(221,91,79,0.3)', body: '#F3D9D5', Icon: WarningCircle },
 }
 
+const toneOf = (tone: unknown) => CALLOUT_TONES[(tone as CalloutTone) in CALLOUT_TONES ? (tone as CalloutTone) : 'note']
+
 export function CalloutView({ tone, children }: { tone: unknown; children: ReactNode }) {
-  const t = CALLOUT_TONES[(tone as CalloutTone) in CALLOUT_TONES ? (tone as CalloutTone) : 'note']
+  const t = toneOf(tone)
   return (
-    // The solid blog card; the tone lives in the icon tile and the label.
-    <aside className={`${BLOG_CARD} mt-7 px-5 py-4 sm:px-6 sm:py-5 [&>p+p]:mt-3 [&>p]:mt-0 [&>ul]:mt-1 [&>ol]:mt-1`}>
+    <aside
+      className="bp-callout mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 rounded-md border px-4 py-3 sm:gap-x-4 sm:px-5 sm:py-3.5"
+      // The tint over a solid base, so the page's wallpaper never shows through.
+      style={{ background: `linear-gradient(${t.bg}, ${t.bg}), #1C1D22`, borderColor: t.border }}
+    >
       <CalloutHead tone={t} />
-      {children}
+      <div className="bp-callout-body min-w-0" style={{ color: t.body }}>{children}</div>
     </aside>
   )
 }
 
-/** Icon tile + label in the tone's colour (shared with the editor's box). */
-export function CalloutHead({ tone, className = 'mb-2.5' }: { tone: (typeof CALLOUT_TONES)[CalloutTone]; className?: string }) {
+/** Icon + label in the tone's colour, sized to sit on the text's first line (shared with the editor's box). */
+export function CalloutHead({ tone, className = '' }: { tone: (typeof CALLOUT_TONES)[CalloutTone]; className?: string }) {
   const { Icon, color, label } = tone
   return (
-    <div data-tone-color={color} className={`${className} flex items-center gap-2.5 text-[14px] font-bold`} style={{ color }}>
-      <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${color} 14%, transparent)` }}>
-        <Icon size={17} weight="duotone" />
-      </span>
-      {label}
+    <div data-tone-color={color} className={`flex h-[1.6em] items-center gap-2 self-start whitespace-nowrap font-bold ${className}`} style={{ color }}>
+      <Icon aria-hidden size={18} weight="duotone" className="shrink-0" />
+      <span className="text-[14px] max-sm:sr-only">{label}</span>
     </div>
   )
 }
