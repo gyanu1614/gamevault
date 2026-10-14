@@ -10,6 +10,8 @@
  * collapse (my-* doubled every gap); in the editor's normal flow the same top
  * margins produce the same gaps.
  *
+ * Also the blog's shared background (`.blog-backdrop`, at the end).
+ *
  * Scope: headings style only as top-level blocks; every other rule skips the
  * inside of a built-in block (`.bp-ui`: FAQ, codes, item card, button,
  * video), which keep their own look — `X:not(.bp-ui *)`.
@@ -147,3 +149,28 @@
 .blog-prose .bp-cell-item { display: flex; align-items: center; gap: 12px; }
 .blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
 
+
+/* ── Shared background (BlogBackdrop): picture on the sides, clean behind the text ──
+   Layers, top first: the side scrim (solid ground across the reading column,
+   fading to a light dim at the edges), a bottom fade into the footer, then the
+   picture. The picture is set only from md up, so phones never fetch it. */
+.blog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .blog-backdrop {
+    background:
+      linear-gradient(90deg,
+        rgba(var(--color-bg-base-rgb), 0.3) 0,
+        rgba(var(--color-bg-base-rgb), 0.3) calc(50% - 680px),
+        var(--color-bg-base) calc(50% - 400px),
+        var(--color-bg-base) calc(50% + 400px),
+        rgba(var(--color-bg-base-rgb), 0.3) calc(50% + 680px),
+        rgba(var(--color-bg-base-rgb), 0.3) 100%),
+      linear-gradient(180deg, transparent 55%, var(--color-bg-base) 100%),
+      var(--blog-backdrop) center / cover no-repeat;
+  }
+}
