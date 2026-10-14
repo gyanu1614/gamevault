@@ -207,8 +207,9 @@ export async function toggleGameContentHub(id: string, isEnabled: boolean) {
   // The picker reads getAllGames (GAME_DIRECTORY_TAG) on every hub page.
   revalidateTag(GAME_DIRECTORY_TAG)
   // The blog home / articles / feed 404 a switched-off game: refresh them.
-  revalidatePath('/[gameSlug]/blog', 'page')
-  revalidatePath('/[gameSlug]/blog/[slug]', 'page')
+  // Route patterns carry the route group (Next 14 tags renders by file path).
+  revalidatePath('/(marketplace)/[gameSlug]/blog', 'page')
+  revalidatePath('/(marketplace)/[gameSlug]/blog/[slug]', 'page')
   return { success: true }
 }
 

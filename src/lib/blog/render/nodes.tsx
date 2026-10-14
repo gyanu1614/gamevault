@@ -188,7 +188,8 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
             <li key={i} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-mono text-[15px] font-semibold text-text-primary">
-                  {r.code}
+                  {/* A code must reach the game exactly: never auto-translated. */}
+                  <span translate="no">{r.code}</span>
                   {r.isNew && <span className="rounded-[5px] bg-[#4FB477]/15 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-[#7DD39B]">New</span>}
                 </p>
                 {r.reward && <p className="mt-0.5 text-[14px] text-text-secondary">{r.reward}</p>}
@@ -204,7 +205,7 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
           <summary className="flex min-h-[44px] cursor-pointer items-center text-[14px] font-medium text-text-secondary">Expired Codes ({expired.length})</summary>
           <ul className="pb-3 text-[14px] text-text-tertiary">
             {expired.map((r, i) => (
-              <li key={i} className="py-1"><span className="font-mono">{r.code}</span>{r.reward ? ` · ${r.reward}` : ''}</li>
+              <li key={i} className="py-1"><span translate="no" className="font-mono">{r.code}</span>{r.reward ? ` · ${r.reward}` : ''}</li>
             ))}
           </ul>
         </details>

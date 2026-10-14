@@ -124,7 +124,7 @@ export function ArticleToc({
           <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[color:var(--color-accent-text)]">{current?.text}</span>
           <ExpandMoreRounded aria-hidden sx={{ fontSize: 20 }} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
-        {open && <nav aria-label="On this page" className="max-h-[50vh] overflow-y-auto pb-3">{list(() => setOpen(false))}</nav>}
+        {open && <nav aria-label="On this page" className="max-h-[50vh] overflow-y-auto overscroll-contain pb-3">{list(() => setOpen(false))}</nav>}
       </div>
     )
   }
@@ -139,7 +139,7 @@ export function ArticleToc({
               <p className="mb-1.5 text-[13px] font-bold text-text-primary">On This Page</p>
               <nav
                 ref={listRef}
-                className={`min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin] ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
+                className={`min-h-0 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin] ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
               >
                 {list()}
               </nav>

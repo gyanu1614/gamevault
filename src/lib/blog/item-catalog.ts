@@ -10,6 +10,7 @@ import 'server-only'
  * A new game needs no code here once its items are in values_items.
  */
 import { createAnonClient } from '@/lib/supabase/anon'
+import { createValueListReadClient } from '@/lib/values/read-client'
 import { getValueItems } from '@/lib/values/data'
 import { itemKey } from '@/lib/blog/render/outline'
 
@@ -36,7 +37,7 @@ const toItem = (r: Row): CatalogItem => ({ slug: r.slug, name: r.name, imageUrl:
 /** A literal for an ILIKE inside PostgREST's or(): wildcards escaped, value quoted. */
 const literal = (s: string) => `"${s.replace(/[\\%_]/g, (c) => `\\${c}`).replace(/"/g, '\\"')}"`
 
-/** Items whose name contains `q` (the editor's item search). */
+/** Items whose name contains `q` (the editor's item search: admin-only, uncached by design — one query per keystroke). */
 export async function searchCatalog(gameSlug: string, q: string): Promise<CatalogItem[]> {
   const own = OWN_TABLE[gameSlug]
   if (own) {
@@ -56,7 +57,8 @@ export async function findCatalogItems(gameSlug: string, names: readonly string[
   let rows: CatalogItem[]
   const own = OWN_TABLE[gameSlug]
   if (own) {
-    const query = own.narrow((createAnonClient() as any).from(own.table).select('slug,name,image_url'))
+    // The article's read: under the game's values tags, so a values publish refreshes its table pictures.
+    const query = own.narrow((createValueListReadClient(gameSlug) as any).from(own.table).select('slug,name,image_url'))
     const { data } = await query.or(names.map((n) => `name.ilike.${literal(n)}`).join(',')).limit(80)
     rows = ((data ?? []) as Row[]).map(toItem)
   } else {

@@ -25,7 +25,8 @@ export function CopyCode({ code }: { code: string }) {
       className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[7px] bg-white/[0.06] px-2.5 text-[13px] font-medium text-text-secondary transition-colors hover:bg-white/[0.1] hover:text-text-primary"
     >
       {done ? <CheckRounded aria-hidden sx={{ fontSize: 16 }} /> : <ContentCopyRounded aria-hidden sx={{ fontSize: 15 }} />}
-      {done ? 'Copied' : 'Copy'}
+      {/* Announced when it flips to "Copied" (the label alone changes silently). */}
+      <span aria-live="polite">{done ? 'Copied' : 'Copy'}</span>
     </button>
   )
 }

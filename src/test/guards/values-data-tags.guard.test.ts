@@ -47,6 +47,7 @@ const SCOPE_FILES = [
   'src/lib/sab/priceCache.ts',
   'src/lib/values/data.ts',
   'src/lib/values/events.ts',
+  'src/lib/blog/item-catalog.ts', // blog table pictures (value items named in a post's tables)
   `${HUB}/page.tsx`, // the SAB landing's top-values carousel
 ]
 
@@ -59,9 +60,13 @@ const ANON_ALLOWED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: 'getGame: the games row (name, SEO copy) — not values data; its price count is tagged',
   },
-  [`${HUB}/blog/[slug]/page.tsx`]: {
+  [`${HUB}/blog/[slug]/_article.tsx`]: {
     count: 1,
-    reason: 'getGame: the games row for the article — not values data',
+    reason: 'getArticleGame: the games row for the article (shared with /[game]/codes) — not values data',
+  },
+  'src/lib/blog/item-catalog.ts': {
+    count: 1,
+    reason: "searchCatalog: the admin editor's item search (one query per keystroke, never cached); the article's read is tagged",
   },
   [`${HUB}/page.tsx`]: {
     count: 3,

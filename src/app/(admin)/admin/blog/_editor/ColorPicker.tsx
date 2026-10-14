@@ -58,7 +58,7 @@ export function ColorPicker({ editor, current, className }: { editor: Editor; cu
               aria-pressed={active === c.hex}
               onClick={() => pick(c.hex)}
               className={cn(
-                'h-7 w-7 rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+                'h-7 w-7 rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring motion-reduce:transition-none motion-reduce:hover:scale-100',
                 active === c.hex && 'ring-2 ring-white ring-offset-2 ring-offset-[#26272D]',
               )}
               style={{ background: c.hex }}
@@ -66,7 +66,7 @@ export function ColorPicker({ editor, current, className }: { editor: Editor; cu
           ))}
         </div>
         <div className="mt-3 flex items-center gap-1.5">
-          <label className={cn(CHIP, 'flex flex-1 cursor-pointer items-center gap-2 bg-white/[0.06]')}>
+          <label className={cn(CHIP, 'flex flex-1 cursor-pointer items-center gap-2 bg-white/[0.06] focus-within:ring-2 focus-within:ring-focus-ring')}>
             <input
               type="color"
               aria-label="Any colour"

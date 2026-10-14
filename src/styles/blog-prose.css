@@ -127,6 +127,7 @@
   white-space: nowrap;
 }
 .blog-prose td:not(.bp-ui *) {
+  font-variant-numeric: tabular-nums; /* prices and counts line up down a column */
   padding: 12px 18px;
   vertical-align: middle;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
