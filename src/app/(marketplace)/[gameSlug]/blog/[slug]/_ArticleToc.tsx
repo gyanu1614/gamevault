@@ -17,6 +17,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded'
 import { TOC_MIN_SECTIONS, type HeadingEntry } from '@/lib/blog/render/outline'
+import { BLOG_CARD } from '@/lib/blog/render/surface'
 
 export function ArticleToc({
   entries,
@@ -93,7 +94,7 @@ export function ArticleToc({
       <aside aria-label="On this page" className="hidden self-stretch lg:block">
         <div className="sticky top-[136px] flex max-h-[calc(100vh-152px)] flex-col xl:top-[96px] xl:max-h-[calc(100vh-112px)]">
           {/* Boxed (Blog v2, like Eldorado's): the current section in the blog highlight colour. */}
-          <div className="blog-type flex min-h-0 flex-col rounded-[16px] border border-white/[0.08] bg-[#16171B]/90 p-4">
+          <div className={`blog-type ${BLOG_CARD} flex min-h-0 flex-col p-4`}>
             <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
             <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
           </div>

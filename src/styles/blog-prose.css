@@ -99,20 +99,23 @@
 .blog-prose blockquote:not(.bp-ui *) > p { margin-top: 0; }
 .blog-prose hr:not(.bp-ui *) { margin: 44px 0 8px; border: 0; border-top: 1px solid var(--bp-rule); }
 
-/* ── Tables: 2px frame, rounded, darker header, bold first column ────── */
+/* ── Tables: a solid card (render/surface.ts BLOG_CARD values), darker
+      header band, bold first column ─────────────────────────────────── */
 .blog-prose .blog-table,
 .blog-prose .tableWrapper /* the editor's table box (Tiptap) */ {
   margin-top: 24px;
   overflow-x: auto;
-  border: 2px solid #2b2c33;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
+  background: linear-gradient(180deg, #212228 0%, #1A1B1F 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
 }
 .blog-prose table:not(.bp-ui *) { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.5; }
 @media (min-width: 640px) {
   .blog-prose table:not(.bp-ui *) { font-size: 16px; }
 }
 .blog-prose th:not(.bp-ui *) {
-  background: #121317;
+  background: rgba(0, 0, 0, 0.22);
   color: var(--bp-strong);
   font-weight: 700;
   padding: 14px 18px;
@@ -122,7 +125,7 @@
 .blog-prose td:not(.bp-ui *) {
   padding: 12px 18px;
   vertical-align: middle;
-  border-top: 1px solid #24252b;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .blog-prose td:not(.bp-ui *):first-child { color: var(--bp-strong); font-weight: 700; }
 .blog-prose th:not(.bp-ui *) > p,

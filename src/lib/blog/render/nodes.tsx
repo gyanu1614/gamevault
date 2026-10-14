@@ -12,6 +12,12 @@ import { CopyCode, YouTubeLite } from './client-nodes'
 import { FaqCards } from '@/components/marketplace/FaqCards'
 import { classifyHref, gamePath } from './links'
 import { PAIR_BOX, pictureFit } from './picture-size'
+import { BLOG_CARD } from './surface'
+import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
+import { Lightbulb } from '@phosphor-icons/react/dist/ssr/Lightbulb'
+import { Info } from '@phosphor-icons/react/dist/ssr/Info'
+import { WarningCircle } from '@phosphor-icons/react/dist/ssr/WarningCircle'
+import type { Icon } from '@phosphor-icons/react'
 
 export const BTN_WHITE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-[8px] bg-[#F2F3F5] px-5 text-[14px] font-semibold text-[#111214] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
@@ -117,25 +123,39 @@ export function ImagePairView({ attrs }: { attrs: Record<string, unknown> }) {
   )
 }
 
-const TONES: Record<CalloutTone, { label: string; color: string }> = {
-  tip: { label: 'Tip', color: 'var(--color-accent-text)' },
-  warning: { label: 'Warning', color: '#E0B155' },
-  note: { label: 'Note', color: '#8FA7B8' },
-  // The article's summary box: the blog highlight colour (Blog v2).
-  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)' },
+/**
+ * One clearly different hue per box (the value pages' callout hues: blue for
+ * a fact, yellow for a tip), so a reader tells them apart at a glance; the
+ * summary keeps the blog highlight colour (Blog v2).
+ */
+export const CALLOUT_TONES: Record<CalloutTone, { label: string; color: string; Icon: Icon }> = {
+  takeaways: { label: 'Key Takeaways', color: 'var(--color-accent-text)', Icon: ListChecks },
+  tip: { label: 'Tip', color: '#FACC15', Icon: Lightbulb },
+  note: { label: 'Note', color: '#8BBDFB', Icon: Info },
+  warning: { label: 'Warning', color: 'var(--color-error)', Icon: WarningCircle },
 }
 
 export function CalloutView({ tone, children }: { tone: unknown; children: ReactNode }) {
-  const t = TONES[(tone as CalloutTone) in TONES ? (tone as CalloutTone) : 'note']
+  const t = CALLOUT_TONES[(tone as CalloutTone) in CALLOUT_TONES ? (tone as CalloutTone) : 'note']
   return (
-    // A flat dark card with the tone on its edge and label only (no tinted fill).
-    <aside
-      className="mt-7 rounded-[16px] border border-l-[3px] border-white/[0.07] bg-[#1A1B20] px-5 py-4 sm:px-6 sm:py-5 [&>p+p]:mt-3 [&>p]:mt-0 [&>ul]:mt-1 [&>ol]:mt-1"
-      style={{ borderLeftColor: t.color }}
-    >
-      <p className="mb-1.5 text-[13px] font-bold tracking-[0.01em]" style={{ color: t.color }}>{t.label}</p>
+    // The solid blog card; the tone lives in the icon tile and the label.
+    <aside className={`${BLOG_CARD} mt-7 px-5 py-4 sm:px-6 sm:py-5 [&>p+p]:mt-3 [&>p]:mt-0 [&>ul]:mt-1 [&>ol]:mt-1`}>
+      <CalloutHead tone={t} />
       {children}
     </aside>
+  )
+}
+
+/** Icon tile + label in the tone's colour (shared with the editor's box). */
+export function CalloutHead({ tone, className = 'mb-2.5' }: { tone: (typeof CALLOUT_TONES)[CalloutTone]; className?: string }) {
+  const { Icon, color, label } = tone
+  return (
+    <div data-tone-color={color} className={`${className} flex items-center gap-2.5 text-[14px] font-bold`} style={{ color }}>
+      <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${color} 14%, transparent)` }}>
+        <Icon size={17} weight="duotone" />
+      </span>
+      {label}
+    </div>
   )
 }
 
@@ -160,9 +180,9 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
   return (
     <div className="bp-ui mt-7">
       {active.length === 0 ? (
-        <p className="rounded-[10px] bg-[#1D1E23] px-5 py-4 text-[15px] text-text-secondary">No working codes right now.</p>
+        <p className={`${BLOG_CARD} px-5 py-4 text-[15px] text-text-secondary`}>No working codes right now.</p>
       ) : (
-        <ul className="divide-y divide-white/[0.06] rounded-[10px] bg-[#1D1E23]">
+        <ul className={`${BLOG_CARD} divide-y divide-white/[0.06]`}>
           {active.map((r, i) => (
             <li key={i} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
@@ -179,7 +199,7 @@ export function CodesView({ attrs }: { attrs: Record<string, unknown> }) {
       )}
       {checked && Number.isFinite(checked.getTime()) && <p className="mt-2 text-[13px] text-text-tertiary">Last checked {CHECKED.format(checked)}</p>}
       {expired.length > 0 && (
-        <details className="mt-3 rounded-[10px] bg-white/[0.025] px-4 [&_summary::-webkit-details-marker]:hidden">
+        <details className={`${BLOG_CARD} mt-3 px-4 [&_summary::-webkit-details-marker]:hidden`}>
           <summary className="flex min-h-[44px] cursor-pointer items-center text-[14px] font-medium text-text-secondary">Expired Codes ({expired.length})</summary>
           <ul className="pb-3 text-[14px] text-text-tertiary">
             {expired.map((r, i) => (
@@ -199,7 +219,7 @@ export function ItemCardView({ attrs, card }: { attrs: Record<string, unknown>; 
   const name = String(attrs.name || card?.name || itemSlug)
   const image = String(attrs.imageUrl || card?.image?.src || '')
   return (
-    <div className="bp-ui mt-7 flex flex-col gap-4 rounded-[16px] bg-[#1D1E23] p-4 sm:flex-row sm:items-center">
+    <div className={`bp-ui ${BLOG_CARD} mt-7 flex flex-col gap-4 p-4 sm:flex-row sm:items-center`}>
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
