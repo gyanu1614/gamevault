@@ -83,6 +83,6 @@ Pending owner decision: the blog font (research in chat: Eldorado Lato, GameBoos
 - [x] Phone save bar full width on the bottom edge — 4192601e
 - [x] P1 Game picker + admin switch — 0987ffd7 (migration 20261013173019)
 - [x] P2 Codes post type + Codes menu — (migration 20261013173721)
-- [ ] P3 Article design v2 (+ picture size system, table pictures)
-- [ ] P4 Shared background (options first)
-- [ ] Blog font (owner decides after research)
+- [x] P3 Article design v2 — 62438567 type/spacing/colour (blog-prose.css), b5c4edcc picture sizes, 07dbfc2b table pictures
+- [ ] P4 Shared background — options A/B/C sent 2026-10-13 (recommend B, islands at night)
+- [x] Blog font: Lato body + Archivo titles (owner: "we do this too")
