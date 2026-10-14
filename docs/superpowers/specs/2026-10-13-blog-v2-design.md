@@ -84,6 +84,6 @@ Pending owner decision: the blog font (research in chat: Eldorado Lato, GameBoos
 - [x] P1 Game picker + admin switch — 0987ffd7 (migration 20261013173019)
 - [x] P2 Codes post type + Codes menu — (migration 20261013173721)
 - [x] P3 Article design v2 — 62438567 type/spacing/colour (blog-prose.css), b5c4edcc picture sizes, 07dbfc2b table pictures
-- [x] P4 Shared background — B "islands at night" (BlogBackdrop, fixed -z-10 layer in an `isolate` page root; 7 KB + 4 KB AVIFs)
+- [x] P4 Shared background — the marketplace hero (hooded figure over the city), whole page, faint: hero vignette over a 0.88→0.93 scrim (.blog-backdrop). Rejected: blue night tint; side-only band ("grey blur")
 - [x] Codes button beside the game switcher (owner: "a separate button", not a tab); phones: leads the tab sub-row
 - [x] Blog font: Lato body + Archivo titles (owner: "we do this too")

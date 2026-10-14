@@ -12,7 +12,7 @@ const root = process.cwd()
 const css = readFileSync(join(root, 'src/styles/blog-prose.css'), 'utf8')
 
 describe('BlogBackdrop', () => {
-  it('is one decorative layer that hands the picture to the stylesheet (no <img>, so phones never fetch it)', () => {
+  it('is one decorative layer that hands the picture to the stylesheet (no <img>)', () => {
     const html = renderToStaticMarkup(createElement(BlogBackdrop))
     expect(html).toMatch(/^<div aria-hidden="true" class="blog-backdrop" style="--blog-backdrop:url\(([^)]+)\)"><\/div>$/)
     expect(html).toContain(BLOG_BACKDROP_IMAGE)
@@ -23,12 +23,14 @@ describe('BlogBackdrop', () => {
     expect(existsSync(join(root, 'public', BLOG_BACKDROP_IMAGE))).toBe(true)
   })
 
-  it('stylesheet: fixed under the content, picture only from md up', () => {
-    const base = css.match(/^\.blog-backdrop\s*{[^}]*}/m)?.[0] ?? ''
-    expect(base).toMatch(/position:\s*fixed/)
-    expect(base).toMatch(/z-index:\s*-10/)
-    expect(base).not.toContain('--blog-backdrop')
-    expect(css).toMatch(/@media \(min-width: 768px\)\s*{\s*\.blog-backdrop\s*{[^}]*var\(--blog-backdrop\)/)
+  // Owner, 2026-10-13: the whole page, faint — the hero recipe's vignette over a
+  // heavy scrim over the picture; no band, no blur.
+  it('stylesheet: fixed under the content, vignette over scrim over the picture', () => {
+    const rule = css.match(/^\.blog-backdrop\s*{[^}]*}/m)?.[0] ?? ''
+    expect(rule).toMatch(/position:\s*fixed/)
+    expect(rule).toMatch(/z-index:\s*-10/)
+    expect(rule).toMatch(/background:\s*var\(--hero-vignette\),\s*linear-gradient\([^;]*\),\s*var\(--blog-backdrop\)/)
+    expect(rule).not.toMatch(/blur|calc\(50%/)
   })
 
   // Blog home + every article (codes posts render through the article view) share it;

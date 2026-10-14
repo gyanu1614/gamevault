@@ -150,27 +150,16 @@
 .blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
 
 
-/* ── Shared background (BlogBackdrop): picture on the sides, clean behind the text ──
-   Layers, top first: the side scrim (solid ground across the reading column,
-   fading to a light dim at the edges), a bottom fade into the footer, then the
-   picture. The picture is set only from md up, so phones never fetch it. */
+/* ── Shared background (BlogBackdrop): the whole page, faint ──
+   The hero recipe, turned down: the hero vignette (tokens.css) over a heavy
+   even scrim over the picture, so it is barely there but still gives the page
+   depth. Tune the faintness with the scrim's two alphas. */
 .blog-backdrop {
   position: fixed;
   inset: 0;
   z-index: -10;
   pointer-events: none;
-}
-@media (min-width: 768px) {
-  .blog-backdrop {
-    background:
-      linear-gradient(90deg,
-        rgba(var(--color-bg-base-rgb), 0.3) 0,
-        rgba(var(--color-bg-base-rgb), 0.3) calc(50% - 680px),
-        var(--color-bg-base) calc(50% - 400px),
-        var(--color-bg-base) calc(50% + 400px),
-        rgba(var(--color-bg-base-rgb), 0.3) calc(50% + 680px),
-        rgba(var(--color-bg-base-rgb), 0.3) 100%),
-      linear-gradient(180deg, transparent 55%, var(--color-bg-base) 100%),
-      var(--blog-backdrop) center / cover no-repeat;
-  }
+  background: var(--hero-vignette),
+    linear-gradient(rgba(var(--color-bg-base-rgb), 0.88), rgba(var(--color-bg-base-rgb), 0.93)),
+    var(--blog-backdrop) center top / cover no-repeat;
 }
