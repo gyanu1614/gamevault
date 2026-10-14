@@ -259,7 +259,7 @@ export function BlogEditor({ post, games, defaultGameSlug }: { post?: AdminBlogP
             }}
             placeholder="Post title"
             aria-label="Title"
-            className="block w-full resize-none overflow-hidden bg-transparent [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[38px]"
+            className="block w-full resize-none overflow-hidden bg-transparent [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[26px] font-bold leading-[1.2] tracking-[-0.015em] text-text-primary outline-none placeholder:text-text-tertiary sm:text-[30px] lg:text-[34px]"
           />
           <textarea
             ref={excerptRef}

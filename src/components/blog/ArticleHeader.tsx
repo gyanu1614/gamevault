@@ -45,8 +45,9 @@ export function ArticleHeader({
         <span aria-hidden>›</span>
         <span className="text-[color:var(--ct-accent-text,#C9CCD2)]">{kindLabel}</span>
       </nav>
-      {/* Titles in the headline face (Archivo); the text below in the reading face (Lato). */}
-      <h1 className="text-balance [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] text-text-primary sm:text-[40px] lg:text-[44px]">
+      {/* Titles in the headline face (Archivo); the text below in the reading face (Lato).
+          Eldorado-sized (they use 32px): fills the line, wraps only when long; bold, not extra-bold (owner). */}
+      <h1 className="text-pretty [font-family:var(--font-archivo),var(--font-inter),sans-serif] text-[26px] font-bold leading-[1.2] tracking-[-0.015em] text-text-primary sm:text-[30px] lg:text-[34px]">
         {title}
       </h1>
       {excerpt && <p className="blog-type mt-4 text-pretty text-[17px] leading-[1.65] text-[#c2c0cc] sm:text-[19px]">{excerpt}</p>}
