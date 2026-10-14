@@ -15,10 +15,44 @@
  * sidebar still holds the buy card then.
  */
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded'
 import { TOC_MIN_SECTIONS, type HeadingEntry } from '@/lib/blog/render/outline'
 import { BLOG_CARD } from '@/lib/blog/render/surface'
+import { BLOG_SIDE_CELL } from '@/components/blog/layout'
+
+/**
+ * The sidebar list on a short window: it scrolls inside its box, fades at the
+ * bottom while more is below (so it never reads as cut off), and keeps the
+ * current section in view as the reader moves through the post.
+ */
+function useListScroll(ref: RefObject<HTMLElement | null>, active: string): boolean {
+  const [more, setMore] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const sync = () => setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4)
+    sync()
+    el.addEventListener('scroll', sync, { passive: true })
+    const ro = new ResizeObserver(sync)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', sync)
+      ro.disconnect()
+    }
+  }, [ref])
+  useEffect(() => {
+    const el = ref.current
+    const item = el?.querySelector<HTMLElement>(`a[href="#${CSS.escape(active)}"]`)
+    if (!el || !item) return
+    // Scroll the list only (never the page): nudge the item inside the box.
+    const box = el.getBoundingClientRect()
+    const r = item.getBoundingClientRect()
+    if (r.top < box.top) el.scrollTop -= box.top - r.top + 8
+    else if (r.bottom > box.bottom) el.scrollTop += r.bottom - box.bottom + 8
+  }, [ref, active])
+  return more
+}
 
 export function ArticleToc({
   entries,
@@ -32,6 +66,8 @@ export function ArticleToc({
 }) {
   const [active, setActive] = useState<string>(entries[0]?.id ?? '')
   const [open, setOpen] = useState(false)
+  const listRef = useRef<HTMLElement>(null)
+  const more = useListScroll(listRef, active)
 
   useEffect(() => {
     if (entries.length === 0) return
@@ -93,13 +129,19 @@ export function ArticleToc({
   }
 
   return (
-      <aside aria-label={hasList ? 'On this page' : 'Shop'} className="hidden self-stretch lg:block">
+      <aside aria-label={hasList ? 'On this page' : 'Shop'} className={`hidden self-stretch lg:block ${BLOG_SIDE_CELL}`}>
         <div className="sticky top-[136px] flex max-h-[calc(100vh-152px)] flex-col gap-6 xl:top-[96px] xl:max-h-[calc(100vh-112px)]">
           {/* Boxed (Blog v2, like Eldorado's): the current section in the blog highlight colour. */}
           {hasList && (
-            <div className={`blog-type ${BLOG_CARD} flex min-h-0 flex-col p-4`}>
+            // min-h: on a short window the list keeps ~3 rows (it scrolls) rather than vanishing under the buy card.
+            <div className={`blog-type ${BLOG_CARD} flex min-h-[200px] flex-col p-4`}>
               <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
-              <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
+              <nav
+                ref={listRef}
+                className={`min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin] ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
+              >
+                {list()}
+              </nav>
             </div>
           )}
           {rail && <div className="hidden shrink-0 xl:block">{rail}</div>}

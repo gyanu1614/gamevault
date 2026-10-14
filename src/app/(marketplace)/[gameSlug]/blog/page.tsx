@@ -200,7 +200,7 @@ export default async function GameBlogIndex({
   return (
     // Opaque hub ground + the blog's shared night background (one for every
     // game; `isolate` keeps its -z-10 layer between the two — BlogBackdrop).
-    <main className={`relative isolate min-h-screen ${HUB_GROUND} ${blogFont.variable}`}>
+    <main className={`blog-home relative isolate min-h-screen ${HUB_GROUND} ${blogFont.variable}`}>
       <BlogBackdrop />
       {/* Single-row shared hub nav (game switcher + Codes + tools + storefront). */}
       <HubNav data={hubNav} />
