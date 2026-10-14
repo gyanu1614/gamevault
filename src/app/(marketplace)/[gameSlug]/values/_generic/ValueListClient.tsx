@@ -22,6 +22,7 @@ import { DiamondIcon } from '@phosphor-icons/react/dist/csr/Diamond'
 import Link from '@/components/navigation/AppLink'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
 import { CardRank, PriceStatPair, RarityLabel, ValueCard } from '@/components/values/ValueCard'
+import { VariantSelector } from '@/components/values/VariantSelector'
 import { ValueSearchField } from '@/components/values/ValueSearchField'
 import { ValueSelect } from '@/components/values/ValueSelect'
 import { ValuePagination } from '@/components/values/ValuePagination'
@@ -36,10 +37,12 @@ import { useValueListRows } from '@/lib/values/useValueListRows'
 import { ValueCardSkeleton } from './ValueListSkeleton'
 import {
   filterSortValueRows,
+  pairForms,
   valueListTabCounts,
   VALUE_LIST_DEFAULT_SORT as DEFAULT_SORT,
   VALUE_LIST_DEFAULT_VIEW as DEFAULT_VIEW,
   VALUE_LIST_PAGE_SIZE as PAGE_SIZE,
+  type ValueListForms,
   type ValueListRow,
   type ValueListSort as Sort,
 } from './valueListModel'
@@ -80,6 +83,8 @@ export default function ValueListClient({
   const { tabs, itemTypeLabels, pageRarities, searchPlaceholder, imageSource } = hub
   // First page from the HTML, every row once rows.json lands (a few hundred ms).
   const { rows, ready, failed, retry } = useValueListRows<ValueListRow>(gameSlug, initial)
+  // Items in two forms (MM2: standard + Chroma) → the card's Standard / Chroma switch.
+  const forms = useMemo(() => pairForms(rows), [rows])
   const reduceMotion = useReducedMotion()
   const listTopRef = useRef<HTMLDivElement>(null)
 
@@ -276,6 +281,7 @@ Showing{' '}
               gameSlug={gameSlug}
               gameName={gameName}
               row={r}
+              forms={forms.get(r.id)}
               rank={(safePage - 1) * PAGE_SIZE + i + 1}
               typeLabel={r.itemType ? itemTypeLabels[r.itemType] ?? null : null}
             />
@@ -314,20 +320,30 @@ function listPhrase(words: readonly string[]): string {
   return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
 }
 
-/** One item on the shared ValueCard: rank + type · rarity → art + name → listed now + trend → Cheapest / Market. */
+/**
+ * One item on the shared ValueCard: rank + type · rarity → art + name → listed
+ * now + trend → (Standard | Chroma switch) → Cheapest / Market. An item in two
+ * forms switches the whole card to the other form's art, prices and page.
+ */
 function ItemCard({
   gameSlug,
   gameName,
-  row,
+  row: listed,
+  forms,
   rank,
   typeLabel,
 }: {
   gameSlug: string
   gameName: string
   row: ValueListRow
+  forms?: ValueListForms
   rank: number
   typeLabel: string | null
 }) {
+  // Start on the card's own form (a Chroma card has a base); the pair may only
+  // arrive with the full list, after the first page renders.
+  const [form, setForm] = useState<'standard' | 'chroma'>(listed.baseItemId ? 'chroma' : 'standard')
+  const row = forms ? forms[form] : listed
   const rarity = row.rarity ? rarityMeta(gameSlug, row.rarity) : null
   const priced = row.cheapestUsd != null
   const trend = row.trendPct != null && Math.abs(row.trendPct) >= TREND_MIN_PCT ? row.trendPct : null
@@ -366,6 +382,7 @@ function ItemCard({
           </span>
         ) : undefined
       }
+      control={forms ? <FormSwitch gameSlug={gameSlug} form={form} onChange={setForm} /> : undefined}
       footer={
         <PriceStatPair
           empty={priced ? null : 'No Price Yet'}
@@ -375,6 +392,30 @@ function ItemCard({
           ]}
         />
       }
+    />
+  )
+}
+
+/** The card's two forms as one row of chips (no popup: two options are one tap). */
+function FormSwitch({ gameSlug, form, onChange }: { gameSlug: string; form: 'standard' | 'chroma'; onChange: (f: 'standard' | 'chroma') => void }) {
+  const chroma = rarityMeta(gameSlug, 'Chroma')
+  return (
+    <VariantSelector
+      size="xs"
+      labels={false}
+      fill
+      groups={[
+        {
+          id: 'form',
+          label: 'Form',
+          mode: 'single',
+          options: [
+            { key: 'standard', label: 'Standard', color: '#C9CCD2', active: form === 'standard' },
+            { key: 'chroma', label: chroma.label, color: chroma.color, active: form === 'chroma' },
+          ],
+        },
+      ]}
+      onSelect={(_, key) => onChange(key === 'chroma' ? 'chroma' : 'standard')}
     />
   )
 }

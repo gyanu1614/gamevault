@@ -26,6 +26,7 @@ export async function getValueListRows(gameSlug: string): Promise<{ rows: ValueL
       marketUsd: i.price?.averageUsd ?? null,
       listedNow: i.price?.sampleSize ?? 0,
       trendPct: trends.pctByItem[i.id] ?? null,
+      baseItemId: i.baseItemId ?? null,
     }
   })
   return { rows, hasTrends: Object.keys(trends.pctByItem).length > 0 }

@@ -33,6 +33,7 @@ export function CompactVariantPicker({
   labels = true,
   merged = false,
   fill = false,
+  size,
 }: {
   variant: Variant
   onChange: (v: Variant) => void
@@ -49,6 +50,8 @@ export function CompactVariantPicker({
   merged?: boolean
   /** Full-width trays, options shared evenly (the item hero, under the art). */
   fill?: boolean
+  /** Chip size; defaults to sm inline, md stacked. xs inside a list card's popup. */
+  size?: 'md' | 'sm' | 'xs'
 }) {
   const groups = amSelectorGroups(variant, { format: formatUsd, isAvailable, priceOf })
   const select = (groupId: string, key: string) => {
@@ -63,7 +66,7 @@ export function CompactVariantPicker({
         groups={groups}
         onSelect={select}
         accent={accent}
-        size={layout === 'inline' ? 'sm' : 'md'}
+        size={size ?? (layout === 'inline' ? 'sm' : 'md')}
         labels={labels && layout !== 'inline'}
         merged={merged}
         fill={fill}

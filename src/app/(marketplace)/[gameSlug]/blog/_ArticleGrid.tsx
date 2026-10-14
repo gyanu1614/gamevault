@@ -1,7 +1,9 @@
 /**
- * "All <game> guides" — a clean, uniform card GRID (newest first). Replaced the
- * Embla carousel whose variable-height / fixed-width cards read as glitchy: now
- * every card is the same fixed-ratio tile in a responsive grid, so nothing jumps.
+ * "All <game> guides" (newest first), uniform cards so nothing jumps:
+ *  - phones: a swipeable row (CSS scroll-snap, no carousel library — the old
+ *    Embla one read as glitchy), one card with the next one peeking;
+ *  - sm+: a grid, 3 then 4 across — short cards: cover, title, meta (owner,
+ *    2026-10-14: the summary made every card too long).
  */
 
 import Link from '@/components/navigation/AppLink'
@@ -43,9 +45,11 @@ export function ArticleGrid({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
         {posts.map((post) => (
-          <GuideCard key={post.slug} gameSlug={gameSlug} post={post} />
+          <div key={post.slug} className="w-[78%] max-w-[320px] shrink-0 snap-start sm:w-auto sm:max-w-none">
+            <GuideCard gameSlug={gameSlug} post={post} />
+          </div>
         ))}
       </div>
     </section>
@@ -55,10 +59,10 @@ export function ArticleGrid({
 /* ─── 4A blog post card ──────────────────────────────────────────────────── */
 
 /**
- * Uniform blog card — fills its grid cell, same structure every time so a grid
- * of them never jumps: fixed 16:9 cover, category eyebrow, 2-line-clamped title,
- * 2-line excerpt, and a meta footer pinned to the bottom (mt-auto).
- * Exported so the admin editor preview stays pixel-identical.
+ * Uniform blog card — fills its cell, same structure every time so a row of
+ * them never jumps: fixed 16:9 cover, category eyebrow, 2-line-clamped title
+ * (no summary: it made the cards too long), and a meta footer pinned to the
+ * bottom (mt-auto). Exported so the admin editor preview stays pixel-identical.
  */
 export function GuideCard({
   gameSlug,
@@ -97,14 +101,11 @@ export function GuideCard({
       </div>
 
       {/* Body — grows to fill; meta pinned to the bottom so all cards align. */}
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="line-clamp-2 text-balance text-[17px] font-semibold leading-[1.25] tracking-[-0.02em] text-text-primary sm:text-[18px]">
+      <div className="flex flex-1 flex-col gap-2 p-3.5">
+        <h3 className="line-clamp-2 text-balance text-[15.5px] font-semibold leading-[1.3] tracking-[-0.01em] text-text-primary">
           {post.title}
         </h3>
-        {post.excerpt && (
-          <p className="line-clamp-2 text-[13px] leading-[1.5] text-text-secondary">{post.excerpt}</p>
-        )}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <span className="flex items-center gap-2 text-[11.5px] font-medium text-text-tertiary">
             <span>{post.date}</span>
             <span aria-hidden className="h-1 w-1 rounded-full bg-white/20" />

@@ -7,8 +7,10 @@ import { VALUE_LABEL, VALUE_SURFACE } from './styles'
  * the generic values_* pipeline). Game differences come in through props and
  * slots: every game passes its variants as `picker` — the universal
  * VariantSelector (SAB mutations, Adopt Me tier/potion, MM2 forms). Layout:
- * the picture with the selector under it · the identity (the title, then
- * the item's facts as rows: Type, Rarity, Availability, …) · the price
+ * the picture · the identity (the title, the item's facts — Type, Rarity,
+ * Availability, … — then the selector as a row under them on desktop, owner
+ * 2026-10-14: under the art it showed two mutations; phones keep it under the
+ * picture) · the price
  * column top right with the Buy/Sell pair; the identity starts at the top
  * (owner, 2026-10-12); the freshness line sits under the buttons; then `below`.
  *
@@ -69,7 +71,7 @@ export function ValueItemHero({
               {art.caption && (
                 <div className="-mt-2 max-w-[232px] text-center text-[10.5px] leading-snug text-text-tertiary">{art.caption}</div>
               )}
-              {picker && <div className="w-full">{picker}</div>}
+              {picker && <div className="w-full lg:hidden">{picker}</div>}
             </div>
           )}
 
@@ -94,8 +96,9 @@ export function ValueItemHero({
                 ))}
               </dl>
             )}
-            {/* No art (some generic items): the picker sits under the title block. */}
-            {!art && picker && <div className="mt-5">{picker}</div>}
+            {/* Desktop: the picker as a row under the facts, beside the picture.
+                No art (some generic items): there on every screen. */}
+            {picker && <div className={art ? 'mt-5 hidden lg:block' : 'mt-5'}>{picker}</div>}
           </div>
 
           {(price || actions) && (

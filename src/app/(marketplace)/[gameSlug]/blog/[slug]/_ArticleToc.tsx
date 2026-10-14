@@ -139,7 +139,7 @@ export function ArticleToc({
               <p className="mb-1.5 text-[13px] font-bold text-text-primary">On This Page</p>
               <nav
                 ref={listRef}
-                className={`min-h-0 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin] ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
+                className={`min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${more ? '[mask-image:linear-gradient(to_bottom,#000_calc(100%-36px),transparent)]' : ''}`}
               >
                 {list()}
               </nav>

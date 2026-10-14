@@ -937,7 +937,12 @@ export default async function BrainrotValuePage({ params }: PageProps) {
         />
 
         {/* Curated FAQ — unique per brainrot (SEO) + FAQPage structured data. */}
-        <HubFaqSection title={`${brainrot.name} — questions`} items={faqItems} />
+        {/* Search-shaped heading (owner, 2026-10-14: "Griffin — questions" read as a placeholder). */}
+        <HubFaqSection
+          title={`${brainrot.name} FAQ`}
+          subtitle={`What ${brainrot.name} is worth, how to get it and how to trade it in Steal a Brainrot.`}
+          items={faqItems}
+        />
       </div>
       <JsonLd data={faqPage(faqItems)} />
 
