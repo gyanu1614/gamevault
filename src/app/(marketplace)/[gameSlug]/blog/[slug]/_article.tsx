@@ -30,10 +30,9 @@ import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { contentThemeVars, getGameContentTheme } from '@/lib/content/theme'
 import { getGameRails, getRailSettings } from '@/lib/buy-rails/server'
 import { barCard } from '@/lib/buy-rails/model'
-import { BuyRail } from '@/components/buy-rails/BuyRail'
 import { BuyBar } from '@/components/buy-rails/BuyBar'
 import { RailCardView } from '@/components/buy-rails/RailCardView'
-import { RAIL_GRID } from '@/components/buy-rails/geometry'
+import { BLOG_PAGE_BOX, BLOG_PAGE_GRID } from '@/components/blog/layout'
 import { ArticleToc } from './_ArticleToc'
 import { ArticleHeader } from '@/components/blog/ArticleHeader'
 import { ArticleCover } from '@/components/blog/ArticleCover'
@@ -112,13 +111,11 @@ export async function ArticleView({
     loadTableItems(gameSlug, collectTableItemNames(doc)),
   ])
 
-  // Buy rails: live currency card left (under the contents list), items card
-  // right, from 1280px; one bottom bar below that. Admin switch: /admin/buy-rails.
-  const showRails = railSettings.blog && !!(rails.currency || rails.items)
+  // Buy card: ONE, in the right sidebar under the contents list, from 1280px
+  // (items first, else currency); one bottom bar below that. Admin switch: /admin/buy-rails.
+  const railCard = railSettings.blog ? (rails.items ?? rails.currency) : null
+  const sideRail = railCard ? <RailCardView card={railCard} surface="blog" position="right" size={hasToc ? 'short' : 'tall'} /> : null
   const bar = railSettings.blog ? barCard(rails) : null
-  const currencyRail = showRails && rails.currency ? (
-    <RailCardView card={rails.currency} surface="blog" position="left" size={hasToc ? 'short' : 'tall'} />
-  ) : null
 
   // Money pages that match the post's intent, only where the game has them.
   const values: RelatedTool | null = hubNav.tools.includes('values')
@@ -161,23 +158,13 @@ export async function ArticleView({
       />
       {faqs.length > 0 && <JsonLd data={faqPage(faqs)} />}
 
-      {/* The blog's shared night background (one for every game), the nav, then ONE grid
-          whose middle column holds the header, cover and body — so the title,
-          the text and the cover share one left edge (the old header was
-          centred on the page, the text on the column: three left edges). */}
+      {/* The shared background (art outside the page box), the nav, then the
+          page box: ONE wide column (header, cover, body share one left edge)
+          and the right sidebar (contents list + buy card) — layout.ts. */}
       <BlogBackdrop />
       <HubNav data={hubNav} />
-      <div className={`relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR} ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
-        <div
-          // minmax(0,1fr): nothing inside (a table, the contents bar) may widen the column past the phone.
-          className={`grid grid-cols-[minmax(0,1fr)] items-start gap-x-10 ${hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-x-12' : ''} ${showRails ? RAIL_GRID : ''}`}
-        >
-          {hasToc ? (
-            <ArticleToc entries={toc} rail={currencyRail} variant="column" />
-          ) : showRails ? (
-            <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
-          ) : null}
-
+      <div className={`relative mx-auto w-full ${BLOG_PAGE_BOX} px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR}`}>
+        <div className={BLOG_PAGE_GRID}>
           <article className="min-w-0">
             <ArticleHeader
               gameSlug={gameSlug}
@@ -200,11 +187,7 @@ export async function ArticleView({
             <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
           </article>
 
-          {showRails && (
-            <BuyRail label={rails.items?.title ?? 'Shop'}>
-              {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
-            </BuyRail>
-          )}
+          <ArticleToc entries={hasToc ? toc : []} rail={sideRail} variant="column" />
         </div>
       </div>
       {bar && <BuyBar card={bar} surface="blog" mode="scroll" closable />}

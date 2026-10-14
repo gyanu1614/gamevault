@@ -7,11 +7,12 @@
  * rows: 97px, 109px from sm), never over its tabs. It names the section you
  * are in; tap to open the list, pick a section, it closes.
  *
- * Desktop (lg+): a sticky list in the left column with its own scroll, so a
- * long contents list is never cut off; the active section is marked. At xl
- * the currency rail card stacks under it.
+ * Desktop (lg+): the right sidebar (Blog v2, Eldorado's layout): a sticky
+ * boxed list with its own scroll, so a long contents list is never cut off;
+ * the active section is marked. At xl the buy card stacks under it.
  *
- * Shown only for posts with 3+ sections (fewer is noise).
+ * The list shows only for posts with 3+ sections (fewer is noise); the
+ * sidebar still holds the buy card then.
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
@@ -26,7 +27,7 @@ export function ArticleToc({
 }: {
   entries: HeadingEntry[]
   rail?: ReactNode
-  /** bar = the phone/tablet bar (placed in the article, under the cover); column = the desktop left column. */
+  /** bar = the phone/tablet bar (placed in the article, under the cover); column = the desktop right sidebar. */
   variant: 'bar' | 'column'
 }) {
   const [active, setActive] = useState<string>(entries[0]?.id ?? '')
@@ -48,7 +49,8 @@ export function ArticleToc({
     return () => observer.disconnect()
   }, [entries])
 
-  if (entries.length < TOC_MIN_SECTIONS) return null
+  const hasList = entries.length >= TOC_MIN_SECTIONS
+  if (!hasList && (variant === 'bar' || !rail)) return null
   const current = entries.find((e) => e.id === active) ?? entries[0]
 
   const list = (onPick?: () => void) =>
@@ -91,14 +93,16 @@ export function ArticleToc({
   }
 
   return (
-      <aside aria-label="On this page" className="hidden self-stretch lg:block">
-        <div className="sticky top-[136px] flex max-h-[calc(100vh-152px)] flex-col xl:top-[96px] xl:max-h-[calc(100vh-112px)]">
+      <aside aria-label={hasList ? 'On this page' : 'Shop'} className="hidden self-stretch lg:block">
+        <div className="sticky top-[136px] flex max-h-[calc(100vh-152px)] flex-col gap-6 xl:top-[96px] xl:max-h-[calc(100vh-112px)]">
           {/* Boxed (Blog v2, like Eldorado's): the current section in the blog highlight colour. */}
-          <div className={`blog-type ${BLOG_CARD} flex min-h-0 flex-col p-4`}>
-            <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
-            <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
-          </div>
-          {rail && <div className="mt-6 hidden shrink-0 xl:block">{rail}</div>}
+          {hasList && (
+            <div className={`blog-type ${BLOG_CARD} flex min-h-0 flex-col p-4`}>
+              <p className="mb-2 text-[14px] font-bold text-text-primary">On This Page</p>
+              <nav className="min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">{list()}</nav>
+            </div>
+          )}
+          {rail && <div className="hidden shrink-0 xl:block">{rail}</div>}
         </div>
       </aside>
   )

@@ -5,7 +5,7 @@
  * so both show a picture the same way.
  *
  *  - photo  (640px+ wide, or size unknown): fills the column, height capped
- *           (560px in the column, 640px when Wide) so a tall photo never
+ *           (560px, 640px when Wide) so a tall photo never
  *           takes the whole screen; rounded corners + blur placeholder.
  *  - small  (under 640px wide): one standard height (240px), centred — but
  *           never blown up past 1.5× its own size (that would look soft).

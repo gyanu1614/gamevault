@@ -21,6 +21,10 @@
   font-family: var(--font-blog), var(--font-inter), system-ui, sans-serif;
 }
 
+/* The article's page box (components/blog/layout.ts): 820 column + 48 gap +
+   300 sidebar + 2×32 gutter. The background art lives outside it. */
+:root { --blog-page-w: 1232px; }
+
 .blog-prose {
   --bp-text: #c2c0cc;
   --bp-strong: #ffffff;
@@ -100,7 +104,7 @@
 .blog-prose hr:not(.bp-ui *) { margin: 44px 0 8px; border: 0; border-top: 1px solid var(--bp-rule); }
 
 /* ── Tables: a solid card (render/surface.ts BLOG_CARD values), darker
-      header band, bold first column ─────────────────────────────────── */
+      header band, striped rows, bold first column ──────────────────── */
 .blog-prose .blog-table,
 .blog-prose .tableWrapper /* the editor's table box (Tiptap) */ {
   margin-top: 24px;
@@ -128,6 +132,13 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .blog-prose td:not(.bp-ui *):first-child { color: var(--bp-strong); font-weight: 700; }
+/* One row dark, the next light; a hairline between columns (owner). Row 1 is the header. */
+.blog-prose tr:nth-child(even) > td:not(.bp-ui *) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.blog-prose :is(th, td):not(.bp-ui *) + :is(th, td) {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
 .blog-prose th:not(.bp-ui *) > p,
 .blog-prose td:not(.bp-ui *) > p { margin-top: 0; }
 
@@ -153,16 +164,25 @@
 .blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
 
 
-/* ── Shared background (BlogBackdrop): the whole page, faint ──
-   The hero recipe, turned down: the hero vignette (tokens.css) over a heavy
-   even scrim over the picture, so it is barely there but still gives the page
-   depth. Tune the faintness with the scrim's two alphas. */
+/* ── Shared background (BlogBackdrop): side art, never behind the text ──
+   Eldorado's one background: a faint character cut-out in the empty strip
+   left of the page box (--blog-page-w). Only where that strip is wide enough
+   (1600px+); smaller screens keep the plain ground and never fetch the art. */
 .blog-backdrop {
   position: fixed;
   inset: 0;
   z-index: -10;
   pointer-events: none;
-  background: var(--hero-vignette),
-    linear-gradient(rgba(var(--color-bg-base-rgb), 0.88), rgba(var(--color-bg-base-rgb), 0.93)),
-    var(--blog-backdrop) center top / cover no-repeat;
+}
+@media (min-width: 1600px) {
+  .blog-backdrop::before {
+    content: '';
+    position: absolute;
+    top: 68px; /* under the nav */
+    bottom: 0;
+    left: 0;
+    width: calc((100% - var(--blog-page-w)) / 2);
+    background: var(--blog-backdrop) center 45% / contain no-repeat;
+    opacity: 0.4;
+  }
 }

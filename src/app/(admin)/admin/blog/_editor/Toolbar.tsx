@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import { SLASH_ITEMS } from './slash'
 import { uploadImage } from './upload'
 import { splitLines } from './lines'
+import { ColorPicker } from './ColorPicker'
 
 /** Buttons hand the cursor back where it was without moving the page (iPhone jumped). */
 const NO_SCROLL = { scrollIntoView: false }
@@ -40,6 +41,7 @@ function useMarks(editor: Editor) {
       italic: e.isActive('italic'),
       link: e.isActive('link'),
       href: String(e.getAttributes('link').href ?? ''),
+      color: String(e.getAttributes('textStyle').color ?? ''),
       h2: e.isActive('heading', { level: 2 }),
       h3: e.isActive('heading', { level: 3 }),
       bullet: e.isActive('bulletList'),
@@ -110,8 +112,8 @@ function Icon({ label, on, onClick, disabled, children }: { label: string; on?: 
   )
 }
 
-/** Bold, italic, link + the heading levels — shared by the toolbar and the selection menu. */
-function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }) {
+/** Bold, italic, link + the heading levels — shared by the toolbar and the selection menu (colour: toolbar only, see ColorPicker). */
+function TextControls({ editor, onLink, withColor = false }: { editor: Editor; onLink: () => void; withColor?: boolean }) {
   const s = useMarks(editor)
   const c = () => editor.chain().focus(undefined, NO_SCROLL)
   // Block styles change the line(s) the cursor or selection is on — never more.
@@ -125,6 +127,7 @@ function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }
       <Icon label="Bold" on={s.bold} onClick={() => c().toggleBold().run()}><FormatBoldRounded sx={{ fontSize: 18 }} /></Icon>
       <Icon label="Italic" on={s.italic} onClick={() => c().toggleItalic().run()}><FormatItalicRounded sx={{ fontSize: 18 }} /></Icon>
       <Icon label="Link" on={s.link} onClick={onLink}><LinkRounded sx={{ fontSize: 18 }} /></Icon>
+      {withColor && <ColorPicker editor={editor} current={s.color} className={btn(!!s.color)} />}
     </>
   )
 }
@@ -183,7 +186,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
         <LinkField editor={editor} href={s.href} onDone={() => setLinking(false)} />
       ) : (
         <>
-          <TextControls editor={editor} onLink={() => setLinking(true)} />
+          <TextControls editor={editor} onLink={() => setLinking(true)} withColor />
           <Icon label="Bullet list" on={s.bullet} onClick={() => c().toggleBulletList().run()}><FormatListBulletedRounded sx={{ fontSize: 18 }} /></Icon>
           <Icon label="Numbered list" on={s.ordered} onClick={() => c().toggleOrderedList().run()}><FormatListNumberedRounded sx={{ fontSize: 18 }} /></Icon>
           <span aria-hidden className="mx-1 h-5 w-px bg-white/[0.08]" />

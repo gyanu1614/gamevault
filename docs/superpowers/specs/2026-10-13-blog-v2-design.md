@@ -84,6 +84,10 @@ Pending owner decision: the blog font (research in chat: Eldorado Lato, GameBoos
 - [x] P1 Game picker + admin switch — 0987ffd7 (migration 20261013173019)
 - [x] P2 Codes post type + Codes menu — (migration 20261013173721)
 - [x] P3 Article design v2 — 62438567 type/spacing/colour (blog-prose.css), b5c4edcc picture sizes, 07dbfc2b table pictures
-- [x] P4 Shared background — the marketplace hero (hooded figure over the city), whole page, faint: hero vignette over a 0.88→0.93 scrim (.blog-backdrop). Rejected: blue night tint; side-only band ("grey blur")
+- [x] P4 Shared background — Eldorado's one background: a faint character cut-out in the empty strip left of the page box, 1600px+ only (.blog-backdrop::before). Interim art = hooded figure from marketplace.avif (public/assets/blog/backdrop-art.webp); owner to upload a character PNG. Rejected: blue night tint; full-photo side band ("grey blur"); full-page faint photo ("bg behind text looks bad")
+- [x] Solid cards (BLOG_CARD) for boxes/tables/contents; boxes get icon tiles + distinct hues (green summary, yellow tip, blue note, red warning)
+- [x] Layout v3 (owner: "text too narrow"): one 820px column + right sidebar (contents + one buy card); page box --blog-page-w 1232px; editor + preview widths match
+- [x] Tables: striped rows + column hairlines
+- [x] Text colour picker (toolbar): 12 swatches + any colour + remove; hex-only on the page (doc/color.ts); pasted colours stripped
 - [x] Codes button beside the game switcher (owner: "a separate button", not a tab); phones: leads the tab sub-row
 - [x] Blog font: Lato body + Archivo titles (owner: "we do this too")

@@ -39,7 +39,7 @@ export function ArticleHeader({
   const edited = !!updatedAt && updatedAt > publishedAt
   const date = fmt(edited ? updatedAt : publishedAt)
   return (
-    <header className="mx-auto w-full max-w-[700px]">
+    <header className="w-full">
       <nav aria-label="Breadcrumb" className="mb-5 flex items-center gap-1.5 text-[13px] text-text-tertiary">
         <Link href={`/${gameSlug}/blog`} className="hover:text-text-primary">{gameName} Guides</Link>
         <span aria-hidden>›</span>

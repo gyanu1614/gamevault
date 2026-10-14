@@ -23,14 +23,19 @@ describe('BlogBackdrop', () => {
     expect(existsSync(join(root, 'public', BLOG_BACKDROP_IMAGE))).toBe(true)
   })
 
-  // Owner, 2026-10-13: the whole page, faint — the hero recipe's vignette over a
-  // heavy scrim over the picture; no band, no blur.
-  it('stylesheet: fixed under the content, vignette over scrim over the picture', () => {
+  // Owner, 2026-10-13 (Eldorado's one background): nothing behind the text —
+  // a faint character in the empty strip beside the page box, wide screens only.
+  it('stylesheet: a fixed layer with no picture of its own', () => {
     const rule = css.match(/^\.blog-backdrop\s*{[^}]*}/m)?.[0] ?? ''
     expect(rule).toMatch(/position:\s*fixed/)
     expect(rule).toMatch(/z-index:\s*-10/)
-    expect(rule).toMatch(/background:\s*var\(--hero-vignette\),\s*linear-gradient\([^;]*\),\s*var\(--blog-backdrop\)/)
-    expect(rule).not.toMatch(/blur|calc\(50%/)
+    expect(rule).not.toContain('--blog-backdrop')
+  })
+
+  it('stylesheet: the art sits only in the strip outside the page box, from 1600px', () => {
+    const art = css.match(/@media \(min-width: 1600px\)\s*{\s*\.blog-backdrop::before\s*{[^}]*}/)?.[0] ?? ''
+    expect(art).toContain('var(--blog-backdrop)')
+    expect(art).toMatch(/width:\s*calc\(\(100% - var\(--blog-page-w\)\) \/ 2\)/)
   })
 
   // Blog home + every article (codes posts render through the article view) share it;

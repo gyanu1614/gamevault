@@ -21,6 +21,7 @@ import { uploadImage } from './upload'
 import { fitHeadings, fitHtmlHeadings, hasPostMarkers, htmlHasPostMarkers, imgToFigureHtml, looksLikeMarkdown, wrapDirectives } from '@/lib/blog/editor/paste'
 import { legacyToDoc } from '@/lib/blog/doc/legacy'
 import { foldFaqSections } from '@/lib/blog/doc/faq'
+import { stripPastedColors } from '@/lib/blog/doc/color'
 import type { DocNode } from '@/lib/blog/doc/types'
 
 /** Copied rich text that already carries structure. */
@@ -63,6 +64,8 @@ const PasteMarkdown = Extension.create({
     return [
       new Plugin({
         props: {
+          // A web page's text colours (often black) never come along; picked colours are the writer's.
+          transformPastedHTML: stripPastedColors,
           handlePaste: (view, event) => {
             const data = event.clipboardData
             if (!data || data.files.length > 0) return false
@@ -72,7 +75,7 @@ const PasteMarkdown = Extension.create({
             // tables, and turn our ::tip boxes / image placeholders into blocks.
             if (RICH_HTML.test(html)) {
               if (!htmlHasPostMarkers(html)) return false
-              const dom = new window.DOMParser().parseFromString(fitHtmlHeadings(imgToFigureHtml(html)), 'text/html')
+              const dom = new window.DOMParser().parseFromString(fitHtmlHeadings(imgToFigureHtml(stripPastedColors(html))), 'text/html')
               const parsed = PMDOMParser.fromSchema(view.state.schema).parse(dom.body).toJSON() as { content?: DocNode[] }
               return editor.commands.insertContent(foldFaqSections(wrapDirectives(parsed.content ?? [])))
             }

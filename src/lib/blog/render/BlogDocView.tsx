@@ -3,9 +3,9 @@
  * no editor code in the page). One renderer for every post: legacy bodies are
  * converted to the same doc first (readBody → legacyToDoc).
  *
- * Layout is a breakout grid: every block sits in a 700px reading column; a
- * "wide" figure spans the whole cell up to 960px — never past the cell, so it
- * can't slide under the contents list or the buy rails beside it.
+ * Layout: every block fills the reading column (up to 820px, beside the
+ * right sidebar — components/blog/layout.ts); a "wide" picture just gets a
+ * taller height cap (picture-size.ts).
  */
 import { createElement, type ReactNode } from 'react'
 import { renderToReactElement } from '@tiptap/static-renderer/pm/react'
@@ -16,6 +16,7 @@ import type { BlogDoc } from '@/lib/blog/doc/types'
 import { collectHeadings } from './outline'
 import { classifyHref, gamePath } from './links'
 import { pruneEmpty } from './prune'
+import { safeColor } from '@/lib/blog/doc/color'
 import { itemKey } from './outline'
 import type { LinkedItem } from '@/lib/blog/item-catalog'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
@@ -41,12 +42,11 @@ const hasCellImage = (n: PmNode) => {
 const HEADING_ANCHOR = 'scroll-mt-[calc(var(--hub-nav-h,112px)+56px)]'
 
 /**
- * The block grid: every block in the 700px reading column, a wide picture up
- * to 960px — never past the cell. Type, colour and spacing come from ONE
- * stylesheet shared with the editor (src/styles/blog-prose.css, `.blog-prose`).
+ * The block grid: one column (grid items' top margins never collapse — see
+ * blog-prose.css). Type, colour and spacing come from ONE stylesheet shared
+ * with the editor (src/styles/blog-prose.css, `.blog-prose`).
  */
-export const BLOG_PROSE_GRID =
-  'blog-prose blog-type grid grid-cols-[minmax(0,1fr)_minmax(0,700px)_minmax(0,1fr)] [&>*]:col-start-2 [&>.blog-wide]:col-[1/-1] [&>.blog-wide]:w-full [&>.blog-wide]:max-w-[960px] [&>.blog-wide]:justify-self-center'
+export const BLOG_PROSE_GRID = 'blog-prose blog-type grid grid-cols-[minmax(0,1fr)]'
 
 export function BlogDocView({
   doc,
@@ -130,6 +130,11 @@ export function BlogDocView({
           if ('external' in kind)
             return createElement('a', { href: kind.external, target: '_blank', rel: 'noopener noreferrer nofollow' }, children)
           return <>{children}</>
+        },
+        // A picked text colour: hex only (doc/color.ts), else the text without it.
+        textStyle: ({ mark, children }: { mark: { attrs: Record<string, unknown> }; children?: ReactNode }) => {
+          const color = safeColor(mark.attrs.color)
+          return color ? <span style={{ color }}>{children}</span> : <>{children}</>
         },
       },
     },

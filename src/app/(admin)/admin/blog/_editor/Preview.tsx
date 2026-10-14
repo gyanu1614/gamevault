@@ -68,7 +68,7 @@ export function Preview({
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#0E0F11] py-8">
-          <div className={cn('mx-auto px-4', width === 'phone' ? 'w-[390px] rounded-[18px] border border-white/[0.08] py-6' : 'w-full max-w-[1000px] sm:px-6')}>
+          <div className={cn('mx-auto px-4', width === 'phone' ? 'w-[390px] rounded-[18px] border border-white/[0.08] py-6' : 'w-full max-w-[868px] sm:px-6')}>
             <ArticleHeader
               gameSlug={gameSlug}
               gameName={gameName}

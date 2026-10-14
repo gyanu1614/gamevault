@@ -25,10 +25,11 @@ const BTN_QUIET =
   'inline-flex h-11 items-center justify-center rounded-[8px] bg-white/[0.06] px-4 text-[14px] font-semibold text-text-primary transition-colors hover:bg-white/[0.1]'
 
 const srcSet = (list: SrcItem[]) => list.map((s) => `${s.url} ${s.w}w`).join(', ')
+// The reading column is up to 820px (components/blog/layout.ts); a Wide picture fills it too, just taller.
 const SIZES = {
-  column: '(min-width: 768px) 700px, calc(100vw - 32px)',
-  wide: '(min-width: 1024px) 960px, calc(100vw - 32px)',
-  half: '(min-width: 768px) 350px, calc(100vw - 32px)',
+  column: '(min-width: 1024px) 820px, calc(100vw - 32px)',
+  wide: '(min-width: 1024px) 820px, calc(100vw - 32px)',
+  half: '(min-width: 1024px) 410px, calc(100vw - 32px)',
 } as const
 
 /** <picture> with AVIF + WebP widths; width/height always set when known (no layout jump). */

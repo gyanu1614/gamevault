@@ -44,6 +44,13 @@ describe('blog card surface', () => {
     expect(rule).toContain('background: linear-gradient(180deg, #212228 0%, #1A1B1F 100%)')
   })
 
+  // Owner: "one row dark, the other light", like the reference table.
+  it('tables alternate their rows and split their columns', () => {
+    const css = readFileSync(join(root, 'src/styles/blog-prose.css'), 'utf8')
+    expect(css).toMatch(/\.blog-prose tr:nth-child\(even\) > td:not\(\.bp-ui \*\)\s*{\s*background:/)
+    expect(css).toMatch(/\+ :is\(th, td\)\s*{\s*border-left:/)
+  })
+
   it('the contents box is the same card', () => {
     const toc = readFileSync(join(root, 'src/app/(marketplace)/[gameSlug]/blog/[slug]/_ArticleToc.tsx'), 'utf8')
     expect(toc).toContain('BLOG_CARD')

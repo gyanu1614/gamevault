@@ -5,12 +5,14 @@
  * pulls editor UI into a public bundle.
  *
  * Built-in (StarterKit): paragraph, heading 2/3, bold, italic, link, bullet
- * and numbered lists, quote, divider, hard break. Tables via TableKit.
+ * and numbered lists, quote, divider, hard break. Tables via TableKit. Text
+ * colour via TextStyle + Color (hex only on the page — doc/color.ts).
  * Ours: figure, imagePair, callout, faq, codes, itemCard, cta, youtube.
  */
 import { Node, mergeAttributes, type Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
+import { Color, TextStyle } from '@tiptap/extension-text-style'
 
 /** A JSON-valued attribute (stored as is in the doc). */
 const json = <T>(fallback: T) => ({
@@ -47,7 +49,7 @@ export const Figure = atom(
     alpha: json(null),
     alt: text(),
     caption: text(),
-    /** column = the reading column; wide = up to 960px on desktop. Phones: always the column. */
+    /** column = the reading column; wide = the column with a taller height cap (picture-size.ts). */
     layout: text('column'),
   },
   'figure',
@@ -112,6 +114,8 @@ export function blogBaseExtensions(): Extensions {
       strike: false,
     }),
     TableKit.configure({ table: { resizable: false } }),
+    TextStyle,
+    Color.configure({ types: ['textStyle'] }),
   ]
 }
 

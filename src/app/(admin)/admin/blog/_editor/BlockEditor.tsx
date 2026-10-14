@@ -78,7 +78,8 @@ export function BlockEditor({ initial, onChange }: { initial: BlogDoc; onChange:
           <DragIndicatorRounded sx={{ fontSize: 18 }} />
         </span>
       </DragHandle>
-      <div className="pt-6 sm:pl-6">
+      {/* The article's reading column (820px) + the drag-handle gutter: lines wrap where readers' do. */}
+      <div className="mx-auto max-w-[844px] pt-6 sm:pl-6">
         <EditorContent editor={editor} />
       </div>
     </div>
