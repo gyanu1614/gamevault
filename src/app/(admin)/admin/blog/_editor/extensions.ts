@@ -14,7 +14,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
 import FileHandler from '@tiptap/extension-file-handler'
 import { toast } from 'sonner'
-import { blogBaseExtensions, Callout, Codes, Cta, Faq, Figure, ImagePair, ItemCard, YouTube } from '@/lib/blog/doc/schema'
+import { blogBaseExtensions, Callout, CellImage, Codes, Cta, Faq, Figure, ImagePair, ItemCard, YouTube } from '@/lib/blog/doc/schema'
 import { CalloutNV, CodesNV, CtaNV, FaqNV, FigureNV, ImagePairNV, ItemCardNV, YouTubeNV } from './node-views'
 import { SlashCommand } from './slash'
 import { uploadImage } from './upload'
@@ -107,6 +107,8 @@ export function editorExtensions(): Extensions {
     ItemCard.extend({ addNodeView: () => ReactNodeViewRenderer(ItemCardNV) }),
     Cta.extend({ addNodeView: () => ReactNodeViewRenderer(CtaNV) }),
     YouTube.extend({ addNodeView: () => ReactNodeViewRenderer(YouTubeNV) }),
+    // A table picture renders as its fixed square straight from the schema (blog-prose.css).
+    CellImage,
     Placeholder.configure({
       placeholder: ({ node }) => (node.type.name === 'heading' ? 'Heading' : 'Write, or type / for images, tables, tips and more'),
     }),

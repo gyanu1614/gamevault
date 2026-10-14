@@ -16,8 +16,8 @@ import { createAnonClient } from '@/lib/supabase/anon'
 import { getPostsTaggedForGame, type DbBlogPost } from '@/lib/blog/db'
 import { readBody } from '@/lib/blog/doc/body'
 import { BlogDocView } from '@/lib/blog/render/BlogDocView'
-import { TOC_MIN_SECTIONS, collectHeadings, collectItemRefs, docReadMinutes, docWordCount } from '@/lib/blog/render/outline'
-import { loadItemCards } from '@/lib/blog/render/items-server'
+import { TOC_MIN_SECTIONS, collectHeadings, collectItemRefs, collectTableItemNames, docReadMinutes, docWordCount } from '@/lib/blog/render/outline'
+import { loadItemCards, loadTableItems } from '@/lib/blog/render/items-server'
 import { JsonLd, breadcrumbList, blogPosting, faqPage } from '@/lib/seo/jsonld'
 import { faqItems } from '@/lib/blog/doc/faq'
 import { stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
@@ -103,12 +103,13 @@ export async function ArticleView({
   const faqs = faqItems(doc)
   const theme = getGameContentTheme(gameSlug)
 
-  const [tagged, hubNav, railSettings, rails, items] = await Promise.all([
+  const [tagged, hubNav, railSettings, rails, items, tableItems] = await Promise.all([
     getPostsTaggedForGame(gameSlug, 4),
     getHubNavData(gameSlug),
     getRailSettings(),
     getGameRails(gameSlug),
     loadItemCards(collectItemRefs(doc)),
+    loadTableItems(gameSlug, collectTableItemNames(doc)),
   ])
 
   // Buy rails: live currency card left (under the contents list), items card
@@ -194,7 +195,7 @@ export async function ArticleView({
               {/* No cover: the same gap the cover would leave under the byline. */}
               <div className={cover || post.cover ? undefined : 'mt-8'}>
                 {hasToc && <ArticleToc entries={toc} variant="bar" />}
-                <BlogDocView doc={doc} items={items} gameSlug={gameSlug} />
+                <BlogDocView doc={doc} items={items} tableItems={tableItems} gameSlug={gameSlug} />
               </div>
               <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
             </article>

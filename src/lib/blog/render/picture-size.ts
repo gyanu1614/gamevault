@@ -13,7 +13,7 @@
  *           sized like the above, but with no rounded box and no placeholder,
  *           so it sits straight on the page (the Eldorado look).
  *  - two side by side: equal boxes (PAIR_BOX), each picture contained.
- *  - table pictures: one fixed square (TABLE_PICTURE).
+ *  - table pictures: one fixed 40px square (blog-prose.css, img[data-cell-image]).
  */
 export const PHOTO_MIN_WIDTH = 640
 export const SMALL_HEIGHT = 240
@@ -48,5 +48,3 @@ export function pictureFit(
 /** Each side of a two-picture row: the same box on both, the picture contained in it. */
 export const PAIR_BOX = 'flex h-[220px] items-center justify-center sm:h-[260px]'
 
-/** A picture inside a table cell: one fixed square, contained. */
-export const TABLE_PICTURE = 'inline-block h-10 w-10 shrink-0 object-contain align-middle'

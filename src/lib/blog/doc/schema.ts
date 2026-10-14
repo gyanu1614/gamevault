@@ -85,7 +85,19 @@ export const Cta = atom('cta', { label: text('Shop Now'), href: text('/') })
 /** YouTube: a thumbnail until clicked (no iframe on page load). */
 export const YouTube = atom('youtube', { id: text(), title: text() })
 
-export const CUSTOM_NODES = [Figure, ImagePair, Callout, Faq, Codes, ItemCard, Cta, YouTube]
+/** A small uploaded picture inside a table cell (Blog v2): one fixed square (render/picture-size.ts). */
+export const CellImage = Node.create({
+  name: 'cellImage',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes: () => ({ src: text(), alt: text() }),
+  parseHTML: () => [{ tag: 'img[data-cell-image]' }],
+  renderHTML: ({ HTMLAttributes }) => ['img', mergeAttributes(HTMLAttributes, { 'data-cell-image': '', width: 40, height: 40 })],
+})
+
+export const CUSTOM_NODES = [Figure, ImagePair, Callout, Faq, Codes, ItemCard, Cta, YouTube, CellImage]
 
 /** StarterKit + tables: the built-in half of the block set (the editor adds node views to CUSTOM_NODES). */
 export function blogBaseExtensions(): Extensions {

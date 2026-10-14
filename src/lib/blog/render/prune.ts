@@ -6,8 +6,9 @@
  */
 import type { BlogDoc, DocNode } from '@/lib/blog/doc/types'
 
+/** Text, or a table picture (a row or line holding only a picture is not empty). */
 const hasText = (n: DocNode): boolean =>
-  n.type === 'text' ? !!n.text?.trim() : (n.content ?? []).some(hasText)
+  n.type === 'cellImage' || (n.type === 'text' ? !!n.text?.trim() : (n.content ?? []).some(hasText))
 
 function keep(n: DocNode): DocNode | null {
   switch (n.type) {

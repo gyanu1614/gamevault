@@ -3,6 +3,7 @@ import 'server-only'
 import { getValueItemRail } from '@/lib/buy-rails/server'
 import type { RailCard } from '@/lib/buy-rails/model'
 import type { ItemRef } from './outline'
+import { findCatalogItems, type LinkedItem } from '@/lib/blog/item-catalog'
 
 /**
  * Live data for a post's item cards: the same stock read the value pages'
@@ -23,3 +24,19 @@ export async function loadItemCards(refs: readonly ItemRef[]): Promise<Map<strin
   )
   return new Map(entries.filter((e): e is NonNullable<typeof e> => e !== null))
 }
+
+/**
+ * Pictures in tables (Blog v2): the value items named in the post's table
+ * first columns (collectTableItemNames), each with its picture and value
+ * page. One catalogue read per article render (ISR-cached); a failed read
+ * just leaves the tables without pictures.
+ */
+export async function loadTableItems(gameSlug: string, names: readonly string[]): Promise<Map<string, LinkedItem>> {
+  if (names.length === 0) return new Map()
+  try {
+    return await findCatalogItems(gameSlug, names)
+  } catch {
+    return new Map()
+  }
+}
+

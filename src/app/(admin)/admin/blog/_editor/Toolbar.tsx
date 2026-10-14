@@ -5,7 +5,7 @@
  * where a "/" is awkward) and a small menu over selected text. Both edit the
  * same marks; links are typed in place (no browser prompt).
  */
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Editor } from '@tiptap/core'
 import { useEditorState } from '@tiptap/react'
 import FormatBoldRounded from '@mui/icons-material/FormatBoldRounded'
@@ -18,7 +18,9 @@ import RedoRounded from '@mui/icons-material/RedoRounded'
 import AddRounded from '@mui/icons-material/AddRounded'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { SLASH_ITEMS } from './slash'
+import { uploadImage } from './upload'
 import { splitLines } from './lines'
 
 /** Buttons hand the cursor back where it was without moving the page (iPhone jumped). */
@@ -127,12 +129,41 @@ function TextControls({ editor, onLink }: { editor: Editor; onLink: () => void }
   )
 }
 
-/** Shown while the cursor is in a table: rows and columns go where the cursor is. */
+/**
+ * Shown while the cursor is in a table: rows and columns go where the cursor
+ * is; + Picture puts an uploaded picture (one fixed 40px square) at the cursor
+ * — for items the value list doesn't have (listed ones get theirs automatically).
+ */
 function TableControls({ editor }: { editor: Editor }) {
   const c = () => editor.chain().focus(undefined, NO_SCROLL)
+  const file = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const addPicture = async (f: File) => {
+    setUploading(true)
+    const r = await uploadImage(f)
+    setUploading(false)
+    if (!r.ok) return void toast.error(r.error)
+    // The smallest stored width is plenty for a 40px square.
+    const src = r.image.sources.webp[0]?.url ?? r.image.src
+    c().insertContent({ type: 'cellImage', attrs: { src, alt: f.name.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ') } }).run()
+  }
   return (
     <span className="flex basis-full flex-wrap items-center gap-0.5 border-t border-white/[0.06] pt-1.5 sm:basis-auto sm:border-l sm:border-t-0 sm:pl-1.5 sm:pt-0" role="group" aria-label="Table">
       <span className="px-1.5 text-[12px] font-medium text-text-tertiary">Table</span>
+      <button type="button" className={btn()} disabled={uploading} onClick={() => file.current?.click()}>
+        {uploading ? 'Uploading…' : '+ Picture'}
+      </button>
+      <input
+        ref={file}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/avif"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ''
+          if (f) void addPicture(f)
+        }}
+      />
       <button type="button" className={btn()} onClick={() => c().addRowAfter().run()}>+ Row</button>
       <button type="button" className={btn()} onClick={() => c().deleteRow().run()}>Remove Row</button>
       <button type="button" className={btn()} onClick={() => c().addColumnAfter().run()}>+ Column</button>

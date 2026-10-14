@@ -141,3 +141,32 @@ describe('BlogDocView: picture size system', () => {
   })
 })
 
+
+describe('BlogDocView: pictures in tables', () => {
+  const row = (cells: any[]) => ({ type: 'tableRow', content: cells })
+  const cell = (type: string, content: any[]) => ({ type, content: [{ type: 'paragraph', content }] })
+  const doc: any = { type: 'doc', content: [{ type: 'table', content: [
+    row([cell('tableHeader', [t('Pet')]), cell('tableHeader', [t('Price')])]),
+    row([cell('tableCell', [t('Bat Dragon')]), cell('tableCell', [t('$500')])]),
+    row([cell('tableCell', [{ type: 'cellImage', attrs: { src: 'https://cdn/x/up.webp', alt: 'Custom pet' } }, t('Custom Pet')]), cell('tableCell', [t('$5')])]),
+  ] }] }
+  const tableItems = new Map([['bat dragon', { slug: 'bat-dragon', name: 'Bat Dragon', imageUrl: '/bat.png', href: '/adopt-me/values/bat-dragon' }]])
+  const html = renderToStaticMarkup(React.createElement(BlogDocView, { doc, tableItems, gameSlug: 'adopt-me' }))
+  it('a first-column item from the value list gets its picture, linked to its value page', () => {
+    expect(html).toMatch(/<a[^>]+href="\/adopt-me\/values\/bat-dragon"[^>]*><img data-cell-image=""[^>]+src="\/bat.png"/)
+  })
+  it('an uploaded table picture renders as the fixed table square', () => {
+    expect(html).toMatch(/<img data-cell-image=""[^>]+src="https:\/\/cdn\/x\/up.webp"[^>]+alt="Custom pet"/)
+  })
+})
+
+describe('BlogDocView: a table row holding only a picture is kept', () => {
+  it('is not pruned as empty', () => {
+    const doc: any = { type: 'doc', content: [{ type: 'table', content: [
+      { type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [t('Pet')] }] }] },
+      { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'cellImage', attrs: { src: 'https://cdn/p.webp', alt: 'p' } }] }] }] },
+    ] }] }
+    expect(renderToStaticMarkup(React.createElement(BlogDocView, { doc })).match(/<tr[ >]/g)?.length).toBe(2)
+  })
+})
+

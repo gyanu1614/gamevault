@@ -7,8 +7,7 @@
  * card's "See Value" link works. Admin only; read-only.
  */
 import { requireAdmin } from '@/lib/actions/admin-permissions'
-import { createAnonClient } from '@/lib/supabase/anon'
-import { getValueItems } from '@/lib/values/data'
+import { searchCatalog } from '@/lib/blog/item-catalog'
 
 export interface BlogItemHit {
   slug: string
@@ -31,15 +30,6 @@ function rank(rows: BlogItemHit[], q: string): BlogItemHit[] {
 
 export async function searchBlogItems(gameSlug: string, q: string): Promise<BlogItemHit[]> {
   await requireAdmin()
-  const supabase = createAnonClient() as any
-  if (gameSlug === 'adopt-me') {
-    const { data } = await supabase.from('adopt_me_pets').select('slug,name,image_url').eq('is_active', true).eq('has_page', true).ilike('name', `%${q.replace(/[%_]/g, '')}%`).limit(40)
-    return rank(((data ?? []) as Array<{ slug: string; name: string; image_url: string | null }>).map((r) => ({ slug: r.slug, name: r.name, imageUrl: r.image_url })), q)
-  }
-  if (gameSlug === 'steal-a-brainrot') {
-    const { data } = await supabase.from('sab_brainrot_market_catalog').select('slug,name,image_url').ilike('name', `%${q.replace(/[%_]/g, '')}%`).limit(40)
-    return rank(((data ?? []) as Array<{ slug: string; name: string; image_url: string | null }>).map((r) => ({ slug: r.slug, name: r.name, imageUrl: r.image_url })), q)
-  }
-  const items = await getValueItems(gameSlug).catch(() => [])
-  return rank(items.map((i) => ({ slug: i.slug, name: i.name, imageUrl: i.imageUrl })), q)
+  // The game's catalogue (Adopt Me pets, SAB brainrots, or values_items): src/lib/blog/item-catalog.ts.
+  return rank(await searchCatalog(gameSlug, q), q)
 }

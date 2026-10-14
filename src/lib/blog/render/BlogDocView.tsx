@@ -16,10 +16,26 @@ import type { BlogDoc } from '@/lib/blog/doc/types'
 import { collectHeadings } from './outline'
 import { classifyHref, gamePath } from './links'
 import { pruneEmpty } from './prune'
+import { itemKey } from './outline'
+import type { LinkedItem } from '@/lib/blog/item-catalog'
 import { CalloutView, CodesView, CtaView, FaqView, FigureView, ImagePairView, ItemCardView, YouTubeView } from './nodes'
 
-type PmNode = { attrs: Record<string, unknown>; type: { name: string } }
-type Props = { node: PmNode; children?: ReactNode }
+type PmNode = {
+  attrs: Record<string, unknown>
+  type: { name: string }
+  textContent: string
+  firstChild: PmNode | null
+  descendants: (f: (n: PmNode) => void) => void
+}
+type Props = { node: PmNode; children?: ReactNode; parent?: PmNode }
+
+const hasCellImage = (n: PmNode) => {
+  let found = false
+  n.descendants((c) => {
+    if (c.type.name === 'cellImage') found = true
+  })
+  return found
+}
 
 /** Headings stop below the fixed hub nav + the phone contents bar when jumped to. */
 const HEADING_ANCHOR = 'scroll-mt-[calc(var(--hub-nav-h,112px)+56px)]'
@@ -32,7 +48,18 @@ const HEADING_ANCHOR = 'scroll-mt-[calc(var(--hub-nav-h,112px)+56px)]'
 export const BLOG_PROSE_GRID =
   'blog-prose blog-type grid grid-cols-[minmax(0,1fr)_minmax(0,700px)_minmax(0,1fr)] [&>*]:col-start-2 [&>.blog-wide]:col-[1/-1] [&>.blog-wide]:w-full [&>.blog-wide]:max-w-[960px] [&>.blog-wide]:justify-self-center'
 
-export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Map<string, RailCard>; gameSlug?: string | null }) {
+export function BlogDocView({
+  doc,
+  items,
+  tableItems,
+  gameSlug,
+}: {
+  doc: BlogDoc
+  items?: Map<string, RailCard>
+  /** Value items named in table first columns (loadTableItems), by itemKey(name). */
+  tableItems?: Map<string, LinkedItem>
+  gameSlug?: string | null
+}) {
   // Heading ids in render order, from the same walk the contents list uses
   // (pruning never drops a heading, so the ids match the page's contents list).
   const ids = collectHeadings(doc).map((h) => h.id)
@@ -63,7 +90,26 @@ export function BlogDocView({ doc, items, gameSlug }: { doc: BlogDoc; items?: Ma
         ),
         tableRow: ({ children }: Props) => <tr>{children}</tr>,
         tableHeader: ({ children }: Props) => <th>{children}</th>,
-        tableCell: ({ children }: Props) => <td>{children}</td>,
+        tableCell: ({ node, parent, children }: Props) => {
+          // A first-column item from the game's value list: its picture, linked to its value page.
+          const item = parent?.firstChild === node && !hasCellImage(node) ? tableItems?.get(itemKey(node.textContent)) : undefined
+          if (!item?.imageUrl) return <td>{children}</td>
+          return (
+            <td>
+              <span className="bp-cell-item">
+                <Link href={item.href} aria-hidden tabIndex={-1}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- catalogue art, fixed 40px square */}
+                  <img data-cell-image="" src={item.imageUrl} alt="" width={40} height={40} loading="lazy" decoding="async" />
+                </Link>
+                <span>{children}</span>
+              </span>
+            </td>
+          )
+        },
+        cellImage: ({ node }: Props) => (
+          // eslint-disable-next-line @next/next/no-img-element -- an uploaded table picture, fixed 40px square
+          <img data-cell-image="" src={String(node.attrs.src ?? '')} alt={String(node.attrs.alt ?? '')} width={40} height={40} loading="lazy" decoding="async" />
+        ),
         figure: ({ node }: Props) => <FigureView attrs={node.attrs} />,
         imagePair: ({ node }: Props) => <ImagePairView attrs={node.attrs} />,
         callout: ({ node, children }: Props) => <CalloutView tone={node.attrs.tone}>{children}</CalloutView>,

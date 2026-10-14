@@ -134,3 +134,16 @@
   line-height: 1.5;
   text-align: center;
 }
+
+/* ── Pictures in tables: one fixed square (render/picture-size.ts TABLE_PICTURE) ── */
+.blog-prose img[data-cell-image] {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.blog-prose .bp-cell-item { display: flex; align-items: center; gap: 12px; }
+.blog-prose .bp-cell-item img[data-cell-image] { margin-right: 0; }
+

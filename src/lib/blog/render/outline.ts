@@ -86,3 +86,30 @@ export function collectItemRefs(doc: BlogDoc): ItemRef[] {
   })
   return [...out.values()]
 }
+
+/** How a table cell's text is matched to a value item's name: trimmed, single-spaced, lower case. */
+export function itemKey(name: string): string {
+  return name.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+const hasCellImage = (n: DocNode): boolean => n.type === 'cellImage' || (n.content ?? []).some(hasCellImage)
+
+/**
+ * Pictures in tables (Blog v2): the names in each table's first column (body
+ * rows only, not the header; at most 40, under 60 chars) that may be value
+ * items — the renderer gives a match the item's picture and a link. A cell
+ * that already holds an uploaded picture is left alone.
+ */
+export function collectTableItemNames(doc: BlogDoc): string[] {
+  const out = new Map<string, string>()
+  walk(doc, (n) => {
+    if (n.type !== 'table') return
+    for (const row of n.content ?? []) {
+      const first = row.content?.[0]
+      if (!first || first.type !== 'tableCell' || hasCellImage(first)) continue
+      const name = nodeText(first).replace(/\s+/g, ' ').trim()
+      if (name && name.length <= 60 && !out.has(itemKey(name))) out.set(itemKey(name), name)
+    }
+  })
+  return [...out.values()].slice(0, 40)
+}

@@ -39,3 +39,19 @@ describe('collectItemRefs', () => {
     ])
   })
 })
+
+describe('collectTableItemNames (pictures in tables, Blog v2)', () => {
+  const cell = (type: string, text: string, extra: any[] = []) => ({ type, content: [{ type: 'paragraph', content: [...extra, { type: 'text', text }] }] })
+  const table = (rows: any[][]) => ({ type: 'table', content: rows.map((r) => ({ type: 'tableRow', content: r })) })
+  it('the first column of every body row, not the header, not cells that already have a picture', async () => {
+    const { collectTableItemNames, itemKey } = await import('./outline')
+    const doc: any = { type: 'doc', content: [table([
+      [cell('tableHeader', 'Pet'), cell('tableHeader', 'Price')],
+      [cell('tableCell', 'Bat Dragon'), cell('tableCell', '$500')],
+      [cell('tableCell', 'Shadow  Dragon '), cell('tableCell', '$290')],
+      [cell('tableCell', 'Frost Dragon', [{ type: 'cellImage', attrs: { src: 'x.webp', alt: '' } }]), cell('tableCell', '$150')],
+    ])] }
+    expect(collectTableItemNames(doc)).toEqual(['Bat Dragon', 'Shadow Dragon'])
+    expect(itemKey(' Bat  DRAGON ')).toBe('bat dragon')
+  })
+})
