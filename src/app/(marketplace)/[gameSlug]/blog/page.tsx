@@ -13,7 +13,7 @@ import { createValueListReadClient } from '@/lib/values/read-client'
 import { getGamePosts } from '@/lib/blog/db'
 import { JsonLd, breadcrumbList, blogCollection } from '@/lib/seo/jsonld'
 import { SITE_URL } from '@/config/site'
-import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
+import { BlogBackdrop } from '@/components/blog/BlogBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData } from '@/lib/content/hubNav'
@@ -198,53 +198,49 @@ export default async function GameBlogIndex({
   }))
 
   return (
-    // Same shell as the Values page: opaque hub ground, shared backdrop with
-    // the header + sub-nav inside it. The hero content floats on top exactly as
-    // Values does, so the navbar reads over the faded (dark) part of the image.
-    <main className={`relative min-h-screen ${HUB_GROUND} ${blogFont.variable}`}>
-      {/* Single-row shared hub nav (game switcher + tools + storefront),
-          inside the backdrop so the scrim keeps it legible at top of page. */}
-      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
-        <HubNav data={hubNav} />
+    // Opaque hub ground + the blog's shared night background (one for every
+    // game; `isolate` keeps its -z-10 layer between the two — BlogBackdrop).
+    <main className={`relative isolate min-h-screen ${HUB_GROUND} ${blogFont.variable}`}>
+      <BlogBackdrop />
+      {/* Single-row shared hub nav (game switcher + Codes + tools + storefront). */}
+      <HubNav data={hubNav} />
 
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Home', path: '/' },
+          { name: game.name, path: `/${gameSlug}` },
+          { name: 'Guides', path: `/${gameSlug}/blog` },
+        ])}
+      />
+      {/* Blog collection — describes this hub's posts so Google discovers the
+          child article URLs from the parent markup (faster indexing). */}
+      {posts.length > 0 && (
         <JsonLd
-          data={breadcrumbList([
-            { name: 'Home', path: '/' },
-            { name: game.name, path: `/${gameSlug}` },
-            { name: 'Guides', path: `/${gameSlug}/blog` },
-          ])}
+          data={blogCollection({
+            name: `${game.name} Guides`,
+            url: `${SITE_URL}/${gameSlug}/blog`,
+            posts: posts.map((p) => ({
+              title: p.title,
+              path: postHref(p),
+              datePublished: p.publishedAt,
+              description: p.excerpt,
+            })),
+          })}
         />
-        {/* Blog collection — describes this hub's posts so Google discovers the
-            child article URLs from the parent markup (faster indexing). */}
-        {posts.length > 0 && (
-          <JsonLd
-            data={blogCollection({
-              name: `${game.name} Guides`,
-              url: `${SITE_URL}/${gameSlug}/blog`,
-              posts: posts.map((p) => ({
-                title: p.title,
-                path: postHref(p),
-                datePublished: p.publishedAt,
-                description: p.excerpt,
-              })),
-            })}
-          />
-        )}
+      )}
 
-        <BlogHubHero
-          gameName={game.name}
-          gameSlug={gameSlug}
-          title={copy.title}
-          lead={copy.lead}
-          stats={statStrip}
-          pets={heroPets}
-          hasCalculator={hubNav.tools.includes('calculator')}
-        />
-      </GameHeroBackdrop>
+      <BlogHubHero
+        gameName={game.name}
+        gameSlug={gameSlug}
+        title={copy.title}
+        lead={copy.lead}
+        stats={statStrip}
+        pets={heroPets}
+        hasCalculator={hubNav.tools.includes('calculator')}
+      />
 
       {/* No z-index here (matches Values): a z-10 wrapper created a stacking
-          context that beat the fixed header — which sits in GameHeroBackdrop's
-          own z-20 layer earlier in the DOM — letting cards scroll over the
+          context that beat the fixed header, letting cards scroll over the
           navbar. Plain flow keeps the header on top. */}
       <div className="relative mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
         {/* The stat strip now lives inside the hero's Market Snapshot card. */}

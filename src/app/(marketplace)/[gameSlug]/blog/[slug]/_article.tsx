@@ -23,7 +23,7 @@ import { faqItems } from '@/lib/blog/doc/faq'
 import { stripBrand, DEFAULT_OG_IMAGES } from '@/lib/seo/title'
 import { SITE_URL } from '@/config/site'
 import { HUB_GROUND } from '@/components/values/styles'
-import { GameHeroBackdrop } from '@/components/marketplace/GameHeroBackdrop'
+import { BlogBackdrop } from '@/components/blog/BlogBackdrop'
 import { HubNav } from '@/components/content/HubNav'
 import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
@@ -137,7 +137,7 @@ export async function ArticleView({
     .map((p) => ({ slug: p.slug, title: p.title, kind: POST_TYPE_LABEL[p.postType] ?? 'Guide', primaryGameSlug: p.primaryGameSlug, postType: p.postType, publishedAt: p.publishedAt, updatedAt: p.updatedAt }))
 
   return (
-    <main className={`relative min-h-screen ${HUB_GROUND} ${blogFont.variable}`} style={contentThemeVars(theme)}>
+    <main className={`relative isolate min-h-screen ${HUB_GROUND} ${blogFont.variable}`} style={contentThemeVars(theme)}>
       <JsonLd
         data={breadcrumbList([
           { name: 'Home', path: '/' },
@@ -161,53 +161,52 @@ export async function ArticleView({
       />
       {faqs.length > 0 && <JsonLd data={faqPage(faqs)} />}
 
-      {/* The whole top of the page sits on the game's art: nav, then ONE grid
+      {/* The blog's shared night background (one for every game), the nav, then ONE grid
           whose middle column holds the header, cover and body — so the title,
           the text and the cover share one left edge (the old header was
           centred on the page, the text on the column: three left edges). */}
-      <GameHeroBackdrop gameSlug={gameSlug} size="hub">
-        <HubNav data={hubNav} />
-        <div className={`relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR} ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
-          <div
-            // minmax(0,1fr): nothing inside (a table, the contents bar) may widen the column past the phone.
-            className={`grid grid-cols-[minmax(0,1fr)] items-start gap-x-10 ${hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-x-12' : ''} ${showRails ? RAIL_GRID : ''}`}
-          >
-            {hasToc ? (
-              <ArticleToc entries={toc} rail={currencyRail} variant="column" />
-            ) : showRails ? (
-              <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
-            ) : null}
+      <BlogBackdrop />
+      <HubNav data={hubNav} />
+      <div className={`relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${HUB_NAV_CLEAR} ${showRails ? 'xl:max-w-none xl:px-0' : ''}`}>
+        <div
+          // minmax(0,1fr): nothing inside (a table, the contents bar) may widen the column past the phone.
+          className={`grid grid-cols-[minmax(0,1fr)] items-start gap-x-10 ${hasToc ? 'lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-x-12' : ''} ${showRails ? RAIL_GRID : ''}`}
+        >
+          {hasToc ? (
+            <ArticleToc entries={toc} rail={currencyRail} variant="column" />
+          ) : showRails ? (
+            <BuyRail label={rails.currency?.title ?? 'Shop'}>{currencyRail}</BuyRail>
+          ) : null}
 
-            <article className="min-w-0">
-              <ArticleHeader
-                gameSlug={gameSlug}
-                gameName={game.name}
-                kindLabel={kindLabel}
-                title={post.title}
-                excerpt={post.excerpt}
-                author={post.author}
-                publishedAt={post.publishedAt}
-                updatedAt={post.updatedAt}
-                readMinutes={docReadMinutes(doc)}
-                note={note}
-              />
-              <ArticleCover image={cover} url={post.cover} alt={post.title} />
-              {/* No cover: the same gap the cover would leave under the byline. */}
-              <div className={cover || post.cover ? undefined : 'mt-8'}>
-                {hasToc && <ArticleToc entries={toc} variant="bar" />}
-                <BlogDocView doc={doc} items={items} tableItems={tableItems} gameSlug={gameSlug} />
-              </div>
-              <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
-            </article>
+          <article className="min-w-0">
+            <ArticleHeader
+              gameSlug={gameSlug}
+              gameName={game.name}
+              kindLabel={kindLabel}
+              title={post.title}
+              excerpt={post.excerpt}
+              author={post.author}
+              publishedAt={post.publishedAt}
+              updatedAt={post.updatedAt}
+              readMinutes={docReadMinutes(doc)}
+              note={note}
+            />
+            <ArticleCover image={cover} url={post.cover} alt={post.title} />
+            {/* No cover: the same gap the cover would leave under the byline. */}
+            <div className={cover || post.cover ? undefined : 'mt-8'}>
+              {hasToc && <ArticleToc entries={toc} variant="bar" />}
+              <BlogDocView doc={doc} items={items} tableItems={tableItems} gameSlug={gameSlug} />
+            </div>
+            <ArticleEnd gameSlug={gameSlug} gameName={game.name} slug={slug} tools={tools} related={related} includeValueNote={post.postType !== 'guide'} />
+          </article>
 
-            {showRails && (
-              <BuyRail label={rails.items?.title ?? 'Shop'}>
-                {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
-              </BuyRail>
-            )}
-          </div>
+          {showRails && (
+            <BuyRail label={rails.items?.title ?? 'Shop'}>
+              {rails.items && <RailCardView card={rails.items} surface="blog" position="right" />}
+            </BuyRail>
+          )}
         </div>
-      </GameHeroBackdrop>
+      </div>
       {bar && <BuyBar card={bar} surface="blog" mode="scroll" closable />}
       <HubFooter
         gameName={hubNav.current.name}

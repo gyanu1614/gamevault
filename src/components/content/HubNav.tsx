@@ -3,7 +3,7 @@
 /**
  * Shared content-hub navbar — one row, identical structure for every game.
  *
- *   [game icon + name ▾]        [Values] [Calculator]       [Buy items][Accounts]
+ *   [game icon + name ▾] [Codes ▾]   [Guides] [Values] [Calculator]   [Shop][Sell]
  *
  * - The game icon + name link to the game's marketplace hub (/{slug}), like
  *   the marketplace GameSubNav; the caret beside them opens the game
@@ -163,7 +163,7 @@ export function HubNav({
           game name or buttons are. Height is mirrored by HUB_NAV_CLEAR in
           hubNavGeometry.ts; pages clear the fixed bar with it. */}
       <div className="flex h-[56px] w-full items-center gap-2.5 px-4 sm:h-[68px] sm:gap-4 sm:px-6 lg:px-10">
-        {/* ── Brand mark + game switcher ──
+        {/* ── Brand mark + game switcher + Codes ──
             shrink-0 below md (the row is already tight on a phone), flex-1 from
             md up so it claims its half and centres the tabs. */}
         <div className="flex min-w-0 shrink items-center gap-2 self-stretch sm:gap-3 xl:flex-1">
@@ -287,6 +287,9 @@ export function HubNav({
               </Command>
             </PopoverContent>
           </Popover>
+
+          {/* ── Codes ── its own button beside the switcher (md+; phones get it in the sub-row). */}
+          <HubCodesMenu games={codes} variant="bar" />
         </div>
 
         {/* ── Section tabs — DESKTOP (md+) only ──
@@ -313,7 +316,6 @@ export function HubNav({
               </Link>
             )
           })}
-          <HubCodesMenu games={codes} variant="desktop" />
         </nav>
 
         {/* ── Storefront buttons — the primary green Shop + the amber Sell,
@@ -368,6 +370,8 @@ export function HubNav({
           set (Guides · Values · WFL Calculator · Cash Price) never clips the way
           the old single-row bar did. */}
       <nav className="flex items-center gap-6 overflow-x-auto border-t border-white/[0.07] px-4 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
+        {/* Phones: the Codes button leads the row, under the switcher (no room up top). */}
+        <HubCodesMenu games={codes} variant="row" />
         {tabs.map((tab) => {
           const active = isTabActive(tab)
           return (
@@ -386,7 +390,6 @@ export function HubNav({
             </Link>
           )
         })}
-        <HubCodesMenu games={codes} variant="mobile" />
       </nav>
     </header>
   )
