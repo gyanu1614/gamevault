@@ -505,6 +505,40 @@ async function sendBatchWithRetry(options, label) {
   throw lastError;
 }
 
+/**
+ * A batch that still fails after its retries (Values Pricing Daily, Oct 7 +
+ * Oct 9: batch 53/54 of ~55 timed out — 504 / 546 / lock timeout — on every
+ * attempt, the gateway giving up while the insert kept its locks, and the
+ * whole SAB import died so the reprice never ran) is split in half and sent
+ * again, down to `minSize` listings. A piece that still fails is skipped and
+ * reported, never quietly: the rest of the day's crawl lands and is priced.
+ * Only transient failures split; a permanent one (bad data, 4xx) still stops
+ * the import. `send(part, label)` is sendBatchWithRetry (retries come first).
+ */
+export async function sendSplitting(listings, send, { label, minSize = 25, pauseMs = 20000 } = {}) {
+  const responses = []
+  const skipped = []
+  async function go(part, name) {
+    try {
+      responses.push(await send(part, name))
+    } catch (error) {
+      if (!isRetryableImportError(error)) throw error
+      if (part.length <= minSize) {
+        skipped.push({ label: name, size: part.length, error: error.message, ids: part.map((l) => l.external_listing_id) })
+        return
+      }
+      const mid = Math.ceil(part.length / 2)
+      console.warn(`\n${name} still failing (${error.message}) — splitting into ${mid} + ${part.length - mid}…`)
+      // Let the timed-out attempt finish and release its locks first.
+      if (pauseMs) await pause(pauseMs)
+      await go(part.slice(0, mid), `${name}a`)
+      await go(part.slice(mid), `${name}b`)
+    }
+  }
+  await go(listings, label)
+  return { responses, skipped }
+}
+
 async function sendBatch({
   endpoint,
   secret,
@@ -729,21 +763,22 @@ async function main() {
     );
   }
 
+  const skippedPieces = [];
   for (let i = 0; i < batchPlan.length; i += 1) {
     const { sourceSlug, batch, label, publish } = batchPlan[i];
 
-    const response = await sendBatchWithRetry(
-      {
-        endpoint,
-        secret,
-        sourceSlug,
-        listings: batch,
-        publish,
-      },
-      label,
-    );
+    // Plain inserts split on a stuck batch; the publishing batch is one request by design.
+    const { responses, skipped } = publish
+      ? { responses: [await sendBatchWithRetry({ endpoint, secret, sourceSlug, listings: batch, publish }, label)], skipped: [] }
+      : await sendSplitting(
+          batch,
+          (part, name) => sendBatchWithRetry({ endpoint, secret, sourceSlug, listings: part, publish }, name),
+          { label },
+        );
+    skippedPieces.push(...skipped);
+    const response = responses[responses.length - 1] ?? { result: null };
 
-    console.log(`\n${label}${publish ? " (publishing)" : ""}:`);
+    console.log(`\n${label}${publish ? " (publishing)" : ""}${responses.length > 1 ? ` (sent in ${responses.length} parts)` : ""}:`);
     console.log(JSON.stringify(response.result, null, 2));
 
     if (response.publication) {
@@ -759,6 +794,13 @@ async function main() {
         JSON.stringify(response.revalidation, null, 2),
       );
     }
+  }
+
+  if (skippedPieces.length) {
+    const n = skippedPieces.reduce((t, p) => t + p.size, 0);
+    // Visible on the run page (::warning::), and listed so the slow rows can be found.
+    console.log(`::warning::SAB import skipped ${n} listing(s) in ${skippedPieces.length} piece(s) that kept timing out; the rest landed.`);
+    for (const p of skippedPieces) console.log(`  skipped ${p.label} (${p.size}): ${p.error} — ${p.ids.slice(0, 10).join(", ")}${p.ids.length > 10 ? " …" : ""}`);
   }
 
   console.log(
