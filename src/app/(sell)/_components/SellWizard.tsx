@@ -28,6 +28,7 @@ import { resolveCurrencyPriceRules } from '@/lib/currency/price-rules'
 import { activeDeliveryMethods } from '@/lib/currency/delivery-methods'
 import { applyOptionSets } from '@/lib/sell/option-sets'
 import { cn } from '@/lib/utils'
+import { scrollToStep } from '@/lib/ui/scroll-into-step'
 
 import { buildChildIndex, collectDescendantIds } from './sell-wizard/attribute-tree'
 import { EMPTY_OFFER_FORM, hasDetailsInput, offerFormFromListing } from './sell-wizard/offer-form'
@@ -191,6 +192,18 @@ export default function SellWizard({ initialCategories, editListingId = null, pr
     remember(g.game_id)
     setStep(3)
   }
+
+  // Continue / Back swap the step in place while the window stays where the
+  // button was (owner, 2026-10-14): bring the new step's heading into view
+  // under the fixed wizard bar (main's pt-32 clears it).
+  const firstStep = useRef(true)
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false
+      return
+    }
+    scrollToStep(cardRef.current, 128)
+  }, [step])
 
   const jumpToStep = (target: number) => {
     if (isEditMode || target >= step) return

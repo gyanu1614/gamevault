@@ -28,6 +28,16 @@ describe('detailsSchema', () => {
     expect(detailsSchema.safeParse({ ...ok, discord: 'has spaces here' }).success).toBe(false)
     expect(detailsSchema.safeParse({ ...ok, discord: '<script>' }).success).toBe(false)
   })
+  // Owner, 2026-10-14: "it says that doesn't look like a Discord username even
+  // though it is" — people type their handle with capitals (Discord shows and
+  // matches usernames in lowercase), or paste it with a space / "@" in front.
+  it('discord: accepts a real handle typed with capitals or stray spaces, saved lowercase', () => {
+    expect(detailsSchema.parse({ ...ok, discord: 'Gyanu1614' }).discord).toBe('gyanu1614')
+    expect(detailsSchema.parse({ ...ok, discord: ' @Alex_Trades.99 ' }).discord).toBe('alex_trades.99')
+    expect(detailsSchema.parse({ ...ok, discord: 'Old Name#0420' }).discord).toBe('Old Name#0420')
+    expect(detailsSchema.safeParse({ ...ok, discord: 'a' }).success).toBe(false)
+    expect(detailsSchema.safeParse({ ...ok, discord: 'way-too-long-' + 'x'.repeat(30) }).success).toBe(false)
+  })
 })
 
 describe('storeNameSchema / typedNameSchema', () => {

@@ -17,6 +17,7 @@ import { saveFoundingDetails } from '@/lib/actions/founding-onboarding'
 import { EXPECTED_VOLUMES } from '@/lib/founding/onboarding'
 import { readFoundingSrc } from '@/lib/seo/founding-href'
 import { Field, FormError, INPUT_CLS, PrimaryButton, StepActions, StepCard } from './ui'
+import { DiscordJoin } from './DiscordJoin'
 
 // Flag images from flagcdn.com (public domain), 40px wide, lazy; shown as a
 // 20×15 tile in the list and in the closed field.
@@ -161,8 +162,10 @@ export function StepDetails({
         </Field>
 
         <Field label="Discord Username" optional htmlFor="f-discord" hint="So buyers and our team can reach you fast.">
-          <input id="f-discord" value={discord} onChange={(e) => setDiscord(e.target.value)} className={INPUT_CLS} placeholder="yourname" autoComplete="off" />
+          <input id="f-discord" value={discord} onChange={(e) => setDiscord(e.target.value)} className={INPUT_CLS} placeholder="yourname" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         </Field>
+        {/* Not on Discord yet, or not in our server: the invite, right where they think of it. */}
+        <div className="-mt-2"><DiscordJoin /></div>
 
         <label htmlFor="f-adult" className="flex cursor-pointer items-start gap-3 py-1">
           <Checkbox id="f-adult" checked={isAdult} onCheckedChange={(v) => setIsAdult(v === true)} className="mt-0.5" />

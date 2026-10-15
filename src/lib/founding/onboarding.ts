@@ -31,8 +31,19 @@ export const sellsEntrySchema = z.object({
 })
 export type SellsEntry = z.infer<typeof sellsEntrySchema>
 
-/** Discord: new-style handle (2–32, lowercase letters/digits/._) or legacy Name#1234. */
-export const DISCORD_RE = /^(?:[a-z0-9._]{2,32}|[^#@:`\s]{2,32}#\d{4})$/
+/** Discord: new-style handle (2–32, lowercase letters/digits/._) or legacy Name#1234 (spaces allowed). */
+export const DISCORD_RE = /^(?:[a-z0-9._]{2,32}|[^#@:`<>]{2,32}#\d{4})$/
+
+/**
+ * A handle as people type it → the form Discord uses (owner, 2026-10-14: real
+ * handles were refused): no spaces around it or "@" in front, and a new-style
+ * handle in lowercase — Discord shows and matches them lowercase, but people
+ * type theirs as "Alex_Trades". A legacy Name#1234 keeps its case.
+ */
+export function normalizeDiscord(raw: string): string {
+  const s = raw.trim().replace(/^@/, '').trim()
+  return s.includes('#') ? s : s.toLowerCase()
+}
 
 export const EXPECTED_VOLUMES = [
   { value: 'under_100', label: 'Under $100 a month' },
@@ -53,7 +64,7 @@ export const detailsSchema = z.object({
     .string()
     .trim()
     .max(64)
-    .transform((s) => s.replace(/^@/, ''))
+    .transform(normalizeDiscord)
     .refine((s) => s === '' || DISCORD_RE.test(s), 'That does not look like a Discord username')
     .optional()
     .default(''),
