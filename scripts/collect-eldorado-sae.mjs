@@ -17,6 +17,7 @@
  */
 import { writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import { walkDone } from './lib/offers.mjs'
 
 const BASE_URL = 'https://www.eldorado.gg'
 const GAME_ID = '452'
@@ -71,9 +72,11 @@ async function main() {
   const collected = []
   let recordCount = null
   let totalPages = null
+  let pageSize = 0
 
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const data = await fetchPage(page)
+    if (!pageSize) pageSize = (data.results ?? []).length
     if (recordCount == null) {
       recordCount = data.recordCount
       totalPages = data.totalPages
@@ -95,7 +98,8 @@ async function main() {
         observed_at: new Date().toISOString(),
       })
     }
-    if (page >= (totalPages ?? 1)) break
+    // Past page 1's page count, keep going while pages are full: the list grew during the walk.
+    if (walkDone({ page, totalPages, resultsLength: (data.results ?? []).length, pageSize })) break
     await sleep(PACING_MS)
   }
 

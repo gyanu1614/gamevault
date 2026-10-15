@@ -14,3 +14,15 @@ export function dedupeOffers(listings) {
     return true
   })
 }
+
+/**
+ * When a cheapest-first page walk may stop. Not at the page count read on
+ * page 1: the list grows during the walk and its dearest end slides past that
+ * page (Adopt Me 2026-10-13/14 lost every offer above ~$1,000 this way). Past
+ * it, keep reading while pages come back full.
+ */
+export function walkDone({ page, totalPages, resultsLength, pageSize }) {
+  if (!resultsLength) return true
+  if (page < (totalPages ?? 1)) return false
+  return resultsLength < pageSize
+}

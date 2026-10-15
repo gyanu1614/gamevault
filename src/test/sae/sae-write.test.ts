@@ -34,3 +34,19 @@ describe('Steal an Egg raw listing write', () => {
     expect(body.indexOf(".insert(")).toBeLessThan(body.indexOf(".update({ is_active: false })"))
   })
 })
+
+// @ts-expect-error -- plain .mjs script helper
+import { walkDone } from '../../../scripts/lib/offers.mjs'
+
+describe('cheapest-first walk stop rule (MM2 + Steal an Egg collectors)', () => {
+  it('keeps reading past the first page count while pages are full (the list grew)', () => {
+    expect(walkDone({ page: 3, totalPages: 5, resultsLength: 50, pageSize: 50 })).toBe(false)
+    expect(walkDone({ page: 5, totalPages: 5, resultsLength: 50, pageSize: 50 })).toBe(false)
+    expect(walkDone({ page: 6, totalPages: 5, resultsLength: 12, pageSize: 50 })).toBe(true)
+    expect(walkDone({ page: 5, totalPages: 5, resultsLength: 30, pageSize: 50 })).toBe(true)
+    expect(walkDone({ page: 7, totalPages: 5, resultsLength: 0, pageSize: 50 })).toBe(true)
+  })
+  it.each(['scripts/collect-eldorado-values.mjs', 'scripts/collect-eldorado-sae.mjs'])('%s uses it', (f) => {
+    expect(readFileSync(join(process.cwd(), f), 'utf8')).toContain('walkDone(')
+  })
+})

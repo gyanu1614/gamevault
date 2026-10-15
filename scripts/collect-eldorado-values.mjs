@@ -24,6 +24,7 @@ import process from 'node:process'
 
 import { eldoradoStructuredConfig } from '../src/lib/values/sources/eldorado-structured-games.ts'
 import { extractEldoradoOffer } from '../src/lib/values/normalisers/eldorado-structured.ts'
+import { walkDone } from './lib/offers.mjs'
 
 const BASE_URL = 'https://www.eldorado.gg'
 const PAGE_SIZE = 50
@@ -95,6 +96,7 @@ async function main() {
   let pagesWalked = 0
   let reachedEnd = false
   let duplicates = 0
+  let pageSize = 0
   const started = new Date().toISOString()
 
   for (let page = 1; page <= MAX_PAGES; page += 1) {
@@ -114,6 +116,7 @@ async function main() {
       console.log(`${GAME} / Eldorado ${config.gameId}: ${recordCount} offers across ${totalPages} pages`)
     }
     const results = data.results ?? []
+    if (!pageSize) pageSize = results.length
     for (const row of results) {
       const listing = extractEldoradoOffer(row, config)
       if (!listing) continue
@@ -121,7 +124,8 @@ async function main() {
       byId.set(listing.source_offer_id, listing)
     }
     if (page % 25 === 0) console.log(`  page ${page}/${totalPages} — ${byId.size} offers`)
-    if (!results.length || (totalPages != null && page >= totalPages)) {
+    // Past page 1's page count, keep going while pages are full: the list grew during the walk.
+    if (walkDone({ page, totalPages, resultsLength: results.length, pageSize })) {
       reachedEnd = true
       break
     }
