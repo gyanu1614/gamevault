@@ -65,6 +65,12 @@ jobs:
           echo "qualifying report: $REPORT"
           pnpm adoptme:catalog --qualifying "$REPORT"
 
+      # The source CDN has no picture for many new pets (39 on 2026-10-14):
+      # copy the Adopt Me Wiki's into our bucket. Pets whose image loads, and
+      # earlier copies, are never touched.
+      - name: Copy wiki images for pets whose image is broken
+        run: pnpm adoptme:images --write
+
       - name: Upload catalog feed (debug artifact)
         if: always()
         uses: actions/upload-artifact@v5

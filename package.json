@@ -39,6 +39,7 @@
     "discord:list": "node scripts/register-discord-commands.mjs --list",
     "adoptme:catalog": "node scripts/collect-adoptmevalues.mjs --enrich --send",
     "adoptme:catalog:dryrun": "tsx scripts/adoptme-catalog-dryrun.mjs",
+    "adoptme:images": "node scripts/adopt-me-wiki-images.mjs",
     "adoptme:cash:eldorado": "node scripts/collect-eldorado-adoptme.mjs",
     "adoptme:cash:eldorado:crawl": "node scripts/collect-eldorado-adoptme.mjs --crawl",
     "adoptme:cash:u7buy": "node scripts/collect-u7buy-adoptme.mjs",

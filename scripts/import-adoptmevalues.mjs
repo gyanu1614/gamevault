@@ -36,6 +36,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
+import { ALL_TRADE_VARIANTS, PUBLISHED_TRADE_VARIANTS, variantTradeValues } from './lib/adoptmevalues-catalog.mjs'
 
 // --- env (minimal loader, matches the SAB scripts) --------------------------
 // Reads .env.local locally, but is a NO-OP when the file is absent (CI, where
@@ -70,25 +71,11 @@ const sb = createClient(
 // their un-potioned Neon/Mega). Every derived row is flagged is_estimated=true
 // so the UI never presents a derived number as observed.
 //
-// Derivation, given N, NEON, MEGA from the source:
-//   F   ≈ N   * 1.15
-//   R   ≈ N   * 1.15
-//   FR  ≈ N   * 1.45          (the standard trading benchmark)
-//   NFR ≈ NEON * 1.35
-//   MFR ≈ MEGA * 1.25
-const DERIVED = {
-  F: { from: 'N', mult: 1.15 },
-  R: { from: 'N', mult: 1.15 },
-  FR: { from: 'N', mult: 1.45 },
-  NFR: { from: 'NEON', mult: 1.35 },
-  MFR: { from: 'MEGA', mult: 1.25 },
-}
-const PUBLISHED_VARIANTS = ['N', 'NEON', 'MEGA']
-const ALL_VARIANTS = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR']
-
-function round2(n) {
-  return n == null ? null : Math.round(n * 100) / 100
-}
+// The ratios live in scripts/lib/adoptmevalues-catalog.mjs (DERIVED_TRADE):
+// F/R ≈ N × 1.15, FR ≈ N × 1.45 (the benchmark), NFR ≈ NEON × 1.35,
+// MFR ≈ MEGA × 1.25, kept to two decimals so a small pet is never 0.
+const PUBLISHED_VARIANTS = PUBLISHED_TRADE_VARIANTS
+const ALL_VARIANTS = ALL_TRADE_VARIANTS
 
 // Obtainability isn't reliably published per-pet on the source, and the
 // "demand_rank" the list exposes is really a position-within-rarity artifact
@@ -114,22 +101,13 @@ const KNOWN_OBTAINABILITY = {
 
 /** Build all 8 variant rows for a pet from its published trade values. */
 function buildVariantRows(petId, tradeValues) {
+  const trade = variantTradeValues(tradeValues)
   const rows = []
   for (const variant of ALL_VARIANTS) {
-    let tradeValue = null
-    let isEstimated = true
-
-    if (PUBLISHED_VARIANTS.includes(variant)) {
-      tradeValue = tradeValues[variant] ?? null
-      // Published trade value is "observed" community consensus. Still no USD,
-      // but the trade number itself is from the source, not derived.
-      isEstimated = tradeValue == null
-    } else {
-      const rule = DERIVED[variant]
-      const anchor = tradeValues[rule.from]
-      if (anchor != null) tradeValue = Math.round(anchor * rule.mult)
-      isEstimated = true
-    }
+    const tradeValue = trade[variant]
+    // Published trade value is "observed" community consensus (still no USD);
+    // the five derived ones are always estimated.
+    const isEstimated = PUBLISHED_VARIANTS.includes(variant) ? tradeValue == null : true
 
     rows.push({
       variant,
