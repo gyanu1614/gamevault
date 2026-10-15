@@ -34,7 +34,13 @@ export function listPageUrl(n) {
     : `${ADOPTMEVALUES_BASE_URL}${ADOPTMEVALUES_LIST_PATH}/page/${n}`
 }
 
-/** "2.1K" → 2100, "7.2K" → 7200, "1.05M" → 1050000, "905" → 905. */
+const round2 = (n) => Math.round(n * 100) / 100
+
+/**
+ * "2.1K" → 2100, "1.05M" → 1050000, "905" → 905, "0.02" → 0.02. Small pets
+ * are listed in fractions; rounding to whole numbers showed them as Trade 0
+ * (2026-10-14), so two decimals are kept.
+ */
 export function parseCompactNumber(raw) {
   if (raw == null) return null
   const s = String(raw).trim().replace(/,/g, '')
@@ -42,7 +48,38 @@ export function parseCompactNumber(raw) {
   if (!m) return null
   const n = parseFloat(m[1])
   const mult = { '': 1, k: 1e3, m: 1e6, b: 1e9 }[m[2].toLowerCase()]
-  return Math.round(n * mult)
+  return round2(n * mult)
+}
+
+/**
+ * The potion / Neon ladder. The source publishes only N, NEON and MEGA; the
+ * other five are derived from these anchors with the community-standard rough
+ * premiums (FR is the trading benchmark). Derived rows are flagged estimated
+ * by the importer.
+ */
+export const DERIVED_TRADE = {
+  F: { from: 'N', mult: 1.15 },
+  R: { from: 'N', mult: 1.15 },
+  FR: { from: 'N', mult: 1.45 },
+  NFR: { from: 'NEON', mult: 1.35 },
+  MFR: { from: 'MEGA', mult: 1.25 },
+}
+export const PUBLISHED_TRADE_VARIANTS = ['N', 'NEON', 'MEGA']
+export const ALL_TRADE_VARIANTS = ['N', 'F', 'R', 'FR', 'NEON', 'NFR', 'MEGA', 'MFR']
+
+/** Every variant's trade value from the published three (null when its anchor is missing). */
+export function variantTradeValues(published) {
+  const out = {}
+  for (const variant of ALL_TRADE_VARIANTS) {
+    if (PUBLISHED_TRADE_VARIANTS.includes(variant)) {
+      out[variant] = published[variant] ?? null
+    } else {
+      const rule = DERIVED_TRADE[variant]
+      const anchor = published[rule.from]
+      out[variant] = anchor != null ? round2(anchor * rule.mult) : null
+    }
+  }
+  return out
 }
 
 /** adoptmevalues rarity text → our canonical schema value, or null if unknown. */

@@ -42,6 +42,21 @@ export const ADOPT_ME_PAGE_SIZE = 25
 export const ADOPT_ME_POPULAR_COUNT = 12
 export const ADOPT_ME_DEFAULT_VARIANT: Variant = 'FR'
 export const ADOPT_ME_DEFAULT_VIEW: AdoptMeView = 'popular'
+
+/** Nearest variants to Fly Ride, in the order a card falls back through them. */
+const CARD_FALLBACK: Variant[] = ['FR', 'R', 'F', 'N', 'NFR', 'NEON', 'MFR', 'MEGA']
+
+/**
+ * The variant a pet's card opens on. On the default list (Fly Ride) a pet
+ * nobody sells as Fly Ride — most cheap pets — opens on the nearest priced
+ * variant instead of a "-" (owner, 2026-10-14); its chip names the variant.
+ * A variant the visitor picked for the whole list always wins.
+ */
+export function cardVariant(values: AdoptMePetItem['values'], tableVariant: Variant): Variant {
+  if (tableVariant !== ADOPT_ME_DEFAULT_VARIANT) return tableVariant
+  const priced = (code: Variant) => values[code]?.cheapestUsd != null || values[code]?.cashUsd != null
+  return CARD_FALLBACK.find(priced) ?? tableVariant
+}
 export const ADOPT_ME_DEFAULT_SORT: AdoptMeSort = 'value-desc'
 
 /**

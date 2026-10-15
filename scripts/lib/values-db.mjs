@@ -6,6 +6,9 @@
  *   --env=local   .env.test  (this worktree's local stack; must be localhost)
  *   --env=prod    .env.local (production; must NOT be localhost; needs --yes)
  *   (no --env)    process.env, ONLY on a GitHub Actions runner (the daily job)
+ *
+ * `readOnly: true` (dry runs) returns the PUBLIC anon-key client instead: it
+ * can only read what the site reads, so a prod dry run needs no --yes.
  */
 import fs from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
@@ -13,7 +16,7 @@ import { config as loadEnv } from 'dotenv'
 
 const isLocalUrl = (url) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/.test(url ?? '')
 
-export function valuesDbClient({ env, yes = false } = {}) {
+export function valuesDbClient({ env, yes = false, readOnly = false } = {}) {
   if (env === 'local' || env === 'prod') {
     const file = env === 'local' ? '.env.test' : '.env.local'
     if (!fs.existsSync(file)) throw new Error(`${file} not found — cannot resolve credentials for --env=${env}`)
@@ -25,11 +28,13 @@ export function valuesDbClient({ env, yes = false } = {}) {
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
+  const key = readOnly ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new Error(`NEXT_PUBLIC_SUPABASE_URL and ${readOnly ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY' : 'SUPABASE_SERVICE_ROLE_KEY'} are required`)
+  }
   if (env === 'local' && !isLocalUrl(url)) throw new Error(`--env=local but the URL is ${url}. Refusing.`)
   if (env === 'prod' && isLocalUrl(url)) throw new Error('--env=prod but the URL is local. Refusing.')
-  if (env === 'prod' && !yes) throw new Error('--env=prod writes need an explicit --yes')
+  if (env === 'prod' && !yes && !readOnly) throw new Error('--env=prod writes need an explicit --yes')
 
   return { db: createClient(url, key, { auth: { persistSession: false } }), url }
 }

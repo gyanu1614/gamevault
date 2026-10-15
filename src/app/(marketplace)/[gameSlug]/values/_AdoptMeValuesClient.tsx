@@ -42,6 +42,7 @@ import {
   ADOPT_ME_DEFAULT_VARIANT,
   ADOPT_ME_DEFAULT_VIEW,
   ADOPT_ME_PAGE_SIZE,
+  cardVariant,
   filterSortPets,
   popularPetSlugs,
   type AdoptMePetItem,
@@ -320,10 +321,10 @@ function PetCard({
   isPopular: boolean
   tableVariant: Variant
 }) {
-  const [code, setCode] = useState<Variant>(tableVariant)
+  const [code, setCode] = useState<Variant>(() => cardVariant(pet.values, tableVariant))
   const [pickerOpen, setPickerOpen] = useState(false)
   // Follow the table-wide selector when it changes.
-  useEffect(() => setCode(tableVariant), [tableVariant])
+  useEffect(() => setCode(cardVariant(pet.values, tableVariant)), [pet.values, tableVariant])
 
   const v = pet.values[code]
   const meta = rarityMeta(pet.rarity)

@@ -20,6 +20,7 @@ import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
 import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
 import { TradeValue } from '@/components/values/TradeValue'
+import { petImageCredit } from '@/lib/adopt-me/image-credit'
 
 const TRADE = new Intl.NumberFormat('en-US')
 
@@ -73,6 +74,7 @@ export default function AdoptMePetHero({
   if (!selected) return null
 
   const accent = variantColor(selected.variant)
+  const credit = petImageCredit(imageUrl, name)
   // Market = the typical reputable price (average), else the stored cash
   // value. The panel leads with OUR price when we list this form and keeps
   // the market as the reference under it; no stock → the market heads.
@@ -92,7 +94,21 @@ export default function AdoptMePetHero({
       titleAs="h2"
       anchorRef={heroRef}
       accent={accent}
-      art={{ src: imageUrl, alt: `${displayName} — Adopt Me` }}
+      art={{
+        src: imageUrl,
+        alt: `${displayName} — Adopt Me`,
+        // Our copy of an Adopt Me Wiki picture (the source image was missing): credit it.
+        caption: credit ? (
+          <a
+            href={credit.href}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="underline decoration-white/20 underline-offset-2 transition-colors hover:text-text-secondary"
+          >
+            {credit.text}
+          </a>
+        ) : undefined,
+      }}
       title={displayName}
       // The pet's facts (owner, 2026-10-12). Listings tracked stays out of the
       // card: the page's structured data (valuePage offers) still carries it.

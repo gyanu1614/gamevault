@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import {
   fetchCatalogPages,
   listPageUrl,
+  parseCompactNumber,
   parseListPage,
+  variantTradeValues,
 } from '../../../scripts/lib/adoptmevalues-catalog.mjs'
 import {
   cleanEldoradoOffer,
@@ -32,6 +34,30 @@ describe('adoptmevalues catalog', () => {
       image_url: 'https://fetch-images.b-cdn.net/images/pets/Crocodile.png',
       trade_values: { N: 15, NEON: 44, MEGA: 1200 },
     })
+  })
+
+  // Bug (owner, 2026-10-14: "Trade 0" on every cheap pet): the source lists
+  // small pets as "0.02" / "0.7" and the parser rounded them to 0 / 1.
+  it('keeps the decimals of small trade values', () => {
+    expect(parseCompactNumber('0.02')).toBe(0.02)
+    expect(parseCompactNumber('0.7')).toBe(0.7)
+    expect(parseCompactNumber('2.1K')).toBe(2100)
+    expect(parseCompactNumber('1.05M')).toBe(1050000)
+    expect(parseCompactNumber('905')).toBe(905)
+  })
+
+  it('derives the potion variants without rounding a small pet to 0', () => {
+    expect(variantTradeValues({ N: 0.02, NEON: 0.7, MEGA: 2.2 })).toEqual({
+      N: 0.02,
+      F: 0.02,
+      R: 0.02,
+      FR: 0.03,
+      NEON: 0.7,
+      NFR: 0.95,
+      MEGA: 2.2,
+      MFR: 2.75,
+    })
+    expect(variantTradeValues({ N: 1000, NEON: null, MEGA: undefined })).toMatchObject({ FR: 1450, NEON: null, NFR: null, MFR: null })
   })
 
   it('keeps unknown rarities (null) for the caller to log', () => {
