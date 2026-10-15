@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import { ValueArt } from './ValueArt'
 import { VALUE_LABEL, VALUE_SURFACE } from './styles'
+import { titleCaseValue } from '@/lib/values/title-case'
 
 /**
  * The ONE item-page hero for every values hub (Steal a Brainrot, Adopt Me and
@@ -10,9 +11,10 @@ import { VALUE_LABEL, VALUE_SURFACE } from './styles'
  * the picture · the identity (the title, the item's facts — Type, Rarity,
  * Availability, … — then the selector as a row under them on desktop, owner
  * 2026-10-14: under the art it showed two mutations; phones keep it under the
- * picture) · the price
- * column top right with the Buy/Sell pair; the identity starts at the top
- * (owner, 2026-10-12); the freshness line sits under the buttons; then `below`.
+ * picture) · the price column top right — `panel` (ValueBuyPanel: our price,
+ * the market reference, Buy, SafeDrop, a quiet Sell line) or the older
+ * `price` + `actions` pair; the identity starts at the top (owner,
+ * 2026-10-12); the freshness line sits under the buttons; then `below`.
  *
  * Look (owner, 2026-10-11/12 revamp): one flat raised card (#1D1E23, 8px),
  * the art as a cut-out with no tile behind it, no blur glow, no empty middle.
@@ -28,6 +30,7 @@ export function ValueItemHero({
   stats,
   price,
   actions,
+  panel,
   footer,
   picker,
   below,
@@ -49,6 +52,8 @@ export function ValueItemHero({
   }
   /** Usually ValueBuyActions. */
   actions?: ReactNode
+  /** The whole price column (ValueBuyPanel); replaces `price` + `actions`. */
+  panel?: ReactNode
   /** Freshness line, shown under the Buy / Sell buttons (bottom right). */
   footer?: ReactNode
   /** The VariantSelector, rendered under the title inside the card. */
@@ -79,19 +84,21 @@ export function ValueItemHero({
             <Title className="text-2xl font-bold leading-[1.1] tracking-[-0.02em] text-text-primary sm:text-[28px]">
               {title}
             </Title>
-            {/* The item's facts as rows under the name (owner, 2026-10-12): Type,
-                Rarity, Availability, … — no label line above the name, no
-                divider lines. Phones: label left, value right, every other row
-                on a faint band. lg+: bigger values side by side. */}
+            {/* The item's facts as rows under the name: label left, value
+                right, every other row on a faint band — at every width (owner,
+                2026-10-14: "in rows, alternate block colour, matching the
+                card"). Plain values read as labels ("Unobtainable"). */}
             {stats && stats.length > 0 && (
-              <dl className="mt-4 lg:mt-5 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(120px,max-content))] lg:gap-x-8 lg:gap-y-4">
+              <dl className="mt-4 lg:mt-5">
                 {stats.map((s) => (
                   <div
                     key={s.label}
-                    className="flex min-w-0 items-baseline justify-between gap-4 rounded-[6px] px-3 py-2.5 odd:bg-white/[0.035] lg:block lg:rounded-none lg:p-0 lg:odd:bg-transparent"
+                    className="flex min-w-0 items-baseline justify-between gap-4 rounded-[6px] px-3 py-2.5 odd:bg-white/[0.035]"
                   >
-                    <dt className="truncate text-body-sm text-text-secondary lg:text-caption lg:text-text-tertiary">{s.label}</dt>
-                    <dd className="truncate text-right text-body-sm font-semibold tabular-nums text-text-primary lg:mt-1 lg:text-left lg:text-subheading lg:font-bold lg:leading-none">{s.value}</dd>
+                    <dt className="truncate text-body-sm text-text-secondary">{s.label}</dt>
+                    <dd className="truncate text-right text-body-sm font-semibold tabular-nums text-text-primary">
+                      {typeof s.value === 'string' ? titleCaseValue(s.value) : s.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -101,7 +108,12 @@ export function ValueItemHero({
             {picker && <div className={art ? 'mt-5 hidden lg:block' : 'mt-5'}>{picker}</div>}
           </div>
 
-          {(price || actions) && (
+          {panel ? (
+            <div>
+              {panel}
+              {footer && <div className="mt-4 flex flex-wrap items-center gap-2 lg:justify-end">{footer}</div>}
+            </div>
+          ) : (price || actions) && (
             // Top right, as before: price, its badges, then Buy / Sell.
             <div className="lg:text-right lg:[&>div]:justify-end">
               {/* Phones: the price sits in its own row under the stats. */}

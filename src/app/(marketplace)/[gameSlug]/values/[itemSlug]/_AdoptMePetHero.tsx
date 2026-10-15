@@ -14,15 +14,13 @@ import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
 import { CompactVariantPicker } from '../_CompactVariantPicker'
 import { FreshnessBadge } from '@/lib/sab/FreshnessBadge'
-import { marketSecondaryUsd } from '@/lib/values/pricing'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import { amVariantKey } from '@/lib/value-listings/catalogs'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, ConfidenceBadge } from '@/components/values/ValueItemHero'
-import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
 import { TradeValue } from '@/components/values/TradeValue'
 
-const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const TRADE = new Intl.NumberFormat('en-US')
 
 export default function AdoptMePetHero({
@@ -75,20 +73,15 @@ export default function AdoptMePetHero({
   if (!selected) return null
 
   const accent = variantColor(selected.variant)
-  // CHEAPEST is the headline — the price a buyer acts on. MARKET (the typical
-  // reputable price = average) shows as a quiet secondary ONLY when it sits a
-  // meaningful step above the cheapest (MARKET_SECONDARY_GAP).
+  // Market = the typical reputable price (average), else the stored cash
+  // value. The panel leads with OUR price when we list this form and keeps
+  // the market as the reference under it; no stock → the market heads.
   const marketUsd = selected.averageUsd ?? selected.cashUsd
-  const cheapestUsd = selected.cheapestUsd
-  // Headline = cheapest when we have it, else the reputable market. When
-  // neither exists we do NOT invent a dollar figure — we fall back to the
-  // trade-points value.
-  const headlineUsd = cheapestUsd ?? marketUsd
-  const secondaryUsd = marketSecondaryUsd(cheapestUsd, marketUsd)
   // A reputable price exists whenever we priced an average from real listings.
   const hasReputable = selected.averageUsd != null
-  const hasCash = headlineUsd != null
+  const hasCash = (selected.cheapestUsd ?? marketUsd) != null
   const pointsValue = selected.tradeValue != null && selected.tradeValue > 0 ? selected.tradeValue : null
+  const listed = cta.state === 'in_stock'
   // Pet name FIRST, variant as a readable suffix: "Bat Dragon - Normal",
   // "Bat Dragon - Neon Fly Ride". N reads as "Normal".
   const variantSuffix = selected.variant === 'N' ? 'Normal' : selected.label
@@ -109,46 +102,42 @@ export default function AdoptMePetHero({
         { label: 'Availability', value: obtainabilityLabel },
         { label: 'Trade Value', value: selected.tradeValue != null ? <TradeValue>{TRADE.format(selected.tradeValue)}</TradeValue> : '—' },
       ]}
-      price={{
-        // Market data, not DropMarket stock: the buy button carries ours.
-        label: hasCash ? (hasReputable ? 'Market Price' : 'Cash Value') : pointsValue ? 'Trade Value' : 'Value',
-        value: hasCash ? (
-          USD.format(headlineUsd as number)
-        ) : pointsValue ? (
-          <>
-            <TradeValue>{TRADE.format(pointsValue)}</TradeValue>
-            <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts</span>
-          </>
-        ) : (
-          'No data yet'
-        ),
-        children: (
-          <>
-            {/* Typical (market) price — only when it genuinely exceeds the
-                cheapest headline (never a duplicate number). */}
-            {secondaryUsd != null && (
-              <p className="mt-1.5 text-[13px] tabular-nums text-text-tertiary">typically ~{USD.format(secondaryUsd)}</p>
-            )}
-            <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2">
+      panel={
+        <ValueBuyPanel
+          cta={cta}
+          itemName={displayName}
+          marketUsd={marketUsd ?? null}
+          cheapestUsd={selected.cheapestUsd ?? null}
+          marketLabel={hasReputable ? 'Market Price' : 'Cash Value'}
+          // No dollar price at all: the trade-points value, never an invented figure.
+          fallback={
+            pointsValue
+              ? {
+                  label: 'Trade Value',
+                  value: (
+                    <>
+                      <TradeValue>{TRADE.format(pointsValue)}</TradeValue>
+                      <span className="ml-1.5 text-[15px] font-semibold text-text-tertiary">pts</span>
+                    </>
+                  ),
+                }
+              : { label: 'Value', value: 'No data yet' }
+          }
+          notes={
+            <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
               {hasReputable ? (
                 <HeroBadge color="var(--color-success)">From Verified Sellers</HeroBadge>
               ) : hasCash ? (
                 <ConfidenceBadge confidence={selected.confidence} />
-              ) : pointsValue ? (
-                <HeroBadge>Community trade value</HeroBadge>
+              ) : pointsValue && !listed ? (
+                // Describes the trade-points headline; with our price heading
+                // the panel it would label the wrong number.
+                <HeroBadge>Community Trade Value</HeroBadge>
               ) : null}
             </div>
-          </>
-        ),
-      }}
-      actions={
-        // Sell door: no keep-figure — Adopt Me cash values are estimates, so we
-        // never attach a $ payout here.
-        <ValueBuyActions
-          cta={cta}
-          itemName={displayName}
-          align="end"
-          sell={{ href: '/adopt-me/sell?src=am-item-page', label: `Sell ${name} For Cash` }}
+          }
+          // No payout figure: Adopt Me cash values are estimates.
+          sell={{ href: '/adopt-me/sell?src=am-item-page' }}
         />
       }
       footer={
@@ -158,12 +147,12 @@ export default function AdoptMePetHero({
         ) : (
           <span className="text-[12px] text-text-tertiary">
             {hasReputable
-              ? 'Cheapest price from sellers with 100+ reviews'
+              ? 'Market price from sellers with 100+ reviews'
               : hasCash
-                ? 'Cheapest from tracked marketplace listings'
-                : pointsValue
+                ? 'Market price from tracked marketplace listings'
+                : pointsValue && !listed
                   ? 'Community trade value — no cash listings tracked yet'
-                  : 'No data tracked yet'}
+                  : 'No market price tracked yet'}
           </span>
         )
       }

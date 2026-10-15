@@ -14,6 +14,7 @@ import { withArticle } from '@/lib/text/article'
 import { HubFaqSection } from '@/components/content/HubFaqSection'
 import { buildBrainrotFaq } from '@/lib/sab/faq'
 import ItemHero, { type MutationOption } from './_ItemHero'
+import { ItemPageTitle } from '@/components/values/ItemPageTitle'
 import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { StatRow } from '@/components/values/HubSection'
 import { HUB_GROUND, VALUE_BTN_SECONDARY, VALUE_SURFACE } from '@/components/values/styles'
@@ -589,7 +590,9 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
   const brainrot = await getBrainrot(itemSlug)
   if (!brainrot) return { title: 'Brainrot Not Found' }
 
-  const title = `${brainrot.name} Value, Income & Mutations`
+  // Same head phrase as Adopt Me / MM2 (owner, 2026-10-14: the game name was missing).
+  const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  const title = `${brainrot.name} Value in Steal a Brainrot (${monthYear})`
   const gate = await getValuePageGate(SAB_GAME, brainrot.slug, true)
   const description = withAnswer(
     answerSentence({ name: brainrot.name, valueUsd: gate.evidence?.valueUsd, offers: gate.evidence?.observations ?? 0, updatedAt: gate.evidence?.priceMovedAt ?? null }),
@@ -803,20 +806,23 @@ export default async function BrainrotValuePage({ params }: PageProps) {
           <span className="font-medium text-text-primary">{brainrot.name}</span>
         </nav>
 
+        {/* The query phrase as the H1, like Adopt Me and MM2; the hero names the mutation (h2). */}
+        <ItemPageTitle name={brainrot.name} game="Steal a Brainrot" />
 
-        <ItemHero
-          brainrotName={brainrot.name}
-          rarity={brainrot.rarity}
-          obtainability={brainrot.obtainability}
-          baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
-          ingameCost={formatIngameCost(brainrot.ingame_cost)}
-          imageUrl={brainrot.image_url}
-          imageAlt={brainrot.image_alt}
-          mutations={mutations}
-          buy={{ itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
-          priceHistory={priceHistory}
-          updatedAt={priceMovedAt}
-        />
+        <div className="mt-6">
+          <ItemHero
+            brainrotName={brainrot.name}
+            rarity={brainrot.rarity}
+            baseIncomePerSecond={asNumber(brainrot.base_income_per_second)}
+            ingameCost={formatIngameCost(brainrot.ingame_cost)}
+            imageUrl={brainrot.image_url}
+            imageAlt={brainrot.image_alt}
+            mutations={mutations}
+            buy={{ itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }}
+            priceHistory={priceHistory}
+            updatedAt={priceMovedAt}
+          />
+        </div>
       </section>
 
       <ValueItemRails gameSlug="steal-a-brainrot" itemSlug={brainrot.slug} itemName={brainrot.name} imageUrl={brainrot.image_url ?? null}>

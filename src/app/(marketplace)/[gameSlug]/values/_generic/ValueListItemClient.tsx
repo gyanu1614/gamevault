@@ -17,10 +17,10 @@ import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder, confidenceMeta } from '@/components/values/ValueItemHero'
 import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
 import { BuyButtonFace } from '@/components/marketplace/BuyButton'
 import { FreshnessBadge } from '@/components/content/ValuesFreshnessBadge'
 import { VALUE_LABEL, VALUE_SURFACE } from '@/components/values/styles'
-import { marketSecondaryUsd } from '@/lib/values/pricing'
 import type { TrendSeries } from '@/components/values/PriceTrendChart'
 import { LightningIcon } from '@phosphor-icons/react/dist/csr/Lightning'
 import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
@@ -103,7 +103,6 @@ export function ValueListItemHero({
   forms: ItemForm[] | null
 }) {
   const cta = useItemCta(buy, name)
-  const secondary = marketSecondaryUsd(cheapestUsd, marketUsd)
 
   return (
     <ValueItemHero
@@ -132,23 +131,23 @@ export function ValueListItemHero({
         label: s.label,
         value: s.color ? <span style={{ color: s.color }}>{s.value}</span> : s.value,
       }))}
-      price={{
-        label: cheapestUsd != null ? 'Cheapest Price' : 'Value',
-        value: cheapestUsd != null ? usd(cheapestUsd) : 'No price yet',
-        children: (
-          <>
-            {secondary != null && (
-              <p className="mt-1.5 text-[13px] tabular-nums text-text-tertiary">typically ~{usd(secondary)}</p>
-            )}
-            {cheapestUsd != null && (
-              <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2">
-                <HeroBadge color="var(--color-success)">From reputable sellers</HeroBadge>
+      panel={
+        <ValueBuyPanel
+          cta={cta}
+          itemName={name}
+          marketUsd={marketUsd}
+          cheapestUsd={cheapestUsd}
+          fallback={{ label: 'Value', value: 'No price yet' }}
+          notes={
+            cheapestUsd != null && (
+              <div className="mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 lg:justify-end">
+                <HeroBadge color="var(--color-success)">From Reputable Sellers</HeroBadge>
               </div>
-            )}
-          </>
-        ),
-      }}
-      actions={<ValueBuyActions cta={cta} itemName={name} sell={sell} align="end" />}
+            )
+          }
+          sell={sell}
+        />
+      }
       footer={
         priceChangedAt ? (
           <FreshnessBadge updatedAt={priceChangedAt} />
