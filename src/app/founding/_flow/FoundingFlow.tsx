@@ -23,6 +23,7 @@ import type { LegalDoc } from '@/lib/legal/documents'
 import { getFoundingFlowState, type FoundingFlowState } from '@/lib/actions/founding-onboarding'
 import { useAuth } from '@/hooks/use-auth'
 import type { FoundingStage, FoundingStepId } from '@/lib/founding/onboarding'
+import { scrollToStep } from '@/lib/ui/scroll-into-step'
 import { StepChecklist } from './StepChecklist'
 import { WhySellPanel } from './WhySellPanel'
 import { StepAccount } from './StepAccount'
@@ -90,6 +91,20 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
   const stage: FoundingStage = state.isSeller ? 5 : state.stage
   const next = () => setOpen(stage)
 
+  // A finished step swaps the card's one open row in place — and signing swaps
+  // the page to the welcome screen — while the window stays where the button
+  // was (owner, 2026-10-14). Bring the new step (or the welcome) into view.
+  const headerRef = useRef<HTMLElement>(null)
+  const stepsRef = useRef<HTMLDivElement>(null)
+  const firstView = useRef(true)
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false
+      return
+    }
+    scrollToStep(stage >= 5 ? headerRef.current : stepsRef.current)
+  }, [open, stage])
+
   // PostHog seller funnel: "viewed" fires here when a step opens. "Completed"
   // fires on the SERVER where each step is saved (lib/analytics/founding.ts):
   // from the browser, an email-confirmed sign-up came back on a fresh page at
@@ -120,9 +135,10 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
     <div className="relative min-h-screen text-text-primary">
       <Navbar transparent minimal />
 
-      {/* Top padding doubles as the slot for the hero background (later). */}
-      <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pt-32">
-        <header className={stage >= 5 ? 'text-center' : 'max-w-3xl'}>
+      {/* Top padding doubles as the slot for the hero background (later).
+          A div: the root layout already provides the page's one <main>. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pt-32">
+        <header ref={headerRef} className={stage >= 5 ? 'text-center' : 'max-w-3xl'}>
           {stage >= 5 ? (
             <>
               <h1 className="text-heading text-text-primary sm:text-[36px] sm:leading-tight">
@@ -141,20 +157,22 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
 
         <div className="mt-8 grid grid-cols-1 items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
           {stage >= 5 ? (
-            <div>
+            <div ref={stepsRef}>
               <StoreTitle shopName={state.shopName} shopSlug={state.shopSlug} logoUrl={state.user?.avatarUrl ?? null} isFounding={state.isFounding} isVerified={state.isVerified} tier={state.tier} />
               <div className={`${GLASS_CARD} mt-7 p-5 sm:p-6`}>
                 <DoneScreen />
               </div>
             </div>
           ) : (
-            <StepChecklist
-              stage={stage}
-              open={open}
-              onOpen={(id) => setOpen(id)}
-              renderStep={renderStep}
-              renderDone={() => null}
-            />
+            <div ref={stepsRef}>
+              <StepChecklist
+                stage={stage}
+                open={open}
+                onOpen={(id) => setOpen(id)}
+                renderStep={renderStep}
+                renderDone={() => null}
+              />
+            </div>
           )}
           {/* Right rail: sticks while the left column scrolls and sits in the
               middle of the viewport (below the navbar) so it stays aligned. */}
@@ -162,7 +180,7 @@ export default function FoundingFlow({ initialState, games, categories, agreemen
             <WhySellPanel progress={state.progress} className="w-full" />
           </div>
         </div>
-      </main>
+      </div>
 
       <CongratsDialog
         open={celebrate}

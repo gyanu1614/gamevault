@@ -28,6 +28,9 @@ export function useBuyCta(input: {
     const href = state.kind === 'none' ? state.similarHref : state.href
     const onClick = () =>
       trackValueEvent({ event: 'cta_click', surface, game: gameSlug, item: itemSlug, variant, state: state.kind })
-    return { state: state.kind, label: copy.label, subline: copy.subline, href, onClick }
+    // Our lowest price + offer count behind the button (the hero leads with it).
+    const priceUsd = state.kind === 'none' ? null : state.priceUsd
+    const count = state.kind === 'none' ? 0 : state.count
+    return { state: state.kind, label: copy.label, subline: copy.subline, href, onClick, priceUsd, count }
   }, [gameSlug, categorySlug, itemSlug, variant, variantName, stock, surface])
 }

@@ -23,6 +23,32 @@ export interface ValueListRow {
   listedNow: number
   /** 7-day change in percent; null without two days of history. */
   trendPct: number | null
+  /** The standard item this one is a form of (MM2: a Chroma → its base), or null. */
+  baseItemId: string | null
+}
+
+/** An item that exists in two forms (MM2: standard + Chroma), as both cards see it. */
+export interface ValueListForms {
+  standard: ValueListRow
+  chroma: ValueListRow
+}
+
+/**
+ * Each item that has both forms in the list → its pair, keyed by BOTH ids, so
+ * either card can switch to the other form (owner, 2026-10-14: "any item that
+ * has common and chroma"). A form whose base isn't listed gets no switch.
+ */
+export function pairForms(rows: readonly ValueListRow[]): Map<string, ValueListForms> {
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const out = new Map<string, ValueListForms>()
+  for (const r of rows) {
+    const base = r.baseItemId ? byId.get(r.baseItemId) : undefined
+    if (!base) continue
+    const pair = { standard: base, chroma: r }
+    out.set(base.id, pair)
+    out.set(r.id, pair)
+  }
+  return out
 }
 
 export type ValueListSort = 'price-desc' | 'price-asc' | 'movers' | 'listed' | 'name'

@@ -352,6 +352,8 @@ export async function crawlEldoradoPets({
   let totalPages = 1
   let pagesFetched = 0
   let stoppedBy = 'complete'
+  let tailPages = 0
+  let tailFresh = 0
 
   /** Ingest one page; returns how many offers on it were new. */
   function ingest(results) {
@@ -393,13 +395,16 @@ export async function crawlEldoradoPets({
   /**
    * One sorted walk. Ascending: to totalPages (≤ the API cap). Descending:
    * until a page brings nothing new (met the ascending pass) or every
-   * reported offer is seen.
+   * reported offer is seen. `tail`: descending, stop ONLY when a page brings
+   * nothing new — page 1's recordCount is stale once the list has grown.
    */
-  async function walk(ascending) {
+  async function walk(ascending, { tail = false, tailMaxPages = 200 } = {}) {
+    const tailStart = pagesFetched
     const label = ascending ? 'asc' : 'desc'
     let consecutiveErrors = 0
     for (let page = 1; page <= ELDORADO_MAX_PAGE_INDEX; page += 1) {
       if (pagesFetched >= maxPages) return 'max-pages'
+      if (tail && pagesFetched - tailStart >= tailMaxPages) return 'tail-cap'
       if (ascending && page > totalPages) return 'complete'
       if (pagesFetched > 0) await new Promise((r) => setTimeout(r, delayMs))
       let body
@@ -423,7 +428,10 @@ export async function crawlEldoradoPets({
       if (pagesFetched % 50 === 0 || page === 1) {
         log(`  eldorado ${label} page ${page} — ${seenOfferIds.size}/${recordCount} offers, ${byName.size} pets`)
       }
-      if (!ascending && (fresh === 0 || seenOfferIds.size >= recordCount)) return 'complete'
+      if (tail) {
+        tailFresh += fresh
+        if (fresh === 0) return 'complete'
+      } else if (!ascending && (fresh === 0 || seenOfferIds.size >= recordCount)) return 'complete'
     }
     return ascending && totalPages > ELDORADO_MAX_PAGE_INDEX ? 'page-cap' : 'complete'
   }
@@ -432,6 +440,16 @@ export async function crawlEldoradoPets({
   if (stoppedBy === 'page-cap') {
     log(`  hit Eldorado's ${ELDORADO_MAX_PAGE_INDEX}-page cap; walking dearest-first for the rest`)
     stoppedBy = await walk(false)
+  } else if (stoppedBy === 'complete') {
+    // The list grows during a ~22-minute walk, so its dearest end slides past
+    // the page count read on page 1 (2026-10-13/14: every offer above ~$1,000
+    // was never read while the crawl said "complete", freezing the top pets'
+    // Mega prices). Read the top until a page brings nothing new: one page
+    // when nothing moved.
+    const tailPagesBefore = pagesFetched
+    stoppedBy = await walk(false, { tail: true })
+    tailPages = pagesFetched - tailPagesBefore
+    log(`  dearest-first tail: ${tailPages} page(s), ${tailFresh} offer(s) the cheapest-first walk missed`)
   }
 
   return {
@@ -444,5 +462,7 @@ export async function crawlEldoradoPets({
     rejected,
     errors,
     stoppedBy,
+    tailPages,
+    tailFresh,
   }
 }

@@ -13,6 +13,8 @@
  *   pnpm values:images --game=murder-mystery-2 --write --env=prod --yes   # owner only
  *
  * Options: --limit N   --refresh (re-copy rows already pointing at the bucket)
+ *          --only-missing (weekly job: rows with no image at all; an image an
+ *          admin set elsewhere is never replaced)
  * Idempotent: rows whose image_url is already in the bucket are skipped.
  */
 import fs from 'node:fs'
@@ -68,7 +70,7 @@ async function main() {
       stats.missingRow += 1
       continue
     }
-    if (!flag('refresh') && row.image_url?.startsWith(publicPrefix)) {
+    if ((flag('only-missing') && row.image_url) || (!flag('refresh') && row.image_url?.startsWith(publicPrefix))) {
       stats.skipped += 1
       continue
     }

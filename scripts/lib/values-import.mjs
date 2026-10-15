@@ -13,6 +13,7 @@
  * A write from an INCOMPLETE feed (crawl stopped early) refuses to run unless
  * allowPartial: it would retire listings the crawl simply did not reach.
  */
+import { dedupeOffers } from './offers.mjs'
 import fs from 'node:fs'
 
 import { normaliseStructuredListing } from '../../src/lib/values/normalisers/eldorado-structured.ts'
@@ -153,19 +154,23 @@ export async function importEldoradoFeed({ game, feed, env, yes = false, write =
 
   const catalogue = await loadDbCatalogue(db, game_.id)
   if (!catalogue.entries.length) throw new Error(`no values_items for '${game}' — run the catalogue import first`)
-  const plan = planRawRows({ game, listings: feed.listings, catalogue, observedAt, gameId: game_.id })
+  const listings = dedupeOffers(feed.listings)
+  if (listings.length < feed.listings.length) console.log(`  duplicates: ${feed.listings.length - listings.length} repeated offers dropped`)
+  const plan = planRawRows({ game, listings, catalogue, observedAt, gameId: game_.id })
   report(plan, feed)
 
   console.log(`Writing ${plan.rows.length} raw listings to ${url}`)
-  if (feed.complete) {
-    // Listings not seen in this crawl stop counting; history is untouched.
-    const { error } = await db.from('values_raw_listings').update({ is_active: false }).eq('game_id', game_.id).eq('is_active', true).lt('observed_at', observedAt)
-    if (error) throw new Error(`retire: ${error.message}`)
-  }
   const insertRows = plan.rows.map(({ matched_slug, _raw_price, ...row }) => row)
   for (let i = 0; i < insertRows.length; i += 500) {
     const { error } = await db.from('values_raw_listings').insert(insertRows.slice(i, i + 500))
     if (error) throw new Error(`values_raw_listings insert: ${error.message}`)
+  }
+  if (feed.complete) {
+    // Only now, with this crawl saved: listings not seen in it stop counting
+    // (done first, a failed insert left the game with no active listings).
+    // History is untouched.
+    const { error } = await db.from('values_raw_listings').update({ is_active: false }).eq('game_id', game_.id).eq('is_active', true).lt('observed_at', observedAt)
+    if (error) throw new Error(`retire: ${error.message}`)
   }
   return plan
 }

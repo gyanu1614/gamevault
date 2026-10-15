@@ -483,7 +483,7 @@ export function Navbar({
         .select('role, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .single()
+        .maybeSingle()
 
       setIsAdmin(!!data)
     }

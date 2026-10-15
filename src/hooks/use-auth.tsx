@@ -238,7 +238,7 @@ function useAuthState(): AuthContextValue {
                   .eq('user_id', userId)
                   .order('created_at', { ascending: false })
                   .limit(1)
-                  .single()
+                  .maybeSingle()
 
                 const sellerTimeout = new Promise((_, reject) =>
                   setTimeout(() => reject(new Error('Seller status timeout')), 5000)
@@ -373,7 +373,7 @@ function useAuthState(): AuthContextValue {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
+                .maybeSingle()
 
               const sellerTimeout = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Seller status timeout')), 5000)

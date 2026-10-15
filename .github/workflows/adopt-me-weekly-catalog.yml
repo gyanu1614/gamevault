@@ -1,9 +1,17 @@
-name: Adopt Me Weekly Catalog
+name: Values Weekly Catalog
 
-# Re-scrapes the Adopt Me pet catalog (adoptmevalues.app) and upserts it by
-# slug, so pets/eggs added in Adopt Me's Friday updates are picked up
-# automatically without duplicating existing pets. Also refreshes the community
-# trade values. Cash prices come from the separate daily workflow.
+# Two jobs, one after the other (one DB-heavy run at a time):
+#   1. Adopt Me — below.
+#   2. Murder Mystery 2 — the Fandom wiki catalogue, NEW items only
+#      (--new-only: existing rows are never rewritten), then images for rows
+#      that have none. Before 2026-10-14 it ran only by hand.
+#
+# Adopt Me re-scrapes the Adopt Me pet catalog (adoptmevalues.app) and upserts it by
+# slug, without duplicating existing pets, and refreshes the community trade
+# values. NEW pets (Friday updates) are added only when the dry run says they
+# qualify — a variant with a real reputable price above $1 (owner rule, T2).
+# Before 2026-10-14 the import held back every new slug (no --qualifying), so
+# no new pet was ever added. Cash prices come from the separate daily workflow.
 
 on:
   workflow_dispatch: {}
@@ -28,6 +36,8 @@ jobs:
 
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      # The dry run reads the live catalog with the public key (GET only).
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
@@ -46,14 +56,67 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Collect + upsert catalog (new pets auto-added by slug)
-        run: pnpm adoptme:catalog
+      - name: Which new pets qualify (dry run, local files only)
+        run: pnpm adoptme:catalog:dryrun
+
+      - name: Collect + upsert catalog (new pets only when they qualify)
+        run: |
+          REPORT=$(ls -t data/adopt-me-catalog-dryrun/*.json | grep -v eldorado-crawl | head -1)
+          echo "qualifying report: $REPORT"
+          pnpm adoptme:catalog --qualifying "$REPORT"
 
       - name: Upload catalog feed (debug artifact)
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: adopt-me-catalog-${{ github.run_id }}
-          path: data/adopt-me-feeds/adoptmevalues-latest.json
+          path: |
+            data/adopt-me-feeds/adoptmevalues-latest.json
+            data/adopt-me-catalog-dryrun/*.csv
+          if-no-files-found: warn
+          retention-days: 14
+
+  mm2-catalog:
+    needs: refresh-catalog
+    # Runs after Adopt Me whether or not that job passed.
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Add new MM2 items from the wiki (never rewrites existing rows)
+        run: pnpm values:mm2:catalogue --write --new-only
+
+      - name: Copy images for items that have none
+        run: pnpm values:images --game=murder-mystery-2 --write --only-missing
+
+      - name: Upload catalogue (debug artifact)
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: mm2-catalogue-${{ github.run_id }}
+          path: data/values-catalogue/murder-mystery-2/catalogue.json
           if-no-files-found: warn
           retention-days: 14

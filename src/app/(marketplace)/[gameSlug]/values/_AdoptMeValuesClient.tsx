@@ -204,6 +204,8 @@ function AdoptMeValuesClientInner({ initial }: { initial: InitialValueList }) {
         <div className="w-full shrink-0 sm:w-48">
           <ValuePopoverField
             label="Choose variant for the whole list"
+            // Wide enough for Normal · Neon · Mega on one row (the trigger is narrower).
+            panelClassName="w-max min-w-[16rem] p-3.5"
             trigger={
               <>
                 <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[11px] font-semibold text-text-primary">{variant}</span>
@@ -214,7 +216,7 @@ function AdoptMeValuesClientInner({ initial }: { initial: InitialValueList }) {
             {() => (
               // Every form is a valid whole-list view (unpriced forms fall back
               // to trade value), so nothing is disabled.
-              <CompactVariantPicker variant={variant} onChange={setVariant} accent="#4FB477" />
+              <CompactVariantPicker variant={variant} size="sm" onChange={setVariant} accent="#4FB477" />
             )}
           </ValuePopoverField>
         </div>
@@ -378,7 +380,16 @@ function PetCard({
       overlay={
         <CardPickerOverlay open={pickerOpen} title="Choose Variant" onClose={() => setPickerOpen(false)}>
           <div className="flex flex-1 flex-col justify-center">
-            <CompactVariantPicker variant={code} onChange={setCode} accent={c} />
+            {/* One tap picks and closes (owner): the card shows the variant straight away. */}
+            <CompactVariantPicker
+              variant={code}
+              size="xs"
+              onChange={(v) => {
+                setCode(v)
+                setPickerOpen(false)
+              }}
+              accent={c}
+            />
           </div>
         </CardPickerOverlay>
       }

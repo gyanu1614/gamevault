@@ -153,3 +153,15 @@ export function formGroup(
     })),
   }
 }
+
+/**
+ * The edge fade for a swipeable chip strip (owner, 2026-10-14): fade only a
+ * side that has more chips beyond it — never the left while the first chip is
+ * in view. Passed to `mask-image`.
+ */
+export function stripMask(atStart: boolean, atEnd: boolean): string {
+  if (atStart && atEnd) return 'none'
+  if (atStart) return 'linear-gradient(90deg,#000 calc(100% - 20px),transparent)'
+  if (atEnd) return 'linear-gradient(90deg,transparent,#000 20px)'
+  return 'linear-gradient(90deg,transparent,#000 20px,#000 calc(100% - 20px),transparent)'
+}

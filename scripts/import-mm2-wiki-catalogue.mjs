@@ -19,7 +19,10 @@
  *   pnpm values:mm2:catalogue --feed data/values-feeds/murder-mystery-2/eldorado-latest.json
  *   pnpm values:mm2:catalogue --write --env=local
  *   pnpm values:mm2:catalogue --write --env=prod --yes      # owner only
+ *   pnpm values:mm2:catalogue --write --new-only            # weekly job (CI)
  * Options: --refresh (ignore the page cache)
+ *          --new-only: insert items we do not have yet and nothing else —
+ *          existing rows (is_enabled, sort_order, links) are never rewritten.
  */
 import fs from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -36,6 +39,7 @@ import {
 import { buildMarketIndex, resolveMarketKey, suggestForReview } from '../src/lib/values/catalogue/resolve.ts'
 import { normaliseStructuredListing } from '../src/lib/values/normalisers/eldorado-structured.ts'
 import { eldoradoStructuredConfig } from '../src/lib/values/sources/eldorado-structured-games.ts'
+import { catalogueGapSummary, newOnlyPlan } from './lib/catalogue-new-only.mjs'
 
 const GAME = 'murder-mystery-2'
 const WIKI = 'https://murder-mystery-2.fandom.com'
@@ -57,6 +61,11 @@ const val = (name, fallback = null) => {
 const flag = (name) => argv.includes(`--${name}`)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+/** Appends to the GitHub job summary when running in Actions. */
+async function summary(md) {
+  console.log(md)
+  if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, md + '\n', { flag: 'a' })
+}
 let cache = { pages: {}, members: {}, images: {}, redirects: {} }
 
 async function api(params) {
@@ -213,7 +222,20 @@ async function write(items) {
   )
   if (vgErr) throw vgErr
 
-  const rows = items.map((i, n) => ({
+  // Weekly job: only the items we do not have (catalogue-new-only.mjs).
+  const newOnly = flag('new-only')
+  let source = items
+  let startOrder = 0
+  if (newOnly) {
+    const existing = await selectAllRows(() => db.from('values_items').select('slug,sort_order').eq('game_id', game.id), 'slug')
+    const plan = newOnlyPlan(items, existing)
+    source = plan.fresh
+    startOrder = plan.startOrder
+    console.log(`  new-only: ${source.length} new of ${items.length} (have ${existing.length})`)
+    await summary(catalogueGapSummary('New MM2 items added', source.map((i) => i.name)))
+    if (!source.length) return
+  }
+  const rows = source.map((i, n) => ({
     game_id: game.id,
     kind: 'item',
     item_type: i.itemType,
@@ -226,24 +248,27 @@ async function write(items) {
     wiki_title: i.wikiTitle,
     is_priced: true,
     is_enabled: true,
-    sort_order: n,
+    sort_order: startOrder + n,
   }))
   for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await db.from('values_items').upsert(rows.slice(i, i + 500), { onConflict: 'game_id,slug' })
+    const { error } = await db
+      .from('values_items')
+      .upsert(rows.slice(i, i + 500), { onConflict: 'game_id,slug', ignoreDuplicates: newOnly })
     if (error) throw new Error(`values_items upsert: ${error.message}`)
   }
   const saved = await selectAllRows(() => db.from('values_items').select('id,slug').eq('game_id', game.id), 'id')
   const idBySlug = new Map(saved.map((r) => [r.slug, r.id]))
   let linked = 0
-  for (const i of items) {
+  for (const i of source) {
     if (!i.baseSlug || !idBySlug.has(i.baseSlug)) continue
     const { error } = await db.from('values_items').update({ base_item_id: idBySlug.get(i.baseSlug) }).eq('id', idBySlug.get(i.slug))
     if (error) throw error
     linked += 1
   }
   const aliases = fs.existsSync(ALIASES) ? JSON.parse(fs.readFileSync(ALIASES, 'utf8')) : {}
+  const sourceSlugs = new Set(source.map((i) => i.slug))
   const aliasRows = Object.entries(aliases)
-    .filter(([, slug]) => idBySlug.has(slug))
+    .filter(([, slug]) => idBySlug.has(slug) && sourceSlugs.has(slug))
     .map(([key, slug]) => ({ item_id: idBySlug.get(slug), alias: `eldorado:${key}` }))
   if (aliasRows.length) {
     const { error } = await db.from('values_item_aliases').upsert(aliasRows, { onConflict: 'item_id,alias' })

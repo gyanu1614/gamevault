@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isRetryableImportError, sendSplitting } from "./lib/sab-import-retry.mjs";
+
+export { isRetryableImportError, sendSplitting };
 
 const DEFAULT_ENDPOINT =
   "https://cserfvellsliylifjkos.supabase.co/functions/v1/sab-market-import";
@@ -400,68 +403,6 @@ const SEND_MAX_ATTEMPTS = 4;
 const PUBLISH_MAX_ATTEMPTS = 5;
 const PUBLISH_BACKOFF_MS = [30_000, 60_000, 120_000, 180_000];
 
-/**
- * PostgREST/Postgres SQLSTATEs that will NEVER succeed on retry, whatever HTTP
- * status they arrive under. The import endpoint wraps an RPC failure in its own
- * 500, so status alone cannot distinguish "the database is busy" from "this
- * statement is invalid" — the SQLSTATE can.
- *
- * ROUTE-013: 21000 is the one that bit us. A full-refresh function did an
- * unqualified DELETE, safe-update mode rejected it, the edge function reported
- * it as a 500, and the retry loop dutifully re-sent the same doomed statement
- * four times before failing — turning a clear, instant error into four minutes
- * of identical failures.
- */
-const NON_RETRYABLE_SQLSTATES = [
-  "21000", // cardinality_violation — incl. "DELETE requires a WHERE clause"
-  "42501", // insufficient_privilege
-  "42703", // undefined_column
-  "42P01", // undefined_table
-  "42883", // undefined_function
-  "23502", // not_null_violation
-  "23503", // foreign_key_violation
-  "23505", // unique_violation
-  "22P02", // invalid_text_representation
-  "PGRST", // PostgREST's own schema-cache / request errors (PGRST2xx, PGRST1xx)
-];
-
-export function isRetryableImportError(error) {
-  const status = Number(error?.status ?? 0);
-  const text = `${error?.details ?? ""} ${error?.message ?? ""}`;
-
-  // Decide on the error's IDENTITY before its HTTP status. A permanent schema or
-  // constraint failure is permanent even when it surfaces as a 500.
-  if (NON_RETRYABLE_SQLSTATES.some((code) => text.includes(code))) return false;
-  if (/requires a where clause/i.test(text)) return false;
-  // ROUTE-017: a malformed listing_url throws the bare `TypeError: Invalid URL`
-  // from new URL() — no status, no SQLSTATE — so it reached the final
-  // `status >= 500` and was rejected only by luck (0 >= 500 is false). Wrapped
-  // in a 5xx, or under 408/429, the same unparseable row would be re-sent 4x.
-  // Keyed on the phrase, not on "url": a statement timeout whose text happens
-  // to contain a URL must still retry.
-  if (/invalid url/i.test(text)) return false;
-
-  // Transient by identity, whatever the status.
-  if (
-    text.includes("57014") ||
-    /statement timeout/i.test(text) ||
-    /gateway timeout|fetch failed|socket|ECONNRESET|EAI_AGAIN|ETIMEDOUT/i.test(
-      text,
-    )
-  ) {
-    return true;
-  }
-
-  // 4xx is the client's fault and will not fix itself — never retry it. (408
-  // and 429 are the two exceptions: both explicitly mean "try again".)
-  if (status === 408 || status === 429) return true;
-  if (status >= 400 && status < 500) return false;
-
-  // A bare 5xx with no recognisable SQLSTATE is assumed transient (the gateway
-  // or the database was briefly unavailable).
-  return status >= 500;
-}
-
 const pause = (milliseconds) =>
   new Promise((done) => setTimeout(done, milliseconds));
 
@@ -504,6 +445,7 @@ async function sendBatchWithRetry(options, label) {
 
   throw lastError;
 }
+
 
 async function sendBatch({
   endpoint,
@@ -729,21 +671,22 @@ async function main() {
     );
   }
 
+  const skippedPieces = [];
   for (let i = 0; i < batchPlan.length; i += 1) {
     const { sourceSlug, batch, label, publish } = batchPlan[i];
 
-    const response = await sendBatchWithRetry(
-      {
-        endpoint,
-        secret,
-        sourceSlug,
-        listings: batch,
-        publish,
-      },
-      label,
-    );
+    // Plain inserts split on a stuck batch; the publishing batch is one request by design.
+    const { responses, skipped } = publish
+      ? { responses: [await sendBatchWithRetry({ endpoint, secret, sourceSlug, listings: batch, publish }, label)], skipped: [] }
+      : await sendSplitting(
+          batch,
+          (part, name) => sendBatchWithRetry({ endpoint, secret, sourceSlug, listings: part, publish }, name),
+          { label },
+        );
+    skippedPieces.push(...skipped);
+    const response = responses[responses.length - 1] ?? { result: null };
 
-    console.log(`\n${label}${publish ? " (publishing)" : ""}:`);
+    console.log(`\n${label}${publish ? " (publishing)" : ""}${responses.length > 1 ? ` (sent in ${responses.length} parts)` : ""}:`);
     console.log(JSON.stringify(response.result, null, 2));
 
     if (response.publication) {
@@ -759,6 +702,13 @@ async function main() {
         JSON.stringify(response.revalidation, null, 2),
       );
     }
+  }
+
+  if (skippedPieces.length) {
+    const n = skippedPieces.reduce((t, p) => t + p.size, 0);
+    // Visible on the run page (::warning::), and listed so the slow rows can be found.
+    console.log(`::warning::SAB import skipped ${n} listing(s) in ${skippedPieces.length} piece(s) that kept timing out; the rest landed.`);
+    for (const p of skippedPieces) console.log(`  skipped ${p.label} (${p.size}): ${p.error} — ${p.ids.slice(0, 10).join(", ")}${p.ids.length > 10 ? " …" : ""}`);
   }
 
   console.log(

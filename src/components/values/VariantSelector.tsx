@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useId, useRef, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import Link from '@/components/navigation/AppLink'
-import type { SelectorGroup, SelectorOption } from '@/lib/values/variant-selector'
+import { stripMask, type SelectorGroup, type SelectorOption } from '@/lib/values/variant-selector'
 import { cn } from '@/lib/utils'
 
 /**
@@ -18,7 +18,8 @@ import { cn } from '@/lib/utils'
  *   single  a radio group: arrow keys move the pick; the pill slides.
  *   toggle  each option on/off (Fly, Ride): the on ones carry the same pill.
  *   many    a long single group (SAB's 14 mutations) becomes a swipeable
- *           strip with faded edges; the pick scrolls into view.
+ *           strip; an edge fades only while chips hide beyond it (stripMask);
+ *           the pick scrolls into view.
  *
  * Clicks never bubble: list cards are links, picking a variant must not open
  * the item page. Reduced motion: the pill jumps instead of sliding.
@@ -43,14 +44,16 @@ export function VariantSelector({
   onSelect: (groupId: string, key: string) => void
   /** Active colour when an option has none of its own (Adopt Me: the variant colour). */
   accent?: string
-  size?: 'md' | 'sm'
+  /** xs: inside a list card's popup (a tier row must fit a ~200px card). */
+  size?: 'md' | 'sm' | 'xs'
   /** Show each group's label ("Tier", "Potion") above its track. */
   labels?: boolean
   /** column: a vertical list (the list cards' mutation popover); the pill slides down. */
   direction?: 'row' | 'column'
   /** All groups in ONE tray, split by a hairline (the item hero: Default | Neon | Mega ‖ Fly | Ride). */
   merged?: boolean
-  /** Each tray takes the full width and its options share it evenly (under the hero art). */
+  /** Phones: each tray takes the full width and its options share it evenly
+   *  (the hero, under the art). Desktop (lg+, beside the art): natural widths. */
   fill?: boolean
   className?: string
 }) {
@@ -93,7 +96,7 @@ function Group({
   group: SelectorGroup
   onSelect: (groupId: string, key: string) => void
   accent?: string
-  size: 'md' | 'sm'
+  size: 'md' | 'sm' | 'xs'
   label: boolean
   column: boolean
   /** Inside a merged tray: the options only, no own tray. */
@@ -104,6 +107,7 @@ function Group({
   const track = useRef<HTMLDivElement | null>(null)
   const many = !column && !bare && group.mode === 'single' && group.options.length > MANY
   const activeKey = group.options.find((o) => o.active)?.key
+  const edges = useStripEdges(track, many)
 
   // Keep the pick in view on a swipeable strip (and after a pick elsewhere).
   useEffect(() => {
@@ -134,7 +138,14 @@ function Group({
   }
 
   // One fixed height per size, so every option (and every tray) lines up.
-  const h = size === 'sm' ? 'h-8 px-3 text-[13px]' : hasHint(group) ? 'min-h-10 px-3.5 py-1.5 text-body-sm' : 'h-10 px-3.5 text-body-sm'
+  const h =
+    size === 'xs'
+      ? 'h-7 px-2 text-[12px]'
+      : size === 'sm'
+        ? 'h-8 px-3 text-[13px]'
+        : hasHint(group)
+          ? 'min-h-10 px-3.5 py-1.5 text-body-sm'
+          : 'h-10 px-3.5 text-body-sm'
 
   return (
     <div className={cn(bare ? 'contents' : 'min-w-0', (many || column || fill) && 'w-full', column && 'flex min-h-0 flex-1 flex-col')}>
@@ -144,17 +155,18 @@ function Group({
         role={group.mode === 'single' ? 'radiogroup' : 'group'}
         aria-label={group.label}
         onKeyDown={onKeyDown}
+        style={many ? { maskImage: stripMask(edges.start, edges.end), WebkitMaskImage: stripMask(edges.start, edges.end) } : undefined}
         className={cn(
           // No tray (owner, 2026-10-12: a dark box with a filled pill inside read
           // as a box in a box): the options are separate chips on the card.
-          'relative flex gap-2',
+          'relative flex', size === 'xs' ? 'gap-1.5' : 'gap-2',
           bare
             ? ''
             : column
             ? 'min-h-0 w-full flex-1 flex-col overflow-y-auto [scrollbar-width:thin]'
             : many
-            ? 'w-full snap-x overflow-x-auto [mask-image:linear-gradient(90deg,transparent,#000_16px,#000_calc(100%-16px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-            : fill ? 'w-full' : 'w-fit max-w-full',
+            ? 'w-full snap-x overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+            : fill ? 'w-full lg:w-fit lg:max-w-full' : 'w-fit max-w-full',
         )}
       >
         {group.options.map((o) => {
@@ -176,7 +188,7 @@ function Group({
                 />
               )}
               <span className="relative flex items-center gap-1.5 whitespace-nowrap">
-                {o.color && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: o.color }} />}
+                {o.color && <span aria-hidden className={cn('shrink-0 rounded-full', size === 'xs' ? 'h-1.5 w-1.5' : 'h-2 w-2')} style={{ backgroundColor: o.color }} />}
                 <span className="flex flex-col items-start leading-tight">
                   <span>{o.label}</span>
                   {o.hint && (
@@ -191,11 +203,11 @@ function Group({
           const cls = cn(
             'relative shrink-0 touch-manipulation snap-start rounded-[8px] border border-white/[0.08] bg-white/[0.03] font-semibold transition-colors duration-150',
             column && 'w-full text-left',
-            fill && !many && 'inline-flex min-w-0 flex-1 items-center justify-center',
+            fill && !many && 'inline-flex min-w-0 flex-1 items-center justify-center lg:flex-none',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
             h,
-            // Even trays share the width; tighter padding so three tiers fit.
-            fill && !many && 'px-2',
+            // Even trays share the width; tighter padding so three tiers fit (phones).
+            fill && !many && 'px-2 lg:px-3.5',
             o.active ? 'border-transparent text-white' : 'text-[#B4B7BF] hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-white',
             o.disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-[#9A9DA6]',
           )
@@ -230,4 +242,27 @@ function Group({
       </div>
     </div>
   )
+}
+
+/** Whether a swipeable strip is scrolled to its start / end (it re-checks on scroll and resize). */
+function useStripEdges(track: RefObject<HTMLDivElement | null>, on: boolean) {
+  const [edges, setEdges] = useState({ start: true, end: false })
+  useEffect(() => {
+    const el = track.current
+    if (!on || !el) return
+    const sync = () => {
+      const start = el.scrollLeft <= 1
+      const end = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
+      setEdges((p) => (p.start === start && p.end === end ? p : { start, end }))
+    }
+    sync()
+    el.addEventListener('scroll', sync, { passive: true })
+    const ro = new ResizeObserver(sync)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', sync)
+      ro.disconnect()
+    }
+  }, [track, on])
+  return edges
 }

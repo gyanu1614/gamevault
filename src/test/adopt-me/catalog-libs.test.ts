@@ -132,13 +132,33 @@ describe('crawlEldoradoPets', () => {
       2: { recordCount: 4, totalPages: 2, results: p2 },
     }
     const crawl = await crawlEldoradoPets({ delayMs: 0, fetchPage: async (n: number) => pages[n] })
-    expect(crawl.pagesFetched).toBe(2)
-    expect(crawl.duplicates).toBe(1)
+    // 2 cheapest-first pages + 1 dearest-first page that meets them (the tail check).
+    expect(crawl.pagesFetched).toBe(3)
+    expect(crawl.duplicates).toBe(3)
     expect(crawl.byName.get('owl')).toMatchObject({ offers: 2 })
     expect(crawl.byName.get('owl')?.listings).toHaveLength(1) // the Ducky is a toy
     expect(crawl.byName.get('fairy bat dragon')?.listings[0]).toMatchObject({ variant: 'NFR' })
     expect(crawl.rejected).toEqual({ toy: 1 })
   })
+  // Root cause of stale top prices (Oct 13 + 14): the list grows during the
+  // ~22-minute walk, so its dearest end slides past the page count read on
+  // page 1 and every offer above ~$1,000 was never read — while the crawl said
+  // "complete". After the cheapest-first walk, a dearest-first pass reads the
+  // top until it meets offers already seen.
+  it('catches the dearest offers the list pushed past the last page during the walk', async () => {
+    const live = [1, 2, 3, 4, 5, 6].map((p) => offer({ id: `o${p}`, name: 'Bat Dragon', price: p * 100 }))
+    const fetchPage = async (n: number, ascending: boolean) => {
+      // After page 1 is read, two new cheap offers arrive: everything shifts right by two.
+      if (ascending && n === 2 && live.length === 6) live.unshift(offer({ id: 'n1', name: 'Owl', price: 1 }), offer({ id: 'n2', name: 'Owl', price: 2 }))
+      const sorted = ascending ? live : [...live].reverse()
+      return { recordCount: 6, totalPages: 3, results: sorted.slice((n - 1) * 2, n * 2) }
+    }
+    const crawl = await crawlEldoradoPets({ delayMs: 0, fetchPage })
+    const seenPrices = (crawl.byName.get('bat dragon')?.offers ?? 0)
+    expect(seenPrices).toBe(6) // o5 + o6 ($500, $600) were past page 3 by then
+    expect(crawl.stoppedBy).toBe('complete')
+  })
+
   it("walks dearest-first past Eldorado's 1000-page cap until the passes meet", async () => {
     // 1,003 pages of one offer each; the API refuses pageIndex > 1000.
     const total = 1003

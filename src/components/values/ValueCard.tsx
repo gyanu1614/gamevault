@@ -2,7 +2,7 @@
 
 import Link from '@/components/navigation/AppLink'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { XIcon } from '@phosphor-icons/react/dist/csr/X'
 import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { ValueArt } from './ValueArt'
@@ -188,7 +188,12 @@ export function VariantPill({
 }
 
 /** In-card picker overlay: covers the card, fades in, closes on ✕ / Escape /
- *  a tap outside the card. */
+ *  a tap outside the card.
+ *
+ *  It unmounts the moment it closes (no fade-out). Bug 2026-10-14: with an
+ *  AnimatePresence exit, picking a variant (the chips' pill slides via a
+ *  Framer layoutId) left the exit unfinished — the popup stayed at opacity 0
+ *  over the card, so the card went dead and taps hit its hidden chips. */
 export function CardPickerOverlay({
   open,
   title,
@@ -212,7 +217,7 @@ export function CardPickerOverlay({
   }, [open, onClose])
 
   return (
-    <AnimatePresence>
+    <>
       {open && (
         <motion.div
           ref={ref}
@@ -220,7 +225,6 @@ export function CardPickerOverlay({
           aria-label={title}
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.97 }}
           transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') onClose()
@@ -246,6 +250,6 @@ export function CardPickerOverlay({
           {children}
         </motion.div>
       )}
-    </AnimatePresence>
+    </>
   )
 }

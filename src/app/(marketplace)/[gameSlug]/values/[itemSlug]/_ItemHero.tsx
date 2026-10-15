@@ -10,7 +10,7 @@ import { rarityMeta } from '@/lib/values/rarity'
 import { useBuyCta } from '@/components/value-listings/useBuyCta'
 import type { ItemStock } from '@/lib/value-listings/buy-state'
 import { ValueItemHero, HeroBadge, TrendChartPlaceholder } from '@/components/values/ValueItemHero'
-import { ValueBuyActions } from '@/components/values/ValueBuyActions'
+import { ValueBuyPanel } from '@/components/values/ValueBuyPanel'
 import { VariantSelector } from '@/components/values/VariantSelector'
 import { mutationGroup } from '@/lib/values/variant-selector'
 import { SearchParamsBridge } from '@/components/navigation/SearchParamsBridge'
@@ -55,7 +55,6 @@ export type MutationOption = {
 interface ItemHeroProps {
   brainrotName: string
   rarity: string
-  obtainability: string
   baseIncomePerSecond: number | null
   ingameCost: string | null
   imageUrl: string | null
@@ -75,7 +74,6 @@ const formatTrendCash = (v: number) => formatCash(v) ?? `$${v}`
 export default function ItemHero({
   brainrotName,
   rarity,
-  obtainability,
   baseIncomePerSecond,
   ingameCost,
   imageUrl,
@@ -148,14 +146,14 @@ export default function ItemHero({
   const isDefault = selected.slug === 'default'
   // Mutation-driven name: "Diamond Garama and Madundung"; plain for Default.
   const displayName = isDefault ? brainrotName : `${selected.name} ${brainrotName}`
-  // CHEAPEST is the headline — the price a buyer acts on. Stored values from the
-  // 3h crawl (≤6h fresh); no per-view live fetch.
+  // Market = the typical reputable price (stored from the 3h crawl, ≤6h
+  // fresh; no per-view live fetch). The panel leads with OUR price when we
+  // have this mutation and keeps the market as its reference.
   const marketUsd = selected.averageUsd ?? selected.marketValueUsd
-  const headlineUsd = selected.cheapestUsd ?? marketUsd
-  const cash = formatCash(headlineUsd)
 
   return (
     <ValueItemHero
+      titleAs="h2"
       anchorRef={heroRef}
       accent={visual.color}
       art={{ src: imageUrl, alt: imageAlt || `${displayName} Steal a Brainrot`, pixelated: true }}
@@ -165,41 +163,32 @@ export default function ItemHero({
       stats={[
         { label: 'Type', value: 'Brainrot' },
         { label: 'Rarity', value: <span style={{ color: rarityMeta('steal-a-brainrot', rarity).color }}>{rarity}</span> },
-        { label: 'Availability', value: obtainability },
         { label: 'Base Income', value: formatIncome(selected.calculatedIncomePerSecond ?? baseIncomePerSecond) },
         { label: 'Mutation', value: `${selected.name} · ${formatMultiplier(selected.multiplier)}` },
         { label: 'In-Game Cost', value: ingameCost ?? 'Unknown' },
       ]}
-      price={{
-        // Market data, not DropMarket stock: the buy button carries ours.
-        label: 'Market Price',
-        value: cash ?? 'No data yet',
-        children: (
-          <>
-            <div className="mt-2 lg:flex">
-              <FreshnessBadge updatedAt={selected.marketUpdatedAt ?? updatedAt} />
-            </div>
-            {/* Only surface a note when the price is estimated or missing. */}
-            {(selected.isEstimated || !cash) && (
-              <div className="mt-1.5 flex min-h-[20px] flex-wrap items-center gap-2">
+      panel={
+        <ValueBuyPanel
+          cta={cta}
+          itemName={displayName}
+          marketUsd={marketUsd}
+          cheapestUsd={selected.cheapestUsd ?? null}
+          // Only surface a note when the market price is estimated or missing.
+          notes={
+            (selected.isEstimated || marketUsd == null) && (
+              <div className="mt-2 flex min-h-[20px] flex-wrap items-center gap-2 lg:justify-end">
                 {selected.isEstimated ? (
-                  <HeroBadge color="var(--color-warning)">Estimated from multiplier</HeroBadge>
+                  <HeroBadge color="var(--color-warning)">Estimated From Multiplier</HeroBadge>
                 ) : (
                   <span className="text-[12.5px] text-text-secondary">No priced listings yet</span>
                 )}
               </div>
-            )}
-          </>
-        ),
-      }}
-      actions={
-        <ValueBuyActions
-          cta={cta}
-          itemName={displayName}
-          align="end"
-          sell={{ href: '/steal-a-brainrot/sell?src=sab-item-page', label: 'Sell Yours For Cash' }}
+            )
+          }
+          sell={{ href: '/steal-a-brainrot/sell?src=sab-item-page' }}
         />
       }
+      footer={<FreshnessBadge updatedAt={selected.marketUpdatedAt ?? updatedAt} />}
       // The universal selector: every mutation of this brainrot, its colour and
       // a swipeable strip (14 mutations), the pill slides to the pick; the
       // price shows in the hero on select, not on every option.
