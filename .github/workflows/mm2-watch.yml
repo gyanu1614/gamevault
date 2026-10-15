@@ -35,6 +35,9 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "22"
+          # Plain Node, no install: without this, setup-node@v5 sees package.json's
+          # packageManager (pnpm) and fails looking for pnpm (2026-10-12).
+          package-manager-cache: false
 
       - name: Run the watch
         id: watch

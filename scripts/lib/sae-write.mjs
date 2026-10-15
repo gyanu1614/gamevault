@@ -10,6 +10,7 @@
  * that table IS the review file the brief asks for.
  */
 import { createClient } from '@supabase/supabase-js'
+import { dedupeOffers } from './offers.mjs'
 
 const GAME_SLUG = 'steal-an-egg'
 
@@ -76,7 +77,11 @@ function matchItem(text, entries) {
   return null
 }
 
-export async function writeListings(listings) {
+export { dedupeOffers }
+
+export async function writeListings(crawled) {
+  const listings = dedupeOffers(crawled)
+  if (listings.length < crawled.length) console.log(`  duplicates: ${crawled.length - listings.length} repeated offers dropped`)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
@@ -157,18 +162,20 @@ export async function writeListings(listings) {
     })
   }
 
-  // Listings not seen in this crawl are no longer active: their prices must
-  // stop counting. History rows are untouched.
-  await db
-    .from('values_raw_listings')
-    .update({ is_active: false })
-    .eq('game_id', game.id)
-    .lt('observed_at', now)
-
   for (let i = 0; i < rows.length; i += 500) {
     const { error } = await db.from('values_raw_listings').insert(rows.slice(i, i + 500))
     if (error) throw new Error(`values_raw_listings insert: ${error.message}`)
   }
+
+  // Only now, with this crawl saved: listings not seen in it are no longer
+  // active and their prices stop counting. (Done first, a failed insert left
+  // the game with no active listings that day.) History rows are untouched.
+  const { error: retireError } = await db
+    .from('values_raw_listings')
+    .update({ is_active: false })
+    .eq('game_id', game.id)
+    .lt('observed_at', now)
+  if (retireError) throw new Error(`values_raw_listings retire: ${retireError.message}`)
 
   const total = rows.length
   console.log(`  matched   : ${stats.matched} (${((stats.matched / total) * 100).toFixed(1)}%)`)
