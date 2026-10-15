@@ -515,7 +515,12 @@ async function sendBatchWithRetry(options, label) {
  * Only transient failures split; a permanent one (bad data, 4xx) still stops
  * the import. `send(part, label)` is sendBatchWithRetry (retries come first).
  */
-export async function sendSplitting(listings, send, { label, minSize = 25, pauseMs = 20000 } = {}) {
+/**
+ * @param {Array<{ external_listing_id?: string }>} listings
+ * @param {(part: any[], label: string) => Promise<any>} send
+ * @param {{ label?: string, minSize?: number, pauseMs?: number }} [options]
+ */
+export async function sendSplitting(listings, send, { label = 'batch', minSize = 25, pauseMs = 20000 } = {}) {
   const responses = []
   const skipped = []
   async function go(part, name) {

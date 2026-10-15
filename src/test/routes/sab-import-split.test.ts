@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-// @ts-expect-error -- plain .mjs script
 import { sendSplitting } from '../../../scripts/import-sab-market-json.mjs'
 
 /**

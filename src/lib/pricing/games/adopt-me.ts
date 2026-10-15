@@ -20,6 +20,7 @@ import {
 import type { RawListing } from '@/lib/pricing/reputable-adapter'
 import { fetchAllRows } from '@/lib/db/fetch-all'
 import type { PublishedPrice } from '@/lib/pricing/change-rule'
+import { OBSERVED_PRICE_TTL_DAYS, evidenceSince, staleObservedKeys } from '@/lib/pricing/adopt-me-expiry'
 
 const PAGE_SIZE = 1000
 
@@ -188,6 +189,10 @@ export async function runAdoptMeCorrection(
     historyReconciled += batch.length
   }
 
+  // Observed prices nothing has confirmed for OBSERVED_PRICE_TTL_DAYS become
+  // estimates (they used to stay "live" indefinitely — adopt-me-expiry.ts).
+  const expired = await expireStaleObserved(admin, corrections, existing, startedAt)
+
   // Ladder inversions: log every withheld form, and unpublish the ones that
   // still carry an observed price on the page (a stale value, or a fresh
   // outlier whose previous run's price would otherwise stay up).
@@ -198,7 +203,8 @@ export async function runAdoptMeCorrection(
 
   console.log(
     `✅ Adopt Me corrections: ${updated} written, ${unchanged} unchanged, of ${corrections.length} pet-variants priced from ${rawRows.length} active listings; ` +
-      `${plan.flagged.length} ladder outlier(s) withheld, ${unpublished} stored price(s) unpublished`,
+      `${plan.flagged.length} ladder outlier(s) withheld, ${unpublished} stored price(s) unpublished, ` +
+      `${expired} unconfirmed for ${OBSERVED_PRICE_TTL_DAYS}+ days marked estimated`,
   )
 
   return {
@@ -209,6 +215,7 @@ export async function runAdoptMeCorrection(
     history_reconciled: historyReconciled,
     ladder_flagged: plan.flagged.length,
     ladder_unpublished: unpublished,
+    expired_estimated: expired,
     placeholders_dropped: plan.placeholdersDropped,
     publishedPrices,
   }
@@ -229,6 +236,58 @@ export function storedObservedPrices(rows: Iterable<ValueRow>): StoredAdoptMePri
     })
   }
   return out
+}
+
+/**
+ * Evidence = priced in this run, or an observed price-history point inside the
+ * TTL window. Every observed row outside it is marked estimated (its numbers
+ * stay; the page shows "Est." until fresh listings price it again). A failed
+ * history read expires nothing.
+ */
+async function expireStaleObserved(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  corrections: AdoptMeVariantCorrection[],
+  existing: Map<string, ValueRow>,
+  startedAt: string,
+): Promise<number> {
+  const { data: recent, error } = await fetchAllRows<{ pet_id: string; variant: string }>(
+    (from, to) =>
+      (admin as any)
+        .from('adopt_me_price_history')
+        .select('pet_id,variant')
+        .eq('is_estimated', false)
+        .gte('history_date', evidenceSince(startedAt))
+        .order('pet_id', { ascending: true })
+        .order('variant', { ascending: true })
+        .order('history_date', { ascending: true })
+        .range(from, to),
+    PAGE_SIZE,
+  )
+  if (error) {
+    console.error('Adopt Me expiry: price history read failed, nothing expired:', (error as { message?: string }).message ?? error)
+    return 0
+  }
+  const evidence = new Set([
+    ...corrections.map((c) => `${c.petId}:${c.variant}`),
+    ...(recent ?? []).map((r) => `${r.pet_id}:${r.variant}`),
+  ])
+  let expired = 0
+  for (const key of staleObservedKeys(existing.values(), evidence)) {
+    const [petId, variant] = key.split(':')
+    const { error: updateError } = await (admin as any)
+      .from('adopt_me_pet_values')
+      .update({ is_estimated: true, confidence: 'low' })
+      .eq('pet_id', petId)
+      .eq('variant', variant)
+    if (updateError) {
+      console.error(`Adopt Me expiry ${key}: ${updateError.message}`)
+      continue
+    }
+    expired += 1
+    const before = existing.get(key)
+    if (before) existing.set(key, { ...before, is_estimated: true, confidence: 'low' })
+  }
+  return expired
 }
 
 /** The row a ladder outlier is reset to: no cash price, back to estimate-pending. */

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-// @ts-expect-error -- plain .mjs script helper
 import { dedupeOffers } from '../../../scripts/lib/sae-write.mjs'
 
 /**
@@ -35,7 +34,6 @@ describe('Steal an Egg raw listing write', () => {
   })
 })
 
-// @ts-expect-error -- plain .mjs script helper
 import { walkDone } from '../../../scripts/lib/offers.mjs'
 
 describe('cheapest-first walk stop rule (MM2 + Steal an Egg collectors)', () => {
