@@ -27,3 +27,19 @@ describe('Adopt Me weekly catalog: new pets', () => {
     expect(wf).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*\$\{\{\s*secrets\.NEXT_PUBLIC_SUPABASE_ANON_KEY\s*\}\}/)
   })
 })
+
+// Owner, 2026-10-14: new MM2 items were only ever added by hand.
+describe('Values weekly catalog: MM2 new items', () => {
+  const mm2 = wf.slice(wf.indexOf('  mm2-catalog:'))
+
+  it('runs after Adopt Me (one DB-heavy job at a time), even if that failed', () => {
+    expect(mm2).toMatch(/needs: refresh-catalog/)
+    expect(mm2).toMatch(/if: always\(\)/)
+  })
+
+  it('only ADDS items and images — never rewrites an existing row', () => {
+    expect(mm2).toMatch(/pnpm values:mm2:catalogue --write --new-only/)
+    expect(mm2).toMatch(/pnpm values:images --game=murder-mystery-2 --write --only-missing/)
+    expect(mm2).not.toMatch(/--refresh|--env=prod|--yes/)
+  })
+})

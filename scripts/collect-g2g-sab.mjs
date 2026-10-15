@@ -30,6 +30,7 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 import dotenv from "dotenv";
+import { catalogueGapSummary } from "./lib/catalogue-new-only.mjs";
 
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
@@ -233,14 +234,15 @@ async function fetchNewestG2GListingByName(names) {
 
   const CONCURRENCY = 8;
   let failures = 0;
-  let unmatched = 0;
+  const unmatchedNames = [];
 
   const targets = names
     .map((name) => ({ name, id: idsByName.get(comparable(name)) }))
     .filter((row) => {
-      if (!row.id) unmatched += 1;
+      if (!row.id) unmatchedNames.push(row.name);
       return Boolean(row.id);
     });
+  const unmatched = unmatchedNames.length;
 
   for (let index = 0; index < targets.length; index += CONCURRENCY) {
     const batch = targets.slice(index, index + CONCURRENCY);
@@ -280,6 +282,12 @@ async function fetchNewestG2GListingByName(names) {
         "we have no evidence we ever looked at them).",
     );
   }
+  // SAB has no catalogue import: list the market's names we do not have (new
+  // Brainrots, or a spelling that needs an alias) on the job page, so new
+  // items are seen within a day instead of never (2026-10-14).
+  const md = catalogueGapSummary("G2G Brainrots not in our catalogue", unmatchedNames.sort());
+  if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, md + "\n", { flag: "a" });
+  else if (unmatched) console.log(md);
   if (failures) {
     console.warn(
       `  crawl-freshness lookup failed for ${failures} Brainrot(s); ` +
