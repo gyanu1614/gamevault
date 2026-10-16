@@ -10,6 +10,7 @@ import { quantityUnit } from '@/lib/currency/quantity-unit'
 import dynamic from 'next/dynamic'
 import React, { Suspense, cache } from 'react'
 import { Metadata } from 'next'
+import { categorySubject } from '@/lib/seo/category-subject'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase/anon'
@@ -251,6 +252,22 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
 
   const hasListings = stats.count > 0 && priceLabel != null
 
+  // Named the way people search: "Escape from Tarkov Roubles (EFT)", not
+  // "Escape from Tarkov Currency" (lib/seo/category-subject).
+  const regionField = currencyCfg?.platform_fields?.region
+  const subj = categorySubject({
+    gameName: game.name,
+    gameSlug,
+    categoryName: category.name,
+    isCurrency,
+    unitLabel: currencyCfg?.unit_label,
+    regionOptions: regionField?.enabled ? normalizePlatformOptions(regionField.options).map((o) => o.value) : [],
+  })
+  const noun = subj.subject.slice(game.name.length).trim() || subj.subject
+  const titleWithAlias = `Buy ${subj.subject} (${subj.alias}) from ${priceLabel}`
+  const listingsTitle =
+    subj.alias && titleWithAlias.length <= 52 ? titleWithAlias : `Buy ${subj.subject} from ${priceLabel}`
+
   // Admin overrides (categories.seo_*) win; otherwise the stats-aware
   // templates below. `.trim() || fallback` keeps blank overrides on template.
   const seoOverride = (v: string | null | undefined, fallback: string) =>
@@ -261,20 +278,18 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
     // (pageTitle → absolute) so the layout template doesn't add it twice.
     title: pageTitle(seoOverride(
       category.seo_title,
-      hasListings
-        ? `Buy ${game.name} ${category.name} from ${priceLabel}`
-        : emptyTitleFor(game.name, category.name),
+      hasListings ? listingsTitle : emptyTitleFor(game.name, noun),
     )),
     description: seoOverride(
       category.seo_description,
       hasListings
-        ? `Buy ${game.name} ${category.name} from verified sellers. ${stats.count} live ${stats.count === 1 ? 'listing' : 'listings'} from ${priceLabel}. SafeDrop protection: get what you ordered or your money back.`
-        : emptyDescriptionFor(game.name, category.name),
+        ? `Buy ${subj.subject}${subj.alias ? ` (${subj.alias})` : ''}${subj.modes ? ` for ${subj.modes}` : ''} from verified sellers. ${stats.count} live ${stats.count === 1 ? 'offer' : 'offers'} from ${priceLabel}. SafeDrop Protection: get what you ordered or your money back.`
+        : emptyDescriptionFor(game.name, noun),
     ),
     keywords: [
-      `${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
-      `buy ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
-      `cheap ${game.name.toLowerCase()} ${category.name.toLowerCase()}`,
+      subj.subject.toLowerCase(),
+      `buy ${subj.subject.toLowerCase()}`,
+      ...(subj.alias ? [`buy ${subj.alias.toLowerCase()} ${noun.toLowerCase()}`] : []),
       `${game.name.toLowerCase()} marketplace`,
     ],
     // Zero-listing money pages stay crawlable but unindexed until the
@@ -285,8 +300,8 @@ async function generateMetadataRaw({ params }: PageProps): Promise<Metadata> {
       ? {}
       : { robots: { index: false, follow: true } }),
     openGraph: {
-      title: `${game.name} ${category.name} - DropMarket`,
-      description: `Buy and sell ${game.name} ${category.name.toLowerCase()} safely`,
+      title: `${subj.subject} - DropMarket`,
+      description: `Buy and sell ${subj.subject} safely`,
       type: 'website',
     },
   }

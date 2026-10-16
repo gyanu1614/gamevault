@@ -25,6 +25,7 @@ import { HubFooter } from '@/components/content/HubFooter'
 import { getHubNavData, HUB_NAV_CLEAR } from '@/lib/content/hubNav'
 import { hasHubPage } from '@/lib/content/theme'
 import AdoptMePetPage from './_AdoptMePetPage'
+import { priceHistorySummary } from '@/lib/values/history-summary'
 import { getAdoptMePet, getPublishablePetSlugs } from './_adoptMePetData'
 import GenericValueItemPage from '../_generic/ValueItemPage'
 import { isValueItemIndexable } from '@/lib/games/indexability'
@@ -912,6 +913,11 @@ export default async function BrainrotValuePage({ params }: PageProps) {
               <StatRow label="Unique Sellers" value={(brainrot.unique_seller_count ?? 0).toLocaleString()} />
               <StatRow label="Confidence" value={<span className="capitalize">{effectiveConfidenceLabel}</span>} />
             </dl>
+            {/* What the browser-only chart shows, as text crawlers can read. */}
+            {(() => {
+              const line = priceHistorySummary(brainrot.name, (priceHistory.default ?? []).map((p) => ({ date: p.date, price: p.median })))
+              return line ? <p className="mt-4 text-meta leading-6 text-text-tertiary">{line}</p> : null
+            })()}
           </section>
 
           <section className={`${VALUE_SURFACE} p-5`}>

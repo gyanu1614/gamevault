@@ -25,6 +25,7 @@ import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { rarityMeta } from '@/lib/values/rarity'
 import { boxForItem } from '@/lib/values/boxes'
 import { getValueItemHistory, getValueItemHowToGet, trendValue, type ValueItem } from '@/lib/values/data'
+import { priceHistorySummary } from '@/lib/values/history-summary'
 import type { ValueHowToGet } from '@/lib/values/how-to-get'
 import { parseImageAttribution, valueItemHasPage, valueListHub } from '@/lib/values/hub-config'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
@@ -341,6 +342,9 @@ async function ItemBody({
       .filter((p): p is { date: string; value: number } => p.value != null),
   }))
 
+  // The chart is browser-only; this line puts its numbers in the HTML.
+  const historyLine = priceHistorySummary(item.name, series[0]?.points.map((p) => ({ date: p.date, price: p.value })))
+
   // Siblings: same rarity with a page, the same type first, then by price
   // proximity — a $4 Godly sits next to other ~$4 Godlies.
   const ref = cheapestUsd ?? 1
@@ -422,6 +426,8 @@ async function ItemBody({
         />
 
         <ValueListPriceTrend series={series} selectedKey={item.slug} />
+        {/* What the browser-only chart shows, as text crawlers can read. */}
+        {historyLine && <p className="-mt-6 text-meta leading-6 text-text-tertiary">{historyLine}</p>}
 
         {similar.length > 0 && (
           <SimilarItemsRail

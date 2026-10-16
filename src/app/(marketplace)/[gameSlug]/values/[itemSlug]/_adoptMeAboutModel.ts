@@ -97,3 +97,32 @@ export function aboutFacts(
   facts.push({ label: 'Forms Priced', value: `${prices.length} of ${variants.length}` })
   return facts
 }
+
+/**
+ * The stored description, minus any sentence that quotes a price or a form
+ * count. Descriptions were written once (2026-10-12) with that day's prices
+ * baked in ("about $6.98 … 6 forms … $75.00"), so a week later the page
+ * contradicted its own table. The story stays; live numbers come from
+ * livePriceSpread, which reads the same rows as the table (2026-10-15).
+ */
+const STALE_SENTENCE = /\$\s?\d|\bforms? with enough listings\b|\bprices change daily\b/i
+
+export function withoutStalePrices(text: string): string {
+  // Split only where a stop is followed by a capital: "$6.98" stays whole.
+  const sentences = text.trim().split(/(?<=[.!?])\s+(?=[A-Z])/)
+  return sentences.filter((s) => !STALE_SENTENCE.test(s)).join(' ').trim()
+}
+
+/** The live version of the old baked-in spread: same numbers as the Price by Form table. */
+export function livePriceSpread(_name: string, variants: AdoptMePetVariant[]): string | null {
+  const ordered = VARIANTS.flatMap((c) => variants.filter((v) => v.variant === c))
+  const priced = ordered
+    .map((v) => ({ label: VARIANT_DISPLAY[v.variant], usd: formPrice(v) }))
+    .filter((p): p is { label: string; usd: number } => p.usd != null && p.usd > 0)
+  if (priced.length === 0) return null
+  if (priced.length === 1) return `Only the ${priced[0].label} form has enough listings to price today: ${formatUsd(priced[0].usd)}.`
+  const lo = priced.reduce((a, b) => (b.usd < a.usd ? b : a))
+  const hi = priced.reduce((a, b) => (b.usd > a.usd ? b : a))
+  return `Across the ${priced.length} of ${variants.length} forms we can price today, the cheapest listings run from ${formatUsd(lo.usd)} (${lo.label}) to ${formatUsd(hi.usd)} (${hi.label}).`
+}
+

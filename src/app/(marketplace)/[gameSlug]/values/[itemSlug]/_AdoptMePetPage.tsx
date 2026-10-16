@@ -25,6 +25,8 @@ import { SimilarItemsRail } from '@/components/values/SimilarItemsRail'
 import { HUB_GROUND, VALUE_LABEL, VALUE_SURFACE_LINK } from '@/components/values/styles'
 import { rarityMeta as sharedRarityMeta } from '@/lib/values/rarity'
 import { AdoptMeAbout, AdoptMeFormTable } from './_AdoptMeAbout'
+import { livePriceSpread, withoutStalePrices } from './_adoptMeAboutModel'
+import { priceHistorySummary } from '@/lib/values/history-summary'
 import { SelectedVariantProvider } from './_SelectedVariantContext'
 import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
@@ -134,6 +136,12 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
 
   const meta = rarityMeta(pet.rarity)
   const faq = petFaq(pet)
+  // The stored story without its old baked-in prices, plus one live line
+  // from the same numbers as the table (no more "$6.98" next to "$6.28").
+  const story = withoutStalePrices(pet.description)
+  const spread = livePriceSpread(pet.name, pet.variants)
+  // The chart is browser-only; this line puts its numbers in the HTML.
+  const history = headline ? priceHistorySummary(`${headline.label} ${pet.name}`, pet.priceHistory[headline.variant]) : null
 
   return (
     <main className={`relative min-h-screen ${HUB_GROUND}`}>
@@ -172,7 +180,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             '@type': 'Product',
             name: `${pet.name} (Fly Ride) — Adopt Me`,
             image: pet.imageUrl ? [pet.imageUrl] : undefined,
-            description: pet.description.slice(0, 300),
+            description: story.slice(0, 300),
             offers: {
               '@type': 'Offer',
               priceCurrency: 'USD',
@@ -244,7 +252,9 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           variants={pet.variants}
         >
           <p>
-            <HighlightedDescription text={pet.description} />
+            <HighlightedDescription text={story} />
+            {spread && <> {spread}</>}
+            {history && <> {history}</>}
           </p>
         </AdoptMeAbout>
 

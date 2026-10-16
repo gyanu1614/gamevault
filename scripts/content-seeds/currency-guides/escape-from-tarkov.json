@@ -38,6 +38,14 @@
     {
       "q": "Do Roubles carry over between PvP and PvE?",
       "a": "No. PvP and PvE use separate profiles, each with its own stash."
+    },
+    {
+      "q": "Can you get banned for buying Roubles in Tarkov?",
+      "a": "It's possible. Battlestate's rules don't allow buying Roubles for real money, and it does ban accounts for it. Delivery here is a normal in-game trade and you never share your login, but following the game's terms is your call."
+    },
+    {
+      "q": "Do Roubles reset in a Tarkov wipe?",
+      "a": "Yes, on PvP. A wipe resets PvP progress, Roubles included, and Battlestate announces it ahead of time. PvE runs on its own schedule. Buy close to when you'll spend them, and check the latest wipe news before a big order."
     }
   ],
   "page": {
@@ -75,10 +83,11 @@
     "safety_text": "Every order is covered, every seller is ID-checked, and you never give out your password.",
     "faq_pick": [
       "What Level Do You Need for the Flea Market in Tarkov?",
-      "Can you buy Roubles from Battlestate Games?",
+      "Can you get banned for buying Roubles in Tarkov?",
       "Do Roubles carry over between PvP and PvE?",
-      "How fast is delivery?",
-      "Do I need to share my password?"
+      "Do Roubles reset in a Tarkov wipe?",
+      "Do I need to share my password?",
+      "How fast is delivery?"
     ]
   },
   "trademark_owner": "Battlestate Games Limited",
@@ -88,5 +97,5 @@
     "https://en.wikipedia.org/wiki/Escape_from_Tarkov"
   ],
   "confidence": "low",
-  "notes": "Flea Market level 15 and the 1.0 category gates are from third-party guides (Insider Gaming, timesaver.gg), not a Battlestate page; the exact gate levels shift by patch, so the copy uses 'around'. 'PvP and PvE are separate profiles' is widely known but I didn't fetch a BSG page that says it: medium confidence. 'what_is' uses (traders, hideout, insurance, Dollars/Euros) are general game knowledge, not sourced this run. Config regions are PvE Zone / PvP Zone / PvP Season / PvE Season; I didn't verify what 'Season' vs 'Zone' means in current Tarkov, so the copy only says PvP or PvE. DELIVERY: config placeholder is generic; the live listing has no description. Delivery via Flea Market sale or in-raid hand-over is the usual method. Buying Roubles is against BSG's rules and BSG bans for RMT; the parent's 'Is It Safe' section should not overpromise here."
+  "notes": "Flea Market level 15 and the 1.0 category gates are from third-party guides (Insider Gaming, timesaver.gg), not a Battlestate page; the exact gate levels shift by patch, so the copy uses 'around'. 'PvP and PvE are separate profiles' is widely known but I didn't fetch a BSG page that says it: medium confidence. 'what_is' uses (traders, hideout, insurance, Dollars/Euros) are general game knowledge, not sourced this run. Config regions are PvE Zone / PvP Zone / PvP Season / PvE Season; I didn't verify what 'Season' vs 'Zone' means in current Tarkov, so the copy only says PvP or PvE. DELIVERY: config placeholder is generic; the live listing has no description. Delivery via Flea Market sale or in-raid hand-over is the usual method. Buying Roubles is against BSG's rules and BSG bans for RMT; the parent's 'Is It Safe' section should not overpromise here. 2026-10-15: added the ban-risk and wipe FAQs (every top roubles seller answers 'can I get banned'; none covers wipes). Both stay date-free on purpose: wipe dates move by patch."
 }
