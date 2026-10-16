@@ -3,11 +3,17 @@
  * the phase-by-phase design tweaks can be verified without an
  * authenticated session (real /checkout/* is middleware-gated).
  * 404s outside development. Remove when the checkout phases wrap.
+ *
+ * `?country=XX` sets the buyer country (like the real page's override). When
+ * the dev server runs on a local Supabase stack, the methods and their fees
+ * are the REAL quotes from that database (eligibleMethods, the same call the
+ * checkout makes), so new methods and fee rows can be checked per country
+ * without a signed-in session; otherwise the fixed mock below renders.
  */
 
 import { notFound } from 'next/navigation'
 import { CheckoutForm } from '../../checkout/[id]/CheckoutForm'
-import type { ClientMethod } from '@/lib/payments/eligibility'
+import { eligibleMethods, toClientMethods, type ClientMethod } from '@/lib/payments/eligibility'
 import { PaymentsMarquee } from '@/components/marketplace/PaymentsMarquee'
 
 const MOCK_LISTING = {
@@ -62,8 +68,23 @@ const MOCK_METHODS: ClientMethod[] = [
   { method: 'wallet', pmId: null, kind: 'wallet', label: 'Store credit', countries: [], coverage: '', countryMatch: true, refundable: true, instantClearing: true, quote: q(0, 0, 0) },
 ]
 
-export default function CheckoutPreviewPage() {
+/** Real quotes, only against a local stack (never a remote database). */
+async function previewMethods(country: string | null): Promise<ClientMethod[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(url)) return MOCK_METHODS
+  try {
+    const { methods } = await eligibleMethods({ buyerId: null, currency: 'USD', country, subtotalMinor: 478n })
+    return toClientMethods(methods)
+  } catch {
+    return MOCK_METHODS
+  }
+}
+
+export default async function CheckoutPreviewPage({ searchParams }: { searchParams: Promise<{ country?: string }> }) {
   if (process.env.NODE_ENV !== 'development') notFound()
+  const { country } = await searchParams
+  const cc = /^[A-Za-z]{2}$/.test(country ?? '') ? country!.toUpperCase() : null
+  const methods = await previewMethods(cc)
   return (
     <div
       className="min-h-screen bg-[#0c0e14]"
@@ -76,7 +97,8 @@ export default function CheckoutPreviewPage() {
         sellerReviews={MOCK_REVIEWS}
         initialQty={2}
         bundleSummary={null}
-        methods={MOCK_METHODS}
+        methods={methods}
+        buyerCountry={cc}
       />
       {/* mirrors checkout/layout.tsx */}
       <div className="-mt-10 sm:-mt-16">

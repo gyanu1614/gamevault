@@ -5,7 +5,7 @@
  *   · registry ⇒ probe 200: every selector pm_id has a recorded passing
  *     probe (docs/checkout.md §9.1, now executable). A pm_id added without a
  *     fixture fails here before it can 491/405 in front of a buyer.
- *   · never-wire list: skrill / payu_pl / multibanco_pt / bancomat_it.
+ *   · never-wire list: payu_pl / multibanco_pt / bancomat_it (skrill wired 2026-10-15).
  *   · per method: createCharge against the recorded answer shape → the
  *     recorded transaction id, an absolute checkout URL, USD sent as-is
  *     (no local-currency conversion), the docs signature, the per-kind expiry.
@@ -52,7 +52,7 @@ describe('B4: registry ⇒ recorded probe 200', () => {
       expect(f.cancelState, `${m.pmId}: probe transaction must have been cancelled`).toBe('cancelled')
       // B4 probes carry the minted transaction id; pre-B4 ones cite their source.
       if (f.source) expect(f.probedAt < '2026-09-24', `${m.pmId}: a source-only fixture is pre-B4`).toBe(true)
-      else expect(f.transactionId).toMatch(/^A\d{12,}$/)
+      else expect(f.transactionId).toMatch(/^AA?\d{12,}$/)
     }
     for (const pm of EU) expect(passingProbe(pm)?.transactionId, `${pm}: recorded B4 transaction id`).toMatch(/^A\d{12,}$/)
   })
@@ -65,10 +65,9 @@ describe('B4: registry ⇒ recorded probe 200', () => {
     }
   })
 
-  it('never-wire pm_ids are absent from the registry, and the control (bancontact_be) stays unwired', () => {
-    for (const pm of [...NEVER_WIRE_PM_IDS, 'bancontact_be']) expect(PAYSSION_METHODS[pm as string], pm).toBeUndefined()
+  it('never-wire pm_ids are absent from the registry', () => {
+    for (const pm of NEVER_WIRE_PM_IDS) expect(PAYSSION_METHODS[pm as string], pm).toBeUndefined()
     expect(PAYSSION_PROBE_FIXTURES.bancomat_it[0].resultCode).toBe(405)
-    expect(passingProbe('bancontact_be')).toBeTruthy()
   })
 
   it('EU country lists are ISO-3166 alpha-2 and the region filter pins the local rails', () => {
@@ -79,14 +78,14 @@ describe('B4: registry ⇒ recorded probe 200', () => {
       expect(new Set(m.countries).size, `${pm}: duplicate country`).toBe(m.countries.length)
     }
     const ids = (ms: Array<{ pmId: string }>) => ms.map((m) => m.pmId)
-    expect(ids(splitPayssionMethodsByCountry('PL').matched)).toEqual(['trustly', 'blik_pl', 'p24_pl', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('AT').matched)).toEqual(['trustly', 'eps_at', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('PT').matched)).toEqual(['trustly', 'mbway_pt', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('IT').matched)).toEqual(['trustly', 'bancomatpay_it', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('CZ').matched)).toEqual(['trustly', 'payu_cz', 'paysafecard'])
-    expect(ids(splitPayssionMethodsByCountry('CA').matched)).toEqual(['paysafecard'])
-    // Existing regions are untouched by the additions.
-    expect(ids(splitPayssionMethodsByCountry('BR').matched)).toEqual(['pix_br', 'boleto_br'])
+    // Skrill (wired 2026-10-15) lists every one of these; it sits after the country's own rails.
+    expect(ids(splitPayssionMethodsByCountry('PL').matched)).toEqual(['trustly', 'blik_pl', 'p24_pl', 'skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('AT').matched)).toEqual(['trustly', 'eps_at', 'skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('PT').matched)).toEqual(['trustly', 'mbway_pt', 'mybank', 'skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('IT').matched)).toEqual(['trustly', 'bancomatpay_it', 'satispay', 'mybank', 'skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('CZ').matched)).toEqual(['trustly', 'payu_cz', 'skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('CA').matched)).toEqual(['skrill', 'paysafecard'])
+    expect(ids(splitPayssionMethodsByCountry('BR').matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br', 'skrill'])
   })
 })
 

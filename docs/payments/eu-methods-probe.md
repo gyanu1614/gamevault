@@ -32,3 +32,31 @@ Never probed, never wired (owner rule): skrill, payu_pl, multibanco_pt.
 ## Recorded fixtures
 
 The passing responses (`result_code`, `transaction.transaction_id / state / amount / currency`, `redirect_url` present, `todo: "redirect"`) and the two 417 bodies are recorded verbatim-shaped in `src/lib/payments/providers/payssion/probe-fixtures.ts`. `eu-methods.test.ts` asserts every registry pm_id has a fixture with `result_code: 200` (the "registry ⇒ probe 200" invariant, now executable) and drives the adapter's `createCharge` through each fixture.
+
+## 2026-10-15 — the account manager's 22-method request
+
+**Tool:** `payssion-probe-22.mjs` (session scratchpad) · **App:** production Payssion account · USD 2.00 per pm_id (local-currency fallback never needed) · every minted transaction cancelled in the same run (`state: cancelled`). No money moved.
+
+| pm_id | result_code | transaction | Verdict |
+|---|---|---|---|
+| skrill | **200** | AA15068156779344 | **WIRE** (owner decision 2026-10-15) |
+| kakaopay_kr | **200** | AA15068163565886 | **WIRE** |
+| paynow_sg | **200** | AA15068170085043 | **WIRE** |
+| grabpay_sg | **200** | AA15068173125755 | **WIRE** |
+| fpx_my | **200** | AA15068175625167 | **WIRE** |
+| touchngo_my | **200** | AA15068178560795 | **WIRE** |
+| vietqr_vn | **200** | AA15068183371959 | **WIRE** |
+| mada_sa | **200** | AA15068185811826 | **WIRE** |
+| applepay_sa | **200** | AA15068188797546 | **WIRE** |
+| creditcard_za | **200** | AA15068191055065 | **WIRE** |
+| creditcard_br | **200** | AA15068194165691 | **WIRE** |
+| creditcard_mx | **200** | AA15068196487315 | **WIRE** |
+| bcp_pe | **200** | AA15068199295849 | **WIRE** (48 h window: paid by reference code) |
+| twint_ch | **200** | AA15068203733889 | **WIRE** |
+| bancontact_be | **200** | AA15068206059866 | **WIRE** |
+| satispay | **200** | AA15068208896996 | **WIRE** |
+| mybank | **200** | AA15068211614474 | **WIRE** |
+| payu_pl | 200 | — | never wire (owner rule) |
+| naverpay_kr, alipay_cn, tenpay_cn, payid_au | **491** | — | not enabled; chase the account manager |
+
+USD was accepted by all 17, so they charge in USD like every other method. The recorded fixtures are in `probe-fixtures.ts` (`ok2` / `notEnabled`), and `global-methods.test.ts` holds the "registry ⇒ probe 200" check for them.

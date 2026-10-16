@@ -20,6 +20,22 @@ export const PAYMENT_METHOD_LOGOS: Record<string, string> = {
   bancomatpay_it: '/payments/bancomatpay_it.svg',
   payu_cz: '/payments/payu_cz.svg',
   paysafecard: '/payments/paysafecard.svg',
+  // 2026-10-15 (sources in public/payments/ATTRIBUTION.md). No legit vector
+  // for PayNow (the only "SVG" wraps a PNG) or the country card rails:
+  // those rows keep their icon.
+  skrill: '/payments/skrill.svg',
+  kakaopay_kr: '/payments/kakaopay_kr.svg',
+  grabpay_sg: '/payments/grabpay_sg.svg',
+  fpx_my: '/payments/fpx_my.svg',
+  touchngo_my: '/payments/touchngo_my.svg',
+  vietqr_vn: '/payments/vietqr_vn.svg',
+  mada_sa: '/payments/mada_sa.svg',
+  applepay_sa: '/payments/applepay_sa.svg',
+  bcp_pe: '/payments/bcp_pe.svg',
+  twint_ch: '/payments/twint_ch.svg',
+  bancontact_be: '/payments/bancontact_be.svg',
+  satispay: '/payments/satispay.svg',
+  mybank: '/payments/mybank.svg',
 }
 
 /** The crypto card's coins, as the checkout lists them. */
