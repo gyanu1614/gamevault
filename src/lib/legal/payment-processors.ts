@@ -22,7 +22,7 @@ export const PAYMENT_PROCESSORS: readonly PaymentProviderEntry[] = [
   {
     key: 'payssion',
     name: 'Payssion',
-    role: 'processes payments made with local payment methods (bank transfers, e-wallets, QR payments and vouchers) in the countries where they are offered',
+    role: 'processes payments made with local payment methods (bank transfers, e-wallets, QR payments, local cards and vouchers) in the countries where they are offered',
   },
   {
     key: 'btcpay',

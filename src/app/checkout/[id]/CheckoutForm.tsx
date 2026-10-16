@@ -37,17 +37,11 @@ import {
   Info,
   Loader2,
   Lock,
-  CreditCard,
   LogOut,
   Settings,
   Landmark,
   LifeBuoy,
-  QrCode,
   ShieldCheck,
-  Smartphone,
-  Store,
-  Barcode,
-  Zap,
   Tag,
   TriangleAlert,
   Undo2,
@@ -65,7 +59,8 @@ import { createCheckout, quoteCheckoutMethods } from '@/lib/actions/checkout'
 import type { ClientMethod } from '@/lib/payments/eligibility'
 import { orderMethodsForRegion, regionForCountry, regionsWithMethods, type RegionId } from '@/lib/payments/regions'
 import { clampCheckoutQty } from './qty'
-import { PAYMENT_METHOD_LOGOS } from '@/lib/payments/method-marks'
+import { toRow, type LocalMethodRow, type MethodIcon } from './_method-ui'
+import { lowestFeeMethodId } from '@/lib/payments/lowest-fee'
 import { getAvatarUrl } from '@/lib/utils/avatar'
 import { validatePromoCode, type PromoValidationResult } from '@/lib/actions/promo'
 import { getMyWalletBalance } from '@/lib/actions/wallet-ledger'
@@ -407,131 +402,8 @@ function CompanyStrip() {
   )
 }
 
-// Payssion local methods arrive from the PAGE (eligibleMethods → the provider
-// registry + payment_method_fees): pm_ids, labels, region chips, display
-// order, country tags and each method's quoted fee. Hidden / over-cap methods
-// never reach this component. This map only adds what neither the registry
-// nor the fee table should know: the icon and the buyer-facing note. Adding
-// a method later = registry entry + fee row + one line here (a missing line
-// still renders, with the fallback icon/note).
+// Local-method rows (icon, buyer notes, logo, flag) come from ./_method-ui.
 type PayMethodId = 'crypto' | (string & {})
-const METHOD_UI: Record<string, { Icon: typeof Smartphone; points: string[] }> = {
-  pix_br: {
-    Icon: Zap,
-    points: ['Scan the QR with your bank app', 'Payment confirms instantly'],
-  },
-  gcash_ph: {
-    Icon: Smartphone,
-    points: ['Approve the payment in GCash', 'Payment confirms instantly'],
-  },
-  maya_ph: {
-    Icon: Smartphone,
-    points: ['Approve the payment in Maya', 'Payment confirms instantly'],
-  },
-  qr_ph: {
-    Icon: QrCode,
-    points: ['Scan with any PH bank or wallet app', 'Payment confirms instantly'],
-  },
-  qris_id: {
-    Icon: QrCode,
-    points: ['Scan with GoPay, OVO, DANA & more', 'Payment confirms instantly'],
-  },
-  oxxo_mx: {
-    Icon: Store,
-    points: ['Pay cash at any OXXO store', 'Voucher valid 48 hours', 'Clears within a day'],
-  },
-  spei_mx: {
-    Icon: Landmark,
-    points: ['Transfer from your bank app', 'Usually clears in minutes'],
-  },
-  boleto_br: {
-    Icon: Barcode,
-    points: ['Pay the slip via bank app or in person', 'Valid 48 hours', 'Clears in 1 to 2 business days'],
-  },
-  pse_co: {
-    Icon: Landmark,
-    points: ['Approve in your bank portal', 'Payment confirms instantly'],
-  },
-  webpay_cl: {
-    Icon: Landmark,
-    points: ['Approve on the WebPay page', 'Payment confirms instantly'],
-  },
-  // ── Europe (checkout B4) — charged in USD; the provider page shows the local amount ──
-  trustly: {
-    Icon: Landmark,
-    points: ['Log in to your bank on the Trustly page', 'Payment confirms instantly'],
-  },
-  blik_pl: {
-    Icon: Smartphone,
-    points: ['Enter the 6-digit code from your bank app', 'Payment confirms instantly'],
-  },
-  p24_pl: {
-    Icon: Landmark,
-    points: ['Pick your bank on the Przelewy24 page', 'Payment confirms instantly'],
-  },
-  eps_at: {
-    Icon: Landmark,
-    points: ['Approve in your bank portal', 'Payment confirms instantly'],
-  },
-  mbway_pt: {
-    Icon: Smartphone,
-    points: ['Approve the payment in the MB Way app', 'Payment confirms instantly'],
-  },
-  bancomatpay_it: {
-    Icon: Smartphone,
-    points: ['Approve the payment in the BANCOMAT Pay app', 'Payment confirms instantly'],
-  },
-  payu_cz: {
-    Icon: Landmark,
-    points: ['Pick your bank on the PayU page', 'Payment confirms instantly'],
-  },
-  paysafecard: {
-    Icon: CreditCard,
-    points: ['Enter your paysafecard PIN', 'Valid 48 hours', 'Refunds go to your Store Balance'],
-  },
-}
-const FALLBACK_UI = {
-  Icon: Landmark,
-  points: ['Redirects to a secure payment page', 'Order starts once payment confirms'],
-}
-
-interface LocalMethodRow {
-  id: string
-  label: string
-  region: string
-  /** The database's buyer-fee quote for this order (checkout B3). */
-  quote: ClientMethod['quote']
-  /** Real brand mark (public/payments/*.svg); Icon is the fallback. */
-  logo?: string
-  /** Emoji flag for the region chip: country flag, or 🌍 for multi-country. */
-  flag: string
-  countries: string[]
-  Icon: typeof Smartphone
-  points: string[]
-}
-
-/** ISO-3166 alpha-2 → emoji flag (regional-indicator pair). */
-function ccFlag(cc: string): string {
-  if (!/^[A-Za-z]{2}$/.test(cc)) return '🌍'
-  return String.fromCodePoint(
-    ...[...cc.toUpperCase()].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65)
-  )
-}
-
-function toRow(m: ClientMethod): LocalMethodRow {
-  const ui = METHOD_UI[m.method] ?? FALLBACK_UI
-  return {
-    id: m.method,
-    label: m.label,
-    region: m.coverage,
-    quote: m.quote,
-    logo: PAYMENT_METHOD_LOGOS[m.method],
-    flag: m.countries.length === 1 ? ccFlag(m.countries[0]) : '🌍',
-    countries: m.countries,
-    Icon: ui.Icon,
-    points: ui.points,
-  }
-}
 
 /** "+ $1.20 · 5%" — the tile / badge fee line (checkout B3). */
 
@@ -577,6 +449,11 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
   const [region, setRegion] = useState<RegionId>(() => regionForCountry(geo))
   const { local: localRows, regional: regionalRows } = orderMethodsForRegion(allLocalRows, region, geo)
   const orderedRows = [...localRows, ...regionalRows]
+  // "Lowest Fee" tag: the cheapest of the buyer's OWN-country methods for
+  // this order — never a regional rail they can't use (a Vietnamese buyer is
+  // not pointed at Indonesia's QRIS) and never crypto. Re-derived from the
+  // live quotes on every render.
+  const lowestFeeId = lowestFeeMethodId(localRows)
   const regionChips = regionsWithMethods(allLocalRows, region)
 
   // Quantity comes clamped from the ?qty deep-link (chosen on the item page)
@@ -936,7 +813,7 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
 
   /** The brand mark in a square white tile on the left (the row's icon,
    *  tinted, when a method has no logo yet). */
-  const markTile = (logo: string | undefined, Icon: typeof Smartphone) => (
+  const markTile = (logo: string | undefined, Icon: MethodIcon) => (
     <span
       className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md bg-white"
       style={{ boxShadow: `inset 0 0 0 1px ${T.line}` }}
@@ -961,6 +838,14 @@ export function CheckoutForm({ listing, user, buyerProfile, sellerReviews = [], 
           <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ color: T.ink }}>
             {m.label}
           </span>
+          {m.id === lowestFeeId && (
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4"
+              style={{ background: T.limeTint, color: T.accentText }}
+            >
+              Lowest Fee
+            </span>
+          )}
           {pickMark(checked)}
         </button>
       </div>

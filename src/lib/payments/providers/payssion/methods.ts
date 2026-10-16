@@ -15,7 +15,11 @@
  *    unknown buyer country shows the full list.
  *
  * Entry ORDER here is the checkout display order — keep it sorted by
- * buyer-traffic priority (BR → PH → ID → MX → CO → CL, then Europe).
+ * buyer-traffic priority (BR → PH → ID → MY/SG/VN → MX → CO → CL → PE, then
+ * Europe, then Middle East & Africa and East Asia). Within a country the bank
+ * or wallet rail comes before local cards (cards carry a rolling reserve and
+ * chargebacks); worldwide wallets/vouchers (Skrill, paysafecard) come last,
+ * so every buyer sees their own country's rails first.
  *
  * Adding a method later = one entry here (probe it first: an un-enabled
  * pm_id fails create with 491) + an icon/copy line in the checkout's
@@ -35,9 +39,17 @@
  *   their fee rows; paysafecard's 491 has cleared. `bancomat_it` is NOT a
  *   pm_id (405) — the real one is bancomatpay_it. The recorded responses are
  *   in ./probe-fixtures.ts and eu-methods.test.ts pins "registry ⇒ probe 200".
- *   NEVER wire skrill (rolling reserve), payu_pl or multibanco_pt (owner rule).
+ *   NEVER wire payu_pl or multibanco_pt (owner rule).
+ * 2026-10-15 probe (USD 2.00, all cancelled): 17 more answer 200 and are
+ *   wired below — skrill (owner decision 2026-10-15, reversing the old
+ *   "never wire"), kakaopay_kr, paynow_sg, grabpay_sg, fpx_my, touchngo_my,
+ *   vietqr_vn, mada_sa, applepay_sa, creditcard_za/br/mx, bcp_pe, twint_ch,
+ *   bancontact_be, satispay, mybank. Not enabled (491): naverpay_kr,
+ *   alipay_cn, tenpay_cn, payid_au.
  * `payssion_test` is the sandbox-only simulator (guarded by PAYSSION_TESTMODE).
  */
+
+import { MYBANK_COUNTRIES, MYBANK_COVERAGE, SATISPAY_COUNTRIES, SATISPAY_COVERAGE, SKRILL_COUNTRIES } from './method-countries'
 
 export interface PayssionMethodMeta {
   pmId: string
@@ -58,6 +70,16 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     pmId: 'pix_br',
     label: 'Pix',
     kind: 'instant', // real-time bank transfer
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Brazil',
+    countries: ['BR'],
+  },
+  // Local card rails are named by country: a card issued elsewhere is
+  // refused on Payssion's page, so "Cards" alone would mislead a US buyer.
+  creditcard_br: {
+    pmId: 'creditcard_br',
+    label: 'Brazilian Cards',
+    kind: 'instant', // card issued in Brazil
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Brazil',
     countries: ['BR'],
@@ -94,6 +116,46 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     coverage: 'Indonesia',
     countries: ['ID'],
   },
+  fpx_my: {
+    pmId: 'fpx_my',
+    label: 'FPX',
+    kind: 'instant', // online banking
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Malaysia',
+    countries: ['MY'],
+  },
+  touchngo_my: {
+    pmId: 'touchngo_my',
+    label: 'TNG eWallet', // the brand's current name (formerly Touch 'n Go eWallet)
+    kind: 'instant', // mobile wallet; no provider refunds (sheet)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Malaysia',
+    countries: ['MY'],
+  },
+  paynow_sg: {
+    pmId: 'paynow_sg',
+    label: 'PayNow',
+    kind: 'instant', // national QR / bank transfer
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Singapore',
+    countries: ['SG'],
+  },
+  grabpay_sg: {
+    pmId: 'grabpay_sg',
+    label: 'GrabPay',
+    kind: 'instant', // mobile wallet
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Singapore',
+    countries: ['SG'],
+  },
+  vietqr_vn: {
+    pmId: 'vietqr_vn',
+    label: 'VietQR',
+    kind: 'instant', // national QR — any VN bank app
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Vietnam',
+    countries: ['VN'],
+  },
   oxxo_mx: {
     pmId: 'oxxo_mx',
     label: 'OXXO',
@@ -106,6 +168,14 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     pmId: 'spei_mx',
     label: 'SPEI',
     kind: 'instant', // near-real-time interbank transfer
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Mexico',
+    countries: ['MX'],
+  },
+  creditcard_mx: {
+    pmId: 'creditcard_mx',
+    label: 'Mexican Cards',
+    kind: 'instant', // card issued in Mexico
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Mexico',
     countries: ['MX'],
@@ -133,6 +203,16 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Chile',
     countries: ['CL'],
+  },
+  bcp_pe: {
+    pmId: 'bcp_pe',
+    label: 'BCP',
+    // Banco de Crédito del Perú: the buyer gets a reference code and pays it
+    // in the BCP app or at an agent, often hours later — a voucher window.
+    kind: 'voucher',
+    expiryMinutes: VOUCHER_MINUTES,
+    coverage: 'Peru',
+    countries: ['PE'],
   },
   // ── Europe (checkout B4, probe-verified 2026-09-24) ──────────────────────
   trustly: {
@@ -162,6 +242,14 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     coverage: 'Poland',
     countries: ['PL'],
   },
+  bancontact_be: {
+    pmId: 'bancontact_be',
+    label: 'Bancontact',
+    kind: 'instant', // Belgian debit card / app
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Belgium',
+    countries: ['BE'],
+  },
   eps_at: {
     pmId: 'eps_at',
     label: 'EPS',
@@ -186,6 +274,22 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     coverage: 'Italy',
     countries: ['IT'],
   },
+  satispay: {
+    pmId: 'satispay',
+    label: 'Satispay',
+    kind: 'instant', // mobile wallet
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: SATISPAY_COVERAGE,
+    countries: SATISPAY_COUNTRIES,
+  },
+  mybank: {
+    pmId: 'mybank',
+    label: 'MyBank',
+    kind: 'instant', // bank-redirect rail (online banking)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: MYBANK_COVERAGE,
+    countries: MYBANK_COUNTRIES,
+  },
   payu_cz: {
     pmId: 'payu_cz',
     label: 'PayU',
@@ -193,6 +297,58 @@ export const PAYSSION_METHODS: Record<string, PayssionMethodMeta> = {
     expiryMinutes: INSTANT_MINUTES,
     coverage: 'Czechia',
     countries: ['CZ'],
+  },
+  twint_ch: {
+    pmId: 'twint_ch',
+    label: 'TWINT',
+    kind: 'instant', // mobile wallet
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Switzerland',
+    countries: ['CH'],
+  },
+  // ── Middle East & Africa / East Asia (2026-10-15 probe) — regions without
+  //    spill: only buyers in the listed country see these. ─────────────────
+  mada_sa: {
+    pmId: 'mada_sa',
+    label: 'Saudi Cards (mada)',
+    kind: 'instant', // mada debit + cards issued in Saudi Arabia
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Saudi Arabia',
+    countries: ['SA'],
+  },
+  applepay_sa: {
+    pmId: 'applepay_sa',
+    label: 'Apple Pay (Saudi Arabia)',
+    kind: 'instant', // Apple Pay with a Saudi-issued card
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Saudi Arabia',
+    countries: ['SA'],
+  },
+  creditcard_za: {
+    pmId: 'creditcard_za',
+    label: 'South African Cards',
+    kind: 'instant', // card issued in South Africa
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'South Africa',
+    countries: ['ZA'],
+  },
+  kakaopay_kr: {
+    pmId: 'kakaopay_kr',
+    label: 'Kakao Pay',
+    kind: 'instant', // mobile wallet
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'South Korea',
+    countries: ['KR'],
+  },
+  // ── Worldwide wallets/vouchers last: a buyer sees their own country's rails
+  //    before them. ──────────────────────────────────────────────────────────
+  skrill: {
+    pmId: 'skrill',
+    label: 'Skrill',
+    kind: 'instant', // e-wallet; Payssion holds a 10% / 180-day reserve (docs/checkout.md §7)
+    expiryMinutes: INSTANT_MINUTES,
+    coverage: 'Worldwide',
+    countries: SKRILL_COUNTRIES,
   },
   paysafecard: {
     pmId: 'paysafecard',

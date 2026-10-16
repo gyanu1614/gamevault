@@ -156,12 +156,13 @@ describe.skipIf(!hasEnv)('buyer_fee_quote — method fees as data (integration)'
       provider_pct: 1, provider_fixed_minor: 100, currencies: ['USD'],
     } as any)
     expect(bad.error?.code).toBe('23503')
+    // NOK: a real currency with no currency_rates row (CHF got one with TWINT, 2026-10-15).
     const { error } = await fx!.svc.from('payment_method_fees').insert({
-      method: 'guardtest_chf', label: 'Guard CHF', provider: 'payssion', fee_currency: 'USD',
-      provider_pct: 1, provider_fixed_minor: 100, currencies: ['USD', 'CHF'],
+      method: 'guardtest_nok', label: 'Guard NOK', provider: 'payssion', fee_currency: 'USD',
+      provider_pct: 1, provider_fixed_minor: 100, currencies: ['USD', 'NOK'],
     } as any)
     expect(error).toBeNull()
-    const q = await quote('guardtest_chf', 2000, 'CHF')
+    const q = await quote('guardtest_nok', 2000, 'NOK')
     expect(q.ok).toBe(false)
     expect(q.reason).toBe('fx_rate_missing')
   })

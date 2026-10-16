@@ -135,8 +135,12 @@ describe('payssion: routing + per-method expiry', () => {
     for (const pm of ['trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz', 'paysafecard']) {
       expect(providerNameForMethod(pm)).toBe('payssion')
     }
-    // Not in the registry (never wired / not a pm_id) → never routed to payssion.
-    expect(providerNameForMethod('skrill')).not.toBe('payssion')
+    // 2026-10-15 probe: Skrill wired (owner decision), payu_pl never; the 491s are not.
+    expect(providerNameForMethod('skrill')).toBe('payssion')
+    for (const pm of ['payu_pl', 'naverpay_kr', 'alipay_cn', 'tenpay_cn', 'payid_au']) {
+      expect(providerNameForMethod(pm), pm).not.toBe('payssion')
+    }
+    // Not in the registry (not a pm_id) → never routed to payssion.
     expect(providerNameForMethod('bancomat_it')).not.toBe('payssion')
     expect(providerNameForMethod('BTC-CHAIN')).not.toBe('payssion')
     expect(providerNameForMethod(undefined)).not.toBe('payssion')
@@ -147,6 +151,8 @@ describe('payssion: routing + per-method expiry', () => {
     expect(new Date(payssionExpiryIso('boleto_br', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('oxxo_mx', now)).getTime() - now).toBe(48 * 60 * 60_000)
     expect(new Date(payssionExpiryIso('paysafecard', now)).getTime() - now).toBe(48 * 60 * 60_000)
+    // BCP is paid by reference code (online or at an agent) — hours, not minutes.
+    expect(new Date(payssionExpiryIso('bcp_pe', now)).getTime() - now).toBe(48 * 60 * 60_000)
     for (const pm of ['gcash_ph', 'pix_br', 'maya_ph', 'qr_ph', 'qris_id', 'spei_mx', 'pse_co', 'webpay_cl',
       'trustly', 'blik_pl', 'p24_pl', 'eps_at', 'mbway_pt', 'bancomatpay_it', 'payu_cz']) {
       expect(new Date(payssionExpiryIso(pm, now)).getTime() - now).toBe(60 * 60_000)
@@ -159,16 +165,17 @@ describe('payssion: checkout region filter', () => {
 
   it('matches the buyer country (case-insensitive) and folds the rest', () => {
     const br = splitPayssionMethodsByCountry('br')
-    expect(ids(br.matched)).toEqual(['pix_br', 'boleto_br'])
+    expect(ids(br.matched)).toEqual(['pix_br', 'creditcard_br', 'boleto_br', 'skrill'])
     expect(ids(br.other)).not.toContain('pix_br')
     const ph = splitPayssionMethodsByCountry('PH')
-    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph'])
+    expect(ids(ph.matched)).toEqual(['gcash_ph', 'maya_ph', 'qr_ph', 'skrill'])
   })
 
-  it('a country with no local rail matches nothing (crypto still renders)', () => {
-    const us = splitPayssionMethodsByCountry('US')
-    expect(us.matched).toEqual([])
-    expect(us.other.length).toBeGreaterThan(0)
+  it('a country with no local rail matches nothing (crypto still renders); the US gets Skrill only', () => {
+    const jp = splitPayssionMethodsByCountry('JP')
+    expect(jp.matched).toEqual([])
+    expect(jp.other.length).toBeGreaterThan(0)
+    expect(ids(splitPayssionMethodsByCountry('US').matched)).toEqual(['skrill'])
   })
 
   it('unknown/garbage country shows everything up front — never strand a buyer', () => {

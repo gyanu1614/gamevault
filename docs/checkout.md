@@ -96,8 +96,8 @@ Each entry carries `pmId, label, kind (instant|voucher), expiryMinutes,
 feePercent, coverage, countries[]`. Entry **order = display order**.
 `payssionSelectorMethods()` hides the sandbox `payssion_test` entry.
 
-The UI adds only what the registry shouldn't know, in `METHOD_UI` inside
-CheckoutForm: an icon, 2–3 checkmark **points** (crisp facts, no sentences),
+The UI adds only what the registry shouldn't know, in `METHOD_UI`
+(`app/checkout/[id]/_method-ui.ts`, pinned by its test to every registry method): an icon, 2–3 checkmark **points** (crisp facts, no sentences),
 and an optional `logo` (real brand SVG in `public/payments/`; falls back to a
 stroke icon). **Adding a method = one registry entry + one METHOD_UI line** —
 filtering, ordering, routing, expiry and tests pick it up automatically.
@@ -255,15 +255,29 @@ Language rule: never "escrow" / "we hold funds" — agent model wording only
 
 ---
 
-## 7. Payssion method status (2026-09-24, checkout B4)
+## 7. Payssion method status (2026-10-15)
 
-**Live in checkout (18):** gcash_ph, maya_ph, qr_ph (PH) · pix_br, boleto_br
-(BR) · oxxo_mx, spei_mx (MX) · qris_id (ID) · pse_co (CO) · webpay_cl (CL) ·
-**trustly (Europe) · blik_pl, p24_pl (PL) · eps_at (AT) · mbway_pt (PT) ·
-bancomatpay_it (IT) · payu_cz (CZ) · paysafecard (EU/UK/CA/AU)** — B4, all
-probe-confirmed 200 on 2026-09-24 (`docs/payments/eu-methods-probe.md`; the
-recorded answers are `src/lib/payments/providers/payssion/probe-fixtures.ts`).
+**Live in checkout (35):** gcash_ph, maya_ph, qr_ph (PH) · pix_br, creditcard_br,
+boleto_br (BR) · oxxo_mx, spei_mx, creditcard_mx (MX) · qris_id (ID) · pse_co
+(CO) · webpay_cl (CL) · bcp_pe (PE) · fpx_my, touchngo_my (MY) · paynow_sg,
+grabpay_sg (SG) · vietqr_vn (VN) · trustly (Europe) · blik_pl, p24_pl (PL) ·
+bancontact_be (BE) · eps_at (AT) · mbway_pt (PT) · bancomatpay_it, satispay,
+mybank (IT +) · payu_cz (CZ) · twint_ch (CH) · mada_sa, applepay_sa (SA) ·
+creditcard_za (ZA) · kakaopay_kr (KR) · skrill, paysafecard (worldwide).
+B4 methods probe-confirmed 200 on 2026-09-24, the 17 newest on 2026-10-15
+(`docs/payments/eu-methods-probe.md`; recorded answers in
+`src/lib/payments/providers/payssion/probe-fixtures.ts`).
 Maya / OXXO / Boleto are wired but hidden by their fee row (`selectable=false`).
+
+**Regions** (`lib/payments/regions.ts`): Europe, Latin America and Southeast
+Asia spill (a buyer also sees the rest of the region's rails); Middle East &
+Africa, East Asia and Rest of World do not (exact country only, and their
+chip shows only to their own buyers). Local card rails are named by country
+("Brazilian Cards", "Saudi Cards (mada)", "Apple Pay (Saudi Arabia)") because
+a card from elsewhere is refused on Payssion's page. The cheapest of the
+buyer's own-country methods (by this order's quoted service fee) carries a
+small "Lowest Fee" tag (`lib/payments/lowest-fee.ts`); crypto and other
+countries' regional rails never count.
 
 **Every method is charged in USD.** Payssion converts on its hosted page
 (its 417 text shows the rate: `0.90 USD(0.81 EUR)`); EUR / PLN / CZK charges
@@ -279,12 +293,30 @@ charges stay USD end to end.
 | mbway_pt | PT | 2.75% + €0.25 | **€1.00 minimum charge** (417 below) → `min_total_minor = 100` |
 | bancomatpay_it | IT | 2.75% + €0.20 | the pm_id is `bancomatpay_it`; `bancomat_it` is not one (405) |
 | payu_cz | CZ | 4.75% + 3.5 Kč | |
+| skrill | worldwide (Skrill's 116 sign-up countries) | 3.5% + $0.35 | €1–€2,000; row stored in EUR (€0.30 fixed); Payssion holds a 10% / 180-day rolling reserve (20% above $300) |
+| bancontact_be | BE | 4.25% + €0.45 | €1–€2,000 |
+| satispay / mybank | IT, FR, LU / IT, BE, ES, PT | 3.75% + €0.35 / 2.25% + €0.35 | max €2,000 |
+| twint_ch | CH | 3.5% + 0.15 CHF | 0.10–5,000 CHF; 10% / 180-day reserve |
+| creditcard_br / _mx | BR / MX | 4.25% | max $500 / 1–10,000 MXN; no FX markup (owner); 10% / 180-day reserve |
+| bcp_pe | PE | 4.25% | 5–7,500 PEN; paid by reference code → voucher (48 h), clears after BCP settles |
+| fpx_my / touchngo_my | MY | 3.5% + 1.80 MYR / 3.5% | 2–5,000 / 1–1,500 MYR; TNG has **no provider refunds** (`refundable=false`) |
+| paynow_sg / grabpay_sg | SG | 3% | 0.01–1,000 SGD |
+| vietqr_vn | VN | 5% | 2,000–50,000,000 VND |
+| mada_sa / applepay_sa | SA | 5.5% | 0.10–2,000 SAR; refunds within 30 days; 10% / 180-day reserve |
+| creditcard_za | ZA | 4.5% | 1–10,000 ZAR; 10% / 180-day reserve |
+| kakaopay_kr | KR | 3.9% | 200–1,000,000 KRW |
 
-**Approved, deliberately NOT wired:** bancontact_be (BE, 4.25% + €0.45 —
-probe control, 200), multibanco_pt (PT — refunds not supported; MB Way
-preferred), skrill (⚠️ 10% + 180-day rolling reserve — **never wire**),
-payu_pl (never wire). **Not enabled:** payid_au (491). **Dead pm_ids (docs
-stale):** ideal_nl, upi_in, neosurf, bankcard_in; sofort discontinued.
+KRW and VND have no minor unit; their fee-row amounts are stored ×100 (200
+KRW = 20000) so `buyer_fee_quote`'s minor-unit conversion stays exact. The
+reserve is cash held back by Payssion, not a fee, so no fee row carries it.
+
+**Deliberately NOT wired:** multibanco_pt (PT — refunds not supported; MB Way
+preferred) and payu_pl (owner rule). Skrill was "never wire" until
+2026-10-15; the owner reversed that and it is now wired like any other
+method (fee = Payssion's 3.5% + $0.35; the 10% reserve is accepted).
+**Not enabled (491):** payid_au, naverpay_kr, alipay_cn, tenpay_cn. **Dead
+pm_ids (docs stale):** ideal_nl, upi_in, neosurf, bankcard_in; sofort
+discontinued.
 
 **Per-method minimum**: `payment_method_fees.min_total_minor` (fee currency).
 `buyer_fee_quote` refuses `under_min` on subtotal + fee (the tile is hidden)
@@ -300,13 +332,19 @@ USD/EUR settlement only. Rate sheet is confidential — never publish it.
 
 ## 8. Testing & ops tools
 
-- **Enable probe**: `payssion-probe.mjs` (session scratchpad) — creates a
-  $0.90 charge per pm_id and cancels it; `200` = enabled, `491` = not
+- **Enable probe**: `payssion-probe.mjs` / `payssion-probe-22.mjs` (session
+  scratchpad) — creates a $0.90 (or $2.00) charge per pm_id and cancels it;
+  give each probe a `notify_url` (real charges send `/api/webhooks/payssion`).
+  Without one Payssion posts the cancel to the dashboard's default notify URL
+  (`https://dropmarket.gg/`, the homepage) and emails "Error received when
+  posting notifications … Status-Code:405" per probe — harmless, but noisy; `200` = enabled, `491` = not
   enabled, `417` = enabled but below its minimum. Takes an env-file path;
   keys live in `~/gamevault/.env.local` (`PAYSSION_API_KEY/SECRET_KEY`).
   Note: Vercel envs are Sensitive (write-only) — `vercel env pull` yields
   placeholders; the readable copy is the Payssion merchant dashboard.
-- **Geo testing**: `?country=BR|PH|US|…` on the checkout URL.
+- **Geo testing**: `?country=BR|PH|US|…` on the checkout URL. In dev,
+  `/dev/checkout-preview?country=XX` renders the checkout with the REAL
+  quotes from a local Supabase stack (no sign-in needed).
 - **Unit tests**: `src/lib/payments/providers/payssion/payssion.test.ts`
   (signatures, state map, webhook chain, routing, expiry, region filter) and
   `src/lib/payments/dispatch.test.ts`. Vitest loads `.env.test` — never let a
