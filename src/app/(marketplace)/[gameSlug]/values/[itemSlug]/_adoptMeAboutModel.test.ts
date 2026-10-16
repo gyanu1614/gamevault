@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aboutAnswer, aboutBasis, aboutFacts, formRows } from './_adoptMeAboutModel'
+import { aboutAnswer, aboutBasis, aboutFacts, formRows, livePriceSpread, withoutStalePrices } from './_adoptMeAboutModel'
 
 const v = (variant: string, cheapestUsd: number | null, tradeValue: number | null, listingsTracked = 0) =>
   ({ variant, label: variant, cheapestUsd, cashUsd: cheapestUsd, averageUsd: cheapestUsd, tradeValue, isEstimated: false, confidence: 'high', listingsTracked, lastPricedAt: null }) as any
@@ -51,3 +51,27 @@ describe('aboutFacts', () => {
     ])
   })
 })
+
+describe('withoutStalePrices', () => {
+  const stored =
+    'The Vampire Dragon is a legendary pet in Adopt Me, released on 5 October 2023 as part of the 2023 Halloween Event. It is no longer available through normal play, so trading with other players is now the main way to get one. In October 2026 the cheapest Fly Ride Vampire Dragon from an established seller was listed at about $6.98. Across the 6 forms with enough listings to price, the cheapest listings ran from about $6.98 (Fly Ride) to $75.00 (Mega Neon Fly Ride). Prices change daily, so check the live values above before you trade or buy.'
+  it('drops the sentences that quote a price or a form count; keeps the story', () => {
+    expect(withoutStalePrices(stored)).toBe(
+      'The Vampire Dragon is a legendary pet in Adopt Me, released on 5 October 2023 as part of the 2023 Halloween Event. It is no longer available through normal play, so trading with other players is now the main way to get one.',
+    )
+  })
+  it('leaves prose without prices alone', () => {
+    expect(withoutStalePrices('A rare pet. Hatched from the Fossil Egg in 2020.')).toBe('A rare pet. Hatched from the Fossil Egg in 2020.')
+  })
+})
+
+describe('livePriceSpread', () => {
+  it('one sentence from the same numbers as the table: cheapest form, dearest form, how many priced', () => {
+    expect(livePriceSpread('Owl', variants)).toBe('Across the 4 of 5 forms we can price today, the cheapest listings run from $120 (Normal) to $2,100 (Mega Fly Ride).')
+  })
+  it('one priced form, or none', () => {
+    expect(livePriceSpread('Owl', [v('FR', 6.28, 20, 19), v('N', null, 14)])).toBe('Only the Fly Ride form has enough listings to price today: $6.28.')
+    expect(livePriceSpread('Owl', [v('N', null, 14)])).toBeNull()
+  })
+})
+
