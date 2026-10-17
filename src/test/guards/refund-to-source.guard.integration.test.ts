@@ -1,12 +1,14 @@
 /**
  * Refund to the original payment method (docs/design/buyer-fee-refund-policy.md):
- *   · a buyer whose refund sits as store credit can request it back to the
- *     paid rail — once per order, only while the credit is unspent, only on
- *     a refundable rail with a provider charge;
- *   · approve = ONE RPC: the credit leaves user_wallet → provider_float and
- *     an outbox row kind='refund' is queued; the drain calls provider.refund
- *     and marks the request sent;
- *   · at the retry cap the mark reverses the credit, marks failed and alerts
+ *   · a buyer whose refund sits as store credit (the item price) can request
+ *     it back to the paid rail for the FULL amount — store credit + the kept
+ *     service fee (2026-10-16) — once per order, only while the credit is
+ *     unspent, only on a refundable rail with a provider charge;
+ *   · approve = ONE RPC: the credit leaves user_wallet → provider_float, the
+ *     kept fee leaves platform_commission → provider_float, and an outbox row
+ *     kind='refund' for the full amount is queued; the drain calls
+ *     provider.refund, marks the request sent and charges a due seller fee;
+ *   · at the retry cap the mark reverses both legs, marks failed and alerts
  *     admins once;
  *   · the new RPCs are service-role only.
  * Every row it creates is removed in afterAll.
@@ -45,9 +47,11 @@ const rpc = async (fn: string, args: Record<string, unknown>) => {
 }
 const wallet = async (uid: string) => BigInt((await rpc('user_wallet_balance', { p_user_id: uid, p_currency: CUR })) ?? 0)
 const request = async (orderId: string) => (await fx!.svc.from('refund_to_source_requests').select('*').eq('order_id', orderId).maybeSingle()).data as any
+const txn = async (key: string) => (await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', key).maybeSingle()).data
+const sellerAvail = async (uid: string) => BigInt((await rpc('seller_available_balance', { p_seller_id: uid, p_currency: CUR })) ?? 0)
 const outboxRows = async (orderId: string) => ((await fx!.svc.from('provider_cancel_outbox').select('*').eq('order_id', orderId).eq('kind', 'refund')).data ?? []) as any[]
 
-/** A PAID $20 Pix (Payssion) order for the admin actor, refunded in full as store credit. */
+/** A PAID $20 Pix (Payssion) order for the admin actor, refunded (seller fault) as $20 store credit; $3.25 fees kept. */
 async function refundedOrder(): Promise<string> {
   const data = await rpc('order_create_pending', {
     p_buyer_id: fx!.admin.id, p_seller_id: fx!.seller.id, p_listing_id: fx!.listingId, p_quantity: 1,
@@ -107,7 +111,11 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     const id = await refundedOrder()
     const first = await rpc('refund_to_source_request', { p_order_id: id, p_buyer_id: fx!.admin.id })
     expect(first.ok).toBe(true)
-    expect(Number(first.amount_minor)).toBe(2325) // $20 + $0.40 marketplace + $2.85 Pix processing
+    // the full amount paid: $20 store credit + $0.40 marketplace + $2.85 Pix processing
+    expect(Number(first.amount_minor)).toBe(2325)
+    expect(Number(first.credit_minor)).toBe(2000)
+    expect(Number(first.fee_minor)).toBe(325)
+    expect(Number((await request(id)).fee_minor)).toBe(325)
     const again = await rpc('refund_to_source_request', { p_order_id: id, p_buyer_id: fx!.admin.id })
     expect(again.ok).toBe(false)
     expect(again.reason).toBe('exists')
@@ -140,7 +148,10 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     const req = await request(id)
     const approved = await rpc('refund_to_source_approve', { p_request_id: req.id, p_admin_id: fx!.admin.id })
     expect(approved.approved).toBe(true)
-    expect(before - (await wallet(fx!.admin.id))).toBe(BigInt(req.amount_minor))
+    // only the store credit leaves the wallet; the kept fee comes from platform_commission
+    expect(before - (await wallet(fx!.admin.id))).toBe(BigInt(req.amount_minor) - BigInt(req.fee_minor))
+    expect(before - (await wallet(fx!.admin.id))).toBe(2000n)
+    expect(await txn(`refund_to_source_fee:${req.id}`)).not.toBeNull()
     const rows = await outboxRows(id)
     expect(rows.length).toBe(1)
     expect(rows[0].status).toBe('pending')
@@ -167,7 +178,7 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     const req = await request(id)
     const before = await wallet(fx!.admin.id)
     await rpc('refund_to_source_approve', { p_request_id: req.id, p_admin_id: fx!.admin.id })
-    expect(before - (await wallet(fx!.admin.id))).toBe(BigInt(req.amount_minor))
+    expect(before - (await wallet(fx!.admin.id))).toBe(2000n)
     // Fast-forward the row to its last allowed attempt.
     await fx!.svc.from('provider_cancel_outbox').update({ attempts: 5, next_attempt_at: new Date(Date.now() - 1000).toISOString() } as any).eq('request_id', req.id)
     refundMode.throw = true
@@ -181,7 +192,10 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     const after = await request(id)
     expect(after.status).toBe('failed')
     expect(after.failure_reason).toMatch(/refund endpoint down/)
+    // both legs reversed: the $20 store credit is back, the fee is back with the platform
     expect(await wallet(fx!.admin.id)).toBe(before)
+    expect(await txn(`refund_to_source_fee_reversal:${req.id}`)).not.toBeNull()
+    expect(await txn(`seller_fault_fee:${id}`)).toBeNull()
     // admin_alert_once: one in-app notification per active admin (the
     // fixture admin), deduped on (type, title, link).
     const { data: alerts } = await fx!.svc.from('notifications').select('id, user_id').eq('type', 'payment_review').eq('title', 'Refund To Source Failed').like('link', `%${id}%`)
@@ -210,12 +224,55 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     expect(await wallet(fx!.admin.id)).toBe(before)
   })
 
+  it('quotes: every refunded order lists its store credit, kept fee and full card amount', async () => {
+    const id = await refundedOrder()
+    const rows = (await rpc('refund_to_source_quotes', { p_buyer_id: fx!.admin.id })) as any[]
+    const row = rows.find((r) => r.order_id === id)
+    expect(row).toBeTruthy()
+    expect(Number(row.credit_minor)).toBe(2000)
+    expect(Number(row.fee_minor)).toBe(325)
+    expect(Number(row.total_minor)).toBe(2325)
+    expect(row.refundable).toBe(true)
+    expect(row.request_status).toBeNull()
+    const stranger = (await rpc('refund_to_source_quotes', { p_buyer_id: fx!.buyer.id })) as any[]
+    expect(stranger.find((r) => r.order_id === id)).toBeUndefined()
+  })
+
+  it('crypto rails cannot refund provider-side: btcpay and coingate are store credit only', async () => {
+    const { data } = await fx!.svc.from('payment_method_fees').select('method, refundable').in('method', ['btcpay', 'coingate'])
+    expect((data ?? []).length).toBe(2)
+    for (const r of data as any[]) expect(r.refundable, r.method).toBe(false)
+  })
+
+  it('a SENT card refund on an order with a due seller fee charges the seller once', async () => {
+    // This file's earlier orders are all seller faults for the same fixture
+    // seller inside the window, so this one is past the threshold.
+    const id = await refundedOrder()
+    const { data: f } = await fx!.svc.from('order_seller_faults').select('fee_due_minor, fee_charged_minor').eq('order_id', id).single()
+    expect(Number((f as any).fee_due_minor)).toBe(325)
+    expect(Number((f as any).fee_charged_minor)).toBe(0)
+    await rpc('refund_to_source_request', { p_order_id: id, p_buyer_id: fx!.admin.id })
+    const req = await request(id)
+    const availBefore = await sellerAvail(fx!.seller.id)
+    await rpc('refund_to_source_approve', { p_request_id: req.id, p_admin_id: fx!.admin.id })
+    // approved but not sent yet: nothing charged
+    expect(await txn(`seller_fault_fee:${id}`)).toBeNull()
+    const { drainProviderCancelOutbox } = await import('@/lib/payments/cancel-outbox')
+    expect((await drainProviderCancelOutbox({ orderId: id })).done).toBe(1)
+    expect((await request(id)).status).toBe('sent')
+    expect(await txn(`seller_fault_fee:${id}`)).not.toBeNull()
+    expect(availBefore - (await sellerAvail(fx!.seller.id))).toBe(325n)
+    const again = await rpc('order_seller_fault_charge', { p_order_id: id })
+    expect(again.charged).toBe(false)
+  })
+
   it('the refund-to-source RPCs are service-role only', async () => {
     for (const [fn, args] of [
       ['refund_to_source_request', { p_order_id: made[0], p_buyer_id: fx!.buyer.id }],
       ['refund_to_source_approve', { p_request_id: made[0], p_admin_id: fx!.buyer.id }],
       ['refund_to_source_reject', { p_request_id: made[0], p_admin_id: fx!.buyer.id, p_notes: null }],
       ['refund_to_source_fail', { p_request_id: made[0], p_error: 'x' }],
+      ['refund_to_source_quotes', { p_buyer_id: fx!.buyer.id }],
     ] as const) {
       const { error } = await (fx!.buyer.client.rpc as any)(fn, args)
       expect(error?.code, fn).toBe('42501')
