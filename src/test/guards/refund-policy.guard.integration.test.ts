@@ -1,12 +1,14 @@
 /**
- * Refund policy (docs/design/buyer-fee-refund-policy.md, 2026-09-30):
- *   · buyer fault  → the item price is credited, the fees the buyer paid move
- *                    refunds → platform_commission (fee_kept:<order>);
- *   · seller fault → full credit + a row in order_seller_faults; from the
- *                    seller's 5th fault in 7 days that order's buyer fees are
- *                    charged to seller_available (seller_fault_fee:<order>);
- *   · platform (default) → full credit, nothing recorded — every caller not
- *                    passing a fault keeps today's behaviour;
+ * Refund policy (2026-09-30, store-credit rule 2026-10-16 —
+ * docs/payments/refund-fee-research-2026-10-16.md):
+ *   · EVERY policy refund credits the item price as store credit; the fees
+ *     the buyer paid move refunds → platform_commission (fee_kept:<order>).
+ *     A refund to the original payment method pays them back (refund-to-source).
+ *   · seller fault → also a row in order_seller_faults; from the seller's 5th
+ *                    fault in 7 days fee_due_minor is recorded, and the fee is
+ *                    charged to seller_available only when the buyer's card
+ *                    refund is sent (order_seller_fault_charge);
+ *   · platform (default) → nothing recorded;
  *   · a replay credits nothing twice; a fault inside the leg leaves no
  *     partial state; buyers are refused by the withdrawal gate.
  *
@@ -47,7 +49,7 @@ const wallet = async (uid: string) => BigInt((await rpc('user_wallet_balance', {
 const sellerAvail = async (uid: string) => BigInt((await rpc('seller_available_balance', { p_seller_id: uid, p_currency: CUR })) ?? 0)
 const txn = async (key: string) => (await fx!.svc.from('ledger_transactions').select('id').eq('idempotency_key', key).maybeSingle()).data
 const faultRow = async (orderId: string) =>
-  (await fx!.svc.from('order_seller_faults').select('order_id, source, fee_charged_minor').eq('order_id', orderId).maybeSingle()).data as any
+  (await fx!.svc.from('order_seller_faults').select('order_id, source, fee_charged_minor, fee_due_minor').eq('order_id', orderId).maybeSingle()).data as any
 
 /**
  * A PAID $20 crypto order for the fixture buyer: subtotal 2000, marketplace
@@ -121,52 +123,75 @@ describe.skipIf(!hasEnv)('refund policy — fault-aware buyer credits (integrati
     expect((await wallet(fx!.admin.id)) - before).toBe(2000n)
   })
 
-  it('default (platform) fault: full credit, nothing kept, no fault row — old callers unchanged', async () => {
+  it('default (platform) fault: the item price is credited, the fees are kept, no fault row', async () => {
     const id = await paidOrder()
     const before = await wallet(fx!.admin.id)
     const r = await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'plat' })
     expect(r.fault).toBe('platform')
-    expect(Number(r.credited_minor)).toBe(2142)
-    expect(Number(r.fee_kept_minor)).toBe(0)
-    expect((await wallet(fx!.admin.id)) - before).toBe(2142n)
-    expect(await txn(`fee_kept:${id}`)).toBeNull()
+    expect(Number(r.credited_minor)).toBe(2000)
+    expect(Number(r.fee_kept_minor)).toBe(142)
+    expect((await wallet(fx!.admin.id)) - before).toBe(2000n)
+    expect(await txn(`fee_kept:${id}`)).not.toBeNull()
     expect(await faultRow(id)).toBeNull()
   })
 
-  it('seller fault: full credit and a fault row; faults 1–4 in the window charge the seller nothing', async () => {
+  it('seller fault: the item price is credited, the fees are kept, a fault row; faults 1–4 owe nothing', async () => {
     const before = await wallet(fx!.admin.id)
     const availBefore = await sellerAvail(fx!.seller.id)
     const ids: string[] = []
     for (let i = 0; i < 4; i++) ids.push(await paidOrder())
     for (const id of ids) {
       const r = await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'seller_cancel:' + id, p_fault: 'seller' })
-      expect(Number(r.credited_minor)).toBe(2142)
+      expect(Number(r.credited_minor)).toBe(2000)
+      expect(Number(r.fee_kept_minor)).toBe(142)
       expect(Number(r.fault_fee_minor)).toBe(0)
+      expect(Number(r.fault_fee_due_minor)).toBe(0)
       const f = await faultRow(id)
       expect(f?.source).toBe('seller_cancel')
       expect(Number(f?.fee_charged_minor)).toBe(0)
+      expect(Number(f?.fee_due_minor)).toBe(0)
     }
-    expect((await wallet(fx!.admin.id)) - before).toBe(4n * 2142n)
+    expect((await wallet(fx!.admin.id)) - before).toBe(4n * 2000n)
     expect(await sellerAvail(fx!.seller.id)).toBe(availBefore)
     const r4 = await rpc('order_refund_buyer_credit', { p_order_id: ids[3], p_fault: 'seller', p_amount_minor: null })
     // replay of the leg on an already-recorded order: idempotent, no second row
     expect(Number(r4.fault_fee_minor)).toBe(0)
   })
 
-  it('the 5th seller fault in 7 days charges that order’s buyer fees ($1.42) to seller_available and notifies the seller', async () => {
+  it('the 5th seller fault in 7 days records fee_due ($1.42) but charges nothing until a card refund is sent', async () => {
     const id = await paidOrder()
     const availBefore = await sellerAvail(fx!.seller.id)
     const r = await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'cancel_request:' + id, p_fault: 'seller' })
-    expect(Number(r.credited_minor)).toBe(2142)
+    expect(Number(r.credited_minor)).toBe(2000)
     expect(Number(r.fault_count_in_window)).toBeGreaterThanOrEqual(5)
-    expect(Number(r.fault_fee_minor)).toBe(142)
-    expect(availBefore - (await sellerAvail(fx!.seller.id))).toBe(142n)
-    expect(await txn(`seller_fault_fee:${id}`)).not.toBeNull()
+    expect(Number(r.fault_fee_minor)).toBe(0)
+    expect(Number(r.fault_fee_due_minor)).toBe(142)
+    expect(await sellerAvail(fx!.seller.id)).toBe(availBefore)
+    expect(await txn(`seller_fault_fee:${id}`)).toBeNull()
     const f = await faultRow(id)
     expect(f?.source).toBe('admin_cancel')
-    expect(Number(f?.fee_charged_minor)).toBe(142)
+    expect(Number(f?.fee_due_minor)).toBe(142)
+    expect(Number(f?.fee_charged_minor)).toBe(0)
+
+    // order_seller_fault_charge (what a SENT card refund runs) posts it once and notifies.
+    const c = await rpc('order_seller_fault_charge', { p_order_id: id })
+    expect(c.charged).toBe(true)
+    expect(Number(c.fee_charged_minor)).toBe(142)
+    expect(availBefore - (await sellerAvail(fx!.seller.id))).toBe(142n)
+    expect(await txn(`seller_fault_fee:${id}`)).not.toBeNull()
+    expect(Number((await faultRow(id))?.fee_charged_minor)).toBe(142)
+    const again = await rpc('order_seller_fault_charge', { p_order_id: id })
+    expect(again.charged).toBe(false)
+    expect(availBefore - (await sellerAvail(fx!.seller.id))).toBe(142n)
     const { data: n } = await fx!.svc.from('notifications').select('title').eq('user_id', fx!.seller.id).eq('type', 'seller_fault_fee').like('link', `%${id}%`).maybeSingle()
     expect((n as any)?.title).toBe('Non-Delivery Fee Applied')
+  })
+
+  it('a not_delivered:<order> key records the fault as not_delivered', async () => {
+    const id = await paidOrder()
+    const r = await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'not_delivered:' + id, p_fault: 'seller' })
+    expect(Number(r.credited_minor)).toBe(2000)
+    expect((await faultRow(id))?.source).toBe('not_delivered')
   })
 
   it('replaying a refund credits nothing twice and reports changed=false', async () => {
@@ -206,6 +231,19 @@ describe.skipIf(!hasEnv)('refund policy — fault-aware buyer credits (integrati
     expect(await txn(`fee_kept:${id}`)).toBeNull()
   })
 
+  itFault('a fault inside order_seller_fault_charge leaves no fee posted and the fee still due', async () => {
+    // fx.seller is past the threshold by now: this fault records fee_due.
+    const id = await paidOrder()
+    await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'seller_cancel:' + id, p_fault: 'seller' })
+    expect(Number((await faultRow(id))?.fee_due_minor)).toBe(142)
+    const availBefore = await sellerAvail(fx!.seller.id)
+    const err = withFault('order_seller_fault_charge:after_journal', `SELECT order_seller_fault_charge('${id}'::uuid)`)
+    expect(err).toMatch(/money_fault_hook|order_seller_fault_charge:after_journal/)
+    expect(await txn(`seller_fault_fee:${id}`)).toBeNull()
+    expect(await sellerAvail(fx!.seller.id)).toBe(availBefore)
+    expect(Number((await faultRow(id))?.fee_charged_minor)).toBe(0)
+  })
+
   it('the withdrawal gate refuses a buyer account: not_a_seller, with support copy from withdrawal_quote', async () => {
     const gate = await rpc('seller_withdrawal_gate', { p_seller_id: fx!.buyer.id })
     expect(gate.eligible).toBe(false)
@@ -223,6 +261,8 @@ describe.skipIf(!hasEnv)('refund policy — fault-aware buyer credits (integrati
     for (const [fn, args] of [
       ['order_refund_buyer_credit', { p_order_id: made[0], p_fault: 'buyer', p_amount_minor: null }],
       ['order_seller_fault_record', { p_order_id: made[0], p_source: 'seller_cancel' }],
+      ['order_seller_fault_charge', { p_order_id: made[0] }],
+      ['refund_to_source_quotes', { p_buyer_id: fx!.buyer.id }],
     ] as const) {
       const { error } = await (fx!.buyer.client.rpc as any)(fn, args)
       expect(error?.code, fn).toBe('42501')

@@ -1,9 +1,10 @@
 /**
  * Seller cancels an order they can't fulfil (integration, real action +
  * money RPCs, the seller's own session):
- *   · paid       -> CANCELLED, buyer's wallet credited in full, once
+ *   · paid       -> CANCELLED, buyer's wallet credited the item price, once
  *     (a second click is a no-op, not a second refund);
- *   · delivering -> REFUNDED, buyer's wallet credited in full;
+ *   · delivering -> REFUNDED, buyer's wallet credited the item price;
+ *   (these fixture orders carry no fees, so the item price is the total)
  *   · the chat gets an "order_cancelled" notice with the reason;
  *   · a delivered order, the buyer, a bad reason: refused, nothing moves.
  */

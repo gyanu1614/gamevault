@@ -329,10 +329,10 @@ export async function processCancellationRequest(
   action: 'approve' | 'reject',
   adminNotes?: string,
   /**
-   * Refund policy (2026-09-30): who is at fault. 'buyer' (default) credits
-   * the item price and keeps the service fee; 'seller' (the seller went
-   * quiet / could not deliver) credits everything and counts against the
-   * seller's 5-in-7-days non-delivery fee.
+   * Who is at fault (refund rule 2026-10-16). The buyer's refund is the same
+   * either way — the item price as store credit, the full amount on request
+   * to their card. 'seller' (the seller went quiet / could not deliver) also
+   * counts against the seller's 5-in-7-days non-delivery record.
    */
   fault: 'buyer' | 'seller' = 'buyer'
 ): Promise<{ data?: CancellationRequest; error?: { message: string } }> {
@@ -450,7 +450,7 @@ export async function processCancellationRequest(
           user_id: order.buyer_id,
           type: 'order_refunded',
           title: 'Refund In Your Store Balance',
-          message: `Your cancellation for order #${orderRef} was approved — $${creditedAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.`,
+          message: `Your cancellation for order #${orderRef} was approved — $${creditedAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.${creditedAmount < Number(order.total_amount ?? 0) ? ` Want the full $${Number(order.total_amount).toFixed(2)} back to your payment method? Request it from your Wallet.` : ''}`,
           link: '/account/wallet',
           is_read: false,
         })

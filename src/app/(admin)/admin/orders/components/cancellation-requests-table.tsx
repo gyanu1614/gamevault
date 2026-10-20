@@ -40,10 +40,10 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [showReasonModal, setShowReasonModal] = useState<CancellationRequest | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
-  // Refund policy: who is at fault decides the refund. Off = the buyer
-  // changed their mind (item price back, service fee kept). On = the seller
-  // went quiet / could not deliver (everything back, counts against the
-  // seller's non-delivery record).
+  // Refund rule (2026-10-16): the buyer's refund is the same either way —
+  // the item price as store credit, the full amount on request to their
+  // card. The box only decides whether it counts against the seller's
+  // non-delivery record (on = the seller went quiet / could not deliver).
   const [sellerFault, setSellerFault] = useState(false)
   const queryClient = useQueryClient()
 
@@ -206,7 +206,7 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   </p>
                 </div>
 
-                {/* Fault → refund amount (refund policy) */}
+                {/* Fault → the seller's non-delivery record (refund rule 2026-10-16) */}
                 <label className="flex cursor-pointer items-start gap-3 rounded-md bg-bg-overlay p-3.5">
                   <input
                     type="checkbox"
@@ -218,9 +218,9 @@ export function CancellationRequestsTable({ requests, isLoading }: CancellationR
                   <span>
                     <span className="block text-[13.5px] font-semibold text-text-primary">Seller At Fault</span>
                     <span className="mt-0.5 block text-[12.5px] leading-relaxed text-text-tertiary">
-                      On approve: the buyer gets everything back including the service fee, and this counts against the
-                      seller&apos;s non-delivery record. Leave off when the buyer simply changed their mind (item price back,
-                      service fee kept).
+                      On: counts against the seller&apos;s non-delivery record. The buyer&apos;s refund is the same either
+                      way: the item price as store credit, the full amount on request to their payment method. Leave off
+                      when the buyer simply changed their mind.
                     </span>
                   </span>
                 </label>

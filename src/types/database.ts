@@ -4862,6 +4862,7 @@ export type Database = {
       order_seller_faults: {
         Row: {
           fee_charged_minor: number
+          fee_due_minor: number
           fee_txn_id: string | null
           occurred_at: string
           order_id: string
@@ -4870,6 +4871,7 @@ export type Database = {
         }
         Insert: {
           fee_charged_minor?: number
+          fee_due_minor?: number
           fee_txn_id?: string | null
           occurred_at?: string
           order_id: string
@@ -4878,6 +4880,7 @@ export type Database = {
         }
         Update: {
           fee_charged_minor?: number
+          fee_due_minor?: number
           fee_txn_id?: string | null
           occurred_at?: string
           order_id?: string
@@ -6524,6 +6527,7 @@ export type Database = {
           currency: string
           decided_at: string | null
           failure_reason: string | null
+          fee_minor: number
           id: string
           order_id: string
           outbox_id: string | null
@@ -6543,6 +6547,7 @@ export type Database = {
           currency: string
           decided_at?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
           order_id: string
           outbox_id?: string | null
@@ -6562,6 +6567,7 @@ export type Database = {
           currency?: string
           decided_at?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
           order_id?: string
           outbox_id?: string | null
@@ -14520,6 +14526,7 @@ export type Database = {
         }
         Returns: Json
       }
+      order_seller_fault_charge: { Args: { p_order_id: string }; Returns: Json }
       order_seller_fault_record: {
         Args: { p_order_id: string; p_source: string }
         Returns: Json
@@ -14693,6 +14700,21 @@ export type Database = {
       refund_to_source_fail: {
         Args: { p_error: string; p_request_id: string }
         Returns: Json
+      }
+      refund_to_source_quotes: {
+        Args: { p_buyer_id: string }
+        Returns: {
+          credit_minor: number
+          currency: string
+          fee_minor: number
+          method_label: string
+          order_id: string
+          order_number: string
+          refundable: boolean
+          refunded_at: string
+          request_status: string
+          total_minor: number
+        }[]
       }
       refund_to_source_reject: {
         Args: { p_admin_id: string; p_notes?: string; p_request_id: string }

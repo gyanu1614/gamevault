@@ -39,6 +39,7 @@ import { toast } from 'sonner'
 import WithdrawalRequestCard from '@/components/wallet/WithdrawalRequestCard'
 import { lifetimeSpentOf, matchesPurchaseFilter, saleRowAmounts } from '@/lib/wallet/wallet-rows'
 import { WalletSkeleton } from './_WalletSkeleton'
+import { RefundToCardCard } from './_RefundToCardCard'
 import { OrderStatusPill } from '@/components/account/OrderStatusPill'
 import { SegmentedTabs } from '@/components/account/SegmentedTabs'
 import { accountInputCls } from '@/components/account/AccountSurface'
@@ -622,6 +623,9 @@ export default function WalletClient({ userId, isSeller }: Props) {
               ))}
             </div>
           </div>
+          {/* Refunds sit as store credit (item price); each refunded order
+              can go back to the card for the full amount (2026-10-16). */}
+          <RefundToCardCard userId={userId} />
         </div>
 
       {/* ── Tabs: the shared compact control with the sliding pill ── */}
