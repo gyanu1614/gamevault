@@ -403,6 +403,15 @@ export default async function OrderDetailPage({ params }: PageProps) {
       pending: !!pendingRequest,
     }
   }
+  // Cancel – Not Delivered: the order's report (buyer + seller), read only
+  // while the seller still owes the delivery.
+  const notDelivered =
+    (userRole === 'buyer' || userRole === 'seller') && ['paid', 'delivering'].includes(order.status)
+      ? await (async () => {
+          const { getNotDeliveredClaim } = await import('@/lib/actions/not-delivered')
+          return getNotDeliveredClaim(order.id)
+        })()
+      : null
   const itemImageUrl = orderItemImage({
     categoryType: category?.type,
     currencyConfig: currencyCfg as any,
@@ -538,6 +547,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         buyerRefund={buyerRefund}
         refundToSource={refundToSource}
         cancelRequest={cancelRequest}
+        notDelivered={notDelivered}
         itemTitle={listingTitle ?? 'Order Details'}
         deliveryMethod={deliveryMethod}
         gameName={gameName ?? null}
