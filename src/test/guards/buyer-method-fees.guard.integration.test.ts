@@ -207,8 +207,8 @@ describe.skipIf(!hasEnv)('checkout B3 — buyer method fees (integration)', () =
     const out = await eligible({ buyerId: null, country: 'PH' })
     expect(out.methods.some((m) => m.kind === 'wallet')).toBe(false)
     const ph = out.methods.filter((m) => m.kind === 'local' && m.countryMatch).map((m) => m.method)
-    // Maya is hidden by its fee row; Skrill lists PH (wired 2026-10-15).
-    expect(ph.sort()).toEqual(['gcash_ph', 'qr_ph', 'skrill'])
+    // Maya is hidden by its fee row.
+    expect(ph.sort()).toEqual(['gcash_ph', 'qr_ph'])
     expect(out.methods.some((m) => m.method === 'pix_br' && !m.countryMatch)).toBe(true)
   })
 
