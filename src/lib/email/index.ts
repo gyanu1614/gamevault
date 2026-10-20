@@ -621,6 +621,7 @@ export async function sendOrderRefundedEmail({
   amount,
   destination,
   pending = false,
+  fullAmount,
 }: {
   to: string
   name: string
@@ -634,10 +635,19 @@ export async function sendOrderRefundedEmail({
    *  support will arrange the refund — the email must not claim the
    *  money already moved. */
   pending?: boolean
+  /** Store-credit refunds (refund rule 2026-10-16): the order total, when it
+   *  is more than the credit — the card-refund line names it. */
+  fullAmount?: number
 }) {
   // Store-credit refunds land instantly; only external rails have the
-  // 5–10 business day caveat.
-  const toWallet = destination.toLowerCase().includes('wallet')
+  // 5–10 business day caveat. Callers say "your Store Balance" (the wallet's
+  // customer-facing name since 2026-09-29) — both count as store credit.
+  const dest = destination.toLowerCase()
+  const toWallet = dest.includes('wallet') || dest.includes('store balance')
+  const cardLine =
+    toWallet && fullAmount != null && fullAmount > amount
+      ? ` Want the full $${fullAmount.toFixed(2)} back to your payment method instead? Request it from your Wallet.`
+      : ''
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
@@ -663,7 +673,7 @@ export async function sendOrderRefundedEmail({
           pending
             ? `You'll get a confirmation the moment your refund is issued. Any questions in the meantime, support is one click away.`
             : toWallet
-              ? `Your store credit is in your Store Balance now — spend it on your next order with no service fee.`
+              ? `Your store credit is in your Store Balance now — spend it on your next order with no service fee.${cardLine}`
               : `Refunds to a payment method usually arrive within 5&ndash;10 business days, depending on your provider.`,
         ),
     }),

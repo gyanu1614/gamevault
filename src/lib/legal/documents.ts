@@ -67,8 +67,9 @@ const UPDATED_2026_10_10 = { lastUpdated: '10 October 2026', version: 'v1.3' } a
 
 /** Refund rule: store credit = the item price; the full amount, service fee
  *  included, to the original payment method on request (Terms, Buyer Terms,
- *  Seller Agreement, SafeDrop, Refund & Dispute Policy). */
-const UPDATED_2026_10_19 = { lastUpdated: '19 October 2026', version: 'v1.2' } as const
+ *  Seller Agreement, SafeDrop, Refund & Dispute Policy); 20 Oct adds Cancel –
+ *  Not Delivered (SafeDrop 2.1, Refund Policy 12.2). */
+const UPDATED_2026_10_20 = { lastUpdated: '20 October 2026', version: 'v1.2' } as const
 
 export type LegalBlock =
   | { t: 'p'; md: string }
@@ -202,7 +203,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Terms of Use',
     description:
       'The master terms governing use of the DropMarket platform: our venue role, SafeDrop Protection and payments, eligibility, accounts, consumer rights, liability, and governing law.',
-    ...UPDATED_2026_10_19,
+    ...UPDATED_2026_10_20,
     sections: [
       {
         h: '1. Introduction',
@@ -563,7 +564,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Buyer Terms',
     description:
       'How SafeDrop protects buyers: what is covered, what is not, protection and dispute windows, refunds, and how your statutory rights sit alongside the platform protection.',
-    ...UPDATED_2026_10_19,
+    ...UPDATED_2026_10_20,
     sections: [
       {
         h: '1. About these Buyer Terms',
@@ -647,7 +648,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
   {
     slug: 'seller-agreement',
     title: 'Seller Agency Agreement',
-    ...UPDATED_2026_10_19,
+    ...UPDATED_2026_10_20,
     description:
       'The commercial agency agreement between DropMarket Ltd and the Seller: the disclosed commercial-agent appointment, authority to conclude sales and collect payment, fees, payouts, reserves and clawbacks, delivery, KYC/AML and sanctions, tax and platform reporting, confidentiality, anti-circumvention, and termination — under the PSRs 2017 commercial-agent exclusion.',
     sections: [
@@ -824,7 +825,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'SafeDrop Protection Terms',
     description:
       'How SafeDrop Protection works: what’s covered, category protection windows, how disputes are decided, and when sellers are paid out.',
-    ...UPDATED_2026_10_19,
+    ...UPDATED_2026_10_20,
     sections: [
       {
         h: '1. What SafeDrop is',
@@ -844,7 +845,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         h: '2. What SafeDrop covers',
         blocks: [
           p(
-            `2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time. Once that time has passed you can open a dispute from the Order page; where the stated delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer you can instead ask us to cancel the Order. If the Order is cancelled for non-delivery you get the item price back straight away as store credit to your Store Balance, or the full amount you paid, service fee included, to your original payment method on request from your Wallet or the order page (see the Refund & Dispute Policy, Sections 7 and 12).`,
+            `2.1. **Non-delivery.** You do not receive the item or service within the Seller’s stated delivery time. Once that time has passed you can open a dispute from the Order page; where the stated delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer you can instead ask us to cancel the Order. You can also choose Cancel – Not Delivered: the Seller then has one hour to reply or start delivery, or the Order is cancelled and refunded automatically. If the Order is cancelled for non-delivery you get the item price back straight away as store credit to your Store Balance, or the full amount you paid, service fee included, to your original payment method on request from your Wallet or the order page (see the Refund & Dispute Policy, Sections 7 and 12).`,
           ),
           p(
             '2.2. **Not as described.** The item or service you receive materially differs from the Listing (wrong item, missing described features, incorrect account attributes, undisclosed defects). Raise a dispute within the Dispute Window (Section 2.5) and, if upheld, you receive a full refund or redelivery.',
@@ -933,7 +934,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: 'Refund & Dispute Policy',
     description:
       'When refunds apply, category protection windows, the five-stage dispute process, store-credit and cash refund mechanics, and how chargebacks are handled.',
-    ...UPDATED_2026_10_19,
+    ...UPDATED_2026_10_20,
     sections: [
       {
         blocks: [
@@ -1140,7 +1141,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
             `12.1. **Cancellation requests.** Where the Listing’s stated delivery time is ${CANCEL_REQUEST_MIN_DELIVERY_HOURS} hours or longer, a Buyer may ask DropMarket to cancel the Order from the Order page while it has not been marked delivered, starting one hour after payment. We review each request; the Seller may also cancel an Order it cannot fulfil. Once the Order is marked delivered, cancellation is subject to the outcome of a Dispute.`,
           ),
           p(
-            '12.2. **Non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within that time, the Buyer can open a Dispute from the Order page (or, for longer delivery times, request cancellation under 12.1). An Order cancelled for non-delivery is refunded as store credit for the item price (see Section 7), and the Buyer is notified on screen. The full amount, service fee included, goes back to the original payment method instead on request from the Wallet or the order page, per Section 7.',
+            '12.2. **Non-delivery.** Each Listing states the Seller’s delivery time. If the Seller does not deliver within that time, the Buyer can open a Dispute from the Order page (or, for longer delivery times, request cancellation under 12.1). The Buyer can also choose **Cancel – Not Delivered** on the Order page: the Seller is notified and has **one hour** to reply in the Order chat or start delivery; if the Seller does not respond, the Order is cancelled and refunded automatically. If the Seller responds but the item still does not arrive, the Buyer can open a Dispute. An Order cancelled for non-delivery is refunded as store credit for the item price (see Section 7), and the Buyer is notified on screen. The full amount, service fee included, goes back to the original payment method instead on request from the Wallet or the order page, per Section 7.',
           ),
         ],
       },

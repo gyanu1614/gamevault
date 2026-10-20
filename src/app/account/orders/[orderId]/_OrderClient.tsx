@@ -26,6 +26,8 @@ import { MarkReceivedModal } from './_MarkReceivedModal'
 import { DisputeModal } from './_DisputeModal'
 import { CancelOrderModal } from './_CancelOrderModal'
 import { RequestCancelModal } from './_RequestCancelModal'
+import { NotDeliveredModal, NotDeliveredStatus } from './_NotDeliveredPanel'
+import type { NotDeliveredClaim } from '@/lib/actions/not-delivered'
 import { cancelCancellationRequest } from '@/lib/actions/order-cancellation'
 import { toast } from 'sonner'
 import { AuditLog } from './_AuditLog'
@@ -65,6 +67,8 @@ interface OrderClientProps {
   refundToSource?: RefundToSourceState | null
   /** Buyer: Request Cancellation eligibility, and an already pending request. */
   cancelRequest?: { eligible: boolean; pending: boolean } | null
+  /** Buyer + seller: the order's "Cancel – Not Delivered" report, if any. */
+  notDelivered?: NotDeliveredClaim | null
   gameName: string | null
   gameIconUrl: string | null
   categoryName: string | null
@@ -101,6 +105,7 @@ export function OrderClient(props: OrderClientProps) {
     buyerRefund = null,
     refundToSource = null,
     cancelRequest = null,
+    notDelivered = null,
     itemTitle,
     deliveryMethod = null,
     gameName,
@@ -162,6 +167,7 @@ export function OrderClient(props: OrderClientProps) {
   const [markReceivedOpen, setMarkReceivedOpen] = useState(false)
   const [cancelOrderOpen, setCancelOrderOpen] = useState(false)
   const [requestCancelOpen, setRequestCancelOpen] = useState(false)
+  const [notDeliveredOpen, setNotDeliveredOpen] = useState(false)
   const withdrawCancelRequest = async () => {
     const res = await cancelCancellationRequest(order.id)
     if (res.error) {
@@ -457,10 +463,23 @@ export function OrderClient(props: OrderClientProps) {
                   : undefined
               }
               onOpenDispute={openDispute}
+              onReportNotDelivered={
+                // Cancel – Not Delivered: overdue, still owed, and no report
+                // open or already answered (a withdrawn one can be re-made).
+                userRole === 'buyer' &&
+                (order.status === 'paid' || order.status === 'delivering') &&
+                !deliveredAt &&
+                (!notDelivered || notDelivered.status === 'withdrawn')
+                  ? () => setNotDeliveredOpen(true)
+                  : undefined
+              }
               existingReview={existingReview}
               promoted
               hidePassiveOnMobile
             />
+            )}
+            {notDelivered && (order.status === 'paid' || order.status === 'delivering') && (
+              <NotDeliveredStatus role={userRole} orderId={order.id} claim={notDelivered} />
             )}
             {userRole === 'buyer' && order.status === 'completed' && <TrustpilotReviewLine />}
             {/* Mobile stacking: delivery instructions (small, actionable)
@@ -620,6 +639,13 @@ export function OrderClient(props: OrderClientProps) {
       {userRole === 'buyer' && (
         <>
           <RequestCancelModal open={requestCancelOpen} onOpenChange={setRequestCancelOpen} orderId={order.id} />
+          <NotDeliveredModal
+            open={notDeliveredOpen}
+            onOpenChange={setNotDeliveredOpen}
+            orderId={order.id}
+            creditAmount={Math.max(0, subtotal - Number(paymentSummary?.promoDiscount ?? order.promo_discount ?? 0))}
+            totalAmount={totalPaid}
+          />
           <MarkReceivedModal
             open={markReceivedOpen}
             onOpenChange={setMarkReceivedOpen}

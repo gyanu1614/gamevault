@@ -486,6 +486,7 @@ export async function processCancellationRequest(
             listingTitle: cancelledListing?.title || 'your item',
             amount: creditedAmount,
             destination: 'your Store Balance',
+            fullAmount: Number(order.total_amount ?? 0),
             pending: false,
           })
         }

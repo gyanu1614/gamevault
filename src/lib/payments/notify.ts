@@ -285,6 +285,7 @@ export async function notifyOrderTransition(
             gameSlug: order.gameSlug,
             amount: refundedAmount,
             destination: 'your Store Balance',
+            fullAmount: order.total_amount ?? undefined,
           })
         : Promise.resolve(),
       insertNotification({
