@@ -42,6 +42,7 @@ import { ValueListItemSkeleton } from './ValueListItemSkeleton'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { aboutSentence, chromaSentence, formatUsd, itemFaq, priceSentence, type ItemCopyInput } from './valueListItemCopy'
 import { howToGetFaqs } from '@/lib/values/how-to-get-copy'
+import { factRows, releasedLabel } from '@/lib/values/item-facts'
 
 /**
  * Value page for one high-tier item on a value-list hub (Murder Mystery 2:
@@ -333,8 +334,8 @@ async function ItemBody({
   const stats: { label: string; value: string; color?: string }[] = []
   if (item.rarity) stats.push({ label: 'Rarity', value: rarity.label, color: rarity.color })
   stats.push({ label: 'Type', value: typeLabel })
-  if (item.origin) stats.push({ label: 'Origin', value: item.origin })
-  if (item.releaseYear) stats.push({ label: 'Released', value: String(item.releaseYear) })
+  // The shared fact rows (Released, Origin), from the catalogue row.
+  stats.push(...factRows({ released: releasedLabel({ year: item.releaseYear }), origin: item.origin, howToGet: null }))
   stats.push({ label: 'Sold By', value: 'Professional Sellers' })
 
   const series = [item, ...(counterpart ? [counterpart] : [])].map((f) => ({
