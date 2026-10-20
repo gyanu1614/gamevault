@@ -95,13 +95,13 @@ describe('value item search title and snippet', () => {
 describe('trade value FAQ', () => {
   const base = { name: 'Seer', gameName: 'Murder Mystery 2', shortName: 'MM2', rarity: 'Legendary', typeNoun: 'knife', releaseYear: null, origin: null, obtain: [], cheapestUsd: 0.4, marketUsd: 0.45, listedNow: 28, priceChangedAt: null, counterpart: null }
   it('says the points, the benchmark and where they come from', () => {
-    const f = itemFaq({ ...base, trade: { points: '5.8', inBenchmark: '< 0.1 Harvesters', benchmark: 'Harvester', isBenchmark: false } }).find((q) => q.q.includes('trade value'))
+    const f = itemFaq({ ...base, trade: { points: '15', inBenchmark: '< 0.1 Harvesters', benchmark: 'Harvester', benchmarkPoints: '250', isBenchmark: false } }).find((q) => q.q.includes('trade value'))
     expect(f?.q).toBe('What is the trade value of Seer in MM2?')
-    expect(f?.a).toMatch(/^Seer is worth 5\.8 trade points \(under 0\.1 Harvesters\)\. A Harvester is 100 points/)
+    expect(f?.a).toMatch(/^Seer is worth 15 trade points \(under 0\.1 Harvesters\)\. A Harvester is 250 points/)
   })
   it('the benchmark item explains itself instead of "worth about 1 Harvester"', () => {
-    const f = itemFaq({ ...base, name: 'Harvester', trade: { points: '100', inBenchmark: '≈ 1 Harvester', benchmark: 'Harvester', isBenchmark: true } }).find((q) => q.q.includes('trade value'))
-    expect(f?.a).toMatch(/^Harvester is the benchmark: it is 100 trade points/)
+    const f = itemFaq({ ...base, name: 'Harvester', trade: { points: '250', inBenchmark: '≈ 1 Harvester', benchmark: 'Harvester', benchmarkPoints: '250', isBenchmark: true } }).find((q) => q.q.includes('trade value'))
+    expect(f?.a).toMatch(/^Harvester is the benchmark: it is 250 trade points/)
   })
   it('no trade value, no question', () => {
     expect(itemFaq(base).some((q) => q.q.includes('trade value'))).toBe(false)
