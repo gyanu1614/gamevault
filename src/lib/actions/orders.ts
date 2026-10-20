@@ -648,6 +648,7 @@ export async function cancelOrder(orderId: string): Promise<{
           listingTitle: await orderItemTitleFor(orderId, cancelledListing?.title || 'your item'),
           amount: refundAmount,
           destination: 'your Store Balance',
+          fullAmount: Number(order.total_amount ?? 0),
           pending: false,
         })
       }
@@ -762,6 +763,7 @@ export async function sellerCancelOrder(
           listingTitle: await orderItemTitleFor(orderId),
           amount,
           destination: 'your Store Balance',
+          fullAmount: Number(order.total_amount ?? 0),
           pending: false,
         })
       }
