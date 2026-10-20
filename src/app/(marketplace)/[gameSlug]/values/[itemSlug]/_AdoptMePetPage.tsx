@@ -32,6 +32,7 @@ import { HubBuyCta } from '@/components/content/HubBuyCta'
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
 
 const OBTAINABILITY_LABEL: Record<string, string> = {
   obtainable: 'Obtainable',
@@ -39,8 +40,6 @@ const OBTAINABILITY_LABEL: Record<string, string> = {
   unobtainable: 'Unobtainable',
 }
 
-// Trade-points formatter — used by the per-pet FAQ copy below.
-const TRADE = new Intl.NumberFormat('en-US')
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
 const rarityMeta = (r: string) => sharedRarityMeta('adopt-me', r)
@@ -92,11 +91,13 @@ function benchmark(pet: AdoptMePetDetail): AdoptMePetVariant | undefined {
 
 function petFaq(pet: AdoptMePetDetail) {
   const fr = benchmark(pet)
-  const frTrade = fr?.tradeValue != null ? TRADE.format(fr.tradeValue) : 'its listed'
+  const frTrade = fr?.tradeValue != null ? `${formatTradeValue(fr.tradeValue)} trade points (${frostsLabel(fr.tradeValue).replace('≈ ', 'about ')})` : null
   return [
     {
       q: `How much is ${withArticle(pet.name)} worth in Adopt Me?`,
-      a: `A Fly Ride ${pet.name} is worth around ${frTrade} in community trade value. Its cash value in real money is shown on this page and is built from DropMarket marketplace activity; where we don't yet hold enough sales, the cash value is a clearly-marked estimate derived from the variant ladder.`,
+      a: frTrade
+        ? `A Fly Ride ${pet.name} is worth ${frTrade}. The cash price is on this page too, from real listings by established sellers.`
+        : `There aren't enough sales of the Fly Ride ${pet.name} yet to value it. The prices we do have are on this page.`,
     },
     {
       q: `Is the ${pet.name} still obtainable?`,
@@ -110,8 +111,8 @@ function petFaq(pet: AdoptMePetDetail) {
       a: `A Fly Ride ${pet.name} has had both a Fly Potion and a Ride Potion applied, letting you fly and ride it. FR is the standard trading benchmark — when traders quote a pet's value, they usually mean its Fly Ride value.`,
     },
     {
-      q: `Why do the cash value and trade value differ?`,
-      a: `Trade value is the community's consensus in points, used for checking whether a trade is fair. Cash value is what the pet actually sells for in real money on DropMarket. They diverge because community ratings lag real demand — which is exactly why we show both.`,
+      q: `How is the trade value worked out?`,
+      a: `From real sale prices, not votes. A Frost Dragon (Fly Ride) is 100 points and every pet is scored against it, so 320 points is worth about 3.2 Frost Dragons. A form with too few sales is estimated from the same pet's other forms and marked "est."`,
     },
   ]
 }

@@ -135,12 +135,10 @@ export function AdoptMeCalcSeo({
             Why use the DropMarket Adopt Me calculator?
           </h2>
           <p className="mt-3 leading-7 text-text-secondary">
-            Most Adopt Me calculators only score trades in community value points. Those
-            points are useful, but they don&apos;t tell you what a pet costs in real money —
-            and the two often disagree. DropMarket holds a live cash value for every priced
-            pet, taken from real marketplace listings, so this is the only WFL checker that
-            shows both sides. A trade can be fair on points and still be a real-money loss;
-            the cash verdict catches it.
+            Most Adopt Me calculators score trades in points set by votes. Ours come from
+            real sale prices: a Frost Dragon (Fly Ride) is 100 points and every pet is
+            scored against it. Next to the points you get the cash value in USD, from the
+            same marketplace listings, so you see a trade both ways before you accept it.
           </p>
         </div>
 

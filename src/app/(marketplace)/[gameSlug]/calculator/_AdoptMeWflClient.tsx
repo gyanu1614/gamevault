@@ -42,9 +42,9 @@ import {
 import { ADOPT_ME_RARITIES, rarityMeta } from '@/lib/values/rarity'
 import { TradeValue } from '@/components/values/TradeValue'
 import { VARIANT_DISPLAY } from '@/lib/adopt-me/variants'
+import { formatTradeValue } from '@/lib/adopt-me/trade-value'
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-const TRADE = new Intl.NumberFormat('en-US')
 
 /** Adopt Me stat colours (same as the value list): cheapest cash + trade. */
 const CASH_COLOR = '#54DDBE'
@@ -258,7 +258,7 @@ function Side({
                       {v?.cashUsd != null ? USD.format(v.cashUsd) : '—'}
                     </p>
                     <p className="mt-0.5 text-[12px] tabular-nums text-text-secondary">
-                      {v?.tradeValue != null ? <><TradeValue>{TRADE.format(v.tradeValue)}</TradeValue> trade</> : 'no cash'}
+                      {v?.tradeValue != null ? <><TradeValue>{formatTradeValue(v.tradeValue)}</TradeValue> trade</> : 'no cash'}
                     </p>
                   </div>
                   <button
@@ -296,7 +296,7 @@ function Side({
         {entries.length > 0 ? (
           <div className="text-right">
             <p className="text-[16px] font-bold leading-none tabular-nums" style={{ color: CASH_COLOR }}>{USD.format(total.cash)}</p>
-            <p className="mt-0.5 text-[12px] text-text-secondary"><TradeValue>{TRADE.format(total.trade)}</TradeValue> trade</p>
+            <p className="mt-0.5 text-[12px] text-text-secondary"><TradeValue>{formatTradeValue(total.trade)}</TradeValue> trade</p>
           </div>
         ) : (
           <span className="text-[12px] text-text-tertiary">Total shows here</span>
@@ -447,9 +447,9 @@ function Verdict({
       {/* ── Tug-of-war: each side shows its pets + total; the meter leans to the
           heavier side; the verdict word pops in. ─────────────────────────── */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
-        <BalanceSide label="You give" accent="#5AC8FA" cash={USD.format(cashGive)} pts={<><TradeValue>{TRADE.format(tradeGive)}</TradeValue> trade</>} lines={giveLines} />
+        <BalanceSide label="You give" accent="#5AC8FA" cash={USD.format(cashGive)} pts={<><TradeValue>{formatTradeValue(tradeGive)}</TradeValue> trade</>} lines={giveLines} />
         <div className="flex items-center justify-center text-caption font-extrabold text-text-tertiary">VS</div>
-        <BalanceSide label="They offer" accent="#B07BC9" cash={USD.format(cashRec)} pts={<><TradeValue>{TRADE.format(tradeRec)}</TradeValue> trade</>} align="right" lines={recLines} />
+        <BalanceSide label="They offer" accent="#B07BC9" cash={USD.format(cashRec)} pts={<><TradeValue>{formatTradeValue(tradeRec)}</TradeValue> trade</>} align="right" lines={recLines} />
       </div>
 
       {/* Weighted balance bar */}
@@ -493,7 +493,7 @@ function Verdict({
       {/* Detail axes — real money + trade value, quieter, below the fold. */}
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
         <Axis label="Real money" hint="DropMarket cash value" verdict={cash} give={USD.format(cashGive)} rec={USD.format(cashRec)} />
-        <Axis label="Trade value" hint="Community consensus" verdict={trade} give={<TradeValue>{TRADE.format(tradeGive)}</TradeValue>} rec={<TradeValue>{TRADE.format(tradeRec)}</TradeValue>} />
+        <Axis label="Trade value" hint="Frost Dragon FR = 100" verdict={trade} give={<TradeValue>{formatTradeValue(tradeGive)}</TradeValue>} rec={<TradeValue>{formatTradeValue(tradeRec)}</TradeValue>} />
       </div>
 
       {cashMissing && (
@@ -649,7 +649,7 @@ function PetPicker({
               {priced ? USD.format(v!.cashUsd!) : <span className="text-body-sm text-text-tertiary">No price</span>}
             </p>
             <p className="text-caption tabular-nums text-text-secondary">
-              {v?.tradeValue != null ? <><TradeValue>{TRADE.format(v.tradeValue)}</TradeValue> trade</> : VARIANT_DISPLAY[draft]}
+              {v?.tradeValue != null ? <><TradeValue>{formatTradeValue(v.tradeValue)}</TradeValue> trade</> : VARIANT_DISPLAY[draft]}
             </p>
           </div>
         </div>

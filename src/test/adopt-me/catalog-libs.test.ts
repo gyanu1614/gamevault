@@ -5,7 +5,6 @@ import {
   listPageUrl,
   parseCompactNumber,
   parseListPage,
-  variantTradeValues,
 } from '../../../scripts/lib/adoptmevalues-catalog.mjs'
 import {
   cleanEldoradoOffer,
@@ -32,7 +31,9 @@ describe('adoptmevalues catalog', () => {
       name: 'Crocodile',
       rarity: 'ultra_rare',
       image_url: 'https://fetch-images.b-cdn.net/images/pets/Crocodile.png',
-      trade_values: { N: 15, NEON: 44, MEGA: 1200 },
+      // The list's three numbers are the FLY RIDE values (the site's headline
+      // value is FR: rvalue == rvalueFlyRide), not the plain pet.
+      trade_values: { FR: 15, NFR: 44, MFR: 1200 },
     })
   })
 
@@ -44,20 +45,6 @@ describe('adoptmevalues catalog', () => {
     expect(parseCompactNumber('2.1K')).toBe(2100)
     expect(parseCompactNumber('1.05M')).toBe(1050000)
     expect(parseCompactNumber('905')).toBe(905)
-  })
-
-  it('derives the potion variants without rounding a small pet to 0', () => {
-    expect(variantTradeValues({ N: 0.02, NEON: 0.7, MEGA: 2.2 })).toEqual({
-      N: 0.02,
-      F: 0.02,
-      R: 0.02,
-      FR: 0.03,
-      NEON: 0.7,
-      NFR: 0.95,
-      MEGA: 2.2,
-      MFR: 2.75,
-    })
-    expect(variantTradeValues({ N: 1000, NEON: null, MEGA: undefined })).toMatchObject({ FR: 1450, NEON: null, NFR: null, MFR: null })
   })
 
   it('keeps unknown rarities (null) for the caller to log', () => {

@@ -9,9 +9,9 @@
  * WHAT IT WRITES
  *   adopt_me_pets        — one row per pet (upsert by slug)
  *   adopt_me_pet_values  — 8 variant rows per pet (upsert by pet_id+variant):
- *       N, NEON, MEGA           → trade_value from the source (published)
- *       F, R, FR, NFR, MFR      → trade_value DERIVED from the potion ladder,
- *                                 is_estimated=true (source doesn't publish them)
+ *       new pets only: 8 empty form rows. trade_value is DropMarket's own,
+ *       computed by the daily reprice from our market prices (owner,
+ *       2026-10-19: no third-party values); this import never writes it
  *   cash_value_usd stays NULL — USD comes from the marketplace collectors later.
  *
  * Pets are set is_active=true once they carry values, so the value LIST can
@@ -36,7 +36,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
-import { ALL_TRADE_VARIANTS, PUBLISHED_TRADE_VARIANTS, variantTradeValues } from './lib/adoptmevalues-catalog.mjs'
+import { ALL_TRADE_VARIANTS } from './lib/adoptmevalues-catalog.mjs'
 
 // --- env (minimal loader, matches the SAB scripts) --------------------------
 // Reads .env.local locally, but is a NO-OP when the file is absent (CI, where
@@ -63,18 +63,8 @@ const sb = createClient(
   { auth: { persistSession: false } },
 )
 
-// --- the potion / Neon ladder ----------------------------------------------
-// Adopt Me trade values follow a well-known progression off the Normal (N)
-// value. The source publishes only N, NEON and MEGA; the other five are
-// derived from these anchors. Ratios are the community-standard rough premiums
-// (Fly and Ride are near-identical; FR is the benchmark; NFR/MFR sit above
-// their un-potioned Neon/Mega). Every derived row is flagged is_estimated=true
-// so the UI never presents a derived number as observed.
-//
-// The ratios live in scripts/lib/adoptmevalues-catalog.mjs (DERIVED_TRADE):
-// F/R ≈ N × 1.15, FR ≈ N × 1.45 (the benchmark), NFR ≈ NEON × 1.35,
-// MFR ≈ MEGA × 1.25, kept to two decimals so a small pet is never 0.
-const PUBLISHED_VARIANTS = PUBLISHED_TRADE_VARIANTS
+// Trade values are ours (src/lib/pricing/adopt-me-trade-value.ts, written by
+// the daily reprice). This catalog import only adds pets and their empty rows.
 const ALL_VARIANTS = ALL_TRADE_VARIANTS
 
 // Obtainability isn't reliably published per-pet on the source, and the
@@ -99,15 +89,13 @@ const KNOWN_OBTAINABILITY = {
   'pink-cat': 'unobtainable',
 }
 
-/** Build all 8 variant rows for a pet from its published trade values. */
-function buildVariantRows(petId, tradeValues) {
-  const trade = variantTradeValues(tradeValues)
+/** The 8 empty form rows for a new pet (prices and trade values come later). */
+function buildVariantRows() {
   const rows = []
   for (const variant of ALL_VARIANTS) {
-    const tradeValue = trade[variant]
-    // Published trade value is "observed" community consensus (still no USD);
-    // the five derived ones are always estimated.
-    const isEstimated = PUBLISHED_VARIANTS.includes(variant) ? tradeValue == null : true
+    const tradeValue = null
+    // is_estimated is the CASH flag; a new row has no cash yet.
+    const isEstimated = true
 
     rows.push({
       variant,
@@ -217,13 +205,6 @@ async function main() {
       continue
     }
 
-    // Was it already there? (to report insert vs update)
-    const { data: existing } = await sb
-      .from('adopt_me_pets')
-      .select('id')
-      .eq('slug', pet.slug)
-      .maybeSingle()
-
     const { data: upserted, error: petErr } = await sb
       .from('adopt_me_pets')
       .upsert(petPayload, { onConflict: 'slug' })
@@ -234,7 +215,7 @@ async function main() {
       console.error(`  ❌ ${pet.name}: ${petErr.message}`)
       continue
     }
-    existing ? updated++ : inserted++
+    isExisting ? updated++ : inserted++
 
     // --- write the 8 variant value rows (by pet_id + variant) ---
     // CRITICAL: this catalog importer owns ONLY the trade columns. The USD cash
@@ -243,7 +224,7 @@ async function main() {
     // upsert here would blank real cash on every catalog refresh — so we INSERT
     // brand-new variant rows in full (cash correctly NULL) but only UPDATE the
     // TRADE columns on rows that already exist, leaving their cash untouched.
-    const built = buildVariantRows(upserted.id, pet.trade_values).map((r) => ({
+    const built = buildVariantRows().map((r) => ({
       ...r,
       pet_id: upserted.id,
     }))
@@ -260,7 +241,6 @@ async function main() {
     const have = new Set((existingVariants ?? []).map((r) => r.variant))
 
     const toInsert = built.filter((r) => !have.has(r.variant))
-    const toUpdate = built.filter((r) => have.has(r.variant))
 
     let valErr = null
     // New rows: insert in full (their cash is legitimately NULL).
@@ -268,25 +248,11 @@ async function main() {
       const { error } = await sb.from('adopt_me_pet_values').insert(toInsert)
       valErr = valErr || error
     }
-    // Existing rows: touch ONLY trade_value. is_estimated belongs to the cash
-    // pipeline too (the reprice sets it false on a real price) — writing it
-    // here flipped every priced row back to "estimated" until the next reprice.
-    for (const r of toUpdate) {
-      const { error } = await sb
-        .from('adopt_me_pet_values')
-        .update({ trade_value: r.trade_value })
-        .eq('pet_id', upserted.id)
-        .eq('variant', r.variant)
-      valErr = valErr || error
-    }
-
     if (valErr) {
       console.error(`  ❌ ${pet.name} values: ${valErr.message}`)
     } else {
-      valueRows += built.length
-      console.log(
-        `  ✅ ${pet.name} (${pet.rarity}) — ${toInsert.length} new, ${toUpdate.length} trade-updated`,
-      )
+      valueRows += toInsert.length
+      if (toInsert.length > 0) console.log(`  ✅ ${pet.name} (${pet.rarity}) — ${toInsert.length} new form rows`)
     }
   }
 

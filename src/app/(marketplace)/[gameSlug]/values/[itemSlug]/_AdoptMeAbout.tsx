@@ -13,6 +13,7 @@ import { variantColor } from './_adoptMeVariantColor'
 import { useSelectedVariant } from './_SelectedVariantContext'
 import { aboutAnswer, aboutBasis, aboutFacts, formRows } from './_adoptMeAboutModel'
 import { TradeValue } from '@/components/values/TradeValue'
+import { formatTradeValue } from '@/lib/adopt-me/trade-value'
 
 /**
  * "About The <Pet>" (owner, 2026-10-11 revamp: structured, curated, easy to
@@ -25,7 +26,6 @@ import { TradeValue } from '@/components/values/TradeValue'
  * numbers and put a second Buy button beside a different price.
  */
 const CHEAPEST_TEAL = '#54DDBE'
-const TRADE = new Intl.NumberFormat('en-US')
 
 export function AdoptMeAbout({
   name,
@@ -199,7 +199,8 @@ export function AdoptMeFormTable({
                         {r.isEstimated && r.cheapestUsd != null && <span className="ml-1 text-caption font-medium text-text-tertiary">est.</span>}
                       </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums">
-                        {r.tradeValue != null ? <TradeValue>{TRADE.format(r.tradeValue)}</TradeValue> : <span className="text-text-tertiary"><span aria-hidden>—</span><span className="sr-only">None yet</span></span>}
+                        {r.tradeValue != null ? <TradeValue>{formatTradeValue(r.tradeValue)}</TradeValue> : <span className="text-text-tertiary"><span aria-hidden>—</span><span className="sr-only">None yet</span></span>}
+                        {r.tradeValue != null && r.tradeIsEstimated && <span className="ml-1 text-caption font-medium text-text-tertiary">est.</span>}
                       </td>
                       <td className="hidden px-3 py-3 text-right tabular-nums text-text-secondary sm:table-cell">{r.listings > 0 ? r.listings : '—'}</td>
                       <td className="px-5 py-3 text-right sm:px-6">

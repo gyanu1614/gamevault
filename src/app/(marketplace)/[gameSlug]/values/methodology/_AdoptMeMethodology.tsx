@@ -23,7 +23,7 @@ import { FaqCards } from '@/components/marketplace/FaqCards'
 export const ADOPT_ME_METHODOLOGY_FAQ: { q: string; a: string }[] = [
   {
     q: 'What is the difference between trade value and cash value on DropMarket?',
-    a: 'Trade value is the community consensus in points — the number traders use to check whether a swap is fair. Cash value is what a pet actually sells for in real money (USD) on marketplaces. They differ because community point ratings lag real demand, and because cash prices reflect what buyers will genuinely pay today. DropMarket shows both side by side; the cash value is the one that answers "how much is this worth in real money".',
+    a: 'Both come from the same real sale prices. Cash value is what a pet sells for in USD. Trade value turns that into points so you can compare pets: a Frost Dragon (Fly Ride) is 100, so a pet at 320 is worth about 3.2 Frost Dragons. Use the points to check a swap and the cash value to know what it is worth in money.',
   },
   {
     q: 'How does DropMarket get its Adopt Me cash values?',
@@ -35,7 +35,7 @@ export const ADOPT_ME_METHODOLOGY_FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'How are the eight Adopt Me variants priced?',
-    a: 'Each pet exists in eight tradable forms — Normal, Fly, Ride, Fly Ride, Neon, Neon Fly Ride, Mega Neon and Mega Fly Ride. We price the high-volume, clearly-labelled forms (Fly Ride, Neon Fly Ride, Mega Fly Ride) directly from real listings. Where a variant has too few trustworthy listings, its value is shown as a clearly-marked estimate rather than a fabricated number.',
+    a: "Each pet exists in eight tradable forms — Normal, Fly, Ride, Fly Ride, Neon, Neon Fly Ride, Mega Neon and Mega Fly Ride. We price the high-volume, clearly-labelled forms (Fly Ride, Neon Fly Ride, Mega Fly Ride) directly from real listings. Where a form has too few trustworthy listings, we estimate it from the same pet's priced forms, using the price gaps between forms that we measure across all our sales, and mark it 'est.'. The trade value works the same way.",
   },
   {
     q: 'What does the confidence label mean?',
@@ -86,17 +86,15 @@ export default async function AdoptMeMethodology() {
       </GameHeroBackdrop>
 
       <div className="relative z-10 mx-auto w-full max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
-        <HubSection title="Trade value vs cash value — why we show both">
-          Every incumbent Adopt Me value site publishes one number: an abstract
-          community <em>trade value</em> in points. That is useful for checking
-          whether a swap is fair, but it cannot tell you what a pet is worth in
-          real money — because those sites do not process transactions.
-          DropMarket does. So every pet shows two numbers: the community{' '}
-          <strong className="text-[#E8BD6A]">trade value</strong>, and the
-          DropMarket <strong className="text-[#54DDBE]">cash value in USD</strong>,
-          built from real marketplace activity. They diverge because point
-          ratings lag real demand — and that gap is exactly what you want to see
-          before you accept an offer or decide to sell.
+        <HubSection title="Our trade value, from real sale prices">
+          Most Adopt Me value sites publish points set by votes or staff. Ours
+          come from what pets actually sell for. A{' '}
+          <strong className="text-[#E8BD6A]">Frost Dragon (Fly Ride) is 100 points</strong>,
+          and every other pet and form is scored by its real price against it.
+          So <strong className="text-text-primary">320 points is worth about 3.2 Frost Dragons</strong>.
+          Next to it you get the{' '}
+          <strong className="text-[#54DDBE]">cash value in USD</strong>, from the
+          same listings. Both are refreshed every day.
         </HubSection>
 
         <HubSection title="Real listings, priced at the low end">
