@@ -4,20 +4,77 @@
     "name": "Halloween 2026",
     "season": "halloween",
     "year": 2026,
-    "status": "upcoming",
-    "starts_on": null,
-    "ends_on": null,
-    "currency": null,
-    "format": null,
-    "summary": "Not announced yet: as of Oct 5, 2026 MM2 has given no date for Halloween 2026. Last year's Halloween event started on Oct 18, 2025.",
-    "how_items_were_obtained": "Not announced yet.",
-    "items": [],
+    "status": "live",
+    "starts_on": "2026-10-18",
+    "ends_on": "2026-11-16",
+    "currency": "Candies",
+    "format": "mixed",
+    "summary": "Live now until Nov 16, 2026: a retro Halloween with a witch-themed lobby, the Haunted House 2 map, a 30-tier Candy battle pass ending in the ancient Emberbow, an ember-themed Halloween Box and the Cauldron, where Emberbow and Embersickle craft the ancient Emberscythe. The first Chroma ancients arrive with it.",
+    "how_items_were_obtained": "Battle pass tiers cost 600 Candies (tier 1 is free) and the Emberbow costs 100,000 at the end, with a rare Chroma Emberbow. The 2026 Halloween Box (600 Candies or a Halloween Key) drops the godly Embersickle at 0.2% and a rarer Chroma Embersickle. Putting Emberbow and Embersickle in the Cauldron crafts Emberscythe, with a low chance of Chroma Emberscythe. The Mortal Bundle (3,399 Robux, or 1,699 each) gives the godly Mortal knife and Immortal gun. Candies are the only currency that drops; no coins.",
+    "items": [
+      {
+        "name": "Emberbow",
+        "slug": "emberbow",
+        "kind": "gun",
+        "rarity": "Ancient",
+        "how": "Final reward of the Halloween 2026 battle pass, 100,000 Candies after tier 30."
+      },
+      {
+        "name": "Chroma Emberbow",
+        "slug": "chroma-emberbow",
+        "kind": "gun",
+        "rarity": "Chroma",
+        "how": "Rare alternate when buying the Emberbow at the end of the Halloween 2026 battle pass; one of the first two Chroma ancients."
+      },
+      {
+        "name": "Emberscythe",
+        "slug": "emberscythe",
+        "kind": "knife",
+        "rarity": "Ancient",
+        "how": "Crafted in the Cauldron during Halloween 2026 from an Emberbow and an Embersickle."
+      },
+      {
+        "name": "Chroma Emberscythe",
+        "slug": "chroma-emberscythe",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Low-chance result when crafting Emberscythe in the Halloween 2026 Cauldron."
+      },
+      {
+        "name": "Embersickle",
+        "slug": "embersickle",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Unboxed from the 2026 Halloween Box (0.2%) during the Halloween Event 2026."
+      },
+      {
+        "name": "Chroma Embersickle",
+        "slug": "chroma-embersickle",
+        "kind": "knife",
+        "rarity": "Chroma",
+        "how": "Rare drop from the 2026 Halloween Box during the Halloween Event 2026."
+      },
+      {
+        "name": "Mortal",
+        "slug": "mortal",
+        "kind": "knife",
+        "rarity": "Godly",
+        "how": "Bought with Robux in the Mortal Bundle (3,399) or on its own (1,699) during Halloween 2026."
+      },
+      {
+        "name": "Immortal",
+        "slug": "immortal",
+        "kind": "gun",
+        "rarity": "Godly",
+        "how": "Bought with Robux in the Mortal Bundle (3,399) or on its own (1,699) during Halloween 2026."
+      }
+    ],
     "sources": [
-      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2025",
-      "https://murder-mystery-2.fandom.com/wiki/Timeline"
+      "https://murder-mystery-2.fandom.com/wiki/Halloween_Event_2026",
+      "https://timesaver.gg/blog/mm2-halloween-event"
     ],
     "confidence": "high",
-    "checked_at": "2026-10-05"
+    "checked_at": "2026-10-19"
   },
   {
     "slug": "the-hunt-roblox-20",

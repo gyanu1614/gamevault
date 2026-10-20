@@ -303,7 +303,13 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
         />
 
         {/* Shared end-of-page CTA with the per-game background hero. */}
-        <HubBuyCta gameName="Adopt Me" gameSlug="adopt-me" buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })} />
+        <HubBuyCta
+          gameName="Adopt Me"
+          gameSlug="adopt-me"
+          buyHref={itemBuyHref({ gameSlug: 'adopt-me', categorySlug: buyCategorySlug, itemSlug: pet.slug })}
+          title={`Get ${withArticle(pet.name)} without the grind`}
+          ctaLabel={`See ${pet.name} Offers`}
+        />
       </div>
       </ValueItemRails>
       </SelectedVariantProvider>
