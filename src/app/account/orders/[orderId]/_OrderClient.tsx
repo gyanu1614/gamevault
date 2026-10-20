@@ -60,7 +60,7 @@ interface OrderClientProps {
   deliveryMethod?: CurrencyDeliveryMethod | null
   /** Buyer / admin: what came back as store credit and whether the service
    *  fee was kept (buyer-fault cancel). null before any refund. */
-  buyerRefund?: { credited: number; feeKept: boolean } | null
+  buyerRefund?: { credited: number; feeKept: boolean; total: number } | null
   /** Buyer: refund-to-original-method request state (refund policy). */
   refundToSource?: RefundToSourceState | null
   /** Buyer: Request Cancellation eligibility, and an already pending request. */

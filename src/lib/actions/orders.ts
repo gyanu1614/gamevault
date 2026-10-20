@@ -547,9 +547,10 @@ export async function cancelOrder(orderId: string): Promise<{
     try {
       // Round B: a pending order's live charge is closed as 'void' and
       // queued in provider_cancel_outbox inside the same RPC transaction.
-      // Refund policy: the buyer's own cancel of a PAID order is a buyer
-      // fault — the item price comes back as store credit, the service fee
-      // stays. A pending order returns its wallet hold in full regardless.
+      // Refund rule: the buyer's own cancel of a PAID order is a buyer fault —
+      // the item price comes back as store credit (the full amount on request
+      // to their card); nothing counts against the seller. A pending order
+      // returns its wallet hold in full regardless.
       cancelResult = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true, closeAttemptAs: 'void', fault: 'buyer' })
     } catch (cancelError: any) {
       console.error('Failed to cancel order:', cancelError)
@@ -626,7 +627,7 @@ export async function cancelOrder(orderId: string): Promise<{
           type: 'order_refunded',
           title: refundIssued ? 'Refund In Your Store Balance' : 'Order Cancelled',
           message: refundIssued
-            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.${wasUnpaid ? '' : ' The service fee is not refunded when you cancel a paid order.'}`
+            ? `Order #${orderRef} was cancelled — $${refundAmount.toFixed(2)} was refunded to your Store Balance as store credit. Spend it at checkout with no service fee.${!wasUnpaid && refundAmount < Number(order.total_amount ?? 0) ? ` Want the full $${Number(order.total_amount).toFixed(2)} back to your payment method? Request it from your Wallet.` : ''}`
             : `Order #${orderRef} was cancelled — nothing had been charged.`,
           link: refundIssued ? '/account/wallet' : `/account/orders/${orderId}`,
         }),
@@ -749,7 +750,7 @@ export async function sellerCancelOrder(
         userId: order.buyer_id,
         type: 'order_refunded',
         title: 'Order Cancelled By The Seller',
-        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your Store Balance as store credit.`,
+        message: `#${orderRef}: ${reasonLabel}. $${amount.toFixed(2)} was refunded to your Store Balance as store credit.${amount < Number(order.total_amount ?? 0) ? ` Want the full $${Number(order.total_amount).toFixed(2)} back to your payment method? Request it from your Wallet.` : ''}`,
         link: '/account/wallet',
       })
       if (buyer?.email) {

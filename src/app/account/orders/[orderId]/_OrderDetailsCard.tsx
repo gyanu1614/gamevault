@@ -69,7 +69,7 @@ interface OrderDetailsCardProps {
   } | null
   /** Buyer / admin: what came back as store credit and whether the service
    *  fee was kept (buyer-fault cancel). null before any refund. */
-  buyerRefund?: { credited: number; feeKept: boolean } | null
+  buyerRefund?: { credited: number; feeKept: boolean; total: number } | null
   /** Buyer: refund-to-original-method request state (refund policy). */
   refundToSource?: RefundToSourceState | null
   subtotal: number
@@ -253,7 +253,7 @@ function FeesRow({ marketplaceFee, paymentFee }: { marketplaceFee: number; payme
  * requestRefundToSource decides eligibility (unspent credit, refundable
  * rail); this only renders and refreshes.
  */
-function RefundToSourceRow({ orderId, state }: { orderId: string; state: RefundToSourceState }) {
+function RefundToSourceRow({ orderId, state, fullAmount }: { orderId: string; state: RefundToSourceState; fullAmount: number }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const req = state.request
@@ -266,13 +266,13 @@ function RefundToSourceRow({ orderId, state }: { orderId: string; state: RefundT
           : req.status === 'sent'
             ? `Refund sent — $${req.amount.toFixed(2)} went back to your original payment method. Allow 5 to 10 business days for it to land.`
             : req.status === 'failed'
-              ? 'The refund could not be sent to your payment method. The full amount is back in your Store Balance; support will follow up.'
+              ? 'The refund could not be sent to your payment method. Your store credit is back in your Store Balance; support will follow up.'
               : `Refund to your payment method declined${req.adminNotes ? `: ${req.adminNotes}` : '.'} The store credit stays in your Store Balance.`
     return <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">{line}</p>
   }
   return (
     <p className="mt-2 text-center text-[12px] leading-[1.55] text-text-tertiary">
-      Prefer a refund to your original payment method?{' '}
+      Want the full {fmtUsd(fullAmount)}, service fee included, back to your payment method instead?{' '}
       <button
         type="button"
         disabled={busy}
@@ -325,8 +325,8 @@ function SafeDropBody({
   disputeUntil,
 }: {
   amount: number
-  /** What came back as store credit, and whether the service fee was kept. */
-  refund?: { credited: number; feeKept: boolean } | null
+  /** What came back as store credit, whether the service fee was kept, and the order total (what a card refund pays). */
+  refund?: { credited: number; feeKept: boolean; total: number } | null
   refundToSource?: RefundToSourceState | null
   orderStatus: string
   orderId: string
@@ -369,7 +369,7 @@ function SafeDropBody({
   } else if (orderStatus === 'refunded') {
     amountLabel = 'Amount Refunded'
     caption = refund?.feeKept
-      ? 'The item price was added to your Store Balance as store credit. The service fee is not refunded when you cancel a paid order. Spend your credit at checkout with no service fee.'
+      ? `The item price (${fmtUsd(refund.credited)}) was added to your Store Balance as store credit. Spend it at checkout with no service fee.`
       : 'Your refund was added to your Store Balance as store credit. Spend it at checkout on any listing with no service fee.'
   } else if (orderStatus === 'disputed') {
     amountLabel = 'Amount In Dispute'
@@ -379,7 +379,7 @@ function SafeDropBody({
     if (cancelledWithRefund) {
       amountLabel = 'Amount Refunded'
       caption = refund?.feeKept
-        ? 'Order cancelled. The item price was added to your Store Balance as store credit; the service fee is not refunded when you cancel a paid order.'
+        ? `Order cancelled. The item price (${fmtUsd(refund.credited)}) was added to your Store Balance as store credit. Spend it at checkout with no service fee.`
         : 'Order cancelled. Your refund was added to your Store Balance as store credit. Spend it at checkout with no service fee.'
     } else {
       amountLabel = 'Order Total'
@@ -388,17 +388,18 @@ function SafeDropBody({
   }
 
   // Refund to the original payment method (Refund & Dispute Policy 7.2):
-  // store credit is the default outcome; the buyer can ask for it to go
-  // back to the method they paid with. Never automatic — an admin approves
-  // (each provider refund costs a fee). Only shown when a refund landed.
+  // store credit (the item price) is the default outcome; the buyer can ask
+  // for the FULL amount, service fee included, to go back to the method they
+  // paid with. Never automatic — an admin approves (each provider refund
+  // costs a fee). Only shown when a refund landed.
   const showRefundToSource =
     role === 'buyer' &&
     (orderStatus === 'refunded' || (orderStatus === 'cancelled' && cancelledWithRefund)) &&
     refundToSource != null &&
     (refundToSource.request != null || refundToSource.canRequest)
 
-  // After a refund the row shows what actually came back (the item price on
-  // a buyer-fault cancel), not the amount that was covered.
+  // After a refund the row shows what actually came back (the item price as
+  // store credit), not the amount that was covered.
   const shownAmount = refund && (orderStatus === 'refunded' || cancelledWithRefund) ? refund.credited : amount
 
   return (
@@ -410,7 +411,7 @@ function SafeDropBody({
       <p className="mt-3 text-center text-[13px] leading-[1.55] text-text-secondary">
         {caption}
       </p>
-      {showRefundToSource && <RefundToSourceRow orderId={orderId} state={refundToSource!} />}
+      {showRefundToSource && <RefundToSourceRow orderId={orderId} state={refundToSource!} fullAmount={refund?.total ?? amount} />}
       {showDisputeCta && (
         onOpenDispute ? (
           <button

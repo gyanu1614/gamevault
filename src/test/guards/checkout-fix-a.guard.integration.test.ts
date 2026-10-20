@@ -11,7 +11,7 @@
  *            same transaction; an undelivered cancel returns the stock.
  *   PAY-015  inventory_claim_for_order refuses a new claim on an unpaid order.
  *   PAY-008  the buyer's cancelOrder is the RPC (no TS composition): pending
- *            returns the wallet hold; paid credits the full total; a raced
+ *            returns the wallet hold; paid credits the item price (fees kept); a raced
  *            'delivering' is refused.
  *   PAY-005  an in-flight racing order (no checkout_url yet) is never
  *            superseded or re-charged: "payment is being prepared".
@@ -232,8 +232,9 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       await fx!.svc.rpc('ledger_test_cleanup', { p_prefix: `test:ledger:fix-a:fund:${orderId}` } as any)
     }, 60_000)
 
-    it('buyer explicit cancel (allowPaid) cancels a paid order and credits the full total to the wallet', async () => {
-      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', total_amount: 2.5, seller_payout: 2, order_number: `GT-P2-buyer-${tag()}` })
+    it('buyer explicit cancel (allowPaid) cancels a paid order and credits the item price to the wallet (fees kept)', async () => {
+      // $2.00 item + $0.50 fees: store credit = the item price (refund rule 2026-10-16).
+      const orderId = await insertOrder({ status: 'paid', escrow_status: 'held', subtotal: 2, unit_price: 2, platform_fee: 0.5, total_amount: 2.5, seller_payout: 1.8, order_number: `GT-P2-buyer-${tag()}` })
       const before = await walletMinor(fx!.buyer.id)
       const { cancelOrderReturnWallet } = await import('@/lib/wallet/order-money')
       const r = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
@@ -243,11 +244,13 @@ describe.skipIf(!hasEnv)('checkout fix round A (integration)', () => {
       const row = await orderRow(orderId)
       expect(row.status).toBe('cancelled')
       expect(row.escrow_status).toBe('refunded')
-      expect(await walletMinor(fx!.buyer.id)).toBe(before + 250n)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 200n)
+      expect(r.creditedMinor).toBe(200n)
+      expect(r.feeKeptMinor).toBe(50n)
       // Replay: idempotent, no double credit.
       const again = await cancelOrderReturnWallet(orderId, undefined, { allowPaid: true })
       expect(again.changed).toBe(false)
-      expect(await walletMinor(fx!.buyer.id)).toBe(before + 250n)
+      expect(await walletMinor(fx!.buyer.id)).toBe(before + 200n)
       // allowPaid never reaches past 'paid'.
       const delivering = await insertOrder({ status: 'delivering', escrow_status: 'held', order_number: `GT-P2-deliv-${tag()}` })
       const refused = await cancelOrderReturnWallet(delivering, undefined, { allowPaid: true })
