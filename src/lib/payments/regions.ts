@@ -2,11 +2,11 @@
  * Checkout regions — the buyer-facing grouping of local payment rails
  * (checkout regions revamp, 2026-09-26).
  *
- * The selector no longer pins a COUNTRY; it reads the buyer's REGION from
- * the geo country and orders the flat method list as:
+ * The buyer's country (geo, or picked from "Paying from … · Change" under
+ * the list, owner 2026-10-19) gives its REGION, and the flat method list is:
  *
- *   1. rails local to the buyer's own country   (Romania → Trustly)
- *   2. the rest of the region's rails           (BLIK, EPS, MB Way, …)
+ *   1. rails local to the buyer's own country   (Belgium → Bancontact, Trustly, …)
+ *   2. ONLY when there are none: the region's rails (Argentina → Pix, SPEI, …)
  *   3. Cryptocurrency, always last              (first and only when 1+2 are empty)
  *
  * "Rest of World", "Middle East & Africa" and "East Asia" are not coherent
@@ -77,9 +77,9 @@ export interface RegionalMethod {
 
 /**
  * Split a region's rails into the buyer's own-country rails and the rest,
- * both in registry order. `country` may sit outside `region` (the buyer
- * switched region by hand): then nothing is "local" and the whole region
- * is "regional". A no-spill region never offers another country's rails.
+ * both in registry order. `country` may sit outside `region`: then nothing
+ * is "local" and the whole region is "regional". A no-spill region never
+ * offers another country's rails.
  */
 export function orderMethodsForRegion<M extends RegionalMethod>(
   methods: readonly M[],
@@ -95,14 +95,9 @@ export function orderMethodsForRegion<M extends RegionalMethod>(
     if (ccInRegion && cc && m.countries.includes(cc)) local.push(m)
     else if (r.spill && m.countries.some((c) => r.countries.has(c))) regional.push(m)
   }
+  // Owner 2026-10-16: a buyer whose country has its own rails sees only those
+  // (Belgium: Bancontact, Trustly, MyBank, Skrill, paysafecard — not BLIK or
+  // EPS). The region's list is the fallback for a country with none.
+  if (local.length > 0) return { local, regional: [] }
   return { local, regional }
-}
-
-/**
- * Regions worth a switcher chip: spill regions with at least one rail, plus
- * the buyer's own. A no-spill region shows nothing to an outsider (its rails
- * are exact-country), so its chip appears only for its own buyers.
- */
-export function regionsWithMethods<M extends RegionalMethod>(methods: readonly M[], current: RegionId): Region[] {
-  return REGIONS.filter((r) => r.id === current || (r.spill && methods.some((m) => m.countries.some((c) => r.countries.has(c)))))
 }

@@ -61,23 +61,27 @@ export default function CheckoutLoading() {
 
           {/* Left — payment column */}
           <div>
-            {/* Heading + region dropdown on the right */}
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <Block className="h-6 w-28" />
-                <Block className="mt-1.5 h-3.5 w-64" />
-              </div>
-              <Block className="h-9 w-[172px] rounded-md" />
+            {/* Heading */}
+            <div>
+              <Block className="h-6 w-28" />
+              <Block className="mt-1.5 h-3.5 w-64" />
             </div>
 
-            {/* Method rows: mark tile + label + pick mark */}
+            {/* Method rows (60px glass rows): brand mark + label + pick mark */}
             {[0, 1, 2].map((i) => (
-              <Card key={i} className="mt-2 flex items-center gap-3 px-3.5 py-2">
-                <Block className="h-8 w-8 rounded-md" />
+              <div
+                key={i}
+                className="mt-2 flex items-center gap-3.5 rounded-md bg-white/[0.035] px-4 py-[15px]"
+                style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)' }}
+              >
+                <div className="flex w-[76px] shrink-0 justify-center"><Block className="h-[18px] w-12" /></div>
                 <Block className="h-4 w-28 flex-1" />
-                <Block className="h-5 w-5 rounded-full" />
-              </Card>
+                <Block className="h-[22px] w-[22px] rounded-full" />
+              </div>
             ))}
+
+            {/* "Paying from … · Change" */}
+            <Block className="mt-3 h-4 w-52" />
 
             {/* Phones: discount + money rows under the list */}
             <Card className="mt-4 px-4 pb-4 pt-3 lg:hidden">

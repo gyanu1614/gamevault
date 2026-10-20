@@ -312,7 +312,9 @@ export function OrderClient(props: OrderClientProps) {
 
   return (
     <div
-      className="has-backdrop relative isolate min-h-screen"
+      className="has-backdrop hero-dim-deep relative isolate min-h-screen"
+      // Owner 2026-10-19: the order art much darker (hero-dim-deep), so the
+      // chat and the order card own the page.
       // V21/P5.x — Same hero-backdrop pattern as HomePage. The
       // .hero-backdrop child below renders the art behind the
       // navbar via --page-hero-image; --hero-offset pulls it up

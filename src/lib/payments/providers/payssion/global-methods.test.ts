@@ -116,11 +116,12 @@ describe('2026-10-15 methods: labels, kind, countries', () => {
     expect(PAYSSION_METHODS.bcp_pe.expiryMinutes).toBe(48 * 60)
   })
 
-  it('Skrill is offered wherever a Skrill wallet can be opened (its sign-up list, 2026-10-15)', () => {
+  it("Skrill is offered only where Payssion's Skrill works: EU/EEA, UK and Switzerland", () => {
     const sk = PAYSSION_METHODS.skrill.countries
-    expect(sk).toHaveLength(116)
-    for (const cc of ['GB', 'DE', 'US', 'SA', 'ZA', 'KR', 'BR', 'MX', 'SG', 'MY', 'VN', 'PE', 'CH', 'BE', 'IT']) expect(sk, cc).toContain(cc)
-    for (const cc of ['JP', 'IN', 'TR', 'RU']) expect(sk, cc).not.toContain(cc)
+    for (const cc of ['GB', 'DE', 'BE', 'IT', 'CH', 'NO', 'IS', 'LI', 'PL', 'IE']) expect(sk, cc).toContain(cc)
+    // 2026-10-16: Payssion's page answered "network location not supported" outside Europe.
+    for (const cc of ['US', 'AR', 'BR', 'SA', 'ZA', 'KR', 'SG', 'MY', 'VN', 'PE', 'JP', 'TR', 'UA']) expect(sk, cc).not.toContain(cc)
+    expect(sk).toHaveLength(32)
   })
 
   it('country lists are ISO-3166 alpha-2, non-empty, without duplicates', () => {

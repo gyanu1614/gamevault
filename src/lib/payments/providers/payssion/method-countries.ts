@@ -6,18 +6,19 @@
  */
 
 /**
- * Skrill — every country of residence Skrill's own sign-up form offers
- * (account.skrill.com sign-up "Country of residence" list, read 2026-10-15:
- * 116 countries). Notably absent: JP, IN (no new sign-ups), TR, RU.
- * Re-read it when Skrill changes its markets.
+ * Skrill — where Payssion's Skrill page actually works: the EU/EEA, the UK
+ * and Switzerland. Skrill's own sign-up list is far wider (116 countries,
+ * 2026-10-15), but Payssion's page answers "Your current network location
+ * are not supported for Skrill" outside Europe (seen 2026-10-16 from a US
+ * connection; a Belgian one opened the Skrill wallet). Widen only once
+ * Payssion confirms the countries its Skrill route serves.
  */
 export const SKRILL_COUNTRIES: string[] = [
-  'AD', 'AE', 'AL', 'AM', 'AR', 'AT', 'AU', 'AW', 'AZ', 'BA', 'BD', 'BE', 'BG', 'BN', 'BO', 'BR', 'BS', 'BW', 'CA', 'CH',
-  'CL', 'CM', 'CN', 'CO', 'CR', 'CX', 'CY', 'CZ', 'DE', 'DK', 'DM', 'DO', 'DZ', 'EC', 'EE', 'EG', 'ES', 'FI', 'FK', 'FR',
-  'GB', 'GE', 'GG', 'GH', 'GI', 'GR', 'GU', 'HK', 'HR', 'HU', 'ID', 'IE', 'IL', 'IM', 'IS', 'IT', 'JE', 'KE', 'KH', 'KR',
-  'KW', 'KZ', 'LI', 'LK', 'LS', 'LT', 'LU', 'LV', 'MA', 'MC', 'MD', 'ME', 'MG', 'MK', 'MN', 'MT', 'MU', 'MV', 'MX', 'MY',
-  'NA', 'NG', 'NI', 'NL', 'NO', 'NP', 'NZ', 'PA', 'PE', 'PH', 'PK', 'PL', 'PR', 'PT', 'PY', 'QA', 'RO', 'RS', 'SA', 'SE',
-  'SG', 'SI', 'SK', 'SM', 'SN', 'TH', 'TN', 'TW', 'TZ', 'UA', 'US', 'UY', 'VG', 'VI', 'VN', 'ZA',
+  // EU 27
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
+  'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
+  // EEA / EFTA + UK
+  'IS', 'LI', 'NO', 'GB', 'CH',
 ]
 
 /** Satispay — the markets its own site serves (Italy, France, Luxembourg). */
