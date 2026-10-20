@@ -787,7 +787,7 @@ it('finalize after the grace cancels: $item to Store Balance, fee kept, fault no
 it('a delivery inside the grace closes the claim with no refund', async () => {
   const id = await paidOrder()
   await rpc('order_not_delivered_open', { p_order_id: id, p_buyer_id: fx!.admin.id, p_due_at: past(5) })
-  await rpc('safedrop_transition', { p_order_id: id, p_event: 'DELIVERED', p_dedupe_key: `test:${id}`, p_reason: null, p_amount_minor: null })
+  await rpc('order_mark_delivered', { p_order_id: id, p_seller_id: fx!.seller.id })
   await ageClaim(id)
   const f = await rpc('order_not_delivered_finalize', { p_order_id: id })
   expect(f).toMatchObject({ finalized: true, outcome: 'delivered' })
@@ -832,7 +832,7 @@ it('a seller reply AFTER the hour is too late: the order still auto-cancels', as
 it('Start delivery inside the hour counts as a response', async () => {
   const id = await paidOrder()
   await rpc('order_not_delivered_open', { p_order_id: id, p_buyer_id: fx!.admin.id, p_due_at: past(5) })
-  await rpc('safedrop_transition', { p_order_id: id, p_event: 'DELIVERING', p_dedupe_key: `test:start:${id}`, p_reason: null, p_amount_minor: null })
+  await rpc('safedrop_transition', { p_order_id: id, p_event: 'SELLER_DELIVERING', p_dedupe_key: null, p_release_method: null, p_refund_minor: null })
   const f = await rpc('order_not_delivered_finalize', { p_order_id: id })
   expect(f).toMatchObject({ finalized: true, outcome: 'seller_responded' })
   expect((await claim(id)).response_kind).toBe('started_delivery')
@@ -858,7 +858,7 @@ itFault('a fault after the refund leaves the claim open and no credit', async ()
 })
 ```
 
-Check the real `safedrop_transition` argument names in the latest migration that defines it (`git grep -l "FUNCTION public.safedrop_transition" supabase/migrations | tail -1`), and the event names the seller's Start Delivery and Mark As Delivered paths use (the tests assume `DELIVERING` / `DELIVERED`) (`grep -n "safedrop_transition\|DELIVERED" src/lib/actions/orders.ts`). Use exactly those.
+Event names confirmed from `seller-cancel.guard.integration.test.ts`: Start delivery = `safedrop_transition(p_event => 'SELLER_DELIVERING', p_dedupe_key, p_release_method, p_refund_minor)`, Mark As Delivered = `order_mark_delivered(p_order_id, p_seller_id)`.
 
 Run: `pnpm vitest run src/test/guards/not-delivered.guard.integration.test.ts` — Expected: FAIL (functions missing).
 
