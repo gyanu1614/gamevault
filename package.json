@@ -53,6 +53,8 @@
     "values:mm2:catalogue": "tsx scripts/import-mm2-wiki-catalogue.mjs",
     "values:mm2:how-to-get": "node scripts/import-mm2-how-to-get.mjs",
     "values:mm2:events": "node scripts/import-mm2-events.mjs",
+    "sab:facts:collect": "tsx scripts/collect-sab-wiki-facts.mjs",
+    "sab:facts:import": "node scripts/import-sab-facts.mjs",
     "values:images": "tsx scripts/copy-values-images.mjs",
     "values:dryrun": "tsx scripts/values-dryrun.mjs",
     "value-refs:backfill": "tsx scripts/value-refs-backfill.mjs",

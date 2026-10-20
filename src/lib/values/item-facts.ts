@@ -40,8 +40,8 @@ export function factRows(f: ItemFacts): Array<{ label: string; value: string }> 
   ]
 }
 
-/** "from the Fossil Egg" — an origin that already starts with an article keeps it. */
-const fromOrigin = (origin: string) => (/^(the|a|an)\s/i.test(origin) ? `from ${origin}` : `from the ${origin}`)
+/** "from the Fossil Egg"; an origin with its own article, or a plural ("Admin Abuse events"), takes none. */
+export const fromOrigin = (origin: string) => (/^(the|a|an)\s/i.test(origin) || /s$/.test(origin) ? `from ${origin}` : `from the ${origin}`)
 /** "on 27 October 2022" for a day, "in 2022" for a year. */
 const onOrIn = (released: string) => (/^\d{4}$/.test(released) ? `in ${released}` : `on ${released}`)
 
