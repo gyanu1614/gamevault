@@ -231,6 +231,19 @@ describe.skipIf(!hasEnv)('refund policy — fault-aware buyer credits (integrati
     expect(await txn(`fee_kept:${id}`)).toBeNull()
   })
 
+  itFault('a fault inside order_seller_fault_charge leaves no fee posted and the fee still due', async () => {
+    // fx.seller is past the threshold by now: this fault records fee_due.
+    const id = await paidOrder()
+    await rpc('order_refund_to_wallet', { p_order_id: id, p_dedupe_key: 'seller_cancel:' + id, p_fault: 'seller' })
+    expect(Number((await faultRow(id))?.fee_due_minor)).toBe(142)
+    const availBefore = await sellerAvail(fx!.seller.id)
+    const err = withFault('order_seller_fault_charge:after_journal', `SELECT order_seller_fault_charge('${id}'::uuid)`)
+    expect(err).toMatch(/money_fault_hook|order_seller_fault_charge:after_journal/)
+    expect(await txn(`seller_fault_fee:${id}`)).toBeNull()
+    expect(await sellerAvail(fx!.seller.id)).toBe(availBefore)
+    expect(Number((await faultRow(id))?.fee_charged_minor)).toBe(0)
+  })
+
   it('the withdrawal gate refuses a buyer account: not_a_seller, with support copy from withdrawal_quote', async () => {
     const gate = await rpc('seller_withdrawal_gate', { p_seller_id: fx!.buyer.id })
     expect(gate.eligible).toBe(false)

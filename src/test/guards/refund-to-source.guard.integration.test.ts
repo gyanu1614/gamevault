@@ -14,6 +14,7 @@
  * Every row it creates is removed in afterAll.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { hasEnv, makeFixture, type Fixture } from './throwaway'
 
 vi.mock('@/lib/email', () => ({}))
@@ -39,6 +40,18 @@ let fx: Fixture | null = null
 const CUR = 'USD'
 const made: string[] = []
 const tag = () => Math.random().toString(36).slice(2, 8)
+const DB_URL = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const targetHost = (() => { try { return new globalThis.URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname } catch { return '' } })()
+const itFault = it.skipIf(!['127.0.0.1', 'localhost', '[::1]', '::1'].includes(targetHost))
+function withFault(point: string, sql: string): string {
+  const script = `BEGIN;\nSET LOCAL app.money_fault = '${point}';\n${sql};\nCOMMIT;`
+  try {
+    execFileSync('psql', [DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-c', script], { stdio: 'pipe' })
+    return ''
+  } catch (e: any) {
+    return e?.stderr?.toString() ?? String(e)
+  }
+}
 
 const rpc = async (fn: string, args: Record<string, unknown>) => {
   const { data, error } = await (fx!.svc.rpc as any)(fn, args)
@@ -264,6 +277,20 @@ describe.skipIf(!hasEnv)('refund to source — request → approve → provider 
     expect(availBefore - (await sellerAvail(fx!.seller.id))).toBe(325n)
     const again = await rpc('order_seller_fault_charge', { p_order_id: id })
     expect(again.charged).toBe(false)
+  })
+
+  itFault('a fault after the fee leg rolls approve back: credit unspent, no fee paid out, no outbox row', async () => {
+    const id = await refundedOrder()
+    await rpc('refund_to_source_request', { p_order_id: id, p_buyer_id: fx!.admin.id })
+    const req = await request(id)
+    const before = await wallet(fx!.admin.id)
+    const err = withFault('refund_to_source_approve:after_fee', `SELECT refund_to_source_approve('${req.id}'::uuid, '${fx!.admin.id}'::uuid)`)
+    expect(err).toMatch(/money_fault_hook|refund_to_source_approve:after_fee/)
+    expect(await wallet(fx!.admin.id)).toBe(before)
+    expect(await txn(`refund_to_source:${req.id}`)).toBeNull()
+    expect(await txn(`refund_to_source_fee:${req.id}`)).toBeNull()
+    expect((await outboxRows(id)).length).toBe(0)
+    expect((await request(id)).status).toBe('pending')
   })
 
   it('the refund-to-source RPCs are service-role only', async () => {
