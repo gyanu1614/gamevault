@@ -63,7 +63,9 @@ async function say(orderId: string, senderId: string | null) {
     if (error) throw new Error(`conversation: ${error.message}`)
     cv = data
   }
-  const { error } = await (fx!.svc.from('messages').insert as any)({ conversation_id: cv.id, sender_id: senderId, content: 'on it' })
+  // A system notice (sender NULL) must carry a JSON notice body (messages_system_notice_shape).
+  const content = senderId === null ? JSON.stringify({ type: 'order_delivered', seller: 'test' }) : 'on it'
+  const { error } = await (fx!.svc.from('messages').insert as any)({ conversation_id: cv.id, sender_id: senderId, content })
   if (error) throw new Error(`message: ${error.message}`)
 }
 
@@ -89,6 +91,9 @@ async function paidOrder(): Promise<string> {
 describe.skipIf(!hasEnv)('Cancel – Not Delivered — report, 1-hour grace, auto-cancel (integration)', () => {
   beforeAll(async () => {
     fx = await makeFixture()
+    // Every case buys the fixture listing once; the fixture ships 5 in stock.
+    const { error } = await fx.svc.from('listings').update({ quantity: 100 } as any).eq('id', fx.listingId)
+    if (error) throw new Error(`listing stock: ${error.message}`)
   }, 90_000)
 
   afterAll(async () => {
@@ -187,6 +192,16 @@ describe.skipIf(!hasEnv)('Cancel – Not Delivered — report, 1-hour grace, aut
     expect(await open(id)).toMatchObject({ ok: false, reason: 'closed' })
   })
 
+  it('a reply sent from the seller’s own session (the real chat path) closes the report too', async () => {
+    const id = await paidOrder()
+    await open(id)
+    await say(id, fx!.admin.id) // creates the order chat
+    const { data: cv } = (await fx!.svc.from('conversations').select('id').eq('order_id', id).single()) as any
+    const { error } = await (fx!.seller.client.from('messages').insert as any)({ conversation_id: cv.id, sender_id: fx!.seller.id, content: 'delivering now' })
+    expect(error).toBeNull()
+    expect((await claim(id)).status).toBe('seller_responded')
+  })
+
   it('buyer messages and system notices do not count as a seller response', async () => {
     const id = await paidOrder()
     await open(id)
@@ -207,7 +222,7 @@ describe.skipIf(!hasEnv)('Cancel – Not Delivered — report, 1-hour grace, aut
   it('Start delivery inside the hour counts as a response', async () => {
     const id = await paidOrder()
     await open(id)
-    await rpc('safedrop_transition', { p_order_id: id, p_event: 'SELLER_DELIVERING', p_dedupe_key: null, p_release_method: null, p_refund_minor: null })
+    await rpc('order_mark_delivering', { p_order_id: id, p_seller_id: fx!.seller.id })
     expect(await rpc('order_not_delivered_finalize', { p_order_id: id })).toMatchObject({ finalized: true, outcome: 'seller_responded' })
     expect((await claim(id)).response_kind).toBe('started_delivery')
     expect(await txn(`wallet_refund:${id}`)).toBeNull()

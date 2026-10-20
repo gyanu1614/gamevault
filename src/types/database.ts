@@ -4859,6 +4859,147 @@ export type Database = {
           },
         ]
       }
+      order_not_delivered_claims: {
+        Row: {
+          buyer_id: string
+          closed_at: string | null
+          credited_minor: number | null
+          due_at: string
+          grace_ends_at: string
+          opened_at: string
+          order_id: string
+          responded_at: string | null
+          response_kind: string | null
+          seller_id: string
+          status: string
+        }
+        Insert: {
+          buyer_id: string
+          closed_at?: string | null
+          credited_minor?: number | null
+          due_at: string
+          grace_ends_at: string
+          opened_at?: string
+          order_id: string
+          responded_at?: string | null
+          response_kind?: string | null
+          seller_id: string
+          status?: string
+        }
+        Update: {
+          buyer_id?: string
+          closed_at?: string | null
+          credited_minor?: number | null
+          due_at?: string
+          grace_ends_at?: string
+          opened_at?: string
+          order_id?: string
+          responded_at?: string | null
+          response_kind?: string | null
+          seller_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "fee_resolution_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["reviewer_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "admin_review_overview"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_dashboard_stats"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "order_not_delivered_claims_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_shop_banners"
+            referencedColumns: ["seller_id"]
+          },
+        ]
+      }
       order_seller_faults: {
         Row: {
           fee_charged_minor: number
@@ -5595,6 +5736,7 @@ export type Database = {
           founding_discount_pct: number
           founding_months: number
           id: boolean
+          not_delivered_grace_minutes: number
           payout_details_freeze_hours: number
           rank_floor_pct: number
           seller_fault_fee_threshold: number
@@ -5613,6 +5755,7 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
+          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -5631,6 +5774,7 @@ export type Database = {
           founding_discount_pct?: number
           founding_months?: number
           id?: boolean
+          not_delivered_grace_minutes?: number
           payout_details_freeze_hours?: number
           rank_floor_pct?: number
           seller_fault_fee_threshold?: number
@@ -14506,6 +14650,23 @@ export type Database = {
       }
       order_mark_delivering: {
         Args: { p_order_id: string; p_seller_id: string }
+        Returns: Json
+      }
+      order_not_delivered_due: { Args: { p_limit?: number }; Returns: string[] }
+      order_not_delivered_finalize: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      order_not_delivered_mark_responded: {
+        Args: { p_at: string; p_kind: string; p_order_id: string }
+        Returns: boolean
+      }
+      order_not_delivered_open: {
+        Args: { p_buyer_id: string; p_due_at: string; p_order_id: string }
+        Returns: Json
+      }
+      order_not_delivered_withdraw: {
+        Args: { p_buyer_id: string; p_order_id: string }
         Returns: Json
       }
       order_refund_buyer_credit: {
