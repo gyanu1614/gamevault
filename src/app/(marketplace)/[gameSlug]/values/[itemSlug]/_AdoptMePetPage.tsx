@@ -33,6 +33,10 @@ import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { itemBuyHref } from '@/lib/value-listings/buy-state'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
 import { formatTradeValue, frostsLabel } from '@/lib/adopt-me/trade-value'
+import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
+import { getItemFacts } from '@/lib/values/item-facts-data'
+import { itemFactsGame } from '@/lib/values/item-facts-config'
+import { factFaqs, mergeFaqs } from '@/lib/values/item-facts'
 
 const OBTAINABILITY_LABEL: Record<string, string> = {
   obtainable: 'Obtainable',
@@ -122,13 +126,15 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   // This pet's FR cash value — used to rank similar pets by value proximity.
   const refFrUsd = fr?.cheapestUsd ?? fr?.cashUsd ?? null
 
-  const [hubNav, similar, buyData, evidence] = await Promise.all([
+  const [hubNav, similar, buyData, evidence, facts] = await Promise.all([
     getHubNavData('adopt-me'),
     getSimilarPets(pet.rarity, pet.slug, refFrUsd),
     // DropMarket's own live stock (Bundle 2): buy buttons + "Available Now".
     getValueItemBuyData('adopt-me', pet.slug),
     // The ONE page date: the last material price move of any variant.
     readValuePageEvidence('adopt-me', pet.slug),
+    // The shared facts (released, origin, verified How To Get).
+    getItemFacts('adopt-me', pet.slug),
   ])
   const priceMovedAt = evidence?.priceMovedAt ?? null
   // The answer sentence (snippet + JSON-LD, not shown on the page): Fly Ride, else the best-covered real price.
@@ -136,7 +142,10 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
   const buyCategorySlug = buyData?.categorySlug ?? 'buy-items'
 
   const meta = rarityMeta(pet.rarity)
-  const faq = petFaq(pet)
+  const game = itemFactsGame('adopt-me')
+  const buy = { gameSlug: 'adopt-me', itemSlug: pet.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }
+  // The pet questions, with the facts' verified answers in their place.
+  const faq = mergeFaqs(petFaq(pet), factFaqs({ name: pet.name, game, facts, cheapestUsd: refFrUsd }))
   // The stored story without its old baked-in prices, plus one live line
   // from the same numbers as the table (no more "$6.98" next to "$6.28").
   const story = withoutStalePrices(pet.description)
@@ -250,6 +259,7 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
           originType={pet.originType}
           originDetail={pet.originDetail}
           obtainabilityLabel={OBTAINABILITY_LABEL[pet.obtainability] ?? pet.obtainability}
+          released={facts.released}
           variants={pet.variants}
         >
           <p>
@@ -258,6 +268,16 @@ export default async function AdoptMePetPage({ pet }: { pet: AdoptMePetDetail })
             {history && <> {history}</>}
           </p>
         </AdoptMeAbout>
+
+        <ItemHowToGet
+          itemName={pet.name}
+          game={game}
+          imageUrl={pet.imageUrl}
+          accent={meta.color}
+          howToGet={facts.howToGet}
+          cheapestUsd={refFrUsd}
+          buy={buy}
+        />
 
         {/* ── Price trend — daily history for the SELECTED variant (shared with
             the hero). One focused line + range tabs; its own dropdown writes the

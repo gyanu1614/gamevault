@@ -7,7 +7,7 @@
  * Deliberately NOT said: whether an item is still obtainable (the wiki flag
  * behind `obtain.still_obtainable` is unreliable — 2017 event items read as
  * obtainable) and drop odds. Both come only from the verified how_to_get
- * entry (valueHowToGetCopy.ts), which itemFaq takes as an argument.
+ * entry (src/lib/values/how-to-get-copy.ts), which itemFaq takes as an argument.
  */
 
 import type { ValueObtainSource } from '@/lib/values/data'
@@ -125,7 +125,7 @@ export function priceSentence(i: ItemCopyInput): string | null {
 /**
  * The page's FAQ (visible block + the one FAQPage schema). `howTo` are the
  * verified "How do you get X?" / "Can you get X for free?" entries
- * (valueHowToGetCopy.howToGetFaqs): when the item has them they take the
+ * (how-to-get-copy.ts howToGetFaqs): when the item has them they take the
  * "Where does X come from?" slot, so the page never answers the same
  * question twice from two sources.
  */

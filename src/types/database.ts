@@ -601,6 +601,7 @@ export type Database = {
           demand_trend: string | null
           description: string | null
           has_page: boolean | null
+          how_to_get: Json | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -620,6 +621,7 @@ export type Database = {
           demand_trend?: string | null
           description?: string | null
           has_page?: boolean | null
+          how_to_get?: Json | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -639,6 +641,7 @@ export type Database = {
           demand_trend?: string | null
           description?: string | null
           has_page?: boolean | null
+          how_to_get?: Json | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -7182,6 +7185,7 @@ export type Database = {
           base_income_per_second: number | null
           created_at: string
           game_data_last_verified_at: string | null
+          how_to_get: Json | null
           id: string
           image_alt_text: string | null
           image_path: string | null
@@ -7192,8 +7196,10 @@ export type Database = {
           name: string
           needs_review: boolean
           obtainability: string
+          origin: string | null
           popularity_rank: number | null
           rarity: string | null
+          release_year: number | null
           slug: string
           source_name: string | null
           source_page_id: number | null
@@ -7208,6 +7214,7 @@ export type Database = {
           base_income_per_second?: number | null
           created_at?: string
           game_data_last_verified_at?: string | null
+          how_to_get?: Json | null
           id?: string
           image_alt_text?: string | null
           image_path?: string | null
@@ -7218,8 +7225,10 @@ export type Database = {
           name: string
           needs_review?: boolean
           obtainability?: string
+          origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
+          release_year?: number | null
           slug: string
           source_name?: string | null
           source_page_id?: number | null
@@ -7234,6 +7243,7 @@ export type Database = {
           base_income_per_second?: number | null
           created_at?: string
           game_data_last_verified_at?: string | null
+          how_to_get?: Json | null
           id?: string
           image_alt_text?: string | null
           image_path?: string | null
@@ -7244,8 +7254,10 @@ export type Database = {
           name?: string
           needs_review?: boolean
           obtainability?: string
+          origin?: string | null
           popularity_rank?: number | null
           rarity?: string | null
+          release_year?: number | null
           slug?: string
           source_name?: string | null
           source_page_id?: number | null

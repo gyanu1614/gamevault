@@ -1,6 +1,7 @@
 import 'server-only'
 import { createValuesReadClient } from '@/lib/values/read-client'
-import { parseHowToGet, type ValueHowToGet } from '@/lib/values/how-to-get'
+import { parseHowToGet } from '@/lib/values/how-to-get'
+import { NO_FACTS, releasedLabel, type ItemFacts } from '@/lib/values/item-facts'
 
 /**
  * Read layer for the generic values pipeline.
@@ -224,27 +225,33 @@ export async function getValueItem(
 }
 
 /**
- * One item's verified "How To Get" facts (values_items.how_to_get), or null
- * when it has none — the item page then renders no section. Its own one-row
+ * One item's shared facts (values_items.release_year / origin / how_to_get) —
+ * the How To Get section renders only when how_to_get is set. Its own one-row
  * read, under the ITEM's tags, so the list reads don't carry the column and a
- * values revalidate refreshes it with the rest of the page.
+ * values revalidate refreshes it with the rest of the page. Callers use
+ * getItemFacts (item-facts-data.ts), which picks the table per game.
  */
-export async function getValueItemHowToGet(gameSlug: string, itemSlug: string): Promise<ValueHowToGet | null> {
+export async function getValueItemFacts(gameSlug: string, itemSlug: string): Promise<ItemFacts> {
   const supabase = createValuesReadClient({ gameSlug, itemSlug })
   const gameId = await gameIdFor(supabase, gameSlug)
-  if (!gameId) return null
+  if (!gameId) return NO_FACTS
   const { data, error } = await (supabase as any)
     .from('values_items')
-    .select('how_to_get')
+    .select('release_year,origin,how_to_get')
     .eq('game_id', gameId)
     .eq('slug', itemSlug)
     .eq('is_enabled', true)
     .maybeSingle()
   if (error) {
-    console.error('getValueItemHowToGet:', error)
-    return null
+    console.error('getValueItemFacts:', error)
+    return NO_FACTS
   }
-  return parseHowToGet(data?.how_to_get)
+  if (!data) return NO_FACTS
+  return {
+    released: releasedLabel({ year: data.release_year }),
+    origin: typeof data.origin === 'string' && data.origin.trim() ? data.origin.trim() : null,
+    howToGet: parseHowToGet(data.how_to_get),
+  }
 }
 
 /**

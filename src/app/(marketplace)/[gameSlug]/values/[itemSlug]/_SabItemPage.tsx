@@ -23,6 +23,11 @@ import { answerSentence, withAnswer } from '@/components/values/value-answer-for
 import { AvailableNow } from '@/components/value-listings/AvailableNow'
 import { ValueItemRails } from '@/components/buy-rails/ValueItemRails'
 import { getValueItemBuyData } from '../../[categorySlug]/_valueItemOffers'
+import { ItemHowToGet } from '@/components/values/how-to-get/ItemHowToGet'
+import { getItemFacts } from '@/lib/values/item-facts-data'
+import { itemFactsGame } from '@/lib/values/item-facts-config'
+import { factFaqs, factRows, mergeFaqs } from '@/lib/values/item-facts'
+import { rarityMeta } from '@/lib/values/rarity'
 import ItemHero from './_ItemHero'
 import {
   SAB_GAME,
@@ -44,7 +49,7 @@ import {
  * here is for a real item and is tagged to it (see _sabItemData).
  */
 export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: string; brainrot: BrainrotRow }) {
-  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav, evidence] =
+  const [mutations, relatedBrainrots, defaultTradePrice, priceHistory, hubNav, evidence, facts] =
     await Promise.all([
       getMutations(brainrot.slug, brainrot.id),
       getRelatedBrainrots(brainrot),
@@ -55,6 +60,8 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
       // puts in dateModified and lists in the sitemap (a real price move only;
       // a re-crawl that finds the same price does not bump it).
       readValuePageEvidence(SAB_GAME, brainrot.slug),
+      // The shared facts (released, origin, verified How To Get).
+      getItemFacts(SAB_GAME, brainrot.slug),
     ])
   const priceMovedAt = evidence?.priceMovedAt ?? null
 
@@ -110,7 +117,10 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
     .filter((m) => m.slug !== 'default' && asNumber(m.marketValueUsd) != null)
     .sort((a, b) => (asNumber(b.marketValueUsd) ?? 0) - (asNumber(a.marketValueUsd) ?? 0))[0]
 
-  const faqItems = buildBrainrotFaq({
+  const game = itemFactsGame(SAB_GAME)
+  const buy = { gameSlug: SAB_GAME, itemSlug: brainrot.slug, categorySlug: buyCategorySlug, stock: buyData?.stock ?? null }
+  // The FAQ: the Brainrot questions, with the facts' verified answers in their place.
+  const faqItems = mergeFaqs(buildBrainrotFaq({
     name: brainrot.name,
     rarity: brainrot.rarity,
     obtainability: brainrot.obtainability,
@@ -125,7 +135,8 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
       ? { name: topMutation.name, priceUsd: topMutation.marketValueUsd }
       : null,
     sampleSize: marketSampleSize,
-  })
+  }), factFaqs({ name: brainrot.name, game, facts, cheapestUsd: reputableCheapest ?? marketPriceUsd }))
+  const factList = factRows(facts)
   const canonicalPath = `/steal-a-brainrot/values/${brainrot.slug}`
 
   return (
@@ -268,11 +279,28 @@ export default async function SabItemPage({ gameSlug, brainrot }: { gameSlug: st
             </dl>
           </section>
 
+          <ItemHowToGet
+            itemName={brainrot.name}
+            game={game}
+            imageUrl={brainrot.image_url}
+            accent={rarityMeta(SAB_GAME, brainrot.rarity).color}
+            howToGet={facts.howToGet}
+            cheapestUsd={reputableCheapest ?? marketPriceUsd}
+            buy={buy}
+          />
+
           <section className={`${VALUE_SURFACE} p-5 sm:p-6`}>
             <h2 className="text-lg font-semibold text-text-primary">About {brainrot.name}</h2>
             <p className="mt-2 text-sm leading-6 text-text-secondary">
               {brainrot.name} is {withArticle(brainrot.rarity)} Brainrot with a base income of {formatIncome(brainrot.base_income_per_second)}. Its current obtainability status is {brainrot.obtainability}. Mutation income estimates use the verified base income and each mutation&apos;s multiplier unless a verified variant-specific override exists.
             </p>
+            {factList.length > 0 && (
+              <dl className="mt-4">
+                {factList.map((f) => (
+                  <StatRow key={f.label} label={f.label} value={f.value} />
+                ))}
+              </dl>
+            )}
             {brainrot.source_url && (
               <a
                 href={brainrot.source_url}

@@ -26,7 +26,7 @@ import { hexRgb } from '@/lib/values/events-model'
 import { expectedDraws, fmtDraws, roundingNote } from '@/lib/values/box-odds'
 import { bestCoinBox, type BoxView } from '@/lib/values/boxes'
 import { cn } from '@/lib/utils'
-import { WaySectionHead } from '../values/_generic/WaySectionHead'
+import { WaySectionHead } from '@/components/values/how-to-get/WaySectionHead'
 import { HubLeadSkeleton } from '../events/_EventsSkeleton'
 import {
   approxUsd,

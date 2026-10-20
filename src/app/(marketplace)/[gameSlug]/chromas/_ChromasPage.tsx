@@ -50,7 +50,7 @@ import {
   type UnboxMaths,
 } from '@/lib/values/chromas'
 import { cn } from '@/lib/utils'
-import { WaySectionHead } from '../values/_generic/WaySectionHead'
+import { WaySectionHead } from '@/components/values/how-to-get/WaySectionHead'
 import { HubLeadSkeleton } from '../events/_EventsSkeleton'
 import {
   biggestHeading,
